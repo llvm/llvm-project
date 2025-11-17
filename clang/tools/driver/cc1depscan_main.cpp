@@ -32,7 +32,6 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Option/ArgList.h"
@@ -364,7 +363,6 @@ static int
 scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
                        StringRef WorkingDirectory,
                        SmallVectorImpl<const char *> &OutputArgs,
-                       bool ProduceIncludeTree,
                        llvm::function_ref<const char *(const Twine &)> SaveArg,
                        const CASOptions &CASOpts, DiagnosticsEngine &Diag,
                        std::optional<llvm::cas::CASID> &RootID);
@@ -522,13 +520,10 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
   }
 
 #endif // LLVM_ON_UNIX
-  bool ProduceIncludeTree = Args.hasArg(options::OPT_fdepscan_include_tree);
 
   auto SaveArg = [&Args](const Twine &T) { return Args.MakeArgString(T); };
 #ifdef LLVM_ON_UNIX
   CompilerInvocation::GenerateCASArgs(CASOpts, Sharing.CASArgs, SaveArg);
-  if (ProduceIncludeTree)
-    Sharing.CASArgs.push_back("-fdepscan-include-tree");
 
   if (auto DaemonPath = makeDepscanDaemonPath(Mode, Sharing))
     return scanAndUpdateCC1UsingDaemon(Exec, OldArgs, WorkingDirectory, NewArgs,
@@ -537,8 +532,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
 #endif // LLVM_ON_UNIX
 
   return scanAndUpdateCC1Inline(Exec, OldArgs, WorkingDirectory, NewArgs,
-                                ProduceIncludeTree, SaveArg, CASOpts, Diag,
-                                RootID);
+                                SaveArg, CASOpts, Diag, RootID);
 }
 
 int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
@@ -641,7 +635,6 @@ struct ScanServer {
   const char *Argv0 = nullptr;
   SmallString<128> BasePath;
   CASOptions CASOpts;
-  bool ProduceIncludeTree = true;
   int PidFD = -1;
   int ListenSocket = -1;
   /// \p std::nullopt means it runs indefinitely.
@@ -835,8 +828,6 @@ void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
       Opts.ParseArgs(CASArgs, MissingArgIndex, MissingArgCount);
   CompilerInvocation::ParseCASArgs(CASOpts, ParsedCASArgs, Diags);
   CASOpts.ensurePersistentCAS();
-  ProduceIncludeTree =
-      ParsedCASArgs.hasArg(clang::options::OPT_fdepscan_include_tree);
 
   static std::once_flag ValidateOnce;
   std::call_once(ValidateOnce, [&] {
@@ -906,15 +897,10 @@ int ScanServer::listen() {
   if (!Cache)
     reportError("cannot create ActionCache");
 
-  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
-  if (!ProduceIncludeTree)
-    FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
   tooling::dependencies::DependencyScanningService Service(
       tooling::dependencies::ScanningMode::DependencyDirectivesScan,
-      ProduceIncludeTree
-          ? tooling::dependencies::ScanningOutputFormat::IncludeTree
-          : tooling::dependencies::ScanningOutputFormat::Tree,
-      CASOpts, CAS, Cache, FS);
+      tooling::dependencies::ScanningOutputFormat::IncludeTree, CASOpts, CAS,
+      Cache);
 
   std::atomic<int> NumRunning(0);
 
@@ -993,18 +979,13 @@ int ScanServer::listen() {
         OS << "\n";
       };
 
-      bool ProduceIncludeTree =
-          Service.getFormat() ==
-          tooling::dependencies::ScanningOutputFormat::IncludeTree;
-
       // Is this safe to reuse? Or does DependendencyScanningWorkerFileSystem
       // make some bad assumptions about relative paths?
       if (!Tool) {
         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
             llvm::vfs::createPhysicalFileSystem();
-        if (ProduceIncludeTree)
-          UnderlyingFS = llvm::cas::createCASProvidingFileSystem(
-              CAS, std::move(UnderlyingFS));
+        UnderlyingFS = llvm::cas::createCASProvidingFileSystem(
+            CAS, std::move(UnderlyingFS));
         Tool.emplace(Service, std::move(UnderlyingFS));
       }
 
@@ -1128,7 +1109,6 @@ static int
 scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
                        StringRef WorkingDirectory,
                        SmallVectorImpl<const char *> &OutputArgs,
-                       bool ProduceIncludeTree,
                        llvm::function_ref<const char *(const Twine &)> SaveArg,
                        const CASOptions &CASOpts, DiagnosticsEngine &Diag,
                        std::optional<llvm::cas::CASID> &RootID) {
@@ -1136,21 +1116,14 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
   if (!DB || !Cache)
     return 1;
 
-  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
-  if (!ProduceIncludeTree)
-    FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*DB));
-
   tooling::dependencies::DependencyScanningService Service(
       tooling::dependencies::ScanningMode::DependencyDirectivesScan,
-      ProduceIncludeTree
-          ? tooling::dependencies::ScanningOutputFormat::IncludeTree
-          : tooling::dependencies::ScanningOutputFormat::Tree,
-      CASOpts, DB, Cache, FS);
+      tooling::dependencies::ScanningOutputFormat::IncludeTree, CASOpts, DB,
+      Cache);
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
       llvm::vfs::createPhysicalFileSystem();
-  if (ProduceIncludeTree)
-    UnderlyingFS =
-        llvm::cas::createCASProvidingFileSystem(DB, std::move(UnderlyingFS));
+  UnderlyingFS =
+      llvm::cas::createCASProvidingFileSystem(DB, std::move(UnderlyingFS));
   tooling::dependencies::DependencyScanningTool Tool(Service,
                                                      std::move(UnderlyingFS));
 

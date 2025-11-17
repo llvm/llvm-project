@@ -3,7 +3,7 @@
 
 // RUN: rm -rf %t && mkdir %t
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t.rsp -cc1-args \
+// RUN: %clang -cc1depscan -fdepscan=inline -o %t/t.rsp -cc1-args \
 // RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -emit-obj %s -o %t/t.o
 
 // RUN: %clang @%t/t.rsp -Rcompile-job-cache -index-store-path %t/idx -index-unit-output-path t.o 2>&1 \

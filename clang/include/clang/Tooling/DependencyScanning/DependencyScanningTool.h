@@ -73,9 +73,6 @@ struct TranslationUnitDeps {
   /// includes both direct and transitive module dependencies.
   std::vector<std::string> VisibleModules;
 
-  /// The CASID for input file dependency tree.
-  std::optional<std::string> CASFileSystemRootID;
-
   /// The include-tree for input file dependency tree.
   std::optional<std::string> IncludeTreeID;
 
@@ -145,20 +142,6 @@ public:
     return getP1689ModuleDependencyFile(Command, CWD, MakeformatOutput,
                                         MakeformatOutputPath);
   }
-
-  /// Collect dependency tree.
-  llvm::Expected<llvm::cas::ObjectProxy>
-  getDependencyTree(const std::vector<std::string> &CommandLine, StringRef CWD);
-
-  /// If \p DiagGenerationAsCompilation is true it will generate error
-  /// diagnostics same way as the normal compilation, with "N errors generated"
-  /// message and the serialized diagnostics file emitted if the
-  /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
-  llvm::Expected<llvm::cas::ObjectProxy>
-  getDependencyTreeFromCompilerInvocation(
-      std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
-      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-      bool DiagGenerationAsCompilation);
 
   Expected<cas::IncludeTreeRoot>
   getIncludeTree(cas::ObjectStore &DB,
@@ -255,17 +238,6 @@ public:
 
   const CASOptions &getCASOpts() const { return Worker.getCASOpts(); }
 
-  CachingOnDiskFileSystemPtr getCachingFileSystem() {
-    return Worker.getCASFS();
-  }
-
-  /// If \p DependencyScanningService enabled sharing of \p FileManager this
-  /// will return the same instance, otherwise it will create a new one for
-  /// each invocation.
-  llvm::IntrusiveRefCntPtr<FileManager> getOrCreateFileManager() const {
-    return Worker.getOrCreateFileManager();
-  }
-
   static std::unique_ptr<DependencyActionController>
   createActionController(DependencyScanningWorker &Worker,
                          LookupModuleOutputCallback LookupModuleOutput);
@@ -313,10 +285,6 @@ public:
     ContextHash = std::move(Hash);
   }
 
-  void handleCASFileSystemRootID(std::string ID) override {
-    CASFileSystemRootID = std::move(ID);
-  }
-
   void handleIncludeTreeID(std::string ID) override {
     IncludeTreeID = std::move(ID);
   }
@@ -341,7 +309,6 @@ private:
   std::vector<std::string> VisibleModules;
   std::vector<Command> Commands;
   std::string ContextHash;
-  std::optional<std::string> CASFileSystemRootID;
   std::optional<std::string> IncludeTreeID;
   const llvm::DenseSet<ModuleID> &AlreadySeen;
 };

@@ -38,7 +38,7 @@ public:
       : CDB(CDB), TFS(TFS),
         Service(tooling::dependencies::ScanningMode::CanonicalPreprocessing,
                 tooling::dependencies::ScanningOutputFormat::P1689,
-                CASOptions(), nullptr, nullptr, nullptr) {}
+                CASOptions(), nullptr, nullptr) {}
 
   /// The scanned modules dependency information for a specific source file.
   struct ModuleDependencyInfo {

@@ -452,26 +452,6 @@ public:
   }
 };
 
-// FIXME: Make this thread-safe by pulling the FS out of `FileManager`.
-class CASDependencyDirectivesGetter : public DependencyDirectivesGetter {
-  DependencyScanningCASFilesystem *DepCASFS;
-
-public:
-  CASDependencyDirectivesGetter(DependencyScanningCASFilesystem *DepCASFS)
-      : DepCASFS(DepCASFS) {}
-
-  std::unique_ptr<DependencyDirectivesGetter>
-  cloneFor(FileManager &FileMgr) override {
-    (void)FileMgr;
-    return std::make_unique<CASDependencyDirectivesGetter>(DepCASFS);
-  }
-
-  std::optional<ArrayRef<dependency_directives_scan::Directive>>
-  operator()(FileEntryRef File) override {
-    return DepCASFS->getDirectiveTokens(File.getName());
-  }
-};
-
 /// Sanitize diagnostic options for dependency scan.
 void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   // Don't print 'X warnings and Y errors generated'.
@@ -568,11 +548,11 @@ createCompilerInvocation(ArrayRef<std::string> CommandLine,
 }
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-initVFSForTUBuferScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    llvm::MemoryBufferRef TUBuffer, std::shared_ptr<cas::ObjectStore> CAS,
-    IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS) {
+initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                          ArrayRef<std::string> CommandLine,
+                          StringRef WorkingDirectory,
+                          llvm::MemoryBufferRef TUBuffer,
+                          std::shared_ptr<cas::ObjectStore> CAS) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -586,9 +566,9 @@ initVFSForTUBuferScanning(
       InputPath, 0, llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer()));
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
 
-  // If we are using a CAS but not dependency CASFS, we need to provide the
-  // fake input file in a CASProvidingFS for include-tree.
-  if (CAS && !DepCASFS)
+  // If we are using a CAS, we need to provide the fake input file in a
+  // CASProvidingFS for include-tree.
+  if (CAS)
     InMemoryOverlay =
         llvm::cas::createCASProvidingFileSystem(CAS, std::move(InMemoryFS));
 
@@ -602,11 +582,10 @@ initVFSForTUBuferScanning(
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
-initVFSForByNameScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    StringRef ModuleName, std::shared_ptr<cas::ObjectStore> CAS,
-    IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS) {
+initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                         ArrayRef<std::string> CommandLine,
+                         StringRef WorkingDirectory, StringRef ModuleName,
+                         std::shared_ptr<cas::ObjectStore> CAS) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -624,9 +603,9 @@ initVFSForByNameScanning(
   InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
 
-  // If we are using a CAS but not dependency CASFS, we need to provide the
-  // fake input file in a CASProvidingFS for include-tree.
-  if (CAS && !DepCASFS)
+  // If we are using a CAS, we need to provide the fake input file in a
+  // CASProvidingFS for include-tree.
+  if (CAS)
     InMemoryOverlay =
         llvm::cas::createCASProvidingFileSystem(CAS, std::move(InMemoryFS));
 
@@ -643,8 +622,7 @@ bool initializeScanCompilerInstance(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-    bool DiagGenerationAsCompilation, raw_ostream *VerboseOS,
-    llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS) {
+    bool DiagGenerationAsCompilation, raw_ostream *VerboseOS) {
   ScanInstance.setBuildingModule(false);
 
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
@@ -674,8 +652,6 @@ bool initializeScanCompilerInstance(
   // This will prevent us compiling individual modules asynchronously since
   // FileManager is not thread-safe, but it does improve performance for now.
   ScanInstance.getFrontendOpts().ModulesShareFileManager = true;
-  if (DepCASFS)
-    ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
   ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
   ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
       any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
@@ -697,11 +673,6 @@ bool initializeScanCompilerInstance(
         std::make_unique<ScanningDependencyDirectivesGetter>(
             ScanInstance.getFileManager()));
   }
-
-  // CAS Implementation.
-  if (DepCASFS)
-    ScanInstance.setDependencyDirectivesGetter(
-        std::make_unique<CASDependencyDirectivesGetter>(DepCASFS.get()));
 
   ScanInstance.createSourceManager();
 
@@ -796,7 +767,6 @@ std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
   // is explicit in each \p DependencyScanningTool function.
   switch (Service.getFormat()) {
   case ScanningOutputFormat::Make:
-  case ScanningOutputFormat::Tree:
     ScanInstance.addDependencyCollector(
         std::make_shared<DependencyConsumerForwarder>(
             std::move(DepOutputOpts), WorkingDirectory, Consumer,
@@ -805,7 +775,6 @@ std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
   case ScanningOutputFormat::IncludeTree:
   case ScanningOutputFormat::P1689:
   case ScanningOutputFormat::Full:
-  case ScanningOutputFormat::FullTree:
   case ScanningOutputFormat::FullIncludeTree:
     if (EmitDependencyFile) {
       auto DFG = std::make_shared<ReversePrefixMappingDependencyFileGenerator>(
@@ -880,7 +849,7 @@ bool DependencyScanningAction::runInvocation(
   assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
   if (!initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
                                       DepFS, DiagGenerationAsCompilation,
-                                      VerboseOS, DepCASFS))
+                                      VerboseOS))
     return false;
 
   llvm::SmallVector<StringRef> StableDirs = getInitialStableDirs(ScanInstance);
@@ -933,10 +902,7 @@ bool DependencyScanningAction::runInvocation(
     return reportError(std::move(E));
 
   // Forward any CAS results to consumer.
-  std::string ID = OriginalInvocation.getFileSystemOpts().CASFileSystemRootID;
-  if (!ID.empty())
-    Consumer.handleCASFileSystemRootID(std::move(ID));
-  ID = OriginalInvocation.getFrontendOpts().CASIncludeTreeID;
+  std::string ID = OriginalInvocation.getFrontendOpts().CASIncludeTreeID;
   if (!ID.empty())
     Consumer.handleIncludeTreeID(std::move(ID));
 
@@ -958,19 +924,6 @@ std::optional<std::string> DependencyScanningAction::takeLastCC1CacheKey() {
   return Result;
 }
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-DependencyScanningAction::getDepScanFS() {
-  if (DepFS) {
-    assert(!DepCASFS && "CAS DepFS should not be set");
-    return DepFS;
-  }
-  if (DepCASFS) {
-    assert(!DepFS && "DepFS should not be set");
-    return DepCASFS;
-  }
-  return nullptr;
-}
-
 bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
   if (DC) {
     DiagConsumer = DC;
@@ -980,10 +933,8 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
     DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
   }
 
-  std::tie(OverlayFS, CommandLine) =
-      initVFSForByNameScanning(Worker.BaseFS, CommandLine, CWD,
-                               "ScanningByName", Worker.CAS, Worker.DepCASFS);
-
+  std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
+      Worker.BaseFS, CommandLine, CWD, "ScanningByName", Worker.CAS);
 
   DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
       CommandLine, OverlayFS, *DiagConsumer);
@@ -1025,7 +976,7 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
   CI.getInvocation().getCASOpts() = Worker.CASOpts;
   if (!initializeScanCompilerInstance(
           CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
-          Worker.Service, Worker.DepFS, false, nullptr, Worker.DepCASFS))
+          Worker.Service, Worker.DepFS, false, nullptr))
     return false;
 
   llvm::SmallVector<StringRef> StableDirs = getInitialStableDirs(CI);
@@ -1144,10 +1095,7 @@ bool CompilerInstanceWithContext::computeDependencies(
     return false;
   }
 
-  std::string ID = ModuleInvocation.getFileSystemOpts().CASFileSystemRootID;
-  if (!ID.empty())
-    Consumer.handleCASFileSystemRootID(std::move(ID));
-  ID = ModuleInvocation.getFrontendOpts().CASIncludeTreeID;
+  std::string ID = ModuleInvocation.getFrontendOpts().CASIncludeTreeID;
   if (!ID.empty())
     Consumer.handleIncludeTreeID(std::move(ID));
 

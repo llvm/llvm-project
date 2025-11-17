@@ -150,10 +150,6 @@ public:
   /// The \c CASID for the module, or empty.
   std::string CASID;
 
-  /// The CAS filesystem root ID for implicit modules built with the dependency
-  /// scanner, or empty.
-  std::string CASFileSystemRootID;
-
   /// The include-tree root ID for implicit modules built with the dependency
   /// scanner, or empty.
   std::string IncludeTreeID;

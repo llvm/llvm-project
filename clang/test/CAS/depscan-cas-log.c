@@ -6,7 +6,7 @@
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CAS_LOG=1 LLVM_CAS_DISABLE_VALIDATION=1 %clang \
-// RUN:   -cc1depscan -fdepscan=daemon -fdepscan-include-tree -o - \
+// RUN:   -cc1depscan -fdepscan=daemon -o - \
 // RUN:   -cc1-args -cc1 -triple x86_64-apple-macosx11.0.0 -emit-obj %s -o %t/t.o -fcas-path %t/cas
 // RUN: FileCheck %s --input-file %t/cas/v1.log
 

@@ -33,7 +33,6 @@ class DiagnosticsEngine;
 
 enum class CachingInputKind {
   IncludeTree,
-  FileSystemRoot,
   CachedCompilation,
   Object,
 };

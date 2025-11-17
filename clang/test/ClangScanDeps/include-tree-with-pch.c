@@ -3,7 +3,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
-// RUN: %clang -x c-header %t/prefix.h -target x86_64-apple-macos12 -o %t/prefix.pch -fdepscan=inline -fdepscan-include-tree -Xclang -fcas-path -Xclang %t/cas
+// RUN: %clang -x c-header %t/prefix.h -target x86_64-apple-macos12 -o %t/prefix.pch -fdepscan=inline -Xclang -fcas-path -Xclang %t/cas
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-include-tree -cas-path %t/cas > %t/result.txt
 // RUN: cat %t/result.txt | %PathSanitizingFileCheck --sanitize PREFIX=%/t %s
 

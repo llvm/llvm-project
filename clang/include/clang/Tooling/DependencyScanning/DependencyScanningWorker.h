@@ -15,7 +15,6 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -28,10 +27,6 @@ class DependencyOutputOptions;
 
 namespace tooling {
 namespace dependencies {
-
-using CachingOnDiskFileSystemPtr =
-    llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem>;
-
 class DependencyScanningWorkerFilesystem;
 class CompilerInstanceWithContext;
 
@@ -70,8 +65,6 @@ public:
   virtual void handleVisibleModule(std::string ModuleName) = 0;
 
   virtual void handleContextHash(std::string Hash) = 0;
-
-  virtual void handleCASFileSystemRootID(std::string ID) {}
 
   virtual void handleIncludeTreeID(std::string ID) {}
 };
@@ -211,14 +204,8 @@ public:
 
   ScanningOutputFormat getScanningFormat() const { return Service.getFormat(); }
 
-  CachingOnDiskFileSystemPtr getCASFS() { return CacheFS; }
   const CASOptions &getCASOpts() const { return CASOpts; }
   std::shared_ptr<cas::ObjectStore> getCAS() const { return CAS; }
-
-  /// If \p DependencyScanningService enabled sharing of \p FileManager this
-  /// will return the same instance, otherwise it will create a new one for
-  /// each invocation.
-  llvm::IntrusiveRefCntPtr<FileManager> getOrCreateFileManager() const;
 
   llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
 
@@ -235,10 +222,6 @@ private:
   /// (passed in the constructor).
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
-  /// The caching file system.
-  CachingOnDiskFileSystemPtr CacheFS;
-  /// The CAS Dependency Filesytem. This is not set at the sametime as DepFS;
-  llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   CASOptions CASOpts;
   std::shared_ptr<cas::ObjectStore> CAS;
 

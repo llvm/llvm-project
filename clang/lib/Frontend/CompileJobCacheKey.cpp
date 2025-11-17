@@ -40,9 +40,6 @@ static llvm::cas::CASID createCompileJobCacheKeyForArgs(
   case CachingInputKind::IncludeTree:
     Builder.push(InputRef, llvm::cas::TreeEntry::Regular, "include-tree");
     break;
-  case CachingInputKind::FileSystemRoot:
-    Builder.push(InputRef, llvm::cas::TreeEntry::Tree, "filesystem");
-    break;
   case CachingInputKind::CachedCompilation:
     // TODO: Pass a "ref" tree entry kind.
     Builder.push(InputRef, llvm::cas::TreeEntry::Tree, "cache-key");
@@ -152,9 +149,6 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
   if (!CI.getFrontendOpts().CASIncludeTreeID.empty()) {
     InputIDString = CI.getFrontendOpts().CASIncludeTreeID;
     InputKind = CachingInputKind::IncludeTree;
-  } else if (!CI.getFileSystemOpts().CASFileSystemRootID.empty()) {
-    InputIDString = CI.getFileSystemOpts().CASFileSystemRootID;
-    InputKind = CachingInputKind::FileSystemRoot;
   } else if (!CI.getFrontendOpts().CASInputFileCacheKey.empty()) {
     InputIDString = CI.getFrontendOpts().CASInputFileCacheKey;
     InputKind = CachingInputKind::CachedCompilation;

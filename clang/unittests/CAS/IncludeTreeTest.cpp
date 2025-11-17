@@ -2,7 +2,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -52,7 +51,7 @@ TEST(IncludeTree, IncludeTreeScan) {
 
   DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
                                     ScanningOutputFormat::IncludeTree,
-                                    CASOptions(), nullptr, nullptr, nullptr);
+                                    CASOptions(), nullptr, nullptr);
   DependencyScanningTool ScanTool(Service, std::move(VFS));
 
   std::vector<std::string> CommandLine = {"clang",

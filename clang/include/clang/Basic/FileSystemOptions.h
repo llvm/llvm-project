@@ -24,14 +24,6 @@ public:
   /// If set, paths are resolved as if the working directory was
   /// set to the value of WorkingDir.
   std::string WorkingDir;
-
-  /// If set, uses this root ID with \a CASFileSystem.
-  std::string CASFileSystemRootID;
-
-  /// If set, used as the working directory for -fcas-fs.
-  ///
-  /// FIXME: Merge with WorkingDir?
-  std::string CASFileSystemWorkingDirectory;
 };
 
 } // end namespace clang

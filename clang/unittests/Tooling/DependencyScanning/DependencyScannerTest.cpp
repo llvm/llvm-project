@@ -18,8 +18,8 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -237,7 +237,7 @@ TEST(DependencyScanner, ScanDepsWithFS) {
 
   DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
                                     ScanningOutputFormat::Make, CASOptions(),
-                                    nullptr, nullptr, nullptr);
+                                    nullptr, nullptr);
   DependencyScanningTool ScanTool(Service, VFS);
 
   std::string DepFile;
@@ -261,7 +261,7 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
 
   DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
                                     ScanningOutputFormat::Make, CASOptions(),
-                                    nullptr, nullptr, nullptr);
+                                    nullptr, nullptr);
   {
     DependencyScanningWorkerFilesystem DepFS(Service, std::move(CASFS));
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
@@ -349,7 +349,7 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
 
   DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
                                     ScanningOutputFormat::Make, CASOptions(),
-                                    nullptr, nullptr, nullptr);
+                                    nullptr, nullptr);
   DependencyScanningTool ScanTool(Service, InterceptFS);
 
   // This will fail with "fatal error: module 'Foo' not found" but it doesn't
@@ -382,7 +382,7 @@ TEST(DependencyScanner, ScanDepsWithDiagConsumer) {
 
   DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
                                     ScanningOutputFormat::Make, CASOptions(),
-                                    nullptr, nullptr, nullptr);
+                                    nullptr, nullptr);
   DependencyScanningWorker Worker(Service, VFS);
 
   llvm::DenseSet<ModuleID> AlreadySeen;
@@ -467,7 +467,7 @@ TEST(DependencyScanner, NoNegativeCache) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      CASOptions(), nullptr, nullptr, nullptr, ScanningOptimizations::All,
+      CASOptions(), nullptr, nullptr, ScanningOptimizations::All,
       /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/false);
@@ -526,7 +526,7 @@ TEST(DependencyScanner, NoNegativeCacheCAS) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::FullIncludeTree,
-      CASOptions(), DB, Cache, nullptr, ScanningOptimizations::Default,
+      CASOptions(), DB, Cache, ScanningOptimizations::Default,
       /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/false);

@@ -1,5 +1,4 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-cas --cas %t/cas --ingest %s > %t/casid
 
 // Check that this doesn't crash and provides proper round-tripping.
 
@@ -7,15 +6,19 @@
 // RUN:   -fconst-strings -Wincompatible-pointer-types-discards-qualifiers \
 // RUN:   -serialize-diagnostic-file %t/regular.dia %s 2> %t/regular-diags.txt
 
-// RUN: %clang -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas \
-// RUN:   -fcas-fs @%t/casid -fcache-compile-job -emit-obj -o %t/output.o \
+// RUN: %clang -cc1depscan -o %t.rsp -fdepscan=inline -cc1-args \
+// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas \
+// RUN:   -fcache-compile-job -emit-obj -o %t/output.o \
 // RUN:   -fconst-strings -Wincompatible-pointer-types-discards-qualifiers \
-// RUN:   -serialize-diagnostic-file %t/t1.dia %s 2> %t/diags1.txt
+// RUN:   -serialize-diagnostic-file %t/t1.dia %s
+// RUN: %clang @%t.rsp 2> %t/diags1.txt
 
-// RUN: %clang -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas \
-// RUN:   -fcas-fs @%t/casid -fcache-compile-job -emit-obj -o %t/output.o \
+// RUN: %clang -cc1depscan -o %t.rsp -fdepscan=inline -cc1-args \
+// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas \
+// RUN:   -fcache-compile-job -emit-obj -o %t/output.o \
 // RUN:   -fconst-strings -Wincompatible-pointer-types-discards-qualifiers \
-// RUN:   -serialize-diagnostic-file %t/t2.dia %s 2> %t/diags2.txt
+// RUN:   -serialize-diagnostic-file %t/t2.dia %s
+// RUN: %clang @%t.rsp 2> %t/diags2.txt
 
 // RUN: diff -u %t/regular-diags.txt %t/diags1.txt
 // RUN: diff -u %t/regular-diags.txt %t/diags2.txt

@@ -111,11 +111,6 @@ void tooling::dependencies::configureInvocationForCaching(
     CodeGenOpts.DebugCompilationDir.clear();
     break;
   }
-  case CachingInputKind::FileSystemRoot: {
-    FileSystemOpts.CASFileSystemRootID = std::move(InputID);
-    FileSystemOpts.CASFileSystemWorkingDirectory = std::move(WorkingDir);
-    break;
-  }
   case CachingInputKind::CachedCompilation: {
     FrontendOpts.Inputs.clear();
     FrontendOpts.CASInputFileCacheKey = std::move(InputID);
@@ -185,18 +180,7 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   // out of InputArgs) but if they have been overridden we want the new ones.
   Invocation.getCASOpts() = Tool.getCASOpts();
 
-  bool ProduceIncludeTree =
-      Tool.getScanningFormat() ==
-      tooling::dependencies::ScanningOutputFormat::IncludeTree;
-
-  std::unique_ptr<llvm::PrefixMapper> MapperPtr;
-  if (ProduceIncludeTree) {
-    MapperPtr = std::make_unique<llvm::PrefixMapper>();
-  } else {
-    MapperPtr = std::make_unique<llvm::TreePathPrefixMapper>(
-        Tool.getCachingFileSystem());
-  }
-  llvm::PrefixMapper &Mapper = *MapperPtr;
+  llvm::PrefixMapper Mapper;
   DepscanPrefixMapping::configurePrefixMapper(Invocation, Mapper);
 
   auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
@@ -204,31 +188,22 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   // failed, but warnings are ignored and deferred for the main compilation.
   ScanInvocation->getDiagnosticOpts().IgnoreWarnings = true;
 
+  LookupModuleOutputCallback Lookup;
+
   std::optional<llvm::cas::CASID> Root;
-  if (ProduceIncludeTree) {
-    if (Error E =
-            Tool.getIncludeTreeFromCompilerInvocation(
-                    DB, std::move(ScanInvocation), WorkingDirectory,
-                    /*LookupModuleOutput=*/nullptr, DiagsConsumer, VerboseOS,
-                    /*DiagGenerationAsCompilation*/ true)
-                .moveInto(Root))
-      return std::move(E);
-  } else {
-    if (Error E = Tool.getDependencyTreeFromCompilerInvocation(
-                          std::move(ScanInvocation), WorkingDirectory,
-                          DiagsConsumer, VerboseOS,
-                          /*DiagGenerationAsCompilation*/ true)
-                      .moveInto(Root))
-      return std::move(E);
-  }
+  if (Error E =
+          Tool.getIncludeTreeFromCompilerInvocation(
+                  DB, std::move(ScanInvocation), WorkingDirectory,
+                  /*LookupModuleOutput=*/nullptr, DiagsConsumer, VerboseOS,
+                  /*DiagGenerationAsCompilation*/ true)
+              .moveInto(Root))
+    return std::move(E);
 
   // Turn off dependency outputs. Should have already been emitted.
   Invocation.getDependencyOutputOpts().OutputFile.clear();
 
   configureInvocationForCaching(Invocation, Tool.getCASOpts(), Root->toString(),
-                                ProduceIncludeTree
-                                    ? CachingInputKind::IncludeTree
-                                    : CachingInputKind::FileSystemRoot,
+                                CachingInputKind::IncludeTree,
                                 WorkingDirectory.str());
   DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
   return *Root;

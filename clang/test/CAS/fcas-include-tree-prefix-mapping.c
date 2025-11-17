@@ -2,7 +2,7 @@
 // RUN: split-file %s %t/src
 // RUN: mkdir %t/out
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
+// RUN: %clang -cc1depscan -fdepscan=inline \
 // RUN:   -o %t/t1.rsp -cc1-args \
 // RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
@@ -42,7 +42,7 @@
 // RUN: split-file %s %t/src2
 // RUN: mkdir %t/out2
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
+// RUN: %clang -cc1depscan -fdepscan=inline \
 // RUN:   -o %t/t2.rsp -cc1-args \
 // RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
@@ -80,7 +80,7 @@
 
 // Check with PCH.
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
+// RUN: %clang -cc1depscan -fdepscan=inline \
 // RUN:   -o %t/pch1.rsp -cc1-args \
 // RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
@@ -93,7 +93,7 @@
 // RUN: %clang @%t/pch1.rsp
 
 // With different cas path to avoid cache hit.
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
+// RUN: %clang -cc1depscan -fdepscan=inline \
 // RUN:   -o %t/pch2.rsp -cc1-args \
 // RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas2 -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
@@ -107,7 +107,7 @@
 
 // RUN: diff %t/out/prefix.h.pch %t/out2/prefix.h.pch
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
+// RUN: %clang -cc1depscan -fdepscan=inline \
 // RUN:   -o %t/t3.rsp -cc1-args \
 // RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
@@ -124,7 +124,7 @@
 // RUN:   -e "s/^.*miss for '//" \
 // RUN:   -e "s/' .*$//" > %t/cache-key3
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
+// RUN: %clang -cc1depscan -fdepscan=inline \
 // RUN:   -o %t/t4.rsp -cc1-args \
 // RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \

@@ -7,7 +7,7 @@
 // CHECK-DIAG: Value stored to 'v' during its initialization is never read
 // CHECK-PLIST: Value stored to &apos;v&apos; during its initialization is never read
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t.rsp -cc1-args \
+// RUN: %clang -cc1depscan -fdepscan=inline -o %t/t.rsp -cc1-args \
 // RUN:   -cc1 -triple x86_64-apple-macosx12 -fcas-path %t/cas -analyze -analyzer-checker=deadcode -analyzer-output plist %s -o %t/cached.plist
 // RUN: %clang @%t/t.rsp
 
@@ -21,7 +21,7 @@
 // RUN: diff -u %t/regular.plist %t/cached.plist
 
 // Check cache is skipped for analyzer html output.
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t2.rsp -cc1-args \
+// RUN: %clang -cc1depscan -fdepscan=inline -o %t/t2.rsp -cc1-args \
 // RUN:   -cc1 -triple x86_64-apple-macosx12 -fcas-path %t/cas -analyze -analyzer-checker=deadcode -analyzer-output html %s -o %t/analysis
 // RUN: %clang @%t/t2.rsp -Rcompile-job-cache 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-HTML

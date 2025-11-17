@@ -9,7 +9,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Basic/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Process.h"
 
@@ -47,18 +46,13 @@ DependencyScanningService::DependencyScanningService(
     ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
     std::shared_ptr<llvm::cas::ObjectStore> CAS,
     std::shared_ptr<llvm::cas::ActionCache> Cache,
-    IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
     ScanningOptimizations OptimizeArgs, bool EagerLoadModules, bool TraceVFS,
     std::time_t BuildSessionTimestamp, bool CacheNegativeStats)
     : Mode(Mode), Format(Format), CASOpts(std::move(CASOpts)),
       CAS(std::move(CAS)), Cache(std::move(Cache)), OptimizeArgs(OptimizeArgs),
       EagerLoadModules(EagerLoadModules), TraceVFS(TraceVFS),
       CacheNegativeStats(CacheNegativeStats),
-      SharedFS(std::move(SharedFS)),
       BuildSessionTimestamp(BuildSessionTimestamp) {
-  if (!this->SharedFS)
-    SharedCache.emplace();
-
   // The FullIncludeTree output format completely subsumes header search and
   // VFS optimizations due to how it works. Disable these optimizations so
   // we're not doing unneeded work.

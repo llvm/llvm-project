@@ -107,31 +107,6 @@ class EmptyDependencyConsumer : public DependencyConsumer {
   void handleContextHash(std::string Hash) override {}
 };
 
-/// Returns a CAS tree containing the dependencies.
-class GetDependencyTree : public EmptyDependencyConsumer {
-public:
-  void handleCASFileSystemRootID(std::string ID) override {
-    CASFileSystemRootID = ID;
-  }
-
-  Expected<llvm::cas::ObjectProxy> getTree() {
-    if (CASFileSystemRootID) {
-      auto ID = FS.getCAS().parseID(*CASFileSystemRootID);
-      if (!ID)
-        return ID.takeError();
-      return FS.getCAS().getProxy(*ID);
-    }
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "failed to get casfs");
-  }
-
-  GetDependencyTree(llvm::cas::CachingOnDiskFileSystem &FS) : FS(FS) {}
-
-private:
-  llvm::cas::CachingOnDiskFileSystem &FS;
-  std::optional<std::string> CASFileSystemRootID;
-};
-
 /// Returns an IncludeTree containing the dependencies.
 class GetIncludeTree : public EmptyDependencyConsumer {
 public:
@@ -159,31 +134,6 @@ private:
   cas::ObjectStore &DB;
   std::optional<std::string> IncludeTreeID;
 };
-}
-
-llvm::Expected<llvm::cas::ObjectProxy>
-DependencyScanningTool::getDependencyTree(
-    const std::vector<std::string> &CommandLine, StringRef CWD) {
-  GetDependencyTree Consumer(*Worker.getCASFS());
-  auto Controller = createCASFSActionController(nullptr, *Worker.getCASFS());
-  auto Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, *Controller);
-  if (Result)
-    return std::move(Result);
-  return Consumer.getTree();
-}
-
-llvm::Expected<llvm::cas::ObjectProxy>
-DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
-    std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
-    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-    bool DiagGenerationAsCompilation) {
-  GetDependencyTree Consumer(*Worker.getCASFS());
-  auto Controller = createCASFSActionController(nullptr, *Worker.getCASFS());
-  Worker.computeDependenciesFromCompilerInvocation(
-      std::move(Invocation), CWD, Consumer, *Controller, DiagsConsumer,
-      VerboseOS, DiagGenerationAsCompilation);
-  return Consumer.getTree();
 }
 
 Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
@@ -338,7 +288,6 @@ TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
   TU.VisibleModules = std::move(VisibleModules);
   TU.Commands = std::move(Commands);
-  TU.CASFileSystemRootID = std::move(CASFileSystemRootID);
   TU.IncludeTreeID = std::move(IncludeTreeID);
 
   for (auto &&M : ClangModuleDeps) {
@@ -363,8 +312,6 @@ DependencyScanningTool::createActionController(
   if (Worker.getScanningFormat() == ScanningOutputFormat::FullIncludeTree)
     return createIncludeTreeActionController(LookupModuleOutput,
                                              *Worker.getCAS());
-  if (auto CacheFS = Worker.getCASFS())
-    return createCASFSActionController(LookupModuleOutput, *CacheFS);
   return std::make_unique<CallbackActionController>(LookupModuleOutput);
 }
 
