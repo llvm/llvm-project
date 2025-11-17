@@ -28,8 +28,9 @@
 #include <optional>
 #include <string>
 
-#define LLDB_DAP_INVALID_VARRERF UINT64_MAX
+#define LLDB_DAP_INVALID_VARRERF INT64_MAX
 #define LLDB_DAP_INVALID_SRC_REF 0
+#define LLDB_DAP_INVALID_VALUE_LOC 0
 
 namespace lldb_dap::protocol {
 

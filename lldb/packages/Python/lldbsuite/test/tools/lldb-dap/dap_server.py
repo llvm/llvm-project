@@ -978,9 +978,10 @@ class DebugCommunication(object):
             return []
         args_dict = {
             "expression": expression,
-            "context": context,
             "frameId": stackFrame["id"],
         }
+        if context:
+            args_dict["context"] = context
         command_dict = {
             "command": "evaluate",
             "type": "request",
