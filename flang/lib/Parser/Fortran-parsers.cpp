@@ -1297,6 +1297,8 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name[=value] [, name[=value]]...
 // !DIR$ UNROLL [n]
+// !DIR$ PREFETCH designator[, designator]...
+// !DIR$ IVDEP
 // !DIR$ <anything else>
 constexpr auto ignore_tkr{
     "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
@@ -1311,6 +1313,8 @@ constexpr auto vectorAlways{
     "VECTOR ALWAYS" >> construct<CompilerDirective::VectorAlways>()};
 constexpr auto unroll{
     "UNROLL" >> construct<CompilerDirective::Unroll>(maybe(digitString64))};
+constexpr auto prefetch{"PREFETCH" >>
+    construct<CompilerDirective::Prefetch>(nonemptyList(indirect(designator)))};
 constexpr auto unrollAndJam{"UNROLL_AND_JAM" >>
     construct<CompilerDirective::UnrollAndJam>(maybe(digitString64))};
 constexpr auto novector{"NOVECTOR" >> construct<CompilerDirective::NoVector>()};
@@ -1322,6 +1326,7 @@ constexpr auto forceinlineDir{
 constexpr auto noinlineDir{
     "NOINLINE" >> construct<CompilerDirective::NoInline>()};
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
+constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
 TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1329,12 +1334,14 @@ TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
                 construct<CompilerDirective>(vectorAlways) ||
                 construct<CompilerDirective>(unrollAndJam) ||
                 construct<CompilerDirective>(unroll) ||
+                construct<CompilerDirective>(prefetch) ||
                 construct<CompilerDirective>(novector) ||
                 construct<CompilerDirective>(nounrollAndJam) ||
                 construct<CompilerDirective>(nounroll) ||
                 construct<CompilerDirective>(noinlineDir) ||
                 construct<CompilerDirective>(forceinlineDir) ||
                 construct<CompilerDirective>(inlineDir) ||
+                construct<CompilerDirective>(ivdep) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /

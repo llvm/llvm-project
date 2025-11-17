@@ -2003,6 +2003,49 @@ static void determineDefaultLoopParMode(
   }
 }
 
+// Helper to visit Bounds of DO LOOP nest.
+static void visitLoopControl(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::DoConstruct &outerDoConstruct,
+    uint64_t loopsToProcess, Fortran::lower::pft::Evaluation &eval,
+    std::function<void(const Fortran::parser::LoopControl::Bounds &,
+                       mlir::Location)>
+        callback) {
+  Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
+  for (uint64_t i = 0; i < loopsToProcess; ++i) {
+    const Fortran::parser::LoopControl *loopControl;
+    if (i == 0) {
+      loopControl = &*outerDoConstruct.GetLoopControl();
+      mlir::Location loc = converter.genLocation(
+          Fortran::parser::FindSourceLocation(outerDoConstruct));
+      callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
+               loc);
+    } else {
+      // Safely locate the next inner DoConstruct within this eval.
+      const Fortran::parser::DoConstruct *innerDo = nullptr;
+      if (crtEval && crtEval->hasNestedEvaluations()) {
+        for (Fortran::lower::pft::Evaluation &child :
+             crtEval->getNestedEvaluations()) {
+          if (auto *stmt = child.getIf<Fortran::parser::DoConstruct>()) {
+            innerDo = stmt;
+            // Prepare to descend for the next iteration
+            crtEval = &child;
+            break;
+          }
+        }
+      }
+      if (!innerDo)
+        break; // No deeper loop; stop collecting collapsed bounds.
+
+      loopControl = &*innerDo->GetLoopControl();
+      mlir::Location loc =
+          converter.genLocation(Fortran::parser::FindSourceLocation(*innerDo));
+      callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
+               loc);
+    }
+  }
+}
+
 // Extract loop bounds, steps, induction variables, and privatization info
 // for both DO CONCURRENT and regular do loops
 static void processDoLoopBounds(
@@ -2024,7 +2067,6 @@ static void processDoLoopBounds(
     llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess) {
   assert(loopsToProcess > 0 && "expect at least one loop");
   locs.push_back(currentLocation); // Location of the directive
-  Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
   bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
 
   if (isDoConcurrent) {
@@ -2065,57 +2107,29 @@ static void processDoLoopBounds(
       inclusiveBounds.push_back(true);
     }
   } else {
-    for (uint64_t i = 0; i < loopsToProcess; ++i) {
-      const Fortran::parser::LoopControl *loopControl;
-      if (i == 0) {
-        loopControl = &*outerDoConstruct.GetLoopControl();
-        locs.push_back(converter.genLocation(
-            Fortran::parser::FindSourceLocation(outerDoConstruct)));
-      } else {
-        // Safely locate the next inner DoConstruct within this eval.
-        const Fortran::parser::DoConstruct *innerDo = nullptr;
-        if (crtEval && crtEval->hasNestedEvaluations()) {
-          for (Fortran::lower::pft::Evaluation &child :
-               crtEval->getNestedEvaluations()) {
-            if (auto *stmt = child.getIf<Fortran::parser::DoConstruct>()) {
-              innerDo = stmt;
-              // Prepare to descend for the next iteration
-              crtEval = &child;
-              break;
-            }
-          }
-        }
-        if (!innerDo)
-          break; // No deeper loop; stop collecting collapsed bounds.
+    visitLoopControl(
+        converter, outerDoConstruct, loopsToProcess, eval,
+        [&](const Fortran::parser::LoopControl::Bounds &bounds,
+            mlir::Location loc) {
+          locs.push_back(loc);
+          lowerbounds.push_back(fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(bounds.lower), stmtCtx)));
+          upperbounds.push_back(fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(bounds.upper), stmtCtx)));
+          if (bounds.step)
+            steps.push_back(fir::getBase(converter.genExprValue(
+                *Fortran::semantics::GetExpr(bounds.step), stmtCtx)));
+          else // If `step` is not present, assume it is `1`.
+            steps.push_back(builder.createIntegerConstant(
+                currentLocation, upperbounds[upperbounds.size() - 1].getType(),
+                1));
+          Fortran::semantics::Symbol &ivSym =
+              bounds.name.thing.symbol->GetUltimate();
+          privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
+                      privateOperands, ivPrivate, privatizationRecipes);
 
-        loopControl = &*innerDo->GetLoopControl();
-        locs.push_back(converter.genLocation(
-            Fortran::parser::FindSourceLocation(*innerDo)));
-      }
-
-      const Fortran::parser::LoopControl::Bounds *bounds =
-          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
-      assert(bounds && "Expected bounds on the loop construct");
-      lowerbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(bounds->lower), stmtCtx)));
-      upperbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(bounds->upper), stmtCtx)));
-      if (bounds->step)
-        steps.push_back(fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
-      else // If `step` is not present, assume it is `1`.
-        steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
-
-      Fortran::semantics::Symbol &ivSym =
-          bounds->name.thing.symbol->GetUltimate();
-      privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate, privatizationRecipes);
-
-      inclusiveBounds.push_back(true);
-
-      // crtEval already updated when descending; no blind increment here.
-    }
+          inclusiveBounds.push_back(true);
+        });
   }
 }
 
@@ -2251,6 +2265,34 @@ static void remapDataOperandSymbols(
   }
 }
 
+static void privatizeInductionVariables(
+    Fortran::lower::AbstractConverter &converter,
+    mlir::Location currentLocation,
+    const Fortran::parser::DoConstruct &outerDoConstruct,
+    Fortran::lower::pft::Evaluation &eval,
+    llvm::SmallVector<mlir::Value> &privateOperands,
+    llvm::SmallVector<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
+        &ivPrivate,
+    llvm::SmallVector<mlir::Attribute> &privatizationRecipes,
+    llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess) {
+  // ivTypes and locs will be ignored since no acc.loop control arguments will
+  // be created.
+  llvm::SmallVector<mlir::Type> ivTypes;
+  llvm::SmallVector<mlir::Location> ivLocs;
+  assert(!outerDoConstruct.IsDoConcurrent() &&
+         "do concurrent loops are not expected to contained earlty exits");
+  visitLoopControl(converter, outerDoConstruct, loopsToProcess, eval,
+                   [&](const Fortran::parser::LoopControl::Bounds &bounds,
+                       mlir::Location loc) {
+                     locs.push_back(loc);
+                     Fortran::semantics::Symbol &ivSym =
+                         bounds.name.thing.symbol->GetUltimate();
+                     privatizeIv(converter, ivSym, currentLocation, ivTypes,
+                                 ivLocs, privateOperands, ivPrivate,
+                                 privatizationRecipes);
+                   });
+}
+
 static mlir::acc::LoopOp buildACCLoopOp(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2280,13 +2322,22 @@ static mlir::acc::LoopOp buildACCLoopOp(
   llvm::SmallVector<mlir::Location> locs;
   llvm::SmallVector<mlir::Value> lowerbounds, upperbounds, steps;
 
-  // Look at the do/do concurrent loops to extract bounds information.
-  processDoLoopBounds(converter, currentLocation, stmtCtx, builder,
-                      outerDoConstruct, eval, lowerbounds, upperbounds, steps,
-                      privateOperands, ivPrivate, privatizationRecipes, ivTypes,
-                      ivLocs, inclusiveBounds, locs, loopsToProcess);
-
-  // Prepare the operand segment size attribute and the operands value range.
+  // Look at the do/do concurrent loops to extract bounds information unless
+  // this loop is lowered in an unstructured fashion, in which case bounds are
+  // not represented on acc.loop and explicit control flow is used inside body.
+  if (!eval.lowerAsUnstructured()) {
+    processDoLoopBounds(converter, currentLocation, stmtCtx, builder,
+                        outerDoConstruct, eval, lowerbounds, upperbounds, steps,
+                        privateOperands, ivPrivate, privatizationRecipes,
+                        ivTypes, ivLocs, inclusiveBounds, locs, loopsToProcess);
+  } else {
+    // When the loop contains early exits, privatize induction variables, but do
+    // not create acc.loop bounds. The control flow of the loop will be
+    // generated explicitly in the acc.loop body that is just a container.
+    privatizeInductionVariables(converter, currentLocation, outerDoConstruct,
+                                eval, privateOperands, ivPrivate,
+                                privatizationRecipes, locs, loopsToProcess);
+  }
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
   addOperands(operands, operandSegments, lowerbounds);
@@ -2315,18 +2366,34 @@ static mlir::acc::LoopOp buildACCLoopOp(
   // Remap symbols from data clauses to use data operation results
   remapDataOperandSymbols(converter, builder, loopOp, dataOperandSymbolPairs);
 
-  for (auto [arg, iv] :
-       llvm::zip(loopOp.getLoopRegions().front()->front().getArguments(),
-                 ivPrivate)) {
-    // Store block argument to the related iv private variable.
-    mlir::Value privateValue =
-        converter.getSymbolAddress(std::get<Fortran::semantics::SymbolRef>(iv));
-    fir::StoreOp::create(builder, currentLocation, arg, privateValue);
+  if (!eval.lowerAsUnstructured()) {
+    for (auto [arg, iv] :
+         llvm::zip(loopOp.getLoopRegions().front()->front().getArguments(),
+                   ivPrivate)) {
+      // Store block argument to the related iv private variable.
+      mlir::Value privateValue = converter.getSymbolAddress(
+          std::get<Fortran::semantics::SymbolRef>(iv));
+      fir::StoreOp::create(builder, currentLocation, arg, privateValue);
+    }
+    loopOp.setInclusiveUpperbound(inclusiveBounds);
+  } else {
+    loopOp.setUnstructuredAttr(builder.getUnitAttr());
   }
 
-  loopOp.setInclusiveUpperbound(inclusiveBounds);
-
   return loopOp;
+}
+
+static bool hasEarlyReturn(Fortran::lower::pft::Evaluation &eval) {
+  bool hasReturnStmt = false;
+  for (auto &e : eval.getNestedEvaluations()) {
+    e.visit(Fortran::common::visitors{
+        [&](const Fortran::parser::ReturnStmt &) { hasReturnStmt = true; },
+        [&](const auto &s) {},
+    });
+    if (e.hasNestedEvaluations())
+      hasReturnStmt = hasEarlyReturn(e);
+  }
+  return hasReturnStmt;
 }
 
 static mlir::acc::LoopOp createLoopOp(
@@ -2338,8 +2405,7 @@ static mlir::acc::LoopOp createLoopOp(
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::AccClauseList &accClauseList,
     std::optional<mlir::acc::CombinedConstructsType> combinedConstructs =
-        std::nullopt,
-    bool needEarlyReturnHandling = false) {
+        std::nullopt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   llvm::SmallVector<mlir::Value> tileOperands, privateOperands,
       reductionOperands, cacheOperands, vectorOperands, workerNumOperands,
@@ -2515,7 +2581,10 @@ static mlir::acc::LoopOp createLoopOp(
 
   llvm::SmallVector<mlir::Type> retTy;
   mlir::Value yieldValue;
-  if (needEarlyReturnHandling) {
+  if (eval.lowerAsUnstructured() && hasEarlyReturn(eval)) {
+    // When there is a return statement inside the loop, add a result to the
+    // acc.loop that will be used in a conditional branch after the loop to
+    // return.
     mlir::Type i1Ty = builder.getI1Type();
     yieldValue = builder.createIntegerConstant(currentLocation, i1Ty, 0);
     retTy.push_back(i1Ty);
@@ -2596,19 +2665,6 @@ static mlir::acc::LoopOp createLoopOp(
   return loopOp;
 }
 
-static bool hasEarlyReturn(Fortran::lower::pft::Evaluation &eval) {
-  bool hasReturnStmt = false;
-  for (auto &e : eval.getNestedEvaluations()) {
-    e.visit(Fortran::common::visitors{
-        [&](const Fortran::parser::ReturnStmt &) { hasReturnStmt = true; },
-        [&](const auto &s) {},
-    });
-    if (e.hasNestedEvaluations())
-      hasReturnStmt = hasEarlyReturn(e);
-  }
-  return hasReturnStmt;
-}
-
 static mlir::Value
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
@@ -2622,17 +2678,6 @@ genACC(Fortran::lower::AbstractConverter &converter,
 
   mlir::Location currentLocation =
       converter.genLocation(beginLoopDirective.source);
-  bool needEarlyExitHandling = false;
-  if (eval.lowerAsUnstructured()) {
-    needEarlyExitHandling = hasEarlyReturn(eval);
-    // If the loop is lowered in an unstructured fashion, lowering generates
-    // explicit control flow that duplicates the looping semantics of the
-    // loops.
-    if (!needEarlyExitHandling)
-      TODO(currentLocation,
-           "loop with early exit inside OpenACC loop construct");
-  }
-
   Fortran::lower::StatementContext stmtCtx;
 
   assert(loopDirective.v == llvm::acc::ACCD_loop &&
@@ -2645,8 +2690,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
       std::get<std::optional<Fortran::parser::DoConstruct>>(loopConstruct.t);
   auto loopOp = createLoopOp(converter, currentLocation, semanticsContext,
                              stmtCtx, *outerDoConstruct, eval, accClauseList,
-                             /*combinedConstructs=*/{}, needEarlyExitHandling);
-  if (needEarlyExitHandling)
+                             /*combinedConstructs=*/{});
+  if (loopOp.getNumResults() == 1)
     return loopOp.getResult(0);
 
   return mlir::Value{};
@@ -3430,10 +3475,6 @@ genACC(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation =
       converter.genLocation(beginCombinedDirective.source);
   Fortran::lower::StatementContext stmtCtx;
-
-  if (eval.lowerAsUnstructured())
-    TODO(currentLocation,
-         "loop with early exit inside OpenACC combined construct");
 
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
     createComputeOp<mlir::acc::KernelsOp>(

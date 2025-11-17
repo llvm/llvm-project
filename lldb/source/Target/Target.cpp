@@ -1855,6 +1855,9 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
 }
 
 void Target::ModulesDidLoad(ModuleList &module_list) {
+  if (GetPreloadSymbols())
+    module_list.PreloadSymbols(GetParallelModuleLoad());
+
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
     for (size_t idx = 0; idx < num_images; ++idx) {
@@ -2509,10 +2512,6 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         if (symbol_file_spec)
           module_sp->SetSymbolFileFileSpec(symbol_file_spec);
 
-        // Preload symbols outside of any lock, so hopefully we can do this for
-        // each library in parallel.
-        if (GetPreloadSymbols())
-          module_sp->PreloadSymbols();
         llvm::SmallVector<ModuleSP, 1> replaced_modules;
         for (ModuleSP &old_module_sp : old_modules) {
           if (m_images.GetIndexForModule(old_module_sp.get()) !=
@@ -3207,6 +3206,11 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   bool should_stop = false;
   bool requested_continue = false;
 
+  // A stop hook might get deleted while running stop hooks.
+  // We have to decide what that means.  We will follow the rule that deleting
+  // a stop hook while processing these stop hooks will delete it for FUTURE
+  // stops but not this stop.  Fortunately, copying the m_stop_hooks to the
+  // active_hooks list before iterating over the hooks has this effect.
   for (auto cur_hook_sp : active_hooks) {
     bool any_thread_matched = false;
     for (auto exc_ctx : exc_ctx_with_reasons) {

@@ -746,9 +746,9 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX9-NEXT:    s_mov_b64 exec, 0
 ; GFX9-NEXT:  .LBB6_6: ; %.continue1
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; GFX9-NEXT:    v_bfrev_b32_e32 v1, 60
-; GFX9-NEXT:    exp mrt0 v0, v0, v1, v1 done compr vm
+; GFX9-NEXT:    v_bfrev_b32_e32 v0, 60
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX9-NEXT:    exp mrt0 v1, v1, v0, v0 done compr vm
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:  .LBB6_7:
 ; GFX9-NEXT:    s_mov_b64 exec, 0
@@ -792,9 +792,9 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, 0
 ; GFX10-32-NEXT:  .LBB6_6: ; %.continue1
 ; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; GFX10-32-NEXT:    v_bfrev_b32_e32 v1, 60
-; GFX10-32-NEXT:    exp mrt0 v0, v0, v1, v1 done compr vm
+; GFX10-32-NEXT:    v_bfrev_b32_e32 v0, 60
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX10-32-NEXT:    exp mrt0 v1, v1, v0, v0 done compr vm
 ; GFX10-32-NEXT:    s_endpgm
 ; GFX10-32-NEXT:  .LBB6_7:
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, 0
@@ -838,9 +838,9 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX10-64-NEXT:    s_mov_b64 exec, 0
 ; GFX10-64-NEXT:  .LBB6_6: ; %.continue1
 ; GFX10-64-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; GFX10-64-NEXT:    v_bfrev_b32_e32 v1, 60
-; GFX10-64-NEXT:    exp mrt0 v0, v0, v1, v1 done compr vm
+; GFX10-64-NEXT:    v_bfrev_b32_e32 v0, 60
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX10-64-NEXT:    exp mrt0 v1, v1, v0, v0 done compr vm
 ; GFX10-64-NEXT:    s_endpgm
 ; GFX10-64-NEXT:  .LBB6_7:
 ; GFX10-64-NEXT:    s_mov_b64 exec, 0
@@ -1005,9 +1005,9 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX9-NEXT:  .LBB7_8: ; %.return
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; GFX9-NEXT:    v_bfrev_b32_e32 v1, 60
-; GFX9-NEXT:    exp mrt0 v0, v0, v1, v1 done compr vm
+; GFX9-NEXT:    v_bfrev_b32_e32 v0, 60
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX9-NEXT:    exp mrt0 v1, v1, v0, v0 done compr vm
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:  .LBB7_9:
 ; GFX9-NEXT:    s_mov_b64 exec, 0
@@ -1068,9 +1068,9 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-32-NEXT:  .LBB7_8: ; %.return
 ; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
-; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; GFX10-32-NEXT:    v_bfrev_b32_e32 v1, 60
-; GFX10-32-NEXT:    exp mrt0 v0, v0, v1, v1 done compr vm
+; GFX10-32-NEXT:    v_bfrev_b32_e32 v0, 60
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX10-32-NEXT:    exp mrt0 v1, v1, v0, v0 done compr vm
 ; GFX10-32-NEXT:    s_endpgm
 ; GFX10-32-NEXT:  .LBB7_9:
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, 0
@@ -1131,9 +1131,9 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-64-NEXT:  .LBB7_8: ; %.return
 ; GFX10-64-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[0:1]
-; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; GFX10-64-NEXT:    v_bfrev_b32_e32 v1, 60
-; GFX10-64-NEXT:    exp mrt0 v0, v0, v1, v1 done compr vm
+; GFX10-64-NEXT:    v_bfrev_b32_e32 v0, 60
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX10-64-NEXT:    exp mrt0 v1, v1, v0, v0 done compr vm
 ; GFX10-64-NEXT:    s_endpgm
 ; GFX10-64-NEXT:  .LBB7_9:
 ; GFX10-64-NEXT:    s_mov_b64 exec, 0

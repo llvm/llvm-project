@@ -12137,6 +12137,9 @@ def err_omp_unexpected_schedule_modifier : Error<
   "modifier '%0' cannot be used along with modifier '%1'">;
 def err_omp_schedule_nonmonotonic_static : Error<
   "'nonmonotonic' modifier can only be specified with 'dynamic' or 'guided' schedule kind">;
+def err_omp_incompatible_dyn_groupprivate_modifier
+    : Error<"modifier '%0' cannot be used along with modifier '%1' in "
+            "dyn_groupprivate">;
 def err_omp_simple_clause_incompatible_with_ordered : Error<
   "'%0' clause with '%1' modifier cannot be specified if an 'ordered' clause is specified">;
 def err_omp_ordered_simd : Error<
@@ -12963,6 +12966,9 @@ def err_builtin_invalid_arg_type: Error<
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
+
+def err_bswapg_invalid_bit_width : Error<
+  "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;
 
 def err_builtin_trivially_relocate_invalid_arg_type: Error <
   "first%select{||| and second}0 argument%select{|||s}0 to "

@@ -10,6 +10,7 @@
 #include "DirectX.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -20,6 +21,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 #define DEBUG_TYPE "dxil-resource-access"
@@ -44,16 +46,28 @@ static Value *calculateGEPOffset(GetElementPtrInst *GEP, Value *PrevOffset,
   APInt ConstantOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
   if (GEP->accumulateConstantOffset(DL, ConstantOffset)) {
     APInt Scaled = ConstantOffset.udiv(ScalarSize);
-    return ConstantInt::get(Type::getInt32Ty(GEP->getContext()), Scaled);
+    return ConstantInt::get(DL.getIndexType(GEP->getType()), Scaled);
   }
 
-  auto IndexIt = GEP->idx_begin();
-  assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
-         "GEP is not indexing through pointer");
-  ++IndexIt;
-  Value *Offset = *IndexIt;
-  assert(++IndexIt == GEP->idx_end() && "Too many indices in GEP");
-  return Offset;
+  unsigned NumIndices = GEP->getNumIndices();
+
+  // If we have a single index we're indexing into a top level array. This
+  // generally only happens with cbuffers.
+  if (NumIndices == 1)
+    return *GEP->idx_begin();
+
+  // If we have two indices, this should be a simple access through a pointer.
+  if (NumIndices == 2) {
+    auto IndexIt = GEP->idx_begin();
+    assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
+           "GEP is not indexing through pointer");
+    ++IndexIt;
+    Value *Offset = *IndexIt;
+    assert(++IndexIt == GEP->idx_end() && "Too many indices in GEP");
+    return Offset;
+  }
+
+  llvm_unreachable("Unhandled GEP structure for resource access");
 }
 
 static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
@@ -171,6 +185,127 @@ static void createRawLoad(IntrinsicInst *II, LoadInst *LI, Value *Offset) {
   LI->replaceAllUsesWith(V);
 }
 
+namespace {
+/// Helper for building a `load.cbufferrow` intrinsic given a simple type.
+struct CBufferRowIntrin {
+  Intrinsic::ID IID;
+  Type *RetTy;
+  unsigned int EltSize;
+  unsigned int NumElts;
+
+  CBufferRowIntrin(const DataLayout &DL, Type *Ty) {
+    assert(Ty == Ty->getScalarType() && "Expected scalar type");
+
+    switch (DL.getTypeSizeInBits(Ty)) {
+    case 16:
+      IID = Intrinsic::dx_resource_load_cbufferrow_8;
+      RetTy = StructType::get(Ty, Ty, Ty, Ty, Ty, Ty, Ty, Ty);
+      EltSize = 2;
+      NumElts = 8;
+      break;
+    case 32:
+      IID = Intrinsic::dx_resource_load_cbufferrow_4;
+      RetTy = StructType::get(Ty, Ty, Ty, Ty);
+      EltSize = 4;
+      NumElts = 4;
+      break;
+    case 64:
+      IID = Intrinsic::dx_resource_load_cbufferrow_2;
+      RetTy = StructType::get(Ty, Ty);
+      EltSize = 8;
+      NumElts = 2;
+      break;
+    default:
+      llvm_unreachable("Only 16, 32, and 64 bit types supported");
+    }
+  }
+};
+} // namespace
+
+static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI, Value *Offset,
+                              dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = LI->getDataLayout();
+
+  Type *Ty = LI->getType();
+  assert(!isa<StructType>(Ty) && "Structs not handled yet");
+  CBufferRowIntrin Intrin(DL, Ty->getScalarType());
+
+  StringRef Name = LI->getName();
+  Value *Handle = II->getOperand(0);
+
+  IRBuilder<> Builder(LI);
+
+  ConstantInt *GlobalOffset = dyn_cast<ConstantInt>(II->getOperand(1));
+  assert(GlobalOffset && "CBuffer getpointer index must be constant");
+
+  unsigned int FixedOffset = GlobalOffset->getZExtValue();
+  // If we have a further constant offset we can just fold it in to the fixed
+  // offset.
+  if (auto *ConstOffset = dyn_cast_if_present<ConstantInt>(Offset)) {
+    FixedOffset += ConstOffset->getZExtValue();
+    Offset = nullptr;
+  }
+
+  Value *CurrentRow = ConstantInt::get(
+      Builder.getInt32Ty(), FixedOffset / hlsl::CBufferRowSizeInBytes);
+  unsigned int CurrentIndex =
+      (FixedOffset % hlsl::CBufferRowSizeInBytes) / Intrin.EltSize;
+
+  assert(!(CurrentIndex && Offset) &&
+         "Dynamic indexing into elements of cbuffer rows is not supported");
+  // At this point if we have a non-constant offset it has to be an array
+  // offset, so we can assume that it's a multiple of the row size.
+  if (Offset)
+    CurrentRow = FixedOffset ? Builder.CreateAdd(CurrentRow, Offset) : Offset;
+
+  auto *CBufLoad = Builder.CreateIntrinsic(
+      Intrin.RetTy, Intrin.IID, {Handle, CurrentRow}, nullptr, Name + ".load");
+  auto *Elt =
+      Builder.CreateExtractValue(CBufLoad, {CurrentIndex++}, Name + ".extract");
+
+  // At this point we've loaded the first scalar of our result, but our original
+  // type may have been a vector.
+  unsigned int Remaining =
+      ((DL.getTypeSizeInBits(Ty) / 8) / Intrin.EltSize) - 1;
+  if (Remaining == 0) {
+    // We only have a single element, so we're done.
+    Value *Result = Elt;
+
+    // However, if we loaded a <1 x T>, then we need to adjust the type.
+    if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+      assert(VT->getNumElements() == 1 && "Can't have multiple elements here");
+      Result = Builder.CreateInsertElement(PoisonValue::get(VT), Result,
+                                           Builder.getInt32(0), Name);
+    }
+    LI->replaceAllUsesWith(Result);
+    return;
+  }
+
+  // Walk each element and extract it, wrapping to new rows as needed.
+  SmallVector<Value *> Extracts{Elt};
+  while (Remaining--) {
+    CurrentIndex %= Intrin.NumElts;
+
+    if (CurrentIndex == 0) {
+      CurrentRow = Builder.CreateAdd(CurrentRow,
+                                     ConstantInt::get(Builder.getInt32Ty(), 1));
+      CBufLoad = Builder.CreateIntrinsic(Intrin.RetTy, Intrin.IID,
+                                         {Handle, CurrentRow}, nullptr,
+                                         Name + ".load");
+    }
+
+    Extracts.push_back(Builder.CreateExtractValue(CBufLoad, {CurrentIndex++},
+                                                  Name + ".extract"));
+  }
+
+  // Finally, we build up the original loaded value.
+  Value *Result = PoisonValue::get(Ty);
+  for (int I = 0, E = Extracts.size(); I < E; ++I)
+    Result = Builder.CreateInsertElement(
+        Result, Extracts[I], Builder.getInt32(I), Name + formatv(".upto{}", I));
+  LI->replaceAllUsesWith(Result);
+}
+
 static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
                                 dxil::ResourceTypeInfo &RTI) {
   switch (RTI.getResourceKind()) {
@@ -179,6 +314,8 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
     return createRawLoad(II, LI, Offset);
+  case dxil::ResourceKind::CBuffer:
+    return createCBufferLoad(II, LI, Offset, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
@@ -190,9 +327,8 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-  case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::TBuffer:
-    // TODO: handle these
+    reportFatalUsageError("Load not yet implemented for resource type");
     return;
   case dxil::ResourceKind::Sampler:
   case dxil::ResourceKind::RTAccelerationStructure:

@@ -140,6 +140,13 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
       insertComment(Description, TextCommentsArray, "BriefComments");
     else if (I.Name == "return")
       insertComment(Description, TextCommentsArray, "ReturnComments");
+    else if (I.Name == "throws" || I.Name == "throw") {
+      json::Value ThrowsVal = Object();
+      auto &ThrowsObj = *ThrowsVal.getAsObject();
+      ThrowsObj["Exception"] = I.Args.front();
+      ThrowsObj["Children"] = TextCommentsArray;
+      insertComment(Description, ThrowsVal, "ThrowsComments");
+    }
     return Obj;
   }
 
@@ -581,22 +588,14 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   if (I->IT == InfoType::IT_record) {
     auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
     FileName = RecordSymbolInfo->MangledName;
-  } else if (I->USR == GlobalNamespaceID)
+  } else if (I->IT == InfoType::IT_namespace) {
     FileName = "index";
-  else if (I->IT == InfoType::IT_namespace) {
-    for (const auto &NS : I->Namespace) {
-      FileName += NS.Name;
-      FileName += "_";
-    }
-    FileName += I->Name;
   } else
     FileName = I->Name;
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
 
-// FIXME: Revert back to creating nested directories for namespaces instead of
-// putting everything in a flat directory structure.
 Error JSONGenerator::generateDocs(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx) {
@@ -609,6 +608,7 @@ Error JSONGenerator::generateDocs(
     auto RootDirStr = RootDir.str() + "/json";
     StringRef JSONDir = StringRef(RootDirStr);
     sys::path::native(JSONDir, Path);
+    sys::path::append(Path, Info->getRelativeFilePath(""));
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())
