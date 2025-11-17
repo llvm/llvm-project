@@ -1774,14 +1774,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
       if (Subtarget->hasSVEB16B16() &&
           Subtarget->isNonStreamingSVEorSME2Available()) {
-        setOperationAction(ISD::FADD, VT, Legal);
+        setOperationAction(ISD::FADD, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMAXIMUM, VT, Custom);
         setOperationAction(ISD::FMAXNUM, VT, Custom);
         setOperationAction(ISD::FMINIMUM, VT, Custom);
         setOperationAction(ISD::FMINNUM, VT, Custom);
-        setOperationAction(ISD::FMUL, VT, Legal);
-        setOperationAction(ISD::FSUB, VT, Legal);
+        setOperationAction(ISD::FMUL, VT, Custom);
+        setOperationAction(ISD::FSUB, VT, Custom);
       }
     }
 
