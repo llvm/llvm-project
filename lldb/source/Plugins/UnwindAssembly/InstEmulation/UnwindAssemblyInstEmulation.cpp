@@ -174,8 +174,10 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     m_inst_emulator_up->SetInstruction(inst->GetOpcode(), inst->GetAddress(),
                                        nullptr);
+    const EmulateInstruction::InstructionCondition new_condition =
+        m_inst_emulator_up->GetInstructionCondition();
 
-    if (last_condition != m_inst_emulator_up->GetInstructionCondition()) {
+    if (last_condition != new_condition) {
       // If the last instruction was conditional with a different condition
       // than the current condition then restore the state.
       if (last_condition != EmulateInstruction::UnconditionalCondition) {
@@ -190,7 +192,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       condition_block_start_state = it;
     }
 
-    last_condition = m_inst_emulator_up->GetInstructionCondition();
+    last_condition = new_condition;
 
     m_inst_emulator_up->EvaluateInstruction(
         eEmulateInstructionOptionIgnoreConditions);
