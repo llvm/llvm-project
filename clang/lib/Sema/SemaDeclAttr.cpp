@@ -3695,20 +3695,28 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) InitPriorityAttr(S.Context, AL, prioritynum));
 }
 
-static void handleFlattenDepthAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  Expr *E = AL.getArgAsExpr(0);
+void Sema::addFlattenDepthAttr(Decl *D, const AttributeCommonInfo &CI,
+                               Expr *E) {
+  // If the expression is template-dependent, defer evaluation until
+  // instantiation
+  if (E->isValueDependent()) {
+    D->addAttr(FlattenDepthAttr::Create(Context, E, CI));
+    return;
+  }
+
+  // For non-dependent expressions, evaluate immediately
   uint32_t depthHint;
-  if (!S.checkUInt32Argument(AL, E, depthHint)) {
+  if (!checkUInt32Argument(CI, E, depthHint)) {
     return;
   }
 
   if (depthHint == 0) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
-        << AL << E->getSourceRange();
+    Diag(CI.getLoc(), diag::err_attribute_argument_is_zero)
+        << CI << E->getSourceRange();
     return;
   }
 
-  D->addAttr(FlattenDepthAttr::Create(S.Context, depthHint, AL));
+  D->addAttr(FlattenDepthAttr::Create(Context, E, CI));
 }
 
 ErrorAttr *Sema::mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -7253,7 +7261,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleFormatAttr(S, D, AL);
     break;
   case ParsedAttr::AT_FlattenDepth:
-    handleFlattenDepthAttr(S, D, AL);
+    S.addFlattenDepthAttr(D, AL, AL.getArgAsExpr(0));
     break;
   case ParsedAttr::AT_FormatMatches:
     handleFormatMatchesAttr(S, D, AL);

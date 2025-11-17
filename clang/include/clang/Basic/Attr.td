@@ -1979,7 +1979,7 @@ def Flatten : InheritableAttr {
 def FlattenDepth : InheritableAttr {
   let Spellings = [Clang<"flatten_depth">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Args = [UnsignedArgument<"DepthHint">];
+  let Args = [ExprArgument<"DepthHint">];
   let Documentation = [FlattenDepthDocs];
 }
 

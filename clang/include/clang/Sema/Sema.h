@@ -4905,6 +4905,10 @@ public:
   void AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
                          Expr *ParamExpr);
 
+  /// addFlattenDepthAttr - Adds a flatten_depth attribute to a particular
+  /// declaration.
+  void addFlattenDepthAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E);
+
   bool CheckAttrTarget(const ParsedAttr &CurrAttr);
   bool CheckAttrNoArgs(const ParsedAttr &CurrAttr);
 

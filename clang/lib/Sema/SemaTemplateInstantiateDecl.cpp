@@ -234,6 +234,21 @@ static void instantiateDependentAnnotationAttr(
   }
 }
 
+static void instantiateDependentFlattenDepthAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const FlattenDepthAttr *Attr, Decl *New) {
+  // The depth expression is a constant expression.
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Result = S.SubstExpr(Attr->getDepthHint(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+
+  Expr *E = Result.getAs<Expr>();
+  S.addFlattenDepthAttr(New, *Attr, E);
+}
+
 template <typename Attr>
 static void sharedInstantiateConstructorDestructorAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs, const Attr *A,
@@ -909,6 +924,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
     if (const auto *Mode = dyn_cast<ModeAttr>(TmplAttr)) {
       instantiateDependentModeAttr(*this, TemplateArgs, *Mode, New);
+      continue;
+    }
+
+    if (const auto *FlattenDepth = dyn_cast<FlattenDepthAttr>(TmplAttr)) {
+      instantiateDependentFlattenDepthAttr(*this, TemplateArgs, FlattenDepth,
+                                           New);
       continue;
     }
 
