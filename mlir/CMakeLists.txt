@@ -210,6 +210,19 @@ set(MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES 0 CACHE BOOL
        'Development.Module' and ensure that find_package(pybind11) is \
        satisfied (and keep up to date as requirements evolve).")
 
+set(_mlir_python_stubgen_enabled ON)
+# Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
+# to find the extension module for the host arch).
+# Note: Stubgen requires some extra handling to work properly when sanitizers are enabled,
+# so we skip running it in that case now.
+if(CMAKE_CROSSCOMPILING OR (NOT LLVM_USE_SANITIZER STREQUAL ""))
+  set(_mlir_python_stubgen_enabled OFF)
+endif()
+
+option(MLIR_PYTHON_STUBGEN_ENABLED
+       "Generate Python type stubs for the MLIR Python bindings."
+       ${_mlir_python_stubgen_enabled})
+
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
   # Note that both upstream and downstreams often call this macro. It gates
