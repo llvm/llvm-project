@@ -1575,16 +1575,31 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   return BaseT::getNumberOfParts(Tp);
 }
 
+// New API that wraps the old isSourceOfDivergence and isAlwaysUniform APIs
+// with additional support for new uniformity classifications
 InstructionUniformity
-GCNTTIImpl::getInstructionUniformity(const Instruction &I) const {
-  if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
-    switch (II->getIntrinsicID()) {
+GCNTTIImpl::getInstructionUniformity(const Value *V) const {
+  // Check for new special cases first (permlane16/permlanex16)
+  // These need operand-dependent uniformity analysis
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
+    switch (Intrinsic->getIntrinsicID()) {
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16:
+      // Result value can be uniform if either of first two operands are uniform
       return InstructionUniformity::AnyOfFirstTwoUseOp;
     default:
       break;
     }
   }
+
+  // Delegate to old APIs for backward compatibility
+  if (isAlwaysUniform(V))
+    return InstructionUniformity::AlwaysUniform;
+
+  // Check if source of divergence
+  if (isSourceOfDivergence(V))
+    return InstructionUniformity::NeverUniform;
+
+  // Default behavior
   return InstructionUniformity::Default;
 }

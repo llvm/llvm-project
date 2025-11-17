@@ -635,3 +635,16 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
 }
+
+// New API that wraps the old isSourceOfDivergence API
+// NVPTX doesn't have isAlwaysUniform, so we only delegate to
+// isSourceOfDivergence
+InstructionUniformity
+NVPTXTTIImpl::getInstructionUniformity(const Value *V) const {
+  // Delegate to old API for backward compatibility
+  if (isSourceOfDivergence(V))
+    return InstructionUniformity::NeverUniform;
+
+  // Default behavior
+  return InstructionUniformity::Default;
+}

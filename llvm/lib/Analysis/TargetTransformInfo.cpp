@@ -1518,8 +1518,8 @@ bool TargetTransformInfo::allowVectorElementIndexingUsingGEP() const {
 }
 
 InstructionUniformity
-TargetTransformInfo::getInstructionUniformity(const Instruction &I) const {
-  return TTIImpl->getInstructionUniformity(I);
+TargetTransformInfo::getInstructionUniformity(const Value *V) const {
+  return TTIImpl->getInstructionUniformity(V);
 }
 
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
