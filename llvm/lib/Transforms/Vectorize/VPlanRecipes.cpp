@@ -3799,7 +3799,7 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
   // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
-  // After migrating to getMemIntrinsicInstrCost, switch this to vp_load.
+  // After migrating to getMemIntrinsicInstrCost, switch this to vp_store.
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       {Intrinsic::masked_store, Ty, Alignment, AS}, Ctx.CostKind);
   if (!Reverse)
