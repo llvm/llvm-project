@@ -723,7 +723,8 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
 }
 
 StringRef
-ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress, bool RestoreSymbolName) {
+ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress,
+                                              bool RestoreSymbolName) {
   // Get the function range by branch target if it's a call branch.
   auto *FRange = Binary->findFuncRangeForStartAddr(TargetAddress);
 
@@ -733,8 +734,7 @@ ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress, bool Resto
     return StringRef();
 
   if (RestoreSymbolName && FRange->Func->FromSymtab) {
-    const AddressProbesMap &Address2ProbesMap =
-        Binary->getAddress2ProbesMap();
+    const AddressProbesMap &Address2ProbesMap = Binary->getAddress2ProbesMap();
     for (const MCDecodedPseudoProbe &Probe :
          Address2ProbesMap.find(TargetAddress)) {
       if (const auto *ProbeDesc = Binary->getFuncDescForGUID(Probe.getGuid()))
