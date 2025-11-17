@@ -19,10 +19,9 @@ def continueOnCuIndexOverflow_EQ : Joined<["-", "--"], "continue-on-cu-index-ove
 
 def dwarf64StringOffsets : Flag<["-", "--"], "dwarf64-str-offsets">;
 def dwarf64StringOffsets_EQ : Joined<["-", "--"], "dwarf64-str-offsets=">,
-  HelpText<"default = disabled, This setting doesn't convert DWARF32 .debug_str_offsets\n"
-    "tables in .dwo files to DWARF64 in the .dwp file. = enabled, This allows .debug_str\n"
-    "tables to exceed the 4GB limit and have any DWARF32 .debug_str_offsets tables\n"
-    "converted to DWARF64 only for tables that require 64 bit string offsets.\n"
-    "= always, This forces all .debug_str_offsets tables to be emitted as DWARF64.\n"
-    "This is used for testing.">,
+  HelpText<"default = enabled, This allows .debug_str tables to exceed the 4GB limit\n"
+    "and have any DWARF32 .debug_str_offsets tables converted to DWARF64 only for tables\n"
+    "that require 64 bit string offsets. = disabled, This setting doesn't convert DWARF32\n"
+    " .debug_str_offsets tables in .dwo files to DWARF64 in the .dwp file. = always, This\n"
+    "forces all .debug_str_offsets tables to be emitted as DWARF64. This is used for testing.">,
   Values<"disabled,enabled,always">;
