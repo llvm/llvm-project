@@ -741,8 +741,7 @@ uint32_t Symtab::AppendSymbolIndexesWithNameAndType(
                                   symbol_visibility, indexes) > 0 &&
       symbol_type != eSymbolTypeAny) {
     llvm::erase_if(indexes, [this, symbol_type](uint32_t index) {
-      return symbol_type != eSymbolTypeAny &&
-             m_symbols[index].GetType() != symbol_type;
+      return m_symbols[index].GetType() != symbol_type;
     });
   }
   return indexes.size();
