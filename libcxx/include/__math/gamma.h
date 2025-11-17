@@ -55,6 +55,8 @@ inline _LIBCPP_HIDE_FROM_ABI double tgamma(_A1 __x) _NOEXCEPT {
   return __builtin_tgamma((double)__x);
 }
 
+} // namespace __math
+
 // __lgamma_r
 
 struct __lgamma_result {
@@ -66,7 +68,7 @@ struct __lgamma_result {
 _LIBCPP_EXPORTED_FROM_ABI __lgamma_result __lgamma_thread_safe_impl(double) _NOEXCEPT;
 
 inline _LIBCPP_HIDE_FROM_ABI __lgamma_result __lgamma_thread_safe(double __d) _NOEXCEPT {
-  return __math::__lgamma_thread_safe_impl(__d);
+  return std::__lgamma_thread_safe_impl(__d);
 }
 #else
 // When deploying to older targets, call `lgamma_r` directly but avoid declaring the actual
@@ -75,12 +77,10 @@ double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("lgamma_r");
 
 inline _LIBCPP_HIDE_FROM_ABI __lgamma_result __lgamma_thread_safe(double __d) _NOEXCEPT {
   int __sign;
-  double __res = __math::__lgamma_r_shim(__d, &__sign);
+  double __res = std::__lgamma_r_shim(__d, &__sign);
   return __lgamma_result{__res, __sign};
 }
 #endif
-
-} // namespace __math
 
 _LIBCPP_END_NAMESPACE_STD
 

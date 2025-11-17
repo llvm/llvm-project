@@ -24,7 +24,7 @@ Version 22.0
 
   All platforms
   -------------
-  Symbol added: _ZNSt3__16__math25__lgamma_thread_safe_implEd
+  Symbol added: _ZNSt3__125__lgamma_thread_safe_implEd
 
 * [libc++] Remove __time_get_storage::{__analyze,init} from the ABI
 

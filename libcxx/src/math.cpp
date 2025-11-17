@@ -14,7 +14,6 @@
 #include <math.h> // for lgamma_r
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-namespace __math {
 
 __lgamma_result __lgamma_thread_safe_impl(double __d) noexcept {
   int __sign;
@@ -22,5 +21,4 @@ __lgamma_result __lgamma_thread_safe_impl(double __d) noexcept {
   return __lgamma_result{__result, __sign};
 }
 
-} // namespace __math
 _LIBCPP_END_NAMESPACE_STD

@@ -102,10 +102,9 @@ template <class _IntType>
 binomial_distribution<_IntType>::param_type::param_type(result_type __t, double __p) : __t_(__t), __p_(__p) {
   if (0 < __p_ && __p_ < 1) {
     __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
-    __pr_ =
-        std::exp(__math::__lgamma_thread_safe(__t_ + 1.).__result - __math::__lgamma_thread_safe(__r0_ + 1.).__result -
-                 __math::__lgamma_thread_safe(__t_ - __r0_ + 1.).__result + __r0_ * std::log(__p_) +
-                 (__t_ - __r0_) * std::log(1 - __p_));
+    __pr_ = std::exp(std::__lgamma_thread_safe(__t_ + 1.).__result - std::__lgamma_thread_safe(__r0_ + 1.).__result -
+                     std::__lgamma_thread_safe(__t_ - __r0_ + 1.).__result + __r0_ * std::log(__p_) +
+                     (__t_ - __r0_) * std::log(1 - __p_));
     __odds_ratio_ = __p_ / (1 - __p_);
   }
 }
