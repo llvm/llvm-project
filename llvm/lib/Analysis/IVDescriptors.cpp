@@ -1382,7 +1382,7 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
          "StartValue is not an integer for integer induction");
 
   // Check the Step Value. It should be non-zero integer value.
-  assert((!getStepValue() || !getStepValue()->isZero()) &&
+  assert((!getConstIntStepValue() || !getConstIntStepValue()->isZero()) &&
          "Step value is zero");
 
   assert((IK == IK_FpInduction || Step->getType()->isIntegerTy()) &&
@@ -1400,11 +1400,10 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
     llvm::append_range(RedundantCasts, *Casts);
 }
 
-const APInt *InductionDescriptor::getStepValue() const {
-  const APInt *StepC;
-  if (!match(Step, m_scev_APInt(StepC)))
-    return nullptr;
-  return StepC;
+ConstantInt *InductionDescriptor::getConstIntStepValue() const {
+  if (auto *C = dyn_cast<SCEVConstant>(Step))
+    return dyn_cast<ConstantInt>(C->getValue());
+  return nullptr;
 }
 
 bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
@@ -1621,6 +1620,10 @@ bool InductionDescriptor::isInductionPHI(
   // Check that the PHI is consecutive.
   const SCEV *PhiScev = Expr ? Expr : SE->getSCEV(Phi);
   const SCEV *Step;
+
+  // FIXME: We are currently matching the specific loop TheLoop; if it doesn't
+  // match, we should treat it as a uniform. Unfortunately, we don't currently
+  // know how to handled uniform PHIs.
   if (!match(PhiScev, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step),
                                           m_SpecificLoop(TheLoop)))) {
     LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");

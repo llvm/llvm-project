@@ -704,7 +704,7 @@ void LoopVectorizationLegality::addInductionPhi(
 
   // Int inductions are special because we only allow one IV.
   if (ID.getKind() == InductionDescriptor::IK_IntInduction &&
-      ID.getStepValue() && ID.getStepValue()->isOne() &&
+      ID.getConstIntStepValue() && ID.getConstIntStepValue()->isOne() &&
       isa<Constant>(ID.getStartValue()) &&
       cast<Constant>(ID.getStartValue())->isNullValue()) {
 
@@ -889,7 +889,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
           if (AllowStridedPointerIVs)
             return false;
           return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-                 ID.getStepValue() == nullptr;
+                 ID.getConstIntStepValue() == nullptr;
         };
 
     // TODO: Instead of recording the AllowedExit, it would be good to

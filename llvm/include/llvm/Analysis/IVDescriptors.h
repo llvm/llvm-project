@@ -401,7 +401,7 @@ public:
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
   BinaryOperator *getInductionBinOp() const { return InductionBinOp; }
-  LLVM_ABI const APInt *getStepValue() const;
+  LLVM_ABI ConstantInt *getConstIntStepValue() const;
 
   /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
   /// induction, the induction descriptor \p D will contain the data describing
