@@ -1083,6 +1083,9 @@ public:
   /// Tests whether the target is RISC-V (32- and 64-bit).
   bool isRISCV() const { return isRISCV32() || isRISCV64(); }
 
+  /// Tests whether the target is Hexagon.
+  bool isHexagon() const { return getArch() == Triple::hexagon; }
+
   /// Tests whether the target is 32-bit SPARC (little and big endian).
   bool isSPARC32() const {
     return getArch() == Triple::sparc || getArch() == Triple::sparcel;
