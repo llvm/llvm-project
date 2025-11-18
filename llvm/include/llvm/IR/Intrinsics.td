@@ -54,6 +54,25 @@ def IntrInaccessibleMemOnly : IntrinsicProperty;
 // by the module being compiled. This is a weaker form of IntrArgMemOnly.
 def IntrInaccessibleMemOrArgMemOnly : IntrinsicProperty;
 
+// Tablegen representation of IRMemLocation.
+class IntrinsicMemoryLocation;
+
+// TODO: Populate with all IRMemLocation enum values and update
+// getValueAsIRMemLocation accordingly.
+def InaccessibleMem : IntrinsicMemoryLocation;
+def TargetMem0 : IntrinsicMemoryLocation;
+def TargetMem1 : IntrinsicMemoryLocation;
+
+// The list of IRMemoryLocations that are read from.
+class IntrRead<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
+   list<IntrinsicMemoryLocation>  MemLoc=idx;
+}
+
+//  The list of IRMemoryLocations that are write to.
+class IntrWrite<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
+   list<IntrinsicMemoryLocation> MemLoc=idx;
+}
+
 // Commutative - This intrinsic is commutative: X op Y == Y op X.
 def Commutative : IntrinsicProperty;
 
