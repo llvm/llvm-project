@@ -130,3 +130,24 @@ LLVMBool LLVMGetBitcodeModule2(LLVMMemoryBufferRef MemBuf,
                                LLVMModuleRef *OutM) {
   return LLVMGetBitcodeModuleInContext2(LLVMGetGlobalContext(), MemBuf, OutM);
 }
+
+LLVMBool LLVMGetBitcodeProducerString(LLVMMemoryBufferRef MemBuf,
+                                      char **OutProducer, char **OutMessage) {
+  MemoryBufferRef Buf = unwrap(MemBuf)->getMemBufferRef();
+
+  Expected<std::string> ProducerOrErr = getBitcodeProducerString(Buf);
+  if (!ProducerOrErr) {
+    std::string Message;
+    handleAllErrors(ProducerOrErr.takeError(),
+                    [&](ErrorInfoBase &EIB) { Message = EIB.message(); });
+    if (OutMessage)
+      *OutMessage = strdup(Message.c_str());
+    if (OutProducer)
+      *OutProducer = nullptr;
+    return 1;
+  }
+
+  if (OutProducer)
+    *OutProducer = strdup(ProducerOrErr->c_str());
+  return 0;
+}
