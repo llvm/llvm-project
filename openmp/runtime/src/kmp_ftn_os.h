@@ -140,8 +140,6 @@
 #define FTN_GET_MEMSPACE_NUM_RESOURCES omp_get_memspace_num_resources
 #define FTN_GET_SUBMEMSPACE omp_get_submemspace
 #define FTN_GET_DEVICE_NUM omp_get_device_num
-#define FTN_GET_UID_FROM_DEVICE omp_get_uid_from_device
-#define FTN_GET_DEVICE_FROM_UID omp_get_device_from_uid
 #define FTN_SET_AFFINITY_FORMAT omp_set_affinity_format
 #define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format
 #define FTN_DISPLAY_AFFINITY omp_display_affinity
@@ -291,8 +289,6 @@
 #define FTN_ALLOC omp_alloc_
 #define FTN_FREE omp_free_
 #define FTN_GET_DEVICE_NUM omp_get_device_num_
-#define FTN_GET_UID_FROM_DEVICE omp_get_uid_from_device_
-#define FTN_GET_DEVICE_FROM_UID omp_get_device_from_uid_
 #define FTN_SET_AFFINITY_FORMAT omp_set_affinity_format_
 #define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format_
 #define FTN_DISPLAY_AFFINITY omp_display_affinity_
@@ -440,8 +436,6 @@
 #define FTN_GET_MEMSPACE_NUM_RESOURCES OMP_GET_MEMSPACE_NUM_RESOURCES
 #define FTN_GET_SUBMEMSPACE OMP_GET_SUBMEMSPACE
 #define FTN_GET_DEVICE_NUM OMP_GET_DEVICE_NUM
-#define FTN_GET_UID_FROM_DEVICE OMP_GET_UID_FROM_DEVICE
-#define FTN_GET_DEVICE_FROM_UID OMP_GET_DEVICE_FROM_UID
 #define FTN_SET_AFFINITY_FORMAT OMP_SET_AFFINITY_FORMAT
 #define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT
 #define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY
@@ -591,8 +585,6 @@
 #define FTN_ALLOC OMP_ALLOC_
 #define FTN_FREE OMP_FREE_
 #define FTN_GET_DEVICE_NUM OMP_GET_DEVICE_NUM_
-#define FTN_GET_UID_FROM_DEVICE OMP_GET_UID_FROM_DEVICE_
-#define FTN_GET_DEVICE_FROM_UID OMP_GET_DEVICE_FROM_UID_
 #define FTN_SET_AFFINITY_FORMAT OMP_SET_AFFINITY_FORMAT_
 #define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT_
 #define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY_
