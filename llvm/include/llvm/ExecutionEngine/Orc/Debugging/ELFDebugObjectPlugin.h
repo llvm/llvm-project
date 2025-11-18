@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Shared/AllocationActions.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -59,31 +60,34 @@ public:
                            jitlink::LinkGraph &G, jitlink::JITLinkContext &Ctx,
                            MemoryBufferRef InputObj) override;
 
+  Error notifyEmitted(MaterializationResponsibility &MR) override;
   Error notifyFailed(MaterializationResponsibility &MR) override;
-  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
-
-  void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
-                                   ResourceKey SrcKey) override;
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &LG,
                         jitlink::PassConfiguration &PassConfig) override;
 
+  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
+    return Error::success();
+  }
+
+  void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
+                                   ResourceKey SrcKey) override {}
+
 private:
   ExecutionSession &ES;
-
-  using OwnedDebugObject = std::unique_ptr<DebugObject>;
-  std::map<MaterializationResponsibility *, OwnedDebugObject> PendingObjs;
-  std::map<ResourceKey, std::vector<OwnedDebugObject>> RegisteredObjs;
+  ExecutorAddr RegistrationAction;
+  ExecutorAddr DeallocAction;
+  ExecutorAddr TargetMemMgr;
 
   std::mutex PendingObjsLock;
-  std::mutex RegisteredObjsLock;
+  std::map<MaterializationResponsibility *, DebugObject> PendingObjs;
 
-  ExecutorAddr RegistrationAction;
   bool RequireDebugSections;
   bool AutoRegisterCode;
 
   DebugObject *getPendingDebugObj(MaterializationResponsibility &MR);
+  shared::AllocActionCallPair createAllocActions(ExecutorAddrRange R);
 };
 
 } // namespace orc

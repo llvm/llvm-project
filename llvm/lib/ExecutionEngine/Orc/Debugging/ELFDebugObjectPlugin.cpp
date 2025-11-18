@@ -55,15 +55,6 @@ public:
     FinalizeFuture = FinalizePromise.get_future();
   }
 
-  ~DebugObject() {
-    if (Alloc) {
-      std::vector<FinalizedAlloc> Allocs;
-      Allocs.push_back(std::move(Alloc));
-      if (Error Err = MemMgr.deallocate(std::move(Allocs)))
-        ES.reportError(std::move(Err));
-    }
-  }
-
   StringRef getName() const { return Name; }
 
   StringRef getBuffer() {
@@ -77,8 +68,6 @@ public:
   }
 
   SimpleSegmentAlloc &getTargetAlloc() { return WorkingMem; }
-
-  void trackFinalizedAlloc(FinalizedAlloc FA) { Alloc = std::move(FA); }
 
   Expected<ExecutorAddrRange> awaitTargetMem() { return FinalizeFuture.get(); }
 
@@ -106,8 +95,6 @@ private:
 
   std::promise<MSVCPExpected<ExecutorAddrRange>> FinalizePromise;
   std::future<MSVCPExpected<ExecutorAddrRange>> FinalizeFuture;
-
-  FinalizedAlloc Alloc;
 };
 
 template <typename ELFT>
@@ -190,8 +177,11 @@ ELFDebugObjectPlugin::ELFDebugObjectPlugin(ExecutionSession &ES,
       AutoRegisterCode(AutoRegisterCode) {
   // Pass bootstrap symbol for registration function to enable debugging
   ErrorAsOutParameter _(&Err);
-  Err = ES.getExecutorProcessControl().getBootstrapSymbols(
-      {{RegistrationAction, rt::RegisterJITLoaderGDBAllocActionName}});
+  Err = ES.getExecutorProcessControl().getBootstrapSymbols({
+      {RegistrationAction, rt::RegisterJITLoaderGDBAllocActionName},
+      {DeallocAction, rt::SimpleExecutorMemoryManagerReleaseWrapperName},
+      {TargetMemMgr, rt::SimpleExecutorMemoryManagerInstanceName},
+  });
 }
 
 ELFDebugObjectPlugin::~ELFDebugObjectPlugin() = default;
@@ -228,19 +218,17 @@ void ELFDebugObjectPlugin::notifyMaterializing(
   }
 
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  assert(PendingObjs.count(&MR) == 0 && "One debug object per materialization");
-  PendingObjs[&MR] = std::make_unique<DebugObject>(
-      InputObj.getBufferIdentifier(), std::move(*Alloc), Ctx, ES);
-
-  MutableArrayRef<char> Buffer = PendingObjs[&MR]->getMutBuffer();
-  memcpy(Buffer.data(), InputObj.getBufferStart(), Size);
+  auto [It, Inserted] = PendingObjs.try_emplace(
+      &MR, InputObj.getBufferIdentifier(), std::move(*Alloc), Ctx, ES);
+  assert(Inserted && "One debug object per materialization");
+  memcpy(It->second.getMutBuffer().data(), InputObj.getBufferStart(), Size);
 }
 
 DebugObject *
 ELFDebugObjectPlugin::getPendingDebugObj(MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
   auto It = PendingObjs.find(&MR);
-  return It == PendingObjs.end() ? nullptr : It->second.get();
+  return It == PendingObjs.end() ? nullptr : &It->second;
 }
 
 void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
@@ -283,9 +271,10 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // Step 3: We start copying the debug object into target memory
     auto &Alloc = DebugObj->getTargetAlloc();
 
-    // FIXME: FA->getAddress() below is supposed to be the address of the memory
-    // range on the target, but InProcessMemoryManager returns the address of a
-    // FinalizedAllocInfo helper instead
+    // FIXME: The lookup in the segment info here is a workaround. The below
+    // FA->release() is supposed to provide the base address in target memory,
+    // but InProcessMemoryManager returns the address of a FinalizedAllocInfo
+    // helper instead.
     auto ROSeg = Alloc.getSegInfo(MemProt::Read);
     ExecutorAddrRange R(ROSeg.Addr, ROSeg.WorkingMem.size());
     Alloc.finalize([this, R, &MR](Expected<DebugObject::FinalizedAlloc> FA) {
@@ -293,8 +282,8 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
       if (!FA)
         DebugObj->failMaterialization(FA.takeError());
 
-      // Keep allocation alive until the corresponding code is removed
-      DebugObj->trackFinalizedAlloc(std::move(*FA));
+      // Dealloc action from the LinkGraph's allocation will free target memory
+      FA->release();
 
       // Unblock post-fixup pass
       DebugObj->reportTargetMem(R);
@@ -311,63 +300,42 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     Expected<ExecutorAddrRange> R = DebugObj->awaitTargetMem();
     if (!R)
       return R.takeError();
-
-    // Step 5: We have to keep the allocation alive until the corresponding
-    // code is removed
-    Error Err = MR.withResourceKeyDo([&](ResourceKey K) {
-      std::lock_guard<std::mutex> LockPending(PendingObjsLock);
-      std::lock_guard<std::mutex> LockRegistered(RegisteredObjsLock);
-      auto It = PendingObjs.find(&MR);
-      RegisteredObjs[K].push_back(std::move(It->second));
-      PendingObjs.erase(It);
-    });
-
-    if (Err)
-      return Err;
-
     if (R->empty())
       return Error::success();
 
+    // Step 5: Use allocation actions to (1) register the debug object with the
+    // GDB JIT Interface and (2) free the debug object when the corresponding
+    // code is removed
     using namespace shared;
-    G.allocActions().push_back(
-        {cantFail(WrapperFunctionCall::Create<
-                  SPSArgList<SPSExecutorAddrRange, bool>>(
-             RegistrationAction, *R, AutoRegisterCode)),
-         {/* no deregistration */}});
+    G.allocActions().push_back(createAllocActions(*R));
     return Error::success();
   });
 }
 
-Error ELFDebugObjectPlugin::notifyFailed(MaterializationResponsibility &MR) {
+shared::AllocActionCallPair
+ELFDebugObjectPlugin::createAllocActions(ExecutorAddrRange R) {
+  using namespace shared;
+  // Add the target memory range to __jit_debug_descriptor
+  auto Init = cantFail(
+      WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange, bool>>(
+          RegistrationAction, R, AutoRegisterCode));
+  // Free the debug object's target memory block
+  auto Fini =
+      cantFail(WrapperFunctionCall::Create<
+               SPSArgList<SPSExecutorAddr, SPSSequence<SPSExecutorAddr>>>(
+          DeallocAction, TargetMemMgr, ArrayRef<ExecutorAddr>(R.Start)));
+  return {Init, Fini};
+}
+
+Error ELFDebugObjectPlugin::notifyEmitted(MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
   PendingObjs.erase(&MR);
   return Error::success();
 }
 
-void ELFDebugObjectPlugin::notifyTransferringResources(JITDylib &JD,
-                                                       ResourceKey DstKey,
-                                                       ResourceKey SrcKey) {
-  // Debug objects are stored by ResourceKey only after registration.
-  // Thus, pending objects don't need to be updated here.
-  std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-  auto SrcIt = RegisteredObjs.find(SrcKey);
-  if (SrcIt != RegisteredObjs.end()) {
-    // Resources from distinct MaterializationResponsibilitys can get merged
-    // after emission, so we can have multiple debug objects per resource key.
-    for (std::unique_ptr<DebugObject> &DebugObj : SrcIt->second)
-      RegisteredObjs[DstKey].push_back(std::move(DebugObj));
-    RegisteredObjs.erase(SrcIt);
-  }
-}
-
-Error ELFDebugObjectPlugin::notifyRemovingResources(JITDylib &JD,
-                                                    ResourceKey Key) {
-  // Removing the resource for a pending object fails materialization, so they
-  // get cleaned up in the notifyFailed() handler.
-  std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-  RegisteredObjs.erase(Key);
-
-  // TODO: Implement unregister notifications.
+Error ELFDebugObjectPlugin::notifyFailed(MaterializationResponsibility &MR) {
+  std::lock_guard<std::mutex> Lock(PendingObjsLock);
+  PendingObjs.erase(&MR);
   return Error::success();
 }
 
