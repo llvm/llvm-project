@@ -1872,6 +1872,8 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
                MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
       /*pattern benefit=*/regularPatternBenefit);
+  // For following patterns, we need to override the regular vector distribution
+  // patterns. Therefore, assign higher benefit.
   patterns
       .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution,
            VectorInsertStridedSliceDistribution>(
