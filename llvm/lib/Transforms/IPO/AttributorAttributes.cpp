@@ -1545,8 +1545,8 @@ struct AAPointerInfoImpl
           if (!IsMustAcc)
             AK = AccessKind((AK & ~AK_MUST) | AK_MAY);
           Changed |=
-              addAccess(A, NewRanges, CB, RAcc.getContent(), RAcc.getKind(),
-                        RAcc.getType(), OffsetInfoMap, RAcc.getRemoteInst());
+              addAccess(A, NewRanges, CB, RAcc.getContent(), AK, RAcc.getType(),
+                        OffsetInfoMap, RAcc.getRemoteInst());
         }
       }
     }
