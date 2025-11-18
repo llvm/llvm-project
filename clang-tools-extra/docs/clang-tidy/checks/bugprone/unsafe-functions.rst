@@ -141,8 +141,6 @@ and warning flags:
    memcpy(dest, src, 999'999); // warning: function 'memcpy' is recommended to have compiler hardening using '_FORTIFY_SOURCE'
    printf(raw_str); // warning: function 'printf' is recommended to have the '-Werror=format-security' compiler warning flag
 
-The
-
 .. note::
 
    Fully qualified names can contain template parameters on certain C++ classes,
