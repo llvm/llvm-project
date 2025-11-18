@@ -1985,7 +1985,7 @@ static Value *foldSelectToInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
     // Edge Case: if Z is the constant 0 then the select can be folded
     // to just the instrinsic comparison.
     if (match(TrueVal, m_Zero()))
-      return Builder.CreateIntrinsic(X->getType(), IID, {X, Y});
+      return Builder.CreateIntrinsic(SI.getType(), IID, {X, Y});
 
     Value *FrozenX = Builder.CreateFreeze(X, X->getName() + ".frz");
     Value *FrozenY = Builder.CreateFreeze(Y, Y->getName() + ".frz");
