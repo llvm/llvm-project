@@ -84,10 +84,7 @@ EncompassingIntegerType(ArrayRef<struct WidthAndSignedness> Types) {
   assert(Types.size() > 0 && "Empty list of types.");
 
   // If any of the given types is signed, we must return a signed type.
-  bool Signed = false;
-  for (const auto &Type : Types) {
-    Signed |= Type.Signed;
-  }
+bool Signed = llvm::any_of(Types, [](const auto &T) { return T.Signed; });
 
   // The encompassing type must have a width greater than or equal to the width
   // of the specified types.  Additionally, if the encompassing type is signed,
