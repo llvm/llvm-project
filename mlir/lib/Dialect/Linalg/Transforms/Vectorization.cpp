@@ -1890,9 +1890,8 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
 
   // Create masked TransferReadOp.
   auto maskedRead = vector::createReadOrMaskedRead(
-      rewriter, loc, packOp.getSource(), readVecType.getShape(), padValue,
-      useInBoundsInsteadOfMasking,
-      /*inputScalableVecSizes=*/{});
+      rewriter, loc, packOp.getSource(), readVecType, padValue,
+      useInBoundsInsteadOfMasking);
 
   // Create ShapeCastOp.
   auto shapeCastOp = vector::ShapeCastOp::create(
@@ -1977,9 +1976,12 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   }
 
   // -- Generate the read operation --
+  VectorType readVecType =
+      VectorType::get(readVectorSizes, unpackTensorType.getElementType(),
+                      readScalableVectorFlags);
   Value readResult = vector::createReadOrMaskedRead(
-      rewriter, loc, unpackOp.getSource(), readVectorSizes, std::nullopt,
-      useInBoundsInsteadOfMasking, readScalableVectorFlags);
+      rewriter, loc, unpackOp.getSource(), readVecType, std::nullopt,
+      useInBoundsInsteadOfMasking);
 
   // -- Generate the transpose operation --
   PackingMetadata packMetadata;
@@ -2025,9 +2027,10 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
           .reifyResultShapes(rewriter, reifiedReturnShapes);
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
+  auto readType = VectorType::get(inputVectorSizes, padValue.getType());
   auto maskedRead = vector::createReadOrMaskedRead(
-      rewriter, loc, padOp.getSource(), inputVectorSizes, padValue,
-      /*useInBoundsInsteadOfMasking=*/false, /*inputScalableVecSizes=*/{});
+      rewriter, loc, padOp.getSource(), readType, padValue,
+      /*useInBoundsInsteadOfMasking=*/false);
 
   // Create Xfer write Op
   Value dest = tensor::EmptyOp::create(rewriter, loc, reifiedReturnShapes[0],
@@ -2222,9 +2225,9 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
         state.getCanonicalVecType(elemType, readMap.compose(indexingMap));
 
     Value read = mlir::vector::createReadOrMaskedRead(
-        rewriter, loc, opOperand.get(), readType.getShape(),
+        rewriter, loc, opOperand.get(), readType,
         /*padding=*/arith::getZeroConstant(rewriter, loc, elemType),
-        /*useInBoundsInsteadOfMasking=*/false, readType.getScalableDims());
+        /*useInBoundsInsteadOfMasking=*/false);
     vecOperands.push_back(read);
   }
 
@@ -3165,9 +3168,8 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   SmallVector<Value> readIndices(
       vecType.getRank(), arith::ConstantIndexOp::create(rewriter, loc, 0));
   Value read = mlir::vector::createReadOrMaskedRead(
-      rewriter, loc, source, vecType.getShape(), padValue,
-      /*useInBoundsInsteadOfMasking=*/inputVectorSizes.empty(),
-      /*inputScalableVecSizes=*/{});
+      rewriter, loc, source, vecType, padValue,
+      /*useInBoundsInsteadOfMasking=*/inputVectorSizes.empty());
 
   // Create write
   auto writeIndices =

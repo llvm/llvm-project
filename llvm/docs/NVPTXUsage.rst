@@ -911,7 +911,7 @@ Semantics:
 """"""""""
 
 Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
-values. Instead, a NaN input yeilds an unspecified NaN output.
+values. Instead, a NaN input yields an unspecified NaN output.
 
 
 '``llvm.nvvm.fabs.ftz.*``' Intrinsic
@@ -1330,6 +1330,32 @@ copied and it must be a multiple of 16.
 * The [N-1]th argument (denoted by ``i1 %flag_mc``) when set, indicates
   the presence of a multicast mask (``i16 %mc``) and generates the PTX
   instruction with the ``.multicast::cluster`` modifier.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+
+'``llvm.nvvm.cp.async.bulk.global.to.shared.cta``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.global.to.shared.cta``' intrinsic
+corresponds to the ``cp.async.bulk.shared::cta.global.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+copy of bulk data from global memory to shared::cta memory.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+copied and it must be a multiple of 16. The last argument
+(denoted by ``i1 %flag_ch``) is a compile-time constant. When set,
+it indicates a valid cache_hint (``i64 %ch``) and generates the
+``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
@@ -2601,7 +2627,7 @@ the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix and acc
 operation
 
 When `.sp` is specifed, the dimension of A matrix is `M x (K/2)` and requires
-specifiying an additional `%spmetadata` argument
+specifying an additional `%spmetadata` argument
 
 `.ashift` shifts the rows of the A matrix down by one row, except for the last row
 in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
@@ -2613,7 +2639,7 @@ along with `.ashift`
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%kind_flag` flag:
 
@@ -2690,14 +2716,14 @@ Overview:
 
 `nvvm.tcgen05.mma.block_scale` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.block_scale` will result in the initiation of the whole matrix multiply and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires specifying an additional `%spmetadata` argument
 
 The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%cta_group`:
 

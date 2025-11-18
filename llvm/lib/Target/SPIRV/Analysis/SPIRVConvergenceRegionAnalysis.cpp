@@ -21,6 +21,7 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include <optional>
 #include <queue>
+#include <unordered_set>
 
 #define DEBUG_TYPE "spirv-convergence-region-analysis"
 

@@ -689,7 +689,6 @@ TEST_F(LifetimeAnalysisTest, GslPointerConstructFromView) {
   EXPECT_THAT(Origin("q"), HasLoansTo({"a"}, "p1"));
 }
 
-// FIXME: Handle loans in ternary operator!
 TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
   SetupTest(R"(
     void target(bool cond) {
@@ -698,7 +697,24 @@ TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
       POINT(p1);
     }
   )");
-  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"a", "b"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, ExtraParenthesis) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = ((View((((a))))));
+      View y = ((View{(((x)))}));
+      View z = ((View(((y)))));
+      View p = ((View{((x))}));
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"a"}, "p1"));
 }
 
 // FIXME: Handle temporaries.
