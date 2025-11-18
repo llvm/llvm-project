@@ -142,7 +142,10 @@ struct identity // NOLINT(readability-identifier-naming)
 /// The std::pointer_traits<>::to_address(p) variations of these overloads has
 /// not been implemented.
 template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
-template <class T> constexpr T *to_address(T *P) { return P; }
+template <class T> constexpr T *to_address(T *P) {
+  static_assert(!std::is_function_v<T>);
+  return P;
+}
 
 //===----------------------------------------------------------------------===//
 //     Features from C++23

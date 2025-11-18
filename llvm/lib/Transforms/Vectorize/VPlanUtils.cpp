@@ -18,12 +18,12 @@ using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstPartOnly(Def); });
 }
 
 bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
@@ -58,13 +58,21 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 
   VPValue *A, *B;
 
+  auto m_CanonicalScalarIVSteps =
+      m_ScalarIVSteps(m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                      m_One(), m_Specific(&Plan.getVF()));
+
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A,
-                  m_ScalarIVSteps(
-                      m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
-                      m_One(), m_Specific(&Plan.getVF()))) ||
-            IsWideCanonicalIV(A));
+           (match(A, m_CanonicalScalarIVSteps) || IsWideCanonicalIV(A));
+
+  // For scalar plans, the header mask uses the scalar steps.
+  if (match(V, m_ICmp(m_CanonicalScalarIVSteps,
+                      m_Specific(Plan.getBackedgeTakenCount())))) {
+    assert(Plan.hasScalarVFOnly() &&
+           "Non-scalar VF using scalar IV steps for header mask?");
+    return true;
+  }
 
   return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
          B == Plan.getBackedgeTakenCount();
@@ -89,6 +97,15 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
                                 SCEV::FlagAnyWrap);
       })
+      .Case<VPWidenIntOrFpInductionRecipe>(
+          [&SE, L](const VPWidenIntOrFpInductionRecipe *R) {
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), SE, L);
+            if (!L || isa<SCEVCouldNotCompute>(Step))
+              return SE.getCouldNotCompute();
+            const SCEV *Start =
+                getSCEVExprForVPValue(R->getStartValue(), SE, L);
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+          })
       .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
         const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
         const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);

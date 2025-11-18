@@ -129,7 +129,7 @@ static StringRef getAsConstantStr(Value *V) {
 
 static void diagnoseInvalidFormatString(const CallBase *CI) {
   CI->getContext().diagnose(DiagnosticInfoUnsupported(
-      *CI->getParent()->getParent(),
+      *CI->getFunction(),
       "printf format string must be a trivially resolved constant string "
       "global variable",
       CI->getDebugLoc()));
