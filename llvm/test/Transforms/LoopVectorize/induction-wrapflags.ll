@@ -51,9 +51,9 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-  %ind.1 = phi i32 [ %ind.1.next, %loop ], [ 3, %entry ]
-  %ind.2 = phi i32 [ %ind.1, %loop ], [ 0, %entry ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %ind.1 = phi i32 [ 3, %entry ], [ %ind.1.next, %loop ]
+  %ind.2 = phi i32 [ 0, %entry ], [ %ind.1, %loop ]
   %sext.1 = sext i32 %ind.1 to i64
   %gep.1 = getelementptr i8, ptr %p, i64 %sext.1
   store i8 0, ptr %gep.1
