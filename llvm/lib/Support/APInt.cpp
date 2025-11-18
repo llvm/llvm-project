@@ -15,10 +15,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -3186,4 +3186,12 @@ APInt llvm::APIntOps::fshr(const APInt &Hi, const APInt &Lo,
   if (ShiftAmt == 0)
     return Lo;
   return Hi.shl(Hi.getBitWidth() - ShiftAmt) | Lo.lshr(ShiftAmt);
+}
+
+APInt llvm::APIntOps::clmul(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  APInt Result(LHS.getBitWidth(), 0);
+  for (unsigned I : seq<unsigned>(Result.getBitWidth()))
+    Result ^= LHS.shl(I) * (RHS.lshr(I) & 1);
+  return Result;
 }
