@@ -14851,7 +14851,10 @@ Syntax:
 
 ::
 
-      <result> = call ptr llvm.structured.gep <basetype> poison, ptr <source>, {, [i32/i64] <index> }*
+      declare <ret_type>
+      @llvm.structured.gep(<basetype> poison,
+                           ptr <source>
+                           {, [i32/i64] <index> }*)
 
 Overview:
 """""""""
@@ -14872,10 +14875,12 @@ pointed by source.
 The actual value passed is ignored, and should be ``poison``.
 
 ``ptr <source>``:
-A pointer to a valid memory location assumed to be large enough to hold a
-completely laid out value with the same type as ``basetype``. The physical
-layout of ``basetype`` is target dependent, and is not always known at
-compile time.
+A pointer to a memory location assumed to hold a completely laid out value
+with the same type as ``basetype``. The physical layout of ``basetype`` is
+target dependent, and is not always known at compile time.
+The assumption this instruction makes on the memory location is only relevant
+to this particular call. A frontend could possibly emit multiple structured
+GEP with the same source pointer but a different ``basetype``.
 
 ``[i32/i64] index, ...``:
 Indices used to traverse into the basetype and determine the target element
@@ -14883,6 +14888,8 @@ this instruction computes an offset for. Indices can be 32-bit or 64-bit
 unsigned integers. Indices being handled one by one, both sizes can be mixed
 in the same instruction. The precision used to compute the resulting pointer
 is target-dependent.
+When used to index into a struct, the value only integer constants are
+allowed.
 
 Semantics:
 """"""""""
