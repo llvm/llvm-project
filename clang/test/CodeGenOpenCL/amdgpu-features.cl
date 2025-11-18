@@ -63,9 +63,9 @@
 // NOCPU-WAVE32: "target-features"="+wavefrontsize32"
 // NOCPU-WAVE64: "target-features"="+wavefrontsize64"
 
-// GFX600: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+s-memtime-inst,+sad-insts,+wavefrontsize64
-// GFX601: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+s-memtime-inst,+sad-insts,+wavefrontsize64
-// GFX602: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+s-memtime-inst,+sad-insts,+wavefrontsize64
+// GFX600: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+s-memtime-inst,+sad-insts,+wavefrontsize64"
+// GFX601: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+s-memtime-inst,+sad-insts,+wavefrontsize64"
+// GFX602: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+s-memtime-inst,+sad-insts,+wavefrontsize64"
 // GFX700: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+qsad-insts,+s-memtime-inst,+sad-insts,+wavefrontsize64"
 // GFX701: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+qsad-insts,+s-memtime-inst,+sad-insts,+wavefrontsize64"
 // GFX702: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+lerp-inst,+qsad-insts,+s-memtime-inst,+sad-insts,+wavefrontsize64"
