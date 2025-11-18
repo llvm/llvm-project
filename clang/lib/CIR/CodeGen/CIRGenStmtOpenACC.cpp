@@ -317,7 +317,7 @@ const VarDecl *getLValueDecl(const Expr *e) {
 static mlir::acc::AtomicReadOp
 emitAtomicRead(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
                mlir::Location start,
-               OpenACCAtomicConstruct::SingleStmtInfo inf) {
+               const OpenACCAtomicConstruct::SingleStmtInfo &inf) {
   // Atomic 'read' only permits 'v = x', where v and x are both scalar L
   // values. The getAssociatedStmtInfo strips off implicit casts, which
   // includes implicit conversions and L-to-R-Value conversions, so we can
@@ -334,7 +334,7 @@ emitAtomicRead(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
 static mlir::acc::AtomicWriteOp
 emitAtomicWrite(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
                 mlir::Location start,
-                OpenACCAtomicConstruct::SingleStmtInfo inf) {
+                const OpenACCAtomicConstruct::SingleStmtInfo &inf) {
   mlir::Value x = cgf.emitLValue(inf.X).getPointer();
   mlir::Value expr = cgf.emitAnyExpr(inf.RefExpr).getValue();
   return mlir::acc::AtomicWriteOp::create(builder, start, x, expr,
@@ -344,7 +344,7 @@ emitAtomicWrite(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
 static std::pair<mlir::LogicalResult, mlir::acc::AtomicUpdateOp>
 emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
                  mlir::Location start, mlir::Location end,
-                 OpenACCAtomicConstruct::SingleStmtInfo inf) {
+                 const OpenACCAtomicConstruct::SingleStmtInfo &inf) {
   mlir::Value x = cgf.emitLValue(inf.X).getPointer();
   auto op = mlir::acc::AtomicUpdateOp::create(builder, start, x, /*ifCond=*/{});
 
@@ -368,7 +368,7 @@ emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
         cgf.cgm.getSize(
             cgf.getContext().getTypeAlignInChars(inf.X->getType())));
 
-    alloca.setInitAttr(mlir::UnitAttr::get(&cgf.getMLIRContext()));
+    alloca.setInitAttr(builder.getUnitAttr());
     builder.CIRBaseBuilderTy::createStore(start, recipeBlock->getArgument(0),
                                           alloca);
 

@@ -325,27 +325,26 @@ OpenACCAtomicConstruct *OpenACCAtomicConstruct::Create(
 }
 
 static std::optional<std::pair<const Expr *, const Expr *>>
-getBinaryAssignOpArgs(const Expr *Op, bool &isCompoundAssign) {
+getBinaryAssignOpArgs(const Expr *Op, bool &IsCompoundAssign) {
   if (const auto *BO = dyn_cast<BinaryOperator>(Op)) {
     if (!BO->isAssignmentOp())
       return std::nullopt;
-    isCompoundAssign = BO->isCompoundAssignmentOp();
-    return std::pair<const Expr *, const Expr *>({BO->getLHS(), BO->getRHS()});
+    IsCompoundAssign = BO->isCompoundAssignmentOp();
+    return std::pair<const Expr *, const Expr *>(BO->getLHS(), BO->getRHS());
   }
 
   if (const auto *OO = dyn_cast<CXXOperatorCallExpr>(Op)) {
     if (!OO->isAssignmentOp())
       return std::nullopt;
-    isCompoundAssign = OO->getOperator() != OO_Equal;
-    return std::pair<const Expr *, const Expr *>(
-        {OO->getArg(0), OO->getArg(1)});
+    IsCompoundAssign = OO->getOperator() != OO_Equal;
+    return std::pair<const Expr *, const Expr *>(OO->getArg(0), OO->getArg(1));
   }
   return std::nullopt;
 }
 static std::optional<std::pair<const Expr *, const Expr *>>
 getBinaryAssignOpArgs(const Expr *Op) {
-  bool isCompoundAssign;
-  return getBinaryAssignOpArgs(Op, isCompoundAssign);
+  bool IsCompoundAssign;
+  return getBinaryAssignOpArgs(Op, IsCompoundAssign);
 }
 
 static std::optional<const Expr *> getUnaryOpArgs(const Expr *Op) {
@@ -355,8 +354,8 @@ static std::optional<const Expr *> getUnaryOpArgs(const Expr *Op) {
   if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(Op)) {
     // Post-inc/dec have a second unused argument to differentiate it, so we
     // accept -- or ++ as unary, or any operator call with only 1 arg.
-    if (OpCall->getNumArgs() == 1 || OpCall->getOperator() != OO_PlusPlus ||
-        OpCall->getOperator() != OO_MinusMinus)
+    if (OpCall->getNumArgs() == 1 || OpCall->getOperator() == OO_PlusPlus ||
+        OpCall->getOperator() == OO_MinusMinus)
       return {OpCall->getArg(0)};
   }
 
@@ -422,9 +421,9 @@ getUpdateStmtInfo(const Expr *E) {
     return Res;
   }
 
-  bool isRHSCompoundAssign = false;
+  bool IsRHSCompoundAssign = false;
   std::optional<std::pair<const Expr *, const Expr *>> BinaryArgs =
-      getBinaryAssignOpArgs(E, isRHSCompoundAssign);
+      getBinaryAssignOpArgs(E, IsRHSCompoundAssign);
   if (!BinaryArgs)
     return std::nullopt;
 
@@ -437,15 +436,15 @@ getUpdateStmtInfo(const Expr *E) {
   // 'update' has to be either a compound-assignment operation, or
   // assignment-to-a-binary-op. Return nullopt if these are not the case.
   // If we are already compound-assign, we're done!
-  if (isRHSCompoundAssign)
+  if (IsRHSCompoundAssign)
     return Res;
 
   // else we have to check that we have a binary operator.
   const Expr *RHS = BinaryArgs->second->IgnoreImpCasts();
 
-  if (isa<BinaryOperator>(RHS))
+  if (isa<BinaryOperator>(RHS)) {
     return Res;
-  else if (const auto *OO = dyn_cast<CXXOperatorCallExpr>(RHS)) {
+  } else if (const auto *OO = dyn_cast<CXXOperatorCallExpr>(RHS)) {
     if (OO->isInfixBinaryOp())
       return Res;
   }
@@ -453,8 +452,15 @@ getUpdateStmtInfo(const Expr *E) {
   return std::nullopt;
 }
 
+/// The statement associated with an atomic capture comes in 1 of two forms: A
+/// compound statement containing two statements, or a single statement.  In
+/// either case, the compound/single statement is decomposed into 2 separate
+/// operations, eihter a read/write, read/update, or update/read.  This function
+/// figures out that information in the form listed in the standard (filling in
+/// V, X, or Expr) for each of these operations.
 static OpenACCAtomicConstruct::StmtInfo
 getCaptureStmtInfo(const Stmt *AssocStmt) {
+
   if (const auto *CmpdStmt = dyn_cast<CompoundStmt>(AssocStmt)) {
     // We checked during Sema to ensure we only have 2 statements here, and
     // that both are expressions, we can look at these to see what the valid
@@ -462,6 +468,10 @@ getCaptureStmtInfo(const Stmt *AssocStmt) {
     const Expr *Stmt1 = cast<Expr>(*CmpdStmt->body().begin())->IgnoreImpCasts();
     const Expr *Stmt2 =
         cast<Expr>(*(CmpdStmt->body().begin() + 1))->IgnoreImpCasts();
+
+    // The compound statement form allows read/write, read/update, or
+    // update/read. First we get the information for a 'Read' to see if this is
+    // one of the former two.
     std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Read =
         getReadStmtInfo(Stmt1);
 
@@ -478,6 +488,8 @@ getCaptureStmtInfo(const Stmt *AssocStmt) {
       // v = x; --x
       std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Update =
           getUpdateStmtInfo(Stmt2);
+      // Since we already know the first operation is a read, the second is
+      // either an update, which we check, or a write, which we can assume next.
       if (Update)
         return OpenACCAtomicConstruct::StmtInfo::createReadUpdate(*Read,
                                                                   *Update);
@@ -494,6 +506,7 @@ getCaptureStmtInfo(const Stmt *AssocStmt) {
     // x++; v = x
     // --x; v = x
     // x--; v = x
+    // Otherwise, it is one of the above forms for update/read.
     std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Update =
         getUpdateStmtInfo(Stmt1);
     Read = getReadStmtInfo(Stmt2);

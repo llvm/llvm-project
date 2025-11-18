@@ -66,7 +66,7 @@ void use(int x, int v, float f, HasOps ops) {
   //
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[DEC:.*]] = cir.unary(dec, %[[X_VAR_LOAD]]) nsw : !s32i, !s32i
-  // CHECK-NEXT: cir.store{{.*}} %[[INC]], %[[X_VAR_ALLOC]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT: cir.store{{.*}} %[[DEC]], %[[X_VAR_ALLOC]] : !s32i, !cir.ptr<!s32i>
   //
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: acc.yield %[[X_VAR_LOAD]] : !s32i
@@ -84,7 +84,7 @@ void use(int x, int v, float f, HasOps ops) {
   // 
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[DEC:.*]] = cir.unary(dec, %[[X_VAR_LOAD]]) nsw : !s32i, !s32i
-  // CHECK-NEXT: cir.store{{.*}} %[[INC]], %[[X_VAR_ALLOC]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT: cir.store{{.*}} %[[DEC]], %[[X_VAR_ALLOC]] : !s32i, !cir.ptr<!s32i>
   //
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: acc.yield %[[X_VAR_LOAD]] : !s32i
