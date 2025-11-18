@@ -1,4 +1,4 @@
-; NOTE: This test is expected to test the Identity shuffle costs as zero, regardless of target ISA in AArch64, scalable or fixed width shuffle vectors, As a result enabling aggressive vector-combine transforms.
+; NOTE: This test is expected to test the Identity shuffle costs as zero, regardless of scalable or fixed width shuffle vectors, As a result enabling aggressive vector-combine transforms.
 ; RUN: opt -passes=vector-combine -S %s | FileCheck %s
 target triple = "aarch64-unknown-linux-gnu"
 
