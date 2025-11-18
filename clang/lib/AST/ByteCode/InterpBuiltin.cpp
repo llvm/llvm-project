@@ -3380,7 +3380,6 @@ static bool interp__builtin_ia32_cvt_mask(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
