@@ -22,7 +22,6 @@ static_library("Orc") {
     "CompileOnDemandLayer.cpp",
     "CompileUtils.cpp",
     "Core.cpp",
-    "DebugObjectManagerPlugin.cpp",
     "DebugUtils.cpp",
     "EHFrameRegistrationPlugin.cpp",
     "ELFNixPlatform.cpp",
