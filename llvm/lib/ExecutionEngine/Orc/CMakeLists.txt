@@ -14,7 +14,6 @@ add_llvm_component_library(LLVMOrcJIT
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
-  DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
   EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp

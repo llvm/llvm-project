@@ -17,9 +17,9 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/ELFDebugObjectPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
@@ -1298,8 +1298,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     if (DebuggerSupport) {
       Error TargetSymErr = Error::success();
-      auto Plugin = std::make_unique<DebugObjectManagerPlugin>(ES, true, true,
-                                                               TargetSymErr);
+      auto Plugin =
+          std::make_unique<ELFDebugObjectPlugin>(ES, true, true, TargetSymErr);
       if (!TargetSymErr)
         ObjLayer.addPlugin(std::move(Plugin));
       else
