@@ -537,7 +537,8 @@ static bool isSplat(ArrayRef<Value *> VL) {
 /// \param I The instruction to check for commutativity
 /// \param ValWithUses The value whose uses are analyzed for special
 /// patterns
-static bool isCommutative(Instruction *I, Value *ValWithUses) {
+static bool isCommutative(Instruction *I, Value *ValWithUses,
+                          bool IsCopyable = false) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
@@ -546,7 +547,7 @@ static bool isCommutative(Instruction *I, Value *ValWithUses) {
             !ValWithUses->hasNUsesOrMore(UsesLimit) &&
             all_of(
                 ValWithUses->uses(),
-                [](const Use &U) {
+                [&](const Use &U) {
                   // Commutative, if icmp eq/ne sub, 0
                   CmpPredicate Pred;
                   if (match(U.getUser(),
@@ -555,10 +556,11 @@ static bool isCommutative(Instruction *I, Value *ValWithUses) {
                     return true;
                   // Commutative, if abs(sub nsw, true) or abs(sub, false).
                   ConstantInt *Flag;
+                  auto *I = dyn_cast<BinaryOperator>(U.get());
                   return match(U.getUser(),
                                m_Intrinsic<Intrinsic::abs>(
                                    m_Specific(U.get()), m_ConstantInt(Flag))) &&
-                         (!cast<Instruction>(U.get())->hasNoSignedWrap() ||
+                         ((!IsCopyable && I && !I->hasNoSignedWrap()) ||
                           Flag->isOne());
                 })) ||
            (BO->getOpcode() == Instruction::FSub &&
@@ -3164,7 +3166,8 @@ public:
         bool IsInverseOperation = false;
         if (S.isCopyableElement(VL[Lane])) {
           // The value is a copyable element.
-          IsInverseOperation = !isCommutative(MainOp, VL[Lane]);
+          IsInverseOperation =
+              !isCommutative(MainOp, VL[Lane], /*IsCopyable=*/true);
         } else {
           assert(I && "Expected instruction");
           auto [SelectedOp, Ops] = convertTo(I, S);
@@ -5337,6 +5340,7 @@ private:
           bool IsNonSchedulableWithParentPhiNode =
               TE->doesNotNeedToSchedule() && TE->UserTreeIndex &&
               TE->UserTreeIndex.UserTE->hasState() &&
+              TE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
               TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
           // Count the number of unique phi nodes, which are the parent for
           // parent entry, and exit, if all the unique phis are processed.
@@ -5388,6 +5392,7 @@ private:
         bool IsNonSchedulableWithParentPhiNode =
             P.first->doesNotNeedToSchedule() && P.first->UserTreeIndex &&
             P.first->UserTreeIndex.UserTE->hasState() &&
+            P.first->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
             P.first->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
         auto *It = find(P.first->Scalars, User);
         do {
@@ -5687,6 +5692,8 @@ private:
                   Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
                   Bundle->getTreeEntry()->UserTreeIndex &&
                   Bundle->getTreeEntry()->UserTreeIndex.UserTE->hasState() &&
+                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->State !=
+                      TreeEntry::SplitVectorize &&
                   Bundle->getTreeEntry()->UserTreeIndex.UserTE->getOpcode() ==
                       Instruction::PHI;
               // Count the number of unique phi nodes, which are the parent for
@@ -21472,7 +21479,18 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
            "new ScheduleData already in scheduling region");
     SD->init(SchedulingRegionID, I);
 
+    auto CanIgnoreLoad = [](const Instruction *I) {
+      const auto *LI = dyn_cast<LoadInst>(I);
+      // If there is a simple load marked as invariant, we can ignore it.
+      // But, in the (unlikely) case of non-simple invariant load,
+      // we should not ignore it.
+      return LI && LI->isSimple() &&
+             LI->getMetadata(LLVMContext::MD_invariant_load);
+    };
+
     if (I->mayReadOrWriteMemory() &&
+        // Simple InvariantLoad does not depend on other memory accesses.
+        !CanIgnoreLoad(I) &&
         (!isa<IntrinsicInst>(I) ||
          (cast<IntrinsicInst>(I)->getIntrinsicID() != Intrinsic::sideeffect &&
           cast<IntrinsicInst>(I)->getIntrinsicID() !=

@@ -63,4 +63,42 @@ def ACCImplicitData : Pass<"acc-implicit-data", "mlir::ModuleOp"> {
   ];
 }
 
+def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
+  let summary = "Generate implicit acc routine for functions in acc regions";
+  let description = [{
+    This pass implements the implicit rules described in OpenACC specification
+    for `Routine Directive` (OpenACC 3.4 spec, section 2.15.1).
+
+    "If no explicit routine directive applies to a procedure whose definition
+    appears in the program unit being compiled, then the implementation applies
+    an implicit routine directive to that procedure if any of the following
+    conditions holds:
+    - The procedure is called or its address is accessed in a compute region."
+
+    The specification further states:
+    "When the implementation applies an implicit routine directive to a procedure,
+    it must recursively apply implicit routine directives to other procedures for
+    which the above rules specify relevant dependencies. Such dependencies can
+    form a cycle, so the implementation must take care to avoid infinite recursion."
+
+    This pass implements these requirements by:
+    1. Walking through all OpenACC compute constructs and functions already
+       marked with `acc routine` in the module and identifying function calls
+       within these regions.
+    2. Creating implicit `acc.routine` operations for functions that don't already
+       have routine declarations.
+    3. Recursively walking through all existing `acc routine` and creating
+       implicit routine operations for function calls within these routines,
+       while avoiding infinite recursion through proper tracking.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+  let options = [
+    Option<"deviceType", "device-type", "mlir::acc::DeviceType",
+           "mlir::acc::DeviceType::None",
+           "Target device type for implicit routine generation. "
+           "Ensures that `acc routine` device_type clauses are "
+           "properly considered not just default clauses.">
+  ];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

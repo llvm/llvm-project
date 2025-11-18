@@ -415,6 +415,12 @@ def CmpBranchUImm6Operand_64b
   let WantsParent = true;
 }
 
+def CmpBranchBExtOperand
+    : ComplexPattern<i32, 2, "SelectCmpBranchExtOperand<true>", []> {}
+
+def CmpBranchHExtOperand
+    : ComplexPattern<i32, 2, "SelectCmpBranchExtOperand<false>", []> {}
+
 def UImm6Plus1Operand : AsmOperandClass {
   let Name = "UImm6P1";
   let DiagnosticType = "InvalidImm1_64";
@@ -13196,8 +13202,22 @@ multiclass CmpBranchRegisterAlias<string mnemonic, string insn> {
 }
 
 class CmpBranchRegisterPseudo<RegisterClass regtype>
-  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, regtype:$Rm, am_brcmpcond:$Target), []>,
-    Sched<[WriteBr]> {
+    : Pseudo<(outs),
+             (ins ccode:$Cond, regtype:$Rt, regtype:$Rm, am_brcmpcond:$Target),
+             []>,
+      Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
+// Cmpbr pseudo instruction, encoding potentially folded zero-, sign-extension,
+// assertzext and/or assersext.
+class CmpBranchExtRegisterPseudo
+    : Pseudo<(outs),
+             (ins ccode:$Cond, GPR32:$Rt, GPR32:$Rm, am_brcmpcond:$Target,
+                 simm8_32b:$ExtRt, simm8_32b:$ExtRm),
+             []>,
+      Sched<[WriteBr]> {
   let isBranch = 1;
   let isTerminator = 1;
 }

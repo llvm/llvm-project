@@ -753,8 +753,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
                          TM.Options.FloatABIType, TM.Options.EABIVersion,
-                         TM.Options.MCOptions.getABIName(),
-                         TM.Options.VectorLibrary),
+                         TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo) {
   initActions();
 
