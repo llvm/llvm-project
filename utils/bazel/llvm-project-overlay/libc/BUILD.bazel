@@ -7118,7 +7118,7 @@ libc_support_library(
     name = "pkey_common",
     hdrs = [
         "src/sys/mman/linux/pkey_common.h",
-    ] + select({
+    ] + selects.with_or({
         PLATFORM_CPU_X86_64: ["src/sys/mman/linux/x86_64/pkey_common.h"],
         "//conditions:default": ["src/sys/mman/linux/generic/pkey_common.h"],
     }),
