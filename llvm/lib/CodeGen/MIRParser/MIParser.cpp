@@ -2883,7 +2883,6 @@ bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::lparen))
     return true;
 
-  LaneBitmask LaneMask = LaneBitmask::getAll();
   // Parse lanemask.
   if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
     return error("expected a valid lane mask value");
@@ -2892,7 +2891,7 @@ bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
   LaneBitmask::Type V;
   if (getUint64(V))
     return true;
-  LaneMask = LaneBitmask(V);
+  LaneBitmask LaneMask(V);
   lex();
 
   if (expectAndConsume(MIToken::rparen))
