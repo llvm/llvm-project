@@ -36,6 +36,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  inet_addr
+  SRCS
+    inet_addr.cpp
+  HDRS
+    inet_addr.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.include.llvm-libc-macros.netinet_in_macros
+    libc.include.llvm-libc-types.in_addr
+    libc.include.llvm-libc-types.in_addr_t
+    libc.src.__support.common
+    libc.src.arpa.inet.inet_aton
+)
+
+add_entrypoint_object(
   ntohl
   SRCS
     ntohl.cpp
