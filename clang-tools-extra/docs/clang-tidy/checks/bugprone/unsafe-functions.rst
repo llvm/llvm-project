@@ -96,37 +96,62 @@ to be checked. The format is the following, without newlines:
 The functions are matched using POSIX extended regular expressions.
 *(Note: The regular expressions do not support negative* ``(?!)`` *matches.)*
 
-The `reason` is optional and is used to provide additional information
-about the reasoning behind the replacement. The default reason is
-`is marked as unsafe`.
+The ``reason`` is optional and is used to provide additional information about the
+reasoning behind the replacement. The default reason is ``is marked as unsafe``.
 
-If `replacement` is empty, the text `it should not be used` will be shown
-instead of the suggestion for a replacement.
+If ``replacement`` is empty, the default text ``it should not be used`` will be
+shown instead of the suggestion for a replacement.
 
-As an example, the configuration `^original$, replacement, is deprecated;`
-will produce the following diagnostic message.
+If the ``reason`` starts with the character ``>``, the reason becomes fully custom.
+The default suffix is disabled even if a ``replacement`` is present, and only the
+reason message is shown after the matched function, to allow better control over
+the suggestions. (The starting ``>`` and whitespace directly after it are
+trimmed from the message.)
+
+As an example, the following configuration matches only the function ``original``
+in the default namespace. A similar diagnostic can also be printed using a fully
+custom reason.
 
 .. code:: c
 
+   // bugprone-unsafe-functions.CustomFunctions:
+   //   ^original$, replacement, is deprecated;
+   // Using the fully custom message syntax:
+   //   ^suspicious$,,> should be avoided if possible.
    original(); // warning: function 'original' is deprecated; 'replacement' should be used instead.
+   suspicious(); // warning: function 'suspicious' should be avoided if possible.
    ::std::original(); // no-warning
    original_function(); // no-warning
 
-If the regular expression contains the character `:`, it is matched against the
-qualified name (i.e. ``std::original``), otherwise the regex is matched against the unqualified name (``original``).
-If the regular expression starts with `::` (or `^::`), it is matched against the
-fully qualified name (``::std::original``).
+If the regular expression contains the character ``:``, it is matched against the
+qualified name (i.e. ``std::original``), otherwise the regex is matched against
+the unqualified name (``original``). If the regular expression starts with ``::``
+(or ``^::``), it is matched against the fully qualified name
+(``::std::original``).
+
+One of the use cases for fully custom messages is suggesting compiler options
+and warning flags:
+
+.. code:: c
+
+   // bugprone-unsafe-functions.CustomFunctions:
+   //   ^memcpy$,,>is recommended to have compiler hardening using '_FORTIFY_SOURCE';
+   //   ^printf$,,>is recommended to have the '-Werror=format-security' compiler warning flag;
+
+   memcpy(dest, src, 999'999); // warning: function 'memcpy' is recommended to have compiler hardening using '_FORTIFY_SOURCE'
+   printf(raw_str); // warning: function 'printf' is recommended to have the '-Werror=format-security' compiler warning flag
 
 .. note::
 
-   Fully qualified names can contain template parameters on certain C++ classes, but not on C++ functions.
-   Type aliases are resolved before matching.
+   Fully qualified names can contain template parameters on certain C++ classes,
+   but not on C++ functions. Type aliases are resolved before matching.
 
    As an example, the member function ``open`` in the class ``std::ifstream``
    has a fully qualified name of ``::std::basic_ifstream<char>::open``.
 
-   The example could also be matched with the regex ``::std::basic_ifstream<[^>]*>::open``, which matches all potential
-   template parameters, but does not match nested template classes.
+   The example could also be matched with the regex
+   ``::std::basic_ifstream<[^>]*>::open``, which matches all potential template
+   parameters, but does not match nested template classes.
 
 Options
 -------
