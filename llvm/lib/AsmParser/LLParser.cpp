@@ -315,10 +315,10 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return error(NT.second.second,
                    "use of undefined type '%" + Twine(NT.first) + "'");
 
-  for (const auto &NamedType : NamedTypes)
-    if (NamedType.second.second.isValid())
-      return error(NamedType.second.second,
-                   "use of undefined type named '" + NamedType.getKey() + "'");
+  for (const auto &[Name, TypeInfo] : NamedTypes)
+    if (TypeInfo.second.isValid())
+      return error(TypeInfo.second,
+                   "use of undefined type named '" + Name + "'");
 
   if (!ForwardRefComdats.empty())
     return error(ForwardRefComdats.begin()->second,
