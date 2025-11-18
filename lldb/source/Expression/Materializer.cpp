@@ -76,10 +76,11 @@ public:
 
     const bool zero_memory = false;
     IRMemoryMap::AllocationPolicy used_policy;
-    uint64_t malloc_size = llvm::expectedToOptional(
-        m_persistent_variable_sp->GetByteSize()).value_or(0);
-    auto address_or_error = map.Malloc(malloc_size,
-        8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+    uint64_t malloc_size =
+        llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
+            .value_or(0);
+    auto address_or_error = map.Malloc(
+        malloc_size, 8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
         IRMemoryMap::eAllocationPolicyMirror, zero_memory, &used_policy);
     if (!address_or_error) {
       err = Status::FromErrorStringWithFormat(
@@ -90,9 +91,9 @@ public:
     }
     lldb::addr_t mem = *address_or_error;
 
-    LLDB_LOGF(log, "Allocated 0x%" PRIx64 "bytes for %s (0x%" PRIx64 
-              ") successfully", malloc_size, 
-              m_persistent_variable_sp->GetName().GetCString(), mem);
+    LLDB_LOGF(
+        log, "Allocated 0x%" PRIx64 "bytes for %s (0x%" PRIx64 ") successfully",
+        malloc_size, m_persistent_variable_sp->GetName().GetCString(), mem);
 
     // Put the location of the spare memory into the live data of the
     // ValueObject.
@@ -144,11 +145,9 @@ public:
   void DestroyAllocation(IRMemoryMap &map, Status &err) {
     Status deallocate_error;
 
-    lldb::ValueObjectSP live_valobj_sp 
-        = m_persistent_variable_sp->GetLiveObject();
-    map.Free((lldb::addr_t)live_valobj_sp->GetValue()
-                 .GetScalar()
-                 .ULongLong(),
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
+    map.Free((lldb::addr_t)live_valobj_sp->GetValue().GetScalar().ULongLong(),
              deallocate_error);
 
     live_valobj_sp.reset();
@@ -186,18 +185,17 @@ public:
         return;
     }
 
-    lldb::ValueObjectSP live_valobj_sp 
-        = m_persistent_variable_sp->GetLiveObject();
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
     if ((m_persistent_variable_sp->m_flags &
-             ExpressionVariable::EVIsProgramReference && live_valobj_sp) ||
+             ExpressionVariable::EVIsProgramReference &&
+         live_valobj_sp) ||
         m_persistent_variable_sp->m_flags &
             ExpressionVariable::EVIsLLDBAllocated) {
       Status write_error;
 
-      map.WriteScalarToMemory(
-          load_addr,
-          live_valobj_sp->GetValue().GetScalar(),
-          map.GetAddressByteSize(), write_error);
+      map.WriteScalarToMemory(load_addr, live_valobj_sp->GetValue().GetScalar(),
+                              map.GetAddressByteSize(), write_error);
 
       if (!write_error.Success()) {
         err = Status::FromErrorStringWithFormat(
@@ -233,8 +231,8 @@ public:
       m_delegate->DidDematerialize(m_persistent_variable_sp);
     }
 
-    lldb::ValueObjectSP live_valobj_sp 
-          = m_persistent_variable_sp->GetLiveObject();
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
     if ((m_persistent_variable_sp->m_flags &
          ExpressionVariable::EVIsLLDBAllocated) ||
         (m_persistent_variable_sp->m_flags &
@@ -246,7 +244,7 @@ public:
         // ClangExpressionVariable's live variable data hasn't been set up yet.
         // Do this now.
 
-       lldb::addr_t location;
+        lldb::addr_t location;
         Status read_error;
 
         map.ReadPointerFromMemory(&location, load_addr, read_error);
@@ -290,12 +288,10 @@ public:
         return;
       }
 
-      lldb::addr_t mem = live_valobj_sp->GetValue()
-                             .GetScalar()
-                             .ULongLong();
+      lldb::addr_t mem = live_valobj_sp->GetValue().GetScalar().ULongLong();
 
-      if (live_valobj_sp->GetValue().GetValueAddressType() 
-          != eAddressTypeLoad) {
+      if (live_valobj_sp->GetValue().GetValueAddressType() !=
+          eAddressTypeLoad) {
         err = Status::FromErrorStringWithFormat(
             "the address of the memory area for %s is in an incorrect format",
             m_persistent_variable_sp->GetName().GetCString());

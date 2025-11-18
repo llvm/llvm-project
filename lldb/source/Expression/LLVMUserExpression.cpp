@@ -252,11 +252,12 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
   if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result_sp,
                            function_stack_bottom, function_stack_top)) {
-//    if (result_sp) {
-//      // This is a bit of a hack, replace with a real API.  Trying to force 
-//      // fetching all the dynamic info at this point.
-//      result_sp->GetValueObject();
-//    }
+    //    if (result_sp) {
+    //      // This is a bit of a hack, replace with a real API.  Trying to
+    //      force
+    //      // fetching all the dynamic info at this point.
+    //      result_sp->GetValueObject();
+    //    }
     return lldb::eExpressionCompleted;
   }
 

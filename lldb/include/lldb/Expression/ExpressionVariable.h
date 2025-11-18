@@ -33,20 +33,19 @@ public:
 
   virtual ~ExpressionVariable() = default;
 
-  llvm::Expected<uint64_t> GetByteSize() { 
-    return GetValueObject()->GetByteSize(); 
-  
+  llvm::Expected<uint64_t> GetByteSize() {
+    return GetValueObject()->GetByteSize();
   }
 
   ConstString GetName() { return m_frozen_sp->GetName(); }
 
   lldb::ValueObjectSP GetValueObject() {
-    lldb::ValueObjectSP dyn_sp = 
+    lldb::ValueObjectSP dyn_sp =
         m_frozen_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
     if (dyn_sp && dyn_sp->UpdateValueIfNeeded())
       return dyn_sp;
     else
-      return m_frozen_sp; 
+      return m_frozen_sp;
   }
 
   uint8_t *GetValueBytes();
@@ -91,12 +90,10 @@ public:
   }
   // We don't try to get the dynamic value of the live object when we fetch
   // it here.  The live object describes the container of the value in the
-  // target, but it's type is of the object for convenience.  So it can't 
+  // target, but it's type is of the object for convenience.  So it can't
   // produce the dynamic value.  Instead, we use TransferAddress to adjust the
   // value held by the LiveObject.
-  lldb::ValueObjectSP GetLiveObject() {
-    return m_live_sp;
-  }
+  lldb::ValueObjectSP GetLiveObject() { return m_live_sp; }
 
   enum Flags {
     EVNone = 0,
@@ -133,7 +130,7 @@ public:
   /// The m_frozen_sp holds the data & type of the expression variable or result
   /// in the host.  The m_frozen_sp also can present a dynamic value if one is
   /// available.
-  /// The m_frozen_sp manages the copy of this value in m_frozen_sp that we 
+  /// The m_frozen_sp manages the copy of this value in m_frozen_sp that we
   /// insert in the target so that it can be referred to in future expressions.
   /// We don't actually use the contents of the live_sp to create the value in
   /// the target, that comes from the frozen sp.  The live_sp is mostly to track
@@ -148,7 +145,7 @@ public:
   lldb::ValueObjectSP m_live_sp;
   /// @}
 
-  //LLVMCastKind m_kind;
+  // LLVMCastKind m_kind;
   lldb::DynamicValueType m_dyn_option = lldb::eNoDynamicValues;
 };
 

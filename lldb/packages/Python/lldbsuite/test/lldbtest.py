@@ -2540,7 +2540,7 @@ FileCheck output:
         result_value=None,
         result_type=None,
         result_children=None,
-        options=None
+        options=None,
     ):
         """
         Evaluates the given expression and verifies the result.
@@ -2558,7 +2558,7 @@ FileCheck output:
 
         frame = self.frame()
         if not options:
-          options = lldb.SBExpressionOptions()
+            options = lldb.SBExpressionOptions()
 
         # Disable fix-its that tests don't pass by accident.
         options.SetAutoApplyFixIts(False)
