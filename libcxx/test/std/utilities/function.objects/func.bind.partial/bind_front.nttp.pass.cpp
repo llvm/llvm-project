@@ -268,6 +268,21 @@ constexpr void test_perfect_forwarding_call_wrapper() {
     }
   }
 
+  { // Test perfect forwarding when various overloads are available
+    struct X {
+      Tag<0> operator()(int&, char) const;
+      Tag<1> operator()(const int&, char) const;
+      Tag<2> operator()(int&&, char) const;
+      Tag<3> operator()(const int&&, char) const;
+    };
+
+    using F = decltype(std::bind_front<X{}>(0));
+    static_assert(std::same_as<std::invoke_result_t<F&, char>, Tag<0>>);
+    static_assert(std::same_as<std::invoke_result_t<const F&, char>, Tag<1>>);
+    static_assert(std::same_as<std::invoke_result_t<F, char>, Tag<2>>);
+    static_assert(std::same_as<std::invoke_result_t<const F, char>, Tag<3>>);
+  }
+
   { // Test perfect forwarding
     auto f = [](int& val) {
       val = 5;
