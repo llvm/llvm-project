@@ -1003,39 +1003,38 @@ private:
   vector::UnrollVectorOptions options;
 };
 
-/// Checks whether targetShape is contiguous in resultShape.
-/// For targetShape to be contiguous in resultShape:
-/// 1) The inner dimensions of targetShape and resultShape must match exactly.
-/// 2) The total number of elements in resultShape must be evenly divisible by
-///    the total number of elements in targetShape.
+/// Checks whether extractShape is contiguous in shape.
+/// For extractShape to be contiguous in shape:
+/// 1) The inner dimensions of extractShape and shape must match exactly.
+/// 2) The total number of elements in shape must be evenly divisible by
+///    the total number of elements in extractShape.
 /// Examples:
 ///   isContiguous([4, 4], [8, 4]) == true
 ///   isContiguous([2, 4], [8, 4]) == true
 ///   isContiguous([2, 2], [8, 4]) == false
 /// Removes leading unit dimensions to handle cases like:
 ///   isContiguous([1, 16], [1, 32]) == true
-static bool isContiguous(ArrayRef<int64_t> targetShape,
-                         ArrayRef<int64_t> resultShape) {
+static bool isContiguous(ArrayRef<int64_t> extractShape,
+                         ArrayRef<int64_t> shape) {
 
-  if (targetShape.size() > resultShape.size())
+  if (extractShape.size() > shape.size())
     return false;
 
-  while (!targetShape.empty() && targetShape.front() == 1) {
-    targetShape = targetShape.drop_front();
+  while (!extractShape.empty() && extractShape.front() == 1) {
+    extractShape = extractShape.drop_front();
   }
 
-  while (!resultShape.empty() && resultShape.front() == 1) {
-    resultShape = resultShape.drop_front();
+  while (!shape.empty() && shape.front() == 1) {
+    shape = shape.drop_front();
   }
 
-  size_t rankDiff = resultShape.size() - targetShape.size();
-  if (!llvm::equal(targetShape.drop_front(),
-                   resultShape.drop_front(rankDiff + 1)))
+  size_t rankDiff = shape.size() - extractShape.size();
+  if (!llvm::equal(extractShape.drop_front(), shape.drop_front(rankDiff + 1)))
     return false;
 
-  int64_t targetElements = ShapedType::getNumElements(targetShape);
-  int64_t resultElements = ShapedType::getNumElements(resultShape);
-  return resultElements % targetElements == 0;
+  int64_t extractElements = ShapedType::getNumElements(extractShape);
+  int64_t shapeElements = ShapedType::getNumElements(shape);
+  return shapeElements % extractElements == 0;
 }
 
 /// This function determines what shape to use with
