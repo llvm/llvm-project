@@ -32,35 +32,21 @@ AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
 
 void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                                const SDNode *N) const {
+  switch (N->getOpcode()) {
+  case AArch64ISD::WrapperLarge:
+    // operand #0 must have type i32, but has type i64
+    return;
+  }
+
   SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 
 #ifndef NDEBUG
   // Some additional checks not yet implemented by verifyTargetNode.
-  constexpr MVT FlagsVT = MVT::i32;
   switch (N->getOpcode()) {
-  case AArch64ISD::SUBS:
-    assert(N->getValueType(1) == FlagsVT);
-    break;
-  case AArch64ISD::ADC:
-  case AArch64ISD::SBC:
-    assert(N->getOperand(2).getValueType() == FlagsVT);
-    break;
-  case AArch64ISD::ADCS:
-  case AArch64ISD::SBCS:
-    assert(N->getValueType(1) == FlagsVT);
-    assert(N->getOperand(2).getValueType() == FlagsVT);
-    break;
-  case AArch64ISD::CSEL:
-  case AArch64ISD::CSINC:
-  case AArch64ISD::BRCOND:
-    assert(N->getOperand(3).getValueType() == FlagsVT);
-    break;
   case AArch64ISD::SADDWT:
   case AArch64ISD::SADDWB:
   case AArch64ISD::UADDWT:
   case AArch64ISD::UADDWB: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 2 && "Expected two operands!");
     EVT VT = N->getValueType(0);
     EVT Op0VT = N->getOperand(0).getValueType();
     EVT Op1VT = N->getOperand(1).getValueType();
@@ -80,8 +66,6 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   case AArch64ISD::SUNPKHI:
   case AArch64ISD::UUNPKLO:
   case AArch64ISD::UUNPKHI: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 1 && "Expected one operand!");
     EVT VT = N->getValueType(0);
     EVT OpVT = N->getOperand(0).getValueType();
     assert(OpVT.isVector() && VT.isVector() && OpVT.isInteger() &&
@@ -98,8 +82,6 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   case AArch64ISD::UZP2:
   case AArch64ISD::ZIP1:
   case AArch64ISD::ZIP2: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 2 && "Expected two operands!");
     EVT VT = N->getValueType(0);
     EVT Op0VT = N->getOperand(0).getValueType();
     EVT Op1VT = N->getOperand(1).getValueType();
@@ -109,11 +91,8 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   }
   case AArch64ISD::RSHRNB_I: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 2 && "Expected two operands!");
     EVT VT = N->getValueType(0);
     EVT Op0VT = N->getOperand(0).getValueType();
-    EVT Op1VT = N->getOperand(1).getValueType();
     assert(VT.isVector() && VT.isInteger() &&
            "Expected integer vector result type!");
     assert(Op0VT.isVector() && Op0VT.isInteger() &&
@@ -122,8 +101,8 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
            "Expected vectors of equal size!");
     assert(VT.getVectorElementCount() == Op0VT.getVectorElementCount() * 2 &&
            "Expected input vector with half the lanes of its result!");
-    assert(Op1VT == MVT::i32 && isa<ConstantSDNode>(N->getOperand(1)) &&
-           "Expected second operand to be a constant i32!");
+    assert(isa<ConstantSDNode>(N->getOperand(1)) &&
+           "Expected second operand to be a constant!");
     break;
   }
   }

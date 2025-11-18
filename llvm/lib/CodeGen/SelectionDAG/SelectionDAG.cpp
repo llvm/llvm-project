@@ -76,7 +76,6 @@
 #include <cstdlib>
 #include <limits>
 #include <optional>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -2468,180 +2467,6 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
 }
 
-/// Given a store node \p StoreNode, return true if it is safe to fold that node
-/// into \p FPNode, which expands to a library call with output pointers.
-static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
-                                                  SDNode *FPNode) {
-  SmallVector<const SDNode *, 8> Worklist;
-  SmallVector<const SDNode *, 8> DeferredNodes;
-  SmallPtrSet<const SDNode *, 16> Visited;
-
-  // Skip FPNode use by StoreNode (that's the use we want to fold into FPNode).
-  for (SDValue Op : StoreNode->ops())
-    if (Op.getNode() != FPNode)
-      Worklist.push_back(Op.getNode());
-
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  while (!Worklist.empty()) {
-    const SDNode *Node = Worklist.pop_back_val();
-    auto [_, Inserted] = Visited.insert(Node);
-    if (!Inserted)
-      continue;
-
-    if (MaxSteps > 0 && Visited.size() >= MaxSteps)
-      return false;
-
-    // Reached the FPNode (would result in a cycle).
-    // OR Reached CALLSEQ_START (would result in nested call sequences).
-    if (Node == FPNode || Node->getOpcode() == ISD::CALLSEQ_START)
-      return false;
-
-    if (Node->getOpcode() == ISD::CALLSEQ_END) {
-      // Defer looking into call sequences (so we can check we're outside one).
-      // We still need to look through these for the predecessor check.
-      DeferredNodes.push_back(Node);
-      continue;
-    }
-
-    for (SDValue Op : Node->ops())
-      Worklist.push_back(Op.getNode());
-  }
-
-  // True if we're outside a call sequence and don't have the FPNode as a
-  // predecessor. No cycles or nested call sequences possible.
-  return !SDNode::hasPredecessorHelper(FPNode, Visited, DeferredNodes,
-                                       MaxSteps);
-}
-
-bool SelectionDAG::expandMultipleResultFPLibCall(
-    RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
-    std::optional<unsigned> CallRetResNo) {
-  LLVMContext &Ctx = *getContext();
-  EVT VT = Node->getValueType(0);
-  unsigned NumResults = Node->getNumValues();
-
-  if (LC == RTLIB::UNKNOWN_LIBCALL)
-    return false;
-
-  const char *LCName = TLI->getLibcallName(LC);
-  if (!LCName)
-    return false;
-
-  auto getVecDesc = [&]() -> VecDesc const * {
-    for (bool Masked : {false, true}) {
-      if (VecDesc const *VD = getLibInfo().getVectorMappingInfo(
-              LCName, VT.getVectorElementCount(), Masked)) {
-        return VD;
-      }
-    }
-    return nullptr;
-  };
-
-  // For vector types, we must find a vector mapping for the libcall.
-  VecDesc const *VD = nullptr;
-  if (VT.isVector() && !(VD = getVecDesc()))
-    return false;
-
-  // Find users of the node that store the results (and share input chains). The
-  // destination pointers can be used instead of creating stack allocations.
-  SDValue StoresInChain;
-  SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
-  for (SDNode *User : Node->users()) {
-    if (!ISD::isNormalStore(User))
-      continue;
-    auto *ST = cast<StoreSDNode>(User);
-    SDValue StoreValue = ST->getValue();
-    unsigned ResNo = StoreValue.getResNo();
-    // Ensure the store corresponds to an output pointer.
-    if (CallRetResNo == ResNo)
-      continue;
-    // Ensure the store to the default address space and not atomic or volatile.
-    if (!ST->isSimple() || ST->getAddressSpace() != 0)
-      continue;
-    // Ensure all store chains are the same (so they don't alias).
-    if (StoresInChain && ST->getChain() != StoresInChain)
-      continue;
-    // Ensure the store is properly aligned.
-    Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
-    if (ST->getAlign() <
-        getDataLayout().getABITypeAlign(StoreType->getScalarType()))
-      continue;
-    // Avoid:
-    //  1. Creating cyclic dependencies.
-    //  2. Expanding the node to a call within a call sequence.
-    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node))
-      continue;
-    ResultStores[ResNo] = ST;
-    StoresInChain = ST->getChain();
-  }
-
-  TargetLowering::ArgListTy Args;
-
-  // Pass the arguments.
-  for (const SDValue &Op : Node->op_values()) {
-    EVT ArgVT = Op.getValueType();
-    Type *ArgTy = ArgVT.getTypeForEVT(Ctx);
-    Args.emplace_back(Op, ArgTy);
-  }
-
-  // Pass the output pointers.
-  SmallVector<SDValue, 2> ResultPtrs(NumResults);
-  Type *PointerTy = PointerType::getUnqual(Ctx);
-  for (auto [ResNo, ST] : llvm::enumerate(ResultStores)) {
-    if (ResNo == CallRetResNo)
-      continue;
-    EVT ResVT = Node->getValueType(ResNo);
-    SDValue ResultPtr = ST ? ST->getBasePtr() : CreateStackTemporary(ResVT);
-    ResultPtrs[ResNo] = ResultPtr;
-    Args.emplace_back(ResultPtr, PointerTy);
-  }
-
-  SDLoc DL(Node);
-
-  // Pass the vector mask (if required).
-  if (VD && VD->isMasked()) {
-    EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), Ctx, VT);
-    SDValue Mask = getBoolConstant(true, DL, MaskVT, VT);
-    Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
-  }
-
-  Type *RetType = CallRetResNo.has_value()
-                      ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
-                      : Type::getVoidTy(Ctx);
-  SDValue InChain = StoresInChain ? StoresInChain : getEntryNode();
-  SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
-                                     TLI->getPointerTy(getDataLayout()));
-  TargetLowering::CallLoweringInfo CLI(*this);
-  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      TLI->getLibcallCallingConv(LC), RetType, Callee, std::move(Args));
-
-  auto [Call, CallChain] = TLI->LowerCallTo(CLI);
-
-  for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
-    if (ResNo == CallRetResNo) {
-      Results.push_back(Call);
-      continue;
-    }
-    MachinePointerInfo PtrInfo;
-    SDValue LoadResult =
-        getLoad(Node->getValueType(ResNo), DL, CallChain, ResultPtr, PtrInfo);
-    SDValue OutChain = LoadResult.getValue(1);
-
-    if (StoreSDNode *ST = ResultStores[ResNo]) {
-      // Replace store with the library call.
-      ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
-      PtrInfo = ST->getPointerInfo();
-    } else {
-      PtrInfo = MachinePointerInfo::getFixedStack(
-          getMachineFunction(), cast<FrameIndexSDNode>(ResultPtr)->getIndex());
-    }
-
-    Results.push_back(LoadResult);
-  }
-
-  return true;
-}
-
 SDValue SelectionDAG::expandVAArg(SDNode *Node) {
   SDLoc dl(Node);
   const TargetLowering &TLI = getTargetLoweringInfo();
@@ -2919,6 +2744,34 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
   unsigned BitWidth = Op.getScalarValueSizeInBits();
   return MaskedValueIsZero(Op, APInt::getSignMask(BitWidth), Depth);
+}
+
+bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
+  if (Depth >= MaxRecursionDepth)
+    return false; // Limit search depth.
+
+  unsigned Opc = Op.getOpcode();
+  switch (Opc) {
+  case ISD::FABS:
+    return true;
+  case ISD::AssertNoFPClass: {
+    FPClassTest NoFPClass =
+        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
+
+    const FPClassTest TestMask = fcNan | fcNegative;
+    return (NoFPClass & TestMask) == TestMask;
+  }
+  case ISD::ARITH_FENCE:
+    return SignBitIsZeroFP(Op, Depth + 1);
+  case ISD::FEXP:
+  case ISD::FEXP2:
+  case ISD::FEXP10:
+    return Op->getFlags().hasNoNaNs();
+  default:
+    return false;
+  }
+
+  llvm_unreachable("covered opcode switch");
 }
 
 /// MaskedValueIsZero - Return true if 'V & Mask' is known to be zero.  We use
@@ -4120,6 +3973,25 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     // well as clearing one bits.
     Known.Zero.setLowBits(LogOfAlign);
     Known.One.clearLowBits(LogOfAlign);
+    break;
+  }
+  case ISD::AssertNoFPClass: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
+    FPClassTest NoFPClass =
+        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
+    const FPClassTest NegativeTestMask = fcNan | fcNegative;
+    if ((NoFPClass & NegativeTestMask) == NegativeTestMask) {
+      // Cannot be negative.
+      Known.makeNonNegative();
+    }
+
+    const FPClassTest PositiveTestMask = fcNan | fcPositive;
+    if ((NoFPClass & PositiveTestMask) == PositiveTestMask) {
+      // Cannot be positive.
+      Known.makeNegative();
+    }
+
     break;
   }
   case ISD::FGETSIGN:
@@ -6233,7 +6105,17 @@ bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
   if (ConstantFPSDNode *C1 = isConstOrConstSplatFP(Op, true))
     return !C1->isNegative();
 
-  return Op.getOpcode() == ISD::FABS;
+  switch (Op.getOpcode()) {
+  case ISD::FABS:
+  case ISD::FEXP:
+  case ISD::FEXP2:
+  case ISD::FEXP10:
+    return true;
+  default:
+    return false;
+  }
+
+  llvm_unreachable("covered opcode switch");
 }
 
 bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
@@ -8404,7 +8286,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
-  case ISD::PARTIAL_REDUCE_SUMLA: {
+  case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA: {
     [[maybe_unused]] EVT AccVT = N1.getValueType();
     [[maybe_unused]] EVT Input1VT = N2.getValueType();
     [[maybe_unused]] EVT Input2VT = N3.getValueType();
@@ -12746,6 +12629,10 @@ void SelectionDAG::getTopologicallyOrderedNodes(
   for (unsigned i = 0U; i < SortedNodes.size(); ++i) {
     const SDNode *N = SortedNodes[i];
     for (const SDNode *U : N->users()) {
+      // HandleSDNode is never part of a DAG and therefore has no entry in
+      // RemainingOperands.
+      if (U->getOpcode() == ISD::HANDLENODE)
+        continue;
       unsigned &NumRemOperands = RemainingOperands[U];
       assert(NumRemOperands && "Invalid number of remaining operands");
       --NumRemOperands;
@@ -12759,8 +12646,6 @@ void SelectionDAG::getTopologicallyOrderedNodes(
          "First node in topological sort is not the entry token");
   assert(SortedNodes.front()->getNumOperands() == 0 &&
          "First node in topological sort has operands");
-  assert(SortedNodes.back()->use_empty() &&
-         "Last node in topologic sort has users");
 }
 
 /// AddDbgValue - Add a dbg_value SDNode. If SD is non-null that means the
@@ -13062,6 +12947,11 @@ bool llvm::isOneOrOneSplat(SDValue N, bool AllowUndefs) {
   return C && C->isOne();
 }
 
+bool llvm::isOneOrOneSplatFP(SDValue N, bool AllowUndefs) {
+  ConstantFPSDNode *C = isConstOrConstSplatFP(N, AllowUndefs);
+  return C && C->isExactlyValue(1.0);
+}
+
 bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
   N = peekThroughBitcasts(N);
   unsigned BitWidth = N.getScalarValueSizeInBits();
@@ -13078,6 +12968,11 @@ bool llvm::isOnesOrOnesSplat(SDValue N, bool AllowUndefs) {
 bool llvm::isZeroOrZeroSplat(SDValue N, bool AllowUndefs) {
   N = peekThroughBitcasts(N);
   ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs, true);
+  return C && C->isZero();
+}
+
+bool llvm::isZeroOrZeroSplatFP(SDValue N, bool AllowUndefs) {
+  ConstantFPSDNode *C = isConstOrConstSplatFP(N, AllowUndefs);
   return C && C->isZero();
 }
 

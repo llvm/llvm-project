@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; CHECK-NOT: #pragma simd{{\s*$}}
 ; CHECK: #pragma simd reduction

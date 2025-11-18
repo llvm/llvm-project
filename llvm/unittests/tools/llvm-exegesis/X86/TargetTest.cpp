@@ -9,7 +9,6 @@
 #include "Target.h"
 
 #include <cassert>
-#include <memory>
 
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MmapUtils.h"

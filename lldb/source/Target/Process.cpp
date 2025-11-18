@@ -3256,6 +3256,7 @@ Status Process::ConnectRemote(llvm::StringRef remote_url) {
       if (state == eStateStopped || state == eStateCrashed) {
         // If we attached and actually have a process on the other end, then
         // this ended up being the equivalent of an attach.
+        SetShouldDetach(true);
         CompleteAttach();
 
         // This delays passing the stopped event to listeners till

@@ -77,7 +77,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
-#include <vector>
 
 #define DEBUG_TYPE "hexagon-qfp-optimizer"
 
@@ -112,11 +111,6 @@ const std::map<unsigned short, unsigned short> QFPInstMap{
     {Hexagon::V6_vneg_qf32_sf, Hexagon::V6_vneg_qf32_qf32},
     {Hexagon::V6_vneg_qf16_hf, Hexagon::V6_vneg_qf16_qf16}};
 } // namespace
-
-namespace llvm {
-FunctionPass *createHexagonQFPOptimizer();
-void initializeHexagonQFPOptimizerPass(PassRegistry &);
-} // namespace llvm
 
 namespace {
 struct HexagonQFPOptimizer : public MachineFunctionPass {

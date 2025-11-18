@@ -37,13 +37,13 @@ TEST(LICMTest, TestSCEVInvalidationOnHoisting) {
 
   SMDiagnostic Error;
   StringRef Text = R"(
-    define void @foo(i64* %ptr) {
+    define void @foo(ptr %ptr) {
     entry:
       br label %loop
 
     loop:
       %iv = phi i64 [ 0, %entry ], [ %iv.inc, %loop ]
-      %n = load i64, i64* %ptr, !invariant.load !0
+      %n = load i64, ptr %ptr, !invariant.load !0
       %iv.inc = add i64 %iv, 1
       %cmp = icmp ult i64 %iv.inc, %n
       br i1 %cmp, label %loop, label %exit
@@ -62,17 +62,17 @@ TEST(LICMTest, TestSCEVInvalidationOnHoisting) {
   BasicBlock &EntryBB = F->getEntryBlock();
   BasicBlock *LoopBB = EntryBB.getUniqueSuccessor();
 
-  // Select `load i64, i64* %ptr`.
+  // Select `load i64, ptr %ptr`.
   Instruction *IBefore = &*LoopBB->getFirstNonPHIIt();
   // Make sure the right instruction was selected.
   ASSERT_TRUE(isa<LoadInst>(IBefore));
-  // Upon this query SCEV caches disposition of <load i64, i64* %ptr> SCEV.
+  // Upon this query SCEV caches disposition of <load i64, ptr %ptr> SCEV.
   ASSERT_EQ(SE.getBlockDisposition(SE.getSCEV(IBefore), LoopBB),
             ScalarEvolution::BlockDisposition::DominatesBlock);
 
   MPM.run(*M, MAM);
 
-  // Select `load i64, i64* %ptr` after it was hoisted.
+  // Select `load i64, ptr %ptr` after it was hoisted.
   Instruction *IAfter = &*EntryBB.getFirstNonPHIIt();
   // Make sure the right instruction was selected.
   ASSERT_TRUE(isa<LoadInst>(IAfter));
@@ -84,7 +84,7 @@ TEST(LICMTest, TestSCEVInvalidationOnHoisting) {
       SE.getBlockDisposition(SE.getSCEV(IAfter), LoopBB);
 
   // If LICM have properly invalidated SCEV,
-  //   1. SCEV of <load i64, i64* %ptr> should properly dominate the "loop" BB,
+  //   1. SCEV of <load i64, ptr %ptr> should properly dominate the "loop" BB,
   //   2. extra invalidation shouldn't change result of the query.
   EXPECT_EQ(DispositionBeforeInvalidation,
             ScalarEvolution::BlockDisposition::ProperlyDominatesBlock);

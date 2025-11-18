@@ -484,9 +484,9 @@ exit:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdgesIgnorePHIs) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:
@@ -526,9 +526,9 @@ bb4:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdges) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:

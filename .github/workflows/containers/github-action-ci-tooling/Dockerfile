@@ -47,6 +47,28 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 # as root in 'ci-container-code-format' and 'ci-container-code-lint' containers
 
 
+FROM base AS ci-container-build-tools
+ARG LLVM_VERSION
+ARG LLVM_VERSION_MAJOR
+
+COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-${LLVM_VERSION_MAJOR} \
+                            ${LLVM_SYSROOT}/bin/
+COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/lib/clang/${LLVM_VERSION_MAJOR}/include \
+                            ${LLVM_SYSROOT}/lib/clang/${LLVM_VERSION_MAJOR}/include
+RUN ln -s ${LLVM_SYSROOT}/bin/clang-${LLVM_VERSION_MAJOR} ${LLVM_SYSROOT}/bin/clang && \
+    ln -s ${LLVM_SYSROOT}/bin/clang ${LLVM_SYSROOT}/bin/clang++
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    cmake \
+    ninja-build && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV CC=${LLVM_SYSROOT}/bin/clang
+ENV CXX=${LLVM_SYSROOT}/bin/clang++
+
+
 FROM base AS ci-container-code-format
 ARG LLVM_VERSION
 
@@ -63,27 +85,13 @@ USER gha
 WORKDIR /home/gha
 
 
-FROM base AS ci-container-code-lint
+FROM ci-container-build-tools AS ci-container-code-lint
 ARG LLVM_VERSION
 ARG LLVM_VERSION_MAJOR
 
 COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-tidy \
-                            /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-${LLVM_VERSION_MAJOR} \
                             ${LLVM_SYSROOT}/bin/
-COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/lib/clang/${LLVM_VERSION_MAJOR}/include \
-                            ${LLVM_SYSROOT}/lib/clang/${LLVM_VERSION_MAJOR}/include
 COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/clang-tidy-diff.py
-
-RUN ln -s ${LLVM_SYSROOT}/bin/clang-${LLVM_VERSION_MAJOR} ${LLVM_SYSROOT}/bin/clang && \
-    ln -s ${LLVM_SYSROOT}/bin/clang ${LLVM_SYSROOT}/bin/clang++
-
-
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    cmake \
-    ninja-build && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
 
 # Install dependencies for 'pr-code-lint.yml' job
 COPY llvm/utils/git/requirements_linting.txt requirements_linting.txt
@@ -91,3 +99,24 @@ RUN pip install -r requirements_linting.txt --break-system-packages && \
     rm requirements_linting.txt
 USER gha
 WORKDIR /home/gha
+
+
+FROM ci-container-build-tools as ci-container-abi-tests
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    abi-compliance-checker \
+    abi-dumper \
+    autoconf \
+    parallel \
+    pkg-config && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/universal-ctags/ctags.git && \
+    cd ctags && \
+    ./autogen.sh && \
+    ./configure && \
+    sudo make install && \
+    rm -Rf ../ctags
+

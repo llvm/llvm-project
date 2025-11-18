@@ -959,7 +959,11 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
                   PatternRewriter &rewriter) const override {
     auto viewLikeOp =
         extractOp.getSource().getDefiningOp<ViewLikeOpInterface>();
-    if (!viewLikeOp || extractOp.getSource() != viewLikeOp.getViewDest())
+    // ViewLikeOpInterface by itself doesn't guarantee to preserve the base
+    // pointer in general and `memref.view` is one such example, so just check
+    // for a few specific cases.
+    if (!viewLikeOp || extractOp.getSource() != viewLikeOp.getViewDest() ||
+        !isa<memref::SubViewOp, memref::ReinterpretCastOp>(viewLikeOp))
       return rewriter.notifyMatchFailure(extractOp, "not a ViewLike source");
     rewriter.modifyOpInPlace(extractOp, [&]() {
       extractOp.getSourceMutable().assign(viewLikeOp.getViewSource());

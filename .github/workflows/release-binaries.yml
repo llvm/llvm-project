@@ -189,13 +189,7 @@ jobs:
         ref: ${{ needs.prepare.outputs.ref }}
 
     - name: Install Ninja
-      uses: llvm/actions/install-ninja@42d80571b13f4599bbefbc7189728b64723c7f78 # main
-
-    - name: Setup Windows
-      if: startsWith(runner.os, 'Windows')
-      uses: llvm/actions/setup-windows@42d80571b13f4599bbefbc7189728b64723c7f78 # main
-      with:
-        arch: amd64
+      uses: llvm/actions/install-ninja@5dd955034a6742a2e21d82bf165fcb1050ae7b49 # main
 
     - name: Set Build Prefix
       id: setup-stage
@@ -270,7 +264,7 @@ jobs:
 
     - name: Attest Build Provenance
       id: provenance
-      uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
         subject-path: ${{ needs.prepare.outputs.release-binary-filename }}
 

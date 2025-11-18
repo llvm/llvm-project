@@ -18,7 +18,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -251,7 +250,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
                   fir::FortranVariableFlagsAttr flags, mlir::Value dummyScope,
                   mlir::Value storage, std::uint64_t storageOffset,
-                  cuf::DataAttributeAttr dataAttr) {
+                  cuf::DataAttributeAttr dataAttr, unsigned dummyArgNo) {
 
   mlir::Value base = fir::getBase(exv);
   assert(fir::conformsWithPassByRef(base.getType()) &&
@@ -282,7 +281,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
       [](const auto &) {});
   auto declareOp = hlfir::DeclareOp::create(
       builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
-      storageOffset, flags, dataAttr);
+      storageOffset, flags, dataAttr, dummyArgNo);
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 

@@ -81,6 +81,33 @@ class CodeGenModule;
 class CodeGenFunction;
 class LValue;
 
+class CGHLSLOffsetInfo {
+  SmallVector<uint32_t> Offsets;
+
+public:
+  static const uint32_t Unspecified = ~0U;
+
+  /// Iterates over all declarations in the HLSL buffer and based on the
+  /// packoffset or register(c#) annotations it fills outs the Offsets vector
+  /// with the user-specified layout offsets. The buffer offsets can be
+  /// specified 2 ways: 1. declarations in cbuffer {} block can have a
+  /// packoffset annotation (translates to HLSLPackOffsetAttr) 2. default
+  /// constant buffer declarations at global scope can have register(c#)
+  /// annotations (translates to HLSLResourceBindingAttr with RegisterType::C)
+  /// It is not guaranteed that all declarations in a buffer have an annotation.
+  /// For those where it is not specified a `~0U` value is added to the Offsets
+  /// vector. In the final layout these declarations will be placed at the end
+  /// of the HLSL buffer after all of the elements with specified offset.
+  static CGHLSLOffsetInfo fromDecl(const HLSLBufferDecl &BufDecl);
+
+  /// Get the given offset, or `~0U` if there is no offset for the member.
+  uint32_t operator[](size_t I) const {
+    if (Offsets.empty())
+      return Unspecified;
+    return Offsets[I];
+  }
+};
+
 class CGHLSLRuntime {
 public:
   //===----------------------------------------------------------------------===//
@@ -136,6 +163,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdxCoarse, ddx_coarse)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
@@ -146,30 +175,37 @@ protected:
 
   llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
-                                      Attr *Semantic,
+                                      HLSLAppliedSemanticAttr *Semantic,
                                       std::optional<unsigned> Index);
 
   llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
                                         const FunctionDecl *FD,
                                         llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl);
+                                        const clang::DeclaratorDecl *Decl,
+                                        HLSLAppliedSemanticAttr *Semantic);
 
-  llvm::Value *handleStructSemanticLoad(llvm::IRBuilder<> &B,
-                                        const FunctionDecl *FD,
-                                        llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl);
+  std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+  handleStructSemanticLoad(
+      llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+      const clang::DeclaratorDecl *Decl,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
 
-  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
-                                  llvm::Type *Type,
-                                  const clang::DeclaratorDecl *Decl);
+  std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+  handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                     llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> end);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGHLSLRuntime() {}
 
-  llvm::Type *
-  convertHLSLSpecificType(const Type *T,
-                          SmallVector<int32_t> *Packoffsets = nullptr);
+  llvm::Type *convertHLSLSpecificType(const Type *T,
+                                      const CGHLSLOffsetInfo &OffsetInfo);
+  llvm::Type *convertHLSLSpecificType(const Type *T) {
+    return convertHLSLSpecificType(T, CGHLSLOffsetInfo());
+  }
 
   void generateGlobalCtorDtorCalls();
 
@@ -205,14 +241,14 @@ private:
                                    HLSLResourceBindingAttr *RBA);
 
   llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                         HLSLSemanticAttr *Semantic,
+                                         HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                        HLSLSemanticAttr *Semantic,
+                                        HLSLAppliedSemanticAttr *Semantic,
                                         std::optional<unsigned> Index);
   llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
-                                    HLSLSemanticAttr *Semantic,
+                                    HLSLAppliedSemanticAttr *Semantic,
                                     std::optional<unsigned> Index);
 
   llvm::Triple::ArchType getArch();

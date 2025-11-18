@@ -116,7 +116,7 @@ public:
   void run(raw_ostream &OS);
 
 private:
-  typedef std::pair<const Init *, int> SearchTableEntry;
+  using SearchTableEntry = std::pair<const Init *, int>;
 
   enum TypeContext {
     TypeInStaticStruct,

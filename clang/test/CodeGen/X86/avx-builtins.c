@@ -45,12 +45,14 @@ __m256d test_mm256_addsub_pd(__m256d A, __m256d B) {
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_addsub_pd(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_addsub_pd((__m256d){+1.0, +2.0, +3.0, +4.0}, (__m256d){+1.0, +1.0, +1.0, +1.0}), +0.0, +3.0, +2.0, +5.0));
 
 __m256 test_mm256_addsub_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_addsub_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_addsub_ps(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_addsub_ps((__m256){+1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}, (__m256){+1.0f, +1.0f, +1.0f, +1.0f, +1.0f, +1.0f, +1.0f, +1.0f}), +0.0f, +3.0f, +2.0f, +5.0f, +4.0f, +7.0f, +6.0f, +9.0f));
 
 __m256d test_mm256_and_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_and_pd

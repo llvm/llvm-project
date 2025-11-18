@@ -32,6 +32,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -65,7 +66,6 @@ class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
 class LoopVectorizationCostModel;
-class LoopVersioning;
 
 struct VPCostContext;
 
@@ -483,12 +483,25 @@ public:
   /// Set the recipe's debug location to \p NewDL.
   void setDebugLoc(DebugLoc NewDL) { DL = NewDL; }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe, delegating to printRecipe().
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override final;
+#endif
+
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
   /// instructions.
   virtual InstructionCost computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Each concrete VPRecipe prints itself, without printing common information,
+  /// like debug info or metadata.
+  virtual void printRecipe(raw_ostream &O, const Twine &Indent,
+                           VPSlotTracker &SlotTracker) const = 0;
+#endif
 };
 
 // Helper macro to define common classof implementations for recipes.
@@ -588,7 +601,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPSingleDefRecipe to dbgs() (for debugging).
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
@@ -870,14 +883,6 @@ public:
 /// using IR flags.
 struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                      DebugLoc DL = DebugLoc::getUnknown())
-      : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags() {}
-
-  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                      Instruction &I)
-      : VPSingleDefRecipe(SC, Operands, &I, I.getDebugLoc()), VPIRFlags(I) {}
-
-  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
                       const VPIRFlags &Flags,
                       DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags(Flags) {}
@@ -945,10 +950,6 @@ public:
   /// \p I.
   VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
 
-  /// Adds metatadata that can be preserved from the original instruction
-  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
-  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
-
   /// Copy constructor for cloning.
   VPIRMetadata(const VPIRMetadata &Other) = default;
 
@@ -957,14 +958,29 @@ public:
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
 
-  /// Add metadata with kind \p Kind and \p Node.
-  void addMetadata(unsigned Kind, MDNode *Node) {
-    Metadata.emplace_back(Kind, Node);
+  /// Set metadata with kind \p Kind to \p Node. If metadata with \p Kind
+  /// already exists, it will be replaced. Otherwise, it will be added.
+  void setMetadata(unsigned Kind, MDNode *Node) {
+    auto It =
+        llvm::find_if(Metadata, [Kind](const std::pair<unsigned, MDNode *> &P) {
+          return P.first == Kind;
+        });
+    if (It != Metadata.end())
+      It->second = Node;
+    else
+      Metadata.emplace_back(Kind, Node);
   }
 
   /// Intersect this VPIRMetada object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
+
+  /// Get metadata of kind \p Kind. Returns nullptr if not found.
+  MDNode *getMetadata(unsigned Kind) const {
+    auto It =
+        find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
+    return It != Metadata.end() ? It->second : nullptr;
+  }
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -1099,12 +1115,7 @@ private:
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
-
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, const VPIRMetadata &MD = {},
+                const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
@@ -1129,10 +1140,6 @@ public:
                               VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the VPInstruction to \p O.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-
   /// Print the VPInstruction to dbgs() (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
@@ -1178,6 +1185,13 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the VPInstruction to \p O.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A specialization of VPInstruction augmenting it with a dedicated result
@@ -1191,14 +1205,10 @@ class VPInstructionWithType : public VPInstruction {
 
 public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
+                        Type *ResultTy, const VPIRFlags &Flags = {},
+                        const VPIRMetadata &Metadata = {},
+                        DebugLoc DL = DebugLoc::getUnknown(),
                         const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, {}, DL, Name),
-        ResultTy(ResultTy) {}
-
-  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Type *ResultTy, DebugLoc DL, const VPIRFlags &Flags,
-                        const VPIRMetadata &Metadata, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
         ResultTy(ResultTy) {}
 
@@ -1227,7 +1237,7 @@ public:
   VPInstruction *clone() override {
     auto *New =
         new VPInstructionWithType(getOpcode(), operands(), getResultType(),
-                                  *this, getDebugLoc(), getName());
+                                  *this, *this, getDebugLoc(), getName());
     New->setUnderlyingValue(getUnderlyingValue());
     return New;
   }
@@ -1243,10 +1253,11 @@ public:
 
   Type *getResultType() const { return ResultTy; }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -1310,7 +1321,7 @@ public:
 
 struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
   VPPhi(ArrayRef<VPValue *> Operands, DebugLoc DL, const Twine &Name = "")
-      : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
+      : VPInstruction(Instruction::PHI, Operands, {}, {}, DL, Name) {}
 
   static inline bool classof(const VPUser *U) {
     auto *VPI = dyn_cast<VPInstruction>(U);
@@ -1335,13 +1346,13 @@ struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
 
   void execute(VPTransformState &State) override;
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 
-protected:
   const VPRecipeBase *getAsRecipe() const override { return this; }
 };
 
@@ -1381,12 +1392,6 @@ public:
 
   Instruction &getInstruction() const { return I; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   bool usesScalars(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
@@ -1409,6 +1414,13 @@ public:
   /// Builder. Must only be used for VPIRInstructions with at least one operand
   /// wrapping a PHINode.
   void extractLastLaneOfFirstOperand(VPBuilder &Builder);
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
@@ -1428,13 +1440,13 @@ struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
 
   void execute(VPTransformState &State) override;
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 
-protected:
   const VPRecipeBase *getAsRecipe() const override { return this; }
 };
 
@@ -1453,9 +1465,13 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
         VPIRMetadata(Metadata), Opcode(Opcode) {}
 
-  VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPIRMetadata(I),
-        Opcode(I.getOpcode()) {}
+  VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
+                DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
+        VPIRMetadata(Metadata), Opcode(I.getOpcode()) {
+    setUnderlyingValue(&I);
+  }
 
   ~VPWidenRecipe() override = default;
 
@@ -1478,10 +1494,11 @@ public:
 
   unsigned getOpcode() const { return Opcode; }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -1495,31 +1512,22 @@ class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 
 public:
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst &UI)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), VPIRMetadata(UI),
-        Opcode(Opcode), ResultTy(ResultTy) {
-    assert(UI.getOpcode() == Opcode &&
-           "opcode of underlying cast doesn't match");
-  }
-
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    const VPIRFlags &Flags = {},
+                    CastInst *CI = nullptr, const VPIRFlags &Flags = {},
                     const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, Flags, DL),
         VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
+    setUnderlyingValue(CI);
   }
 
   ~VPWidenCastRecipe() override = default;
 
   VPWidenCastRecipe *clone() override {
-    auto *New = new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy, *this,
-                                      *this, getDebugLoc());
-    if (auto *UV = getUnderlyingValue())
-      New->setUnderlyingValue(UV);
-    return New;
+    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
+                                 cast_or_null<CastInst>(getUnderlyingValue()),
+                                 *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
@@ -1531,16 +1539,17 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   Instruction::CastOps getOpcode() const { return Opcode; }
 
   /// Returns the result type of the cast.
   Type *getResultType() const { return ResultTy; }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for widening vector intrinsics.
@@ -1563,18 +1572,27 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         const VPIRFlags &Flags = {},
+                         const VPIRMetadata &MD = {},
                          DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
-        VPIRMetadata(CI), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, Flags,
+                            DL),
+        VPIRMetadata(MD), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
         MayReadFromMemory(CI.mayReadFromMemory()),
         MayWriteToMemory(CI.mayWriteToMemory()),
-        MayHaveSideEffects(CI.mayHaveSideEffects()) {}
+        MayHaveSideEffects(CI.mayHaveSideEffects()) {
+    setUnderlyingValue(&CI);
+  }
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         const VPIRFlags &Flags = {},
+                         const VPIRMetadata &Metadata = {},
                          DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
-        VPIRMetadata(), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, Flags,
+                            DL),
+        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
+        ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
@@ -1590,9 +1608,10 @@ public:
   VPWidenIntrinsicRecipe *clone() override {
     if (Value *CI = getUnderlyingValue())
       return new VPWidenIntrinsicRecipe(*cast<CallInst>(CI), VectorIntrinsicID,
-                                        operands(), ResultTy, getDebugLoc());
+                                        operands(), ResultTy, *this, *this,
+                                        getDebugLoc());
     return new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(), ResultTy,
-                                      getDebugLoc());
+                                      *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
@@ -1622,13 +1641,14 @@ public:
   /// Returns true if the intrinsic may have side-effects.
   bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
+
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
-
-  bool usesFirstLaneOnly(const VPValue *Op) const override;
 };
 
 /// A recipe for widening Call instructions using library calls.
@@ -1642,10 +1662,11 @@ class LLVM_ABI_FOR_TEST VPWidenCallRecipe : public VPRecipeWithIRFlags,
 public:
   VPWidenCallRecipe(Value *UV, Function *Variant,
                     ArrayRef<VPValue *> CallArguments,
-                    DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
-                            *cast<Instruction>(UV)),
-        VPIRMetadata(*cast<Instruction>(UV)), Variant(Variant) {
+                    const VPIRFlags &Flags = {},
+                    const VPIRMetadata &Metadata = {}, DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments, Flags, DL),
+        VPIRMetadata(Metadata), Variant(Variant) {
+    setUnderlyingValue(UV);
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
@@ -1655,7 +1676,7 @@ public:
 
   VPWidenCallRecipe *clone() override {
     return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
-                                 getDebugLoc());
+                                 *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -1674,10 +1695,11 @@ public:
   operand_range args() { return drop_end(operands()); }
   const_operand_range args() const { return drop_end(operands()); }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -1718,10 +1740,11 @@ public:
     return getNumOperands() == 3 ? getOperand(2) : nullptr;
   }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -1730,15 +1753,19 @@ public:
 /// instruction.
 struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
                                                public VPIRMetadata {
-  VPWidenSelectRecipe(SelectInst &I, ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I),
-        VPIRMetadata(I) {}
+  VPWidenSelectRecipe(SelectInst *SI, ArrayRef<VPValue *> Operands,
+                      const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
+                      DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, Flags, DL),
+        VPIRMetadata(MD) {
+    setUnderlyingValue(SI);
+  }
 
   ~VPWidenSelectRecipe() override = default;
 
   VPWidenSelectRecipe *clone() override {
-    return new VPWidenSelectRecipe(*cast<SelectInst>(getUnderlyingInstr()),
-                                   operands());
+    return new VPWidenSelectRecipe(cast<SelectInst>(getUnderlyingInstr()),
+                                   operands(), *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSelectSC)
@@ -1750,28 +1777,25 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   unsigned getOpcode() const { return Instruction::Select; }
 
   VPValue *getCond() const {
     return getOperand(0);
   }
 
-  bool isInvariantCond() const {
-    return getCond()->isDefinedOutsideLoopRegions();
-  }
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getCond() && isInvariantCond();
+    return Op == getCond() && Op->isDefinedOutsideLoopRegions();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for handling GEP instructions.
@@ -1793,9 +1817,12 @@ class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   }
 
 public:
-  VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP),
+  VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands,
+                   const VPIRFlags &Flags = {},
+                   DebugLoc DL = DebugLoc::getUnknown())
+      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, Flags, DL),
         SourceElementTy(GEP->getSourceElementType()) {
+    setUnderlyingValue(GEP);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
     getMetadataToPropagate(GEP, Metadata);
@@ -1806,7 +1833,7 @@ public:
 
   VPWidenGEPRecipe *clone() override {
     return new VPWidenGEPRecipe(cast<GetElementPtrInst>(getUnderlyingInstr()),
-                                operands());
+                                operands(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
@@ -1826,12 +1853,6 @@ public:
     return 0;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -1841,6 +1862,13 @@ public:
     else
       return !isPointerLoopInvariant() && Op->isDefinedOutsideLoopRegions();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe to compute a pointer to the last element of each part of a widened
@@ -1897,10 +1925,11 @@ public:
                                         getDebugLoc());
   }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -1952,10 +1981,11 @@ public:
     return 0;
   }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -2013,12 +2043,6 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override = 0;
-#endif
-
   /// Returns the start value of the phi, if one is set.
   VPValue *getStartValue() {
     return getNumOperands() == 0 ? nullptr : getOperand(0);
@@ -2043,6 +2067,13 @@ public:
   virtual VPRecipeBase &getBackedgeRecipe() {
     return *getBackedgeValue()->getDefiningRecipe();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override = 0;
+#endif
 };
 
 /// Base class for widened induction (VPWidenIntOrFpInductionRecipe and
@@ -2123,7 +2154,8 @@ public:
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector values. This is an abstract recipe and must be
 /// converted to concrete recipes before executing.
-class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
+class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
+                                      public VPIRFlags {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
@@ -2132,19 +2164,20 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                DebugLoc DL)
+                                const VPIRFlags &Flags, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
-        Trunc(nullptr) {
+        VPIRFlags(Flags), Trunc(nullptr) {
     addOperand(VF);
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                TruncInst *Trunc, DebugLoc DL)
+                                TruncInst *Trunc, const VPIRFlags &Flags,
+                                DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
-        Trunc(Trunc) {
+        VPIRFlags(Flags), Trunc(Trunc) {
     addOperand(VF);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
@@ -2158,7 +2191,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), Trunc, getDebugLoc());
+        getInductionDescriptor(), Trunc, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
@@ -2167,12 +2200,6 @@ public:
     llvm_unreachable("cannot execute this recipe, should be expanded via "
                      "expandVPWidenIntOrFpInductionRecipe");
   }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
@@ -2207,6 +2234,13 @@ public:
   VPValue *getLastUnrolledPartOperand() {
     return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe {
@@ -2246,10 +2280,11 @@ public:
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -2262,9 +2297,6 @@ class LLVM_ABI_FOR_TEST VPWidenPHIRecipe : public VPSingleDefRecipe,
                                            public VPPhiAccessors {
   /// Name to use for the generated IR instruction for the widened phi.
   std::string Name;
-
-protected:
-  const VPRecipeBase *getAsRecipe() const override { return this; }
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
@@ -2291,11 +2323,14 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
+
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 };
 
 /// A recipe for handling first-order recurrence phis. The start value is the
@@ -2318,18 +2353,19 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getStartValue();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for handling reduction phis. The start value is the first operand
@@ -2378,12 +2414,6 @@ public:
   /// Get the factor that the VF of this recipe's output should be scaled by.
   unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns the number of incoming values, also number of incoming blocks.
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
   /// incoming value, its start value.
@@ -2404,6 +2434,13 @@ public:
            "Op must be an operand of the recipe");
     return isOrdered() || isInLoop();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -2461,12 +2498,6 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -2476,6 +2507,13 @@ public:
     return all_of(users(),
                   [this](VPUser *U) { return U->usesFirstLaneOnly(this); });
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A common base class for interleaved memory operations.
@@ -2602,12 +2640,6 @@ public:
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
@@ -2617,6 +2649,13 @@ public:
   unsigned getNumStoreOperands() const override {
     return getNumOperands() - (getMask() ? 2 : 1);
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for interleaved memory operations with vector-predication
@@ -2649,12 +2688,6 @@ public:
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// The recipe only uses the first lane of the address, and EVL operand.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -2666,6 +2699,13 @@ public:
   unsigned getNumStoreOperands() const override {
     return getNumOperands() - (getMask() ? 3 : 2);
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on
@@ -2742,12 +2782,6 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Return the recurrence kind for the in-loop reduction.
   RecurKind getRecurrenceKind() const { return RdxKind; }
   /// Return true if the in-loop reduction is ordered.
@@ -2762,6 +2796,13 @@ public:
   VPValue *getCondOp() const {
     return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for forming partial reductions. In the loop, an accumulator and
@@ -2819,10 +2860,11 @@ public:
   /// Get the factor that the VF of this recipe's output should be scaled by.
   unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -2852,12 +2894,6 @@ public:
   /// Generate the reduction in the loop
   void execute(VPTransformState &State) override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// The VPValue of the explicit vector length.
   VPValue *getEVL() const { return getOperand(2); }
 
@@ -2867,6 +2903,13 @@ public:
            "Op must be an operand of the recipe");
     return Op == getEVL();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
@@ -2884,10 +2927,12 @@ class LLVM_ABI_FOR_TEST VPReplicateRecipe : public VPRecipeWithIRFlags,
 public:
   VPReplicateRecipe(Instruction *I, ArrayRef<VPValue *> Operands,
                     bool IsSingleScalar, VPValue *Mask = nullptr,
-                    VPIRMetadata Metadata = {})
-      : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
+                    const VPIRFlags &Flags = {}, VPIRMetadata Metadata = {},
+                    DebugLoc DL = DebugLoc::getUnknown())
+      : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, Flags, DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
+    setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);
   }
@@ -2895,9 +2940,9 @@ public:
   ~VPReplicateRecipe() override = default;
 
   VPReplicateRecipe *clone() override {
-    auto *Copy =
-        new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsSingleScalar,
-                              isPredicated() ? getMask() : nullptr, *this);
+    auto *Copy = new VPReplicateRecipe(
+        getUnderlyingInstr(), operands(), IsSingleScalar,
+        isPredicated() ? getMask() : nullptr, *this, *this, getDebugLoc());
     Copy->transferFlags(*this);
     return Copy;
   }
@@ -2912,12 +2957,6 @@ public:
   /// Return the cost of this VPReplicateRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
 
   bool isSingleScalar() const { return IsSingleScalar; }
 
@@ -2949,6 +2988,13 @@ public:
   }
 
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
@@ -2973,8 +3019,8 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override {
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override {
     O << Indent << "BRANCH-ON-MASK ";
     printOperands(O, SlotTracker);
   }
@@ -3115,12 +3161,6 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if this expression contains recipes that may read from or
   /// write to memory.
   bool mayReadOrWriteMemory() const;
@@ -3131,6 +3171,13 @@ public:
 
   /// Returns true if the result of this VPExpressionRecipe is a single-scalar.
   bool isSingleScalar() const;
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when
@@ -3163,18 +3210,19 @@ public:
     return 0;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if the recipe uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A common base class for widening memory operations. An optional mask can be
@@ -3292,12 +3340,6 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
   /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3306,6 +3348,13 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
     // their address.
     return Op == getAddr() && isConsecutive();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for widening load operations with vector-predication intrinsics,
@@ -3333,12 +3382,6 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3347,6 +3390,13 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
     // only demand the first lane of their address.
     return Op == getEVL() || (Op == getAddr() && isConsecutive());
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for widening store operations, using the stored value, the address
@@ -3374,12 +3424,6 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   /// Generate a wide store or scatter.
   void execute(VPTransformState &State) override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3388,6 +3432,13 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
     // unless the same operand is also stored.
     return Op == getAddr() && isConsecutive() && Op != getStoredValue();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for widening store operations with vector-predication intrinsics,
@@ -3417,12 +3468,6 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3436,6 +3481,13 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
     // happen with opaque pointers.
     return Op == getAddr() && isConsecutive() && Op != getStoredValue();
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// Recipe to expand a SCEV expression.
@@ -3463,13 +3515,14 @@ public:
     return 0;
   }
 
+  const SCEV *getSCEV() const { return Expr; }
+
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
-
-  const SCEV *getSCEV() const { return Expr; }
 };
 
 /// Canonical scalar induction phi of the vector loop. Starting at the specified
@@ -3496,12 +3549,6 @@ public:
                      "scalar phi recipe");
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   /// Returns the scalar type of the induction.
   Type *getScalarType() const {
     return getStartValue()->getLiveInIRValue()->getType();
@@ -3527,6 +3574,13 @@ public:
     // For now, match the behavior of the legacy cost model.
     return 0;
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for generating the active lane mask for the vector loop that is
@@ -3553,10 +3607,11 @@ public:
   /// Generate the active lane mask phi of the vector loop.
   void execute(VPTransformState &State) override;
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3596,10 +3651,11 @@ public:
     return true;
   }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3631,10 +3687,11 @@ public:
     return 0;
   }
 
+protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3686,12 +3743,6 @@ public:
     return 0;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   Type *getScalarType() const {
     return getStartValue()->getLiveInIRValue()->getType();
   }
@@ -3705,6 +3756,13 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
@@ -3756,12 +3814,6 @@ public:
     return 0;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
   VPValue *getStepValue() const { return getOperand(1); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
@@ -3770,6 +3822,13 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
@@ -3816,6 +3875,75 @@ struct CastInfo<VPPhiAccessors, VPRecipeBase *>
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
     : CastInfoVPPhiAccessors<const VPRecipeBase *> {};
+
+/// Casting from (const) VPRecipeBase -> (const) VPIRMetadata is supported for
+/// all recipe types implementing VPIRMetadata. Used by isa<> & co.
+namespace detail {
+template <typename DstTy, typename RecipeBasePtrTy>
+static inline auto castToVPIRMetadata(RecipeBasePtrTy R) -> DstTy {
+  switch (R->getVPDefID()) {
+  case VPDef::VPInstructionSC:
+    return cast<VPInstruction>(R);
+  case VPDef::VPWidenSC:
+    return cast<VPWidenRecipe>(R);
+  case VPDef::VPWidenCastSC:
+    return cast<VPWidenCastRecipe>(R);
+  case VPDef::VPWidenIntrinsicSC:
+    return cast<VPWidenIntrinsicRecipe>(R);
+  case VPDef::VPWidenCallSC:
+    return cast<VPWidenCallRecipe>(R);
+  case VPDef::VPWidenSelectSC:
+    return cast<VPWidenSelectRecipe>(R);
+  case VPDef::VPReplicateSC:
+    return cast<VPReplicateRecipe>(R);
+  case VPDef::VPInterleaveSC:
+  case VPDef::VPInterleaveEVLSC:
+    return cast<VPInterleaveBase>(R);
+  case VPDef::VPWidenLoadSC:
+  case VPDef::VPWidenLoadEVLSC:
+  case VPDef::VPWidenStoreSC:
+  case VPDef::VPWidenStoreEVLSC:
+    return cast<VPWidenMemoryRecipe>(R);
+  default:
+    llvm_unreachable("invalid recipe for VPIRMetadata cast");
+  }
+}
+} // namespace detail
+
+/// Support casting from VPRecipeBase -> VPIRMetadata, by down-casting to the
+/// recipe types implementing VPIRMetadata. Used by cast<>, dyn_cast<> & co.
+template <typename DstTy, typename SrcTy>
+struct CastInfoVPIRMetadata : public CastIsPossible<DstTy, SrcTy> {
+  static inline bool isPossible(SrcTy R) {
+    // NOTE: Each recipe inheriting from VPIRMetadata must be listed here and
+    // also handled in castToVPIRMetadata.
+    return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+               VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPWidenSelectRecipe,
+               VPReplicateRecipe, VPInterleaveRecipe, VPInterleaveEVLRecipe,
+               VPWidenLoadRecipe, VPWidenLoadEVLRecipe, VPWidenStoreRecipe,
+               VPWidenStoreEVLRecipe>(R);
+  }
+
+  using RetTy = DstTy *;
+
+  /// doCast is used by cast<>.
+  static inline RetTy doCast(SrcTy R) {
+    return detail::castToVPIRMetadata<RetTy, SrcTy>(R);
+  }
+
+  /// doCastIfPossible is used by dyn_cast<>.
+  static inline RetTy doCastIfPossible(SrcTy R) {
+    if (!isPossible(R))
+      return nullptr;
+    return doCast(R);
+  }
+};
+template <>
+struct CastInfo<VPIRMetadata, VPRecipeBase *>
+    : CastInfoVPIRMetadata<VPIRMetadata, VPRecipeBase *> {};
+template <>
+struct CastInfo<VPIRMetadata, const VPRecipeBase *>
+    : CastInfoVPIRMetadata<const VPIRMetadata, const VPRecipeBase *> {};
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
@@ -4213,10 +4341,9 @@ public:
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
   /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
-  VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
+  VPlan(BasicBlock *ScalarHeaderBB) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
-    TripCount = TC;
   }
 
   LLVM_ABI_FOR_TEST ~VPlan();
@@ -4440,10 +4567,10 @@ public:
   void printLiveIns(raw_ostream &O) const;
 
   /// Print this VPlan to \p O.
-  void print(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O) const;
 
   /// Print this VPlan in DOT format to \p O.
-  void printDOT(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void printDOT(raw_ostream &O) const;
 
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
@@ -4451,7 +4578,7 @@ public:
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
-  VPlan *duplicate();
+  LLVM_ABI_FOR_TEST VPlan *duplicate();
 
   /// Create a new VPBasicBlock with \p Name and containing \p Recipe if
   /// present. The returned block is owned by the VPlan and deleted once the

@@ -383,6 +383,16 @@ LogicalResult cir::CastOp::verify() {
   mlir::Type resType = getType();
   mlir::Type srcType = getSrc().getType();
 
+  // Verify address space casts for pointer types. given that
+  // casts for within a different address space are illegal.
+  auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
+  auto resPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
+  if (srcPtrTy && resPtrTy && (getKind() != cir::CastKind::address_space))
+    if (srcPtrTy.getAddrSpace() != resPtrTy.getAddrSpace()) {
+      return emitOpError() << "result type address space does not match the "
+                              "address space of the operand";
+    }
+
   if (mlir::isa<cir::VectorType>(srcType) &&
       mlir::isa<cir::VectorType>(resType)) {
     // Use the element type of the vector to verify the cast kind. (Except for
@@ -1902,22 +1912,45 @@ mlir::LogicalResult cir::FuncOp::verify() {
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
   llvm::SmallSet<llvm::StringRef, 16> gotos;
-
+  llvm::SmallSet<llvm::StringRef, 16> blockAddresses;
+  bool invalidBlockAddress = false;
   getOperation()->walk([&](mlir::Operation *op) {
     if (auto lab = dyn_cast<cir::LabelOp>(op)) {
       labels.insert(lab.getLabel());
     } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
       gotos.insert(goTo.getLabel());
+    } else if (auto blkAdd = dyn_cast<cir::BlockAddressOp>(op)) {
+      if (blkAdd.getBlockAddrInfoAttr().getFunc().getAttr() != getSymName()) {
+        // Stop the walk early, no need to continue
+        invalidBlockAddress = true;
+        return mlir::WalkResult::interrupt();
+      }
+      blockAddresses.insert(blkAdd.getBlockAddrInfoAttr().getLabel());
     }
+    return mlir::WalkResult::advance();
   });
 
+  if (invalidBlockAddress)
+    return emitOpError() << "blockaddress references a different function";
+
+  llvm::SmallSet<llvm::StringRef, 16> mismatched;
   if (!labels.empty() || !gotos.empty()) {
-    llvm::SmallSet<llvm::StringRef, 16> mismatched =
-        llvm::set_difference(gotos, labels);
+    mismatched = llvm::set_difference(gotos, labels);
 
     if (!mismatched.empty())
       return emitOpError() << "goto/label mismatch";
   }
+
+  mismatched.clear();
+
+  if (!labels.empty() || !blockAddresses.empty()) {
+    mismatched = llvm::set_difference(blockAddresses, labels);
+
+    if (!mismatched.empty())
+      return emitOpError()
+             << "expects an existing label target in the referenced function";
+  }
+
   return success();
 }
 
