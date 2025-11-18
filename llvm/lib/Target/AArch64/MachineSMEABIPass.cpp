@@ -856,15 +856,12 @@ void MachineSMEABI::emitSMEPrologue(MachineBasicBlock &MBB,
         .addImm(AArch64SVCR::SVCRZA)
         .addImm(1);
   } else if (AFI->getSMEFnAttrs().hasSharedZAInterface()) {
-    if (ZeroZA) {
+    if (ZeroZA)
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::ZERO_M))
           .addImm(ZERO_ALL_ZA_MASK)
           .addDef(AArch64::ZAB0, RegState::ImplicitDefine);
-    }
-    if (ZeroZT0) {
-      DebugLoc DL = getDebugLoc(MBB, MBBI);
+    if (ZeroZT0)
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::ZERO_T)).addDef(AArch64::ZT0);
-    }
   }
 }
 
