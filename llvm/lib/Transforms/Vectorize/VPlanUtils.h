@@ -90,7 +90,7 @@ inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
           ID.getInductionBinOp()))
     return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
                                   OBO->hasNoSignedWrap());
-  return {};
+  return VPIRFlags::WrapFlagsTy(false, false);
 }
 } // namespace vputils
 
