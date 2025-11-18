@@ -7992,7 +7992,9 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
 /// Find all possible partial reductions in the loop and track all of those that
 /// are valid so recipes can be formed later.
 void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
-  // Find all possible partial reductions, grouping chains by their PHI.
+  // Find all possible partial reductions, grouping chains by their PHI. This
+  // grouping allows invalidating the whole chain, if any link is not a valid
+  // partial reduction.
   MapVector<Instruction *,
             SmallVector<std::pair<PartialReductionChain, unsigned>>>
       ChainsByPhi;
