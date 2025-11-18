@@ -150,10 +150,10 @@ template <> struct unit<std::nano> {
 template <typename Rep, typename Period>
 struct format_provider<std::chrono::duration<Rep, Period>> {
 private:
-  typedef std::chrono::duration<Rep, Period> Dur;
-  typedef std::conditional_t<std::chrono::treat_as_floating_point<Rep>::value,
-                             double, intmax_t>
-      InternalRep;
+  using Dur = std::chrono::duration<Rep, Period>;
+  using InternalRep =
+      std::conditional_t<std::chrono::treat_as_floating_point<Rep>::value,
+                         double, intmax_t>;
 
   template <typename AsPeriod> static InternalRep getAs(const Dur &D) {
     using namespace std::chrono;

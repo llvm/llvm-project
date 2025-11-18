@@ -225,7 +225,7 @@ what to add to your calendar invite.
      -
    * - GlobalISel
      - Every 2nd Tuesday of the month
-     - `gcal <https://calendar.google.com/calendar/u/0?cid=ZDcyMjc0ZjZiZjNhMzFlYmE3NTNkMWM2MGM2NjM5ZWU3ZDE2MjM4MGFlZDc2ZjViY2UyYzMwNzVhZjk4MzQ4ZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=YWZjNzhmMzE4MDNlNTAyNGY1NmE1MDIyODY0YTYwZmJmYzRjYTEwNTE1NmUxODA2NzBkYTliY2ZhYTVkNjk0NUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
 
 
@@ -562,7 +562,7 @@ An example invite looks as follows
 .. code-block:: none
 
   This event is a meetup for all developers of LLDB. Meeting agendas are posted
-  on discourse before the event.
+  on Discourse before the event.
 
   Attendees must adhere to the LLVM Code of Conduct
   (https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,

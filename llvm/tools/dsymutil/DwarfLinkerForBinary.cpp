@@ -90,7 +90,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -794,9 +793,10 @@ bool DwarfLinkerForBinary::linkImpl(
         reportWarning("Could not parse binary Swift module: " +
                           toString(FromInterfaceOrErr.takeError()),
                       Obj->getObjectFilename());
-        // Only skip swiftmodules that could be parsed and are
-        // positively identified as textual.
-      } else if (*FromInterfaceOrErr) {
+        // Only skip swiftmodules that could be parsed and are positively
+        // identified as textual. Do so only when the option allows.
+      } else if (*FromInterfaceOrErr &&
+                 !Options.IncludeSwiftModulesFromInterface) {
         if (Options.Verbose)
           outs() << "Skipping compiled textual Swift interface: "
                  << Obj->getObjectFilename() << "\n";
