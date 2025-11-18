@@ -10,7 +10,7 @@ then the list of included files is cleared.
 Examples:
 
 .. code-block:: c++
-
+  
   #include <memory>
   #include <vector>
   #include <memory>
@@ -33,3 +33,13 @@ Because of the intervening macro definitions, this code remains unchanged:
   #define NDEBUG
   #include "assertion.h"
   // ...code with assertions disabled
+
+Options
+-------
+
+.. option:: IgnoreHeaders
+   
+   A semicolon-separated list of regexes to allow duplicate inclusion of header
+   files that match this regex.  E.g., `foo/.*` disables
+   insertion/removal for all headers under the directory `foo`. Default is an
+   empty string, no headers will be ignored.

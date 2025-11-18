@@ -7,11 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "DuplicateIncludeCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
 #include <memory>
+#include <vector>
 
 namespace clang::tidy::readability {
 
@@ -33,11 +38,8 @@ using FileList = SmallVector<StringRef>;
 class DuplicateIncludeCallbacks : public PPCallbacks {
 public:
   DuplicateIncludeCallbacks(DuplicateIncludeCheck &Check,
-                            const SourceManager &SM)
-      : Check(Check), SM(SM) {
-    // The main file doesn't participate in the FileChanged notification.
-    Files.emplace_back();
-  }
+                            const SourceManager &SM,
+                            const std::vector<std::string> &AllowedStrings);
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -62,9 +64,24 @@ private:
   SmallVector<FileList> Files;
   DuplicateIncludeCheck &Check;
   const SourceManager &SM;
+  std::vector<llvm::Regex> AllowedDuplicateRegex;
+
+  bool IsAllowedDuplicateInclude(StringRef TokenName);
 };
 
 } // namespace
+
+DuplicateIncludeCallbacks::DuplicateIncludeCallbacks(
+    DuplicateIncludeCheck &Check, const SourceManager &SM,
+    const std::vector<std::string> &AllowedStrings)
+    : Check(Check), SM(SM) {
+  // The main file doesn't participate in the FileChanged notification.
+  Files.emplace_back();
+  AllowedDuplicateRegex.reserve(AllowedStrings.size());
+  for (const std::string &str : AllowedStrings) {
+    AllowedDuplicateRegex.emplace_back(str);
+  }
+}
 
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
                                             FileChangeReason Reason,
@@ -85,6 +102,13 @@ void DuplicateIncludeCallbacks::InclusionDirective(
   if (FilenameRange.getBegin().isMacroID() ||
       FilenameRange.getEnd().isMacroID())
     return;
+
+  // if duplicate allowed, record and return
+  if (IsAllowedDuplicateInclude(FileName)) {
+    Files.back().push_back(FileName);
+    return;
+  }
+
   if (llvm::is_contained(Files.back(), FileName)) {
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.
@@ -109,9 +133,41 @@ void DuplicateIncludeCallbacks::MacroUndefined(const Token &MacroNameTok,
   Files.back().clear();
 }
 
-void DuplicateIncludeCheck::registerPPCallbacks(
-    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(std::make_unique<DuplicateIncludeCallbacks>(*this, SM));
+bool DuplicateIncludeCallbacks::IsAllowedDuplicateInclude(StringRef FileName) {
+  // try to match with each regex
+  for (const llvm::Regex &reg : AllowedDuplicateRegex) {
+    if (reg.match(FileName))
+      return true;
+  }
+  return false;
+}
+} // namespace clang::tidy::readability
+
+namespace clang::tidy::readability {
+DuplicateIncludeCheck::DuplicateIncludeCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context) {
+  std::string Raw = Options.get("IgnoreHeaders", "").str();
+  if (!Raw.empty()) {
+    SmallVector<StringRef, 4> StringParts;
+    StringRef(Raw).split(StringParts, ';', -1, false);
+
+    for (StringRef Part : StringParts) {
+      Part = Part.trim();
+      if (!Part.empty())
+        AllowedDuplicateIncludes.push_back(Part.str());
+    }
+  }
 }
 
+void DuplicateIncludeCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(std::make_unique<DuplicateIncludeCallbacks>(
+      *this, SM, AllowedDuplicateIncludes));
+}
+
+void DuplicateIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreHeaders",
+                llvm::join(AllowedDuplicateIncludes, ";"));
+}
 } // namespace clang::tidy::readability
