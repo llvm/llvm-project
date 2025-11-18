@@ -312,7 +312,14 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
                            .getClusterInfoForFunction(MF.getName());
     if (ClusterInfo.empty())
       return false;
+    DenseSet<UniqueBBID> FuncUniqueBBID;
+    for (auto &MBB : MF) {
+      FuncUniqueBBID.insert(MBB.getBBID().value());
+    }
     for (auto &BBClusterInfo : ClusterInfo) {
+      if (!FuncUniqueBBID.count(BBClusterInfo.BBID)) {
+        return false;
+      }
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }
   }
