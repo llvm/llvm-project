@@ -320,6 +320,8 @@ public:
       Opts["__opencl_c_3d_image_writes"] = true;
       Opts["cl_khr_3d_image_writes"] = true;
       Opts["__opencl_c_program_scope_global_variables"] = true;
+      Opts["__opencl_c_atomic_scope_all_devices"] = true;
+      Opts["__opencl_c_atomic_order_seq_cst"] = true;
 
       if (GPUKind >= llvm::AMDGPU::GK_GFX700) {
         Opts["__opencl_c_generic_address_space"] = true;
