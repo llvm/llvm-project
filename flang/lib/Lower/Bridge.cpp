@@ -3931,9 +3931,9 @@ private:
             charHelper.createUnboxChar(selector);
         std::pair<mlir::Value, mlir::Value> rhsVal =
             charHelper.createUnboxChar(rhs);
-        return fir::runtime::genCharCompare(*builder, loc, pred, lhsVal.first,
-                                            lhsVal.second, rhsVal.first,
-                                            rhsVal.second);
+        auto cmp = hlfir::CmpCharOp::create(
+          *builder, loc, pred, lhsVal.first, rhsVal.first);
+        return hlfir::EntityWithAttributes{cmp};
       };
       mlir::Block *newBlock = insertBlock(*caseBlock);
       if (mlir::isa<fir::ClosedIntervalAttr>(attr)) {
