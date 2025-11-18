@@ -301,7 +301,7 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
   if (Custom) {
     for (const auto &Entry : CustomFunctions) {
       if (Entry.Pattern.match(*FuncDecl)) {
-        const StringRef Reason =
+        StringRef Reason =
             Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
 
         // Omit the replacement, when a fully-custom reason is given.
