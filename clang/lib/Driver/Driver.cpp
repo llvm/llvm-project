@@ -2155,14 +2155,20 @@ void Driver::generateCompilationDiagnostics(
 
     std::error_code EC = llvm::sys::fs::createTemporaryFile(
         llvm::sys::path::stem(Input), extension, FD, Path);
-
     if (EC) {
       Diag(clang::diag::note_drv_command_failed_diag_msg)
           << "Error generating run script: " << "Failed copying IR input files"
           << " " << EC.message();
       return;
     }
-    llvm::sys::fs::copy_file(Input, FD);
+
+    EC = llvm::sys::fs::copy_file(Input, FD);
+    if (EC) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating run script: " << "Failed copying IR input files"
+          << " " << EC.message();
+      return;
+    }
 
     TempFiles.push_back(std::string(Path.begin(), Path.end()));
   }
