@@ -628,6 +628,8 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
            "All memrefs must have static shape.">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">,
     ListOption<"allowedDialects", "allowed-dialects", "std::string",
                "Run conversion patterns of only the specified dialects">,
   ];
