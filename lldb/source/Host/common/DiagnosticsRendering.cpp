@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/DiagnosticsRendering.h"
+#include "lldb/Host/Terminal.h"
 #include <cstdint>
 
 using namespace lldb_private;
@@ -102,7 +103,7 @@ void RenderDiagnosticDetails(Stream &stream,
   // characters.  In the future it might make sense to move this into
   // Host so it can be customized for a specific platform.
   llvm::StringRef cursor, underline, vbar, joint, hbar, spacer;
-  if (TerminalSupportsUnicode()) {
+  if (Terminal::SupportsUnicode()) {
     cursor = "˄";
     underline = "˜";
     vbar = "│";
@@ -231,20 +232,4 @@ void RenderDiagnosticDetails(Stream &stream,
       stream << detail.rendered << '\n';
     }
 }
-
-bool TerminalSupportsUnicode() {
-  static std::optional<bool> result;
-  if (result)
-    return result.value();
-#ifndef _WIN32
-  if (const char *lang_var = std::getenv("LANG"))
-    result = std::string(lang_var).find("UTF-8");
-  else
-    result = false;
-#else
-  result = std::getenv("WT_SESSION") != nullptr;
-#endif
-  return result.value();
-}
-
 } // namespace lldb_private

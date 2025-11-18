@@ -23,7 +23,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Unwind.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -902,8 +901,8 @@ bool StackFrameList::IsPreviousFrameHidden(lldb_private::StackFrame &frame) {
 std::wstring StackFrameList::FrameMarker(lldb::StackFrameSP frame_sp,
                                          lldb::StackFrameSP selected_frame_sp) {
   if (frame_sp == selected_frame_sp) {
-    return TerminalSupportsUnicode() ? L" * " : L"* ";
-  } else if (!TerminalSupportsUnicode()) {
+    return Terminal::SupportsUnicode() ? L" * " : L"* ";
+  } else if (!Terminal::SupportsUnicode()) {
     return L"  ";
   } else if (IsPreviousFrameHidden(*frame_sp)) {
     return L" ﹉";
