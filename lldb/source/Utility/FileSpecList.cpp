@@ -45,10 +45,9 @@ bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
 // FIXME: Replace this with a DenseSet at the call site. It is inefficient.
 bool SupportFileList::AppendIfUnique(const FileSpec &file_spec) {
   collection::iterator end = m_files.end();
-  if (find_if(m_files.begin(), end,
-              [&](const SupportFileSP &support_file) {
-                return support_file->GetSpecOnly() == file_spec;
-              }) == end) {
+  if (find_if(m_files.begin(), end, [&](const SupportFileSP &support_file) {
+        return support_file->GetSpecOnly() == file_spec;
+      }) == end) {
     Append(file_spec);
     return true;
   }
@@ -214,8 +213,7 @@ const FileSpec &SupportFileList::GetFileSpecAtIndex(size_t idx) const {
   return g_empty_file_spec;
 }
 
-SupportFileSP
-SupportFileList::GetSupportFileAtIndex(size_t idx) const {
+SupportFileSP SupportFileList::GetSupportFileAtIndex(size_t idx) const {
   if (idx < m_files.size())
     return m_files[idx];
   return {};

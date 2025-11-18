@@ -177,8 +177,7 @@ public:
   size_t DisplayMoreWithLineNumbers(Stream *s, uint32_t count, bool reverse,
                                     const SymbolContextList *bp_locs = nullptr);
 
-  bool SetDefaultFileAndLine(SupportFileSP support_file_sp,
-                             uint32_t line);
+  bool SetDefaultFileAndLine(SupportFileSP support_file_sp, uint32_t line);
 
   struct SupportFileAndLine {
     SupportFileSP support_file_sp;
