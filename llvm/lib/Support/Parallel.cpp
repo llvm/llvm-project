@@ -193,16 +193,7 @@ private:
   JobserverClient *TheJobserver = nullptr;
 };
 
-// A global raw pointer to the executor. Lifetime is managed by the
-// objects created within createExecutor().
-static Executor *TheExec = nullptr;
-static std::once_flag Flag;
-
-// This function will be called exactly once to create the executor.
-// It contains the necessary platform-specific logic. Since functions
-// called by std::call_once cannot return value, we have to set the
-// executor as a global variable.
-void createExecutor() {
+Executor *Executor::getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
@@ -226,21 +217,15 @@ void createExecutor() {
                        ThreadPoolExecutor::Deleter>
       ManagedExec;
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
-  TheExec = Exec.get();
+  return Exec.get();
 #else
   // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
   // by llvm_shutdown(), worker threads will clean up and invoke TLS
   // destructors. This can lead to race conditions if other threads attempt to
   // access TLS objects that have already been destroyed.
   static ThreadPoolExecutor Exec(strategy);
-  TheExec = &Exec;
+  return &Exec;
 #endif
-}
-
-Executor *Executor::getDefaultExecutor() {
-  // Use std::call_once to lazily and safely initialize the executor.
-  std::call_once(Flag, createExecutor);
-  return TheExec;
 }
 } // namespace
 } // namespace detail
