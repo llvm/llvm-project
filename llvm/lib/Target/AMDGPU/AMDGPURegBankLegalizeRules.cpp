@@ -960,6 +960,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}}, hasSALUFloat)
       .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat);
 
+  addRulesForGOpcs({G_IS_FPCLASS})
+      .Any({{DivS1, S16}, {{Vcc}, {Vgpr16}}})
+      .Any({{UniS1, S16}, {{UniInVcc}, {Vgpr16}}})
+      .Any({{DivS1, S32}, {{Vcc}, {Vgpr32}}})
+      .Any({{UniS1, S32}, {{UniInVcc}, {Vgpr32}}})
+      .Any({{DivS1, S64}, {{Vcc}, {Vgpr64}}})
+      .Any({{UniS1, S64}, {{UniInVcc}, {Vgpr64}}});
+
   using namespace Intrinsic;
 
   addRulesForIOpcs({amdgcn_s_getpc}).Any({{UniS64, _}, {{Sgpr64}, {None}}});
