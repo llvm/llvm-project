@@ -105,7 +105,7 @@
 #endif
 
 // The PE/COFF format reports a linking error when encountering multiple symbol definitions where at least one is a
-// strong symbol. So we can't inlining a non-inline function without ABI break change.
+// strong symbol. So we can't inline a function that also has a non-inline definition visible.
 #if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 #  define _LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR
 #endif

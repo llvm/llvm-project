@@ -116,7 +116,8 @@ ABI Affecting Changes
   potentially inheriting from the types they wrap. At this point in time we are not aware of any ABI changes caused by
   this.
 
-- ``align`` has been removed from libc++ library in ABI v2. We also add a new ABI flag ``_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN``.
+- ``std::align`` is now implemented as an inline function and its definition is removed from the
+   libc++ built library in ABI v2, or when the ``_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN`` ABI configuration is enabled..
 
 Build System Changes
 --------------------

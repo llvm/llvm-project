@@ -10,7 +10,7 @@
 #include <__cstddef/size_t.h>
 #include <cstdint>
 
-// Don't include <memory> to avoid mulitple declartion of align()
+// Don't include <memory> to avoid multiple declarations of std::align()
 
 #if !defined(_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN)
 
