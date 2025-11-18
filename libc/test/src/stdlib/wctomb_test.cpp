@@ -8,7 +8,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/types/wchar_t.h"
-#include "src/wchar/wctomb.h"
+#include "src/stdlib/wctomb.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
