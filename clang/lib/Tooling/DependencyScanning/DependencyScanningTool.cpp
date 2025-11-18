@@ -265,9 +265,9 @@ DependencyScanningTool::computeDependenciesByNameWithContext(
     StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
-  CallbackActionController Controller(LookupModuleOutput);
+  auto Controller = createActionController(LookupModuleOutput);
   llvm::Error Result = Worker.computeDependenciesByNameWithContextOrError(
-      ModuleName, Consumer, Controller);
+      ModuleName, Consumer, *Controller);
   if (Result)
     return std::move(Result);
 
