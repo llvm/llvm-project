@@ -1473,13 +1473,6 @@ def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "Target requires waits for loads and atomics before system scope stores"
 >;
 
-def FeaturePKF32Insts : SubtargetFeature<"pk-f32-insts",
-  "HasPKF32Insts",
-  "true",
-  "Has packed F32 instructions that only read 32 bits from a scalar operand "
-  "(SGPR or literal) and replicates the bits to both channels."
->;
-
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2152,7 +2145,6 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
-   FeaturePKF32Insts,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<

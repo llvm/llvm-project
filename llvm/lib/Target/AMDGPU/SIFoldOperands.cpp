@@ -775,7 +775,7 @@ static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
 // 32 bits from a scalar operand (SGPR or literal) and replicates the bits to
 // both channels.
 static bool isPKF32Instr(const GCNSubtarget *ST, MachineInstr *MI) {
-  if (!ST->hasPKF32Insts())
+  if (!ST->hasPKF32InstsReplicatingLow32BitsOfScalarInput())
     return false;
   switch (MI->getOpcode()) {
   case AMDGPU::V_PK_ADD_F32:

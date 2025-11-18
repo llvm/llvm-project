@@ -190,7 +190,6 @@ protected:
   bool HasEmulatedSystemScopeAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
-  bool HasPKF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
@@ -1424,7 +1423,9 @@ public:
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
   /// both channels.
-  bool hasPKF32Insts() const { return HasPKF32Insts; }
+  bool hasPKF32InstsReplicatingLow32BitsOfScalarInput() const {
+    return getGeneration() == GFX12 && GFX1250Insts;
+  }
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
