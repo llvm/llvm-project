@@ -4452,13 +4452,9 @@ void Parser::ParseAnnotationSpecifier(ParsedAttributes &Attrs,
   if (AnnotExpr.isInvalid() || AnnotExpr.get()->containsErrors())
     return;
 
-  IdentifierTable &IT = Actions.PP.getIdentifierTable();
-  IdentifierInfo &Placeholder = IT.get("__annotation_placeholder");
-
   ArgsVector ArgExprs;
   ArgExprs.push_back(AnnotExpr.get());
-  Attrs.addNew(&Placeholder, EqLoc, {}, ArgExprs.data(), 1,
-               ParsedAttr::Form::Annotation());
+  Attrs.addNew(EqLoc, {}, ArgExprs.data(), 1, ParsedAttr::Form::Annotation());
 
   if (EndLoc)
     *EndLoc = AnnotExpr.get()->getEndLoc();

@@ -193,6 +193,7 @@ public:
     return Form(getSyntax(), SpellingIndex, IsAlignas,
                 IsRegularKeywordAttribute);
   }
+
   const IdentifierInfo *getAttrName() const { return AttrName; }
   void setAttrName(const IdentifierInfo *AttrNameII) { AttrName = AttrNameII; }
   SourceLocation getLoc() const { return AttrRange.getBegin(); }

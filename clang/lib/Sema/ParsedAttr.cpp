@@ -203,6 +203,10 @@ bool ParsedAttr::isTargetSpecificAttr() const {
   return getInfo().IsTargetSpecific;
 }
 
+bool ParsedAttr::isAnnotationAttr() const {
+  return getParsedKind() == AT_CXX26Annotation;
+}
+
 bool ParsedAttr::isTypeAttr() const { return getInfo().IsType; }
 
 bool ParsedAttr::isStmtAttr() const { return getInfo().IsStmt; }
@@ -213,8 +217,8 @@ bool ParsedAttr::existsInTarget(const TargetInfo &Target) const {
   // If the attribute has a target-specific spelling, check that it exists.
   // Only call this if the attr is not ignored/unknown. For most targets, this
   // function just returns true.
-  bool HasSpelling = K != IgnoredAttribute && K != UnknownAttribute &&
-                     K != NoSemaHandlerAttribute;
+  bool HasSpelling = !isAnnotationAttr() && K != IgnoredAttribute &&
+                     K != UnknownAttribute && K != NoSemaHandlerAttribute;
   bool TargetSpecificSpellingExists =
       !HasSpelling ||
       getInfo().spellingExistsInTarget(Target, getAttributeSpellingListIndex());
