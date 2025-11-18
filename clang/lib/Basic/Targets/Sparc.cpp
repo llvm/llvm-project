@@ -33,7 +33,7 @@ const char *const SparcTargetInfo::GCCRegNames[] = {
     "f56", "f58", "f60", "f62",
 
     // Condition code registers
-    "icc", "fcc", "fcc1", "fcc2", "fcc3"
+    "icc", "fcc0", "fcc1", "fcc2", "fcc3"
     // clang-format on
 };
 
@@ -42,17 +42,14 @@ ArrayRef<const char *> SparcTargetInfo::getGCCRegNames() const {
 }
 
 const TargetInfo::GCCRegAlias SparcTargetInfo::GCCRegAliases[] = {
-    // clang-format off
-    {{"g0"}, "r0"},   {{"g1"}, "r1"},    {{"g2"}, "r2"},        {{"g3"}, "r3"},
-    {{"g4"}, "r4"},   {{"g5"}, "r5"},    {{"g6"}, "r6"},        {{"g7"}, "r7"},
-    {{"o0"}, "r8"},   {{"o1"}, "r9"},    {{"o2"}, "r10"},       {{"o3"}, "r11"},
-    {{"o4"}, "r12"},  {{"o5"}, "r13"},   {{"o6", "sp"}, "r14"}, {{"o7"}, "r15"},
-    {{"l0"}, "r16"},  {{"l1"}, "r17"},   {{"l2"}, "r18"},       {{"l3"}, "r19"},
-    {{"l4"}, "r20"},  {{"l5"}, "r21"},   {{"l6"}, "r22"},       {{"l7"}, "r23"},
-    {{"i0"}, "r24"},  {{"i1"}, "r25"},   {{"i2"}, "r26"},       {{"i3"}, "r27"},
-    {{"i4"}, "r28"},  {{"i5"}, "r29"},   {{"i6", "fp"}, "r30"}, {{"i7"}, "r31"},
-    {{"xcc"}, "icc"}, {{"fcc0"}, "fcc"}
-    // clang-format on
+    {{"g0"}, "r0"},  {{"g1"}, "r1"},  {{"g2"}, "r2"},        {{"g3"}, "r3"},
+    {{"g4"}, "r4"},  {{"g5"}, "r5"},  {{"g6"}, "r6"},        {{"g7"}, "r7"},
+    {{"o0"}, "r8"},  {{"o1"}, "r9"},  {{"o2"}, "r10"},       {{"o3"}, "r11"},
+    {{"o4"}, "r12"}, {{"o5"}, "r13"}, {{"o6", "sp"}, "r14"}, {{"o7"}, "r15"},
+    {{"l0"}, "r16"}, {{"l1"}, "r17"}, {{"l2"}, "r18"},       {{"l3"}, "r19"},
+    {{"l4"}, "r20"}, {{"l5"}, "r21"}, {{"l6"}, "r22"},       {{"l7"}, "r23"},
+    {{"i0"}, "r24"}, {{"i1"}, "r25"}, {{"i2"}, "r26"},       {{"i3"}, "r27"},
+    {{"i4"}, "r28"}, {{"i5"}, "r29"}, {{"i6", "fp"}, "r30"}, {{"i7"}, "r31"},
 };
 
 ArrayRef<TargetInfo::GCCRegAlias> SparcTargetInfo::getGCCRegAliases() const {
