@@ -837,9 +837,6 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         if (Ty->isArrayTy())
           Ty = Ty->getArrayElementType();
         else {
-          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
-          assert(BufferTy->getTargetExtName() == "spirv.Layout");
-          Ty = BufferTy->getTypeParameter(0);
           assert(Ty && Ty->isStructTy());
           uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
           Ty = cast<StructType>(Ty)->getElementType(Index);

@@ -46,7 +46,8 @@ class CBufferMetadata {
   CBufferMetadata(NamedMDNode *MD) : MD(MD) {}
 
 public:
-  static std::optional<CBufferMetadata> get(Module &M);
+  static std::optional<CBufferMetadata>
+  get(Module &M, llvm::function_ref<bool(Type *)> IsPadding);
 
   using iterator = SmallVector<CBufferMapping>::iterator;
   iterator begin() { return Mappings.begin(); }
@@ -54,9 +55,6 @@ public:
 
   void eraseFromModule();
 };
-
-APInt translateCBufArrayOffset(const DataLayout &DL, APInt Offset,
-                               ArrayType *Ty);
 
 } // namespace hlsl
 } // namespace llvm

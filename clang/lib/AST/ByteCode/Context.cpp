@@ -21,7 +21,6 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 
 using namespace clang;
 using namespace clang::interp;

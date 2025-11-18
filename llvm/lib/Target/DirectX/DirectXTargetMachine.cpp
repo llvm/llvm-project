@@ -110,9 +110,9 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createGlobalDCEPass());
+    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
-    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;

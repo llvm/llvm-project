@@ -2278,6 +2278,10 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
+  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant)
+    if (CGM.getHLSLRuntime().emitBufferCopy(*this, DestPtr, SrcPtr, Ty))
+      return;
+
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
   // C99 6.5.16.1p3, which states "If the value being stored in an object is
   // read from another object that overlaps in anyway the storage of the first

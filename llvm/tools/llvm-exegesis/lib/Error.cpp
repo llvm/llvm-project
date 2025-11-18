@@ -10,7 +10,6 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 
 #ifdef LLVM_ON_UNIX
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include <string.h>
 #endif // LLVM_ON_UNIX
 
