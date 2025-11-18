@@ -528,3 +528,42 @@ add_libc_test(
     libc.src.wchar.wcstoull
     .wcstol_test_support
 )
+
+add_libc_test(
+  wcstof_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstof_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstof
+    libc.test.UnitTest.ErrnoCheckingTest
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  wcstod_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstod_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstod
+    libc.test.UnitTest.ErrnoCheckingTest
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  wcstold_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstold_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.uint128
+    libc.src.wchar.wcstold
+    libc.test.UnitTest.ErrnoCheckingTest
+)

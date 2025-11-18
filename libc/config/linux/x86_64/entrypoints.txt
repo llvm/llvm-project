@@ -398,8 +398,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wmemchr
     libc.src.wchar.wcpcpy
     libc.src.wchar.wcpncpy
+    libc.src.wchar.wcstod
+    libc.src.wchar.wcstof
     libc.src.wchar.wcstok
     libc.src.wchar.wcstol
+    libc.src.wchar.wcstold
     libc.src.wchar.wcstoll
     libc.src.wchar.wcstoul
     libc.src.wchar.wcstoull
