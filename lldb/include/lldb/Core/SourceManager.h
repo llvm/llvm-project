@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/SupportFile.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 
@@ -38,8 +39,8 @@ public:
                            const SourceManager::File &rhs);
 
   public:
-    File(lldb::SupportFileSP support_file_sp, lldb::TargetSP target_sp);
-    File(lldb::SupportFileSP support_file_sp, lldb::DebuggerSP debugger_sp);
+    File(SupportFileSP support_file_sp, lldb::TargetSP target_sp);
+    File(SupportFileSP support_file_sp, lldb::DebuggerSP debugger_sp);
 
     bool ModificationTimeIsStale() const;
     bool PathRemappingIsStale() const;
@@ -57,7 +58,7 @@ public:
 
     bool LineIsValid(uint32_t line);
 
-    lldb::SupportFileSP GetSupportFile() const {
+    SupportFileSP GetSupportFile() const {
       assert(m_support_file_sp && "SupportFileSP must always be valid");
       return m_support_file_sp;
     }
@@ -80,13 +81,13 @@ public:
 
   protected:
     /// Set file and update modification time.
-    void SetSupportFile(lldb::SupportFileSP support_file_sp);
+    void SetSupportFile(SupportFileSP support_file_sp);
 
     bool CalculateLineOffsets(uint32_t line = UINT32_MAX);
 
     /// The support file. If the target has source mappings, this might be
     /// different from the original support file passed to the constructor.
-    lldb::SupportFileSP m_support_file_sp;
+    SupportFileSP m_support_file_sp;
 
     /// Keep track of the on-disk checksum.
     Checksum m_checksum;
@@ -107,9 +108,9 @@ public:
     lldb::TargetWP m_target_wp;
 
   private:
-    void CommonInitializer(lldb::SupportFileSP support_file_sp,
+    void CommonInitializer(SupportFileSP support_file_sp,
                            lldb::TargetSP target_sp);
-    void CommonInitializerImpl(lldb::SupportFileSP support_file_sp,
+    void CommonInitializerImpl(SupportFileSP support_file_sp,
                                lldb::TargetSP target_sp);
   };
 
@@ -162,7 +163,7 @@ public:
   }
 
   size_t DisplaySourceLinesWithLineNumbers(
-      lldb::SupportFileSP support_file_sp, uint32_t line, uint32_t column,
+      SupportFileSP support_file_sp, uint32_t line, uint32_t column,
       uint32_t context_before, uint32_t context_after,
       const char *current_line_cstr, Stream *s,
       const SymbolContextList *bp_locs = nullptr);
@@ -176,13 +177,13 @@ public:
   size_t DisplayMoreWithLineNumbers(Stream *s, uint32_t count, bool reverse,
                                     const SymbolContextList *bp_locs = nullptr);
 
-  bool SetDefaultFileAndLine(lldb::SupportFileSP support_file_sp,
+  bool SetDefaultFileAndLine(SupportFileSP support_file_sp,
                              uint32_t line);
 
   struct SupportFileAndLine {
-    lldb::SupportFileSP support_file_sp;
+    SupportFileSP support_file_sp;
     uint32_t line;
-    SupportFileAndLine(lldb::SupportFileSP support_file_sp, uint32_t line)
+    SupportFileAndLine(SupportFileSP support_file_sp, uint32_t line)
         : support_file_sp(support_file_sp), line(line) {}
   };
 
@@ -192,15 +193,15 @@ public:
     return (GetFile(m_last_support_file_sp).get() != nullptr);
   }
 
-  void FindLinesMatchingRegex(lldb::SupportFileSP support_file_sp,
+  void FindLinesMatchingRegex(SupportFileSP support_file_sp,
                               RegularExpression &regex, uint32_t start_line,
                               uint32_t end_line,
                               std::vector<uint32_t> &match_lines);
 
-  FileSP GetFile(lldb::SupportFileSP support_file_sp);
+  FileSP GetFile(SupportFileSP support_file_sp);
 
 protected:
-  lldb::SupportFileSP m_last_support_file_sp;
+  SupportFileSP m_last_support_file_sp;
   uint32_t m_last_line;
   uint32_t m_last_count;
   bool m_default_set;

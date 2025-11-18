@@ -1194,7 +1194,7 @@ protected:
           // file(s) will be found and assigned to
           // sc.comp_unit->GetPrimarySupportFile, which is NOT what we want to
           // print. Instead, we want to print the one from the line entry.
-          lldb::SupportFileSP found_file_sp = sc.line_entry.file_sp;
+          SupportFileSP found_file_sp = sc.line_entry.file_sp;
 
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
               found_file_sp, m_options.start_line, column, 0,

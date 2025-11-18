@@ -25,6 +25,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/SupportFile.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -325,7 +326,7 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
 }
 
 size_t SourceManager::DisplaySourceLinesWithLineNumbers(
-    lldb::SupportFileSP support_file_sp, uint32_t line, uint32_t column,
+    SupportFileSP support_file_sp, uint32_t line, uint32_t column,
     uint32_t context_before, uint32_t context_after,
     const char *current_line_cstr, Stream *s,
     const SymbolContextList *bp_locs) {
@@ -389,7 +390,7 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
   return 0;
 }
 
-bool SourceManager::SetDefaultFileAndLine(lldb::SupportFileSP support_file_sp,
+bool SourceManager::SetDefaultFileAndLine(SupportFileSP support_file_sp,
                                           uint32_t line) {
   assert(support_file_sp && "SupportFile must be valid");
 
@@ -575,7 +576,7 @@ void SourceManager::File::CommonInitializerImpl(SupportFileSP support_file_sp,
   }
 }
 
-void SourceManager::File::SetSupportFile(lldb::SupportFileSP support_file_sp) {
+void SourceManager::File::SetSupportFile(SupportFileSP support_file_sp) {
   FileSpec file_spec = support_file_sp->GetSpecOnly();
   resolve_tilde(file_spec);
   m_support_file_sp =

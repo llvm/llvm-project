@@ -137,10 +137,10 @@ struct LineEntry {
   AddressRange range;
 
   /// The source file, possibly mapped by the target.source-map setting.
-  lldb::SupportFileSP file_sp;
+  SupportFileSP file_sp;
 
   /// The original source file, from debug info.
-  lldb::SupportFileSP original_file_sp;
+  SupportFileSP original_file_sp;
 
   /// The source line number, or LLDB_INVALID_LINE_NUMBER if there is no line
   /// number information.

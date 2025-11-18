@@ -27,7 +27,7 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                   language, is_optimized) {}
 
 CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
-                         lldb::SupportFileSP support_file_sp,
+                         SupportFileSP support_file_sp,
                          const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized,

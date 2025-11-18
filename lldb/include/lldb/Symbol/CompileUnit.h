@@ -118,7 +118,7 @@ public:
   ///     An rvalue list of already parsed support files.
   /// \see lldb::LanguageType
   CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
-              lldb::SupportFileSP support_file_sp, lldb::user_id_t uid,
+              SupportFileSP support_file_sp, lldb::user_id_t uid,
               lldb::LanguageType language, lldb_private::LazyBool is_optimized,
               SupportFileList &&support_files = {});
 
@@ -234,7 +234,7 @@ public:
   }
 
   /// Return the primary source file associated with this compile unit.
-  lldb::SupportFileSP GetPrimarySupportFile() const {
+  SupportFileSP GetPrimarySupportFile() const {
     return m_primary_support_file_sp;
   }
 
@@ -430,7 +430,7 @@ protected:
   /// compile unit.
   std::vector<SourceModule> m_imported_modules;
   /// The primary file associated with this compile unit.
-  lldb::SupportFileSP m_primary_support_file_sp;
+  SupportFileSP m_primary_support_file_sp;
   /// Files associated with this compile unit's line table and declarations.
   SupportFileList m_support_files;
   /// Line table that will get parsed on demand.
