@@ -70,6 +70,8 @@ namespace {
 // If lower=[a], higher=[a, a], [a] reshaped into [1, a].
 // If lower=[a], target=[a, b, a], [a] reshaped into [1, 1, a].
 // If lower=[], target=[a, b, c], [] reshaped into [1, 1, 1].
+// If lower=[c], higher=[?, ?, c], [c] reshaped into [1, 1, c].
+// If lower=[?], higher=[?, ?, ?], [?] reshaped into [1, 1, ?].
 LogicalResult
 computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
                      ArrayRef<int64_t> lowerRankShape,
@@ -87,7 +89,12 @@ computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
     higherRankDim = higherRankShape[i + rankDiff];
     lowerRankDim = lowerRankShape[i];
 
-    if (lowerRankDim != 1 && higherRankDim != 1 &&
+    auto isKnownStaticShapeNotEqualToOne = [](int64_t dim) {
+      return dim != 1 && dim != ShapedType::kDynamic;
+    };
+
+    if (isKnownStaticShapeNotEqualToOne(lowerRankDim) &&
+        isKnownStaticShapeNotEqualToOne(higherRankDim) &&
         lowerRankDim != higherRankDim)
       return failure();
 
