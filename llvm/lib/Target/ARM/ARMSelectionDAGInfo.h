@@ -17,7 +17,62 @@
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
+#define GET_SDNODE_ENUM
+#include "ARMGenSDNodeInfo.inc"
+
 namespace llvm {
+namespace ARMISD {
+
+enum NodeType : unsigned {
+  DYN_ALLOC = GENERATED_OPCODE_END, // Dynamic allocation on the stack.
+
+  MVESEXT,  // Legalization aids for extending a vector into two/four vectors.
+  MVEZEXT,  //  or truncating two/four vectors into one. Eventually becomes
+  MVETRUNC, //  stack store/load sequence, if not optimized to anything else.
+
+  // Operands of the standard BUILD_VECTOR node are not legalized, which
+  // is fine if BUILD_VECTORs are always lowered to shuffles or other
+  // operations, but for ARM some BUILD_VECTORs are legal as-is and their
+  // operands need to be legalized.  Define an ARM-specific version of
+  // BUILD_VECTOR for this purpose.
+  BUILD_VECTOR,
+
+  // Vector load N-element structure to all lanes:
+  FIRST_MEMORY_OPCODE,
+  VLD1DUP = FIRST_MEMORY_OPCODE,
+  VLD2DUP,
+  VLD3DUP,
+  VLD4DUP,
+
+  // NEON loads with post-increment base updates:
+  VLD1_UPD,
+  VLD2_UPD,
+  VLD3_UPD,
+  VLD4_UPD,
+  VLD2LN_UPD,
+  VLD3LN_UPD,
+  VLD4LN_UPD,
+  VLD1DUP_UPD,
+  VLD2DUP_UPD,
+  VLD3DUP_UPD,
+  VLD4DUP_UPD,
+  VLD1x2_UPD,
+  VLD1x3_UPD,
+  VLD1x4_UPD,
+
+  // NEON stores with post-increment base updates:
+  VST1_UPD,
+  VST3_UPD,
+  VST2LN_UPD,
+  VST3LN_UPD,
+  VST4LN_UPD,
+  VST1x2_UPD,
+  VST1x3_UPD,
+  VST1x4_UPD,
+  LAST_MEMORY_OPCODE = VST1x4_UPD,
+};
+
+} // namespace ARMISD
 
 namespace ARM_AM {
   static inline ShiftOpc getShiftOpcForNode(unsigned Opcode) {
@@ -35,9 +90,16 @@ namespace ARM_AM {
   }
 }  // end namespace ARM_AM
 
-class ARMSelectionDAGInfo : public SelectionDAGTargetInfo {
+class ARMSelectionDAGInfo : public SelectionDAGGenTargetInfo {
 public:
+  ARMSelectionDAGInfo();
+
+  const char *getTargetNodeName(unsigned Opcode) const override;
+
   bool isTargetMemoryOpcode(unsigned Opcode) const override;
+
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override;
 
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Dst, SDValue Src,
@@ -66,6 +128,6 @@ public:
                                  RTLIB::Libcall LC) const;
 };
 
-}
+} // namespace llvm
 
 #endif

@@ -353,6 +353,69 @@ define <4 x float> @merge_4f32_f32_019u(ptr %ptr) nounwind uwtable noinline ssp 
   ret <4 x float> %res3
 }
 
+define <4 x float> @merge_v4f32_f32_3210(ptr %ptr) nounwind uwtable noinline ssp {
+; SSE2-LABEL: merge_v4f32_f32_3210:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: merge_v4f32_f32_3210:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: merge_v4f32_f32_3210:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX-NEXT:    retq
+;
+; X86-SSE1-LABEL: merge_v4f32_f32_3210:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE1-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE1-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE41-LABEL: merge_v4f32_f32_3210:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; X86-SSE41-NEXT:    retl
+  %ptr0 = getelementptr inbounds float, ptr %ptr, i64 3
+  %ptr1 = getelementptr inbounds float, ptr %ptr, i64 2
+  %ptr2 = getelementptr inbounds float, ptr %ptr, i64 1
+  %ptr3 = getelementptr inbounds float, ptr %ptr, i64 0
+  %val0 = load float, ptr %ptr0, align 4
+  %val1 = load float, ptr %ptr1, align 4
+  %val2 = load float, ptr %ptr2, align 4
+  %val3 = load float, ptr %ptr3, align 4
+  %res0 = insertelement <4 x float> poison, float %val0, i64 0
+  %res1 = insertelement <4 x float> %res0, float %val1, i64 1
+  %res2 = insertelement <4 x float> %res1, float %val2, i64 2
+  %res3 = insertelement <4 x float> %res2, float %val3, i64 3
+  ret <4 x float> %res3
+}
+
 define <4 x i32> @merge_4i32_i32_23u5(ptr %ptr) nounwind uwtable noinline ssp {
 ; SSE-LABEL: merge_4i32_i32_23u5:
 ; SSE:       # %bb.0:
@@ -724,6 +787,81 @@ define <4 x i32> @merge_4i32_i32_45zz_inc5(ptr %ptr) nounwind uwtable noinline s
   ret <4 x i32> %res1
 }
 
+define <4 x i32> @merge_v4i32_i32_3210(ptr %ptr) nounwind uwtable noinline ssp {
+; SSE2-LABEL: merge_v4i32_i32_3210:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: merge_v4i32_i32_3210:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    pinsrd $1, 8(%rdi), %xmm0
+; SSE41-NEXT:    pinsrd $2, 4(%rdi), %xmm0
+; SSE41-NEXT:    pinsrd $3, (%rdi), %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: merge_v4i32_i32_3210:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vpinsrd $1, 8(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrd $2, 4(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrd $3, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; X86-SSE1-LABEL: merge_v4i32_i32_3210:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl %edi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    pushl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    .cfi_offset %esi, -12
+; X86-SSE1-NEXT:    .cfi_offset %edi, -8
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movl 12(%ecx), %edx
+; X86-SSE1-NEXT:    movl 8(%ecx), %esi
+; X86-SSE1-NEXT:    movl (%ecx), %edi
+; X86-SSE1-NEXT:    movl 4(%ecx), %ecx
+; X86-SSE1-NEXT:    movl %edi, 12(%eax)
+; X86-SSE1-NEXT:    movl %ecx, 8(%eax)
+; X86-SSE1-NEXT:    movl %esi, 4(%eax)
+; X86-SSE1-NEXT:    movl %edx, (%eax)
+; X86-SSE1-NEXT:    popl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    popl %edi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    retl $4
+;
+; X86-SSE41-LABEL: merge_v4i32_i32_3210:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    pinsrd $1, 8(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrd $2, 4(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrd $3, (%eax), %xmm0
+; X86-SSE41-NEXT:    retl
+  %ptr0 = getelementptr inbounds i32, ptr %ptr, i64 3
+  %ptr1 = getelementptr inbounds i32, ptr %ptr, i64 2
+  %ptr2 = getelementptr inbounds i32, ptr %ptr, i64 1
+  %ptr3 = getelementptr inbounds i32, ptr %ptr, i64 0
+  %val0 = load i32, ptr %ptr0, align 4
+  %val1 = load i32, ptr %ptr1, align 4
+  %val2 = load i32, ptr %ptr2, align 4
+  %val3 = load i32, ptr %ptr3, align 4
+  %res0 = insertelement <4 x i32> poison, i32 %val0, i64 0
+  %res1 = insertelement <4 x i32> %res0, i32 %val1, i64 1
+  %res2 = insertelement <4 x i32> %res1, i32 %val2, i64 2
+  %res3 = insertelement <4 x i32> %res2, i32 %val3, i64 3
+  ret <4 x i32> %res3
+}
+
 define <8 x i16> @merge_8i16_i16_23u567u9(ptr %ptr) nounwind uwtable noinline ssp {
 ; SSE-LABEL: merge_8i16_i16_23u567u9:
 ; SSE:       # %bb.0:
@@ -859,6 +997,150 @@ define <8 x i16> @merge_8i16_i16_45u7zzzz(ptr %ptr) nounwind uwtable noinline ss
   %res5 = insertelement <8 x i16> %res4, i16     0, i32 5
   %res6 = insertelement <8 x i16> %res5, i16     0, i32 6
   %res7 = insertelement <8 x i16> %res6, i16     0, i32 7
+  ret <8 x i16> %res7
+}
+
+define <8 x i16> @merge_8i16_i16_76543210(ptr %ptr) nounwind uwtable noinline ssp {
+; SSE2-LABEL: merge_8i16_i16_76543210:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzwl 2(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    movzwl 4(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzwl 6(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-NEXT:    movzwl 8(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzwl 10(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    movzwl 12(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    movzwl 14(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: merge_8i16_i16_76543210:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movzwl 14(%rdi), %eax
+; SSE41-NEXT:    movd %eax, %xmm0
+; SSE41-NEXT:    pinsrw $1, 12(%rdi), %xmm0
+; SSE41-NEXT:    pinsrw $2, 10(%rdi), %xmm0
+; SSE41-NEXT:    pinsrw $3, 8(%rdi), %xmm0
+; SSE41-NEXT:    pinsrw $4, 6(%rdi), %xmm0
+; SSE41-NEXT:    pinsrw $5, 4(%rdi), %xmm0
+; SSE41-NEXT:    pinsrw $6, 2(%rdi), %xmm0
+; SSE41-NEXT:    pinsrw $7, (%rdi), %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: merge_8i16_i16_76543210:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzwl 14(%rdi), %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpinsrw $1, 12(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $2, 10(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $3, 8(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $4, 6(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $5, 4(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $6, 2(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; X86-SSE1-LABEL: merge_8i16_i16_76543210:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl %ebp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    pushl %ebx
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    pushl %edi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE1-NEXT:    pushl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 20
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE1-NEXT:    .cfi_offset %esi, -20
+; X86-SSE1-NEXT:    .cfi_offset %edi, -16
+; X86-SSE1-NEXT:    .cfi_offset %ebx, -12
+; X86-SSE1-NEXT:    .cfi_offset %ebp, -8
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movzwl 14(%eax), %ecx
+; X86-SSE1-NEXT:    movw %cx, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; X86-SSE1-NEXT:    movzwl 12(%eax), %ecx
+; X86-SSE1-NEXT:    movw %cx, (%esp) # 2-byte Spill
+; X86-SSE1-NEXT:    movzwl 10(%eax), %esi
+; X86-SSE1-NEXT:    movzwl 8(%eax), %edi
+; X86-SSE1-NEXT:    movzwl 6(%eax), %ebx
+; X86-SSE1-NEXT:    movzwl 4(%eax), %ebp
+; X86-SSE1-NEXT:    movzwl (%eax), %ecx
+; X86-SSE1-NEXT:    movzwl 2(%eax), %edx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movw %cx, 14(%eax)
+; X86-SSE1-NEXT:    movw %dx, 12(%eax)
+; X86-SSE1-NEXT:    movw %bp, 10(%eax)
+; X86-SSE1-NEXT:    movw %bx, 8(%eax)
+; X86-SSE1-NEXT:    movw %di, 6(%eax)
+; X86-SSE1-NEXT:    movw %si, 4(%eax)
+; X86-SSE1-NEXT:    movzwl (%esp), %ecx # 2-byte Folded Reload
+; X86-SSE1-NEXT:    movw %cx, 2(%eax)
+; X86-SSE1-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 2-byte Folded Reload
+; X86-SSE1-NEXT:    movw %cx, (%eax)
+; X86-SSE1-NEXT:    addl $4, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 20
+; X86-SSE1-NEXT:    popl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE1-NEXT:    popl %edi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    popl %ebx
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    popl %ebp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    retl $4
+;
+; X86-SSE41-LABEL: merge_8i16_i16_76543210:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movzwl 14(%eax), %ecx
+; X86-SSE41-NEXT:    movd %ecx, %xmm0
+; X86-SSE41-NEXT:    pinsrw $1, 12(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrw $2, 10(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrw $3, 8(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrw $4, 6(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrw $5, 4(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrw $6, 2(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrw $7, (%eax), %xmm0
+; X86-SSE41-NEXT:    retl
+  %ptr0 = getelementptr inbounds i16, ptr %ptr, i64 7
+  %ptr1 = getelementptr inbounds i16, ptr %ptr, i64 6
+  %ptr2 = getelementptr inbounds i16, ptr %ptr, i64 5
+  %ptr3 = getelementptr inbounds i16, ptr %ptr, i64 4
+  %ptr4 = getelementptr inbounds i16, ptr %ptr, i64 3
+  %ptr5 = getelementptr inbounds i16, ptr %ptr, i64 2
+  %ptr6 = getelementptr inbounds i16, ptr %ptr, i64 1
+  %ptr7 = getelementptr inbounds i16, ptr %ptr, i64 0
+  %val0 = load i16, ptr %ptr0
+  %val1 = load i16, ptr %ptr1
+  %val2 = load i16, ptr %ptr2
+  %val3 = load i16, ptr %ptr3
+  %val4 = load i16, ptr %ptr4
+  %val5 = load i16, ptr %ptr5
+  %val6 = load i16, ptr %ptr6
+  %val7 = load i16, ptr %ptr7
+  %res0 = insertelement <8 x i16> poison, i16 %val0, i64 0
+  %res1 = insertelement <8 x i16> %res0, i16 %val1, i64 1
+  %res2 = insertelement <8 x i16> %res1, i16 %val2, i64 2
+  %res3 = insertelement <8 x i16> %res2, i16 %val3, i64 3
+  %res4 = insertelement <8 x i16> %res3, i16 %val4, i64 4
+  %res5 = insertelement <8 x i16> %res4, i16 %val5, i64 5
+  %res6 = insertelement <8 x i16> %res5, i16 %val6, i64 6
+  %res7 = insertelement <8 x i16> %res6, i16 %val7, i64 7
   ret <8 x i16> %res7
 }
 
@@ -1053,6 +1335,244 @@ define <16 x i8> @merge_16i8_i8_0123uu67uuuuuzzz(ptr %ptr) nounwind uwtable noin
   %resD = insertelement <16 x i8> %res7, i8     0, i32 13
   %resE = insertelement <16 x i8> %resD, i8     0, i32 14
   %resF = insertelement <16 x i8> %resE, i8     0, i32 15
+  ret <16 x i8> %resF
+}
+
+define <16 x i8> @merge_16i8_i8_FEDCBA9876543210(ptr %ptr) nounwind uwtable noinline ssp {
+; SSE2-LABEL: merge_16i8_i8_FEDCBA9876543210:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movzbl (%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl 1(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE2-NEXT:    movzbl 2(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl 3(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE2-NEXT:    movzbl 4(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl 5(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3],xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSE2-NEXT:    movzbl 6(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl 7(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE2-NEXT:    movzbl 8(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl 9(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE2-NEXT:    movzbl 10(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl 11(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3],xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; SSE2-NEXT:    movzbl 12(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl 13(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE2-NEXT:    movzbl 14(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm4
+; SSE2-NEXT:    movzbl 15(%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3],xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: merge_16i8_i8_FEDCBA9876543210:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movzbl 15(%rdi), %eax
+; SSE41-NEXT:    movd %eax, %xmm0
+; SSE41-NEXT:    pinsrb $1, 14(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $2, 13(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $3, 12(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $4, 11(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $5, 10(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $6, 9(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $7, 8(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $8, 7(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $9, 6(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $10, 5(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $11, 4(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $12, 3(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $13, 2(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $14, 1(%rdi), %xmm0
+; SSE41-NEXT:    pinsrb $15, (%rdi), %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: merge_16i8_i8_FEDCBA9876543210:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzbl 15(%rdi), %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpinsrb $1, 14(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $2, 13(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $3, 12(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $4, 11(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $5, 10(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $6, 9(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $7, 8(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $8, 7(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $9, 6(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $10, 5(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $11, 4(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $12, 3(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $13, 2(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $14, 1(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $15, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; X86-SSE1-LABEL: merge_16i8_i8_FEDCBA9876543210:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl %ebx
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    pushl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    subl $12, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE1-NEXT:    .cfi_offset %esi, -12
+; X86-SSE1-NEXT:    .cfi_offset %ebx, -8
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE1-NEXT:    movzbl 15(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 14(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 13(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 12(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 11(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 10(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 9(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 8(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 7(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movzbl 6(%esi), %ecx
+; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-SSE1-NEXT:    movb 5(%esi), %bh
+; X86-SSE1-NEXT:    movb 4(%esi), %bl
+; X86-SSE1-NEXT:    movb 3(%esi), %dh
+; X86-SSE1-NEXT:    movb 2(%esi), %ch
+; X86-SSE1-NEXT:    movb (%esi), %cl
+; X86-SSE1-NEXT:    movb 1(%esi), %dl
+; X86-SSE1-NEXT:    movb %cl, 15(%eax)
+; X86-SSE1-NEXT:    movb %dl, 14(%eax)
+; X86-SSE1-NEXT:    movb %ch, 13(%eax)
+; X86-SSE1-NEXT:    movb %dh, 12(%eax)
+; X86-SSE1-NEXT:    movb %bl, 11(%eax)
+; X86-SSE1-NEXT:    movb %bh, 10(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 9(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 8(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 7(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 6(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 5(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 4(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 3(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 2(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, 1(%eax)
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movb %cl, (%eax)
+; X86-SSE1-NEXT:    addl $12, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    popl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    popl %ebx
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    retl $4
+;
+; X86-SSE41-LABEL: merge_16i8_i8_FEDCBA9876543210:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movzbl 15(%eax), %ecx
+; X86-SSE41-NEXT:    movd %ecx, %xmm0
+; X86-SSE41-NEXT:    pinsrb $1, 14(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $2, 13(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $3, 12(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $4, 11(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $5, 10(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $6, 9(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $7, 8(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $8, 7(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $9, 6(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $10, 5(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $11, 4(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $12, 3(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $13, 2(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $14, 1(%eax), %xmm0
+; X86-SSE41-NEXT:    pinsrb $15, (%eax), %xmm0
+; X86-SSE41-NEXT:    retl
+  %ptr0 = getelementptr inbounds i8, ptr %ptr, i64 15
+  %ptr1 = getelementptr inbounds i8, ptr %ptr, i64 14
+  %ptr2 = getelementptr inbounds i8, ptr %ptr, i64 13
+  %ptr3 = getelementptr inbounds i8, ptr %ptr, i64 12
+  %ptr4 = getelementptr inbounds i8, ptr %ptr, i64 11
+  %ptr5 = getelementptr inbounds i8, ptr %ptr, i64 10
+  %ptr6 = getelementptr inbounds i8, ptr %ptr, i64 9
+  %ptr7 = getelementptr inbounds i8, ptr %ptr, i64 8
+  %ptr8 = getelementptr inbounds i8, ptr %ptr, i64 7
+  %ptr9 = getelementptr inbounds i8, ptr %ptr, i64 6
+  %ptrA = getelementptr inbounds i8, ptr %ptr, i64 5
+  %ptrB = getelementptr inbounds i8, ptr %ptr, i64 4
+  %ptrC = getelementptr inbounds i8, ptr %ptr, i64 3
+  %ptrD = getelementptr inbounds i8, ptr %ptr, i64 2
+  %ptrE = getelementptr inbounds i8, ptr %ptr, i64 1
+  %ptrF = getelementptr inbounds i8, ptr %ptr, i64 0
+  %val0 = load i8, ptr %ptr0
+  %val1 = load i8, ptr %ptr1
+  %val2 = load i8, ptr %ptr2
+  %val3 = load i8, ptr %ptr3
+  %val4 = load i8, ptr %ptr4
+  %val5 = load i8, ptr %ptr5
+  %val6 = load i8, ptr %ptr6
+  %val7 = load i8, ptr %ptr7
+  %val8 = load i8, ptr %ptr8
+  %val9 = load i8, ptr %ptr9
+  %valA = load i8, ptr %ptrA
+  %valB = load i8, ptr %ptrB
+  %valC = load i8, ptr %ptrC
+  %valD = load i8, ptr %ptrD
+  %valE = load i8, ptr %ptrE
+  %valF = load i8, ptr %ptrF
+  %res0 = insertelement <16 x i8> poison, i8 %val0, i8 0
+  %res1 = insertelement <16 x i8> %res0, i8 %val1, i64 1
+  %res2 = insertelement <16 x i8> %res1, i8 %val2, i64 2
+  %res3 = insertelement <16 x i8> %res2, i8 %val3, i64 3
+  %res4 = insertelement <16 x i8> %res3, i8 %val4, i64 4
+  %res5 = insertelement <16 x i8> %res4, i8 %val5, i64 5
+  %res6 = insertelement <16 x i8> %res5, i8 %val6, i64 6
+  %res7 = insertelement <16 x i8> %res6, i8 %val7, i64 7
+  %res8 = insertelement <16 x i8> %res7, i8 %val8, i64 8
+  %res9 = insertelement <16 x i8> %res8, i8 %val9, i64 9
+  %resA = insertelement <16 x i8> %res9, i8 %valA, i64 10
+  %resB = insertelement <16 x i8> %resA, i8 %valB, i64 11
+  %resC = insertelement <16 x i8> %resB, i8 %valC, i64 12
+  %resD = insertelement <16 x i8> %resC, i8 %valD, i64 13
+  %resE = insertelement <16 x i8> %resD, i8 %valE, i64 14
+  %resF = insertelement <16 x i8> %resE, i8 %valF, i64 15
   ret <16 x i8> %resF
 }
 
