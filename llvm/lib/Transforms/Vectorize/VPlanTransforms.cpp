@@ -1412,7 +1412,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenSelectRecipe,
+               VPReplicateRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
@@ -1464,6 +1465,15 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
+      if (auto *CastR = dyn_cast<VPWidenCastRecipe>(RepOrWidenR)) {
+        VPBuilder Builder(CastR);
+        auto *Clone = Builder.createScalarCast(
+            CastR->getOpcode(), CastR->getOperand(0), CastR->getResultType(),
+            CastR->getDebugLoc(), *CastR, *CastR);
+        CastR->replaceAllUsesWith(Clone);
+        CastR->eraseFromParent();
+        continue;
+      }
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
                                           RepOrWidenR->operands(),
                                           true /*IsSingleScalar*/);
