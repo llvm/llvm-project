@@ -41,7 +41,7 @@ body:             |
     %4:_(s32) = G_ASSERT_SEXT %2, 8
     %5:_(s8) = G_TRUNC %3(s32)
     %6:_(s8) = G_TRUNC %4(s32)
-    %7:_(s8) = G_ABDS %5, %6
+    %7:_(s8) = G_SABD %5, %6
     %8:_(s32) = G_ANYEXT %7(s8)
     $x10 = COPY %8(s32)
     PseudoRET implicit $x10
@@ -83,7 +83,7 @@ body:             |
     %4:_(s32) = G_ASSERT_SEXT %2, 16
     %5:_(s16) = G_TRUNC %3(s32)
     %6:_(s16) = G_TRUNC %4(s32)
-    %7:_(s16) = G_ABDS %5, %6
+    %7:_(s16) = G_SABD %5, %6
     %8:_(s32) = G_ANYEXT %7(s16)
     $x10 = COPY %8(s32)
     PseudoRET implicit $x10
@@ -117,7 +117,7 @@ body:             |
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
-    %3:_(s32) = G_ABDS %1, %2
+    %3:_(s32) = G_SABD %1, %2
     $x10 = COPY %3(s32)
     PseudoRET implicit $x10
 ...
@@ -153,7 +153,7 @@ body:             |
     %3:_(s32) = COPY $x10
     %4:_(s32) = COPY $x11
     %5:_(s64) = G_MERGE_VALUES %3(s32), %4(s32)
-    %6:_(s64) = G_ABDS %2, %5
+    %6:_(s64) = G_SABD %2, %5
     %7:_(s32), %8:_(s32) = G_UNMERGE_VALUES %6(s64)
     $x10 = COPY %7(s32)
     $x11 = COPY %8(s32)
@@ -196,7 +196,7 @@ body:             |
     %4:_(s32) = G_ASSERT_ZEXT %2, 8
     %5:_(s8) = G_TRUNC %3(s32)
     %6:_(s8) = G_TRUNC %4(s32)
-    %7:_(s8) = G_ABDU %5, %6
+    %7:_(s8) = G_UABD %5, %6
     %8:_(s32) = G_ANYEXT %7(s8)
     $x10 = COPY %8(s32)
     PseudoRET implicit $x10
@@ -238,7 +238,7 @@ body:             |
     %4:_(s32) = G_ASSERT_ZEXT %2, 16
     %5:_(s16) = G_TRUNC %3(s32)
     %6:_(s16) = G_TRUNC %4(s32)
-    %7:_(s16) = G_ABDU %5, %6
+    %7:_(s16) = G_UABD %5, %6
     %8:_(s32) = G_ANYEXT %7(s16)
     $x10 = COPY %8(s32)
     PseudoRET implicit $x10
@@ -272,7 +272,7 @@ body:             |
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
-    %3:_(s32) = G_ABDU %1, %2
+    %3:_(s32) = G_UABD %1, %2
     $x10 = COPY %3(s32)
     PseudoRET implicit $x10
 ...
@@ -308,7 +308,7 @@ body:             |
     %3:_(s32) = COPY $x10
     %4:_(s32) = COPY $x11
     %5:_(s64) = G_MERGE_VALUES %3(s32), %4(s32)
-    %6:_(s64) = G_ABDU %2, %5
+    %6:_(s64) = G_UABD %2, %5
     %7:_(s32), %8:_(s32) = G_UNMERGE_VALUES %6(s64)
     $x10 = COPY %7(s32)
     $x11 = COPY %8(s32)

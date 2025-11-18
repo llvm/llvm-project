@@ -2974,7 +2974,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_SMIN:
   case TargetOpcode::G_SMAX:
-  case TargetOpcode::G_ABDS:
+  case TargetOpcode::G_SABD:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
@@ -3013,7 +3013,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
-  case TargetOpcode::G_ABDU:
+  case TargetOpcode::G_UABD:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
@@ -4839,9 +4839,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerShlSat(MI);
   case G_ABS:
     return lowerAbsToAddXor(MI);
-  case G_ABDS:
-  case G_ABDU: {
-    bool IsSigned = MI.getOpcode() == G_ABDS;
+  case G_SABD:
+  case G_UABD: {
+    bool IsSigned = MI.getOpcode() == G_SABD;
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     if ((IsSigned && LI.isLegal({G_SMIN, Ty}) && LI.isLegal({G_SMAX, Ty})) ||
         (!IsSigned && LI.isLegal({G_UMIN, Ty}) && LI.isLegal({G_UMAX, Ty}))) {
@@ -10154,9 +10154,9 @@ LegalizerHelper::lowerAbsToCNeg(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
-  assert((MI.getOpcode() == TargetOpcode::G_ABDS ||
-          MI.getOpcode() == TargetOpcode::G_ABDU) &&
-         "Expected G_ABDS or G_ABDU instruction");
+  assert((MI.getOpcode() == TargetOpcode::G_SABD ||
+          MI.getOpcode() == TargetOpcode::G_UABD) &&
+         "Expected G_SABD or G_UABD instruction");
 
   auto [DstReg, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(LHS);
@@ -10165,7 +10165,7 @@ LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
   // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   Register LHSSub = MIRBuilder.buildSub(Ty, LHS, RHS).getReg(0);
   Register RHSSub = MIRBuilder.buildSub(Ty, RHS, LHS).getReg(0);
-  CmpInst::Predicate Pred = (MI.getOpcode() == TargetOpcode::G_ABDS)
+  CmpInst::Predicate Pred = (MI.getOpcode() == TargetOpcode::G_SABD)
                                 ? CmpInst::ICMP_SGT
                                 : CmpInst::ICMP_UGT;
   auto ICmp = MIRBuilder.buildICmp(Pred, LLT::scalar(1), LHS, RHS);
@@ -10177,9 +10177,9 @@ LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
-  assert((MI.getOpcode() == TargetOpcode::G_ABDS ||
-          MI.getOpcode() == TargetOpcode::G_ABDU) &&
-         "Expected G_ABDS or G_ABDU instruction");
+  assert((MI.getOpcode() == TargetOpcode::G_SABD ||
+          MI.getOpcode() == TargetOpcode::G_UABD) &&
+         "Expected G_SABD or G_UABD instruction");
 
   auto [DstReg, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(LHS);
@@ -10187,7 +10187,7 @@ LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
   // abds(lhs, rhs) -→ sub(smax(lhs, rhs), smin(lhs, rhs))
   // abdu(lhs, rhs) -→ sub(umax(lhs, rhs), umin(lhs, rhs))
   Register MaxReg, MinReg;
-  if (MI.getOpcode() == TargetOpcode::G_ABDS) {
+  if (MI.getOpcode() == TargetOpcode::G_SABD) {
     MaxReg = MIRBuilder.buildSMax(Ty, LHS, RHS).getReg(0);
     MinReg = MIRBuilder.buildSMin(Ty, LHS, RHS).getReg(0);
   } else {

@@ -289,7 +289,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lower();
 
-  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
+  getActionDefinitionsBuilder({G_SABD, G_UABD})
       .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
       .lower();
 
@@ -1829,9 +1829,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_umull:
     return LowerBinOp(AArch64::G_UMULL);
   case Intrinsic::aarch64_neon_sabd:
-    return LowerBinOp(TargetOpcode::G_ABDS);
+    return LowerBinOp(TargetOpcode::G_SABD);
   case Intrinsic::aarch64_neon_uabd:
-    return LowerBinOp(TargetOpcode::G_ABDU);
+    return LowerBinOp(TargetOpcode::G_UABD);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
