@@ -346,11 +346,12 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
       }
 
       // Handling fused authentication and return instructions (Armv8.3-A):
-      // if the Return here is RETA(A|B), we have to keep the authentication
-      // part.
+      // if the Callee does not end in a tailcall, the return will be removed
+      // from the inlined block. If that return is RETA(A|B), we have to keep
+      // the authentication part.
       // RETAA -> AUTIASP + RET
       // RETAB -> AUTIBSP + RET
-      if (BC.isAArch64() && BC.MIB->isPAuthAndRet(Inst)) {
+      if (!CSIsTailCall && BC.isAArch64() && BC.MIB->isPAuthAndRet(Inst)) {
         MCInst Auth;
         BC.MIB->createMatchingAuth(Inst, Auth);
         InsertII =
