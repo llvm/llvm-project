@@ -3672,7 +3672,7 @@ static void genOMP(
 
     if (std::get<parser::OmpTypeNameList>(specifier.t).v.size() > 1)
       TODO(converter.getCurrentLocation(),
-           "multiple types in declare target is not yet supported");
+           "multiple types in declare reduction is not yet supported");
 
     mlir::Type reductionType = getReductionType(converter, specifier);
     ReductionProcessor::GenCombinerCBTy genCombinerCB;
@@ -3700,7 +3700,8 @@ static void genOMP(
           genInitValueCB);
     } else {
       TODO(converter.getCurrentLocation(),
-           "declare target without an initializer clause is not yet supported");
+           "declare reduction without an initializer clause is not yet "
+           "supported");
     }
   }
 }

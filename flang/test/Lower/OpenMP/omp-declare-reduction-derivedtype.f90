@@ -42,24 +42,24 @@ contains
 
 end module maxtype_mod
 !CHECK:  omp.declare_reduction @red_add_max : [[MAXTYPE:.*]] init {
-!CHECK:  ^bb0(%[[ARGI_0:.*]]: [[MAXTYPE]]):
+!CHECK:  ^bb0(%[[OMP_ORIG_ARG_I:.*]]: [[MAXTYPE]]):
 !CHECK:    %[[OMP_PRIV:.*]] = fir.alloca [[MAXTYPE]]
 !CHECK:    %[[OMP_ORIG:.*]] = fir.alloca [[MAXTYPE]]
-!CHECK:    fir.store %[[ARGI_0]] to %[[OMP_ORIG]] : !fir.ref<[[MAXTYPE]]>
+!CHECK:    fir.store %[[OMP_ORIG_ARG_I]] to %[[OMP_ORIG]] : !fir.ref<[[MAXTYPE]]>
 !CHECK:    %[[OMP_ORIG_DECL:.*]]:2 = hlfir.declare %[[OMP_ORIG]] {uniq_name = "omp_orig"} : (!fir.ref<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
-!CHECK:    fir.store %[[ARGI_0]] to %[[OMP_PRIV]] : !fir.ref<[[MAXTYPE]]>
+!CHECK:    fir.store %[[OMP_ORIG_ARG_I]] to %[[OMP_PRIV]] : !fir.ref<[[MAXTYPE]]>
 !CHECK:    %[[OMP_PRIV_DECL:.*]]:2 = hlfir.declare %[[OMP_PRIV]] {uniq_name = "omp_priv"} : (!fir.ref<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
 !CHECK:    fir.call @_QMmaxtype_modPinitme(%[[OMP_PRIV_DECL]]#0, %[[OMP_ORIG_DECL]]#0) fastmath<contract> : (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>) -> ()
 !CHECK:    %[[OMP_PRIV_VAL:.*]] = fir.load %[[OMP_PRIV_DECL]]#0 : !fir.ref<[[MAXTYPE]]>
 !CHECK:    omp.yield(%[[OMP_PRIV_VAL]] : [[MAXTYPE]])
 !CHECK:  } combiner {
-!CHECK:  ^bb0(%[[ARGC_0:.*]]: [[MAXTYPE]], %[[ARGC_1:.*]]: [[MAXTYPE]]):
+!CHECK:  ^bb0(%[[LHS_ARG:.*]]: [[MAXTYPE]], %[[RHS_ARG:.*]]: [[MAXTYPE]]):
 !CHECK:    %[[RESULT:.*]] = fir.alloca [[MAXTYPE]] {bindc_name = ".result"}
 !CHECK:    %[[OMP_OUT:.*]] = fir.alloca [[MAXTYPE]]
 !CHECK:    %[[OMP_IN:.*]] = fir.alloca [[MAXTYPE]]
-!CHECK:    fir.store %[[ARGC_1]] to %[[OMP_IN]] : !fir.ref<[[MAXTYPE]]>
+!CHECK:    fir.store %[[RHS_ARG]] to %[[OMP_IN]] : !fir.ref<[[MAXTYPE]]>
 !CHECK:    %[[OMP_IN_DECL:.*]]:2 = hlfir.declare %[[OMP_IN]] {uniq_name = "omp_in"} : (!fir.ref<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
-!CHECK:    fir.store %[[ARGC_0]] to %[[OMP_OUT]] : !fir.ref<[[MAXTYPE]]>
+!CHECK:    fir.store %[[LHS_ARG]] to %[[OMP_OUT]] : !fir.ref<[[MAXTYPE]]>
 !CHECK:    %[[OMP_OUT_DECL:.*]]:2 = hlfir.declare %[[OMP_OUT]] {uniq_name = "omp_out"} : (!fir.ref<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
 !CHECK:    %[[COMBINE_RESULT:.*]] = fir.call @_QMmaxtype_modPmycombine(%[[OMP_OUT_DECL]]#0, %[[OMP_IN_DECL]]#0) fastmath<contract> : (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>) -> [[MAXTYPE]]
 !CHECK:    fir.save_result %[[COMBINE_RESULT]] to %[[RESULT]] : [[MAXTYPE]], !fir.ref<[[MAXTYPE]]>
@@ -72,10 +72,10 @@ end module maxtype_mod
 !CHECK:    omp.yield(%[[RESULT_VAL]] : [[MAXTYPE]])
 !CHECK:  }
 
-!CHECK:  func.func @_QMmaxtype_modPinitme(%arg0: !fir.ref<[[MAXTYPE]]> {fir.bindc_name = "x"}, %arg1: !fir.ref<[[MAXTYPE]]> {fir.bindc_name = "n"}) {
-!CHECK:    %0 = fir.dummy_scope : !fir.dscope
-!CHECK:    %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QMmaxtype_modFinitmeEn"} : (!fir.ref<[[MAXTYPE]]>, !fir.dscope) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
-!CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QMmaxtype_modFinitmeEx"} : (!fir.ref<[[MAXTYPE]]>, !fir.dscope) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
+!CHECK:  func.func @_QMmaxtype_modPinitme(%[[X_ARG:.*]]: !fir.ref<[[MAXTYPE]]> {fir.bindc_name = "x"}, %[[N_ARG:.*]]: !fir.ref<[[MAXTYPE]]> {fir.bindc_name = "n"}) {
+!CHECK:    %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
+!CHECK:    %[[N_DECL:.*]]:2 = hlfir.declare %[[N_ARG]] dummy_scope %[[SCOPE]] arg 2 {uniq_name = "_QMmaxtype_modFinitmeEn"} : (!fir.ref<[[MAXTYPE]]>, !fir.dscope) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
+!CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QMmaxtype_modFinitmeEx"} : (!fir.ref<[[MAXTYPE]]>, !fir.dscope) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
 !CHECK:    %[[ZERO_0:.*]] = arith.constant 0 : i32
 !CHECK:    %[[X_DESIGNATE_SUMVAL:.*]] = hlfir.designate %[[X_DECL]]#0{"sumval"}   : (!fir.ref<[[MAXTYPE]]>) -> !fir.ref<i32>
 !CHECK:    hlfir.assign %[[ZERO_0]] to %[[X_DESIGNATE_SUMVAL]] : i32, !fir.ref<i32>
@@ -102,8 +102,8 @@ end module maxtype_mod
 !CHECK:    %[[LHS_DESIGNATE_MAXVAL:.*]] = hlfir.designate %[[LHS_DECL]]#0{"maxval"}   : (!fir.ref<[[MAXTYPE]]>) -> !fir.ref<i32>
 !CHECK:    %[[LHS_MAXVAL:.*]] = fir.load %[[LHS_DESIGNATE_MAXVAL]] : !fir.ref<i32>
 !CHECK:    %[[RHS_DESIGNATE_MAXVAL:.*]] = hlfir.designate %[[RHS_DECL]]#0{"maxval"}   : (!fir.ref<[[MAXTYPE]]>) -> !fir.ref<i32>
-!CHECK:    %[[RHS_MAXVAL:.*]] = fir.load %13 : !fir.ref<i32>
-!CHECK:    %[[CMP:.*]] = arith.cmpi sgt, %12, %14 : i32
+!CHECK:    %[[RHS_MAXVAL:.*]] = fir.load %[[RHS_DESIGNATE_MAXVAL]] : !fir.ref<i32>
+!CHECK:    %[[CMP:.*]] = arith.cmpi sgt, %[[LHS_MAXVAL]], %[[RHS_MAXVAL]] : i32
 !CHECK:    %[[MAX_VAL:.*]] = arith.select %[[CMP]], %[[LHS_MAXVAL]], %[[RHS_MAXVAL]] : i32
 !CHECK:    %[[RESULT_DESIGNAGE_MAXVAL:.*]] = hlfir.designate %[[RESULT_DECL]]#0{"maxval"}   : (!fir.ref<[[MAXTYPE]]>) -> !fir.ref<i32>
 !CHECK:    hlfir.assign %[[MAX_VAL]] to %[[RESULT_DESIGNAGE_MAXVAL]] : i32, !fir.ref<i32>
