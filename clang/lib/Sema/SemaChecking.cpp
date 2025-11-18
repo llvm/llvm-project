@@ -41,6 +41,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -7012,12 +7013,24 @@ bool Sema::CheckFormatString(const FormatMatchesAttr *Format,
   return false;
 }
 
-static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
-                                         unsigned FormatIdx, unsigned FirstArg,
-                                         ArrayRef<const Expr *> Args,
-                                         Sema::FormatArgumentPassingKind APK,
-                                         unsigned CallerParamIdx,
-                                         SourceLocation Loc) {
+std::string escapeFormatString(StringRef Input) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  for (char C : Input) {
+    StringRef Escaped = escapeCStyle<EscapeChar::Double>(C);
+    if (Escaped.empty())
+      OS << C;
+    else
+      OS << Escaped;
+  }
+  return Result;
+}
+
+static void CheckMissingFormatAttributes(
+    Sema *S, ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
+    const StringLiteral *ReferenceFormatString, unsigned FormatIdx,
+    unsigned FirstDataArg, FormatStringType FormatType, unsigned CallerParamIdx,
+    SourceLocation Loc) {
   NamedDecl *Caller = S->getCurFunctionOrMethodDecl();
   if (!Caller)
     return;
@@ -7039,13 +7052,13 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
     // function. Try to match caller and callee arguments. If successful, then
     // emit a diag with the caller idx, otherwise we can't determine the callee
     // arguments.
-    unsigned NumCalleeArgs = Args.size() - FirstArg;
+    unsigned NumCalleeArgs = Args.size() - FirstDataArg;
     if (NumCalleeArgs == 0 || NumCallerParams < NumCalleeArgs) {
       // There aren't enough arguments in the caller to pass to callee.
       return;
     }
     for (unsigned CalleeIdx = Args.size() - 1, CallerIdx = NumCallerParams - 1;
-         CalleeIdx >= FirstArg; --CalleeIdx, --CallerIdx) {
+         CalleeIdx >= FirstDataArg; --CalleeIdx, --CallerIdx) {
       const auto *Arg =
           dyn_cast<DeclRefExpr>(Args[CalleeIdx]->IgnoreParenCasts());
       if (!Arg)
@@ -7065,8 +7078,10 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
                              : 0;
     break;
   case Sema::FormatArgumentPassingKind::FAPK_Elsewhere:
-    // Args are not passed to the callee.
-    return;
+    // The callee has a format_matches attribute. We will emit that instead.
+    if (!ReferenceFormatString)
+      return;
+    break;
   }
 
   // Emit the diagnostic and fixit.
@@ -7074,12 +7089,18 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
     unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
     StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
     std::string Attr, Fixit;
-    llvm::raw_string_ostream(Attr)
-        << "format(" << FormatTypeName << ", " << FormatStringIndex << ", "
-        << FirstArgumentIndex << ")";
+    if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere)
+      llvm::raw_string_ostream(Attr)
+          << "format(" << FormatTypeName << ", " << FormatStringIndex << ", "
+          << FirstArgumentIndex << ")";
+    else
+      llvm::raw_string_ostream(Attr)
+          << "format_matches(" << FormatTypeName << ", " << FormatStringIndex
+          << ", \"" << escapeFormatString(ReferenceFormatString->getString())
+          << "\")";
     auto DB = S->Diag(Loc, diag::warn_missing_format_attribute)
               << Attr << Caller;
-    
+
     SourceLocation SL;
     llvm::raw_string_ostream IS(Fixit);
     // The attribute goes at the start of the declaration in C/C++ functions
@@ -7164,8 +7185,9 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
 
   const LangOptions &LO = getLangOpts();
   if (CallerParamIdx && (LO.GNUMode || LO.C23 || LO.CPlusPlus11))
-    CheckMissingFormatAttributes(this, Type, format_idx, firstDataArg, Args,
-                                 APK, *CallerParamIdx, Loc);
+    CheckMissingFormatAttributes(this, Args, APK, ReferenceFormatString,
+                                 format_idx, firstDataArg, Type,
+                                 *CallerParamIdx, Loc);
 
   // Strftime is particular as it always uses a single 'time' argument,
   // so it is safe to pass a non-literal string.

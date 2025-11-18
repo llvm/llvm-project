@@ -27,6 +27,9 @@ size_t strftime(char *, size_t, const char *, const struct tm *);
 [[gnu::format(strfmon, 3, 4)]]
 ssize_t strfmon(char *, size_t, const char *, ...);
 
+[[gnu::format_matches(printf, 1, "%d %f \"'")]]
+int custom_print(const char *, va_list);
+
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(printf, 1, 0)]] "
 void f1(const char *fmt, va_list args) // #f1
 {
@@ -225,4 +228,12 @@ void f23(const char *fmt, ... /* args */)
   va_list args;
   vprintf(fmt, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f23'}}
                       // expected-note@#f23 {{'f23' declared here}}
+}
+
+// CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format_matches(printf, 1, \"%d %f \\\"'\")]] "
+void f24(const char *fmt, ...) // #f24
+{
+  va_list args;
+  custom_print(fmt, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format_matches(printf, 1, "%d %f \"'")' attribute to the declaration of 'f24'}}
+                           // expected-note@#f24 {{'f24' declared here}}
 }
