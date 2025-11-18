@@ -335,6 +335,7 @@ void LinkerDriver::handleReproFile(StringRef path, InputType inputType) {
              << ": " << ec.message();
   sys::path::remove_dots(absPath, true);
   *reproFile << absPath << "\"\n";
+  reproFile->flush();
 }
 
 void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputType pathType) {
@@ -427,10 +428,9 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         StringRef parentName) {
 
   auto reportBufferError = [=](Error &&e) {
-    StringRef childName =
-      CHECK(c.getName(),
-            "could not get child name for archive " + parentName +
-            " while loading symbol " + toCOFFString(ctx, sym));
+    StringRef childName = CHECK(
+        c.getName(), "could not get child name for archive " + parentName +
+                         " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
                << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);

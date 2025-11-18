@@ -1,12 +1,11 @@
 # REQUIRES: x86
-# Unsupported on Windows due to maximum path length limitations.
-# UNSUPPORTED: system-windows
 
 # RUN: rm -rf %t.dir %t.obj
 # RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 # RUN: yaml2obj %p/Inputs/empty.yaml -o %t.archive.obj
 # RUN: rm -f %t.archive.lib
 # RUN: llvm-ar rcs %t.archive.lib %t.archive.obj
+# RUN: llvm-pdbutil yaml2pdb %S/Inputs/pdb-type-server-simple-ts.yaml -pdb %t.pdb
 
 
 Test link.exe-style /linkreprofullpathrsp: flag.
@@ -14,10 +13,11 @@ Test link.exe-style /linkreprofullpathrsp: flag.
 # RUN: cd %t.dir/build1
 # RUN: lld-link %t.obj %p/Inputs/std32.lib /subsystem:console /defaultlib:%p/Inputs/library.lib \
 # RUN:  /libpath:%p/Inputs /defaultlib:std64.lib ret42.lib /entry:main@0 /linkreprofullpathrsp:%t.rsp \
-# RUN:  /wholearchive:%t.archive.lib /out:%t.exe
+# RUN:  /wholearchive:%t.archive.lib /out:%t.exe /pdb:%t.pdb
 # RUN: FileCheck %s --check-prefix=RSP -DT=%t -DP=%p < %t.rsp
 
-# RSP: [[T]].obj
+# RSP: "[[T].obj"
+# RSP-NEXT: "[[T]].pdb"
 # RSP-NEXT: "[[P]]/Inputs/std32.lib"
 # RSP-NEXT: "[[P]]/Inputs/ret42.lib"
 # RSP-NEXT: "/wholearchive:[[T]].archive.lib"
