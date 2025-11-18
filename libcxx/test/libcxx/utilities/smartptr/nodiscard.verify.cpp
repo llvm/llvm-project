@@ -48,9 +48,7 @@ void test() {
     sPtr.get();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     *sPtr;            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sPtr.use_count(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#if TEST_STD_VER <= 20
-    sPtr.unique(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
+    sPtr.unique();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     sPtr.owner_before(std::shared_ptr<int>());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
