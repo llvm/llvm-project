@@ -11,14 +11,14 @@ if(NOT TARGET omp_testing)
   return()
 endif()
 
-function(add_openmp_unittest test_dirname)
-  add_unittest(OpenMPUnitTests ${test_dirname} ${ARGN})
+function(add_openmp_unittest test_filename)
+  add_unittest(OpenMPUnitTests ${test_filename} ${ARGN})
 
   # Link against the testing library which exports all symbols.
-  target_link_libraries(${test_dirname} PRIVATE omp_testing)
-  add_dependencies(${test_dirname} omp_testing)
+  target_link_libraries(${test_filename} PRIVATE omp_testing)
+  add_dependencies(${test_filename} omp_testing)
 
-  target_include_directories(${test_dirname} PRIVATE
+  target_include_directories(${test_filename} PRIVATE
     ${LIBOMP_INCLUDE_DIR}
     ${LIBOMP_SRC_DIR}
   )
