@@ -1966,7 +1966,8 @@ void RegisterCoalescer::updateRegDefsUses(
       //  %1.sub32:gr64      = INSTX
       //  undef %1.sub8:gr64 = INSTY , implicit-def %1
       //
-      // Because that would thrash the top 24 bits of %1.sub32.
+      // because the undef means that none of the bits of %1 are read, thus
+      // thrashing the top 24 bits of %1.sub32.
       if (is_contained(SubregToRegSrcInsts, UseMI) &&
           all_of(UseMI->defs(), [&SubIdx](const MachineOperand &MO) -> bool {
             if (MO.isUndef())
@@ -2009,7 +2010,7 @@ void RegisterCoalescer::updateRegDefsUses(
         //  32B    %1:gpr32 = MOVIMM32 ..
         //  48B    %0:gpr64 = SUBREG_TO_REG 0, %1, sub32
         //
-        //  Only the MOVIMM32 require a def of the top lanes and any intervals
+        //  Only the MOVIMM32 requires a def of the top lanes and any intervals
         //  for the top 32-bits of the def at 16B should be removed.
         for (LiveInterval::SubRange &SR : DstInt->subranges()) {
           if (!Writes || RequiresImplicitRedef ||
@@ -2019,7 +2020,7 @@ void RegisterCoalescer::updateRegDefsUses(
           assert((SR.LaneMask & UnusedLanes) == SR.LaneMask &&
                  "Unexpected lanemask. Subrange needs finer granularity");
 
-          SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI).getRegSlot(false);
+          SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI).getRegSlot();
           auto SegmentI = SR.find(UseIdx);
           if (SegmentI != SR.end())
             SR.removeSegment(SegmentI, true);
@@ -2140,26 +2141,33 @@ void RegisterCoalescer::setUndefOnPrunedSubRegUses(LiveInterval &LI,
 
 /// For a given use of value \p Idx, it returns the def in the current block,
 /// or otherwise all possible defs in preceding blocks.
-static bool FindDefInBlock(SmallPtrSetImpl<MachineBasicBlock *> &VisitedBlocks,
-                           SmallVector<MachineInstr *> &Instrs,
-                           LiveIntervals *LIS, LiveInterval &SrcInt,
-                           MachineBasicBlock *MBB, VNInfo *Idx) {
-  if (!Idx->isPHIDef()) {
+static bool findPrecedingDefs(SmallVector<MachineInstr *> &Instrs,
+                              LiveIntervals *LIS, LiveInterval &SrcInt,
+                              MachineBasicBlock *MBB, VNInfo *Idx) {
+  auto IsPrecedingDef = [&](VNInfo *Idx) -> bool {
+    if (Idx->isPHIDef())
+      return false;
     MachineInstr *Def = LIS->getInstructionFromIndex(Idx->def);
     assert(Def && "Unable to find a def for SUBREG_TO_REG source operand");
     Instrs.push_back(Def);
     return true;
+  };
+
+  if (IsPrecedingDef(Idx))
+    return true;
+
+  SmallVector<MachineBasicBlock *> Worklist = {MBB};
+  SmallPtrSet<MachineBasicBlock *, 8> VisitedBlocks;
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    if (VisitedBlocks.count(Worklist[I]))
+      continue;
+    VisitedBlocks.insert(Worklist[I]);
+    VNInfo *Idx = SrcInt.getVNInfoBefore(LIS->getMBBEndIdx(Worklist[I]));
+    if (!IsPrecedingDef(Idx))
+      Worklist.append(Worklist[I]->pred_begin(), Worklist[I]->pred_end());
   }
 
-  bool Any = false;
-  if (VisitedBlocks.count(MBB))
-    return false;
-  VisitedBlocks.insert(MBB);
-  for (MachineBasicBlock *Pred : MBB->predecessors()) {
-    Any |= FindDefInBlock(VisitedBlocks, Instrs, LIS, SrcInt, Pred,
-                          SrcInt.getVNInfoBefore(LIS->getMBBEndIdx(Pred)));
-  }
-  return Any;
+  return !Instrs.empty();
 }
 
 bool RegisterCoalescer::joinCopy(
@@ -2321,10 +2329,9 @@ bool RegisterCoalescer::joinCopy(
     //                                            // do with the SUBREG_TO_REG.
     LiveInterval &SrcInt = LIS->getInterval(SrcReg);
     SlotIndex SubregToRegSlotIdx = LIS->getInstructionIndex(*CopyMI);
-    SmallPtrSet<MachineBasicBlock *, 8> VisitedBlocks;
-    if (!FindDefInBlock(VisitedBlocks, SubregToRegSrcInsts, LIS, SrcInt,
-                        CopyMI->getParent(),
-                        SrcInt.Query(SubregToRegSlotIdx).valueIn()))
+    if (!findPrecedingDefs(SubregToRegSrcInsts, LIS, SrcInt,
+                           CopyMI->getParent(),
+                           SrcInt.Query(SubregToRegSlotIdx).valueIn()))
       llvm_unreachable("SUBREG_TO_REG src requires a def");
   }
 
