@@ -2934,6 +2934,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-exegesis"],
                 "lib/Target/PowerPC/PPCGenExegesis.inc",
             ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/PowerPC/PPCGenSDNodeInfo.inc",
+            ),
         ],
     },
     {
