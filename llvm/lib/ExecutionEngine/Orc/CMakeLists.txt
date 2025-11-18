@@ -26,7 +26,6 @@ add_llvm_component_library(LLVMOrcJIT
   ExecutionUtils.cpp
   ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
-  GetDylibInterface.cpp
   IndirectionUtils.cpp
   InProcessMemoryAccess.cpp
   IRCompileLayer.cpp

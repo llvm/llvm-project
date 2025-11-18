@@ -23,22 +23,23 @@ END subroutine openmp_parse_unroll_heuristic
 !PTREE-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !PTREE-NEXT: | | OmpClauseList ->
 !PTREE-NEXT: | | Flags = None
-!PTREE-NEXT: | DoConstruct
-!PTREE-NEXT: | | NonLabelDoStmt
-!PTREE-NEXT: | | | LoopControl -> LoopBounds
-!PTREE-NEXT: | | | | Scalar -> Name = 'i'
-!PTREE-NEXT: | | | | Scalar -> Expr = '1_4'
-!PTREE-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!PTREE-NEXT: | | | | Scalar -> Expr = '100_4'
-!PTREE-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '100'
-!PTREE-NEXT: | | Block
-!PTREE-NEXT: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL func(i)'
-!PTREE-NEXT: | | | | | | Call
-!PTREE-NEXT: | | | | | ProcedureDesignator -> Name = 'func'
-!PTREE-NEXT: | | | | | ActualArgSpec
-!PTREE-NEXT: | | | | | | ActualArg -> Expr = 'i'
-!PTREE-NEXT: | | | | | | | Designator -> DataRef -> Name = 'i'
-!PTREE-NEXT: | | EndDoStmt ->
+!PTREE-NEXT: | Block
+!PTREE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+!PTREE-NEXT: | | | NonLabelDoStmt
+!PTREE-NEXT: | | | | LoopControl -> LoopBounds
+!PTREE-NEXT: | | | | | Scalar -> Name = 'i'
+!PTREE-NEXT: | | | | | Scalar -> Expr = '1_4'
+!PTREE-NEXT: | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!PTREE-NEXT: | | | | | Scalar -> Expr = '100_4'
+!PTREE-NEXT: | | | | | | LiteralConstant -> IntLiteralConstant = '100'
+!PTREE-NEXT: | | | Block
+!PTREE-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL func(i)'
+!PTREE-NEXT: | | | | | | | Call
+!PTREE-NEXT: | | | | | | ProcedureDesignator -> Name = 'func'
+!PTREE-NEXT: | | | | | | ActualArgSpec
+!PTREE-NEXT: | | | | | | | ActualArg -> Expr = 'i'
+!PTREE-NEXT: | | | | | | | | Designator -> DataRef -> Name = 'i'
+!PTREE-NEXT: | | | EndDoStmt ->
 !PTREE-NEXT: | OmpEndLoopDirective
 !PTREE-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !PTREE-NEXT: | | OmpClauseList ->
