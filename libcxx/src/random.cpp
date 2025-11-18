@@ -31,8 +31,6 @@
 #    include <linux/random.h>
 #    include <sys/ioctl.h>
 #  endif
-#elif defined(_LIBCPP_USING_NACL_RANDOM)
-#  include <nacl/nacl_random.h>
 #elif defined(_LIBCPP_USING_FUCHSIA_CPRNG)
 #  include <zircon/syscalls.h>
 #endif
@@ -90,30 +88,6 @@ unsigned random_device::operator()() {
     n -= static_cast<size_t>(s);
     p += static_cast<size_t>(s);
   }
-  return r;
-}
-
-#elif defined(_LIBCPP_USING_NACL_RANDOM)
-
-random_device::random_device(const string& __token) {
-  if (__token != "/dev/urandom")
-    std::__throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
-  int error = nacl_secure_random_init();
-  if (error)
-    std::__throw_system_error(error, ("random device failed to open " + __token).c_str());
-}
-
-random_device::~random_device() {}
-
-unsigned random_device::operator()() {
-  unsigned r;
-  size_t n = sizeof(r);
-  size_t bytes_written;
-  int error = nacl_secure_random(&r, n, &bytes_written);
-  if (error != 0)
-    std::__throw_system_error(error, "random_device failed getting bytes");
-  else if (bytes_written != n)
-    std::__throw_runtime_error("random_device failed to obtain enough bytes");
   return r;
 }
 

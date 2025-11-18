@@ -304,7 +304,8 @@ public:
       : DataConsumer(dataConsumer) {}
 
   void Initialize(ASTContext &Context) override {
-    DataConsumer.setASTContext(Context);
+    // TODO: accept Context as IntrusiveRefCntPtr?
+    DataConsumer.setASTContext(&Context);
     DataConsumer.startedTranslationUnit();
   }
 
@@ -355,7 +356,7 @@ public:
         DataConsumer->importedPCH(*File);
     }
 
-    DataConsumer->setASTContext(CI.getASTContext());
+    DataConsumer->setASTContext(CI.getASTContextPtr());
     Preprocessor &PP = CI.getPreprocessor();
     PP.addPPCallbacks(std::make_unique<IndexPPCallbacks>(PP, *DataConsumer));
     DataConsumer->setPreprocessor(CI.getPreprocessorPtr());
@@ -706,7 +707,7 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
   else
     DataConsumer.enteredMainFile(std::nullopt);
 
-  DataConsumer.setASTContext(Unit->getASTContext());
+  DataConsumer.setASTContext(Unit->getASTContextPtr());
   DataConsumer.startedTranslationUnit();
 
   indexPreprocessingRecord(*Unit, DataConsumer);

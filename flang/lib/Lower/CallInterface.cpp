@@ -1766,6 +1766,17 @@ mlir::Type Fortran::lower::getDummyProcedureType(
   return procType;
 }
 
+mlir::Type Fortran::lower::getDummyProcedurePointerType(
+    const Fortran::semantics::Symbol &dummyProcPtr,
+    Fortran::lower::AbstractConverter &converter) {
+  std::optional<Fortran::evaluate::characteristics::Procedure> iface =
+      Fortran::evaluate::characteristics::Procedure::Characterize(
+          dummyProcPtr, converter.getFoldingContext());
+  mlir::Type procPtrType = getProcedureDesignatorType(
+      iface.has_value() ? &*iface : nullptr, converter);
+  return fir::ReferenceType::get(procPtrType);
+}
+
 bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {
   return mlir::isa<fir::ReferenceType>(ty) &&
          fir::isa_integer(fir::unwrapRefType(ty));

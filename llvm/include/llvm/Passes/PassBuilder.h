@@ -23,6 +23,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/ModuleInliner.h"
@@ -35,10 +36,6 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
-template <typename T> class IntrusiveRefCntPtr;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {
@@ -64,6 +61,9 @@ public:
   /// Tuning option to enable/disable loop interchange. Its default value is
   /// false.
   bool LoopInterchange;
+
+  /// Tuning option to enable/disable loop fusion. Its default value is false.
+  bool LoopFusion;
 
   /// Tuning option to forget all SCEV loops in LoopUnroll. Its default value
   /// is that of the flag: `-forget-scev-loop-unroll`.
@@ -112,6 +112,7 @@ class PassBuilder {
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
 public:
   /// A struct to capture parsed pass pipeline names.
@@ -131,7 +132,8 @@ public:
       TargetMachine *TM = nullptr,
       PipelineTuningOptions PTO = PipelineTuningOptions(),
       std::optional<PGOOptions> PGOOpt = std::nullopt,
-      PassInstrumentationCallbacks *PIC = nullptr);
+      PassInstrumentationCallbacks *PIC = nullptr,
+      IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem());
 
   /// Cross register the analysis managers through their proxies.
   ///
@@ -629,13 +631,17 @@ public:
                                        bool RunProfileGen, bool IsCS,
                                        bool AtomicCounterUpdate,
                                        std::string ProfileFile,
-                                       std::string ProfileRemappingFile,
-                                       IntrusiveRefCntPtr<vfs::FileSystem> FS);
+                                       std::string ProfileRemappingFile);
 
   /// Returns PIC. External libraries can use this to register pass
   /// instrumentation callbacks.
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
+  }
+
+  /// Returns the virtual file system.
+  IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystemPtr() const {
+    return FS;
   }
 
   // Invoke the callbacks registered for the various extension points.
@@ -736,7 +742,7 @@ private:
   void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
 
   void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
-                       bool IsFullLTO);
+                       ThinOrFullLTOPhase LTOPhase);
 
   static std::optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
@@ -769,8 +775,7 @@ private:
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
                          bool AtomicCounterUpdate, std::string ProfileFile,
-                         std::string ProfileRemappingFile,
-                         IntrusiveRefCntPtr<vfs::FileSystem> FS);
+                         std::string ProfileRemappingFile);
   void addPostPGOLoopRotation(ModulePassManager &MPM, OptimizationLevel Level);
 
   bool isInstrumentedPGOUse() const;

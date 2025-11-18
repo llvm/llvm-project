@@ -314,7 +314,7 @@ constexpr bool test() {
   test_copy_and_move<int*, const int*>();
 
   // `memmove` does not support volatile pointers.
-  // (See also https://github.com/llvm/llvm-project/issues/28901).
+  // (See also https://llvm.org/PR28527).
   if (!std::is_constant_evaluated()) {
     test_both_directions<volatile int, int>();
     test_both_directions<volatile int, volatile int>();

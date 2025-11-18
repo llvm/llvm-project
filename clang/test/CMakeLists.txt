@@ -26,7 +26,6 @@ llvm_canonicalize_cmake_booleans(
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
-  LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
   )
 
 # Run tests requiring Z3 headers only if LLVM was built with Z3
@@ -104,7 +103,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-linker-wrapper
   clang-nvlink-wrapper
   clang-offload-bundler
-  clang-offload-packager
   clang-sycl-linker
   diagtool
   hmaptool
@@ -174,6 +172,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-strip
     llvm-symbolizer
     llvm-windres
+    llvm-offload-binary
     obj2yaml
     opt
     split-file
@@ -225,17 +224,6 @@ add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
 add_custom_target(clang-test)
 add_dependencies(clang-test check-clang)
 set_target_properties(clang-test PROPERTIES FOLDER "Clang/Tests")
-
-# Allow running Clang Python binding tests separately from CI.
-add_lit_testsuite(check-clang-python "Running the Clang Python tests"
-  ${CMAKE_CURRENT_BINARY_DIR}
-  #LIT ${LLVM_LIT}
-  PARAMS ${CLANG_TEST_PARAMS}
-  DEPENDS ${CLANG_TEST_DEPS}
-  ARGS ${CLANG_TEST_EXTRA_ARGS} --filter=bindings.sh
-  # Avoid running tests twice.
-  EXCLUDE_FROM_CHECK_ALL
-  )
 
 # FIXME: This logic can be removed once all buildbots have moved
 # debuginfo-test from clang/test to llvm/projects or monorepo.

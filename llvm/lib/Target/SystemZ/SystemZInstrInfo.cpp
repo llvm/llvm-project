@@ -59,8 +59,8 @@ static uint64_t allOnes(unsigned int Count) {
 // Pin the vtable to this file.
 void SystemZInstrInfo::anchor() {}
 
-SystemZInstrInfo::SystemZInstrInfo(SystemZSubtarget &sti)
-    : SystemZGenInstrInfo(-1, -1),
+SystemZInstrInfo::SystemZInstrInfo(const SystemZSubtarget &sti)
+    : SystemZGenInstrInfo(sti, RI, -1, -1),
       RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister(),
          sti.getHwMode()),
       STI(sti) {}
@@ -1023,8 +1023,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void SystemZInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1036,10 +1036,12 @@ void SystemZInstrInfo::storeRegToStackSlot(
                     FrameIdx);
 }
 
-void SystemZInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
-    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            Register DestReg, int FrameIdx,
+                                            const TargetRegisterClass *RC,
+                                            Register VReg,
+                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1286,7 +1288,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   if ((Opcode == SystemZ::ALFI && OpNum == 0 &&
        isInt<8>((int32_t)MI.getOperand(2).getImm())) ||
       (Opcode == SystemZ::ALGFI && OpNum == 0 &&
-       isInt<8>((int64_t)MI.getOperand(2).getImm()))) {
+       isInt<8>(MI.getOperand(2).getImm()))) {
     // AL(G)FI %reg, CONST -> AL(G)SI %mem, CONST
     Opcode = (Opcode == SystemZ::ALFI ? SystemZ::ALSI : SystemZ::ALGSI);
     MachineInstr *BuiltMI =
@@ -1301,7 +1303,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   if ((Opcode == SystemZ::SLFI && OpNum == 0 &&
        isInt<8>((int32_t)-MI.getOperand(2).getImm())) ||
       (Opcode == SystemZ::SLGFI && OpNum == 0 &&
-       isInt<8>((int64_t)-MI.getOperand(2).getImm()))) {
+       isInt<8>((-MI.getOperand(2).getImm())))) {
     // SL(G)FI %reg, CONST -> AL(G)SI %mem, -CONST
     Opcode = (Opcode == SystemZ::SLFI ? SystemZ::ALSI : SystemZ::ALGSI);
     MachineInstr *BuiltMI =

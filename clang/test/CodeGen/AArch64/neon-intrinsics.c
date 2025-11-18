@@ -8585,7 +8585,7 @@ uint32x2_t test_vqshrun_n_s64(int64x2_t a) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[VQSHRUN_N3]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    ret <16 x i8> [[SHUFFLE_I]]
 //
-int8x16_t test_vqshrun_high_n_s16(int8x8_t a, int16x8_t b) {
+uint8x16_t test_vqshrun_high_n_s16(uint8x8_t a, int16x8_t b) {
   return vqshrun_high_n_s16(a, b, 3);
 }
 
@@ -8598,7 +8598,7 @@ int8x16_t test_vqshrun_high_n_s16(int8x8_t a, int16x8_t b) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[VQSHRUN_N3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK-NEXT:    ret <8 x i16> [[SHUFFLE_I]]
 //
-int16x8_t test_vqshrun_high_n_s32(int16x4_t a, int32x4_t b) {
+uint16x8_t test_vqshrun_high_n_s32(uint16x4_t a, int32x4_t b) {
   return vqshrun_high_n_s32(a, b, 9);
 }
 
@@ -8611,7 +8611,7 @@ int16x8_t test_vqshrun_high_n_s32(int16x4_t a, int32x4_t b) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[VQSHRUN_N3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    ret <4 x i32> [[SHUFFLE_I]]
 //
-int32x4_t test_vqshrun_high_n_s64(int32x2_t a, int64x2_t b) {
+uint32x4_t test_vqshrun_high_n_s64(uint32x2_t a, int64x2_t b) {
   return vqshrun_high_n_s64(a, b, 19);
 }
 
@@ -8810,7 +8810,7 @@ uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[VQRSHRUN_N3]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    ret <16 x i8> [[SHUFFLE_I]]
 //
-int8x16_t test_vqrshrun_high_n_s16(int8x8_t a, int16x8_t b) {
+uint8x16_t test_vqrshrun_high_n_s16(uint8x8_t a, int16x8_t b) {
   return vqrshrun_high_n_s16(a, b, 3);
 }
 
@@ -8823,7 +8823,7 @@ int8x16_t test_vqrshrun_high_n_s16(int8x8_t a, int16x8_t b) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[VQRSHRUN_N3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK-NEXT:    ret <8 x i16> [[SHUFFLE_I]]
 //
-int16x8_t test_vqrshrun_high_n_s32(int16x4_t a, int32x4_t b) {
+uint16x8_t test_vqrshrun_high_n_s32(uint16x4_t a, int32x4_t b) {
   return vqrshrun_high_n_s32(a, b, 9);
 }
 
@@ -8836,7 +8836,7 @@ int16x8_t test_vqrshrun_high_n_s32(int16x4_t a, int32x4_t b) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[VQRSHRUN_N3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    ret <4 x i32> [[SHUFFLE_I]]
 //
-int32x4_t test_vqrshrun_high_n_s64(int32x2_t a, int64x2_t b) {
+uint32x4_t test_vqrshrun_high_n_s64(uint32x2_t a, int64x2_t b) {
   return vqrshrun_high_n_s64(a, b, 19);
 }
 
@@ -12643,7 +12643,7 @@ uint64_t test_vqrshld_u64(uint64_t a, int64_t b) {
 // CHECK-LABEL: define dso_local i64 @test_vpaddd_s64(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VPADDD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A]])
+// CHECK-NEXT:    [[VPADDD_S64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
 // CHECK-NEXT:    ret i64 [[VPADDD_S64_I]]
 //
 int64_t test_vpaddd_s64(int64x2_t a) {
@@ -23227,7 +23227,7 @@ uint64x2_t test_vpaddq_u64(uint64x2_t a, uint64x2_t b) {
 // CHECK-LABEL: define dso_local i64 @test_vpaddd_u64(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VPADDD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A]])
+// CHECK-NEXT:    [[VPADDD_U64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
 // CHECK-NEXT:    ret i64 [[VPADDD_U64_I]]
 //
 uint64_t test_vpaddd_u64(uint64x2_t a) {
@@ -23237,7 +23237,7 @@ uint64_t test_vpaddd_u64(uint64x2_t a) {
 // CHECK-LABEL: define dso_local i64 @test_vaddvq_s64(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDVQ_S64_I:%.*]] = call i64 @llvm.aarch64.neon.saddv.i64.v2i64(<2 x i64> [[A]])
+// CHECK-NEXT:    [[VADDVQ_S64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
 // CHECK-NEXT:    ret i64 [[VADDVQ_S64_I]]
 //
 int64_t test_vaddvq_s64(int64x2_t a) {
@@ -23247,7 +23247,7 @@ int64_t test_vaddvq_s64(int64x2_t a) {
 // CHECK-LABEL: define dso_local i64 @test_vaddvq_u64(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDVQ_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A]])
+// CHECK-NEXT:    [[VADDVQ_U64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
 // CHECK-NEXT:    ret i64 [[VADDVQ_U64_I]]
 //
 uint64_t test_vaddvq_u64(uint64x2_t a) {
@@ -23878,7 +23878,7 @@ float64x1_t test_vrsqrts_f64(float64x1_t a, float64x1_t b) {
 // CHECK-LABEL: define dso_local i32 @test_vminv_s32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMINV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sminv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VMINV_S32_I:%.*]] = call i32 @llvm.vector.reduce.smin.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VMINV_S32_I]]
 //
 int32_t test_vminv_s32(int32x2_t a) {
@@ -23888,7 +23888,7 @@ int32_t test_vminv_s32(int32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vminv_u32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMINV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uminv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VMINV_U32_I:%.*]] = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VMINV_U32_I]]
 //
 uint32_t test_vminv_u32(uint32x2_t a) {
@@ -23898,7 +23898,7 @@ uint32_t test_vminv_u32(uint32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vmaxv_s32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMAXV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.smaxv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VMAXV_S32_I:%.*]] = call i32 @llvm.vector.reduce.smax.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VMAXV_S32_I]]
 //
 int32_t test_vmaxv_s32(int32x2_t a) {
@@ -23908,7 +23908,7 @@ int32_t test_vmaxv_s32(int32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vmaxv_u32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMAXV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.umaxv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VMAXV_U32_I:%.*]] = call i32 @llvm.vector.reduce.umax.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VMAXV_U32_I]]
 //
 uint32_t test_vmaxv_u32(uint32x2_t a) {
@@ -23918,7 +23918,7 @@ uint32_t test_vmaxv_u32(uint32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vaddv_s32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.saddv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VADDV_S32_I:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VADDV_S32_I]]
 //
 int32_t test_vaddv_s32(int32x2_t a) {
@@ -23928,7 +23928,7 @@ int32_t test_vaddv_s32(int32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vaddv_u32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uaddv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VADDV_U32_I:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VADDV_U32_I]]
 //
 uint32_t test_vaddv_u32(uint32x2_t a) {

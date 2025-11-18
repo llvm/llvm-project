@@ -21,13 +21,17 @@ class SM<string version, list<SMFeatures> newer_list> : SMFeatures {
                         !strconcat(f, "|", newer.Features));
 }
 
+let Features = "sm_121a" in def SM_121a : SMFeatures;
 let Features = "sm_120a" in def SM_120a : SMFeatures;
+let Features = "sm_103a" in def SM_103a : SMFeatures;
 let Features = "sm_101a" in def SM_101a : SMFeatures;
 let Features = "sm_100a" in def SM_100a : SMFeatures;
 let Features = "sm_90a" in def SM_90a : SMFeatures;
 
-def SM_120 : SM<"120", [SM_120a]>;
-def SM_101 : SM<"101", [SM_101a, SM_120]>;
+def SM_121 : SM<"121", [SM_121a]>;
+def SM_120 : SM<"120", [SM_120a, SM_121]>;
+def SM_103 : SM<"103", [SM_103a, SM_120]>;
+def SM_101 : SM<"101", [SM_101a, SM_103]>;
 def SM_100 : SM<"100", [SM_100a, SM_101]>;
 def SM_90 : SM<"90", [SM_90a, SM_100]>;
 def SM_89 : SM<"89", [SM_90]>;
@@ -50,8 +54,9 @@ class PTX<string version, PTXFeatures newer> : PTXFeatures {
   let Features = !strconcat("ptx", version, "|", newer.Features);
 }
 
-let Features = "ptx87" in def PTX87 : PTXFeatures;
+let Features = "ptx88" in def PTX88 : PTXFeatures;
 
+def PTX87 : PTX<"87", PTX88>;
 def PTX86 : PTX<"86", PTX87>;
 def PTX85 : PTX<"85", PTX86>;
 def PTX84 : PTX<"84", PTX85>;
@@ -574,11 +579,35 @@ def __nvvm_ff2bf16x2_rn : NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(float, float)
 def __nvvm_ff2bf16x2_rn_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(float, float)", SM_80, PTX70>;
 def __nvvm_ff2bf16x2_rz : NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(float, float)", SM_80, PTX70>;
 def __nvvm_ff2bf16x2_rz_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(float, float)", SM_80, PTX70>;
+def __nvvm_ff2bf16x2_rs :
+  NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(float, float, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_ff2bf16x2_rs_relu :
+  NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(float, float, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_ff2bf16x2_rs_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(float, float, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_ff2bf16x2_rs_relu_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(float, float, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
 
 def __nvvm_ff2f16x2_rn : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(float, float)", SM_80, PTX70>;
 def __nvvm_ff2f16x2_rn_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(float, float)", SM_80, PTX70>;
 def __nvvm_ff2f16x2_rz : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(float, float)", SM_80, PTX70>;
 def __nvvm_ff2f16x2_rz_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(float, float)", SM_80, PTX70>;
+def __nvvm_ff2f16x2_rs :
+  NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(float, float, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_ff2f16x2_rs_relu :
+  NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(float, float, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_ff2f16x2_rs_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(float, float, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_ff2f16x2_rs_relu_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(float, float, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
 
 def __nvvm_f2bf16_rn : NVPTXBuiltinSMAndPTX<"__bf16(float)", SM_80, PTX70>;
 def __nvvm_f2bf16_rn_relu : NVPTXBuiltinSMAndPTX<"__bf16(float)", SM_80, PTX70>;
@@ -586,7 +615,7 @@ def __nvvm_f2bf16_rz : NVPTXBuiltinSMAndPTX<"__bf16(float)", SM_80, PTX70>;
 def __nvvm_f2bf16_rz_relu : NVPTXBuiltinSMAndPTX<"__bf16(float)", SM_80, PTX70>;
 
 def __nvvm_f2tf32_rna : NVPTXBuiltinSMAndPTX<"int32_t(float)", SM_80, PTX70>;
-def __nvvm_f2tf32_rna_satfinite : NVPTXBuiltinSMAndPTX<"int32_t(float)", SM_89, PTX81>;
+def __nvvm_f2tf32_rna_satfinite : NVPTXBuiltinSMAndPTX<"int32_t(float)", SM_80, PTX81>;
 def __nvvm_f2tf32_rn : NVPTXBuiltinSMAndPTX<"int32_t(float)", SM_90, PTX78>;
 def __nvvm_f2tf32_rn_relu : NVPTXBuiltinSMAndPTX<"int32_t(float)", SM_90, PTX78>;
 def __nvvm_f2tf32_rn_satfinite : NVPTXBuiltinSMAndPTX<"int32_t(float)", SM_100, PTX86>;
@@ -611,6 +640,19 @@ def __nvvm_e4m3x2_to_f16x2_rn_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(sh
 def __nvvm_e5m2x2_to_f16x2_rn : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(short)", SM_89, PTX81>;
 def __nvvm_e5m2x2_to_f16x2_rn_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(short)", SM_89, PTX81>;
 
+def __nvvm_f32x4_to_e4m3x4_rs_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<4, char>(_Vector<4, float>, uint32_t)", 
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_f32x4_to_e4m3x4_rs_relu_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<4, char>(_Vector<4, float>, uint32_t)", 
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_f32x4_to_e5m2x4_rs_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<4, char>(_Vector<4, float>, uint32_t)", 
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_f32x4_to_e5m2x4_rs_relu_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<4, char>(_Vector<4, float>, uint32_t)", 
+                       SM<"100a", [SM_103a]>, PTX87>;
+
 def __nvvm_ff_to_e2m3x2_rn_satfinite : NVPTXBuiltinSMAndPTX<"short(float, float)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
 def __nvvm_ff_to_e2m3x2_rn_relu_satfinite : NVPTXBuiltinSMAndPTX<"short(float, float)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
 def __nvvm_ff_to_e3m2x2_rn_satfinite : NVPTXBuiltinSMAndPTX<"short(float, float)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
@@ -621,11 +663,31 @@ def __nvvm_e2m3x2_to_f16x2_rn_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(sh
 def __nvvm_e3m2x2_to_f16x2_rn : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(short)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
 def __nvvm_e3m2x2_to_f16x2_rn_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(short)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
 
+def __nvvm_f32x4_to_e2m3x4_rs_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<4, char>(_Vector<4, float>, uint32_t)", 
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_f32x4_to_e2m3x4_rs_relu_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<4, char>(_Vector<4, float>, uint32_t)", 
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_f32x4_to_e3m2x4_rs_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<4, char>(_Vector<4, float>, uint32_t)", 
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_f32x4_to_e3m2x4_rs_relu_satfinite :
+  NVPTXBuiltinSMAndPTX<"_Vector<4, char>(_Vector<4, float>, uint32_t)", 
+                       SM<"100a", [SM_103a]>, PTX87>;
+
 def __nvvm_ff_to_e2m1x2_rn_satfinite : NVPTXBuiltinSMAndPTX<"short(float, float)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
 def __nvvm_ff_to_e2m1x2_rn_relu_satfinite : NVPTXBuiltinSMAndPTX<"short(float, float)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
 
 def __nvvm_e2m1x2_to_f16x2_rn : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(short)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
 def __nvvm_e2m1x2_to_f16x2_rn_relu : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(short)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
+
+def __nvvm_f32x4_to_e2m1x4_rs_satfinite :
+  NVPTXBuiltinSMAndPTX<"short(_Vector<4, float>, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
+def __nvvm_f32x4_to_e2m1x4_rs_relu_satfinite :
+  NVPTXBuiltinSMAndPTX<"short(_Vector<4, float>, uint32_t)",
+                       SM<"100a", [SM_103a]>, PTX87>;
 
 def __nvvm_ff_to_ue8m0x2_rz : NVPTXBuiltinSMAndPTX<"short(float, float)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;
 def __nvvm_ff_to_ue8m0x2_rz_satfinite : NVPTXBuiltinSMAndPTX<"short(float, float)", SM<"100a", [SM_101a, SM_120a]>, PTX86>;

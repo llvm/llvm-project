@@ -17,7 +17,7 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV32-NEXT:    mul a1, a1, a2
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    slt a2, a0, a3
-; RV32-NEXT:    slti a1, a1, 0
+; RV32-NEXT:    srli a1, a1, 31
 ; RV32-NEXT:    beq a1, a2, .LBB0_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    srai a0, a0, 31
@@ -81,7 +81,7 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV64-NEXT:    mv a1, a0
 ; RV64-NEXT:    add a0, a0, a2
 ; RV64-NEXT:    slt a1, a0, a1
-; RV64-NEXT:    slti a2, a2, 0
+; RV64-NEXT:    srli a2, a2, 63
 ; RV64-NEXT:    beq a2, a1, .LBB1_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    srai a0, a0, 63

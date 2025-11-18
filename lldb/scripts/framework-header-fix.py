@@ -97,7 +97,7 @@ def main():
     parser.add_argument("-o", "--output_file")
     parser.add_argument("-p", "--unifdef_path")
     parser.add_argument(
-        "unifdef_guards",
+        "--unifdef_guards",
         nargs="+",
         type=str,
         help="Guards to be removed with unifdef. These must be specified in the same way as they would be when passed directly into unifdef.",
@@ -111,11 +111,14 @@ def main():
     # unifdef takes the guards to remove as arguments in their own right (e.g. -USWIG)
     # but passing them in with dashes for this script causes argparse to think that they're
     # arguments in and of themself, so they need to passed in without dashes.
-    unifdef_guards = ["-" + guard for guard in args.unifdef_guards]
+    if args.unifdef_guards:
+        unifdef_guards = ["-U" + guard for guard in args.unifdef_guards]
 
     # Create the framework's header dir if it doesn't already exist
-    if not os.path.exists(os.path.dirname(output_file_path)):
+    try:
         os.makedirs(os.path.dirname(output_file_path))
+    except FileExistsError:
+        pass
 
     if framework_version == "lldb_main":
         modify_main_includes(input_file_path, output_file_path)
@@ -123,7 +126,8 @@ def main():
         modify_rpc_includes(input_file_path, output_file_path)
     # After the incldues have been modified, run unifdef on the headers to remove any guards
     # specified at the command line.
-    remove_guards(output_file_path, unifdef_path, unifdef_guards)
+    if args.unifdef_guards:
+        remove_guards(output_file_path, unifdef_path, unifdef_guards)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,6 @@
 
 #include <clc/opencl/opencl-base.h>
 
-_CLC_OVERLOAD _CLC_DECL uint get_sub_group_size();
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL uint get_sub_group_size();
 
 #endif // __CLC_OPENCL_WORKITEM_GET_SUB_GROUP_SIZE_H__

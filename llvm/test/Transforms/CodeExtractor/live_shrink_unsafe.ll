@@ -14,8 +14,8 @@ define void @_Z3foo_unknown_mem_accessv() local_unnamed_addr  {
 bb:
   %tmp = alloca %class.A, align 4
   %tmp1 = alloca %class.A, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %tmp)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %tmp1)
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp)
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp1)
   %tmp4 = load ptr, ptr @condptr, align 8, !tbaa !2
   %tmp5 = load i32, ptr %tmp4, align 4, !tbaa !6
   %tmp6 = icmp eq i32 %tmp5, 0
@@ -26,20 +26,20 @@ bb7:                                              ; preds = %bb
   br label %bb8
 
 bb8:                                              ; preds = %bb7, %bb
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %tmp1)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %tmp)
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp1)
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp)
   ret void
 }
 
 declare void @_Z3barv() local_unnamed_addr
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @_ZN1A7memfuncEv(ptr) local_unnamed_addr
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @_Z3foo_unknown_calli(i32 %arg) local_unnamed_addr {
 bb:
   %tmp = alloca %class.A, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %tmp)
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp)
   tail call void @_Z3barv()
   %tmp2 = icmp eq i32 %arg, 0
   br i1 %tmp2, label %bb3, label %bb4
@@ -49,7 +49,7 @@ bb3:                                              ; preds = %bb
   br label %bb4
 
 bb4:                                              ; preds = %bb3, %bb
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %tmp)
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp)
   ret void
 }
 

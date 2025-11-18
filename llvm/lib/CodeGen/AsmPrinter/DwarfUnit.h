@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 #include <string>
@@ -107,7 +108,7 @@ public:
     return LabelBegin;
   }
   MCSymbol *getEndLabel() const { return EndLabel; }
-  uint16_t getLanguage() const { return CUNode->getSourceLanguage(); }
+  llvm::dwarf::SourceLanguage getSourceLanguage() const;
   const DICompileUnit *getCUNode() const { return CUNode; }
   DwarfDebug &getDwarfDebug() const { return *DD; }
 
@@ -256,7 +257,9 @@ public:
 
   DIE *getOrCreateNameSpace(const DINamespace *NS);
   DIE *getOrCreateModule(const DIModule *M);
-  DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal = false);
+  virtual DIE *getOrCreateSubprogramDIE(const DISubprogram *SP,
+                                        const Function *FnHint,
+                                        bool Minimal = false);
 
   void applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
                                  bool SkipSPAttributes = false);
@@ -331,7 +334,7 @@ public:
                                const DIE &TyDIE);
 
 protected:
-  ~DwarfUnit();
+  ~DwarfUnit() override;
 
   /// Create new static data member DIE.
   DIE *getOrCreateStaticMemberDIE(const DIDerivedType *DT);
@@ -343,7 +346,23 @@ protected:
   /// Emit the common part of the header for this unit.
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
 
+  bool shouldPlaceInUnitDIE(const DISubprogram *SP, bool Minimal) {
+    // Add subprogram declarations to the CU die directly.
+    return Minimal || SP->getDeclaration();
+  }
+
+  DIE *getOrCreateSubprogramContextDIE(const DISubprogram *SP,
+                                       bool IgnoreScope) {
+    if (IgnoreScope)
+      return &getUnitDie();
+    return getOrCreateContextDIE(SP->getScope());
+  }
+
 private:
+  DISourceLanguageName getLanguage() const {
+    return CUNode->getSourceLanguage();
+  }
+
   /// A helper to add a wide integer constant to a DIE using a block
   /// form.
   void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);

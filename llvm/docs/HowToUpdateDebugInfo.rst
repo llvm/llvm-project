@@ -95,7 +95,7 @@ memory access occurred.
 To maintain distinct source locations for SamplePGO, it is often beneficial to
 retain an arbitrary but deterministic location instead of discarding line and
 column information as part of merging. In particular, loss of location
-information for calls inhibit optimizations such as indirect call promotion.
+information for calls inhibits optimizations such as indirect call promotion.
 This behavior can be optionally enabled until support for accurately
 representing merged instructions in the line table is implemented.
 
@@ -499,12 +499,12 @@ a JSON file as follows:
   $ opt -verify-debuginfo-preserve -verify-di-preserve-export=sample.json -pass-to-test sample.ll
 
 and then use the ``llvm/utils/llvm-original-di-preservation.py`` script
-to generate an HTML page with the issues reported in a more human readable form
+to generate an HTML page with the issues reported in a more human-readable form
 as follows:
 
 .. code-block:: bash
 
-  $ llvm-original-di-preservation.py sample.json sample.html
+  $ llvm-original-di-preservation.py sample.json --report-file sample.html
 
 Testing of original debug info preservation can be invoked from front-end level
 as follows:

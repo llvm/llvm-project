@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20                                         -verify=ref,both %s
 
 namespace Throw {
 
@@ -57,4 +57,57 @@ namespace Casts {
 
   /// Just make sure this doesn't crash.
   float PR9558 = reinterpret_cast<const float&>("asd");
+}
+
+
+/// This used to crash in collectBlock().
+struct S {
+};
+S s;
+S *sp[2] = {&s, &s};
+S *&spp = sp[1];
+
+namespace InvalidBitCast {
+  void foo() {
+    const long long int i = 1; // both-note {{declared const here}}
+    if (*(double *)&i == 2) {
+      i = 0; // both-error {{cannot assign to variable}}
+    }
+  }
+
+  struct S2 {
+    void *p;
+  };
+  struct T {
+    S2 s;
+  };
+  constexpr T t = {{nullptr}};
+  constexpr void *foo2() { return ((void **)&t)[0]; } // both-error {{never produces a constant expression}} \
+                                                      // both-note 2{{cast that performs the conversions of a reinterpret_cast}}
+  constexpr auto x = foo2(); // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{in call to}}
+
+
+  struct sockaddr
+  {
+    char sa_data[8];
+  };
+  struct in_addr
+  {
+    unsigned int s_addr;
+  };
+  struct sockaddr_in
+  {
+    unsigned short int sin_port;
+    struct in_addr sin_addr;
+  };
+  /// Bitcast from sockaddr to sockaddr_in. Used to crash.
+  unsigned int get_addr(sockaddr addr) {
+      return ((sockaddr_in *)&addr)->sin_addr.s_addr;
+  }
+
+
+  struct s { int a; int b[1]; };
+  struct s myx;
+  int *myy = ((struct s *)&myx.a)->b;
 }

@@ -14,8 +14,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -51,15 +51,15 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
   // translation.
 
   return llvm::StringSwitch<llvm::Triple::ArchType>(Str)
-      .Cases("i386", "i486", "i486SX", "i586", "i686", llvm::Triple::x86)
-      .Cases("pentium", "pentpro", "pentIIm3", "pentIIm5", "pentium4",
+      .Cases({"i386", "i486", "i486SX", "i586", "i686"}, llvm::Triple::x86)
+      .Cases({"pentium", "pentpro", "pentIIm3", "pentIIm5", "pentium4"},
              llvm::Triple::x86)
-      .Cases("x86_64", "x86_64h", llvm::Triple::x86_64)
+      .Cases({"x86_64", "x86_64h"}, llvm::Triple::x86_64)
       // This is derived from the driver.
-      .Cases("arm", "armv4t", "armv5", "armv6", "armv6m", llvm::Triple::arm)
-      .Cases("armv7", "armv7em", "armv7k", "armv7m", llvm::Triple::arm)
-      .Cases("armv7s", "xscale", llvm::Triple::arm)
-      .Cases("arm64", "arm64e", llvm::Triple::aarch64)
+      .Cases({"arm", "armv4t", "armv5", "armv6", "armv6m"}, llvm::Triple::arm)
+      .Cases({"armv7", "armv7em", "armv7k", "armv7m"}, llvm::Triple::arm)
+      .Cases({"armv7s", "xscale"}, llvm::Triple::arm)
+      .Cases({"arm64", "arm64e"}, llvm::Triple::aarch64)
       .Case("arm64_32", llvm::Triple::aarch64_32)
       .Case("r600", llvm::Triple::r600)
       .Case("amdgcn", llvm::Triple::amdgcn)
@@ -1035,12 +1035,12 @@ static const char *ArmMachOArchName(StringRef Arch) {
       .Case("xscale", "xscale")
       .Case("armv4t", "armv4t")
       .Case("armv7", "armv7")
-      .Cases("armv7a", "armv7-a", "armv7")
-      .Cases("armv7r", "armv7-r", "armv7")
-      .Cases("armv7em", "armv7e-m", "armv7em")
-      .Cases("armv7k", "armv7-k", "armv7k")
-      .Cases("armv7m", "armv7-m", "armv7m")
-      .Cases("armv7s", "armv7-s", "armv7s")
+      .Cases({"armv7a", "armv7-a"}, "armv7")
+      .Cases({"armv7r", "armv7-r"}, "armv7")
+      .Cases({"armv7em", "armv7e-m"}, "armv7em")
+      .Cases({"armv7k", "armv7-k"}, "armv7k")
+      .Cases({"armv7m", "armv7-m"}, "armv7m")
+      .Cases({"armv7s", "armv7-s"}, "armv7s")
       .Default(nullptr);
 }
 
@@ -1079,7 +1079,7 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
 
   case llvm::Triple::thumb:
   case llvm::Triple::arm:
-    if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ))
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
       if (const char *Arch = ArmMachOArchName(A->getValue()))
         return Arch;
 
@@ -1609,7 +1609,12 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
       AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
 
-        // Libfuzzer is written in C++ and requires libcxx.
+      // Libfuzzer is written in C++ and requires libcxx.
+      // Since darwin::Linker::ConstructJob already adds -lc++ for clang++
+      // by default if ShouldLinkCXXStdlib(Args), we only add the option if
+      // !ShouldLinkCXXStdlib(Args). This avoids duplicate library errors
+      // on Darwin.
+      if (!ShouldLinkCXXStdlib(Args))
         AddCXXStdlibLibArgs(Args, CmdArgs);
     }
     if (Sanitize.needsStatsRt()) {
@@ -2988,7 +2993,7 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
   if (!BoundArch.empty()) {
     StringRef Name = BoundArch;
     const Option MCpu = Opts.getOption(options::OPT_mcpu_EQ);
-    const Option MArch = Opts.getOption(clang::driver::options::OPT_march_EQ);
+    const Option MArch = Opts.getOption(options::OPT_march_EQ);
 
     // This code must be kept in sync with LLVM's getArchTypeForDarwinArch,
     // which defines the list of which architectures we accept.
@@ -3187,28 +3192,46 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
 
   ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
 
-  // On arm64e, enable pointer authentication (for the return address and
-  // indirect calls), as well as usage of the intrinsics.
-  if (getArchName() == "arm64e") {
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
-                           options::OPT_fno_ptrauth_returns))
-      CC1Args.push_back("-fptrauth-returns");
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
-                           options::OPT_fno_ptrauth_intrinsics))
-      CC1Args.push_back("-fptrauth-intrinsics");
-
+  // On arm64e, we enable all the features required for the Darwin userspace
+  // ABI
+  if (getTriple().isArm64e()) {
+    // Core platform ABI
     if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
                            options::OPT_fno_ptrauth_calls))
       CC1Args.push_back("-fptrauth-calls");
-
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
     if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
                            options::OPT_fno_ptrauth_indirect_gotos))
       CC1Args.push_back("-fptrauth-indirect-gotos");
-
     if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
                            options::OPT_fno_ptrauth_auth_traps))
       CC1Args.push_back("-fptrauth-auth-traps");
+
+    // C++ v-table ABI
+    if (!DriverArgs.hasArg(
+            options::OPT_fptrauth_vtable_pointer_address_discrimination,
+            options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+      CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+    if (!DriverArgs.hasArg(
+            options::OPT_fptrauth_vtable_pointer_type_discrimination,
+            options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+      CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+    // Objective-C ABI
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_isa,
+                           options::OPT_fno_ptrauth_objc_isa))
+      CC1Args.push_back("-fptrauth-objc-isa");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_class_ro,
+                           options::OPT_fno_ptrauth_objc_class_ro))
+      CC1Args.push_back("-fptrauth-objc-class-ro");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_interface_sel,
+                           options::OPT_fno_ptrauth_objc_interface_sel))
+      CC1Args.push_back("-fptrauth-objc-interface-sel");
   }
 }
 

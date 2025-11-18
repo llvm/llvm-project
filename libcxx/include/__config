@@ -14,6 +14,8 @@
 #include <__configuration/abi.h>
 #include <__configuration/availability.h>
 #include <__configuration/compiler.h>
+#include <__configuration/experimental.h>
+#include <__configuration/hardening.h>
 #include <__configuration/language.h>
 #include <__configuration/platform.h>
 
@@ -38,124 +40,8 @@
 #    define _LIBCPP_FREESTANDING
 #  endif
 
-// HARDENING {
-
-// TODO: Remove in LLVM 21. We're making this an error to catch folks who might not have migrated.
-#  ifdef _LIBCPP_ENABLE_ASSERTIONS
-#    error "_LIBCPP_ENABLE_ASSERTIONS has been removed, please use _LIBCPP_HARDENING_MODE instead"
-#  endif
-
-// The library provides the macro `_LIBCPP_HARDENING_MODE` which can be set to one of the following values:
-//
-// - `_LIBCPP_HARDENING_MODE_NONE`;
-// - `_LIBCPP_HARDENING_MODE_FAST`;
-// - `_LIBCPP_HARDENING_MODE_EXTENSIVE`;
-// - `_LIBCPP_HARDENING_MODE_DEBUG`.
-//
-// These values have the following effects:
-//
-// - `_LIBCPP_HARDENING_MODE_NONE` -- sets the hardening mode to "none" which disables all runtime hardening checks;
-//
-// - `_LIBCPP_HARDENING_MODE_FAST` -- sets that hardening mode to "fast". The fast mode enables security-critical checks
-//   that can be done with relatively little runtime overhead in constant time;
-//
-// - `_LIBCPP_HARDENING_MODE_EXTENSIVE` -- sets the hardening mode to "extensive". The extensive mode is a superset of
-//   the fast mode that additionally enables checks that are relatively cheap and prevent common types of logic errors
-//   but are not necessarily security-critical;
-//
-// - `_LIBCPP_HARDENING_MODE_DEBUG` -- sets the hardening mode to "debug". The debug mode is a superset of the extensive
-//   mode and enables all checks available in the library, including internal assertions. Checks that are part of the
-//   debug mode can be very expensive and thus the debug mode is intended to be used for testing, not in production.
-
-// Inside the library, assertions are categorized so they can be cherry-picked based on the chosen hardening mode. These
-// macros are only for internal use -- users should only pick one of the high-level hardening modes described above.
-//
-// - `_LIBCPP_ASSERT_VALID_INPUT_RANGE` -- checks that ranges (whether expressed as an iterator pair, an iterator and
-//   a sentinel, an iterator and a count, or a `std::range`) given as input to library functions are valid:
-//   - the sentinel is reachable from the begin iterator;
-//   - TODO(hardening): both iterators refer to the same container.
-//
-// - `_LIBCPP_ASSERT_VALID_ELEMENT_ACCESS` -- checks that any attempts to access a container element, whether through
-//   the container object or through an iterator, are valid and do not attempt to go out of bounds or otherwise access
-//   a non-existent element. For iterator checks to work, bounded iterators must be enabled in the ABI. Types like
-//   `optional` and `function` are considered one-element containers for the purposes of this check.
-//
-// - `_LIBCPP_ASSERT_NON_NULL` -- checks that the pointer being dereferenced is not null. On most modern platforms zero
-//   address does not refer to an actual location in memory, so a null pointer dereference would not compromize the
-//   memory security of a program (however, it is still undefined behavior that can result in strange errors due to
-//   compiler optimizations).
-//
-// - `_LIBCPP_ASSERT_NON_OVERLAPPING_RANGES` -- for functions that take several ranges as arguments, checks that the
-//   given ranges do not overlap.
-//
-// - `_LIBCPP_ASSERT_VALID_DEALLOCATION` -- checks that an attempt to deallocate memory is valid (e.g. the given object
-//   was allocated by the given allocator). Violating this category typically results in a memory leak.
-//
-// - `_LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL` -- checks that a call to an external API doesn't fail in
-//   an unexpected manner. This includes triggering documented cases of undefined behavior in an external library (like
-//   attempting to unlock an unlocked mutex in pthreads). Any API external to the library falls under this category
-//   (from system calls to compiler intrinsics). We generally don't expect these failures to compromize memory safety or
-//   otherwise create an immediate security issue.
-//
-// - `_LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR` -- checks any operations that exchange nodes between containers to make sure
-//   the containers have compatible allocators.
-//
-// - `_LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN` -- checks that the given argument is within the domain of valid arguments
-//   for the function. Violating this typically produces an incorrect result (e.g. the clamp algorithm returns the
-//   original value without clamping it due to incorrect functors) or puts an object into an invalid state (e.g.
-//   a string view where only a subset of elements is possible to access). This category is for assertions violating
-//   which doesn't cause any immediate issues in the library -- whatever the consequences are, they will happen in the
-//   user code.
-//
-// - `_LIBCPP_ASSERT_PEDANTIC` -- checks prerequisites which are imposed by the Standard, but violating which happens to
-//   be benign in our implementation.
-//
-// - `_LIBCPP_ASSERT_SEMANTIC_REQUIREMENT` -- checks that the given argument satisfies the semantic requirements imposed
-//   by the Standard. Typically, there is no simple way to completely prove that a semantic requirement is satisfied;
-//   thus, this would often be a heuristic check and it might be quite expensive.
-//
-// - `_LIBCPP_ASSERT_INTERNAL` -- checks that internal invariants of the library hold. These assertions don't depend on
-//   user input.
-//
-// - `_LIBCPP_ASSERT_UNCATEGORIZED` -- for assertions that haven't been properly classified yet.
-
-// clang-format off
-#  define _LIBCPP_HARDENING_MODE_NONE      (1 << 1)
-#  define _LIBCPP_HARDENING_MODE_FAST      (1 << 2)
-#  define _LIBCPP_HARDENING_MODE_EXTENSIVE (1 << 4) // Deliberately not ordered.
-#  define _LIBCPP_HARDENING_MODE_DEBUG     (1 << 3)
-// clang-format on
-
-#  ifndef _LIBCPP_HARDENING_MODE
-
-#    ifndef _LIBCPP_HARDENING_MODE_DEFAULT
-#      error _LIBCPP_HARDENING_MODE_DEFAULT is not defined. This definition should be set at configuration time in the \
-`__config_site` header, please make sure your installation of libc++ is not broken.
-#    endif
-
-#    define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEFAULT
-#  endif
-
-#  if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_NONE &&                                                         \
-      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_FAST &&                                                         \
-      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE &&                                                    \
-      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
-#    error _LIBCPP_HARDENING_MODE must be set to one of the following values: \
-_LIBCPP_HARDENING_MODE_NONE, \
-_LIBCPP_HARDENING_MODE_FAST, \
-_LIBCPP_HARDENING_MODE_EXTENSIVE, \
-_LIBCPP_HARDENING_MODE_DEBUG
-#  endif
-
-// } HARDENING
-
 #  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
-
-// NOLINTNEXTLINE(libcpp-cpp-version-check)
-#  if __cplusplus < 201103L
-#    define _LIBCPP_CXX03_LANG
-#  endif
 
 #  ifndef __has_constexpr_builtin
 #    define __has_constexpr_builtin(x) 0
@@ -189,24 +75,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
 #    define _LIBCPP_ABI_VCRUNTIME
 #  endif
-
-#  if __has_feature(experimental_library)
-#    ifndef _LIBCPP_ENABLE_EXPERIMENTAL
-#      define _LIBCPP_ENABLE_EXPERIMENTAL
-#    endif
-#  endif
-
-// Incomplete features get their own specific disabling flags. This makes it
-// easier to grep for target specific flags once the feature is complete.
-#  if defined(_LIBCPP_ENABLE_EXPERIMENTAL) || defined(_LIBCPP_BUILDING_LIBRARY)
-#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 1
-#  else
-#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 0
-#  endif
-
-#  define _LIBCPP_HAS_EXPERIMENTAL_PSTL _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
-#  define _LIBCPP_HAS_EXPERIMENTAL_TZDB _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
-#  define _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
 
 #  if defined(__MVS__)
 #    include <features.h> // for __NATIVE_ASCII_F
@@ -265,13 +133,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 //      When this option is used, the token passed to `std::random_device`'s
 //      constructor *must* be "/dev/urandom" -- anything else is an error.
 //
-// _LIBCPP_USING_NACL_RANDOM
-//      NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
-//      including accesses to the special files under `/dev`. This implementation
-//      uses the NaCL syscall `nacl_secure_random_init()` to get entropy.
-//      When this option is used, the token passed to `std::random_device`'s
-//      constructor *must* be "/dev/urandom" -- anything else is an error.
-//
 // _LIBCPP_USING_WIN32_RANDOM
 //      Use rand_s(), for use on Windows.
 //      When this option is used, the token passed to `std::random_device`'s
@@ -283,8 +144,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_USING_GETENTROPY
 #  elif defined(__Fuchsia__)
 #    define _LIBCPP_USING_FUCHSIA_CPRNG
-#  elif defined(__native_client__)
-#    define _LIBCPP_USING_NACL_RANDOM
 #  elif defined(_LIBCPP_WIN32API)
 #    define _LIBCPP_USING_WIN32_RANDOM
 #  else
@@ -293,7 +152,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-#    define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
+#    define _LIBCPP_ALIGNOF(...) alignof(__VA_ARGS__)
 #    define _ALIGNAS_TYPE(x) alignas(x)
 #    define _ALIGNAS(x) alignas(x)
 #    define _NOEXCEPT noexcept
@@ -302,7 +161,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 #  else
 
-#    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
+#    define _LIBCPP_ALIGNOF(...) _Alignof(__VA_ARGS__)
 #    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 #    define _ALIGNAS(x) __attribute__((__aligned__(x)))
 #    define nullptr __nullptr
@@ -416,6 +275,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
 #  endif
 
+// Macros to enter and leave a state where deprecation warnings are suppressed.
+#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                             \
+    _LIBCPP_DIAGNOSTIC_PUSH _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")                                           \
+        _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+#  define _LIBCPP_SUPPRESS_DEPRECATED_POP _LIBCPP_DIAGNOSTIC_POP
+
 #  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 #    define _LIBCPP_HARDENING_SIG f
 #  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
@@ -426,6 +291,16 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HARDENING_SIG n // "none"
 #  endif
 
+#  if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_OBSERVE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG o
+#  elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG q
+#  elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG e
+#  else
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG i // `ignore`
+#  endif
+
 #  if !_LIBCPP_HAS_EXCEPTIONS
 #    define _LIBCPP_EXCEPTIONS_SIG n
 #  else
@@ -433,7 +308,9 @@ typedef __char32_t char32_t;
 #  endif
 
 #  define _LIBCPP_ODR_SIGNATURE                                                                                        \
-    _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_EXCEPTIONS_SIG), _LIBCPP_VERSION)
+    _LIBCPP_CONCAT(                                                                                                    \
+        _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_ASSERTION_SEMANTIC_SIG), _LIBCPP_EXCEPTIONS_SIG), \
+        _LIBCPP_VERSION)
 
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:
@@ -669,6 +546,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_(m)
 #  endif
 
+#  if defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#    define _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS 1
+#  else
+#    define _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS 0
+#  endif
+
 #  if !defined(_LIBCPP_CXX03_LANG)
 #    define _LIBCPP_DEPRECATED_IN_CXX11 _LIBCPP_DEPRECATED
 #  else
@@ -711,17 +594,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #  else
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T
-#  endif
-
-// Macros to enter and leave a state where deprecation warnings are suppressed.
-#  if defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                           \
-      _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")                                \
-          _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#    define _LIBCPP_SUPPRESS_DEPRECATED_POP _Pragma("GCC diagnostic pop")
-#  else
-#    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-#    define _LIBCPP_SUPPRESS_DEPRECATED_POP
 #  endif
 
 #  if _LIBCPP_STD_VER <= 11
@@ -893,7 +765,7 @@ typedef __char32_t char32_t;
 #    endif
 #  endif
 
-#  if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(__no_thread_safety_analysis__)
+#  if __has_attribute(__no_thread_safety_analysis__)
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((__no_thread_safety_analysis__))
 #  else
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
@@ -1009,8 +881,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 #  endif
 
-// TODO(LLVM 22): Remove the workaround
-#  if defined(__OBJC__) && (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER < 2001)
+#  if defined(__OBJC__) && defined(_LIBCPP_APPLE_CLANG_VER)
 #    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
 #  endif
 
@@ -1095,10 +966,31 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DIAGNOSE_WARNING(...)
 #  endif
 
+#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_APPLE_CLANG_VER) &&                                         \
+      (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2001)
+#    define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_DIAGNOSE_IF(...)
+#  endif
+
+#  define _LIBCPP_DIAGNOSE_NULLPTR_IF(condition, condition_description)                                                \
+    _LIBCPP_DIAGNOSE_IF(                                                                                               \
+        condition,                                                                                                     \
+        "null passed to callee that requires a non-null argument" condition_description,                               \
+        "warning",                                                                                                     \
+        "nonnull")
+
 #  if __has_cpp_attribute(_Clang::__lifetimebound__)
 #    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]
 #  else
 #    define _LIBCPP_LIFETIMEBOUND
+#  endif
+
+// This is to work around https://llvm.org/PR156809
+#  ifndef _LIBCPP_CXX03_LANG
+#    define _LIBCPP_CTOR_LIFETIMEBOUND _LIBCPP_LIFETIMEBOUND
+#  else
+#    define _LIBCPP_CTOR_LIFETIMEBOUND
 #  endif
 
 #  if __has_cpp_attribute(_Clang::__noescape__)
@@ -1112,12 +1004,6 @@ typedef __char32_t char32_t;
       [[_Clang::__no_specializations__("Users are not allowed to specialize this standard library entity")]]
 #  else
 #    define _LIBCPP_NO_SPECIALIZATIONS
-#  endif
-
-#  if __has_cpp_attribute(_Clang::__standalone_debug__)
-#    define _LIBCPP_STANDALONE_DEBUG [[_Clang::__standalone_debug__]]
-#  else
-#    define _LIBCPP_STANDALONE_DEBUG
 #  endif
 
 #  if __has_cpp_attribute(_Clang::__preferred_name__)
@@ -1197,14 +1083,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DIAGNOSE_NULLPTR _Nonnull
 #  else
 #    define _LIBCPP_DIAGNOSE_NULLPTR
-#  endif
-
-// TODO(LLVM 22): Remove this macro once LLVM19 support ends. __cpp_explicit_this_parameter has been set in LLVM20.
-// Clang-18 has support for deducing this, but it does not set the FTM.
-#  if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)
-#    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 1
-#  else
-#    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 0
 #  endif
 
 #endif // __cplusplus

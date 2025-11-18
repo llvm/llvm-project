@@ -82,6 +82,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-uniformity", MachineUniformityAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+MACHINE_FUNCTION_ANALYSIS("reaching-def", ReachingDefAnalysis())
 MACHINE_FUNCTION_ANALYSIS("regalloc-evict", RegAllocEvictionAdvisorAnalysis())
 MACHINE_FUNCTION_ANALYSIS("regalloc-priority", RegAllocPriorityAdvisorAnalysis())
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
@@ -96,8 +97,7 @@ MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 // MachinePostDominatorTreeAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-region-info",
 // MachineRegionInfoPassAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("reaching-def",
-// ReachingDefAnalysisAnalysis()) MACHINE_FUNCTION_ANALYSIS("gc-analysis",
+// MACHINE_FUNCTION_ANALYSIS("gc-analysis",
 // GCMachineCodeAnalysisPass())
 #undef MACHINE_FUNCTION_ANALYSIS
 
@@ -113,6 +113,7 @@ MACHINE_FUNCTION_PASS("early-machinelicm", EarlyMachineLICMPass())
 MACHINE_FUNCTION_PASS("early-tailduplication", EarlyTailDuplicatePass())
 MACHINE_FUNCTION_PASS("fentry-insert", FEntryInserterPass())
 MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
+MACHINE_FUNCTION_PASS("finalizebundle-test", FinalizeBundleTestPass())
 MACHINE_FUNCTION_PASS("fixup-statepoint-caller-saved", FixupStatepointCallerSavedPass())
 MACHINE_FUNCTION_PASS("init-undef", InitUndefPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
@@ -150,8 +151,10 @@ MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
                       MachinePostDominatorTreePrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-uniformity>",
                       MachineUniformityPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<reaching-def>", ReachingDefPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<virtregmap>", VirtRegMapPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("process-imp-defs", ProcessImplicitDefsPass())
 MACHINE_FUNCTION_PASS("prolog-epilog", PrologEpilogInserterPass())
 MACHINE_FUNCTION_PASS("reg-usage-collector", RegUsageInfoCollectorPass())
 MACHINE_FUNCTION_PASS("reg-usage-propagation", RegUsageInfoPropagationPass())
@@ -283,7 +286,6 @@ DUMMY_MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitter)
 DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
 DUMMY_MACHINE_FUNCTION_PASS("machineinstr-printer", MachineFunctionPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass)
-DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog-code", PrologEpilogCodeInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-pbqp", RAPBQPPass)

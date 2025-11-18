@@ -4,39 +4,22 @@
 define void @neg_cond(ptr noalias %p, ptr noalias %q) {
 ; CHECK-LABEL: define void @neg_cond(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], splat (i32 42)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> splat (i32 42), <4 x i32> splat (i32 43)
-; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P_GEP]], align 4
-; CHECK-NEXT:    [[Q_GEP:%.*]] = getelementptr i32, ptr [[Q]], i32 [[IV]]
-; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[Q_GEP]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 42
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT]], i32 42, i32 43
-; CHECK-NEXT:    store i32 [[SEL]], ptr [[P_GEP]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

@@ -115,7 +115,7 @@ auipc t6, 32
 # CHECK: :[[@LINE+1]]:8: error: register must be a GPR excluding zero (x0)
 c.addi x31, 0
 # CHECK-DIS: 9846 <unknown>
-# CHECK: :[[@LINE+1]]:7: error: register must be a GPR excluding zero (x0)
+# CHECK: :[[@LINE+1]]:7: error: invalid operand for instruction
 c.add x16, x17
 # CHECK-DIS: 8046 <unknown>
 # CHECK: :[[@LINE+1]]:10: error: register must be a GPR excluding zero (x0)

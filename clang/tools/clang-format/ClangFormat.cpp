@@ -88,7 +88,7 @@ static cl::opt<std::string> AssumeFileName(
              "  CSharp: .cs\n"
              "  Java: .java\n"
              "  JavaScript: .js .mjs .cjs .ts\n"
-             "  Json: .json .ipynb\n"
+             "  JSON: .json .ipynb\n"
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
@@ -237,12 +237,11 @@ static bool parseLineRange(StringRef Input, unsigned &FromLine,
 
 static bool fillRanges(MemoryBuffer *Code,
                        std::vector<tooling::Range> &Ranges) {
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts);
   SourceManager Sources(Diagnostics, Files);
   const auto ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
                                      InMemoryFileSystem.get());
@@ -490,7 +489,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
     auto Err =
         Replaces.add(tooling::Replacement(AssumedFileName, 0, 0, "x = "));
     if (Err)
-      llvm::errs() << "Bad Json variable insertion\n";
+      llvm::errs() << "Bad JSON variable insertion\n";
   }
 
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
@@ -511,15 +510,14 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   if (OutputXML) {
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
-    IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-        new llvm::vfs::InMemoryFileSystem);
+    auto InMemoryFileSystem =
+        makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     FileManager Files(FileSystemOptions(), InMemoryFileSystem);
 
     DiagnosticOptions DiagOpts;
     ClangFormatDiagConsumer IgnoreDiagnostics;
-    DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts,
-        &IgnoreDiagnostics, false);
+    DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                  &IgnoreDiagnostics, false);
     SourceManager Sources(Diagnostics, Files);
     FileID ID = createInMemoryFile(AssumedFileName, *Code, Sources, Files,
                                    InMemoryFileSystem.get());

@@ -576,7 +576,7 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(const DyadicFloat<Bits> &a,
     // Check the leading bit directly, should be faster than using clz in
     // normalize().
     if (result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORD_COUNT - 1] >>
-            63 ==
+            (DyadicFloat<Bits>::MantissaType::WORD_SIZE - 1) ==
         0)
       result.shift_left(1);
   } else {

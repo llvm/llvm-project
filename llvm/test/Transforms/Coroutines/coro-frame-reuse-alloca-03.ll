@@ -16,33 +16,33 @@ entry:
   br i1 %cond, label %then, label %else
 
 then:
-  call void @llvm.lifetime.start.p0(i64 500, ptr nonnull %data)
+  call void @llvm.lifetime.start.p0(ptr nonnull %data)
   call void @consume(ptr %data)
   %suspend.value = call i8 @llvm.coro.suspend(token none, i1 false)
   switch i8 %suspend.value, label %coro.ret [i8 0, label %resume
                                              i8 1, label %cleanup1]
 
 resume:
-  call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %data)
+  call void @llvm.lifetime.end.p0(ptr nonnull %data)
   br label %cleanup1
 
 cleanup1:
-  call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %data)
+  call void @llvm.lifetime.end.p0(ptr nonnull %data)
   br label %cleanup
 
 else:
-  call void @llvm.lifetime.start.p0(i64 500, ptr nonnull %data2)
+  call void @llvm.lifetime.start.p0(ptr nonnull %data2)
   call void @consume(ptr %data2)
   %suspend.value2 = call i8 @llvm.coro.suspend(token none, i1 false)
   switch i8 %suspend.value2, label %coro.ret [i8 0, label %resume2
                                               i8 1, label %cleanup2]
 
 resume2:
-  call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %data2)
+  call void @llvm.lifetime.end.p0(ptr nonnull %data2)
   br label %cleanup2
 
 cleanup2:
-  call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %data2)
+  call void @llvm.lifetime.end.p0(ptr nonnull %data2)
   br label %cleanup
 
 cleanup:
@@ -50,7 +50,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %coro.ret
 coro.ret:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -66,11 +66,11 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32)
 declare double @print(double)
 declare void @free(ptr)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)

@@ -48,6 +48,9 @@ flang:frontend:
   - flang/Evaluate/**/*
   - flang/Semantics/**/*
 
+libclc:
+  - libclc/**
+
 HLSL:
   - clang/*HLSL*/**/*
   - clang/**/*HLSL*
@@ -86,9 +89,6 @@ LTO:
   - llvm/*/ThinLTO/**
   - llvm/lib/Transforms/*/FunctionImport*
   - llvm/tools/gold/**
-
-mc:
-  - llvm/*/MC/**
 
 clang:driver:
   - clang/*/Driver/**
@@ -618,6 +618,12 @@ llvm:adt:
 llvm:support:
   - llvm/**/Support/**
 
+# Skip llvm/test/MC and llvm/unittests/MC, which includes target-specific directories.
+llvm:mc:
+  - llvm/include/llvm/MC/**
+  - llvm/lib/MC/**
+  - llvm/tools/llvm-mc/**
+
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
@@ -716,7 +722,14 @@ mlgo:
   - llvm/include/llvm/Analysis/IR2Vec.h
   - llvm/lib/Analysis/IR2Vec.cpp
   - llvm/lib/Analysis/models/**
+  - llvm/include/llvm/CodeGen/MIR2Vec.h
+  - llvm/lib/CodeGen/MIR2Vec.cpp
   - llvm/test/Analysis/IR2Vec/**
+  - llvm/test/CodeGen/MIR2Vec/**
+  - llvm/unittests/Analysis/IR2VecTest.cpp
+  - llvm/unittests/CodeGen/MIR2VecTest.cpp
+  - llvm/tools/llvm-ir2vec/**
+  - llvm/docs/CommandGuide/llvm-ir2vec.rst
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
@@ -1082,6 +1095,14 @@ clang:openmp:
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
 
+clang:temporal-safety:
+  - clang/include/clang/Analysis/Analyses/LifetimeSafety/**
+  - clang/lib/Analysis/LifetimeSafety/**
+  - clang/unittests/Analysis/LifetimeSafety*
+  - clang/test/Sema/*lifetime-safety*
+  - clang/test/Sema/*lifetime-analysis*
+  - clang/test/Analysis/LifetimeSafety/**
+
 clang:as-a-library:
   - clang/tools/libclang/**
   - clang/bindings/**
@@ -1105,3 +1126,6 @@ tablegen:
   - llvm/include/TableGen/**
   - llvm/lib/TableGen/**
   - llvm/utils/TableGen/**
+
+infrastructure:
+  - .ci/**

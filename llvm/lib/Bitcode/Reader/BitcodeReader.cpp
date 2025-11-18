@@ -293,10 +293,18 @@ static Expected<bool> hasObjCCategoryInModule(BitstreamCursor &Stream) {
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid section name record");
+
       // Check for the i386 and other (x86_64, ARM) conventions
-      if (S.find("__DATA,__objc_catlist") != std::string::npos ||
-          S.find("__OBJC,__category") != std::string::npos ||
-          S.find("__TEXT,__swift") != std::string::npos)
+
+      auto [Segment, Section] = StringRef(S).split(",");
+      Segment = Segment.trim();
+      Section = Section.trim();
+
+      if (Segment == "__DATA" && Section.starts_with("__objc_catlist"))
+        return true;
+      if (Segment == "__OBJC" && Section.starts_with("__category"))
+        return true;
+      if (Segment == "__TEXT" && Section.starts_with("__swift"))
         return true;
       break;
     }
@@ -1275,6 +1283,7 @@ static int getDecodedCastOpcode(unsigned Val) {
   case bitc::CAST_SITOFP  : return Instruction::SIToFP;
   case bitc::CAST_FPTRUNC : return Instruction::FPTrunc;
   case bitc::CAST_FPEXT   : return Instruction::FPExt;
+  case bitc::CAST_PTRTOADDR: return Instruction::PtrToAddr;
   case bitc::CAST_PTRTOINT: return Instruction::PtrToInt;
   case bitc::CAST_INTTOPTR: return Instruction::IntToPtr;
   case bitc::CAST_BITCAST : return Instruction::BitCast;
@@ -2194,6 +2203,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SANITIZE_REALTIME_BLOCKING:
     return Attribute::SanitizeRealtimeBlocking;
+  case bitc::ATTR_KIND_SANITIZE_ALLOC_TOKEN:
+    return Attribute::SanitizeAllocToken;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -2246,6 +2257,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Captures;
   case bitc::ATTR_KIND_DEAD_ON_RETURN:
     return Attribute::DeadOnReturn;
+  case bitc::ATTR_KIND_NO_CREATE_UNDEF_OR_POISON:
+    return Attribute::NoCreateUndefOrPoison;
   }
 }
 
@@ -7007,13 +7020,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (StripDebugInfo)
     stripDebugInfo(*F);
 
-  // Upgrade any old intrinsic calls in the function.
-  for (auto &I : UpgradedIntrinsics) {
-    for (User *U : llvm::make_early_inc_range(I.first->materialized_users()))
-      if (CallInst *CI = dyn_cast<CallInst>(U))
-        UpgradeIntrinsicCall(CI, I.second);
-  }
-
   // Finish fn->subprogram upgrade for materialized functions.
   if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
     F->setSubprogram(SP);
@@ -7022,14 +7028,14 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (!MDLoader->isStrippingTBAA()) {
     for (auto &I : instructions(F)) {
       MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa);
-      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(I, TBAA))
+      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA))
         continue;
       MDLoader->setStripTBAA(true);
       stripTBAA(F->getParent());
     }
   }
 
-  for (auto &I : instructions(F)) {
+  for (auto &I : make_early_inc_range(instructions(F))) {
     // "Upgrade" older incorrect branch weights by dropping them.
     if (auto *MD = I.getMetadata(LLVMContext::MD_prof)) {
       if (MD->getOperand(0) != nullptr && isa<MDString>(MD->getOperand(0))) {
@@ -7060,8 +7066,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
       }
     }
 
-    // Remove incompatible attributes on function calls.
     if (auto *CI = dyn_cast<CallBase>(&I)) {
+      // Remove incompatible attributes on function calls.
       CI->removeRetAttrs(AttributeFuncs::typeIncompatible(
           CI->getFunctionType()->getReturnType(), CI->getRetAttributes()));
 
@@ -7069,6 +7075,13 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         CI->removeParamAttrs(ArgNo, AttributeFuncs::typeIncompatible(
                                         CI->getArgOperand(ArgNo)->getType(),
                                         CI->getParamAttributes(ArgNo)));
+
+      // Upgrade intrinsics.
+      if (Function *OldFn = CI->getCalledFunction()) {
+        auto It = UpgradedIntrinsics.find(OldFn);
+        if (It != UpgradedIntrinsics.end())
+          UpgradeIntrinsicCall(CI, It->second);
+      }
     }
   }
 
@@ -7116,9 +7129,11 @@ Error BitcodeReader::materializeModule() {
       if (CallInst *CI = dyn_cast<CallInst>(U))
         UpgradeIntrinsicCall(CI, I.second);
     }
-    if (!I.first->use_empty())
-      I.first->replaceAllUsesWith(I.second);
-    I.first->eraseFromParent();
+    if (I.first != I.second) {
+      if (!I.first->use_empty())
+        I.first->replaceAllUsesWith(I.second);
+      I.first->eraseFromParent();
+    }
   }
   UpgradedIntrinsics.clear();
 
@@ -7129,6 +7144,8 @@ Error BitcodeReader::materializeModule() {
   UpgradeNVVMAnnotations(*TheModule);
 
   UpgradeARCRuntime(*TheModule);
+
+  copyModuleAttrToFunctions(*TheModule);
 
   return Error::success();
 }
@@ -8551,16 +8568,13 @@ Expected<std::unique_ptr<ModuleSummaryIndex>> BitcodeModule::getSummary() {
 }
 
 static Expected<std::pair<bool, bool>>
-getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream,
-                                                 unsigned ID,
-                                                 BitcodeLTOInfo &LTOInfo) {
+getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream, unsigned ID) {
   if (Error Err = Stream.EnterSubBlock(ID))
     return std::move(Err);
-  SmallVector<uint64_t, 64> Record;
 
+  SmallVector<uint64_t, 64> Record;
   while (true) {
     BitstreamEntry Entry;
-    std::pair<bool, bool> Result = {false,false};
     if (Error E = Stream.advanceSkippingSubblocks().moveInto(Entry))
       return std::move(E);
 
@@ -8569,8 +8583,8 @@ getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream,
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock: {
-      // If no flags record found, set both flags to false.
-      return Result;
+      // If no flags record found, return both flags as false.
+      return std::make_pair(false, false);
     }
     case BitstreamEntry::Record:
       // The interesting case.
@@ -8588,13 +8602,11 @@ getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream,
     case bitc::FS_FLAGS: { // [flags]
       uint64_t Flags = Record[0];
       // Scan flags.
-      assert(Flags <= 0x2ff && "Unexpected bits in flag");
+      assert(Flags <= 0x7ff && "Unexpected bits in flag");
 
       bool EnableSplitLTOUnit = Flags & 0x8;
       bool UnifiedLTO = Flags & 0x200;
-      Result = {EnableSplitLTOUnit, UnifiedLTO};
-
-      return Result;
+      return std::make_pair(EnableSplitLTOUnit, UnifiedLTO);
     }
     }
   }
@@ -8623,26 +8635,15 @@ Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
                             /*EnableSplitLTOUnit=*/false, /*UnifiedLTO=*/false};
 
     case BitstreamEntry::SubBlock:
-      if (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID) {
-        BitcodeLTOInfo LTOInfo;
+      if (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID ||
+          Entry.ID == bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID) {
         Expected<std::pair<bool, bool>> Flags =
-            getEnableSplitLTOUnitAndUnifiedFlag(Stream, Entry.ID, LTOInfo);
+            getEnableSplitLTOUnitAndUnifiedFlag(Stream, Entry.ID);
         if (!Flags)
           return Flags.takeError();
-        std::tie(LTOInfo.EnableSplitLTOUnit, LTOInfo.UnifiedLTO) = Flags.get();
-        LTOInfo.IsThinLTO = true;
-        LTOInfo.HasSummary = true;
-        return LTOInfo;
-      }
-
-      if (Entry.ID == bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID) {
         BitcodeLTOInfo LTOInfo;
-        Expected<std::pair<bool, bool>> Flags =
-            getEnableSplitLTOUnitAndUnifiedFlag(Stream, Entry.ID, LTOInfo);
-        if (!Flags)
-          return Flags.takeError();
         std::tie(LTOInfo.EnableSplitLTOUnit, LTOInfo.UnifiedLTO) = Flags.get();
-        LTOInfo.IsThinLTO = false;
+        LTOInfo.IsThinLTO = (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID);
         LTOInfo.HasSummary = true;
         return LTOInfo;
       }

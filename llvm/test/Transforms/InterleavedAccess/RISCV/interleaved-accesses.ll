@@ -874,3 +874,79 @@ define void @load_factor2_fp128(ptr %ptr) {
   %v1 = shufflevector <4 x fp128> %interleaved.vec, <4 x fp128> poison, <2 x i32> <i32 1, i32 3>
   ret void
 }
+
+define void @load_factor2_f32(ptr %ptr) {
+; RV32-LABEL: @load_factor2_f32(
+; RV32-NEXT:    [[TMP1:%.*]] = call { <8 x float>, <8 x float> } @llvm.riscv.seg2.load.mask.v8f32.p0.i32(ptr [[PTR:%.*]], <8 x i1> splat (i1 true), i32 8)
+; RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <8 x float>, <8 x float> } [[TMP1]], 1
+; RV32-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x float>, <8 x float> } [[TMP1]], 0
+; RV32-NEXT:    ret void
+;
+; RV64-LABEL: @load_factor2_f32(
+; RV64-NEXT:    [[TMP1:%.*]] = call { <8 x float>, <8 x float> } @llvm.riscv.seg2.load.mask.v8f32.p0.i64(ptr [[PTR:%.*]], <8 x i1> splat (i1 true), i64 8)
+; RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <8 x float>, <8 x float> } [[TMP1]], 1
+; RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x float>, <8 x float> } [[TMP1]], 0
+; RV64-NEXT:    ret void
+;
+  %interleaved.vec = load <16 x float>, ptr %ptr
+  %v0 = shufflevector <16 x float> %interleaved.vec, <16 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %v1 = shufflevector <16 x float> %interleaved.vec, <16 x float> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret void
+}
+
+define void @load_factor2_f64(ptr %ptr) {
+; RV32-LABEL: @load_factor2_f64(
+; RV32-NEXT:    [[TMP1:%.*]] = call { <8 x double>, <8 x double> } @llvm.riscv.seg2.load.mask.v8f64.p0.i32(ptr [[PTR:%.*]], <8 x i1> splat (i1 true), i32 8)
+; RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 1
+; RV32-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 0
+; RV32-NEXT:    ret void
+;
+; RV64-LABEL: @load_factor2_f64(
+; RV64-NEXT:    [[TMP1:%.*]] = call { <8 x double>, <8 x double> } @llvm.riscv.seg2.load.mask.v8f64.p0.i64(ptr [[PTR:%.*]], <8 x i1> splat (i1 true), i64 8)
+; RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 1
+; RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 0
+; RV64-NEXT:    ret void
+;
+  %interleaved.vec = load <16 x double>, ptr %ptr
+  %v0 = shufflevector <16 x double> %interleaved.vec, <16 x double> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %v1 = shufflevector <16 x double> %interleaved.vec, <16 x double> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret void
+}
+
+define void @load_factor2_bf16(ptr %ptr) {
+; RV32-LABEL: @load_factor2_bf16(
+; RV32-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x bfloat>, ptr [[PTR:%.*]], align 32
+; RV32-NEXT:    [[V0:%.*]] = shufflevector <16 x bfloat> [[INTERLEAVED_VEC]], <16 x bfloat> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; RV32-NEXT:    [[V1:%.*]] = shufflevector <16 x bfloat> [[INTERLEAVED_VEC]], <16 x bfloat> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; RV32-NEXT:    ret void
+;
+; RV64-LABEL: @load_factor2_bf16(
+; RV64-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x bfloat>, ptr [[PTR:%.*]], align 32
+; RV64-NEXT:    [[V0:%.*]] = shufflevector <16 x bfloat> [[INTERLEAVED_VEC]], <16 x bfloat> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; RV64-NEXT:    [[V1:%.*]] = shufflevector <16 x bfloat> [[INTERLEAVED_VEC]], <16 x bfloat> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; RV64-NEXT:    ret void
+;
+  %interleaved.vec = load <16 x bfloat>, ptr %ptr
+  %v0 = shufflevector <16 x bfloat> %interleaved.vec, <16 x bfloat> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %v1 = shufflevector <16 x bfloat> %interleaved.vec, <16 x bfloat> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret void
+}
+
+define void @load_factor2_f16(ptr %ptr) {
+; RV32-LABEL: @load_factor2_f16(
+; RV32-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x half>, ptr [[PTR:%.*]], align 32
+; RV32-NEXT:    [[V0:%.*]] = shufflevector <16 x half> [[INTERLEAVED_VEC]], <16 x half> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; RV32-NEXT:    [[V1:%.*]] = shufflevector <16 x half> [[INTERLEAVED_VEC]], <16 x half> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; RV32-NEXT:    ret void
+;
+; RV64-LABEL: @load_factor2_f16(
+; RV64-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x half>, ptr [[PTR:%.*]], align 32
+; RV64-NEXT:    [[V0:%.*]] = shufflevector <16 x half> [[INTERLEAVED_VEC]], <16 x half> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; RV64-NEXT:    [[V1:%.*]] = shufflevector <16 x half> [[INTERLEAVED_VEC]], <16 x half> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; RV64-NEXT:    ret void
+;
+  %interleaved.vec = load <16 x half>, ptr %ptr
+  %v0 = shufflevector <16 x half> %interleaved.vec, <16 x half> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %v1 = shufflevector <16 x half> %interleaved.vec, <16 x half> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret void
+}

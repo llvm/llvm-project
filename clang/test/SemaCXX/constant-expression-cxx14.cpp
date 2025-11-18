@@ -265,7 +265,7 @@ namespace const_modify {
 
 namespace null {
   constexpr int test(int *p) {
-    return *p = 123; // expected-note {{assignment to dereferenced null pointer}}
+    return *p = 123; // expected-note {{dereferencing a null pointer}}
   }
   static_assert(test(0), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
@@ -1047,7 +1047,7 @@ constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant 
 constexpr void PR28739(int n) { // cxx14_20-error {{never produces a constant}}
   int *p = &n;                  // expected-note {{array 'p' declared here}}
   p += (__int128)(unsigned long)-1; // cxx14_20-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
-  // expected-warning@-1 {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4611686018427387904 elements)}}
+  // expected-warning@-1 {{the pointer incremented by 18'446'744'073'709'551'615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4'611'686'018'427'387'904 elements)}}
 }
 
 constexpr void Void(int n) {
@@ -1335,4 +1335,124 @@ namespace comparison_dead_variable {
   }
   // FIXME: This should fail.
   static_assert(f(),"");
+
+}
+namespace GH48665 {
+constexpr bool foo(int *i) {
+    int &j = *i;
+    // expected-note@-1 {{dereferencing a null pointer}}
+    return true;
+}
+
+static_assert(foo(nullptr), ""); // expected-note {{in call to 'foo(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+constexpr bool foo_rvalue(int *i) {
+    int &&j = (int&&)*i;
+    // expected-note@-1 {{dereferencing a null pointer}}
+    return true;
+}
+static_assert(foo_rvalue(nullptr), ""); // expected-note {{in call to 'foo_rvalue(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+int arr[3]; // expected-note {{declared here}}
+constexpr bool f() { // cxx14_20-error {{constexpr function never produces a constant expression}}
+  int &r  = arr[3]; // expected-note {{read of dereferenced one-past-the-end pointer}} \
+                    // cxx14_20-note {{read of dereferenced one-past-the-end pointer}} \
+                    // expected-warning {{array index 3 is past the end of the array}}
+  return true;
+}
+static_assert(f(), ""); // expected-note {{in call to 'f()'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+
+struct Aggregate {
+   int &r;
+};
+constexpr bool test_agg(int *i) {
+   Aggregate a{*i}; //expected-note {{dereferencing a null pointer}}
+   return true;
+}
+static_assert(test_agg(nullptr), ""); // expected-note {{in call to 'test_agg(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+struct B {
+  constexpr B(int *p) : r{*p} {}  // expected-note {{dereferencing a null pointer}}
+  int &r;
+};
+
+constexpr bool test_ctr(int *i) {
+    B b(i); // expected-note {{in call to 'B(nullptr)'}}
+    return true;
+}
+
+static_assert(test_ctr(nullptr), ""); // expected-note {{in call to 'test_ctr(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+
+// verify that we can dereference function pointers
+namespace functions {
+
+constexpr int f() {return 0;}
+constexpr int(*f_ptr)() = &f;
+constexpr int(*null_ptr)() = nullptr;
+
+constexpr int(&f_ref)() = f;
+constexpr int test = (*f_ptr)();
+constexpr int test2 = (*f_ref)();
+constexpr int test3 = (*f_ref)();
+constexpr int test4 = (*null_ptr)();
+//expected-error@-1 {{constexpr variable 'test4' must be initialized by a constant expression}} \
+//expected-note@-1 {{'(*null_ptr)' evaluates to a null function pointer}}
+
+constexpr int(*f_ptr_arr[1])() = {&f};
+constexpr int test_array_ok = (f_ptr_arr[0])();
+constexpr int test_array_err = (f_ptr_arr[1])();
+// expected-error@-1 {{constexpr variable 'test_array_err' must be initialized by a constant expression}} \
+// expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+
+struct S {
+    int(*f_ptr)() = &f;
+    int(*f_ptr_arr[1])() = {&f};
+    int(&f_ref)() = f;
+    int(*null_ptr)() = nullptr;
+};
+
+constexpr int test_member() {
+    S s {};
+    (*s.f_ptr)();
+    (*s.f_ref)();
+    (s.f_ref)();
+    (s.f_ptr_arr[0])();
+    (s.f_ptr_arr[1])();
+    // expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+    return 0;
+}
+constexpr int test_member_null() { // cxx14_20-error {{never produces a constant expression}}
+    S s {};
+    (*s.null_ptr)(); // expected-note {{'(*s.null_ptr)' evaluates to a null function pointer}} \
+                     // cxx14_20-note {{'(*s.null_ptr)' evaluates to a null function pointer}}
+    return 0;
+}
+
+static_assert(test_member(), "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+// expected-note@-1 {{in call to 'test_member()'}}
+
+static_assert(test_member_null(), "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+// expected-note@-1 {{in call to 'test_member_null()'}}
+
+}
+}
+
+namespace GH149500 {
+  unsigned int * p = &(*(unsigned int *)0x400);
+  static const void *q = &(*(const struct sysrq_key_op *)0);
+}
+
+constexpr bool missingCase() {
+  switch (1) {
+    1u: return false; // expected-error {{expected 'case' keyword before expression}}
+  }
 }

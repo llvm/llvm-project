@@ -380,7 +380,7 @@ func.func @mismatched_types() {
 
 // -----
 
-// expected-error @+1 {{alignment attribute value 63 is not a power of 2}}
+// expected-error @+1 {{'memref.global' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
 memref.global "private" @gv : memref<4xf32> = dense<1.0> { alignment = 63 }
 
 // -----
@@ -653,6 +653,18 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{expected mixed offsets rank to match mixed sizes rank (2 vs 3) so the rank of the result type is well-formed}}
   %1 = memref.subview %0[0, 0][2, 2, 2][1, 1, 1]
     : memref<8x16x4xf32> to memref<8x16x4xf32>
+  return
+}
+
+// -----
+
+// This test is not written in the op's assembly format, to reproduce a mismatch
+// between the rank of static_offsets and the number of Values sent as the
+// dynamic offsets.
+func.func @invalid_subview(%arg0 : memref<?x128xi8, 1>) {
+  %0 = memref.alloc() :memref<1xf32>
+  // expected-error@+1 {{expected the number of 'offsets' to match the number of dynamic entries in 'static_offsets' (0 vs 1)}}
+  "memref.subview"(%0) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (memref<1xf32>) -> memref<1xf32, strided<[1], offset: ?>>
   return
 }
 
@@ -962,6 +974,40 @@ func.func @test_store_zero_results2(%x: i32, %p: memref<i32>) {
 
 // -----
 
+func.func @invalid_load_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @below {{'memref.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %val = memref.load %memref[%c0] { alignment = -1 } : memref<4xi32>
+  return
+}
+
+// -----
+
+func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: i32) {
+  %c0 = arith.constant 0 : index
+  // expected-error @below {{'memref.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  memref.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>
+  return
+}
+
+// -----
+
+func.func @invalid_alloc_alignment() {
+  // expected-error @below {{'memref.alloc' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = memref.alloc() {alignment = 3} : memref<4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_realloc_alignment(%src: memref<4xf32>) {
+  // expected-error @below {{'memref.realloc' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = memref.realloc %src {alignment = 7} : memref<4xf32> to memref<8xf32>
+  return
+}
+
+// -----
+
 func.func @test_alloc_memref_map_rank_mismatch() {
 ^bb0:
   // expected-error@+1 {{memref layout mismatch between rank and affine map: 2 != 1}}
@@ -1137,5 +1183,21 @@ func.func @expand_shape_invalid_output_shape(
   %0 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [2, 15, 21] :
       memref<30x20xf32, strided<[4000, 2], offset: 100>>
       into memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>
+  return
+}
+
+// -----
+
+func.func @distinct_objects_types_mismatch(%arg0: memref<?xf32>, %arg1: memref<?xi32>) -> (memref<?xi32>, memref<?xf32>) {
+  // expected-error @+1 {{operand types and result types must match}}
+  %0, %1 = "memref.distinct_objects"(%arg0, %arg1) : (memref<?xf32>, memref<?xi32>) -> (memref<?xi32>, memref<?xf32>)
+  return %0, %1 : memref<?xi32>, memref<?xf32>
+}
+
+// -----
+
+func.func @distinct_objects_0_operands() {
+  // expected-error @+1 {{expected at least one operand}}
+  "memref.distinct_objects"() : () -> ()
   return
 }

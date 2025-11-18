@@ -13,7 +13,6 @@
 def XSfmmVTypeAsmOperand : AsmOperandClass {
   let Name = "XSfmmVType";
   let ParserMethod = "parseXSfmmVType";
-  let DiagnosticType = "InvalidXSfmmVType";
   let RenderMethod = "addVTypeIOperands";
 }
 
@@ -65,6 +64,7 @@ class SFInstTileMemOp<dag outs, dag ins, bits<3> nf, RISCVOpcode opcode,
   let Inst{6-0} = opcode.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
@@ -94,6 +94,7 @@ class SFInstTileMoveOp<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -113,6 +114,7 @@ class SFInstMatmulF<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{6-0} = OPC_OP_VE.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -135,6 +137,7 @@ class SFInstMatmulF8<bit a, bit b, dag outs, dag ins,
   let Inst{6-0} = OPC_OP_VE.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 
@@ -167,6 +170,7 @@ class SFInstMatmulI8<bit funct6_1, bit a, bit b, dag outs, dag ins,
   let Inst{6-0} = OPC_OP_VE.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 class I8Encode<bit encoding, string name> {
@@ -220,7 +224,7 @@ let Predicates = [HasVendorXSfmmbase] in {
   def SF_VSETTM : SFInstSetSingle<(outs GPR:$rd), (ins GPR:$rs1), 0b00001,
                                   "sf.vsettm", "$rd, $rs1">;
   def SF_VSETTK : SFInstSetSingle<(outs GPR:$rd), (ins GPR:$rs1), 0b00010,
-                                   "sf.vsettk", "$rd, $rs1">;
+                                  "sf.vsettk", "$rd, $rs1">;
   def SF_VTDISCARD : SFInstVtDiscard<"sf.vtdiscard">;
 
   def SF_VTMV_V_T : SFInstTileMoveOp<0b010000, (outs VR:$vd), (ins GPR:$rs1),
@@ -272,3 +276,195 @@ let Uses = [FRM], mayRaiseFPException = true in {
 } // Predicates = [HasVendorXSfmm32a8f]
 
 } // DecoderNamespace = "XSfvector"
+
+class VPseudoSF_VTileLoad
+    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, AVL:$atn, ixlenimm:$sew,
+                                ixlenimm:$twiden)> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let HasVLOp = 1; // Tn
+  let HasSEWOp = 1;
+  let HasTWidenOp = 1;
+  let hasSideEffects = 1;
+}
+
+class VPseudoSF_VTileStore
+    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, AVL:$atn, ixlenimm:$sew,
+                                ixlenimm:$twiden)> {
+  let mayLoad = 0;
+  let mayStore = 1;
+  let HasVLOp = 1; // Tn
+  let HasSEWOp = 1;
+  let HasTWidenOp = 1;
+  let hasSideEffects = 1;
+}
+
+class VPseudoSF_VTileMove_V_T
+    : RISCVVPseudo<(outs VRM8:$vd), (ins GPR:$rs1, AVL:$atn, ixlenimm:$sew,
+                                         ixlenimm:$twiden)> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let HasVLOp = 1; // Tn
+  let HasSEWOp = 1;
+  let HasTWidenOp = 1;
+  let hasSideEffects = 1;
+}
+
+class VPseudoSF_VTileMove_T_V
+    : RISCVVPseudo<(outs), (ins GPR:$rs1, VRM8:$vs2, AVL:$atn, ixlenimm:$sew,
+                                ixlenimm:$twiden)> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let HasVLOp = 1; // Tn
+  let HasSEWOp = 1;
+  let HasTWidenOp = 1;
+  let hasSideEffects = 1;
+}
+
+class VPseudoSF_MatMul<RegisterClass mtd_class>
+    : RISCVVPseudo<(outs),
+                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, AVL:$atm, AVL:$atn,
+                        AVL:$atk, ixlenimm:$sew, ixlenimm:$twiden)> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let HasTmOp = 1;
+  let HasVLOp = 1; // Tn
+  let HasTkOp = 1;
+  let HasSEWOp = 1;
+  let HasTWidenOp = 1;
+  let hasSideEffects = 1;
+}
+
+class VPseudoSF_MatMul_FRM<RegisterClass mtd_class>
+    : RISCVVPseudo<(outs),
+                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, ixlenimm:$frm,
+                        AVL:$atm, AVL:$atn, AVL:$atk, ixlenimm:$sew,
+                        ixlenimm:$twiden), []> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let HasTmOp = 1;
+  let HasVLOp = 1; // Tn
+  let HasTkOp = 1;
+  let HasSEWOp = 1;
+  let HasRoundModeOp = 1;
+  let hasPostISelHook = 1;
+  let HasTWidenOp = 1;
+  let hasSideEffects = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let Defs = [VL, VTYPE] in {
+  def PseudoSF_VSETTNT
+      : Pseudo<(outs GPR:$rd),
+               (ins GPRNoX0:$rs1, XSfmmVTypeOp:$vtypei), []>,
+        PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
+        Sched<[WriteVSETVLI, ReadVSETVLI]>;
+  def PseudoSF_VSETTNTX0
+      : Pseudo<(outs GPRNoX0:$rd),
+               (ins GPRX0:$rs1, XSfmmVTypeOp:$vtypei), []>,
+        PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
+        Sched<[WriteVSETVLI, ReadVSETVLI]>;
+  def PseudoSF_VSETTNTX0X0
+      : Pseudo<(outs GPRX0:$rd),
+               (ins GPRX0:$rs1, XSfmmVTypeOp:$vtypei), []>,
+        PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
+        Sched<[WriteVSETVLI, ReadVSETVLI]>;
+}
+
+let Defs = [VTYPE], Uses = [VTYPE], HasTWidenOp = 1, HasSEWOp = 1 in {
+  def PseudoSF_VSETTM
+      : Pseudo<(outs GPR:$rd),
+               (ins GPR:$rs1, ixlenimm:$log2sew, ixlenimm:$twiden), []>,
+        PseudoInstExpansion<(SF_VSETTM GPR:$rd, GPR:$rs1)>,
+        Sched<[WriteVSETVLI, ReadVSETVLI]>;
+  def PseudoSF_VSETTK
+      : Pseudo<(outs GPR:$rd),
+               (ins GPR:$rs1, ixlenimm:$logwsew, ixlenimm:$twiden), []>,
+        PseudoInstExpansion<(SF_VSETTK GPR:$rd, GPR:$rs1)>,
+        Sched<[WriteVSETVLI, ReadVSETVLI]>;
+}
+}
+
+foreach eew = [8, 16, 32, 64] in {
+  def PseudoSF_VLTE # eew : VPseudoSF_VTileLoad;
+  def PseudoSF_VSTE # eew : VPseudoSF_VTileStore;
+}
+
+def PseudoSF_VTMV_T_V : VPseudoSF_VTileMove_T_V;
+def PseudoSF_VTMV_V_T : VPseudoSF_VTileMove_V_T;
+
+foreach a = I8Encodes in
+  foreach b = I8Encodes in
+    def PseudoSF_MM_ # !toupper(a.Name) # _ # !toupper(b.Name)
+        : VPseudoSF_MatMul<TRM4>;
+
+let AltFmtType = IS_NOT_ALTFMT in
+  def PseudoSF_MM_F_F : VPseudoSF_MatMul_FRM<TRM2>;
+let AltFmtType = IS_ALTFMT in
+  def PseudoSF_MM_F_F_ALT : VPseudoSF_MatMul_FRM<TRM2>;
+
+foreach e1 = [5, 4] in
+  foreach e2 = [5, 4] in
+    def PseudoSF_MM_E # e1 # M # !sub(7, e1) # _E # e2 # M # !sub(7, e2)
+        : VPseudoSF_MatMul_FRM<TRM4>;
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
+  let HasVLOp = 1, HasTmOp = 1, HasTWidenOp = 1, HasSEWOp = 1 in
+    def PseudoSF_VTZERO_T
+        : RISCVVPseudo<(outs),
+                       (ins TR:$rd, AVL:$atm, AVL:$atn, ixlenimm:$sew,
+                            ixlenimm:$twiden)>;
+  def PseudoSF_VTDISCARD : RISCVVPseudo<(outs), (ins), []>;
+}
+
+class VPatXSfmmTileStore<string intrinsic_name,
+                         string inst_name,
+                         int log2sew> :
+  Pat<(!cast<Intrinsic>(intrinsic_name)
+       (XLenVT GPR:$rs2),
+       (XLenVT GPR:$rs1),
+       (XLenVT AVL:$tn)),
+      (!cast<Instruction>(inst_name)
+       (XLenVT GPR:$rs2),
+       (XLenVT GPR:$rs1),
+       GPR:$tn, log2sew, 1)>;
+
+class VPatXSfmmTileMove_T_V<string intrinsic_name,
+                            string inst_name,
+                            ValueType reg_type,
+                            int log2sew> :
+  Pat<(!cast<Intrinsic>(intrinsic_name)
+                    (XLenVT GPR:$rs1),
+                    (reg_type VRM8:$vs2),
+                    (XLenVT AVL:$atn)),
+      (!cast<Instruction>(inst_name)
+       (XLenVT GPR:$rs1),
+       (reg_type VRM8:$vs2),
+       GPR:$atn, log2sew, 1)>;
+
+class VPatXSfmmTileMove_V_T<string intrinsic_name,
+                            string inst_name,
+                            ValueType result_type,
+                            int log2sew> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
+                    (XLenVT GPR:$rs1),
+                    (XLenVT AVL:$atn))),
+      (!cast<Instruction>(inst_name)
+       (XLenVT GPR:$rs1),
+       GPR:$atn, log2sew, 1)>;
+
+class VPatXSfmmVTDiscard<string intrinsic_name,
+                         string inst_name> :
+  Pat<(!cast<Intrinsic>(intrinsic_name)),
+      (!cast<Instruction>(inst_name))>;
+
+foreach eew = [8, 16, 32, 64] in
+  def : VPatXSfmmTileStore<"int_riscv_sf_vste" # eew, "PseudoSF_VSTE" # eew, !logtwo(eew)>;
+
+foreach vti = [VI8M8, VI16M8, VI32M8, VI64M8, VF16M8, VF32M8, VF64M8, VBF16M8] in {
+  def : VPatXSfmmTileMove_T_V<"int_riscv_sf_vtmv_t_v", "PseudoSF_VTMV_T_V", vti.Vector, vti.Log2SEW>;
+  def : VPatXSfmmTileMove_V_T<"int_riscv_sf_vtmv_v_t", "PseudoSF_VTMV_V_T", vti.Vector, vti.Log2SEW>;
+}
+
+def : VPatXSfmmVTDiscard<"int_riscv_sf_vtdiscard", "PseudoSF_VTDISCARD">;

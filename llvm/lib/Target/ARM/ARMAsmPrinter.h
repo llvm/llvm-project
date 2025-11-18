@@ -123,8 +123,19 @@ public:
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
 
+  // KCFI check lowering
+  void LowerKCFI_CHECK(const MachineInstr &MI);
+
 private:
   void EmitSled(const MachineInstr &MI, SledKind Kind);
+
+  // KCFI check emission helpers
+  void EmitKCFI_CHECK_ARM32(Register AddrReg, int64_t Type,
+                            const MachineInstr &Call, int64_t PrefixNops);
+  void EmitKCFI_CHECK_Thumb2(Register AddrReg, int64_t Type,
+                             const MachineInstr &Call, int64_t PrefixNops);
+  void EmitKCFI_CHECK_Thumb1(Register AddrReg, int64_t Type,
+                             const MachineInstr &Call, int64_t PrefixNops);
 
   // Helpers for emitStartOfAsmFile() and emitEndOfAsmFile()
   void emitAttributes();

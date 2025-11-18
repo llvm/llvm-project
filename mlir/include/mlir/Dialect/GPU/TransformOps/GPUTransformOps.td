@@ -331,7 +331,10 @@ def ApplyGPUPromoteShuffleToAMDGPUPatternsOp : Op<Transform_Dialect,
     Collects patterns that are tryin to promote `gpu.shuffle`s to specialized
     AMDGPU intrinsics.
   }];
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins OptionalAttr<StrAttr>:$chipset);
+  let assemblyFormat = [{
+    (`chipset` `=` $chipset^)? attr-dict
+  }];
 }
 
 

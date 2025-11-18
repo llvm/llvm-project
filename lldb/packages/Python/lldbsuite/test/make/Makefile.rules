@@ -149,6 +149,16 @@ else
 endif
 
 #----------------------------------------------------------------------
+# Use LLD when cross compiling on Darwin.
+#----------------------------------------------------------------------
+ifeq "$(HOST_OS)" "Darwin"
+	ifneq (,$(filter $(OS), Android FreeBSD Linux NetBSD Windows_NT))
+		LDFLAGS += -fuse-ld=lld
+	endif
+endif
+
+
+#----------------------------------------------------------------------
 # ARCHFLAG is the flag used to tell the compiler which architecture
 # to compile for. The default is the flag that clang accepts.
 #----------------------------------------------------------------------
@@ -239,6 +249,10 @@ ifeq ($(CC_TYPE), clang)
    MODULE_DEBUG_INFO_FLAGS += -gmodules
 endif
 
+ifeq "$(MAKE_PDB)" "YES"
+	DEBUG_INFO_FLAG ?= -g -gcodeview
+endif
+
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
 # with codeview by default but all the tests rely on dwarf.
 ifeq "$(OS)" "Windows_NT"
@@ -280,6 +294,11 @@ ifeq "$(MAKE_DEBUG_NAMES)" "YES"
 	CFLAGS += -gpubnames
 endif
 
+# Enable GNU POSIX extensions (e.g. kill(), usleep(), getpgid(), ...)
+ifeq "$(OS)" "Linux"
+	CFLAGS += -D_DEFAULT_SOURCE
+endif
+
 ifeq "$(USE_PRIVATE_MODULE_CACHE)" "YES"
 THE_CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/private-module-cache
 else
@@ -312,6 +331,19 @@ ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 		LDFLAGS += -pthread
 	endif
 endif
+
+# macOS forbids injecting the ASAN runtime into system processes when
+# SIP is enabled. That includes the just-built libLTO that the
+# just-built clang injects into the system linker.  Since we don't
+# test the compiler here, just use the system (non-asanified) LTO
+# library to make ASAN tests work for most users, including the bots.
+ifeq "$(OS)" "Darwin"
+ifneq "$(ASAN_OPTIONS)" ""
+ASAN_LDFLAGS = -Wl,-lto_library -Wl,$(shell dirname $(shell xcrun -find clang))/../lib/libLTO.dylib
+endif
+endif
+LDFLAGS += $(ASAN_LDFLAGS)
+
 OBJECTS =
 EXE ?= a.out
 
@@ -376,7 +408,9 @@ ifeq (,$(filter 1, $(USE_LIBSTDCPP) $(USE_LIBCPP) $(USE_SYSTEM_STDLIB)))
     ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
       CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
     endif
-    LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+
+	# If `-nostdlib++` is not passed, clang will link to the system's stdlib.
+    LDFLAGS += -nostdlib++ -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
   else
     USE_SYSTEM_STDLIB := 1
   endif
@@ -397,7 +431,8 @@ ifeq (1,$(USE_LIBCPP))
 		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
 				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
 		endif
-		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+		# If `-nostdlib++` is not passed, clang will link to the system's stdlib.
+		LDFLAGS += -nostdlib++ -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
 	else
 		ifeq "$(OS)" "Android"
 				# Nothing to do, this is already handled in

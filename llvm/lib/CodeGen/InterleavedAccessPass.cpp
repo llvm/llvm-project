@@ -253,13 +253,29 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
   return false;
 }
 
-// Return the corresponded deinterleaved mask, or nullptr if there is no valid
-// mask.
-static Value *getMask(Value *WideMask, unsigned Factor,
-                      ElementCount LeafValueEC);
+static Value *getMaskOperand(IntrinsicInst *II) {
+  switch (II->getIntrinsicID()) {
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  case Intrinsic::vp_load:
+  case Intrinsic::masked_load:
+    return II->getOperand(1);
+  case Intrinsic::vp_store:
+  case Intrinsic::masked_store:
+    return II->getOperand(2);
+  }
+}
 
-static Value *getMask(Value *WideMask, unsigned Factor,
-                      VectorType *LeafValueTy) {
+// Return a pair of
+//  (1) The corresponded deinterleaved mask, or nullptr if there is no valid
+//  mask.
+//  (2) Some mask effectively skips a certain field, and this element is a mask
+//  in which inactive lanes represent fields that are skipped (i.e. "gaps").
+static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
+                                         ElementCount LeafValueEC);
+
+static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
+                                         VectorType *LeafValueTy) {
   return getMask(WideMask, Factor, LeafValueTy->getElementCount());
 }
 
@@ -268,17 +284,13 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   if (isa<ScalableVectorType>(Load->getType()))
     return false;
 
-  if (auto *LI = dyn_cast<LoadInst>(Load)) {
-    if (!LI->isSimple())
-      return false;
-  } else if (auto *VPLoad = dyn_cast<VPIntrinsic>(Load)) {
-    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load);
-    // Require a constant mask.
-    if (!isa<ConstantVector>(VPLoad->getMaskParam()))
-      return false;
-  } else {
-    llvm_unreachable("unsupported load operation");
-  }
+  auto *LI = dyn_cast<LoadInst>(Load);
+  auto *II = dyn_cast<IntrinsicInst>(Load);
+  if (!LI && !II)
+    return false;
+
+  if (LI && !LI->isSimple())
+    return false;
 
   // Check if all users of this load are shufflevectors. If we encounter any
   // users that are extractelement instructions or binary operators, we save
@@ -298,10 +310,9 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       continue;
     }
     if (auto *BI = dyn_cast<BinaryOperator>(User)) {
-      if (!BI->user_empty() && all_of(BI->users(), [](auto *U) {
-            auto *SVI = dyn_cast<ShuffleVectorInst>(U);
-            return SVI && isa<UndefValue>(SVI->getOperand(1));
-          })) {
+      using namespace PatternMatch;
+      if (!BI->user_empty() &&
+          all_of(BI->users(), match_fn(m_Shuffle(m_Value(), m_Undef())))) {
         for (auto *SVI : BI->users())
           BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
         continue;
@@ -330,7 +341,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   // Holds the corresponding index for each DE-interleave shuffle.
   SmallVector<unsigned, 4> Indices;
 
-  Type *VecTy = FirstSVI->getType();
+  VectorType *VecTy = cast<VectorType>(FirstSVI->getType());
 
   // Check if other shufflevectors are also DE-interleaved of the same type
   // and factor as the first shufflevector.
@@ -367,33 +378,28 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   bool BinOpShuffleChanged =
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
-  if (auto *VPLoad = dyn_cast<VPIntrinsic>(Load)) {
-    Value *LaneMask =
-        getMask(VPLoad->getMaskParam(), Factor, cast<VectorType>(VecTy));
-    if (!LaneMask)
+  Value *Mask = nullptr;
+  auto GapMask = APInt::getAllOnes(Factor);
+  if (LI) {
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
+  } else {
+    // Check mask operand. Handle both all-true/false and interleaved mask.
+    std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor, VecTy);
+    if (!Mask)
       return false;
 
-    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load: " << *Load << "\n");
-
-    // Sometimes the number of Shuffles might be less than Factor, we have to
-    // fill the gaps with null. Also, lowerInterleavedVPLoad
-    // expects them to be sorted.
-    SmallVector<Value *, 4> ShuffleValues(Factor, nullptr);
-    for (auto [Idx, ShuffleMaskIdx] : enumerate(Indices))
-      ShuffleValues[ShuffleMaskIdx] = Shuffles[Idx];
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, LaneMask, ShuffleValues))
-      // If Extracts is not empty, tryReplaceExtracts made changes earlier.
-      return !Extracts.empty() || BinOpShuffleChanged;
-  } else {
-    LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
-
-    // Try to create target specific intrinsics to replace the load and
-    // shuffles.
-    if (!TLI->lowerInterleavedLoad(cast<LoadInst>(Load), Shuffles, Indices,
-                                   Factor))
-      // If Extracts is not empty, tryReplaceExtracts made changes earlier.
-      return !Extracts.empty() || BinOpShuffleChanged;
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load or masked.load: "
+                      << *Load << "\n");
+    LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
+                      << " and actual factor " << GapMask.popcount() << "\n");
   }
+
+  // Try to create target specific intrinsics to replace the load and
+  // shuffles.
+  if (!TLI->lowerInterleavedLoad(cast<Instruction>(Load), Mask, Shuffles,
+                                 Indices, Factor, GapMask))
+    // If Extracts is not empty, tryReplaceExtracts made changes earlier.
+    return !Extracts.empty() || BinOpShuffleChanged;
 
   DeadInsts.insert_range(Shuffles);
 
@@ -502,18 +508,16 @@ bool InterleavedAccessImpl::tryReplaceExtracts(
 bool InterleavedAccessImpl::lowerInterleavedStore(
     Instruction *Store, SmallSetVector<Instruction *, 32> &DeadInsts) {
   Value *StoredValue;
-  if (auto *SI = dyn_cast<StoreInst>(Store)) {
+  auto *SI = dyn_cast<StoreInst>(Store);
+  auto *II = dyn_cast<IntrinsicInst>(Store);
+  if (SI) {
     if (!SI->isSimple())
       return false;
     StoredValue = SI->getValueOperand();
-  } else if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
-    assert(VPStore->getIntrinsicID() == Intrinsic::vp_store);
-    // Require a constant mask.
-    if (!isa<ConstantVector>(VPStore->getMaskParam()))
-      return false;
-    StoredValue = VPStore->getArgOperand(0);
   } else {
-    llvm_unreachable("unsupported store operation");
+    assert(II->getIntrinsicID() == Intrinsic::vp_store ||
+           II->getIntrinsicID() == Intrinsic::masked_store);
+    StoredValue = II->getArgOperand(0);
   }
 
   auto *SVI = dyn_cast<ShuffleVectorInst>(StoredValue);
@@ -529,45 +533,28 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   assert(NumStoredElements % Factor == 0 &&
          "number of stored element should be a multiple of Factor");
 
-  if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
-    unsigned LaneMaskLen = NumStoredElements / Factor;
-    Value *LaneMask = getMask(VPStore->getMaskParam(), Factor,
-                              ElementCount::getFixed(LaneMaskLen));
-    if (!LaneMask)
-      return false;
-
-    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store: " << *Store
-                      << "\n");
-
-    IRBuilder<> Builder(VPStore);
-    // We need to effectively de-interleave the shufflemask
-    // because lowerInterleavedVPStore expects individual de-interleaved
-    // values.
-    SmallVector<Value *, 10> NewShuffles;
-    SmallVector<int, 16> NewShuffleMask(LaneMaskLen);
-    auto ShuffleMask = SVI->getShuffleMask();
-
-    for (unsigned i = 0; i < Factor; i++) {
-      for (unsigned j = 0; j < LaneMaskLen; j++)
-        NewShuffleMask[j] = ShuffleMask[i + Factor * j];
-
-      NewShuffles.push_back(Builder.CreateShuffleVector(
-          SVI->getOperand(0), SVI->getOperand(1), NewShuffleMask));
-    }
-
-    // Try to create target specific intrinsics to replace the vp.store and
-    // shuffle.
-    if (!TLI->lowerInterleavedVPStore(VPStore, LaneMask, NewShuffles))
-      // We already created new shuffles.
-      return true;
-  } else {
+  Value *Mask = nullptr;
+  auto GapMask = APInt::getAllOnes(Factor);
+  if (SI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
-
-    // Try to create target specific intrinsics to replace the store and
-    // shuffle.
-    if (!TLI->lowerInterleavedStore(cast<StoreInst>(Store), SVI, Factor))
+  } else {
+    // Check mask operand. Handle both all-true/false and interleaved mask.
+    unsigned LaneMaskLen = NumStoredElements / Factor;
+    std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor,
+                                      ElementCount::getFixed(LaneMaskLen));
+    if (!Mask)
       return false;
+
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store or masked.store: "
+                      << *Store << "\n");
+    LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
+                      << " and actual factor " << GapMask.popcount() << "\n");
   }
+
+  // Try to create target specific intrinsics to replace the store and
+  // shuffle.
+  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor, GapMask))
+    return false;
 
   // Already have a new target specific interleaved store. Erase the old store.
   DeadInsts.insert(Store);
@@ -575,150 +562,234 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   return true;
 }
 
-static Value *getMask(Value *WideMask, unsigned Factor,
-                      ElementCount LeafValueEC) {
+// A wide mask <1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0> could be used to skip the
+// last field in a factor-of-three interleaved store or deinterleaved load (in
+// which case LeafMaskLen is 4). Such (wide) mask is also known as gap mask.
+// This helper function tries to detect this pattern and return the actual
+// factor we're accessing, which is 2 in this example.
+static void getGapMask(const Constant &MaskConst, unsigned Factor,
+                       unsigned LeafMaskLen, APInt &GapMask) {
+  assert(GapMask.getBitWidth() == Factor);
+  for (unsigned F = 0U; F < Factor; ++F) {
+    bool AllZero = true;
+    for (unsigned Idx = 0U; Idx < LeafMaskLen; ++Idx) {
+      Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
+      if (!C->isZeroValue()) {
+        AllZero = false;
+        break;
+      }
+    }
+    // All mask bits on this field are zero, skipping it.
+    if (AllZero)
+      GapMask.clearBit(F);
+  }
+}
+
+static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
+                                         ElementCount LeafValueEC) {
+  auto GapMask = APInt::getAllOnes(Factor);
+
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());
-        F && F == Factor && llvm::all_equal(IMI->args())) {
-      return IMI->getArgOperand(0);
+        F && F == Factor) {
+      Value *RefArg = nullptr;
+      // Check if all the intrinsic arguments are the same, except those that
+      // are zeros, which we mark as gaps in the gap mask.
+      for (auto [Idx, Arg] : enumerate(IMI->args())) {
+        if (auto *C = dyn_cast<Constant>(Arg); C && C->isZeroValue()) {
+          GapMask.clearBit(Idx);
+          continue;
+        }
+
+        if (!RefArg)
+          RefArg = Arg;
+        else if (RefArg != Arg)
+          return {nullptr, GapMask};
+      }
+
+      // In a very rare occasion, all the intrinsic arguments might be zeros,
+      // in which case we still want to return an all-zeros constant instead of
+      // nullptr.
+      return {RefArg ? RefArg : IMI->getArgOperand(0), GapMask};
     }
+  }
+
+  // Masks that are assembled from bitwise AND.
+  if (auto *AndOp = dyn_cast<BinaryOperator>(WideMask);
+      AndOp && AndOp->getOpcode() == Instruction::And) {
+    auto [MaskLHS, GapMaskLHS] =
+        getMask(AndOp->getOperand(0), Factor, LeafValueEC);
+    auto [MaskRHS, GapMaskRHS] =
+        getMask(AndOp->getOperand(1), Factor, LeafValueEC);
+    if (!MaskLHS || !MaskRHS)
+      return {nullptr, GapMask};
+    // Using IRBuilder here so that any trivial constants could be folded right
+    // away.
+    return {IRBuilder<>(AndOp).CreateAnd(MaskLHS, MaskRHS),
+            GapMaskLHS & GapMaskRHS};
   }
 
   if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
     if (auto *Splat = ConstMask->getSplatValue())
       // All-ones or all-zeros mask.
-      return ConstantVector::getSplat(LeafValueEC, Splat);
+      return {ConstantVector::getSplat(LeafValueEC, Splat), GapMask};
 
     if (LeafValueEC.isFixed()) {
       unsigned LeafMaskLen = LeafValueEC.getFixedValue();
+      // First, check if we use a gap mask to skip some of the factors / fields.
+      getGapMask(*ConstMask, Factor, LeafMaskLen, GapMask);
+
       SmallVector<Constant *, 8> LeafMask(LeafMaskLen, nullptr);
       // If this is a fixed-length constant mask, each lane / leaf has to
       // use the same mask. This is done by checking if every group with Factor
       // number of elements in the interleaved mask has homogeneous values.
       for (unsigned Idx = 0U; Idx < LeafMaskLen * Factor; ++Idx) {
+        if (!GapMask[Idx % Factor])
+          continue;
         Constant *C = ConstMask->getAggregateElement(Idx);
         if (LeafMask[Idx / Factor] && LeafMask[Idx / Factor] != C)
-          return nullptr;
+          return {nullptr, GapMask};
         LeafMask[Idx / Factor] = C;
       }
 
-      return ConstantVector::get(LeafMask);
+      return {ConstantVector::get(LeafMask), GapMask};
     }
   }
 
-  return nullptr;
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(WideMask)) {
+    Type *Op1Ty = SVI->getOperand(1)->getType();
+    if (!isa<FixedVectorType>(Op1Ty))
+      return {nullptr, GapMask};
+
+    // Check that the shuffle mask is: a) an interleave, b) all of the same
+    // set of the elements, and c) contained by the first source.  (c) could
+    // be relaxed if desired.
+    unsigned NumSrcElts =
+        cast<FixedVectorType>(SVI->getOperand(1)->getType())->getNumElements();
+    SmallVector<unsigned> StartIndexes;
+    if (ShuffleVectorInst::isInterleaveMask(SVI->getShuffleMask(), Factor,
+                                            NumSrcElts * 2, StartIndexes) &&
+        llvm::all_of(StartIndexes, [](unsigned Start) { return Start == 0; }) &&
+        llvm::all_of(SVI->getShuffleMask(), [&NumSrcElts](int Idx) {
+          return Idx < (int)NumSrcElts;
+        })) {
+      auto *LeafMaskTy =
+          VectorType::get(Type::getInt1Ty(SVI->getContext()), LeafValueEC);
+      IRBuilder<> Builder(SVI);
+      return {Builder.CreateExtractVector(LeafMaskTy, SVI->getOperand(0),
+                                          uint64_t(0)),
+              GapMask};
+    }
+  }
+
+  return {nullptr, GapMask};
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
     IntrinsicInst *DI, SmallSetVector<Instruction *, 32> &DeadInsts) {
-  Value *LoadedVal = DI->getOperand(0);
-  if (!LoadedVal->hasOneUse() || !isa<LoadInst, VPIntrinsic>(LoadedVal))
+  Instruction *LoadedVal = dyn_cast<Instruction>(DI->getOperand(0));
+  if (!LoadedVal || !LoadedVal->hasOneUse())
+    return false;
+
+  auto *LI = dyn_cast<LoadInst>(LoadedVal);
+  auto *II = dyn_cast<IntrinsicInst>(LoadedVal);
+  if (!LI && !II)
     return false;
 
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   assert(Factor && "unexpected deinterleave intrinsic");
 
-  SmallVector<Value *, 8> DeinterleaveValues(Factor, nullptr);
-  Value *LastFactor = nullptr;
-  for (auto *User : DI->users()) {
-    auto *Extract = dyn_cast<ExtractValueInst>(User);
-    if (!Extract || Extract->getNumIndices() != 1)
-      return false;
-    unsigned Idx = Extract->getIndices()[0];
-    if (DeinterleaveValues[Idx])
-      return false;
-    DeinterleaveValues[Idx] = Extract;
-    LastFactor = Extract;
-  }
-
-  if (!LastFactor)
-    return false;
-
-  if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadedVal)) {
-    if (VPLoad->getIntrinsicID() != Intrinsic::vp_load)
-      return false;
-    // Check mask operand. Handle both all-true/false and interleaved mask.
-    Value *WideMask = VPLoad->getOperand(1);
-    Value *Mask =
-        getMask(WideMask, Factor, cast<VectorType>(LastFactor->getType()));
-    if (!Mask)
-      return false;
-
-    LLVM_DEBUG(dbgs() << "IA: Found a vp.load with deinterleave intrinsic "
-                      << *DI << " and factor = " << Factor << "\n");
-
-    // Since lowerInterleaveLoad expects Shuffles and LoadInst, use special
-    // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, Mask, DeinterleaveValues))
-      return false;
-
-  } else {
-    auto *LI = cast<LoadInst>(LoadedVal);
+  Value *Mask = nullptr;
+  if (LI) {
     if (!LI->isSimple())
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found a load with deinterleave intrinsic " << *DI
                       << " and factor = " << Factor << "\n");
-
-    // Try and match this with target specific intrinsics.
-    if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DeinterleaveValues))
+  } else {
+    assert(II);
+    if (II->getIntrinsicID() != Intrinsic::masked_load &&
+        II->getIntrinsicID() != Intrinsic::vp_load)
       return false;
+
+    // Check mask operand. Handle both all-true/false and interleaved mask.
+    APInt GapMask(Factor, 0);
+    std::tie(Mask, GapMask) =
+        getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
+    if (!Mask)
+      return false;
+    // We haven't supported gap mask if it's deinterleaving using intrinsics.
+    // Yet it is possible that we already changed the IR, hence returning true
+    // here.
+    if (GapMask.popcount() != Factor)
+      return true;
+
+    LLVM_DEBUG(dbgs() << "IA: Found a vp.load or masked.load with deinterleave"
+                      << " intrinsic " << *DI << " and factor = "
+                      << Factor << "\n");
   }
 
-  for (Value *V : DeinterleaveValues)
-    if (V)
-      DeadInsts.insert(cast<Instruction>(V));
+  // Try and match this with target specific intrinsics.
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(LoadedVal, Mask, DI))
+    return false;
+
   DeadInsts.insert(DI);
   // We now have a target-specific load, so delete the old one.
-  DeadInsts.insert(cast<Instruction>(LoadedVal));
+  DeadInsts.insert(LoadedVal);
   return true;
 }
 
 bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
-    IntrinsicInst *II, SmallSetVector<Instruction *, 32> &DeadInsts) {
-  if (!II->hasOneUse())
+    IntrinsicInst *IntII, SmallSetVector<Instruction *, 32> &DeadInsts) {
+  if (!IntII->hasOneUse())
     return false;
-  Value *StoredBy = II->user_back();
-  if (!isa<StoreInst, VPIntrinsic>(StoredBy))
+  Instruction *StoredBy = dyn_cast<Instruction>(IntII->user_back());
+  if (!StoredBy)
+    return false;
+  auto *SI = dyn_cast<StoreInst>(StoredBy);
+  auto *II = dyn_cast<IntrinsicInst>(StoredBy);
+  if (!SI && !II)
     return false;
 
-  SmallVector<Value *, 8> InterleaveValues(II->args());
-  const unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
+  SmallVector<Value *, 8> InterleaveValues(IntII->args());
+  const unsigned Factor = getInterleaveIntrinsicFactor(IntII->getIntrinsicID());
   assert(Factor && "unexpected interleave intrinsic");
 
-  if (auto *VPStore = dyn_cast<VPIntrinsic>(StoredBy)) {
-    if (VPStore->getIntrinsicID() != Intrinsic::vp_store)
+  Value *Mask = nullptr;
+  if (II) {
+    if (II->getIntrinsicID() != Intrinsic::masked_store &&
+        II->getIntrinsicID() != Intrinsic::vp_store)
       return false;
-
-    Value *WideMask = VPStore->getOperand(2);
-    Value *Mask = getMask(WideMask, Factor,
-                          cast<VectorType>(InterleaveValues[0]->getType()));
+    // Check mask operand. Handle both all-true/false and interleaved mask.
+    APInt GapMask(Factor, 0);
+    std::tie(Mask, GapMask) =
+        getMask(getMaskOperand(II), Factor,
+                cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
+    // We haven't supported gap mask if it's interleaving using intrinsics. Yet
+    // it is possible that we already changed the IR, hence returning true here.
+    if (GapMask.popcount() != Factor)
+      return true;
 
-    LLVM_DEBUG(dbgs() << "IA: Found a vp.store with interleave intrinsic "
-                      << *II << " and factor = " << Factor << "\n");
-
-    // Since lowerInterleavedStore expects Shuffle and StoreInst, use special
-    // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedVPStore(VPStore, Mask, InterleaveValues))
-      return false;
+    LLVM_DEBUG(dbgs() << "IA: Found a vp.store or masked.store with interleave"
+                      << " intrinsic " << *IntII << " and factor = "
+                      << Factor << "\n");
   } else {
-    auto *SI = cast<StoreInst>(StoredBy);
     if (!SI->isSimple())
       return false;
 
-    LLVM_DEBUG(dbgs() << "IA: Found a store with interleave intrinsic " << *II
-                      << " and factor = " << Factor << "\n");
-
-    // Try and match this with target specific intrinsics.
-    if (!TLI->lowerInterleaveIntrinsicToStore(SI, InterleaveValues))
-      return false;
+    LLVM_DEBUG(dbgs() << "IA: Found a store with interleave intrinsic "
+                      << *IntII << " and factor = " << Factor << "\n");
   }
 
+  // Try and match this with target specific intrinsics.
+  if (!TLI->lowerInterleaveIntrinsicToStore(StoredBy, Mask, InterleaveValues))
+    return false;
+
   // We now have a target-specific store, so delete the old one.
-  DeadInsts.insert(cast<Instruction>(StoredBy));
-  DeadInsts.insert(II);
+  DeadInsts.insert(StoredBy);
+  DeadInsts.insert(IntII);
   return true;
 }
 
@@ -730,11 +801,13 @@ bool InterleavedAccessImpl::runOnFunction(Function &F) {
   using namespace PatternMatch;
   for (auto &I : instructions(F)) {
     if (match(&I, m_CombineOr(m_Load(m_Value()),
-                              m_Intrinsic<Intrinsic::vp_load>())))
+                              m_Intrinsic<Intrinsic::vp_load>())) ||
+        match(&I, m_Intrinsic<Intrinsic::masked_load>()))
       Changed |= lowerInterleavedLoad(&I, DeadInsts);
 
     if (match(&I, m_CombineOr(m_Store(m_Value(), m_Value()),
-                              m_Intrinsic<Intrinsic::vp_store>())))
+                              m_Intrinsic<Intrinsic::vp_store>())) ||
+        match(&I, m_Intrinsic<Intrinsic::masked_store>()))
       Changed |= lowerInterleavedStore(&I, DeadInsts);
 
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {

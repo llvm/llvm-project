@@ -9,8 +9,8 @@
 #include "AIX.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -168,8 +168,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
        Args.hasArg(options::OPT_coverage))
     CmdArgs.push_back("-bdbg:namedsects:ss");
 
-  if (Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_mxcoff_build_id_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mxcoff_build_id_EQ)) {
     StringRef BuildId = A->getValue();
     if (BuildId[0] != '0' || BuildId[1] != 'x' ||
         BuildId.find_if_not(llvm::isHexDigit, 2) != StringRef::npos)

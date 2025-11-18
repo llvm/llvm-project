@@ -29,6 +29,7 @@ lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
 if lit_shell_env:
     use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
 
+# Set the test format based on shell configuration
 config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
@@ -181,15 +182,16 @@ config.excludes = [
 ]
 
 # Tweak the PATH to include the tools dir.
-llvm_config.with_environment("PATH", config.mlir_tools_dir, append_path=True)
-llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
+tool_dirs = [config.mlir_tools_dir, config.llvm_tools_dir, config.lit_tools_dir]
+for dirs in tool_dirs:
+    llvm_config.with_environment("PATH", dirs, append_path=True)
 
-tool_dirs = [config.mlir_tools_dir, config.llvm_tools_dir]
 tools = [
     "mlir-tblgen",
     "mlir-translate",
     "mlir-lsp-server",
     "mlir-capi-execution-engine-test",
+    "mlir-capi-global-constructors-test",
     "mlir-capi-ir-test",
     "mlir-capi-irdl-test",
     "mlir-capi-llvm-test",
@@ -212,6 +214,11 @@ tools = [
     "not",
 ]
 
+if "Linux" in config.host_os:
+    # TODO: Run only on Linux until we figure out how to build
+    # mlir_apfloat_wrappers in a platform-independent way.
+    tools.extend([add_runtime("mlir_apfloat_wrappers")])
+
 if config.enable_vulkan_runner:
     tools.extend([add_runtime("mlir_vulkan_runtime")])
 
@@ -223,6 +230,9 @@ if config.enable_cuda_runner:
 
 if config.enable_sycl_runner:
     tools.extend([add_runtime("mlir_sycl_runtime")])
+
+if config.enable_levelzero_runner:
+    tools.extend([add_runtime("mlir_levelzero_runtime")])
 
 if config.enable_spirv_cpu_runner:
     tools.extend([add_runtime("mlir_spirv_cpu_runtime")])
@@ -301,6 +311,17 @@ if "MLIR_OPT_CHECK_IR_ROUNDTRIP" in os.environ:
             ToolSubst("mlir-opt", "mlir-opt --verify-roundtrip", unresolved="fatal"),
         ]
     )
+elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
+    tools.extend(
+        [
+            ToolSubst(
+                "mlir-opt",
+                "mlir-opt --debug-only=pattern-logging-listener --mlir-disable-threading",
+                unresolved="fatal",
+            ),
+            ToolSubst("FileCheck", "FileCheck --dump-input=always", unresolved="fatal"),
+        ]
+    )
 else:
     tools.extend(["mlir-opt"])
 
@@ -332,6 +353,8 @@ if config.enable_assertions:
 else:
     config.available_features.add("noasserts")
 
+if config.expensive_checks:
+    config.available_features.add("expensive_checks")
 
 def have_host_jit_feature_support(feature_name):
     mlir_runner_exe = lit.util.which("mlir-runner", config.mlir_tools_dir)
@@ -365,3 +388,6 @@ if config.run_rocm_tests:
 
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")
+
+if sys.version_info >= (3, 11):
+    config.available_features.add("python-ge-311")

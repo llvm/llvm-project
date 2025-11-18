@@ -169,6 +169,10 @@ cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
              "number of accesses allowed to be present in a loop in order to "
              "enable memory promotion."));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
+
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
                                       const LoopSafetyInfo *SafetyInfo,
@@ -435,10 +439,9 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // potentially happen in other passes where instructions are being moved
   // across that edge.
   bool HasCoroSuspendInst = llvm::any_of(L->getBlocks(), [](BasicBlock *BB) {
-    return llvm::any_of(*BB, [](Instruction &I) {
-      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      return II && II->getIntrinsicID() == Intrinsic::coro_suspend;
-    });
+    using namespace PatternMatch;
+    return any_of(make_pointer_range(*BB),
+                  match_fn(m_Intrinsic<Intrinsic::coro_suspend>()));
   });
 
   MemorySSAUpdater MSSAU(MSSA);
@@ -857,9 +860,18 @@ public:
     }
 
     // Now finally clone BI.
-    ReplaceInstWithInst(
-        HoistTarget->getTerminator(),
-        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition()));
+    auto *NewBI =
+        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition(),
+                           HoistTarget->getTerminator()->getIterator());
+    HoistTarget->getTerminator()->eraseFromParent();
+    // md_prof should also come from the original branch - since the
+    // condition was hoisted, the branch probabilities shouldn't change.
+    if (!ProfcheckDisableMetadataFixes)
+      NewBI->copyMetadata(*BI, {LLVMContext::MD_prof});
+    // FIXME: Issue #152767: debug info should also be the same as the
+    // original branch, **if** the user explicitly indicated that.
+    NewBI->setDebugLoc(HoistTarget->getTerminator()->getDebugLoc());
+
     ++NumClonedBranches;
 
     assert(CurLoop->getLoopPreheader() &&
@@ -916,9 +928,9 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       // to that block.
       if (CurLoop->hasLoopInvariantOperands(&I) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, Flags, ORE) &&
-          isSafeToExecuteUnconditionally(
-              I, DT, TLI, CurLoop, SafetyInfo, ORE,
-              Preheader->getTerminator(), AC, AllowSpeculation)) {
+          isSafeToExecuteUnconditionally(I, DT, TLI, CurLoop, SafetyInfo, ORE,
+                                         Preheader->getTerminator(), AC,
+                                         AllowSpeculation)) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
         HoistedInstructions.push_back(&I);
@@ -1106,11 +1118,10 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   return false;
 }
 
-namespace {
 /// Return true if-and-only-if we know how to (mechanically) both hoist and
 /// sink a given instruction out of a loop.  Does not address legality
 /// concerns such as aliasing or speculation safety.
-bool isHoistableAndSinkableInst(Instruction &I) {
+static bool isHoistableAndSinkableInst(Instruction &I) {
   // Only these instructions are hoistable/sinkable.
   return (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
           isa<FenceInst>(I) || isa<CastInst>(I) || isa<UnaryOperator>(I) ||
@@ -1122,8 +1133,8 @@ bool isHoistableAndSinkableInst(Instruction &I) {
 }
 
 /// Return true if I is the only Instruction with a MemoryAccess in L.
-bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
-                        const MemorySSAUpdater &MSSAU) {
+static bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
+                               const MemorySSAUpdater &MSSAU) {
   for (auto *BB : L->getBlocks())
     if (auto *Accs = MSSAU.getMemorySSA()->getBlockAccesses(BB)) {
       int NotAPhi = 0;
@@ -1136,7 +1147,6 @@ bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
       }
     }
   return true;
-}
 }
 
 static MemoryAccess *getClobberingMemoryAccess(MemorySSA &MSSA,
@@ -1230,11 +1240,16 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (Behavior.doesNotAccessMemory())
       return true;
     if (Behavior.onlyReadsMemory()) {
+      // Might have stale MemoryDef for call that was later inferred to be
+      // read-only.
+      auto *MU = dyn_cast<MemoryUse>(MSSA->getMemoryAccess(CI));
+      if (!MU)
+        return false;
+
       // If we can prove there are no writes to the memory read by the call, we
       // can hoist or sink.
       return !pointerInvalidatedByLoop(
-          MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I, Flags,
-          /*InvariantGroup=*/false);
+          MSSA, MU, CurLoop, I, Flags, /*InvariantGroup=*/false);
     }
 
     if (Behavior.onlyWritesMemory()) {
@@ -1688,8 +1703,9 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // The check on hasMetadataOtherThanDebugLoc is to prevent us from burning
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
-      !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
+      !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
     I.dropUBImplyingAttrsAndMetadata();
+  }
 
   if (isa<PHINode>(I))
     // Move the new node to the end of the phi list in the destination block.
@@ -2508,6 +2524,12 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (!GEP)
     return false;
 
+  // Do not try to hoist a constant GEP out of the loop via reassociation.
+  // Constant GEPs can often be folded into addressing modes, and reassociating
+  // them may inhibit CSE of a common base.
+  if (GEP->hasAllConstantIndices())
+    return false;
+
   auto *Src = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
   if (!Src || !Src->hasOneUse() || !L.contains(Src))
     return false;
@@ -2850,7 +2872,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
-      BO0->hasNUsesOrMore(3))
+      BO0->hasNUsesOrMore(BO0->getType()->isIntegerTy() ? 2 : 3))
     return false;
 
   Value *LV = BO0->getOperand(0);

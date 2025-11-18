@@ -48,7 +48,7 @@ void library_move(__strong id &x, __strong id &y) {
 void library_move(__strong id &y) {
   // CHECK: [[X:%x]] = alloca ptr, align 8
   // CHECK: [[I:%.*]] = alloca i32, align 4
-  // CHECK: call void @llvm.lifetime.start.p0(i64 8, ptr [[X]])
+  // CHECK: call void @llvm.lifetime.start.p0(ptr [[X]])
   // CHECK: [[Y:%[a-zA-Z0-9]+]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z4moveIRU8__strongP11objc_objectEON16remove_referenceIT_E4typeEOS5_
   // Load the object
   // CHECK-NEXT: [[OBJ:%[a-zA-Z0-9]+]] = load ptr, ptr [[Y]]
@@ -58,13 +58,13 @@ void library_move(__strong id &y) {
   // CHECK-NEXT: store ptr [[OBJ]], ptr [[X:%[a-zA-Z0-9]+]]
   id x = move(y);
 
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 4, ptr [[I]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[I]])
   // CHECK-NEXT: store i32 17
   int i = 17;
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 4, ptr [[I]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[I]])
   // CHECK-NEXT: [[OBJ:%[a-zA-Z0-9]+]] = load ptr, ptr [[X]]
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[OBJ]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[X]])
   // CHECK-NEXT: ret void
 }
 

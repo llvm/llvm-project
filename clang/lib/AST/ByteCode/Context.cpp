@@ -7,16 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "Boolean.h"
 #include "ByteCodeEmitter.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
-#include "Interp.h"
+#include "Integral.h"
 #include "InterpFrame.h"
+#include "InterpHelpers.h"
 #include "InterpStack.h"
+#include "Pointer.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -44,12 +49,25 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   Compiler<ByteCodeEmitter>(*this, *P).compileFunc(
       FD, const_cast<Function *>(Func));
 
-  ++EvalID;
-  // And run it.
-  if (!Run(Parent, Func))
+  if (!Func->isValid())
     return false;
 
-  return Func->isValid();
+  ++EvalID;
+  // And run it.
+  return Run(Parent, Func);
+}
+
+void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+                                                 const FunctionDecl *FD) {
+  assert(Stk.empty());
+  ++EvalID;
+  size_t StackSizeBefore = Stk.size();
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  if (!C.interpretCall(FD, E)) {
+    C.cleanup();
+    Stk.clearTo(StackSizeBefore);
+  }
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
@@ -77,7 +95,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
 
   return true;
 }
@@ -107,12 +125,12 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
   return true;
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
-                                    APValue &Result) {
+                                    const Expr *Init, APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
@@ -121,7 +139,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&
       (VD->getType()->isRecordType() || VD->getType()->isArrayType());
-  auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
+  auto Res = C.interpretDecl(VD, Init, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
@@ -139,7 +157,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
   return true;
 }
 
@@ -222,6 +240,92 @@ bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
   return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
 }
 
+bool Context::evaluateString(State &Parent, const Expr *E,
+                             std::string &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (!Ptr.isConst())
+      return false;
+
+    unsigned N = Ptr.getNumElems();
+
+    if (Ptr.elemSize() == 1 /* bytes */) {
+      const char *Chars = reinterpret_cast<const char *>(Ptr.getRawAddress());
+      unsigned Length = strnlen(Chars, N);
+      // Wasn't null terminated.
+      if (N == Length)
+        return false;
+      Result.assign(Chars, Length);
+      return true;
+    }
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    for (unsigned I = Ptr.getIndex(); I != N; ++I) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto Elem = Ptr.elem<T>(I);
+        if (Elem.isZero())
+          return true;
+        Result.push_back(static_cast<char>(Elem));
+      });
+    }
+    // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
+}
+
+bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
+      return false;
+
+    unsigned N = Ptr.getNumElems();
+    if (Ptr.elemSize() == 1) {
+      Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
+      return Result != N;
+    }
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    Result = 0;
+    for (unsigned I = Ptr.getIndex(); I != N; ++I) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto Elem = Ptr.elem<T>(I);
+        if (Elem.isZero())
+          return true;
+        ++Result;
+      });
+    }
+    // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
+}
+
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 static PrimType integralTypeToPrimTypeS(unsigned BitWidth) {
@@ -256,7 +360,7 @@ static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
   llvm_unreachable("Unhandled BitWidth");
 }
 
-std::optional<PrimType> Context::classify(QualType T) const {
+OptPrimType Context::classify(QualType T) const {
 
   if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
     auto Kind = BT->getKind();
@@ -313,8 +417,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     return integralTypeToPrimTypeU(BT->getNumBits());
   }
 
-  if (const auto *ET = T->getAs<EnumType>()) {
-    const auto *D = ET->getDecl();
+  if (const auto *D = T->getAsEnumDecl()) {
     if (!D->isComplete())
       return std::nullopt;
     return classify(D->getIntegerType());
@@ -347,17 +450,11 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func) {
-
-  {
-    InterpState State(Parent, *P, Stk, *this, Func);
-    if (Interpret(State)) {
-      assert(Stk.empty());
-      return true;
-    }
-    // State gets destroyed here, so the Stk.clear() below doesn't accidentally
-    // remove values the State's destructor might access.
+  InterpState State(Parent, *P, Stk, *this, Func);
+  if (Interpret(State)) {
+    assert(Stk.empty());
+    return true;
   }
-
   Stk.clear();
   return false;
 }
@@ -402,8 +499,6 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
 
 const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   assert(FuncDecl);
-  FuncDecl = FuncDecl->getMostRecentDecl();
-
   if (const Function *Func = P->getFunction(FuncDecl))
     return Func;
 
@@ -421,23 +516,6 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     // be a non-static member function, this (usually) requiring an
     // instance pointer. We suppress that later in this function.
     IsLambdaStaticInvoker = true;
-
-    const CXXRecordDecl *ClosureClass = MD->getParent();
-    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
-    if (ClosureClass->isGenericLambda()) {
-      const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
-      assert(MD->isFunctionTemplateSpecialization() &&
-             "A generic lambda's static-invoker function must be a "
-             "template specialization");
-      const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
-      FunctionTemplateDecl *CallOpTemplate =
-          LambdaCallOp->getDescribedFunctionTemplate();
-      void *InsertPos = nullptr;
-      const FunctionDecl *CorrespondingCallOpSpecialization =
-          CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
-      assert(CorrespondingCallOpSpecialization);
-      FuncDecl = CorrespondingCallOpSpecialization;
-    }
   }
   // Set up argument indices.
   unsigned ParamOffset = 0;
@@ -450,7 +528,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // elsewhere in the code.
   QualType Ty = FuncDecl->getReturnType();
   bool HasRVO = false;
-  if (!Ty->isVoidType() && !classify(Ty)) {
+  if (!Ty->isVoidType() && !canClassify(Ty)) {
     HasRVO = true;
     ParamTypes.push_back(PT_Ptr);
     ParamOffsets.push_back(ParamOffset);
@@ -491,10 +569,21 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
-    std::optional<PrimType> T = classify(PD->getType());
+  const auto *FuncProto = FuncDecl->getType()->getAs<FunctionProtoType>();
+  for (auto [ParamIndex, PD] : llvm::enumerate(FuncDecl->parameters())) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
+    if (!getASTContext().hasSameType(PD->getType(),
+                                     FuncProto->getParamType(ParamIndex)))
+      return nullptr;
+
+    OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
+
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
     ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT));
@@ -520,9 +609,14 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : BD->parameters()) {
-    std::optional<PrimType> T = classify(PD->getType());
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
+    OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
     ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT));

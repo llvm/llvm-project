@@ -64,8 +64,6 @@
 // Character manipulation functions
 // --------------------------------
 // namespace __locale {
-//  int     __isdigit(int, __locale_t);  // required by the headers
-//  int     __isxdigit(int, __locale_t); // required by the headers
 //  int     __toupper(int, __locale_t);
 //  int     __tolower(int, __locale_t);
 //  int     __strcoll(const char*, const char*, __locale_t);
@@ -115,6 +113,8 @@
 #    include <__locale_dir/support/apple.h>
 #  elif defined(__FreeBSD__)
 #    include <__locale_dir/support/freebsd.h>
+#  elif defined(__NetBSD__)
+#    include <__locale_dir/support/netbsd.h>
 #  elif defined(_LIBCPP_MSVCRT_LIKE)
 #    include <__locale_dir/support/windows.h>
 #  elif defined(__Fuchsia__)
@@ -129,8 +129,6 @@
 //       will define those directly.
 #    if defined(_AIX) || defined(__MVS__)
 #      include <__locale_dir/locale_base_api/ibm.h>
-#    elif defined(__ANDROID__)
-#      include <__locale_dir/locale_base_api/android.h>
 #    elif defined(__OpenBSD__)
 #      include <__locale_dir/locale_base_api/openbsd.h>
 #    elif defined(__wasi__) || _LIBCPP_HAS_MUSL_LIBC
@@ -206,9 +204,6 @@ __strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
 //
 // Character manipulation functions
 //
-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __ch, __locale_t __loc) { return isdigit_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __ch, __locale_t __loc) { return isxdigit_l(__ch, __loc); }
-
 #    if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __strcoll(const char* __s1, const char* __s2, __locale_t __loc) {
   return strcoll_l(__s1, __s2, __loc);

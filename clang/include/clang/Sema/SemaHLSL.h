@@ -17,9 +17,12 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
@@ -84,7 +87,7 @@ struct DeclBindingInfo {
 
 // ResourceBindings class stores information about all resource bindings
 // in a shader. It is used for binding diagnostics and implicit binding
-// assigments.
+// assignments.
 class ResourceBindings {
 public:
   DeclBindingInfo *addDeclBindingInfo(const VarDecl *VD,
@@ -129,8 +132,8 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
-  void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                               const HLSLAnnotationAttr *AnnotationAttr);
+  bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
+                          SourceLocation Loc);
   void DiagnoseAttrStageMismatch(
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
@@ -153,6 +156,12 @@ public:
   ActOnFinishRootSignatureDecl(SourceLocation Loc, IdentifierInfo *DeclIdent,
                                ArrayRef<hlsl::RootSignatureElement> Elements);
 
+  void SetRootSignatureOverride(IdentifierInfo *DeclIdent) {
+    RootSigOverrideIdent = DeclIdent;
+  }
+
+  HLSLRootSignatureDecl *lookupRootSignatureOverrideDecl(DeclContext *DC) const;
+
   // Returns true if any RootSignatureElement is invalid and a diagnostic was
   // produced
   bool
@@ -161,15 +170,24 @@ public:
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_PositionAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
+
+  template <typename T>
+  T *createSemanticAttr(const AttributeCommonInfo &ACI,
+                        std::optional<unsigned> Location) {
+    return ::new (getASTContext())
+        T(getASTContext(), ACI, ACI.getAttrName()->getName(),
+          Location.value_or(0));
+  }
+
+  void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
+                                  std::optional<unsigned> Index);
+  void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
 
@@ -189,7 +207,6 @@ public:
   bool diagnosePositionType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
-  bool ContainsBitField(QualType BaseTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
@@ -220,18 +237,39 @@ private:
 
   uint32_t ImplicitBindingNextOrderID = 0;
 
+  IdentifierInfo *RootSigOverrideIdent = nullptr;
+
+  struct SemanticInfo {
+    HLSLParsedSemanticAttr *Semantic;
+    std::optional<uint32_t> Index;
+  };
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                const RecordType *RT);
+
+  void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
+                               const HLSLAppliedSemanticAttr *SemanticAttr);
+  bool determineActiveSemanticOnScalar(FunctionDecl *FD,
+                                       DeclaratorDecl *OutputDecl,
+                                       DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic,
+                                       llvm::StringSet<> &ActiveInputSemantics);
+  bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *OutputDecl,
+                               DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+                               llvm::StringSet<> &ActiveInputSemantics);
+
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
-  bool initGlobalResourceDecl(VarDecl *VD);
   uint32_t getNextImplicitBindingOrderID() {
     return ImplicitBindingNextOrderID++;
   }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
 };
 
 } // namespace clang

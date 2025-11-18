@@ -1,4 +1,5 @@
-; RUN: llc %s --mtriple=x86_64-pc-windows-msvc -o - | FileCheck %s
+; RUN: llc %s --mtriple=x86_64-pc-windows-msvc -o - | FileCheck %s --check-prefixes=CHECK,X64
+; RUN: %if aarch64-registered-target %{ llc %s --mtriple=aarch64-pc-windows-msvc -o - | FileCheck %s --check-prefixes=CHECK,ARM64 %}
 
 ; Tests the fixed object layouts when two catchpads re-use the same stack
 ; allocation for this catch objects.
@@ -18,27 +19,36 @@
 ; }
 ; ```
 
-; Minimum stack alloc is 64 bytes, so no change there.
 ; CHECK-LABEL:  calls_boom:
-; CHECK:        subq    $64, %rsp
-; CHECK:        .seh_stackalloc 64
+; Minimum stack alloc is 64 bytes, so no change there.
+; X64:          subq    $64, %rsp
+; X64:          .seh_stackalloc 64
+; Only need 48 bytes on the stack, not 64.
+; ARM64:        sub     sp, sp, #48
+; ARM64:        .seh_stackalloc 48
 
 ; Both the catch blocks load from the same address.
 ; CHECK-LABEL:  "?catch$3@?0?calls_boom@4HA":
-; CHECK:        movq    -8(%rbp), %rax
+; X64:          movq    -8(%rbp), %rax
+; ARM64:        ldr     x8, [x29, #24]
 ; CHECK-LABEL:  "?catch$4@?0?calls_boom@4HA":
-; CHECK:        movq    -8(%rbp), %rax
+; X64:          movq    -8(%rbp), %rax
+; ARM64:        ldr     x8, [x29, #24]
 
-; There's enough space for the UnwindHelp to be at 48 instead of 40
 ; CHECK-LABEL:  $cppxdata$calls_boom:
-; CHECK:        .long   48                              # UnwindHelp
+; There's enough space for the UnwindHelp to be at 48 instead of 40
+; X64:          .long   48                              # UnwindHelp
+; There's enough space for the UnwindHelp to be at -16 instead of -32
+; ARM64:        .word   -16                             // UnwindHelp
 
 ; Both catches have the same object offset.
 ; CHECK-LABEL:  $handlerMap$0$calls_boom:
-; CHECK:        .long   56                              # CatchObjOffset
-; CHECK-NEXT:   .long   "?catch$3@?0?calls_boom@4HA"@IMGREL # Handler
-; CHECK:        .long   56                              # CatchObjOffset
-; CHECK-NEXT:   .long   "?catch$4@?0?calls_boom@4HA"@IMGREL # Handler
+; X64:          .long   56                              # CatchObjOffset
+; ARM64:        .word   -8                              // CatchObjOffset
+; CHECK-NEXT:   "?catch$3@?0?calls_boom@4HA"@IMGREL
+; X64:          .long   56                              # CatchObjOffset
+; ARM64:        .word   -8                              // CatchObjOffset
+; CHECK-NEXT:   "?catch$4@?0?calls_boom@4HA"@IMGREL
 
 %rtti.TypeDescriptor2 = type { ptr, ptr, [3 x i8] }
 

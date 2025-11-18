@@ -64,6 +64,12 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
     )>
   ];
 
+  let extraClassDeclaration = [{
+    // return true if all fields of the BlockTensorDescAttr are set with
+    // default values.
+    bool hasDefaultsOnly();
+  }];
+
 }
 
 def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
@@ -169,7 +175,122 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
+def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
+  let cppNamespace = "::mlir::xegpu";
+  let description = [{
+    Common trait for all XeGPU layouts.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Check the availability of workgroup level layouts",
+                    "bool",
+                    "isForWorkgroup">,
+    InterfaceMethod<"Check the availability of subgroup level layouts",
+                    "bool",
+                    "isForSubgroup">,
+    InterfaceMethod<"Get the rank of attribute",
+                    "int64_t",
+                    "getRank">,
+    InterfaceMethod<"Get the num of effective subgroups",
+                    "int64_t",
+                    "getNumSubgroups", (ins), [{
+                        std::optional<SmallVector<int64_t>> sgLayout = llvm::cast<ConcreteAttr>(tablegen_opaque_val).getEffectiveSgLayoutAsInt();
+                        if (sgLayout.has_value())
+                          return computeProduct(*sgLayout);
+                        return 0;
+                    }], [{}]>,
+    InterfaceMethod<"Get the order of the layout attribute",
+                    "DenseI32ArrayAttr",
+                    "getOrder">,
+    InterfaceMethod<"Get the effective SgLayout of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveSgLayoutAsInt">,
+    InterfaceMethod<"Get the effective SgData of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveSgDataAsInt">,
+    InterfaceMethod<"Get the effective InstData of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveInstDataAsInt">,
+    InterfaceMethod<"Get the effective LaneLayout of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveLaneLayoutAsInt">,
+    InterfaceMethod<"Get the effective LaneData of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveLaneDataAsInt">,
+    InterfaceMethod<"Derive a new layout by dropping sgLayout and sgData",
+                    "xegpu::DistributeLayoutAttr",
+                    "dropSgLayoutAndData">,
+    InterfaceMethod<"Derive a new layout by dropping InstData",
+                    "xegpu::DistributeLayoutAttr",
+                    "dropInstData">,
+    InterfaceMethod<[{Delinearizes a linear ID into its multidimensional
+                      indices based on the effective layout level.}],
+                    "FailureOr<SmallVector<Value>>",
+                    "delinearizeId",
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
+    InterfaceMethod<[{Generates instructions to compute multidimensional coordinates for dist units
+                      assigned to a level identified by linearId. The shape parameter
+                      represents the higher-level problem size. Each level may access
+                      multiple blocks according to round-robin distribution rules.}],
+                    "FailureOr<SmallVector<SmallVector<Value>>>",
+                    "computeDistributedCoords",
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
+    InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
+                     to some other layout according to given permutation of (0...n-1).}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isTransposeOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other, "ArrayRef<int64_t>": $perm),
+                    /*methodBody=*/[{
+                      if (!other)
+                        return false;
+                      if ($_self.getRank() != other.getRank() || perm.size() != static_cast<size_t>($_self.getRank()))
+                        return false;
+                      // Check if the permutation is valid
+                      if (!isPermutationVector(perm))
+                        return false;
+                      auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
+                        // If both `dst` and `src` are empty, conservatively return true
+                        // here because some layout fields can be empty.
+                        if (dst.empty() && src.empty())
+                          return true;
+                        for (const auto &ta : llvm::enumerate(perm)) {
+                          if (src[ta.index()] != dst[ta.value()])
+                            return false;
+                        }
+                        return true;
+                      };
+                      // Check sgLayout
+                      if (!checkTranspose($_self.getEffectiveSgLayoutAsInt(), other.getEffectiveSgLayoutAsInt(), perm))
+                        return false;
+                      // Check sgData
+                      if (!checkTranspose($_self.getEffectiveSgDataAsInt(), other.getEffectiveSgDataAsInt(), perm))
+                        return false;
+                      // Check instData
+                      if (!checkTranspose($_self.getEffectiveInstDataAsInt(), other.getEffectiveInstDataAsInt(), perm))
+                        return false;
+                      // Check laneLayout
+                      if (!checkTranspose($_self.getEffectiveLaneLayoutAsInt(), other.getEffectiveLaneLayoutAsInt(), perm))
+                        return false;
+                      // Check laneData
+                      if (!checkTranspose($_self.getEffectiveLaneDataAsInt(), other.getEffectiveLaneDataAsInt(), perm))
+                        return false;
+                      // Check order if both sides have order field.
+                      if ($_self.getOrder() && other.getOrder()) {
+                        auto thisOrderAsInt = llvm::to_vector_of<int64_t>($_self.getOrder().asArrayRef());
+                        auto otherOrderAsInt = llvm::to_vector_of<int64_t>(other.getOrder().asArrayRef());
+                        if (!checkTranspose(thisOrderAsInt, otherOrderAsInt, perm))
+                          return false;
+                      }
+                      return true;
+                    }]>,
+    InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isSliceOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
+  ];
+}
+
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
   let summary = [{
     Describes the data distribution to subgroups and work-items for a tensor
     specified by the tensor descriptor.
@@ -258,6 +379,29 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   );
 
   let builders = [
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $inst_data),
+      [{
+        auto sg_layout = DenseI32ArrayAttr();
+        auto sg_data = DenseI32ArrayAttr();
+        auto order = DenseI32ArrayAttr();
+        auto lane_layout = DenseI32ArrayAttr();
+        auto lane_data = DenseI32ArrayAttr();
+        return $_get($_ctxt, sg_layout, sg_data,
+                     DenseI32ArrayAttr::get($_ctxt, inst_data),
+                     lane_layout, lane_data, order);
+      }]>,
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $inst_data,
+                      "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data),
+      [{
+        auto sg_layout = DenseI32ArrayAttr();
+        auto sg_data = DenseI32ArrayAttr();
+        auto order = DenseI32ArrayAttr();
+        return $_get($_ctxt, sg_layout, sg_data,
+                     DenseI32ArrayAttr::get($_ctxt, inst_data),
+                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
+                     DenseI32ArrayAttr::get($_ctxt, lane_data), order);
+      }]>,
     AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
                      "llvm::ArrayRef<int32_t>": $lane_data),
       [{
@@ -269,18 +413,6 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
                      DenseI32ArrayAttr::get($_ctxt, lane_layout),
                      DenseI32ArrayAttr::get($_ctxt, lane_data), order);
       }]>,
-    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
-                     "llvm::ArrayRef<int32_t>": $lane_data,
-                     "llvm::ArrayRef<int32_t>": $order),
-      [{
-        return $_get($_ctxt,
-                     /*sg_layout =*/ nullptr,
-                     /*sg_data   =*/ nullptr,
-                     /*inst_data =*/ nullptr,
-                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
-                     DenseI32ArrayAttr::get($_ctxt, lane_data),
-                     DenseI32ArrayAttr::get($_ctxt, order));
-      }]>,
     AttrBuilder<(ins "DenseI32ArrayAttr": $lane_layout,
                      "DenseI32ArrayAttr": $lane_data,
                      "DenseI32ArrayAttr": $order),
@@ -291,12 +423,12 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   ];
 
   let extraClassDeclaration = [{
-    bool isWgLayout() {
+    bool isForWorkgroup() {
       return getSgLayout() != nullptr;
     }
 
-    bool isSgLayout() {
-      return !isWgLayout();
+    bool isForSubgroup() {
+      return !isForWorkgroup();
     }
 
     int64_t getRank() {
@@ -324,10 +456,284 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
       return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,
                              getLaneLayout(), getLaneData(), getOrder());
     }
+
+    SmallVector<int64_t> getEffectiveSgLayoutAsInt() const {
+      if (DenseI32ArrayAttr layout = getSgLayout())
+        return llvm::to_vector_of<int64_t>(layout.asArrayRef());
+      return {};
+    }
+
+    SmallVector<int64_t> getEffectiveSgDataAsInt() const {
+      if (DenseI32ArrayAttr data = getSgData())
+        return llvm::to_vector_of<int64_t>(data.asArrayRef());
+      return {};
+    }
+
+    SmallVector<int64_t> getEffectiveInstDataAsInt() const {
+      if (DenseI32ArrayAttr inst = getInstData())
+        return llvm::to_vector_of<int64_t>(inst.asArrayRef());
+      return {};
+    }
+
+    SmallVector<int64_t> getEffectiveLaneLayoutAsInt() const {
+      if (DenseI32ArrayAttr layout = getLaneLayout())
+        return llvm::to_vector_of<int64_t>(layout.asArrayRef());
+      return {};
+    }
+
+    SmallVector<int64_t> getEffectiveLaneDataAsInt() const {
+      if (DenseI32ArrayAttr data = getLaneData())
+        return llvm::to_vector_of<int64_t>(data.asArrayRef());
+      return {};
+    }
+
+    /// Delinearizes a linear ID into its multidimensional indices
+    /// based on the effective level of the layout.
+    FailureOr<SmallVector<Value>>
+    delinearizeId(OpBuilder &builder, Location loc, Value linearId);
+
+    /// Generates instructions to compute multidimensional coordinates for dist units
+    /// assigned to a level identified by linearId. The shape parameter
+    /// represents the higher-level problem size. Each `level` may access
+    /// multiple blocks according to round-robin distribution rules.
+    FailureOr<SmallVector<SmallVector<Value>>>
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
+    /// Check if this is slice of some other layout.
+    bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
+
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
   let genVerifyDecl = 1;
+}
+
+
+def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
+  let summary = [{Describes the data distribution and sharing among subgroups or work-items.}];
+
+  let description = [{
+    Like LayoutAttr, SliceAttr describes data distribution among subgroups or work-items.
+    However, whereas LayoutAttr requires the data to have the same rank as the attribute,
+    SliceAttr permits the data to have a lower rank. In this case, compute units in the
+    specified dimensions (given by `$dims`) share the data, provided that the remaining
+    ranks match the data rank. SliceAttr is commonly used by operations such as
+    vector.multi_reduction and vector.broadcast.
+
+    Example:
+    ```
+    #l = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
+    #r = #xegpu.slice<#l, dim = [0]>
+
+    %exp = math.exp %input {layout_result_0 = #l}: vector<256x128xf32>
+    %red = vector.multi_reduction<add>, %exp, %acc [0] {layout_result_0 = #r}: vector<256x128xf32> to vector<128xf32>
+    %bcast = vector.broadcast %red {layout_result_0 = #l} : vector<128xf32> to vector<256x128xf32>
+    ```
+    In this example, %red is conceptually divided into 4 vectors of type vector<32xf32>, each assigned to
+    a group of subgroups. Each group consists of 8 subgroups from the same column of sg_layout, sharing a
+    single reduction result of type vector<32xf32>.
+
+  }];
+
+  let parameters = (ins
+    "xegpu::DistributeLayoutAttr": $parent,
+    "DenseI64ArrayAttr": $dims
+  );
+
+  let extraClassDeclaration = [{
+
+    int64_t getRank() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.getRank() - attr.getDims().size();
+    }
+
+    DenseI32ArrayAttr getOrder() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.getOrder();
+    }
+
+    bool isForWorkgroup() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.isForWorkgroup();
+    }
+
+    bool isForSubgroup() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.isForSubgroup();
+    }
+
+    /// Returns the SgLayout of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getEffectiveSgLayoutAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto layout = parent.getEffectiveSgLayoutAsInt();
+      if (layout.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(ArrayRef<int64_t>(layout), dims);
+      }
+      return {};
+    }
+
+    /// Returns the SgData of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getEffectiveSgDataAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto data = parent.getEffectiveSgDataAsInt();
+      if (data.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(ArrayRef<int64_t>(data), dims);
+      }
+      return {};
+    }
+
+    /// Returns the InstData of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getEffectiveInstDataAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto inst = parent.getEffectiveInstDataAsInt();
+      if (inst.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(inst), dims);
+      }
+      return {};
+    }
+
+    /// Returns the LaneLayout of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getEffectiveLaneLayoutAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto layout = parent.getEffectiveLaneLayoutAsInt();
+      if (layout.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(layout), dims);
+      }
+      return {};
+    }
+
+    /// Returns the LaneData of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getEffectiveLaneDataAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto data = parent.getEffectiveLaneDataAsInt();
+      if (data.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(data), dims);
+      }
+      return {};
+    }
+
+    SliceAttr dropSgLayoutAndData() {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      parent = parent.dropSgLayoutAndData();
+      return SliceAttr::get(getContext(), parent, attr.getDims());
+    }
+
+    SliceAttr dropInstData() {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      parent = parent.dropInstData();
+      return SliceAttr::get(getContext(), parent, attr.getDims());
+    }
+
+    /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
+    /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
+    /// it will coalese two slice operations and return a simplified SliceAttr
+    /// #xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0, 1]>
+    SliceAttr flatten() const;
+
+    /// Delinearizes a linear subgroup ID into its multidimensional indices
+    /// based on the effective subgroup layout.
+    FailureOr<SmallVector<Value>>
+    delinearizeId(OpBuilder &builder, Location loc, Value linearId);
+
+    /// Generates instructions to compute multidimensional coordinates for blocks
+    /// assigned to a subgroup identified by linearId. The shape parameter
+    /// represents the workgroup-level problem size. Each subgroup may access
+    /// multiple blocks according to round-robin distribution rules.
+
+    FailureOr<SmallVector<SmallVector<Value>>>
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
+    /// Check if this is slice of some other layout.
+    bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
+
+  }];
+
+  let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";
+  let genVerifyDecl = 1;
+}
+
+def XeGPU_RangeAttr : XeGPUAttr<"Range", "range"> {
+  let summary = [{Specifies a half-open range}];
+  let description = [{
+    `RangeAttr` is an attribute that defines a half-open range [start, end).
+    The range is inclusive of the start value and exclusive of the end value.
+    One usage of this attribute can be to specify the subgroup id range.
+    The subgroup id range can be specified using this attribute,
+    and it can be attached to a scf.if op like
+    ```mlir
+    scf.if %cond {
+      // some operations
+    } {sg_id_range = #xegpu.range<[2, 4]>}
+    ```
+    In this case, the scf.if op will only be executed for subgroup IDs 2 and 3.
+  }];
+
+  let parameters = (ins
+    "IntegerAttr": $start,
+    "IntegerAttr": $end
+  );
+
+  let builders = [
+    AttrBuilder<(ins "int":$start, "int":$end)>
+  ];
+
+  let assemblyFormat = "`<` `[`$start `,` $end `]` `>`";
+  let genVerifyDecl = 1;
+}
+
+def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
+  let summary = [{Specifies memory layouts with named attributes.}];
+
+  let description = [{
+    This attribute stores a collection of named attributes that describe
+    memory layout properties such as stride, block, etc.
+  }];
+
+  let parameters = (ins "DictionaryAttr": $attrs);
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    /// Get a specific attribute by name
+    Attribute getAttr(StringRef name) const {
+      return getAttrs().get(name);
+    }
+
+    /// Check if a specific attribute exists
+    bool hasAttr(StringRef name) const {
+      return getAttrs().contains(name);
+    }
+
+    ArrayAttr getStrideAttr() {
+      return getAttrs().getAs<ArrayAttr>("stride");
+    }
+
+    ArrayAttr getBlockAttr() {
+      return getAttrs().getAs<ArrayAttr>("block");
+    }
+
+  }];
+
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD

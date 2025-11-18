@@ -79,13 +79,13 @@ body:             |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C4]](s32)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C4]](s32)
     ; CHECK-NEXT: G_STORE [[C]](s32), [[PTR_ADD]](p0) :: (store (s32) into unknown-address + 12)
     ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C5]](s32)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C5]](s32)
     ; CHECK-NEXT: G_STORE [[C1]](s32), [[PTR_ADD1]](p0) :: (store (s32) into unknown-address + 8, align 8)
     ; CHECK-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C6]](s32)
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C6]](s32)
     ; CHECK-NEXT: G_STORE [[C2]](s32), [[PTR_ADD2]](p0) :: (store (s32) into unknown-address + 4)
     ; CHECK-NEXT: G_STORE [[C3]](s32), [[LOAD]](p0) :: (store (s32), align 16)
     ; CHECK-NEXT: RTS

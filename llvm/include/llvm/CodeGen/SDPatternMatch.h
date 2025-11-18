@@ -559,6 +559,11 @@ m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
+inline auto m_SelectLike(const T0_P &Cond, const T1_P &T, const T2_P &F) {
+  return m_AnyOf(m_Select(Cond, T, F), m_VSelect(Cond, T, F));
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
 inline Result_match<0, TernaryOpc_match<T0_P, T1_P, T2_P>>
 m_Load(const T0_P &Ch, const T1_P &Ptr, const T2_P &Offset) {
   return m_Result<0>(
@@ -578,6 +583,30 @@ m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
   return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
 }
 
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(Opc, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P, true>
+m_c_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, true>(Opc, Op0, Op1, Op2);
+}
+
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+inline auto m_SelectCC(const LTy &L, const RTy &R, const TTy &T, const FTy &F,
+                       const CCTy &CC) {
+  return m_Node(ISD::SELECT_CC, L, R, T, F, CC);
+}
+
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+inline auto m_SelectCCLike(const LTy &L, const RTy &R, const TTy &T,
+                           const FTy &F, const CCTy &CC) {
+  return m_AnyOf(m_Select(m_SetCC(L, R, CC), T, F), m_SelectCC(L, R, T, F, CC));
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -585,9 +614,9 @@ struct BinaryOpc_match {
   unsigned Opcode;
   LHS_P LHS;
   RHS_P RHS;
-  std::optional<SDNodeFlags> Flags;
+  SDNodeFlags Flags;
   BinaryOpc_match(unsigned Opc, const LHS_P &L, const RHS_P &R,
-                  std::optional<SDNodeFlags> Flgs = std::nullopt)
+                  SDNodeFlags Flgs = SDNodeFlags())
       : Opcode(Opc), LHS(L), RHS(R), Flags(Flgs) {}
 
   template <typename MatchContext>
@@ -601,10 +630,7 @@ struct BinaryOpc_match {
              RHS.match(Ctx, N->getOperand(EO.FirstIndex)))))
         return false;
 
-      if (!Flags.has_value())
-        return true;
-
-      return (*Flags & N->getFlags()) == *Flags;
+      return (Flags & N->getFlags()) == Flags;
     }
 
     return false;
@@ -877,6 +903,11 @@ template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Srl(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R);
 }
+template <typename LHS, typename RHS>
+inline auto m_ExactSr(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS>(ISD::SRA, L, R, SDNodeFlags::Exact),
+                 BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R, SDNodeFlags::Exact));
+}
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Rotl(const LHS &L, const RHS &R) {
@@ -1064,6 +1095,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::CTTZ, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FNeg(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FNEG, Op);
+}
+
 // === Constants ===
 struct ConstantInt_match {
   APInt *BindVal;
@@ -1086,9 +1121,9 @@ struct ConstantInt_match {
                                       BindVal ? *BindVal : Discard);
   }
 };
-/// Match any interger constants or splat of an integer constant.
+/// Match any integer constants or splat of an integer constant.
 inline ConstantInt_match m_ConstInt() { return ConstantInt_match(nullptr); }
-/// Match any interger constants or splat of an integer constant; return the
+/// Match any integer constants or splat of an integer constant; return the
 /// specific constant or constant splat value.
 inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
 
@@ -1281,7 +1316,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   }
 
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(const ArrayRef<SmallBitVector> Matches,
+  reassociatableMatchHelper(ArrayRef<SmallBitVector> Matches,
                             SmallBitVector &Used, size_t Curr = 0) {
     if (Curr == Matches.size())
       return true;

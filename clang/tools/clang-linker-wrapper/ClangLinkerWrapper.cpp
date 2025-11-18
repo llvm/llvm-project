@@ -396,8 +396,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   CmdArgs.push_back("--create");
   CmdArgs.push_back(*TempFileOrErr);
   for (const auto &[File, Arch] : InputFiles)
-    CmdArgs.push_back(
-        Args.MakeArgString("--image=profile=" + Arch + ",file=" + File));
+    CmdArgs.push_back(Args.MakeArgString(
+        "--image3=kind=elf,sm=" + Arch.drop_front(3) + ",file=" + File));
 
   if (Error Err = executeCommands(*FatBinaryPath, CmdArgs))
     return std::move(Err);
@@ -439,8 +439,11 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
         Args.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux-gnu"};
-  for (const auto &[File, Arch] : InputFiles)
-    Targets.push_back(Saver.save("hip-amdgcn-amd-amdhsa--" + Arch));
+  for (const auto &[File, Arch] : InputFiles) {
+    Targets.push_back(Saver.save(Arch == "amdgcnspirv"
+                                     ? "hip-spirv64-amd-amdhsa--" + Arch
+                                     : "hip-amdgcn-amd-amdhsa--" + Arch));
+  }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
 #ifdef _WIN32
@@ -474,10 +477,10 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   // Create a new file to write the linked device image to. Assume that the
   // input filename already has the device and architecture.
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "." +
-                           Triple.getArchName() + "." + Arch,
-                       "img");
+  std::string OutputFileBase =
+      "." + Triple.getArchName().str() + "." + Arch.str();
+  auto TempFileOrErr = createOutputFile(
+      sys::path::filename(ExecutableName) + OutputFileBase, "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -486,6 +489,12 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
       "--no-default-config",
       "-o",
       *TempFileOrErr,
+      // Without -dumpdir, Clang will place auxiliary output files in the
+      // temporary directory of TempFileOrErr, where they will not easily be
+      // found by the user and might eventually be automatically removed.  Tell
+      // Clang to instead place them alongside the final executable.
+      "-dumpdir",
+      Args.MakeArgString(ExecutableName + OutputFileBase + ".img."),
       Args.MakeArgString("--target=" + Triple.getTriple()),
   };
 
@@ -602,10 +611,10 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
 Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
                            const ArgList &Args) {
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  if (Kind != OFK_OpenMP || !Triple.isSPIRV() ||
-      Triple.getVendor() != llvm::Triple::Intel)
-    return Error::success();
-  return offloading::intel::containerizeOpenMPSPIRVImage(Img);
+  if (Kind == OFK_OpenMP && Triple.isSPIRV() &&
+      Triple.getVendor() == llvm::Triple::Intel)
+    return offloading::intel::containerizeOpenMPSPIRVImage(Img);
+  return Error::success();
 }
 
 Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
@@ -711,6 +720,14 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M)))
       return std::move(Err);
     break;
+  case OFK_SYCL: {
+    // TODO: fill these options once the Driver supports them.
+    offloading::SYCLJITOptions Options;
+    if (Error Err =
+            offloading::wrapSYCLBinaries(M, BuffersToWrap.front(), Options))
+      return std::move(Err);
+    break;
+  }
   default:
     return createStringError(getOffloadKindName(Kind) +
                              " wrapping is not supported");
@@ -744,6 +761,32 @@ bundleOpenMP(ArrayRef<OffloadingImage> Images) {
   for (const OffloadingImage &Image : Images)
     Buffers.emplace_back(
         MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image)));
+
+  return std::move(Buffers);
+}
+
+Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
+bundleSYCL(ArrayRef<OffloadingImage> Images) {
+  SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
+  if (DryRun) {
+    // In dry-run mode there is an empty input which is insufficient for the
+    // testing. Therefore, we return here a stub image.
+    OffloadingImage Image;
+    Image.TheImageKind = IMG_None;
+    Image.TheOffloadKind = OffloadKind::OFK_SYCL;
+    Image.StringData["symbols"] = "stub";
+    Image.Image = MemoryBuffer::getMemBufferCopy("");
+    SmallString<0> SerializedImage = OffloadBinary::write(Image);
+    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(SerializedImage));
+    return std::move(Buffers);
+  }
+
+  for (const OffloadingImage &Image : Images) {
+    // clang-sycl-linker packs outputs into one binary blob. Therefore, it is
+    // passed to Offload Wrapper as is.
+    StringRef S(Image.Image->getBufferStart(), Image.Image->getBufferSize());
+    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(S));
+  }
 
   return std::move(Buffers);
 }
@@ -800,8 +843,9 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
-  case OFK_SYCL:
     return bundleOpenMP(Images);
+  case OFK_SYCL:
+    return bundleSYCL(Images);
   case OFK_Cuda:
     return bundleCuda(Images, Args);
   case OFK_HIP:
@@ -904,10 +948,12 @@ Error handleOverrideImages(
 }
 
 /// Transforms all the extracted offloading input files into an image that can
-/// be registered by the runtime.
-Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
-    SmallVectorImpl<SmallVector<OffloadFile>> &LinkerInputFiles,
-    const InputArgList &Args, char **Argv, int Argc) {
+/// be registered by the runtime. If NeedsWrapping is false, writes bundled
+/// output directly without wrapping or host linking.
+Expected<SmallVector<StringRef>>
+linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
+                       const InputArgList &Args, char **Argv, int Argc,
+                       bool NeedsWrapping) {
   llvm::TimeTraceScope TimeScope("Handle all device input");
 
   std::mutex ImageMtx;
@@ -995,8 +1041,9 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
   if (Err)
     return std::move(Err);
 
-  // Create a binary image of each offloading image and embed it into a new
-  // object file.
+  // Create a binary image of each offloading image and either embed it into a
+  // new object file, or if all inputs were direct offload binaries, emit the
+  // fat binary directly (e.g. .hipfb / .fatbin).
   SmallVector<StringRef> WrappedOutput;
   for (auto &[Kind, Input] : Images) {
     // We sort the entries before bundling so they appear in a deterministic
@@ -1009,6 +1056,26 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
     if (!BundledImagesOrErr)
       return BundledImagesOrErr.takeError();
+
+    if (!NeedsWrapping) {
+      if (BundledImagesOrErr->size() != 1)
+        return createStringError(
+            "Expected a single bundled image for direct fat binary output");
+
+      Expected<std::unique_ptr<FileOutputBuffer>> FOBOrErr =
+          FileOutputBuffer::create(
+              ExecutableName, BundledImagesOrErr->front()->getBufferSize());
+      if (!FOBOrErr)
+        return FOBOrErr.takeError();
+      std::unique_ptr<FileOutputBuffer> FOB = std::move(*FOBOrErr);
+      llvm::copy(BundledImagesOrErr->front()->getBuffer(),
+                 FOB->getBufferStart());
+      if (Error E = FOB->commit())
+        return std::move(E);
+
+      continue;
+    }
+
     auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, Kind);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
@@ -1061,147 +1128,6 @@ std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
   if (Input.starts_with(":") || Input.ends_with(".lib"))
     return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
   return searchLibraryBaseName(Input, Root, SearchPaths);
-}
-
-/// Common redeclaration of needed symbol flags.
-enum Symbol : uint32_t {
-  Sym_None = 0,
-  Sym_Undefined = 1U << 1,
-  Sym_Weak = 1U << 2,
-};
-
-/// Scan the symbols from a BitcodeFile \p Buffer and record if we need to
-/// extract any symbols from it.
-Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
-                                     bool IsArchive, StringSaver &Saver,
-                                     DenseMap<StringRef, Symbol> &Syms) {
-  Expected<IRSymtabFile> IRSymtabOrErr = readIRSymtab(Buffer);
-  if (!IRSymtabOrErr)
-    return IRSymtabOrErr.takeError();
-
-  bool ShouldExtract = !IsArchive;
-  DenseMap<StringRef, Symbol> TmpSyms;
-  for (unsigned I = 0; I != IRSymtabOrErr->Mods.size(); ++I) {
-    for (const auto &Sym : IRSymtabOrErr->TheReader.module_symbols(I)) {
-      if (Sym.isFormatSpecific() || !Sym.isGlobal())
-        continue;
-
-      auto It = Syms.find(Sym.getName());
-      bool NewSymbol = It == Syms.end();
-      auto OldSym = NewSymbol ? Sym_None : It->second;
-
-      // We will extract if it defines a currenlty undefined non-weak
-      // symbol.
-      bool ResolvesStrongReference =
-          ((OldSym & Sym_Undefined && !(OldSym & Sym_Weak)) &&
-           !Sym.isUndefined());
-      // We will extract if it defines a new global symbol visible to the
-      // host. This is only necessary for code targeting an offloading
-      // language.
-      bool NewGlobalSymbol =
-          ((NewSymbol || (OldSym & Sym_Undefined)) && !Sym.isUndefined() &&
-           !Sym.canBeOmittedFromSymbolTable() && Kind != object::OFK_None &&
-           (Sym.getVisibility() != GlobalValue::HiddenVisibility));
-      ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
-
-      // Update this symbol in the "table" with the new information.
-      if (OldSym & Sym_Undefined && !Sym.isUndefined())
-        TmpSyms[Saver.save(Sym.getName())] =
-            static_cast<Symbol>(OldSym & ~Sym_Undefined);
-      if (Sym.isUndefined() && NewSymbol)
-        TmpSyms[Saver.save(Sym.getName())] =
-            static_cast<Symbol>(OldSym | Sym_Undefined);
-      if (Sym.isWeak())
-        TmpSyms[Saver.save(Sym.getName())] =
-            static_cast<Symbol>(OldSym | Sym_Weak);
-    }
-  }
-
-  // If the file gets extracted we update the table with the new symbols.
-  if (ShouldExtract)
-    Syms.insert_range(TmpSyms);
-
-  return ShouldExtract;
-}
-
-/// Scan the symbols from an ObjectFile \p Obj and record if we need to extract
-/// any symbols from it.
-Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
-                                    bool IsArchive, StringSaver &Saver,
-                                    DenseMap<StringRef, Symbol> &Syms) {
-  bool ShouldExtract = !IsArchive;
-  DenseMap<StringRef, Symbol> TmpSyms;
-  for (SymbolRef Sym : Obj.symbols()) {
-    auto FlagsOrErr = Sym.getFlags();
-    if (!FlagsOrErr)
-      return FlagsOrErr.takeError();
-
-    if (!(*FlagsOrErr & SymbolRef::SF_Global) ||
-        (*FlagsOrErr & SymbolRef::SF_FormatSpecific))
-      continue;
-
-    auto NameOrErr = Sym.getName();
-    if (!NameOrErr)
-      return NameOrErr.takeError();
-
-    bool NewSymbol = Syms.count(*NameOrErr) == 0;
-    auto OldSym = NewSymbol ? Sym_None : Syms[*NameOrErr];
-
-    // We will extract if it defines a currenlty undefined non-weak symbol.
-    bool ResolvesStrongReference = (OldSym & Sym_Undefined) &&
-                                   !(OldSym & Sym_Weak) &&
-                                   !(*FlagsOrErr & SymbolRef::SF_Undefined);
-
-    // We will extract if it defines a new global symbol visible to the
-    // host. This is only necessary for code targeting an offloading
-    // language.
-    bool NewGlobalSymbol =
-        ((NewSymbol || (OldSym & Sym_Undefined)) &&
-         !(*FlagsOrErr & SymbolRef::SF_Undefined) && Kind != object::OFK_None &&
-         !(*FlagsOrErr & SymbolRef::SF_Hidden));
-    ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
-
-    // Update this symbol in the "table" with the new information.
-    if (OldSym & Sym_Undefined && !(*FlagsOrErr & SymbolRef::SF_Undefined))
-      TmpSyms[Saver.save(*NameOrErr)] =
-          static_cast<Symbol>(OldSym & ~Sym_Undefined);
-    if (*FlagsOrErr & SymbolRef::SF_Undefined && NewSymbol)
-      TmpSyms[Saver.save(*NameOrErr)] =
-          static_cast<Symbol>(OldSym | Sym_Undefined);
-    if (*FlagsOrErr & SymbolRef::SF_Weak)
-      TmpSyms[Saver.save(*NameOrErr)] = static_cast<Symbol>(OldSym | Sym_Weak);
-  }
-
-  // If the file gets extracted we update the table with the new symbols.
-  if (ShouldExtract)
-    Syms.insert_range(TmpSyms);
-
-  return ShouldExtract;
-}
-
-/// Attempt to 'resolve' symbols found in input files. We use this to
-/// determine if an archive member needs to be extracted. An archive member
-/// will be extracted if any of the following is true.
-///   1) It defines an undefined symbol in a regular object filie.
-///   2) It defines a global symbol without hidden visibility that has not
-///      yet been defined.
-Expected<bool> getSymbols(StringRef Image, OffloadKind Kind, bool IsArchive,
-                          StringSaver &Saver,
-                          DenseMap<StringRef, Symbol> &Syms) {
-  MemoryBufferRef Buffer = MemoryBufferRef(Image, "");
-  switch (identify_magic(Image)) {
-  case file_magic::bitcode:
-    return getSymbolsFromBitcode(Buffer, Kind, IsArchive, Saver, Syms);
-  case file_magic::elf_relocatable: {
-    Expected<std::unique_ptr<ObjectFile>> ObjFile =
-        ObjectFile::createObjectFile(Buffer);
-    if (!ObjFile)
-      return ObjFile.takeError();
-    return getSymbolsFromObject(**ObjFile, Kind, IsArchive, Saver, Syms);
-  }
-  default:
-    return false;
-  }
 }
 
 /// Search the input files and libraries for embedded device offloading code
@@ -1273,7 +1199,6 @@ getDeviceInput(const ArgList &Args) {
 
   // Link all standard input files and update the list of symbols.
   MapVector<OffloadFile::TargetID, SmallVector<OffloadFile, 0>> InputFiles;
-  DenseMap<OffloadFile::TargetID, DenseMap<StringRef, Symbol>> Syms;
   for (OffloadFile &Binary : ObjectFilesToExtract) {
     if (!Binary.getBinary())
       continue;
@@ -1284,12 +1209,6 @@ getDeviceInput(const ArgList &Args) {
         CompatibleTargets.emplace_back(ID);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
-      Expected<bool> ExtractOrErr = getSymbols(
-          Binary.getBinary()->getImage(), Binary.getBinary()->getOffloadKind(),
-          /*IsArchive=*/false, Saver, Syms[ID]);
-      if (!ExtractOrErr)
-        return ExtractOrErr.takeError();
-
       // If another target needs this binary it must be copied instead.
       if (Index == CompatibleTargets.size() - 1)
         InputFiles[ID].emplace_back(std::move(Binary));
@@ -1298,55 +1217,33 @@ getDeviceInput(const ArgList &Args) {
     }
   }
 
-  // Archive members only extract if they define needed symbols. We do this
-  // after every regular input file so that libraries may be included out of
-  // order. This follows 'ld.lld' semantics which are more lenient.
-  bool Extracted = true;
   llvm::DenseSet<StringRef> ShouldExtract;
   for (auto &Arg : Args.getAllArgValues(OPT_should_extract))
     ShouldExtract.insert(Arg);
-  while (Extracted) {
-    Extracted = false;
-    for (OffloadFile &Binary : ArchiveFilesToExtract) {
-      // If the binary was previously extracted it will be set to null.
-      if (!Binary.getBinary())
+
+  // We only extract archive members from the fat binary if we find a used or
+  // requested target. Unlike normal static archive handling, we just extract
+  // every object file contained in the archive.
+  for (OffloadFile &Binary : ArchiveFilesToExtract) {
+    if (!Binary.getBinary())
+      continue;
+
+    SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
+    for (const auto &[ID, Input] : InputFiles)
+      if (object::areTargetsCompatible(Binary, ID))
+        CompatibleTargets.emplace_back(ID);
+
+    for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
+      // Only extract an if we have an an object matching this target or it
+      // was specifically requested.
+      if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.second))
         continue;
 
-      SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
-      for (const auto &[ID, Input] : InputFiles)
-        if (object::areTargetsCompatible(Binary, ID))
-          CompatibleTargets.emplace_back(ID);
-
-      for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
-        // Only extract an if we have an an object matching this target or it
-        // was specifically requested.
-        if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.second))
-          continue;
-
-        Expected<bool> ExtractOrErr =
-            getSymbols(Binary.getBinary()->getImage(),
-                       Binary.getBinary()->getOffloadKind(),
-                       /*IsArchive=*/true, Saver, Syms[ID]);
-        if (!ExtractOrErr)
-          return ExtractOrErr.takeError();
-
-        Extracted = *ExtractOrErr;
-
-        // Skip including the file if it is an archive that does not resolve
-        // any symbols.
-        if (!Extracted && !ShouldExtract.contains(ID.second))
-          continue;
-
-        // If another target needs this binary it must be copied instead.
-        if (Index == CompatibleTargets.size() - 1)
-          InputFiles[ID].emplace_back(std::move(Binary));
-        else
-          InputFiles[ID].emplace_back(Binary.copy());
-      }
-
-      // If we extracted any files we need to check all the symbols again.
-      if (Extracted)
-        break;
+      // If another target needs this binary it must be copied instead.
+      if (Index == CompatibleTargets.size() - 1)
+        InputFiles[ID].emplace_back(std::move(Binary));
+      else
+        InputFiles[ID].emplace_back(Binary.copy());
     }
   }
 
@@ -1424,12 +1321,18 @@ int main(int Argc, char **Argv) {
 
   parallel::strategy = hardware_concurrency(1);
   if (auto *Arg = Args.getLastArg(OPT_wrapper_jobs)) {
-    unsigned Threads = 0;
-    if (!llvm::to_integer(Arg->getValue(), Threads) || Threads == 0)
-      reportError(createStringError("%s: expected a positive integer, got '%s'",
-                                    Arg->getSpelling().data(),
-                                    Arg->getValue()));
-    parallel::strategy = hardware_concurrency(Threads);
+    StringRef Val = Arg->getValue();
+    if (Val.equals_insensitive("jobserver"))
+      parallel::strategy = jobserver_concurrency();
+    else {
+      unsigned Threads = 0;
+      if (!llvm::to_integer(Val, Threads) || Threads == 0)
+        reportError(createStringError(
+            "%s: expected a positive integer or 'jobserver', got '%s'",
+            Arg->getSpelling().data(), Val.data()));
+      else
+        parallel::strategy = hardware_concurrency(Threads);
+    }
   }
 
   if (Args.hasArg(OPT_wrapper_time_trace_eq)) {
@@ -1447,15 +1350,22 @@ int main(int Argc, char **Argv) {
     if (!DeviceInputFiles)
       reportError(DeviceInputFiles.takeError());
 
-    // Link and wrap the device images extracted from the linker input.
-    auto FilesOrErr =
-        linkAndWrapDeviceFiles(*DeviceInputFiles, Args, Argv, Argc);
+    // Check if we should emit fat binary directly without wrapping or host
+    // linking.
+    bool EmitFatbinOnly = Args.hasArg(OPT_emit_fatbin_only);
+
+    // Link and process the device images. The function may emit a direct fat
+    // binary if --emit-fatbin-only is specified.
+    auto FilesOrErr = linkAndWrapDeviceFiles(*DeviceInputFiles, Args, Argv,
+                                             Argc, !EmitFatbinOnly);
     if (!FilesOrErr)
       reportError(FilesOrErr.takeError());
 
     // Run the host linking job with the rendered arguments.
-    if (Error Err = runLinker(*FilesOrErr, Args))
-      reportError(std::move(Err));
+    if (!EmitFatbinOnly) {
+      if (Error Err = runLinker(*FilesOrErr, Args))
+        reportError(std::move(Err));
+    }
   }
 
   if (const opt::Arg *Arg = Args.getLastArg(OPT_wrapper_time_trace_eq)) {

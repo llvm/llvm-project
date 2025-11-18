@@ -96,12 +96,12 @@ struct Test {
 void test() {
 
     [i = 0](this Test) { }();
-    // expected-error@-1 {{invalid explicit object parameter type 'ThisInLambdaWithCaptures::Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
+    // expected-error@-1 {{invalid explicit object parameter type 'Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
 
     struct Derived;
     auto ok = [i = 0](this const Derived&) {};
     auto ko = [i = 0](this const Test&) {};
-    // expected-error@-1 {{invalid explicit object parameter type 'ThisInLambdaWithCaptures::Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
+    // expected-error@-1 {{invalid explicit object parameter type 'Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
 
     struct Derived : decltype(ok){};
     Derived dok{ok};
@@ -1257,13 +1257,13 @@ void f() {
     (&A::e)(a, a);
     // expected-error@-1 {{no matching function for call to 'e'}} \
     // expected-note@#tpl-address-e{{candidate template ignored: constraints not satisfied [with T = A, U = A]}} \
-    // expected-note@#tpl-address-e{{because '__is_same(tpl_address::A, int)' evaluated to false}}
+    // expected-note@#tpl-address-e{{because '__is_same(A, int)' evaluated to false}}
 
     (&A::e<A>)(a, 0);
     (&A::e<A>)(a, a);
     // expected-error@-1 {{no matching function for call to 'e'}} \
     // expected-note@#tpl-address-e{{candidate template ignored: constraints not satisfied [with T = A, U = A]}} \
-    // expected-note@#tpl-address-e{{because '__is_same(tpl_address::A, int)' evaluated to false}}
+    // expected-note@#tpl-address-e{{because '__is_same(A, int)' evaluated to false}}
 
     (&A::e<A, int>)(a, 0);
 
@@ -1273,12 +1273,12 @@ void f() {
     (&A::f<A>)(a);
     // expected-error@-1 {{no matching function for call to 'f'}} \
     // expected-note@#tpl-address-f{{candidate template ignored: constraints not satisfied [with T = A]}} \
-    // expected-note@#tpl-address-f{{because '__is_same(tpl_address::A, int)' evaluated to false}}
+    // expected-note@#tpl-address-f{{because '__is_same(A, int)' evaluated to false}}
 
     (&A::f)(a);
     // expected-error@-1 {{no matching function for call to 'f'}} \
     // expected-note@#tpl-address-f{{candidate template ignored: constraints not satisfied [with T = A]}} \
-    // expected-note@#tpl-address-f{{because '__is_same(tpl_address::A, int)' evaluated to false}}
+    // expected-note@#tpl-address-f{{because '__is_same(A, int)' evaluated to false}}
 
     (&A::g)(a);
     (&A::g)(a, 0);
@@ -1354,6 +1354,38 @@ void Bar(this int) { // expected-note {{candidate function}}
     // expected-error@-1 {{an explicit object parameter cannot appear in a non-member function}}
     Bar(0);
     Bar(); // expected-error {{no matching function for call to 'Bar'}}
+}
+
+}
+
+namespace GH147046_regression {
+
+template <typename z> struct ai {
+    ai(z::ah);
+};
+
+template <typename z> struct ak {
+    template <typename am> void an(am, z);
+    template <typename am> static void an(am, ai<z>);
+};
+template <typename> struct ao {};
+
+template <typename ap>
+auto ar(ao<ap> at) -> decltype(ak<ap>::an(at, 0));
+// expected-note@-1 {{candidate template ignored: substitution failure [with ap = GH147046_regression::ay]: no matching function for call to 'an'}}
+
+class aw;
+struct ax {
+    typedef int ah;
+};
+struct ay {
+    typedef aw ah;
+};
+
+ao<ay> az ;
+ai<ax> bd(0);
+void f() {
+    ar(az); // expected-error {{no matching function for call to 'ar'}}
 }
 
 }

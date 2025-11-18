@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
 #include <optional>
@@ -166,6 +167,42 @@ static bool canUseShiftPair(Instruction *Inst, const APInt &Imm) {
   return false;
 }
 
+// If this is i64 AND is part of (X & -(1 << C1) & 0xffffffff) == C2 << C1),
+// DAGCombiner can convert this to (sraiw X, C1) == sext(C2) for RV64. On RV32,
+// the type will be split so only the lower 32 bits need to be compared using
+// (srai/srli X, C) == C2.
+static bool canUseShiftCmp(Instruction *Inst, const APInt &Imm) {
+  if (!Inst->hasOneUse())
+    return false;
+
+  // Look for equality comparison.
+  auto *Cmp = dyn_cast<ICmpInst>(*Inst->user_begin());
+  if (!Cmp || !Cmp->isEquality())
+    return false;
+
+  // Right hand side of comparison should be a constant.
+  auto *C = dyn_cast<ConstantInt>(Cmp->getOperand(1));
+  if (!C)
+    return false;
+
+  uint64_t Mask = Imm.getZExtValue();
+
+  // Mask should be of the form -(1 << C) in the lower 32 bits.
+  if (!isUInt<32>(Mask) || !isPowerOf2_32(-uint32_t(Mask)))
+    return false;
+
+  // Comparison constant should be a subset of Mask.
+  uint64_t CmpC = C->getZExtValue();
+  if ((CmpC & Mask) != CmpC)
+    return false;
+
+  // We'll need to sign extend the comparison constant and shift it right. Make
+  // sure the new constant can use addi/xori+seqz/snez.
+  unsigned ShiftBits = llvm::countr_zero(Mask);
+  int64_t NewCmpC = SignExtend64<32>(CmpC) >> ShiftBits;
+  return NewCmpC >= -2048 && NewCmpC <= 2048;
+}
+
 InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                                 const APInt &Imm, Type *Ty,
                                                 TTI::TargetCostKind CostKind,
@@ -222,6 +259,9 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
       return TTI::TCC_Free;
     if (Inst && Idx == 1 && Imm.getBitWidth() <= ST->getXLen() &&
         canUseShiftPair(Inst, Imm))
+      return TTI::TCC_Free;
+    if (Inst && Idx == 1 && Imm.getBitWidth() == 64 &&
+        canUseShiftCmp(Inst, Imm))
       return TTI::TCC_Free;
     Takes12BitImm = true;
     break;
@@ -289,9 +329,7 @@ bool RISCVTTIImpl::hasActiveVectorLength() const {
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  return ST->hasStdExtZbb() || (ST->hasVendorXCVbitmanip() && !ST->is64Bit())
-             ? TTI::PSK_FastHardware
-             : TTI::PSK_Software;
+  return ST->hasCPOPLike() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }
 
 InstructionCost RISCVTTIImpl::getPartialReductionCost(
@@ -931,6 +969,13 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
 
+  // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
+  // For now, skip all fixed vector cost analysis when P extension is available
+  // to avoid crashes in getMinRVVVectorSizeInBits()
+  if (ST->enablePExtCodeGen() && isa<FixedVectorType>(Ty)) {
+    return 1; // Treat as single instruction cost for now
+  }
+
   // A build_vector (which is m1 sized or smaller) can be done in no
   // worse than one vslide1down.vx per element in the type.  We could
   // in theory do an explode_vector in the inverse manner, but our
@@ -979,11 +1024,11 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
 
-  // The interleaved memory access pass will lower interleaved memory ops (i.e
-  // a load and store followed by a specific shuffle) to vlseg/vsseg
-  // intrinsics.
-  if (!UseMaskForCond && !UseMaskForGaps &&
-      Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  // The interleaved memory access pass will lower (de)interleave ops combined
+  // with an adjacent appropriate memory to vlseg/vsseg intrinsics. vlseg/vsseg
+  // only support masking per-iteration (i.e. condition), not per-segment (i.e.
+  // gap).
+  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     auto *VTy = cast<VectorType>(VecTy);
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
@@ -1191,9 +1236,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::roundeven, MVT::f64, 9},
     {Intrinsic::rint, MVT::f32, 7},
     {Intrinsic::rint, MVT::f64, 7},
-    {Intrinsic::lrint, MVT::i32, 1},
-    {Intrinsic::lrint, MVT::i64, 1},
-    {Intrinsic::llrint, MVT::i64, 1},
     {Intrinsic::nearbyint, MVT::f32, 9},
     {Intrinsic::nearbyint, MVT::f64, 9},
     {Intrinsic::bswap, MVT::i16, 3},
@@ -1251,11 +1293,48 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   switch (ICA.getID()) {
   case Intrinsic::lrint:
   case Intrinsic::llrint:
-    // We can't currently lower half or bfloat vector lrint/llrint.
-    if (auto *VecTy = dyn_cast<VectorType>(ICA.getArgTypes()[0]);
-        VecTy && VecTy->getElementType()->is16bitFPTy())
-      return InstructionCost::getInvalid();
-    [[fallthrough]];
+  case Intrinsic::lround:
+  case Intrinsic::llround: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    Type *SrcTy = ICA.getArgTypes().front();
+    auto SrcLT = getTypeLegalizationCost(SrcTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      SmallVector<unsigned, 2> Ops;
+      unsigned SrcEltSz = DL.getTypeSizeInBits(SrcTy->getScalarType());
+      unsigned DstEltSz = DL.getTypeSizeInBits(RetTy->getScalarType());
+      if (LT.second.getVectorElementType() == MVT::bf16) {
+        if (!ST->hasVInstructionsBF16Minimal())
+          return InstructionCost::getInvalid();
+        if (DstEltSz == 32)
+          Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFCVT_X_F_V};
+        else
+          Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVT_X_F_V};
+      } else if (LT.second.getVectorElementType() == MVT::f16 &&
+                 !ST->hasVInstructionsF16()) {
+        if (!ST->hasVInstructionsF16Minimal())
+          return InstructionCost::getInvalid();
+        if (DstEltSz == 32)
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFCVT_X_F_V};
+        else
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_X_F_V};
+
+      } else if (SrcEltSz > DstEltSz) {
+        Ops = {RISCV::VFNCVT_X_F_W};
+      } else if (SrcEltSz < DstEltSz) {
+        Ops = {RISCV::VFWCVT_X_F_V};
+      } else {
+        Ops = {RISCV::VFCVT_X_F_V};
+      }
+
+      // We need to use the source LMUL in the case of a narrowing op, and the
+      // destination LMUL otherwise.
+      if (SrcEltSz > DstEltSz)
+        return SrcLT.first *
+               getRISCVInstructionCost(Ops, SrcLT.second, CostKind);
+      return LT.first * getRISCVInstructionCost(Ops, LT.second, CostKind);
+    }
+    break;
+  }
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::trunc:
@@ -1397,7 +1476,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::ctlz:
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector()) {
+    if (ST->hasStdExtZvbb() && LT.second.isVector()) {
       unsigned Op;
       switch (ICA.getID()) {
       case Intrinsic::cttz:
@@ -1489,6 +1568,34 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
   }
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat: {
+    InstructionCost Cost = 0;
+    bool IsSigned = ICA.getID() == Intrinsic::fptosi_sat;
+    Type *SrcTy = ICA.getArgTypes()[0];
+
+    auto SrcLT = getTypeLegalizationCost(SrcTy);
+    auto DstLT = getTypeLegalizationCost(RetTy);
+    if (!SrcTy->isVectorTy())
+      break;
+
+    if (!SrcLT.first.isValid() || !DstLT.first.isValid())
+      return InstructionCost::getInvalid();
+
+    Cost +=
+        getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
+                         RetTy, SrcTy, TTI::CastContextHint::None, CostKind);
+
+    // Handle NaN.
+    // vmfne v0, v8, v8         # If v8[i] is NaN set v0[i] to 1.
+    // vmerge.vim v8, v8, 0, v0 # Convert NaN to 0.
+    Type *CondTy = RetTy->getWithNewBitWidth(1);
+    Cost += getCmpSelInstrCost(BinaryOperator::FCmp, SrcTy, CondTy,
+                               CmpInst::FCMP_UNO, CostKind);
+    Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                               CmpInst::FCMP_UNO, CostKind);
+    return Cost;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1504,6 +1611,18 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
+InstructionCost
+RISCVTTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                        const SCEV *Ptr,
+                                        TTI::TargetCostKind CostKind) const {
+  // Address computations for vector indexed load/store likely require an offset
+  // and/or scaling.
+  if (ST->hasVInstructions() && PtrTy->isVectorTy())
+    return getArithmeticInstrCost(Instruction::Add, PtrTy, CostKind);
+
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
+}
+
 InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                Type *Src,
                                                TTI::CastContextHint CCH,
@@ -1512,6 +1631,14 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   bool IsVectorType = isa<VectorType>(Dst) && isa<VectorType>(Src);
   if (!IsVectorType)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
+  // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
+  // For now, skip all fixed vector cost analysis when P extension is available
+  // to avoid crashes in getMinRVVVectorSizeInBits()
+  if (ST->enablePExtCodeGen() &&
+      (isa<FixedVectorType>(Dst) || isa<FixedVectorType>(Src))) {
+    return 1; // Treat as single instruction cost for now
+  }
 
   // FIXME: Need to compute legalizing cost for illegal types.  The current
   // code handles only legal types and those which can be trivially
@@ -1567,10 +1694,12 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // scalarized if the legalized Src and Dst are not equal sized.
   const DataLayout &DL = this->getDataLayout();
   if (!SrcLT.second.isVector() || !DstLT.second.isVector() ||
+      !SrcLT.first.isValid() || !DstLT.first.isValid() ||
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Src),
                            SrcLT.second.getSizeInBits()) ||
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Dst),
-                           DstLT.second.getSizeInBits()))
+                           DstLT.second.getSizeInBits()) ||
+      SrcLT.first > 1 || DstLT.first > 1)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
   // The split cost is handled by the base getCastInstrCost
@@ -2027,7 +2156,8 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // Assume memory ops cost scale with the number of vector registers
   // possible accessed by the instruction.  Note that BasicTTI already
   // handles the LT.first term for us.
-  if (LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
+  if (ST->hasVInstructions() && LT.second.isVector() &&
+      CostKind != TTI::TCK_CodeSize)
     BaseCost *= TLI->getLMULCost(LT.second);
   return Cost + BaseCost;
 }
@@ -2208,6 +2338,13 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                  const Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
+  // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
+  // For now, skip all fixed vector cost analysis when P extension is available
+  // to avoid crashes in getMinRVVVectorSizeInBits()
+  if (ST->enablePExtCodeGen() && isa<FixedVectorType>(Val)) {
+    return 1; // Treat as single instruction cost for now
+  }
+
   if (Opcode != Instruction::ExtractElement &&
       Opcode != Instruction::InsertElement)
     return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
@@ -2350,6 +2487,24 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
   }
   return BaseCost + SlideCost;
+}
+
+InstructionCost
+RISCVTTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                               TTI::TargetCostKind CostKind,
+                                               unsigned Index) const {
+  if (isa<FixedVectorType>(Val))
+    return BaseT::getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind,
+                                                   Index);
+
+  // TODO: This code replicates what LoopVectorize.cpp used to do when asking
+  // for the cost of extracting the last lane of a scalable vector. It probably
+  // needs a more accurate cost.
+  ElementCount EC = cast<VectorType>(Val)->getElementCount();
+  assert(Index < EC.getKnownMinValue() && "Unexpected reverse index");
+  return getVectorInstrCost(Opcode, Val, CostKind,
+                            EC.getKnownMinValue() - 1 - Index, nullptr,
+                            nullptr);
 }
 
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
@@ -2565,18 +2720,17 @@ void RISCVTTIImpl::getUnrollingPreferences(
   if (L->getNumBlocks() > 4)
     return;
 
-  // Don't unroll vectorized loops, including the remainder loop
-  if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
-    return;
-
   // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining.
+  // inlining. Don't unroll auto-vectorized loops either, though do allow
+  // unrolling of the scalar remainder.
+  bool IsVectorized = getBooleanLoopAttribute(L, "llvm.loop.isvectorized");
   InstructionCost Cost = 0;
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      // Initial setting - Don't unroll loops containing vectorized
-      // instructions.
-      if (I.getType()->isVectorTy())
+      // Both auto-vectorized loops and the scalar remainder have the
+      // isvectorized attribute, so differentiate between them by the presence
+      // of vector instructions.
+      if (IsVectorized && I.getType()->isVectorTy())
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
@@ -2609,6 +2763,305 @@ void RISCVTTIImpl::getUnrollingPreferences(
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
+}
+
+bool RISCVTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
+                                      MemIntrinsicInfo &Info) const {
+  const DataLayout &DL = getDataLayout();
+  Intrinsic::ID IID = Inst->getIntrinsicID();
+  LLVMContext &C = Inst->getContext();
+  bool HasMask = false;
+
+  auto getSegNum = [](const IntrinsicInst *II, unsigned PtrOperandNo,
+                      bool IsWrite) -> int64_t {
+    if (auto *TarExtTy =
+            dyn_cast<TargetExtType>(II->getArgOperand(0)->getType()))
+      return TarExtTy->getIntParameter(0);
+
+    return 1;
+  };
+
+  switch (IID) {
+  case Intrinsic::riscv_vle_mask:
+  case Intrinsic::riscv_vse_mask:
+  case Intrinsic::riscv_vlseg2_mask:
+  case Intrinsic::riscv_vlseg3_mask:
+  case Intrinsic::riscv_vlseg4_mask:
+  case Intrinsic::riscv_vlseg5_mask:
+  case Intrinsic::riscv_vlseg6_mask:
+  case Intrinsic::riscv_vlseg7_mask:
+  case Intrinsic::riscv_vlseg8_mask:
+  case Intrinsic::riscv_vsseg2_mask:
+  case Intrinsic::riscv_vsseg3_mask:
+  case Intrinsic::riscv_vsseg4_mask:
+  case Intrinsic::riscv_vsseg5_mask:
+  case Intrinsic::riscv_vsseg6_mask:
+  case Intrinsic::riscv_vsseg7_mask:
+  case Intrinsic::riscv_vsseg8_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vle:
+  case Intrinsic::riscv_vse:
+  case Intrinsic::riscv_vlseg2:
+  case Intrinsic::riscv_vlseg3:
+  case Intrinsic::riscv_vlseg4:
+  case Intrinsic::riscv_vlseg5:
+  case Intrinsic::riscv_vlseg6:
+  case Intrinsic::riscv_vlseg7:
+  case Intrinsic::riscv_vlseg8:
+  case Intrinsic::riscv_vsseg2:
+  case Intrinsic::riscv_vsseg3:
+  case Intrinsic::riscv_vsseg4:
+  case Intrinsic::riscv_vsseg5:
+  case Intrinsic::riscv_vsseg6:
+  case Intrinsic::riscv_vsseg7:
+  case Intrinsic::riscv_vsseg8: {
+    // Intrinsic interface:
+    // riscv_vle(merge, ptr, vl)
+    // riscv_vle_mask(merge, ptr, mask, vl, policy)
+    // riscv_vse(val, ptr, vl)
+    // riscv_vse_mask(val, ptr, mask, vl, policy)
+    // riscv_vlseg#(merge, ptr, vl, sew)
+    // riscv_vlseg#_mask(merge, ptr, mask, vl, policy, sew)
+    // riscv_vsseg#(val, ptr, vl, sew)
+    // riscv_vsseg#_mask(val, ptr, mask, vl, sew)
+    bool IsWrite = Inst->getType()->isVoidTy();
+    Type *Ty = IsWrite ? Inst->getArgOperand(0)->getType() : Inst->getType();
+    // The results of segment loads are TargetExtType.
+    if (auto *TarExtTy = dyn_cast<TargetExtType>(Ty)) {
+      unsigned SEW =
+          1 << cast<ConstantInt>(Inst->getArgOperand(Inst->arg_size() - 1))
+                   ->getZExtValue();
+      Ty = TarExtTy->getTypeParameter(0U);
+      Ty = ScalableVectorType::get(
+          IntegerType::get(C, SEW),
+          cast<ScalableVectorType>(Ty)->getMinNumElements() * 8 / SEW);
+    }
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 1 - HasMask;
+    MaybeAlign Alignment =
+        Inst->getArgOperand(PtrOperandNo)->getPointerAlignment(DL);
+    Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+    Value *Mask = ConstantInt::getTrue(MaskType);
+    if (HasMask)
+      Mask = Inst->getArgOperand(VLIndex - 1);
+    Value *EVL = Inst->getArgOperand(VLIndex);
+    unsigned SegNum = getSegNum(Inst, PtrOperandNo, IsWrite);
+    // RVV uses contiguous elements as a segment.
+    if (SegNum > 1) {
+      unsigned ElemSize = Ty->getScalarSizeInBits();
+      auto *SegTy = IntegerType::get(C, ElemSize * SegNum);
+      Ty = VectorType::get(SegTy, cast<VectorType>(Ty));
+    }
+    Info.InterestingOperands.emplace_back(Inst, PtrOperandNo, IsWrite, Ty,
+                                          Alignment, Mask, EVL);
+    return true;
+  }
+  case Intrinsic::riscv_vlse_mask:
+  case Intrinsic::riscv_vsse_mask:
+  case Intrinsic::riscv_vlsseg2_mask:
+  case Intrinsic::riscv_vlsseg3_mask:
+  case Intrinsic::riscv_vlsseg4_mask:
+  case Intrinsic::riscv_vlsseg5_mask:
+  case Intrinsic::riscv_vlsseg6_mask:
+  case Intrinsic::riscv_vlsseg7_mask:
+  case Intrinsic::riscv_vlsseg8_mask:
+  case Intrinsic::riscv_vssseg2_mask:
+  case Intrinsic::riscv_vssseg3_mask:
+  case Intrinsic::riscv_vssseg4_mask:
+  case Intrinsic::riscv_vssseg5_mask:
+  case Intrinsic::riscv_vssseg6_mask:
+  case Intrinsic::riscv_vssseg7_mask:
+  case Intrinsic::riscv_vssseg8_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vlse:
+  case Intrinsic::riscv_vsse:
+  case Intrinsic::riscv_vlsseg2:
+  case Intrinsic::riscv_vlsseg3:
+  case Intrinsic::riscv_vlsseg4:
+  case Intrinsic::riscv_vlsseg5:
+  case Intrinsic::riscv_vlsseg6:
+  case Intrinsic::riscv_vlsseg7:
+  case Intrinsic::riscv_vlsseg8:
+  case Intrinsic::riscv_vssseg2:
+  case Intrinsic::riscv_vssseg3:
+  case Intrinsic::riscv_vssseg4:
+  case Intrinsic::riscv_vssseg5:
+  case Intrinsic::riscv_vssseg6:
+  case Intrinsic::riscv_vssseg7:
+  case Intrinsic::riscv_vssseg8: {
+    // Intrinsic interface:
+    // riscv_vlse(merge, ptr, stride, vl)
+    // riscv_vlse_mask(merge, ptr, stride, mask, vl, policy)
+    // riscv_vsse(val, ptr, stride, vl)
+    // riscv_vsse_mask(val, ptr, stride, mask, vl, policy)
+    // riscv_vlsseg#(merge, ptr, offset, vl, sew)
+    // riscv_vlsseg#_mask(merge, ptr, offset, mask, vl, policy, sew)
+    // riscv_vssseg#(val, ptr, offset, vl, sew)
+    // riscv_vssseg#_mask(val, ptr, offset, mask, vl, sew)
+    bool IsWrite = Inst->getType()->isVoidTy();
+    Type *Ty = IsWrite ? Inst->getArgOperand(0)->getType() : Inst->getType();
+    // The results of segment loads are TargetExtType.
+    if (auto *TarExtTy = dyn_cast<TargetExtType>(Ty)) {
+      unsigned SEW =
+          1 << cast<ConstantInt>(Inst->getArgOperand(Inst->arg_size() - 1))
+                   ->getZExtValue();
+      Ty = TarExtTy->getTypeParameter(0U);
+      Ty = ScalableVectorType::get(
+          IntegerType::get(C, SEW),
+          cast<ScalableVectorType>(Ty)->getMinNumElements() * 8 / SEW);
+    }
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 2 - HasMask;
+    MaybeAlign Alignment =
+        Inst->getArgOperand(PtrOperandNo)->getPointerAlignment(DL);
+
+    Value *Stride = Inst->getArgOperand(PtrOperandNo + 1);
+    // Use the pointer alignment as the element alignment if the stride is a
+    // multiple of the pointer alignment. Otherwise, the element alignment
+    // should be the greatest common divisor of pointer alignment and stride.
+    // For simplicity, just consider unalignment for elements.
+    unsigned PointerAlign = Alignment.valueOrOne().value();
+    if (!isa<ConstantInt>(Stride) ||
+        cast<ConstantInt>(Stride)->getZExtValue() % PointerAlign != 0)
+      Alignment = Align(1);
+
+    Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+    Value *Mask = ConstantInt::getTrue(MaskType);
+    if (HasMask)
+      Mask = Inst->getArgOperand(VLIndex - 1);
+    Value *EVL = Inst->getArgOperand(VLIndex);
+    unsigned SegNum = getSegNum(Inst, PtrOperandNo, IsWrite);
+    // RVV uses contiguous elements as a segment.
+    if (SegNum > 1) {
+      unsigned ElemSize = Ty->getScalarSizeInBits();
+      auto *SegTy = IntegerType::get(C, ElemSize * SegNum);
+      Ty = VectorType::get(SegTy, cast<VectorType>(Ty));
+    }
+    Info.InterestingOperands.emplace_back(Inst, PtrOperandNo, IsWrite, Ty,
+                                          Alignment, Mask, EVL, Stride);
+    return true;
+  }
+  case Intrinsic::riscv_vloxei_mask:
+  case Intrinsic::riscv_vluxei_mask:
+  case Intrinsic::riscv_vsoxei_mask:
+  case Intrinsic::riscv_vsuxei_mask:
+  case Intrinsic::riscv_vloxseg2_mask:
+  case Intrinsic::riscv_vloxseg3_mask:
+  case Intrinsic::riscv_vloxseg4_mask:
+  case Intrinsic::riscv_vloxseg5_mask:
+  case Intrinsic::riscv_vloxseg6_mask:
+  case Intrinsic::riscv_vloxseg7_mask:
+  case Intrinsic::riscv_vloxseg8_mask:
+  case Intrinsic::riscv_vluxseg2_mask:
+  case Intrinsic::riscv_vluxseg3_mask:
+  case Intrinsic::riscv_vluxseg4_mask:
+  case Intrinsic::riscv_vluxseg5_mask:
+  case Intrinsic::riscv_vluxseg6_mask:
+  case Intrinsic::riscv_vluxseg7_mask:
+  case Intrinsic::riscv_vluxseg8_mask:
+  case Intrinsic::riscv_vsoxseg2_mask:
+  case Intrinsic::riscv_vsoxseg3_mask:
+  case Intrinsic::riscv_vsoxseg4_mask:
+  case Intrinsic::riscv_vsoxseg5_mask:
+  case Intrinsic::riscv_vsoxseg6_mask:
+  case Intrinsic::riscv_vsoxseg7_mask:
+  case Intrinsic::riscv_vsoxseg8_mask:
+  case Intrinsic::riscv_vsuxseg2_mask:
+  case Intrinsic::riscv_vsuxseg3_mask:
+  case Intrinsic::riscv_vsuxseg4_mask:
+  case Intrinsic::riscv_vsuxseg5_mask:
+  case Intrinsic::riscv_vsuxseg6_mask:
+  case Intrinsic::riscv_vsuxseg7_mask:
+  case Intrinsic::riscv_vsuxseg8_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vloxei:
+  case Intrinsic::riscv_vluxei:
+  case Intrinsic::riscv_vsoxei:
+  case Intrinsic::riscv_vsuxei:
+  case Intrinsic::riscv_vloxseg2:
+  case Intrinsic::riscv_vloxseg3:
+  case Intrinsic::riscv_vloxseg4:
+  case Intrinsic::riscv_vloxseg5:
+  case Intrinsic::riscv_vloxseg6:
+  case Intrinsic::riscv_vloxseg7:
+  case Intrinsic::riscv_vloxseg8:
+  case Intrinsic::riscv_vluxseg2:
+  case Intrinsic::riscv_vluxseg3:
+  case Intrinsic::riscv_vluxseg4:
+  case Intrinsic::riscv_vluxseg5:
+  case Intrinsic::riscv_vluxseg6:
+  case Intrinsic::riscv_vluxseg7:
+  case Intrinsic::riscv_vluxseg8:
+  case Intrinsic::riscv_vsoxseg2:
+  case Intrinsic::riscv_vsoxseg3:
+  case Intrinsic::riscv_vsoxseg4:
+  case Intrinsic::riscv_vsoxseg5:
+  case Intrinsic::riscv_vsoxseg6:
+  case Intrinsic::riscv_vsoxseg7:
+  case Intrinsic::riscv_vsoxseg8:
+  case Intrinsic::riscv_vsuxseg2:
+  case Intrinsic::riscv_vsuxseg3:
+  case Intrinsic::riscv_vsuxseg4:
+  case Intrinsic::riscv_vsuxseg5:
+  case Intrinsic::riscv_vsuxseg6:
+  case Intrinsic::riscv_vsuxseg7:
+  case Intrinsic::riscv_vsuxseg8: {
+    // Intrinsic interface (only listed ordered version):
+    // riscv_vloxei(merge, ptr, index, vl)
+    // riscv_vloxei_mask(merge, ptr, index, mask, vl, policy)
+    // riscv_vsoxei(val, ptr, index, vl)
+    // riscv_vsoxei_mask(val, ptr, index, mask, vl, policy)
+    // riscv_vloxseg#(merge, ptr, index, vl, sew)
+    // riscv_vloxseg#_mask(merge, ptr, index, mask, vl, policy, sew)
+    // riscv_vsoxseg#(val, ptr, index, vl, sew)
+    // riscv_vsoxseg#_mask(val, ptr, index, mask, vl, sew)
+    bool IsWrite = Inst->getType()->isVoidTy();
+    Type *Ty = IsWrite ? Inst->getArgOperand(0)->getType() : Inst->getType();
+    // The results of segment loads are TargetExtType.
+    if (auto *TarExtTy = dyn_cast<TargetExtType>(Ty)) {
+      unsigned SEW =
+          1 << cast<ConstantInt>(Inst->getArgOperand(Inst->arg_size() - 1))
+                   ->getZExtValue();
+      Ty = TarExtTy->getTypeParameter(0U);
+      Ty = ScalableVectorType::get(
+          IntegerType::get(C, SEW),
+          cast<ScalableVectorType>(Ty)->getMinNumElements() * 8 / SEW);
+    }
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 2 - HasMask;
+    Value *Mask;
+    if (HasMask) {
+      Mask = Inst->getArgOperand(VLIndex - 1);
+    } else {
+      // Mask cannot be nullptr here: vector GEP produces <vscale x N x ptr>,
+      // and casting that to scalar i64 triggers a vector/scalar mismatch
+      // assertion in CreatePointerCast. Use an all-true mask so ASan lowers it
+      // via extractelement instead.
+      Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+      Mask = ConstantInt::getTrue(MaskType);
+    }
+    Value *EVL = Inst->getArgOperand(VLIndex);
+    unsigned SegNum = getSegNum(Inst, PtrOperandNo, IsWrite);
+    // RVV uses contiguous elements as a segment.
+    if (SegNum > 1) {
+      unsigned ElemSize = Ty->getScalarSizeInBits();
+      auto *SegTy = IntegerType::get(C, ElemSize * SegNum);
+      Ty = VectorType::get(SegTy, cast<VectorType>(Ty));
+    }
+    Value *OffsetOp = Inst->getArgOperand(PtrOperandNo + 1);
+    Info.InterestingOperands.emplace_back(Inst, PtrOperandNo, IsWrite, Ty,
+                                          Align(1), Mask, EVL,
+                                          /* Stride */ nullptr, OffsetOp);
+    return true;
+  }
+  }
+  return false;
 }
 
 unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) const {
@@ -2649,6 +3102,10 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
 
 unsigned RISCVTTIImpl::getMinTripCountTailFoldingThreshold() const {
   return RVVMinTripCount;
+}
+
+bool RISCVTTIImpl::preferAlternateOpcodeVectorization() const {
+  return ST->enableUnalignedVectorMem();
 }
 
 TTI::AddressingModeKind
@@ -2891,8 +3348,8 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     bool IsVPSplat = match(Op, m_Intrinsic<Intrinsic::experimental_vp_splat>(
                                    m_Value(), m_Value(), m_Value()));
     if (!IsVPSplat &&
-        !match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
-                             m_Undef(), m_ZeroMask())))
+        !match(Op, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
+                             m_Value(), m_ZeroMask())))
       continue;
 
     // Don't sink i1 splats.

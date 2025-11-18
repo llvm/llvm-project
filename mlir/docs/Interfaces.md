@@ -563,7 +563,7 @@ def MyInterface : OpInterface<"MyInterface"> {
         template <typename ConcreteOp>
         struct Model : public Concept {
           Operation *create(OpBuilder &builder, Location loc) const override {
-            return builder.create<ConcreteOp>(loc);
+            return ConcreteOp::create(builder, loc);
           }
         }
       };
@@ -574,7 +574,7 @@ def MyInterface : OpInterface<"MyInterface"> {
     }],
       "Operation *", "create", (ins "OpBuilder &":$builder, "Location":$loc),
       /*methodBody=*/[{
-        return builder.create<ConcreteOp>(loc);
+        return ConcreteOp::create(builder, loc);
     }]>,
 
     InterfaceMethod<[{

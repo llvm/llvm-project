@@ -12,7 +12,10 @@
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
-#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Support/LLVM.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -59,6 +62,38 @@ public:
         trailingZerosNum);
   }
 
+  cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
+                                    cir::ArrayType arrayTy) const {
+    return cir::ConstArrayAttr::get(arrayTy, attrs);
+  }
+
+  mlir::Attribute getConstRecordOrZeroAttr(mlir::ArrayAttr arrayAttr,
+                                           bool packed = false,
+                                           bool padded = false,
+                                           mlir::Type type = {});
+
+  cir::ConstRecordAttr getAnonConstRecord(mlir::ArrayAttr arrayAttr,
+                                          bool packed = false,
+                                          bool padded = false,
+                                          mlir::Type ty = {}) {
+    llvm::SmallVector<mlir::Type, 4> members;
+    for (auto &f : arrayAttr) {
+      auto ta = mlir::cast<mlir::TypedAttr>(f);
+      members.push_back(ta.getType());
+    }
+
+    if (!ty)
+      ty = getAnonRecordTy(members, packed, padded);
+
+    auto sTy = mlir::cast<cir::RecordType>(ty);
+    return cir::ConstRecordAttr::get(sTy, arrayAttr);
+  }
+
+  cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
+    cir::ConstRecordAttr anonRecord = getAnonConstRecord(fieldsAttr);
+    return cir::TypeInfoAttr::get(anonRecord.getType(), fieldsAttr);
+  }
+
   std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
   std::string getUniqueRecordName(const std::string &baseName) {
@@ -73,14 +108,23 @@ public:
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())
-      return cir::LongDoubleType::get(getContext(), typeCache.DoubleTy);
+      return cir::LongDoubleType::get(getContext(), typeCache.doubleTy);
     if (&format == &llvm::APFloat::x87DoubleExtended())
-      return cir::LongDoubleType::get(getContext(), typeCache.FP80Ty);
+      return cir::LongDoubleType::get(getContext(), typeCache.fP80Ty);
     if (&format == &llvm::APFloat::IEEEquad())
-      return cir::LongDoubleType::get(getContext(), typeCache.FP128Ty);
+      return cir::LongDoubleType::get(getContext(), typeCache.fP128Ty);
     if (&format == &llvm::APFloat::PPCDoubleDouble())
       llvm_unreachable("NYI: PPC double-double format for long double");
     llvm_unreachable("Unsupported format for long double");
+  }
+
+  mlir::Type getPtrToVPtrType() {
+    return getPointerTo(cir::VPtrType::get(getContext()));
+  }
+
+  cir::FuncType getFuncType(llvm::ArrayRef<mlir::Type> params, mlir::Type retTy,
+                            bool isVarArg = false) {
+    return cir::FuncType::get(params, retTy, isVarArg);
   }
 
   /// Get a CIR record kind from a AST declaration tag.
@@ -104,9 +148,9 @@ public:
   ///
   /// If a record already exists and is complete, but the client tries to fetch
   /// it with a different set of attributes, this method will crash.
-  cir::RecordType getCompleteRecordTy(llvm::ArrayRef<mlir::Type> members,
-                                      llvm::StringRef name, bool packed,
-                                      bool padded) {
+  cir::RecordType getCompleteNamedRecordType(llvm::ArrayRef<mlir::Type> members,
+                                             bool packed, bool padded,
+                                             llvm::StringRef name) {
     const auto nameAttr = getStringAttr(name);
     auto kind = cir::RecordType::RecordKind::Struct;
     assert(!cir::MissingFeatures::astRecordDeclAttr());
@@ -127,6 +171,11 @@ public:
 
     return type;
   }
+
+  cir::RecordType getCompleteRecordType(mlir::ArrayAttr fields,
+                                        bool packed = false,
+                                        bool padded = false,
+                                        llvm::StringRef name = "");
 
   /// Get an incomplete CIR struct type. If we have a complete record
   /// declaration, we may create an incomplete type and then add the
@@ -209,17 +258,17 @@ public:
     }
   }
 
-  cir::VoidType getVoidTy() { return typeCache.VoidTy; }
+  cir::VoidType getVoidTy() { return typeCache.voidTy; }
 
-  cir::IntType getSInt8Ty() { return typeCache.SInt8Ty; }
-  cir::IntType getSInt16Ty() { return typeCache.SInt16Ty; }
-  cir::IntType getSInt32Ty() { return typeCache.SInt32Ty; }
-  cir::IntType getSInt64Ty() { return typeCache.SInt64Ty; }
+  cir::IntType getSInt8Ty() { return typeCache.sInt8Ty; }
+  cir::IntType getSInt16Ty() { return typeCache.sInt16Ty; }
+  cir::IntType getSInt32Ty() { return typeCache.sInt32Ty; }
+  cir::IntType getSInt64Ty() { return typeCache.sInt64Ty; }
 
-  cir::IntType getUInt8Ty() { return typeCache.UInt8Ty; }
-  cir::IntType getUInt16Ty() { return typeCache.UInt16Ty; }
-  cir::IntType getUInt32Ty() { return typeCache.UInt32Ty; }
-  cir::IntType getUInt64Ty() { return typeCache.UInt64Ty; }
+  cir::IntType getUInt8Ty() { return typeCache.uInt8Ty; }
+  cir::IntType getUInt16Ty() { return typeCache.uInt16Ty; }
+  cir::IntType getUInt32Ty() { return typeCache.uInt32Ty; }
+  cir::IntType getUInt64Ty() { return typeCache.uInt64Ty; }
 
   cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
 
@@ -231,18 +280,29 @@ public:
                              llvm::APFloat fpVal);
 
   bool isInt8Ty(mlir::Type i) {
-    return i == typeCache.UInt8Ty || i == typeCache.SInt8Ty;
+    return i == typeCache.uInt8Ty || i == typeCache.sInt8Ty;
   }
   bool isInt16Ty(mlir::Type i) {
-    return i == typeCache.UInt16Ty || i == typeCache.SInt16Ty;
+    return i == typeCache.uInt16Ty || i == typeCache.sInt16Ty;
   }
   bool isInt32Ty(mlir::Type i) {
-    return i == typeCache.UInt32Ty || i == typeCache.SInt32Ty;
+    return i == typeCache.uInt32Ty || i == typeCache.sInt32Ty;
   }
   bool isInt64Ty(mlir::Type i) {
-    return i == typeCache.UInt64Ty || i == typeCache.SInt64Ty;
+    return i == typeCache.uInt64Ty || i == typeCache.sInt64Ty;
   }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
+
+  // Fetch the type representing a pointer to unsigned int8 values.
+  cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
+
+  /// Get a CIR anonymous record type.
+  cir::RecordType getAnonRecordTy(llvm::ArrayRef<mlir::Type> members,
+                                  bool packed = false, bool padded = false) {
+    assert(!cir::MissingFeatures::astRecordDeclAttr());
+    auto kind = cir::RecordType::RecordKind::Struct;
+    return getType<cir::RecordType>(members, packed, padded, kind);
+  }
 
   //
   // Constant creation helpers
@@ -251,11 +311,14 @@ public:
   cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
     return getConstantInt(loc, getSInt32Ty(), c);
   }
-
-  // Creates constant nullptr for pointer type ty.
-  cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
-    assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
-    return create<cir::ConstantOp>(loc, getConstPtrAttr(ty, 0));
+  cir::ConstantOp getUInt32(uint32_t c, mlir::Location loc) {
+    return getConstantInt(loc, getUInt32Ty(), c);
+  }
+  cir::ConstantOp getSInt64(uint64_t c, mlir::Location loc) {
+    return getConstantInt(loc, getSInt64Ty(), c);
+  }
+  cir::ConstantOp getUInt64(uint64_t c, mlir::Location loc) {
+    return getConstantInt(loc, getUInt64Ty(), c);
   }
 
   mlir::Value createNeg(mlir::Value value) {
@@ -264,7 +327,7 @@ public:
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return create<cir::UnaryOp>(value.getLoc(), value.getType(),
+      return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
                                   cir::UnaryOpKind::Minus, value);
     }
 
@@ -276,8 +339,8 @@ public:
   mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
     assert(!cir::MissingFeatures::fpConstraints());
 
-    return create<cir::CastOp>(v.getLoc(), destType, cir::CastKind::floating,
-                               v);
+    return cir::CastOp::create(*this, v.getLoc(), destType,
+                               cir::CastKind::floating, v);
   }
 
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
@@ -285,7 +348,7 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return create<cir::BinOp>(loc, cir::BinOpKind::Sub, lhs, rhs);
+    return cir::BinOp::create(*this, loc, cir::BinOpKind::Sub, lhs, rhs);
   }
 
   mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
@@ -293,21 +356,40 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return create<cir::BinOp>(loc, cir::BinOpKind::Add, lhs, rhs);
+    return cir::BinOp::create(*this, loc, cir::BinOpKind::Add, lhs, rhs);
   }
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return create<cir::BinOp>(loc, cir::BinOpKind::Mul, lhs, rhs);
+    return cir::BinOp::create(*this, loc, cir::BinOpKind::Mul, lhs, rhs);
   }
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
+    return cir::BinOp::create(*this, loc, cir::BinOpKind::Div, lhs, rhs);
+  }
+
+  mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
+                            cir::PointerType destType, bool isRefCast,
+                            cir::DynamicCastInfoAttr info) {
+    auto castKind =
+        isRefCast ? cir::DynamicCastKind::Ref : cir::DynamicCastKind::Ptr;
+    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src, info,
+                                      /*relative_layout=*/false);
+  }
+
+  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
+                                  bool vtableUseRelativeLayout) {
+    // TODO(cir): consider address space here.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType destTy = getVoidPtrTy();
+    return cir::DynamicCastOp::create(
+        *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
+        cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
   }
 
   Address createBaseClassAddr(mlir::Location loc, Address addr,
@@ -317,9 +399,35 @@ public:
       return addr;
 
     auto ptrTy = getPointerTo(destType);
-    auto baseAddr = create<cir::BaseClassAddrOp>(
-        loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
+    auto baseAddr =
+        cir::BaseClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
+                                     mlir::APInt(64, offset), assumeNotNull);
     return Address(baseAddr, destType, addr.getAlignment());
+  }
+
+  Address createDerivedClassAddr(mlir::Location loc, Address addr,
+                                 mlir::Type destType, unsigned offset,
+                                 bool assumeNotNull) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    cir::PointerType ptrTy = getPointerTo(destType);
+    auto derivedAddr =
+        cir::DerivedClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
+                                        mlir::APInt(64, offset), assumeNotNull);
+    return Address(derivedAddr, destType, addr.getAlignment());
+  }
+
+  mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
+                                 mlir::Value addr, uint64_t offset) {
+    return cir::VTTAddrPointOp::create(*this, loc, retTy,
+                                       mlir::FlatSymbolRefAttr{}, addr, offset);
+  }
+
+  mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
+                                 mlir::FlatSymbolRefAttr sym, uint64_t offset) {
+    return cir::VTTAddrPointOp::create(*this, loc, retTy, sym, mlir::Value{},
+                                       offset);
   }
 
   /// Cast the element type of the given address to a different type,
@@ -337,31 +445,36 @@ public:
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
                          bool isVolatile = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
-    return create<cir::LoadOp>(loc, addr.getPointer(), /*isDeref=*/false,
-                               align);
+    return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
+                               isVolatile, /*alignment=*/align,
+                               /*mem_order=*/cir::MemOrderAttr{});
+  }
+
+  cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
+                                mlir::Value ptr, llvm::MaybeAlign align) {
+    if (ty != mlir::cast<cir::PointerType>(ptr.getType()).getPointee())
+      ptr = createPtrBitcast(ptr, ty);
+    uint64_t alignment = align ? align->value() : 0;
+    mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
+    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
+                               /*isVolatile=*/false, alignAttr,
+                               /*mem_order=*/cir::MemOrderAttr{});
+  }
+
+  cir::LoadOp
+  createAlignedLoad(mlir::Location loc, mlir::Type ty, mlir::Value ptr,
+                    clang::CharUnits align = clang::CharUnits::One()) {
+    return createAlignedLoad(loc, ty, ptr, align.getAsAlign());
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
-                           mlir::IntegerAttr align = {}) {
+                           bool isVolatile = false,
+                           mlir::IntegerAttr align = {},
+                           cir::MemOrderAttr order = {}) {
     if (!align)
       align = getAlignmentAttr(dst.getAlignment());
-    return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
-  }
-
-  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
-                                  mlir::Value imag) {
-    auto resultComplexTy = cir::ComplexType::get(real.getType());
-    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
-  }
-
-  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
-  }
-
-  mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
+    return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), isVolatile,
+                                         align, order);
   }
 
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
@@ -369,8 +482,8 @@ public:
   mlir::Value createComplexRealPtr(mlir::Location loc, mlir::Value value) {
     auto srcPtrTy = mlir::cast<cir::PointerType>(value.getType());
     auto srcComplexTy = mlir::cast<cir::ComplexType>(srcPtrTy.getPointee());
-    return create<cir::ComplexRealPtrOp>(
-        loc, getPointerTo(srcComplexTy.getElementType()), value);
+    return cir::ComplexRealPtrOp::create(
+        *this, loc, getPointerTo(srcComplexTy.getElementType()), value);
   }
 
   Address createComplexRealPtr(mlir::Location loc, Address addr) {
@@ -384,8 +497,8 @@ public:
   mlir::Value createComplexImagPtr(mlir::Location loc, mlir::Value value) {
     auto srcPtrTy = mlir::cast<cir::PointerType>(value.getType());
     auto srcComplexTy = mlir::cast<cir::ComplexType>(srcPtrTy.getPointee());
-    return create<cir::ComplexImagPtrOp>(
-        loc, getPointerTo(srcComplexTy.getElementType()), value);
+    return cir::ComplexImagPtrOp::create(
+        *this, loc, getPointerTo(srcComplexTy.getElementType()), value);
   }
 
   Address createComplexImagPtr(mlir::Location loc, Address addr) {
@@ -406,12 +519,20 @@ public:
   mlir::Value maybeBuildArrayDecay(mlir::Location loc, mlir::Value arrayPtr,
                                    mlir::Type eltTy);
 
+  // Convert byte offset to sequence of high-level indices suitable for
+  // GlobalViewAttr. Ideally we shouldn't deal with low-level offsets at all
+  // but currently some parts of Clang AST, which we don't want to touch just
+  // yet, return them.
+  void computeGlobalViewIndicesFromFlatOffset(
+      int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+      llvm::SmallVectorImpl<int64_t> &indices);
+
   /// Creates a versioned global variable. If the symbol is already taken, an ID
   /// will be appended to the symbol. The returned global must always be queried
   /// for its name so it can be referenced correctly.
   [[nodiscard]] cir::GlobalOp
   createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
-                        mlir::StringRef name, mlir::Type type,
+                        mlir::StringRef name, mlir::Type type, bool isConstant,
                         cir::GlobalLinkageKind linkage) {
     // Create a unique name if the given name is already taken.
     std::string uniqueName;
@@ -420,25 +541,80 @@ public:
     else
       uniqueName = name.str();
 
-    return createGlobal(module, loc, uniqueName, type, linkage);
+    return createGlobal(module, loc, uniqueName, type, isConstant, linkage);
+  }
+
+  cir::StackSaveOp createStackSave(mlir::Location loc, mlir::Type ty) {
+    return cir::StackSaveOp::create(*this, loc, ty);
+  }
+
+  cir::StackRestoreOp createStackRestore(mlir::Location loc, mlir::Value v) {
+    return cir::StackRestoreOp::create(*this, loc, v);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
-                                mlir::Value dstAddr, mlir::Type storageType,
+                                Address dstAddr, mlir::Type storageType,
                                 mlir::Value src, const CIRGenBitFieldInfo &info,
                                 bool isLvalueVolatile, bool useVolatile) {
-    return create<cir::SetBitfieldOp>(loc, resultType, dstAddr, storageType,
-                                      src, info.name, info.size, info.offset,
-                                      info.isSigned, isLvalueVolatile);
+    unsigned offset = useVolatile ? info.volatileOffset : info.offset;
+
+    // If using AAPCS and the field is volatile, load with the size of the
+    // declared field
+    storageType =
+        useVolatile ? cir::IntType::get(storageType.getContext(),
+                                        info.volatileStorageSize, info.isSigned)
+                    : storageType;
+    return cir::SetBitfieldOp::create(
+        *this, loc, resultType, dstAddr.getPointer(), storageType, src,
+        info.name, info.size, offset, info.isSigned, isLvalueVolatile,
+        dstAddr.getAlignment().getAsAlign().value());
   }
 
   mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
-                                mlir::Value addr, mlir::Type storageType,
+                                Address addr, mlir::Type storageType,
                                 const CIRGenBitFieldInfo &info,
                                 bool isLvalueVolatile, bool useVolatile) {
-    return create<cir::GetBitfieldOp>(loc, resultType, addr, storageType,
-                                      info.name, info.size, info.offset,
-                                      info.isSigned, isLvalueVolatile);
+    unsigned offset = useVolatile ? info.volatileOffset : info.offset;
+
+    // If using AAPCS and the field is volatile, load with the size of the
+    // declared field
+    storageType =
+        useVolatile ? cir::IntType::get(storageType.getContext(),
+                                        info.volatileStorageSize, info.isSigned)
+                    : storageType;
+    return cir::GetBitfieldOp::create(*this, loc, resultType, addr.getPointer(),
+                                      storageType, info.name, info.size, offset,
+                                      info.isSigned, isLvalueVolatile,
+                                      addr.getAlignment().getAsAlign().value());
+  }
+
+  cir::VecShuffleOp
+  createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
+                   llvm::ArrayRef<mlir::Attribute> maskAttrs) {
+    auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
+    auto resultTy = cir::VectorType::get(getContext(), vecType.getElementType(),
+                                         maskAttrs.size());
+    return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
+                                     getArrayAttr(maskAttrs));
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     mlir::Value vec2,
+                                     llvm::ArrayRef<int64_t> mask) {
+    auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
+        llvm::map_range(mask, [&](int32_t idx) {
+          return cir::IntAttr::get(getSInt32Ty(), idx);
+        }));
+    return createVecShuffle(loc, vec1, vec2, maskAttrs);
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     llvm::ArrayRef<int64_t> mask) {
+    /// Create a unary shuffle. The second vector operand of the IR instruction
+    /// is poison.
+    cir::ConstantOp poison =
+        getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
+    return createVecShuffle(loc, vec1, poison, mask);
   }
 };
 

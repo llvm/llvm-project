@@ -80,6 +80,10 @@ static cl::opt<unsigned>
                      cl::desc("The number of blocks to scan during memory "
                               "dependency analysis (default = 200)"));
 
+static cl::opt<unsigned> CacheGlobalLimit(
+    "memdep-cache-global-limit", cl::Hidden, cl::init(10000),
+    cl::desc("The max number of entries allowed in a cache (default = 10000)"));
+
 // Limit on the number of memdep results to process.
 static const unsigned int NumResultsLimit = 100;
 
@@ -150,6 +154,10 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
+      Loc = MemoryLocation::getForArgument(II, 0, TLI);
+      // These intrinsics don't really modify the memory, but returning Mod
+      // will allow them to be handled conservatively.
+      return ModRefInfo::Mod;
     case Intrinsic::invariant_start:
       Loc = MemoryLocation::getForArgument(II, 1, TLI);
       // These intrinsics don't really modify the memory, but returning Mod
@@ -441,11 +449,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       Intrinsic::ID ID = II->getIntrinsicID();
       switch (ID) {
       case Intrinsic::lifetime_start: {
-        // FIXME: This only considers queries directly on the invariant-tagged
-        // pointer, not on query pointers that are indexed off of them.  It'd
-        // be nice to handle that at some point (the right approach is to use
-        // GetPointerBaseWithConstantOffset).
-        MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(1));
+        MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(0));
         if (BatchAA.isMustAlias(ArgLoc, MemLoc))
           return MemDepResult::getDef(II);
         continue;
@@ -983,33 +987,37 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
 static void
 SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
                          unsigned NumSortedEntries) {
-  switch (Cache.size() - NumSortedEntries) {
-  case 0:
-    // done, no new entries.
-    break;
-  case 2: {
-    // Two new entries, insert the last one into place.
-    NonLocalDepEntry Val = Cache.back();
-    Cache.pop_back();
-    MemoryDependenceResults::NonLocalDepInfo::iterator Entry =
-        std::upper_bound(Cache.begin(), Cache.end() - 1, Val);
-    Cache.insert(Entry, Val);
-    [[fallthrough]];
+
+  // If only one entry, don't sort.
+  if (Cache.size() < 2)
+    return;
+
+  unsigned s = Cache.size() - NumSortedEntries;
+
+  // If the cache is already sorted, don't sort it again.
+  if (s == 0)
+    return;
+
+  // If no entry is sorted, sort the whole cache.
+  if (NumSortedEntries == 0) {
+    llvm::sort(Cache);
+    return;
   }
-  case 1:
-    // One new entry, Just insert the new value at the appropriate position.
-    if (Cache.size() != 1) {
+
+  // If the number of unsorted entires is small and the cache size is big, using
+  // insertion sort is faster. Here use Log2_32 to quickly choose the sort
+  // method.
+  if (s < Log2_32(Cache.size())) {
+    while (s > 0) {
       NonLocalDepEntry Val = Cache.back();
       Cache.pop_back();
       MemoryDependenceResults::NonLocalDepInfo::iterator Entry =
-          llvm::upper_bound(Cache, Val);
+          std::upper_bound(Cache.begin(), Cache.end() - s + 1, Val);
       Cache.insert(Entry, Val);
+      s--;
     }
-    break;
-  default:
-    // Added many values, do a full scale sort.
+  } else {
     llvm::sort(Cache);
-    break;
   }
 }
 
@@ -1137,6 +1145,10 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     ++NumCacheCompleteNonLocalPtr;
     return true;
   }
+
+  // If the size of this cache has surpassed the global limit, stop here.
+  if (Cache->size() > CacheGlobalLimit)
+    return false;
 
   // Otherwise, either this is a new block, a block with an invalid cache
   // pointer or one that we're about to invalidate by putting more info into

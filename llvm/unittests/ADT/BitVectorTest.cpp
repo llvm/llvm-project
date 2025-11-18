@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "gtest/gtest.h"
 
@@ -20,7 +21,7 @@ template <typename T>
 class BitVectorTest : public ::testing::Test { };
 
 // Test both BitVector and SmallBitVector with the same suite of tests.
-typedef ::testing::Types<BitVector, SmallBitVector> BitVectorTestTypes;
+using BitVectorTestTypes = ::testing::Types<BitVector, SmallBitVector>;
 TYPED_TEST_SUITE(BitVectorTest, BitVectorTestTypes, );
 
 TYPED_TEST(BitVectorTest, TrivialOperation) {
@@ -856,7 +857,7 @@ TYPED_TEST(BitVectorTest, BinOps) {
   EXPECT_FALSE(B.anyCommon(A));
 }
 
-typedef std::vector<std::pair<int, int>> RangeList;
+using RangeList = std::vector<std::pair<int, int>>;
 
 template <typename VecType>
 static inline VecType createBitVector(uint32_t Size,
@@ -1175,6 +1176,98 @@ TYPED_TEST(BitVectorTest, Iterators) {
   unsigned i = 0;
   for (unsigned Bit : ToFill.set_bits())
     EXPECT_EQ(List[i++], Bit);
+}
+
+TYPED_TEST(BitVectorTest, BidirectionalIterator) {
+  // Test decrement operators.
+  TypeParam Vec(100, false);
+  Vec.set(10);
+  Vec.set(20);
+  Vec.set(30);
+  Vec.set(40);
+
+  // Test that we can decrement from end().
+  auto EndIt = Vec.set_bits_end();
+  auto LastIt = EndIt;
+  --LastIt;
+  EXPECT_EQ(*LastIt, 40U);
+
+  // Test post-decrement.
+  auto It = Vec.set_bits_end();
+  auto PrevIt = It--;
+  EXPECT_EQ(PrevIt, Vec.set_bits_end());
+  EXPECT_EQ(*It, 40U);
+
+  // Test pre-decrement.
+  --It;
+  EXPECT_EQ(*It, 30U);
+
+  // Test full backward iteration.
+  std::vector<unsigned> BackwardBits;
+  for (auto RIt = Vec.set_bits_end(); RIt != Vec.set_bits_begin();) {
+    --RIt;
+    BackwardBits.push_back(*RIt);
+  }
+  EXPECT_EQ(BackwardBits.size(), 4U);
+  EXPECT_EQ(BackwardBits[0], 40U);
+  EXPECT_EQ(BackwardBits[1], 30U);
+  EXPECT_EQ(BackwardBits[2], 20U);
+  EXPECT_EQ(BackwardBits[3], 10U);
+}
+
+TYPED_TEST(BitVectorTest, ReverseIteration) {
+  // Test using llvm::reverse.
+  TypeParam Vec(100, false);
+  Vec.set(5);
+  Vec.set(15);
+  Vec.set(25);
+  Vec.set(35);
+  Vec.set(45);
+
+  std::vector<unsigned> ReversedBits;
+  for (unsigned Bit : llvm::reverse(Vec.set_bits())) {
+    ReversedBits.push_back(Bit);
+  }
+
+  EXPECT_EQ(ReversedBits.size(), 5U);
+  EXPECT_EQ(ReversedBits[0], 45U);
+  EXPECT_EQ(ReversedBits[1], 35U);
+  EXPECT_EQ(ReversedBits[2], 25U);
+  EXPECT_EQ(ReversedBits[3], 15U);
+  EXPECT_EQ(ReversedBits[4], 5U);
+}
+
+TYPED_TEST(BitVectorTest, BidirectionalIteratorEdgeCases) {
+  // Test empty BitVector.
+  TypeParam Empty;
+  EXPECT_EQ(Empty.set_bits_begin(), Empty.set_bits_end());
+
+  // Decrementing end() on empty should give -1 (no bits set).
+  auto EmptyEndIt = Empty.set_bits_end();
+  --EmptyEndIt;
+  // After decrement on empty, iterator should still be at "no bit" position.
+  EXPECT_EQ(*EmptyEndIt, static_cast<unsigned>(-1));
+
+  // Test single bit.
+  TypeParam Single(10, false);
+  Single.set(5);
+
+  auto SingleIt = Single.set_bits_end();
+  --SingleIt;
+  EXPECT_EQ(*SingleIt, 5U);
+  // After decrementing past the first element, the iterator is in an
+  // undefined state (before begin), so we don't test this case.
+
+  // Test all bits set.
+  TypeParam AllSet(10, true);
+  std::vector<unsigned> AllBitsReverse;
+  for (unsigned Bit : llvm::reverse(AllSet.set_bits())) {
+    AllBitsReverse.push_back(Bit);
+  }
+  EXPECT_EQ(AllBitsReverse.size(), 10U);
+  for (unsigned i = 0; i < 10; ++i) {
+    EXPECT_EQ(AllBitsReverse[i], 9 - i);
+  }
 }
 
 TYPED_TEST(BitVectorTest, PushBack) {

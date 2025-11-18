@@ -15,60 +15,62 @@
 #ifndef LLVM_BINARYFORMAT_SFRAME_H
 #define LLVM_BINARYFORMAT_SFRAME_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 
-namespace llvm::sframe {
+namespace llvm {
+
+template <typename T> struct EnumEntry;
+
+namespace sframe {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 constexpr uint16_t Magic = 0xdee2;
 
 enum class Version : uint8_t {
-  V1 = 1,
-  V2 = 2,
+#define HANDLE_SFRAME_VERSION(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
 };
 
 enum class Flags : uint8_t {
-  FDESorted = 0x01,
-  FramePointer = 0x02,
-  FDEFuncStartPCRel = 0x04,
+#define HANDLE_SFRAME_FLAG(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
   V2AllFlags = FDESorted | FramePointer | FDEFuncStartPCRel,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/0xff),
 };
 
 enum class ABI : uint8_t {
-  AArch64EndianBig = 1,
-  AArch64EndianLittle = 2,
-  AMD64EndianLittle = 3,
+#define HANDLE_SFRAME_ABI(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
 };
 
 /// SFrame FRE Types. Bits 0-3 of FuncDescEntry.Info.
 enum class FREType : uint8_t {
-  Addr1 = 0,
-  Addr2 = 1,
-  Addr4 = 2,
+#define HANDLE_SFRAME_FRE_TYPE(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
 };
 
 /// SFrame FDE Types. Bit 4 of FuncDescEntry.Info.
 enum class FDEType : uint8_t {
-  PCInc = 0,
-  PCMask = 1,
+#define HANDLE_SFRAME_FDE_TYPE(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
 };
 
 /// Speficies key used for signing return addresses. Bit 5 of
 /// FuncDescEntry.Info.
 enum class AArch64PAuthKey : uint8_t {
-  A = 0,
-  B = 1,
+#define HANDLE_SFRAME_AARCH64_PAUTH_KEY(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
 };
 
-/// Size of stack offsets. Bits 5-6 of FREInfo.Info.
+/// Size of stack offsets. Bits 6-7 of FREInfo.Info.
 enum class FREOffset : uint8_t {
-  B1 = 0,
-  B2 = 1,
-  B4 = 2,
+#define HANDLE_SFRAME_FRE_OFFSET(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
 };
 
 /// Stack frame base register. Bit 0 of FREInfo.Info.
@@ -102,14 +104,8 @@ template <endianness E> struct Header {
   detail::packed<uint32_t, E> FREOff;
 };
 
-template <endianness E> struct FuncDescEntry {
-  detail::packed<int32_t, E> StartAddress;
-  detail::packed<uint32_t, E> Size;
-  detail::packed<uint32_t, E> StartFREOff;
-  detail::packed<uint32_t, E> NumFREs;
+template <endianness E> struct FDEInfo {
   detail::packed<uint8_t, E> Info;
-  detail::packed<uint8_t, E> RepSize;
-  detail::packed<uint16_t, E> Padding2;
 
   uint8_t getPAuthKey() const { return (Info >> 5) & 1; }
   FDEType getFDEType() const { return static_cast<FDEType>((Info >> 4) & 1); }
@@ -121,6 +117,17 @@ template <endianness E> struct FuncDescEntry {
     Info = ((PAuthKey & 1) << 5) | ((static_cast<uint8_t>(FDE) & 1) << 4) |
            (static_cast<uint8_t>(FRE) & 0xf);
   }
+  uint8_t getFuncInfo() const { return Info; }
+};
+
+template <endianness E> struct FuncDescEntry {
+  detail::packed<int32_t, E> StartAddress;
+  detail::packed<uint32_t, E> Size;
+  detail::packed<uint32_t, E> StartFREOff;
+  detail::packed<uint32_t, E> NumFREs;
+  FDEInfo<E> Info;
+  detail::packed<uint8_t, E> RepSize;
+  detail::packed<uint16_t, E> Padding2;
 };
 
 template <endianness E> struct FREInfo {
@@ -149,6 +156,7 @@ template <endianness E> struct FREInfo {
     Info = ((RA & 1) << 7) | ((static_cast<uint8_t>(Sz) & 3) << 5) |
            ((N & 0xf) << 1) | (static_cast<uint8_t>(Reg) & 1);
   }
+  uint8_t getFREInfo() const { return Info; }
 };
 
 template <typename T, endianness E> struct FrameRowEntry {
@@ -160,6 +168,16 @@ template <endianness E> using FrameRowEntryAddr1 = FrameRowEntry<uint8_t, E>;
 template <endianness E> using FrameRowEntryAddr2 = FrameRowEntry<uint16_t, E>;
 template <endianness E> using FrameRowEntryAddr4 = FrameRowEntry<uint32_t, E>;
 
-} // namespace llvm::sframe
+LLVM_ABI ArrayRef<EnumEntry<Version>> getVersions();
+LLVM_ABI ArrayRef<EnumEntry<Flags>> getFlags();
+LLVM_ABI ArrayRef<EnumEntry<ABI>> getABIs();
+LLVM_ABI ArrayRef<EnumEntry<FREType>> getFRETypes();
+LLVM_ABI ArrayRef<EnumEntry<FDEType>> getFDETypes();
+LLVM_ABI ArrayRef<EnumEntry<AArch64PAuthKey>> getAArch64PAuthKeys();
+LLVM_ABI ArrayRef<EnumEntry<FREOffset>> getFREOffsets();
+LLVM_ABI ArrayRef<EnumEntry<BaseReg>> getBaseRegisters();
+
+} // namespace sframe
+} // namespace llvm
 
 #endif // LLVM_BINARYFORMAT_SFRAME_H

@@ -9,7 +9,7 @@
 #include <clc/math/clc_log1p.h>
 #include <clc/opencl/math/log1p.h>
 
-#define FUNCTION log1p
+#define __CLC_FUNCTION log1p
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

@@ -15,8 +15,8 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -168,9 +168,12 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
   assert(!Inputs.empty() && "Must have at least one input.");
 
-  constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+  std::string LinkedBCFilePrefix(
+      Twine(llvm::sys::path::stem(Output.getFilename()), "-linked").str());
+  const char *LinkedBCFilePath = HIP::getTempFile(C, LinkedBCFilePrefix, "bc");
+  InputInfo LinkedBCFile(&JA, LinkedBCFilePath, Output.getBaseInput());
 
-  // Linked BC is now in Output
+  constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
   // Emit SPIR-V binary.
   llvm::opt::ArgStringList TrArgs{
@@ -180,7 +183,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
       "--spirv-lower-const-expr",
       "--spirv-preserve-auxdata",
       "--spirv-debug-info-version=nonsemantic-shader-200"};
-  SPIRV::constructTranslateCommand(C, *this, JA, Output, Output, TrArgs);
+  SPIRV::constructTranslateCommand(C, *this, JA, Output, LinkedBCFile, TrArgs);
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is
@@ -216,8 +219,6 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
-  // Diagnose unsupported sanitizer options only once.
-  diagnoseUnsupportedSanitizers(Args);
 }
 
 void HIPAMDToolChain::addClangTargetOptions(
@@ -261,10 +262,16 @@ void HIPAMDToolChain::addClangTargetOptions(
     // with options that match the user-supplied ones.
     if (!DriverArgs.hasArg(options::OPT_fembed_bitcode_marker))
       CC1Args.push_back("-fembed-bitcode=marker");
+    // For SPIR-V we want to retain the pristine output of Clang CodeGen, since
+    // optimizations might lose structure / information that is necessary for
+    // generating optimal concrete AMDGPU code. We duplicate this because the
+    // HIP TC doesn't invoke the base AMDGPU TC addClangTargetOptions.
+    if (!DriverArgs.hasArg(options::OPT_disable_llvm_passes))
+      CC1Args.push_back("-disable-llvm-passes");
     return; // No DeviceLibs for SPIR-V.
   }
 
-  for (auto BCFile : getDeviceLibs(DriverArgs)) {
+  for (auto BCFile : getDeviceLibs(DriverArgs, DeviceOffloadingKind)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
@@ -283,7 +290,8 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A))
+    // Filter unsupported sanitizers passed from the HostTC.
+    if (!handleSanitizeOption(*this, *DAL, Args, BoundArch, A))
       DAL->append(A);
   }
 
@@ -339,9 +347,8 @@ void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 SanitizerMask HIPAMDToolChain::getSupportedSanitizers() const {
   // The HIPAMDToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host
-  // toolchain. The HIPAMDToolChain will actually ignore any command line
-  // arguments for any of these "supported" sanitizers. That means that no
-  // sanitization of device code is actually supported at this time.
+  // toolchain. The HIPAMDToolChain will later filter unsupported sanitizers
+  // from the command line arguments.
   //
   // This behavior is necessary because the host and device toolchains
   // invocations often share the command line, so the device toolchain must
@@ -355,7 +362,8 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 }
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
+HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
+                               Action::OffloadKind DeviceOffloadingKind) const {
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true) ||
@@ -397,7 +405,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
+    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str(),
+                                          DeviceOffloadingKind))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.

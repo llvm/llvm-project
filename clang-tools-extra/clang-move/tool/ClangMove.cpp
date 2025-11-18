@@ -178,9 +178,8 @@ int main(int argc, const char **argv) {
 
   DiagnosticOptions DiagOpts;
   clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
-      &DiagnosticPrinter, false);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                &DiagnosticPrinter, false);
   auto &FileMgr = Tool.getFiles();
   SourceManager SM(Diagnostics, FileMgr);
   Rewriter Rewrite(SM, LangOptions());

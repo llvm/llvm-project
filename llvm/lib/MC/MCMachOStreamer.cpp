@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -132,8 +131,7 @@ public:
 } // end anonymous namespace.
 
 void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  // Change the section normally.
-  changeSectionImpl(Section, Subsection);
+  MCObjectStreamer::changeSection(Section, Subsection);
 
   // Output a linker-local symbol so we don't need section-relative local
   // relocations. The linker hates us when we do that.
@@ -142,14 +140,16 @@ void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     MCSymbol *Label = getContext().createLinkerPrivateTempSymbol();
     Section->setBeginSymbol(Label);
     HasSectionLabel[Section] = true;
+    if (!Label->isInSection())
+      emitLabel(Label);
   }
 }
 
 void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                           MCSymbol *EHSymbol) {
-  auto *Sym = cast<MCSymbolMachO>(Symbol);
+  auto *Sym = static_cast<const MCSymbolMachO *>(Symbol);
   getAssembler().registerSymbol(*Symbol);
-  if (Symbol->isExternal())
+  if (Sym->isExternal())
     emitSymbolAttribute(EHSymbol, MCSA_Global);
   if (Sym->isWeakDefinition())
     emitSymbolAttribute(EHSymbol, MCSA_WeakDefinition);
@@ -160,8 +160,8 @@ void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
-  if (cast<MCSymbolMachO>(Symbol)->isSymbolLinkerVisible())
-    insert(getContext().allocFragment<MCDataFragment>());
+  if (static_cast<MCSymbolMachO *>(Symbol)->isSymbolLinkerVisible())
+    newFragment();
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
@@ -172,7 +172,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   //
   // FIXME: Cleanup this code, these bits should be emitted based on semantic
   // properties, not on the order of definition, etc.
-  cast<MCSymbolMachO>(Symbol)->clearReferenceType();
+  static_cast<MCSymbolMachO *>(Symbol)->clearReferenceType();
 }
 
 void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -182,7 +182,7 @@ void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
     if (const auto *SymA = Res.getAddSym()) {
       if (!Res.getSubSym() &&
           (SymA->getName().empty() || Res.getConstant() != 0))
-        cast<MCSymbolMachO>(Symbol)->setAltEntry();
+        static_cast<MCSymbolMachO *>(Symbol)->setAltEntry();
     }
   }
   MCObjectStreamer::emitAssignment(Symbol, Value);
@@ -256,7 +256,7 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
 
 bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
-  MCSymbolMachO *Symbol = cast<MCSymbolMachO>(Sym);
+  auto *Symbol = static_cast<MCSymbolMachO *>(Sym);
 
   // Indirect symbols are handled differently, to match how 'as' handles
   // them. This makes writing matching .o files easier.
@@ -367,17 +367,18 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
 void MCMachOStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   // Encode the 'desc' value into the lowest implementation defined bits.
   getAssembler().registerSymbol(*Symbol);
-  cast<MCSymbolMachO>(Symbol)->setDesc(DescValue);
+  static_cast<MCSymbolMachO *>(Symbol)->setDesc(DescValue);
 }
 
 void MCMachOStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {
+  auto &Sym = static_cast<MCSymbolMachO &>(*Symbol);
   // FIXME: Darwin 'as' does appear to allow redef of a .comm by itself.
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
 
-  getAssembler().registerSymbol(*Symbol);
-  Symbol->setExternal(true);
-  Symbol->setCommon(Size, ByteAlignment);
+  getAssembler().registerSymbol(Sym);
+  Sym.setExternal(true);
+  Sym.setCommon(Size, ByteAlignment);
 }
 
 void MCMachOStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -393,7 +394,7 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   // On darwin all virtual sections have zerofill type. Disallow the usage of
   // .zerofill in non-virtual functions. If something similar is needed, use
   // .space or .zero.
-  if (!Section->isVirtualSection()) {
+  if (!Section->isBssSection()) {
     getContext().reportError(
         Loc, "The usage of .zerofill is restricted to sections of "
              "ZEROFILL type. Use .zero or .space instead.");
@@ -430,7 +431,7 @@ void MCMachOStreamer::finishImpl() {
   // defining symbols.
   DenseMap<const MCFragment *, const MCSymbol *> DefiningSymbolMap;
   for (const MCSymbol &Symbol : getAssembler().symbols()) {
-    auto &Sym = cast<MCSymbolMachO>(Symbol);
+    auto &Sym = static_cast<const MCSymbolMachO &>(Symbol);
     if (Sym.isSymbolLinkerVisible() && Sym.isInSection() && !Sym.isVariable() &&
         !Sym.isAltEntry()) {
       // An atom defining symbol should never be internal to a fragment.
@@ -443,13 +444,13 @@ void MCMachOStreamer::finishImpl() {
   // Set the fragment atom associations by tracking the last seen atom defining
   // symbol.
   for (MCSection &Sec : getAssembler()) {
-    cast<MCSectionMachO>(Sec).allocAtoms();
+    static_cast<MCSectionMachO &>(Sec).allocAtoms();
     const MCSymbol *CurrentAtom = nullptr;
     size_t I = 0;
     for (MCFragment &Frag : Sec) {
       if (const MCSymbol *Symbol = DefiningSymbolMap.lookup(&Frag))
         CurrentAtom = Symbol;
-      cast<MCSectionMachO>(Sec).setAtom(I++, CurrentAtom);
+      static_cast<MCSectionMachO &>(Sec).setAtom(I++, CurrentAtom);
     }
   }
 
@@ -460,7 +461,8 @@ void MCMachOStreamer::finishImpl() {
 }
 
 void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
-  const MCSymbol *S = &SRE->getSymbol();
+  auto *S =
+      static_cast<MCSymbolMachO *>(const_cast<MCSymbol *>(&SRE->getSymbol()));
   if (getAssembler().registerSymbol(*S))
     S->setExternal(true);
 }
@@ -479,12 +481,13 @@ void MCMachOStreamer::finalizeCGProfile() {
   // and set its size now so that it's accounted for in layout.
   MCSection *CGProfileSection = Asm.getContext().getMachOSection(
       "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-  changeSection(CGProfileSection);
+  // Call the base class changeSection to omit the linker-local label.
+  MCObjectStreamer::changeSection(CGProfileSection);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
-  cast<MCDataFragment>(*CGProfileSection->begin())
-      .appendContents(SectionBytes, 0);
+  (*CGProfileSection->begin())
+      .setVarContents(std::vector<char>(SectionBytes, 0));
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -512,12 +515,14 @@ void MCMachOStreamer::createAddrSigSection() {
   // to be computed immediately after in order for it to be exported correctly.
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
-  changeSection(AddrSigSection);
-  auto *Frag = cast<MCDataFragment>(AddrSigSection->curFragList()->Head);
+  // Call the base class changeSection to omit the linker-local label.
+  MCObjectStreamer::changeSection(AddrSigSection);
+  auto *Frag = cast<MCFragment>(AddrSigSection->curFragList()->Head);
   // We will generate a series of pointer-sized symbol relocations at offset
   // 0x0. Set the section size to be large enough to contain a single pointer
   // (instead of emitting a zero-sized section) so these relocations are
   // technically valid, even though we don't expect these relocations to
   // actually be applied by the linker.
-  Frag->appendContents(8, 0);
+  constexpr char zero[8] = {};
+  Frag->setVarContents(zero);
 }
