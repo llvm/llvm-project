@@ -68,24 +68,23 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
   return bitCast;
 }
 
-static mlir::Value getMaskVecValue(CIRGenFunction &cgf, const CallExpr *e,
-                                   mlir::Value mask, unsigned numElts) {
+static mlir::Value getMaskVecValue(CIRGenFunction &cgf, const CallExpr *expr,
+                                   mlir::Value mask, unsigned numElems) {
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  auto maskTy =
-      cir::VectorType::get(builder.getBoolTy(),
-                           cast<cir::IntType>(mask.getType()).getWidth());
+  auto maskTy = cir::VectorType::get(
+      builder.getBoolTy(), cast<cir::IntType>(mask.getType()).getWidth());
   mlir::Value maskVec = builder.createBitcast(mask, maskTy);
 
   // If we have less than 8 elements, then the starting mask was an i8 and
   // we need to extract down to the right number of elements.
-  if (numElts < 8) {
+  if (numElems < 8) {
     SmallVector<int64_t, 4> indices;
-    for (auto i : llvm::seq<unsigned>(0, numElts))
+    for (auto i : llvm::seq<unsigned>(0, numElems))
       indices.push_back(i);
 
-    maskVec = builder.createVecShuffle(cgf.getLoc(e->getExprLoc()),
-                                                maskVec, maskVec, indices);
+    maskVec = builder.createVecShuffle(cgf.getLoc(expr->getExprLoc()), maskVec,
+                                       maskVec, indices);
   }
   return maskVec;
 }
@@ -604,21 +603,21 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     unsigned shiftVal =
         ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
         0xff;
-    auto numElts = cast<cir::IntType>(ops[0].getType()).getWidth();
+    auto numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
 
-    if (shiftVal >= numElts)
-      return builder.getNullValue(ops[0].getType(), getLoc(e->getExprLoc()));
+    if (shiftVal >= numElems)
+      return builder.getNullValue(ops[0].getType(), getLoc(expr->getExprLoc()));
 
-    mlir::Value in = getMaskVecValue(*this, e, ops[0], numElts);
+    mlir::Value in = getMaskVecValue(*this, expr, ops[0], numElems);
 
     SmallVector<int64_t, 64> indices;
-    for (auto i : llvm::seq<unsigned>(0, numElts))
-      indices.push_back(numElts + i - shiftVal);
+    for (auto i : llvm::seq<unsigned>(0, numElems))
+      indices.push_back(numElems + i - shiftVal);
 
     mlir::Value zero =
-        builder.getNullValue(in.getType(), getLoc(e->getExprLoc()));
+        builder.getNullValue(in.getType(), getLoc(expr->getExprLoc()));
     mlir::Value sv =
-        builder.createVecShuffle(getLoc(e->getExprLoc()), zero, in, indices);
+        builder.createVecShuffle(getLoc(expr->getExprLoc()), zero, in, indices);
     return builder.createBitcast(sv, ops[0].getType());
   }
   case X86::BI__builtin_ia32_kshiftriqi:
@@ -628,21 +627,21 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     unsigned shiftVal =
         ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
         0xff;
-    auto numElts = cast<cir::IntType>(ops[0].getType()).getWidth();
+    auto numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
 
-    if (shiftVal >= numElts)
-      return builder.getNullValue(ops[0].getType(), getLoc(e->getExprLoc()));
+    if (shiftVal >= numElems)
+      return builder.getNullValue(ops[0].getType(), getLoc(expr->getExprLoc()));
 
-    mlir::Value in = getMaskVecValue(*this, e, ops[0], numElts);
+    mlir::Value in = getMaskVecValue(*this, expr, ops[0], numElems);
 
     SmallVector<int64_t, 64> indices;
-    for (auto i : llvm::seq<unsigned>(0, numElts))
+    for (auto i : llvm::seq<unsigned>(0, numElems))
       indices.push_back(i + shiftVal);
 
     mlir::Value zero =
-        builder.getNullValue(in.getType(), getLoc(e->getExprLoc()));
+        builder.getNullValue(in.getType(), getLoc(expr->getExprLoc()));
     mlir::Value sv =
-        builder.createVecShuffle(getLoc(e->getExprLoc()), in, zero, indices);
+        builder.createVecShuffle(getLoc(expr->getExprLoc()), in, zero, indices);
     return builder.createBitcast(sv, ops[0].getType());
   }
   case X86::BI__builtin_ia32_vprotbi:
