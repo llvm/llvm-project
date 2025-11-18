@@ -1520,19 +1520,12 @@ struct VectorExtractStridedSliceDistribution
 
     int distrDimExtractedSize =
         cast<IntegerAttr>(extractOp.getSizes()[distributedDim]).getInt();
-    if (distrDimExtractedSize ==
-        extractOp.getSourceVectorType().getShape()[distributedDim])
+    int sourceDistrDimSize =
+        extractOp.getSourceVectorType().getShape()[distributedDim];
+    if (distrDimExtractedSize == sourceDistrDimSize)
       return rewriter.notifyMatchFailure(
           warpOp, "Distributed dimension is fully extracted, skipping.");
 
-    // Check if the size extracted along the distributed dimension is a multiple
-    // of the source dim size and should be distributable to lanes.
-    int64_t sourceDisrDimSize = yieldedType.getShape()[distributedDim];
-    if (sourceDisrDimSize % distrDimExtractedSize != 0)
-      return rewriter.notifyMatchFailure(
-          warpOp,
-          "Extracted size along distributed dimension is not a multiple of "
-          "source dim size.");
     auto sourceLayout =
         xegpu::getDistributeLayoutAttr(extractOp->getOpOperand(0));
     if (!sourceLayout || sourceLayout.getEffectiveLaneLayoutAsInt().empty())
@@ -1543,13 +1536,13 @@ struct VectorExtractStridedSliceDistribution
     // Because only single dimension distribution is supported, lane layout size
     // at the distributed dim must be the subgroup size.
     int subgroupSize = sourceLaneLayout[distributedDim];
-    // Check if the distributed extracted dim is a multiple of the subgroup
-    // size.
-    if (distrDimExtractedSize % subgroupSize != 0)
+    // Check if the source size in the distributed dimension is a multiple of
+    // subgroup size.
+    if (sourceDistrDimSize % subgroupSize != 0)
       return rewriter.notifyMatchFailure(
           warpOp,
-          "Extracted size along distributed dimension is not a multiple of "
-          "subgroup size in source layout.");
+          "Source size along distributed dimension is not a multiple of "
+          "subgroup size.");
     auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
     // We expect lane data to be all ones in this case.
     if (!llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))

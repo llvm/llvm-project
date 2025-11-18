@@ -749,4 +749,40 @@ gpu.func @vector_insert_strided_slice_1d(%laneid: index) {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @vector_extract_strided_slice_unsopported_offset
+// CHECK:         %{{.*}} = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<2xf32>) {
+// CHECK:         }
+// CHECK-NOT:     %{{.*}} = vector.extract_strided_slice
+gpu.func @vector_extract_strided_slice_unsopported_offset(%laneid: index) {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<2xf32>) {
+    %0 = "some_def"() : () -> (vector<64xf32>)
+    %1 = vector.extract_strided_slice %0 { offsets = [3], sizes = [32], strides = [1],
+        layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+        layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+      }
+      : vector<64xf32> to vector<32xf32>
+    gpu.yield %1 : vector<32xf32>
+  }
+  "some_use"(%r) : (vector<2xf32>) -> ()
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_extract_strided_slice_unsopported_source
+// CHECK:         %{{.*}} = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<2xf32>) {
+// CHECK:         }
+// CHECK-NOT:     %{{.*}} = vector.extract_strided_slice
+gpu.func @vector_extract_strided_slice_unsopported_source(%laneid: index) {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<2xf32>) {
+    %0 = "some_def"() : () -> (vector<54xf32>)
+    %1 = vector.extract_strided_slice %0 { offsets = [0], sizes = [32], strides = [1],
+        layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+        layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+      }
+      : vector<54xf32> to vector<32xf32>
+    gpu.yield %1 : vector<32xf32>
+  }
+  "some_use"(%r) : (vector<2xf32>) -> ()
+  gpu.return
+}
+
 }
