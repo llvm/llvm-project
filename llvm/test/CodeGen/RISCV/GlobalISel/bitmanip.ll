@@ -261,3 +261,87 @@ define i2 @test_ctpop_i2(i2 %a) {
   %1 = call i2 @llvm.ctpop.i2(i2 %a)
   ret i2 %1
 }
+
+define i11 @test_ctpop_i11(i11 %a) {
+; RV32-LABEL: test_ctpop_i11:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    andi a0, a0, 2047
+; RV32-NEXT:    lui a1, 5
+; RV32-NEXT:    lui a2, 16
+; RV32-NEXT:    srli a3, a0, 1
+; RV32-NEXT:    addi a1, a1, 1365
+; RV32-NEXT:    and a1, a3, a1
+; RV32-NEXT:    lui a3, 3
+; RV32-NEXT:    addi s0, a2, -1
+; RV32-NEXT:    addi a2, a3, 819
+; RV32-NEXT:    sub a0, a0, a1
+; RV32-NEXT:    and a1, a0, s0
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    srli a1, a1, 2
+; RV32-NEXT:    and a1, a1, a2
+; RV32-NEXT:    lui a2, 1
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    srli a1, a0, 4
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    addi a1, a2, -241
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    li a1, 257
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    and a0, a0, s0
+; RV32-NEXT:    srli a0, a0, 8
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ctpop_i11:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    andi a0, a0, 2047
+; RV64-NEXT:    lui a1, 5
+; RV64-NEXT:    lui a2, 16
+; RV64-NEXT:    srli a3, a0, 1
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    and a1, a3, a1
+; RV64-NEXT:    lui a3, 3
+; RV64-NEXT:    addi s0, a2, -1
+; RV64-NEXT:    addi a2, a3, 819
+; RV64-NEXT:    sub a0, a0, a1
+; RV64-NEXT:    and a1, a0, s0
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    srli a1, a1, 2
+; RV64-NEXT:    and a1, a1, a2
+; RV64-NEXT:    lui a2, 1
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    srli a1, a0, 4
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    addi a1, a2, -241
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    li a1, 257
+; RV64-NEXT:    call __muldi3
+; RV64-NEXT:    and a0, a0, s0
+; RV64-NEXT:    srli a0, a0, 8
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
+  %1 = call i11 @llvm.ctpop.i11(i11 %a)
+  ret i11 %1
+}

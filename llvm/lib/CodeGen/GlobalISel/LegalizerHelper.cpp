@@ -7678,14 +7678,12 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     unsigned Size = Ty.getSizeInBits();
     MachineIRBuilder &B = MIRBuilder;
 
-    // Lift small odd-size integer to 8-bit integer.
-    if (Size < 8) {
-      LLT NewTy = LLT::scalar(8);
-      auto ZExt = B.buildZExt(NewTy, SrcReg);
-      auto NewCTPOP = B.buildCTPOP(NewTy, ZExt);
+    // Lift odd-size integer to multiple of 8 bit.
+    if (Size % 8 != 0) {
+      LLT NewTy = LLT::scalar(alignTo(Size, 8));
       Observer.changingInstr(MI);
-      MI.setDesc(TII.get(TargetOpcode::G_TRUNC));
-      MI.getOperand(1).setReg(NewCTPOP.getReg(0));
+      widenScalarSrc(MI, NewTy, 1, TargetOpcode::G_ZEXT);
+      widenScalarDst(MI, NewTy, 0);
       Observer.changedInstr(MI);
       return Legalized;
     }
