@@ -386,7 +386,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 module attributes {transform.with_named_sequence} {
-  // expected-error @below {{trying to schedule a pass on an unsupported operation}}
+  // expected-error @below {{trying to schedule pass 'DuplicateFunctionEliminationPass' on an unsupported operation}}
   // expected-note @below {{target op}}
   func.func @invalid_target_op_type() {
     return
@@ -475,3 +475,35 @@ module attributes {transform.with_named_sequence} {
     "transform.yield"() : () -> ()
   }) : () -> ()
 }) {transform.with_named_sequence} : () -> ()
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  // Unnamed modules do not implement SymbolOpInterface, so test-print-liveness
+  // cannot be applied.
+  // expected-error @+2 {{trying to schedule pass '(anonymous namespace)::TestLivenessPass' on an unsupported operation}}
+  // expected-note @+1 {{target op}}
+  builtin.module attributes{test.target} {}
+
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %1 = transform.structured.match ops{["builtin.module"]} attributes {test.target} in %arg1 : (!transform.any_op) -> !transform.any_op
+
+    // expected-error @below {{pass pipeline failed}}
+    transform.apply_registered_pass "test-print-liveness" to %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  // Named modules implement SymbolOpInterface, so test-print-liveness can be
+  // applied.
+  builtin.module @named_module attributes{test.target} {}
+
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %1 = transform.structured.match ops{["builtin.module"]} attributes {test.target} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "test-print-liveness" to %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
