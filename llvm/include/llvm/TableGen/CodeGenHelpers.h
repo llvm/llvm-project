@@ -47,14 +47,13 @@ private:
 };
 
 // Simple RAII helper for emitting #if guard. It emits:
-// <IfGuard> <Condition>
+// #if <Condition>
 // #endif // <Condition>
 class IfGuardEmitter {
 public:
-  IfGuardEmitter(raw_ostream &OS, StringRef Condition,
-                 StringRef IfGuard = "#if")
+  IfGuardEmitter(raw_ostream &OS, StringRef Condition)
       : Condition(Condition.str()), OS(OS) {
-    OS << IfGuard << " " << Condition << "\n\n";
+    OS << "#if " << Condition << "\n\n";
   }
 
   ~IfGuardEmitter() { OS << "\n#endif // " << Condition << "\n\n"; }
