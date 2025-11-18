@@ -5265,8 +5265,6 @@ multiclass SS41I_extract8<bits<8> opc, string OpcodeStr> {
 let Predicates = [HasAVX, NoBWI] in
   defm VPEXTRB : SS41I_extract8<0x14, "vpextrb">, VEX, WIG;
 
-// Extract an 8-bit value from a vector and zero extend it to
-// i32, corresponds to X86::PEXTRB.
 defm PEXTRB      : SS41I_extract8<0x14, "pextrb">;
 
 

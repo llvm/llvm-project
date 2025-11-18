@@ -144,6 +144,9 @@ def X86andnp   : SDNode<"X86ISD::ANDNP",
 def X86multishift   : SDNode<"X86ISD::MULTISHIFT",
                  SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                       SDTCisSameAs<1,2>]>>;
+
+// Extract an 8-bit value from a vector and zero extend it to
+// i32, corresponds to X86::PEXTRB.
 def X86pextrb  : SDNode<"X86ISD::PEXTRB",
                  SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, v16i8>,
                                       SDTCisVT<2, i8>]>>;
