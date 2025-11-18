@@ -25,6 +25,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX-NEXT:    [[MIN_ITERS_CHECK5:%.*]] = icmp ult i64 [[TMP1]], 124
 ; AVX-NEXT:    br i1 [[MIN_ITERS_CHECK5]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX:       vector.ph:
+; AVX-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP3]], 24
 ; AVX-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], 9223372036854775776
 ; AVX-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX:       vector.body:
@@ -58,7 +59,6 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX:       middle.block:
-; AVX-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP3]], 24
 ; AVX-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; AVX-NEXT:    br i1 [[CMP_N]], label [[EXIT]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; AVX:       vec.epilog.iter.check:
@@ -69,6 +69,8 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX:       vec.epilog.ph:
 ; AVX-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX-NEXT:    [[N_VEC10:%.*]] = and i64 [[TMP3]], 9223372036854775800
+; AVX-NEXT:    [[TMP22:%.*]] = shl i64 [[N_VEC10]], 2
+; AVX-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP22]]
 ; AVX-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; AVX:       vec.epilog.vector.body:
 ; AVX-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
@@ -83,8 +85,6 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT14]], [[N_VEC10]]
 ; AVX-NEXT:    br i1 [[TMP27]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX:       vec.epilog.middle.block:
-; AVX-NEXT:    [[TMP28:%.*]] = shl i64 [[N_VEC10]], 2
-; AVX-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP28]]
 ; AVX-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC10]]
 ; AVX-NEXT:    br i1 [[CMP_N15]], label [[EXIT]], label [[BB12_PREHEADER]]
 ; AVX:       bb12.preheader:
