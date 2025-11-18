@@ -31,6 +31,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRFunctionInterfaces
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemorySlotInterfaces
