@@ -1254,7 +1254,11 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.mbstowcs
+    libc.src.stdlib.mbtowc
     libc.src.stdlib.quick_exit
+    libc.src.stdlib.wcstombs
+    libc.src.stdlib.wctomb
 
     # signal.h entrypoints
     libc.src.signal.kill
@@ -1372,13 +1376,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.mbrlen
     libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc
-    libc.src.wchar.mbtowc
-    libc.src.wchar.mbstowcs
     libc.src.wchar.mbsrtowcs
     libc.src.wchar.mbsnrtowcs
     libc.src.wchar.wcrtomb
-    libc.src.wchar.wctomb
-    libc.src.wchar.wcstombs
     libc.src.wchar.wcsrtombs
     libc.src.wchar.wcsnrtombs
 

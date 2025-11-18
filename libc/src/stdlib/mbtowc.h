@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_WCHAR_MBTOWC_H
-#define LLVM_LIBC_SRC_WCHAR_MBTOWC_H
+#ifndef LLVM_LIBC_SRC_STDLIB_MBTOWC_H
+#define LLVM_LIBC_SRC_STDLIB_MBTOWC_H
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
@@ -19,4 +19,4 @@ int mbtowc(wchar_t *__restrict pwc, const char *__restrict s, size_t n);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_WCHAR_MBTOWC_H
+#endif // LLVM_LIBC_SRC_STDLIB_MBTOWC_H

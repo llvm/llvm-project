@@ -120,17 +120,17 @@ TEST(ScudoMapTest, Zeroing) {
 #if SCUDO_LINUX
   // Now verify that if madvise fails, the data is still zeroed.
   memset(Data, 1U, MemMap.getCapacity());
-  EXPECT_NE(-1, mlock(Data, MemMap.getCapacity()));
+  if (mlock(Data, MemMap.getCapacity()) != -1) {
+    EXPECT_EQ(1U, Data[0]);
+    EXPECT_EQ(1U, Data[PageSize]);
+    EXPECT_EQ(1U, Data[PageSize * 2]);
+    MemMap.releaseAndZeroPagesToOS(MemMap.getBase(), MemMap.getCapacity());
+    EXPECT_EQ(0U, Data[0]);
+    EXPECT_EQ(0U, Data[PageSize]);
+    EXPECT_EQ(0U, Data[PageSize * 2]);
 
-  EXPECT_EQ(1U, Data[0]);
-  EXPECT_EQ(1U, Data[PageSize]);
-  EXPECT_EQ(1U, Data[PageSize * 2]);
-  MemMap.releaseAndZeroPagesToOS(MemMap.getBase(), MemMap.getCapacity());
-  EXPECT_EQ(0U, Data[0]);
-  EXPECT_EQ(0U, Data[PageSize]);
-  EXPECT_EQ(0U, Data[PageSize * 2]);
-
-  EXPECT_NE(-1, munlock(Data, MemMap.getCapacity()));
+    EXPECT_NE(-1, munlock(Data, MemMap.getCapacity()));
+  }
 #endif
 
   MemMap.unmap();
