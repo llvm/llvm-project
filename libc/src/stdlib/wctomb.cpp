@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/wchar/wctomb.h"
+#include "src/stdlib/wctomb.h"
 
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"

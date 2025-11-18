@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/wchar/wcstombs.h"
+#include "src/stdlib/wcstombs.h"
 
 #include "hdr/types/char32_t.h"
 #include "hdr/types/size_t.h"
