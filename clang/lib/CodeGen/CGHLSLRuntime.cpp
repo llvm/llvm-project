@@ -1149,7 +1149,7 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
   // be past the end of the in-memory object.
   SmallVector<llvm::Value *, 2> Indices;
   Indices.push_back(Idx);
-  Indices.push_back(llvm::ConstantInt::get(Idx->getType(), 0));
+  Indices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
 
   llvm::Value *GEP = CGF.Builder.CreateGEP(LayoutTy, Addr.emitRawPointer(CGF),
                                            Indices, "cbufferidx");
