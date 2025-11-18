@@ -105,8 +105,8 @@ set(intrinsics_sources
   __cuda_builtins.f90
 )
 
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "powerpc")
-  list(APPEND host_source
+if (LLVM_TARGET_TRIPLE MATCHES "^ppc" OR LLVM_TARGET_TRIPLE MATCHES "^powerpc")
+  list(APPEND host_sources
     __ppc_types.f90
     __ppc_intrinsics.f90
     mma.f90
