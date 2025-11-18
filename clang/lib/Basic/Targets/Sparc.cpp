@@ -33,7 +33,7 @@ const char *const SparcTargetInfo::GCCRegNames[] = {
     "f56", "f58", "f60", "f62",
 
     // Condition code registers
-    "icc", "fcc0", "fcc1", "fcc2", "fcc3"
+    "icc", "fcc0", "fcc1", "fcc2", "fcc3",
     // clang-format on
 };
 
