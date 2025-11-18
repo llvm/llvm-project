@@ -904,7 +904,7 @@ def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
 def FeatureCubeInsts : SubtargetFeature<"cube-insts",
   "HasCubeInsts",
   "true",
-  "Has V_CUBE* instructions"
+  "Has v_cube* instructions"
 >; 
 
 def FeatureLerpInst : SubtargetFeature<"lerp-inst",
@@ -916,31 +916,31 @@ def FeatureLerpInst : SubtargetFeature<"lerp-inst",
 def FeatureSadInsts : SubtargetFeature<"sad-insts",
   "HasSadInsts",
   "true",
-  "Has V_SAD* instructions"
+  "Has v_sad* instructions"
 >; 
 
 def FeatureQsadInsts : SubtargetFeature<"qsad-insts",
   "HasQsadInsts",
   "true",
-  "Has V_QSAD* instructions"
+  "Has v_qsad* instructions"
 >; 
 
 def FeatureCvtNormInsts : SubtargetFeature<"cvt-norm-insts",
   "HasCvtNormInsts",
   "true",
-  "Has V_CVT_NORM* instructions"
+  "Has v_cvt_norm* instructions"
 >;
 
 def FeatureCvtPkNormVOP2Insts : SubtargetFeature<"cvt-pknorm-vop2-insts",
   "HasCvtPkNormVOP2Insts",
   "true",
-  "Has V_CVT_PK_NORM_* instructions/Has V_CVT_PK_NORM_*_F16 instructions"
+  "Has v_cvt_pk_norm_*f32 instructions/Has v_cvt_pk_norm_*_f16 instructions"
 >;
 
 def FeatureCvtPkNormVOP3Insts : SubtargetFeature<"cvt-pknorm-vop3-insts",
   "HasCvtPkNormVOP3Insts",
   "true",
-  "Has V_CVT_PK_NORM_* instructions/Has V_CVT_PK_NORM_*_F16 instructions"
+  "Has v_cvt_pk_norm_*f32 instructions/Has v_cvt_pk_norm_*_f16 instructions"
 >;
 
 def FeatureAtomicDsPkAdd16Insts : SubtargetFeature<"atomic-ds-pk-add-16-insts",
