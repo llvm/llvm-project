@@ -12,6 +12,7 @@
 #include "VPlan.h"
 
 namespace llvm {
+class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 } // namespace llvm
@@ -97,6 +98,12 @@ bool isUniformAcrossVFsAndUFs(VPValue *V);
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Return a MemoryLocation for \p R with noalias metadata populated from
+/// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
+/// the location is conservatively set to nullptr.
+std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

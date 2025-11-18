@@ -10,6 +10,7 @@
 #include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
@@ -134,4 +135,21 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
     return VPBlockUtils::isHeader(VPB, VPDT);
   });
   return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
+}
+
+std::optional<MemoryLocation>
+vputils::getMemoryLocation(const VPRecipeBase &R) {
+  return TypeSwitch<const VPRecipeBase *, std::optional<MemoryLocation>>(&R)
+      .Case<VPWidenMemoryRecipe, VPInterleaveRecipe, VPReplicateRecipe>(
+          [](auto *S) {
+            MemoryLocation Loc;
+            // Populate noalias metadata from VPIRMetadata.
+            if (MDNode *NoAliasMD = S->getMetadata(LLVMContext::MD_noalias))
+              Loc.AATags.NoAlias = NoAliasMD;
+            if (MDNode *AliasScopeMD =
+                    S->getMetadata(LLVMContext::MD_alias_scope))
+              Loc.AATags.Scope = AliasScopeMD;
+            return Loc;
+          })
+      .Default([](auto *) { return std::nullopt; });
 }

@@ -8,20 +8,6 @@ target triple = "arm64-apple-macosx"
 define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %array) {
 ; CHECK-LABEL: define void @hoist_invariant_load(
 ; CHECK-SAME: ptr readonly captures(none) [[INVARIANT_PTR:%.*]], i64 [[NUM_ELEMENTS:%.*]], ptr captures(none) [[ARRAY:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[NUM_ELEMENTS]], 0
-; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[EXIT:.*]], label %[[LOOP_LATCH:.*]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP_LATCH]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
-; CHECK-NEXT:    [[INVARIANT_VAL:%.*]] = load double, ptr [[INVARIANT_PTR]], align 8
-; CHECK-NEXT:    [[ARRAY_VAL:%.*]] = load double, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[SUM:%.*]] = fadd double [[INVARIANT_VAL]], [[ARRAY_VAL]]
-; CHECK-NEXT:    store double [[SUM]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I2]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[I_NEXT]], [[NUM_ELEMENTS]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_LATCH]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

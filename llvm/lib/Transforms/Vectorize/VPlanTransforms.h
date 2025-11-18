@@ -230,6 +230,11 @@ struct VPlanTransforms {
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
 
+  /// Hoist single-scalar loads with invariant addresses out of the vector loop
+  /// to the preheader, if they are proven not to alias with any stores in the
+  /// plan using noalias metadata.
+  static void hoistInvariantLoads(VPlan &Plan);
+
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
   /// elements, if all transformed interleave groups access the full vector
