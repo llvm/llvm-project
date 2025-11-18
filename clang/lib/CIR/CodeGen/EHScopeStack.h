@@ -217,6 +217,8 @@ public:
   /// Determines whether the exception-scopes stack is empty.
   bool empty() const { return startOfData == endOfBuffer; }
 
+  bool requiresCatchOrCleanup() const;
+
   /// Determines whether there are any normal cleanups on the stack.
   bool hasNormalCleanups() const {
     return innermostNormalCleanup != stable_end();
