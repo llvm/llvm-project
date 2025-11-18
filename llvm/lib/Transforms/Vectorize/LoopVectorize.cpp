@@ -1241,6 +1241,10 @@ public:
   /// only contribute 1/X of its cost to the total cost calculation, but when
   /// optimizing for code size it will just be 1 as code size costs don't depend
   /// on execution probabilities.
+  ///
+  /// Note that if a block wasn't originally predicated but was predicated due
+  /// to tail folding, the divisor will still be 1 because it will execute for
+  /// every iteration of the loop header.
   inline unsigned
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           const BasicBlock *BB) const;
@@ -5111,6 +5115,8 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     // unconditionally executed. For the scalar case, we may not always execute
     // the predicated block, if it is an if-else block. Thus, scale the block's
     // cost by the probability of executing it.
+    // getPredBlockCostDivisor will return 1 for blocks that are only predicated
+    // by the header mask when folding the tail.
     if (VF.isScalar())
       BlockCost /= getPredBlockCostDivisor(CostKind, BB);
 
