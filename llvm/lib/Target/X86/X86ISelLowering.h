@@ -1537,6 +1537,8 @@ namespace llvm {
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;
 
+    MulByConstInfo getMulByConstInfo(EVT VT, const APInt &C) const override;
+
     /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
     /// with this index.
     bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,

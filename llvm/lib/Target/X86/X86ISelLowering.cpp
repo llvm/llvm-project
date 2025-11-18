@@ -3389,6 +3389,12 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   if (!ISD::isConstantSplatVector(C.getNode(), MulC))
     return false;
 
+  // Check if this is an 8-bit vector multiply that can be decomposed to shifts.
+  if (VT.isVector() && VT.getScalarSizeInBits() == 8) {
+    if (getMulByConstInfo(VT, MulC).IsDecomposable)
+      return true;
+  }
+
   // Find the type this will be legalized too. Otherwise we might prematurely
   // convert this to shl+add/sub and then still have to type legalize those ops.
   // Another choice would be to defer the decision for illegal types until
@@ -3411,6 +3417,59 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   // shl+add, shl+sub, shl+add+neg
   return (MulC + 1).isPowerOf2() || (MulC - 1).isPowerOf2() ||
          (1 - MulC).isPowerOf2() || (-(MulC + 1)).isPowerOf2();
+}
+
+TargetLowering::MulByConstInfo
+X86TargetLowering::getMulByConstInfo(EVT VT, const APInt &Constant) const {
+  // Only handle 8-bit vector multiplies
+  if (!VT.isVector() || VT.getScalarSizeInBits() != 8 ||
+      Constant.getBitWidth() < 8)
+    return MulByConstInfo();
+
+  TargetLowering::MulByConstInfo Info;
+  int8_t SignedC = static_cast<int8_t>(Constant.getZExtValue());
+  Info.Negate = SignedC < 0;
+
+  uint32_t U = static_cast<uint8_t>(Info.Negate ? -SignedC : SignedC);
+  if (U == 0 || U == 1)
+    return Info;
+
+  // Power of 2.
+  if (isPowerOf2_32(U)) {
+    Info.Shift1 = llvm::countr_zero(U);
+    Info.NumShifts = 1;
+    Info.IsDecomposable = true;
+    return Info;
+  }
+
+  // Decomposition logic:
+  //   m = 2^x + 2^y  => (shl x, x) + (shl x, y)
+  //   m = 2^x - 2^y  => (shl x, x) - (shl x, y)
+  // where 2^y is the lowest set bit.
+  uint32_t LowBit = U & (0U - U);
+  unsigned Shift2 = llvm::countr_zero(LowBit);
+
+  uint32_t Rem = U - LowBit;
+  if (isPowerOf2_32(Rem)) {
+    Info.Shift1 = llvm::countr_zero(Rem);
+    Info.Shift2 = Shift2;
+    Info.IsSub = false;
+    Info.NumShifts = 2;
+    Info.IsDecomposable = true;
+    return Info;
+  }
+
+  uint32_t Sum = U + LowBit;
+  if (Sum <= 0xFF && isPowerOf2_32(Sum)) {
+    Info.Shift1 = llvm::countr_zero(Sum);
+    Info.Shift2 = Shift2;
+    Info.IsSub = true;
+    Info.NumShifts = 2;
+    Info.IsDecomposable = true;
+    return Info;
+  }
+
+  return Info;
 }
 
 bool X86TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
