@@ -168,6 +168,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPULibCalls.cpp",
     "AMDGPULibFunc.cpp",
     "AMDGPULowerBufferFatPointers.cpp",
+    "AMDGPULowerExecSync.cpp",
     "AMDGPULowerIntrinsics.cpp",
     "AMDGPULowerKernelArguments.cpp",
     "AMDGPULowerKernelAttributes.cpp",
