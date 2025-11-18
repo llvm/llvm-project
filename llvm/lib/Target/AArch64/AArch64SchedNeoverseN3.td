@@ -40,6 +40,7 @@ def N3UnitM0  : ProcResource<1>;  // Integer Single/Multi-Cycle 0
 def N3UnitM1  : ProcResource<1>;  // Integer Single/Multi-Cycle 1
 def N3UnitL01 : ProcResource<2>;  // Load/Store 0/1
 def N3UnitL2  : ProcResource<1>;  // Load 2
+def N3UnitGL  : ProcResource<4>;  // Gather Load
 def N3UnitD   : ProcResource<2>;  // Integer Store data 0/1
 def N3UnitV0  : ProcResource<1>;  // FP/ASIMD 0
 def N3UnitV1  : ProcResource<1>;  // FP/ASIMD 1
@@ -158,6 +159,12 @@ def N3Write_5c_1L_1I : SchedWriteRes<[N3UnitL, N3UnitI]> {
 def N3Write_6c_2L : SchedWriteRes<[N3UnitL, N3UnitL]> {
     let Latency = 6;
     let NumMicroOps = 2;
+}
+
+def N3Write_6c_2GL : SchedWriteRes<[N3UnitL, N3UnitGL]> {
+  let Latency     = 6;
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [3, 5];
 }
 
 def N3Write_2c_1L01_1V : SchedWriteRes<[N3UnitL01, N3UnitV]> {
@@ -2243,8 +2250,8 @@ def : InstRW<[N3Write_7c_4L], (instregex "^LDNT1[BHW]_ZZR_S$",
                                          "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[N3Write_6c_2L], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
-def : InstRW<[N3Write_6c_2L], (instrs LDNT1D_ZZR_D)>;
+def : InstRW<[N3Write_6c_2GL], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[N3Write_6c_2GL], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
 def : InstRW<[N3Write_6c_1L], (instregex "^LDFF1[BHWD]$",
@@ -2293,11 +2300,11 @@ def : InstRW<[N3Write_7c_4L], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
                                          "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[N3Write_6c_2L], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+def : InstRW<[N3Write_6c_2GL], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
                                          "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 64-bit element size
-def : InstRW<[N3Write_6c_2L],
+def : InstRW<[N3Write_6c_2GL],
              (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW(_SCALED)?$",
                         "^GLD(FF)?1S?[BHW]_D(_SCALED)?$",
                         "^GLD(FF)?1D_[SU]XTW(_SCALED)?$",
