@@ -221,8 +221,8 @@
 #ifdef cl_khr_subgroup_ballot
 #error "Incorrect cl_khr_subgroup_ballot define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_ballot' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_ballot' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_subgroup_ballot : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -233,8 +233,8 @@
 #ifdef cl_khr_subgroup_clustered_reduce
 #error "Incorrect cl_khr_subgroup_clustered_reduce define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_clustered_reduce' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_clustered_reduce' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_subgroup_clustered_reduce : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -245,8 +245,8 @@
 #ifdef cl_khr_subgroup_extended_types
 #error "Incorrect cl_khr_subgroup_extended_types define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_extended_types' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_extended_types' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_subgroup_extended_types : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -257,8 +257,8 @@
 #ifdef cl_khr_subgroup_non_uniform_arithmetic
 #error "Incorrect cl_khr_subgroup_non_uniform_arithmetic define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_non_uniform_arithmetic' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_non_uniform_arithmetic' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_subgroup_non_uniform_arithmetic : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -269,8 +269,8 @@
 #ifdef cl_khr_subgroup_non_uniform_vote
 #error "Incorrect cl_khr_subgroup_non_uniform_vote define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_non_uniform_vote' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_non_uniform_vote' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_subgroup_non_uniform_vote : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -281,8 +281,8 @@
 #ifdef cl_khr_subgroup_rotate
 #error "Incorrect cl_khr_subgroup_rotate define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_rotate' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_rotate' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_subgroup_rotate : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -293,8 +293,8 @@
 #ifdef cl_khr_subgroup_shuffle_relative
 #error "Incorrect cl_khr_subgroup_shuffle_relative define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_shuffle_relative' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_shuffle_relative' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_subgroup_shuffle_relative : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -305,8 +305,8 @@
 #ifdef cl_khr_subgroup_shuffle
 #error "Incorrect cl_khr_subgroup_shuffle define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_shuffle' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_shuffle' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_subgroup_shuffle : enable
 
 #ifndef cl_amd_media_ops
