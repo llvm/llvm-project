@@ -4299,23 +4299,6 @@ static unsigned CopyToFromAsymmetricReg(Register DestReg, Register SrcReg,
            : HasAVX  ? X86::VMOVDI2PDIrr
                      : X86::MOVDI2PDIrr;
 
-  // SrcReg(VR128) -> DestReg(GR16)
-  // SrcReg(GR16)  -> DestReg(VR128)
-
-  if (X86::GR16RegClass.contains(DestReg) &&
-      X86::VR128XRegClass.contains(SrcReg))
-    // Copy from a VR128 register to a GR16 register.
-    return HasAVX512 ? X86::VPEXTRWZrri
-           : HasAVX  ? X86::VPEXTRWrri
-                     : X86::PEXTRWrri;
-
-  if (X86::VR128XRegClass.contains(DestReg) &&
-      X86::GR16RegClass.contains(SrcReg))
-    // Copy from a GR16 register to a VR128 register.
-    return HasAVX512 ? X86::VPINSRWZrri
-           : HasAVX  ? X86::VPINSRWrri
-                     : X86::PINSRWrri;
-
   return 0;
 }
 
@@ -4384,28 +4367,55 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if (X86::VK16RegClass.contains(DestReg, SrcReg))
     Opc = Subtarget.hasBWI() ? (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk)
                              : (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVWkk);
+
+  else if (X86::GR16RegClass.contains(DestReg) &&
+           X86::VR128XRegClass.contains(SrcReg)) {
+    // Special case for moving xmm to GPR16 registers, get super reg and fall
+    // use CopyToFromAsymmetricReg
+    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+    DestReg =
+        TRI->getMatchingSuperReg(DestReg, X86::sub_16bit, &X86::GR32RegClass);
+  } else if (X86::VR128XRegClass.contains(DestReg) &&
+             X86::GR16RegClass.contains(SrcReg)) {
+
+    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+
+    // Zero extend GPR16 register to GPR32
+    Register Src32 =
+        TRI->getMatchingSuperReg(SrcReg, X86::sub_16bit, &X86::GR32RegClass);
+
+    BuildMI(MBB, MI, DL, get(X86::MOVZX32rr16), Src32)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+
+    // Assign Src32 to SrcReg and use CopyToFromAsymmetricReg
+    SrcReg = Src32;
+  }
+
   if (!Opc)
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);
 
   if (Opc) {
-    auto MIB = BuildMI(MBB, MI, DL, get(Opc), DestReg);
-    switch (Opc) {
-    case X86::VPINSRWZrri:
-    case X86::VPINSRWrri:
-    case X86::PINSRWrri:
-      MIB.addReg(DestReg, RegState::Undef)
-          .addReg(SrcReg, getKillRegState(KillSrc))
-          .addImm(0);
-      break;
-    case X86::VPEXTRWZrri:
-    case X86::VPEXTRWrri:
-    case X86::PEXTRWrri:
-      MIB.addReg(SrcReg, getKillRegState(KillSrc)).addImm(0);
-      break;
-    default:
-      MIB.addReg(SrcReg, getKillRegState(KillSrc));
-      break;
-    }
+    BuildMI(MBB, MI, DL, get(Opc), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  // Special case for moving GPR16 to xmm registers
+  if (X86::VR128XRegClass.contains(DestReg) &&
+      X86::GR16RegClass.contains(SrcReg)) {
+
+    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+
+    // Zero extend GPR16 register to GPR32
+    Register Src32 =
+        TRI->getMatchingSuperReg(SrcReg, X86::sub_16bit, &X86::GR32RegClass);
+
+    BuildMI(MBB, MI, DL, get(X86::MOVZX32rr16), Src32)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+
+    unsigned Opc = CopyToFromAsymmetricReg(DestReg, Src32, Subtarget);
+    BuildMI(MBB, MI, DL, get(Opc), DestReg).addReg(Src32, RegState::Kill);
+
     return;
   }
 

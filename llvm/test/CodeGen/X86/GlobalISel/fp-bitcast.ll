@@ -3,40 +3,43 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -global-isel -mattr=+avx | FileCheck %s --check-prefixes=AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -global-isel -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512
 
-define dso_local noundef half @test_i16_to_half(i16 %0) {
+define half @test_i16_to_half(i16 %0) {
 ; SSE2-LABEL: test_i16_to_half:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pinsrw $0, %di, %xmm0
+; SSE2-NEXT:    movzwl %di, %edi
+; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_i16_to_half:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vpinsrw $0, %di, %xmm0, %xmm0
+; AVX-NEXT:    movzwl %di, %edi
+; AVX-NEXT:    vmovd %edi, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_i16_to_half:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpinsrw $0, %di, %xmm0, %xmm0
+; AVX512-NEXT:    movzwl %di, %edi
+; AVX512-NEXT:    vmovd %edi, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %2 = bitcast i16 %0 to half
   ret half %2
 }
 
-define dso_local noundef i16 @test_half_to_i16(half %0) {
+define i16 @test_half_to_i16(half %0) {
 ; SSE2-LABEL: test_half_to_i16:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pextrw $0, %xmm0, %ax
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_half_to_i16:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vpextrw $0, %xmm0, %ax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_half_to_i16:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpextrw $0, %xmm0, %ax
+; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    retq
 entry:
   %2 = bitcast half %0 to i16
