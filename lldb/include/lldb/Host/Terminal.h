@@ -169,6 +169,17 @@ protected:
   lldb::pid_t m_process_group = -1;       ///< Cached process group information.
 };
 
+/// Returns whether or not the current terminal supports Unicode rendering.
+///
+/// The value is cached after the first computation.
+///
+/// On POSIX systems, we check if the LANG environment variable contains the
+/// substring "UTF-8";
+///
+/// On Windows, we check that we are running from the Windows Terminal
+/// application.
+bool TerminalSupportsUnicode();
+
 } // namespace lldb_private
 
 #endif // LLDB_HOST_TERMINAL_H

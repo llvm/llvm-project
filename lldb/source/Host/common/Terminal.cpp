@@ -472,3 +472,18 @@ bool TerminalState::TTYStateIsValid() const { return bool(m_data); }
 bool TerminalState::ProcessGroupIsValid() const {
   return static_cast<int32_t>(m_process_group) != -1;
 }
+
+bool lldb_private::TerminalSupportsUnicode() {
+  static std::optional<bool> result;
+  if (result)
+    return result.value();
+#ifdef _WIN32
+  return true;
+#else
+  const char *lang_var = std::getenv("LANG");
+  if (!lang_var)
+    return false;
+  result = llvm::StringRef(lang_var).lower().find("utf-8") != std::string::npos;
+#endif
+  return result.value();
+}
