@@ -32,7 +32,8 @@ private:
 } // end anonymous namespace
 
 ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
-  if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128)
+  if (const auto *BT = Ty->getAs<BuiltinType>();
+      BT && BT->getKind() == BuiltinType::LongDouble)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   if (Ty->isAnyComplexType()) {
@@ -43,7 +44,8 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
 }
 
 ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
-  if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128)
+  if (const auto *BT = Ty->getAs<BuiltinType>();
+      BT && BT->getKind() == BuiltinType::LongDouble)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   return DefaultABIInfo::classifyArgumentType(Ty);
