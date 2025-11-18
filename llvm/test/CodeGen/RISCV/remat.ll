@@ -320,7 +320,7 @@ entry:
 ; We could remat the load of the constant global if we extended the live
 ; interval of the high bits of the address.
 
-@const = constant i32 42
+@const = external constant i32
 define i32 @constglobal_load() nounwind {
 ; CHECK-LABEL: constglobal_load:
 ; CHECK:       # %bb.0: # %entry
