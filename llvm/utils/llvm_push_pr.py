@@ -335,6 +335,13 @@ class LLVMPRAutomator:
             f"python3 -c \"import os; print(os.environ['{LLVM_GITHUB_TOKEN_VAR}'])\""
         )
 
+    def _get_git_env(self) -> dict:
+        git_env = os.environ.copy()
+        git_env["GIT_ASKPASS"] = self._git_askpass_cmd
+        git_env[LLVM_GITHUB_TOKEN_VAR] = self.config.token
+        git_env["GIT_TERMINAL_PROMPT"] = "0"
+        return git_env
+
     def _run_cmd(
         self, command: List[str], read_only: bool = False, **kwargs
     ) -> subprocess.CompletedProcess:
@@ -369,10 +376,7 @@ class LLVMPRAutomator:
             f"Fetching from '{self.config.upstream_remote}' and rebasing '{self.original_branch}' on top of '{target}'..."
         )
 
-        git_env = os.environ.copy()
-        git_env["GIT_ASKPASS"] = self._git_askpass_cmd
-        git_env[LLVM_GITHUB_TOKEN_VAR] = self.config.token
-        git_env["GIT_TERMINAL_PROMPT"] = "0"
+        git_env = self._get_git_env()
 
         https_upstream_url = self._get_https_url_for_remote(self.config.upstream_remote)
         refspec = f"refs/heads/{self.config.base_branch}:refs/remotes/{self.config.upstream_remote}/{self.config.base_branch}"
@@ -484,10 +488,7 @@ class LLVMPRAutomator:
         self.runner.print(f"Processing commit {commit_hash[:7]}: {commit_title}")
         self.runner.print(f"Pushing commit to temporary branch '{branch_name}'")
 
-        git_env = os.environ.copy()
-        git_env["GIT_ASKPASS"] = self._git_askpass_cmd
-        git_env[LLVM_GITHUB_TOKEN_VAR] = self.config.token
-        git_env["GIT_TERMINAL_PROMPT"] = "0"
+        git_env = self._get_git_env()
 
         https_remote_url = self._get_https_url_for_remote(self.remote)
 
