@@ -3380,37 +3380,6 @@ static bool interp__builtin_ia32_cvt_mask(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_x86_byteshift(
-    InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned ID,
-    llvm::function_ref<APInt(const Pointer &, unsigned Lane, unsigned I,
-                             unsigned Shift)>
-        Fn) {
-  assert(Call->getNumArgs() == 2);
-
-  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
-  uint64_t Shift = ImmAPS.getZExtValue() & 0xff;
-
-  const Pointer &Src = S.Stk.pop<Pointer>();
-  if (!Src.getFieldDesc()->isPrimitiveArray())
-    return false;
-
-  unsigned NumElems = Src.getNumElems();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemT = Src.getFieldDesc()->getPrimType();
-
-  for (unsigned Lane = 0; Lane != NumElems; Lane += 16) {
-    for (unsigned I = 0; I != 16; ++I) {
-      unsigned Base = Lane + I;
-      APSInt Result = APSInt(Fn(Src, Lane, I, Shift));
-      INT_TYPE_SWITCH_NO_BOOL(ElemT,
-                              { Dst.elem<T>(Base) = static_cast<T>(Result); });
-    }
-  }
-
-  Dst.initializeAllElements();
-
-  return true;
-}
 
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,

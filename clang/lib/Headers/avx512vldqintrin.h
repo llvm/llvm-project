@@ -914,8 +914,8 @@ _mm256_maskz_cvtepu64_ps(__mmask8 __U, __m256i __A) {
                                            (__v8sf)_mm256_setzero_ps(), \
                                            (__mmask8)(U)))
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_movepi32_mask(__m128i __A) {
+static __inline__ __mmask8
+    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_movepi32_mask(__m128i __A) {
   return (__mmask8) __builtin_ia32_cvtd2mask128 ((__v4si) __A);
 }
 

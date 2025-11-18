@@ -1046,8 +1046,8 @@ _mm512_maskz_cvtepu64_ps (__mmask8 __U, __m512i __A) {
                                          (__v2df)_mm_setzero_pd(), \
                                          (__mmask8)(U), (int)(C), (int)(R)))
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_movepi32_mask(__m512i __A) {
+static __inline__ __mmask16
+    __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_movepi32_mask(__m512i __A) {
   return (__mmask16) __builtin_ia32_cvtd2mask512 ((__v16si) __A);
 }
 
