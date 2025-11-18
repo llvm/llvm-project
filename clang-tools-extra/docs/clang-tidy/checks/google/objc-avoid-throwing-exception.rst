@@ -11,7 +11,8 @@ exceptions from Objective-C code.
 The corresponding C++ style guide rule:
 https://google.github.io/styleguide/cppguide.html#Exceptions
 
-Instead, prefer passing in ``NSError **`` and return ``BOOL`` to indicate success or failure.
+Instead, prefer passing in ``NSError **`` and return ``BOOL`` to indicate
+success or failure.
 
 A counterexample:
 

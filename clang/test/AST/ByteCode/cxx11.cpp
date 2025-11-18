@@ -398,3 +398,24 @@ namespace PointerCast {
                                           // expected-note {{cast that performs the conversions of a reinterpret_cast}}
   };
 }
+
+namespace DummyToGlobalBlockMove {
+  struct Baz {
+    unsigned int n;
+  };
+
+  struct AP {
+    const AP *p;
+    const Baz *lp;
+  };
+
+  class Bar {
+  public:
+    static Baz _m[];
+    static const AP m;
+  };
+
+  const AP Bar::m = {0, &Bar::_m[0]};
+  Baz Bar::_m[] = {{0}};
+  const AP m = {&Bar ::m};
+}

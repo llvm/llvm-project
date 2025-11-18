@@ -3214,9 +3214,8 @@ _mm_broadcastq_epi64(__m128i __X) {
 ///    A 256-bit vector of [8 x i32] containing indexes of values to use from
 ///    \a __a.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_permutevar8x32_epi32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_permvarsi256((__v8si)__a, (__v8si)__b);
 }
 
@@ -3272,9 +3271,8 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
 ///    A 256-bit vector of [8 x i32] containing indexes of values to use from
 ///    \a __a.
 /// \returns A 256-bit vector of [8 x float] containing the result.
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
-_mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
-{
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
   return (__m256)__builtin_ia32_permvarsf256((__v8sf)__a, (__v8si)__b);
 }
 

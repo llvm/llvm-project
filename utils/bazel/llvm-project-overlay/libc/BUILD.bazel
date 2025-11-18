@@ -1025,6 +1025,7 @@ libc_support_library(
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
+        ":__support_wctype_utils",
         ":hdr_errno_macros",
     ],
 )
@@ -1102,6 +1103,7 @@ libc_support_library(
         ":func_realloc",
         ":hdr_stdio_macros",
         ":hdr_stdio_overlay",
+        ":string_memory_utils",
         ":types_off_t",
     ],
 )

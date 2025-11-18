@@ -14,6 +14,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -23,7 +24,6 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
-enum class VectorLibrary;
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
@@ -119,7 +119,8 @@ class TargetLibraryInfoImpl {
 
 public:
   TargetLibraryInfoImpl() = delete;
-  LLVM_ABI explicit TargetLibraryInfoImpl(const Triple &T);
+  LLVM_ABI explicit TargetLibraryInfoImpl(
+      const Triple &T, VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   // Provide value semantics.
   LLVM_ABI TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI);

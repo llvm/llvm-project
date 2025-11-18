@@ -79,9 +79,9 @@ static cl::opt<bool> EnableJoining("join-liveintervals",
                                    cl::desc("Coalesce copies (default=true)"),
                                    cl::init(true), cl::Hidden);
 
-static cl::opt<cl::boolOrDefault>
-    EnableTerminalRule("terminal-rule", cl::desc("Apply the terminal rule"),
-                       cl::init(cl::BOU_UNSET), cl::Hidden);
+static cl::opt<bool> UseTerminalRule("terminal-rule",
+                                     cl::desc("Apply the terminal rule"),
+                                     cl::init(true), cl::Hidden);
 
 /// Temporary flag to test critical edge unsplitting.
 static cl::opt<bool> EnableJoinSplits(
@@ -134,7 +134,6 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   SlotIndexes *SI = nullptr;
   const MachineLoopInfo *Loops = nullptr;
   RegisterClassInfo RegClassInfo;
-  bool UseTerminalRule = false;
 
   /// Position and VReg of a PHI instruction during coalescing.
   struct PHIValPos {
@@ -1374,7 +1373,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   }
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
-  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI);
+  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
@@ -4320,11 +4319,6 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else
     JoinGlobalCopies = (EnableGlobalCopies == cl::BOU_TRUE);
-
-  if (EnableTerminalRule == cl::BOU_UNSET)
-    UseTerminalRule = STI.enableTerminalRule();
-  else
-    UseTerminalRule = EnableTerminalRule == cl::BOU_TRUE;
 
   // If there are PHIs tracked by debug-info, they will need updating during
   // coalescing. Build an index of those PHIs to ease updating.

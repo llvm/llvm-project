@@ -313,28 +313,17 @@ private:
     Type *Ty = getContainedTypes(RetTy).front();
     EVT VT = getTLI()->getValueType(DL, Ty);
 
-    EVT ScalarVT = VT.getScalarType();
     RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
-
-    /// Migration flag. IsVectorCall cases directly know about the vector
-    /// libcall in RuntimeLibcallsInfo and shouldn't try to use
-    /// LibInfo->getVectorMappingInfo.
-    bool IsVectorCall = false;
 
     switch (ICA.getID()) {
     case Intrinsic::modf:
-      LC = RTLIB::getMODF(ScalarVT);
+      LC = RTLIB::getMODF(VT);
       break;
     case Intrinsic::sincospi:
       LC = RTLIB::getSINCOSPI(VT);
-      if (LC == RTLIB::UNKNOWN_LIBCALL)
-        LC = RTLIB::getSINCOSPI(ScalarVT);
-      else if (VT.isVector())
-        IsVectorCall = true;
-
       break;
     case Intrinsic::sincos:
-      LC = RTLIB::getSINCOS(ScalarVT);
+      LC = RTLIB::getSINCOS(VT);
       break;
     default:
       return std::nullopt;
@@ -345,33 +334,14 @@ private:
     if (LibcallImpl == RTLIB::Unsupported)
       return std::nullopt;
 
-    StringRef LCName =
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
-
-    // Search for a corresponding vector variant.
-    //
-    // FIXME: Should use RuntimeLibcallsInfo, not TargetLibraryInfo to get the
-    // vector mapping.
     LLVMContext &Ctx = RetTy->getContext();
-    ElementCount VF = getVectorizedTypeVF(RetTy);
-    VecDesc const *VD = nullptr;
-
-    if (!IsVectorCall) {
-      for (bool Masked : {false, true}) {
-        if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
-          break;
-      }
-      if (!VD)
-        return std::nullopt;
-    }
 
     // Cost the call + mask.
     auto Cost =
         thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
 
-    if ((VD && VD->isMasked()) ||
-        (IsVectorCall &&
-         RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(LibcallImpl))) {
+    if (RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(LibcallImpl)) {
+      ElementCount VF = getVectorizedTypeVF(RetTy);
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
                                       VecTy, {}, CostKind, 0, nullptr, {});

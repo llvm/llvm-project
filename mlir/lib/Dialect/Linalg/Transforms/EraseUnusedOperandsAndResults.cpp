@@ -200,10 +200,10 @@ static void populateOpPayload(
   SmallVector<OpOperand *> newInputOperands = newOp.getDpsInputOperands();
   updateReplacements(origInputOperands, newInputOperands, origInsToNewInsPos);
 
-  SmallVector<OpOperand *> origOutputOperands = llvm::to_vector(llvm::map_range(
-      genericOp.getDpsInitsMutable(), [](OpOperand &o) { return &o; }));
-  SmallVector<OpOperand *> newOutputOperands = llvm::to_vector(llvm::map_range(
-      newOp.getDpsInitsMutable(), [](OpOperand &o) { return &o; }));
+  SmallVector<OpOperand *> origOutputOperands =
+      llvm::to_vector(llvm::make_pointer_range(genericOp.getDpsInitsMutable()));
+  SmallVector<OpOperand *> newOutputOperands =
+      llvm::to_vector(llvm::make_pointer_range(newOp.getDpsInitsMutable()));
   updateReplacements(origOutputOperands, newOutputOperands,
                      origOutsToNewOutsPos);
 

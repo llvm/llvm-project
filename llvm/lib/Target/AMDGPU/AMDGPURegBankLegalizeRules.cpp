@@ -66,6 +66,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64);
   case P5:
     return MRI.getType(Reg) == LLT::pointer(5, 32);
+  case P8:
+    return MRI.getType(Reg) == LLT::pointer(8, 128);
   case Ptr32:
     return isAnyPtr(MRI.getType(Reg), 32);
   case Ptr64:
@@ -108,6 +110,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isUniform(Reg);
   case UniP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isUniform(Reg);
+  case UniP8:
+    return MRI.getType(Reg) == LLT::pointer(8, 128) && MUI.isUniform(Reg);
   case UniPtr32:
     return isAnyPtr(MRI.getType(Reg), 32) && MUI.isUniform(Reg);
   case UniPtr64:
@@ -918,9 +922,20 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
       .Uni(S64, {{Sgpr64}, {}});
 
+  addRulesForGOpcs({G_BLOCK_ADDR}).Any({{UniP0}, {{SgprP0}, {}}});
+
+  addRulesForGOpcs({G_GLOBAL_VALUE})
+      .Any({{UniP0}, {{SgprP0}, {}}})
+      .Any({{UniP1}, {{SgprP1}, {}}})
+      .Any({{UniP3}, {{SgprP3}, {}}})
+      .Any({{UniP4}, {{SgprP4}, {}}})
+      .Any({{UniP8}, {{SgprP8}, {}}});
+
+  addRulesForGOpcs({G_AMDGPU_WAVE_ADDRESS}).Any({{UniP5}, {{SgprP5}, {}}});
+
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
-  addRulesForGOpcs({G_FADD}, Standard)
+  addRulesForGOpcs({G_FADD, G_FMUL}, Standard)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
       .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
@@ -944,6 +959,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}}, hasSALUFloat)
       .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_IS_FPCLASS})
+      .Any({{DivS1, S16}, {{Vcc}, {Vgpr16}}})
+      .Any({{UniS1, S16}, {{UniInVcc}, {Vgpr16}}})
+      .Any({{DivS1, S32}, {{Vcc}, {Vgpr32}}})
+      .Any({{UniS1, S32}, {{UniInVcc}, {Vgpr32}}})
+      .Any({{DivS1, S64}, {{Vcc}, {Vgpr64}}})
+      .Any({{UniS1, S64}, {{UniInVcc}, {Vgpr64}}});
 
   using namespace Intrinsic;
 
