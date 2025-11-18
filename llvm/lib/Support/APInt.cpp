@@ -3197,3 +3197,13 @@ APInt llvm::APIntOps::clmul(const APInt &LHS, const APInt &RHS) {
       Result ^= LHS.shl(I);
   return Result;
 }
+
+APInt llvm::APIntOps::clmulr(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  return clmul(LHS.reverseBits(), RHS.reverseBits()).reverseBits();
+}
+
+APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  return clmulr(LHS, RHS).lshr(1);
+}

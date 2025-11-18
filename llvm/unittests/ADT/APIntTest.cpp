@@ -3851,4 +3851,59 @@ TEST(APIntTest, clmul) {
             -21846);
 }
 
+TEST(APIntTest, clmulr) {
+  EXPECT_EQ(APIntOps::clmulr(APInt(4, 1), APInt(4, 2)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(4, 5), APInt(4, 6)).getZExtValue(), 3U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(4, -4, /*isSigned*/ true),
+                             APInt(4, 2, /*isSigned*/ false))
+                .getSExtValue(),
+            3);
+  EXPECT_EQ(APIntOps::clmulr(APInt(4, -4, /*isSigned*/ true),
+                             APInt(4, -5, /*isSigned*/ true))
+                .getSExtValue(),
+            -2);
+  EXPECT_EQ(APIntOps::clmulr(APInt(8, 0), APInt(8, 255)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(8, 15), APInt(8, 15)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(8, 1), APInt(8, 2)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(64, 0, /*isSigned*/ true),
+                             APInt(64, 9223372036854775807, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmulr(APInt(64, 1, /*isSigned*/ true),
+                             APInt(64, 2, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmulr(APInt(16, -2, /*isSigned*/ true),
+                             APInt(16, -1, /*isSigned*/ true))
+                .getSExtValue(),
+            -21845);
+}
+
+TEST(APIntTest, clmulh) {
+  EXPECT_EQ(APIntOps::clmulh(APInt(4, 1), APInt(4, 2)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(4, 5), APInt(4, 6)).getZExtValue(), 1U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(4, -4, /*isSigned*/ true),
+                             APInt(4, 2, /*isSigned*/ false))
+                .getSExtValue(),
+            1);
+  EXPECT_EQ(APIntOps::clmulh(APInt(4, -4, /*isSigned*/ true),
+                             APInt(4, -5, /*isSigned*/ true))
+                .getSExtValue(),
+            7);
+  EXPECT_EQ(APIntOps::clmulh(APInt(8, 0), APInt(8, 255)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(8, 15), APInt(8, 15)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(8, 1), APInt(8, 2)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(64, 0, /*isSigned*/ true),
+                             APInt(64, 9223372036854775807, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmulh(APInt(64, 1, /*isSigned*/ true),
+                             APInt(64, 2, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmulh(APInt(16, -2, /*isSigned*/ true),
+                             APInt(16, -1, /*isSigned*/ true))
+                .getSExtValue(),
+            21845);
+}
 } // end anonymous namespace
