@@ -38,7 +38,7 @@
 #define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X,KEYCOROUTINES)
 #endif
 #ifndef CUSTOMFN_KEYWORD
-#define CUSTOMFN_KEYWORD(X) CXX20_KEYWORD(X,KEYCUSTOMFN)
+#define CUSTOMFN_KEYWORD(X) KEYWORD(X,KEYCUSTOMFN)
 #endif
 #ifndef MODULES_KEYWORD
 #define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
@@ -435,7 +435,8 @@ CXX20_KEYWORD(constinit             , 0)
 CXX20_KEYWORD(concept               , 0)
 CXX20_KEYWORD(requires              , 0)
 
-// C++20 / customizable functions keyword
+// Customizable functions keyword
+// This is only enabled with -fcustomizable-functions.
 CUSTOMFN_KEYWORD(custom)
 
 // Not a CXX20_KEYWORD because it is disabled by -fno-char8_t.
