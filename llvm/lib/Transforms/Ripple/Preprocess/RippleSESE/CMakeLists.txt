@@ -1,5 +1,5 @@
-add_llvm_component_library(LLVMRippleBase
-  Ripple.cpp
+add_llvm_component_library(LLVMRippleSESE
+  RippleSESE.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
@@ -11,13 +11,8 @@ add_llvm_component_library(LLVMRippleBase
 
   LINK_COMPONENTS
   Analysis
-  AsmParser
-  BitReader
   Core
-  Demangle
-  CodeGen
+  RippleBase
   Support
   TransformUtils
 )
-
-add_subdirectory(Preprocess)
