@@ -390,6 +390,7 @@ defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
 defm SPV_INTEL_bfloat16_arithmetic
     : ExtensionOperand<129, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_16bit_atomics : ExtensionOperand<130, [EnvVulkan, EnvOpenCL]>;
+defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<131, [EnvOpenCL, EnvVulkan]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -1110,6 +1111,8 @@ defm HalfFloat : ImageChannelDataTypeOperand<13, [Kernel]>;
 defm Float : ImageChannelDataTypeOperand<14, [Kernel]>;
 defm UnormInt24 : ImageChannelDataTypeOperand<15, [Kernel]>;
 defm UnormInt101010_2 : ImageChannelDataTypeOperand<16, [Kernel]>;
+defm UnsignedIntRaw10EXT : ImageChannelDataTypeOperand<17, [Kernel]>;
+defm UnsignedIntRaw12EXT : ImageChannelDataTypeOperand<18, [Kernel]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define ImageOperand enum values and at the same time
