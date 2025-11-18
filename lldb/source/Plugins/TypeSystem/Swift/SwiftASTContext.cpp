@@ -6715,12 +6715,14 @@ SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
     exe_scope->CalculateExecutionContext(exe_ctx);
     CompilerType bound_type =
         BindGenericTypeParameters({weak_from_this(), type}, exe_scope);
+    if (!bound_type)
+      return llvm::createStringError("Cannot bind type.");
 
     // Check that the type has been bound successfully -- and if not,
     // log the event and bail out to avoid an infinite loop.
     swift::CanType swift_bound_type(GetCanonicalSwiftType(bound_type));
     if (!swift_bound_type || swift_bound_type->hasTypeParameter())
-      return llvm::createStringError("Cannot bind type: %s",
+      return llvm::createStringError("Cannot canonicalize: %s",
                                      bound_type.GetTypeName().AsCString(""));
 
     // Note that the bound type may be in a different AST context.
