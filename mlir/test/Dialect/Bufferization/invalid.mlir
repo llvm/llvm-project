@@ -131,8 +131,8 @@ func.func @invalid_manual_deallocation() {
 // -----
 
 func.func @invalid_rank_to_buffer(%t: tensor<1x2x3x4xf32>) {
-  // expected-error @below{{shapes do not match}}
   // expected-error @below{{'bufferization.to_buffer' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{shapes do not match}}
   %b = bufferization.to_buffer %t
     : tensor<1x2x3x4xf32> to memref<1x2x3xf32>
   return
@@ -141,8 +141,8 @@ func.func @invalid_rank_to_buffer(%t: tensor<1x2x3x4xf32>) {
 // -----
 
 func.func @invalid_rank_to_tensor(%b: memref<1x2x3xf32>) {
-  // expected-error @below{{shapes do not match}}
   // expected-error @below{{'bufferization.to_tensor' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{shapes do not match}}
   %t = bufferization.to_tensor %b
     : memref<1x2x3xf32> to tensor<1x2x3x4xf32>
   return
