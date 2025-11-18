@@ -13709,9 +13709,7 @@ def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
 
 def warn_comparison_in_enum_initializer
-    : Warning<"comparison operator '%0' in enumerator constant is likely a "
-              "typo for "
-              "the shift operator '%1'">,
+    : Warning<"comparison operator '%0' is potentially a typo for a shift operator '%1'">,
       InGroup<DiagGroup<"enum-compare-typo">>;
 
 def note_enum_compare_typo_suggest
