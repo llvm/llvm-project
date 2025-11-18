@@ -28,11 +28,20 @@ def SDT_VMOVRRD : SDTypeProfile<2, 1, [SDTCisVT<0, i32>, SDTCisSameAs<0, 1>,
 
 def SDT_VMOVSR : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, i32>]>;
 
+// ARM VFP compare instruction, sets FPSCR.
 def arm_cmpfp   : SDNode<"ARMISD::CMPFP",    SDT_CMPFP>;
+
+// ARM VFP compare against zero instruction, sets FPSCR.
 def arm_cmpfp0  : SDNode<"ARMISD::CMPFPw0",  SDT_CMPFP0>;
+
+// ARM VFP signalling compare instruction, sets FPSCR.
 def arm_cmpfpe  : SDNode<"ARMISD::CMPFPE",   SDT_CMPFP>;
+
+// ARM VFP signalling compare against zero instruction, sets
+// FPSCR.
 def arm_cmpfpe0 : SDNode<"ARMISD::CMPFPEw0", SDT_CMPFP0>;
 
+// ARM fmstat instruction.
 def arm_fmstat : SDNode<"ARMISD::FMSTAT",
   SDTypeProfile<1, 1, [
     SDTCisVT<0, FlagsVT>, // out flags
@@ -40,12 +49,19 @@ def arm_fmstat : SDNode<"ARMISD::FMSTAT",
   ]>
 >;
 
+// Two gprs to double.
 def arm_fmdrr  : SDNode<"ARMISD::VMOVDRR", SDT_VMOVDRR>;
+
+// double to two gprs.
 def arm_fmrrd  : SDNode<"ARMISD::VMOVRRD", SDT_VMOVRRD>;
+
+// move gpr to single, used for f32 literal constructed in a gpr
 def arm_vmovsr  : SDNode<"ARMISD::VMOVSR", SDT_VMOVSR>;
 
 def SDT_VMOVhr : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVT<1, i32>] >;
 def SDT_VMOVrh : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisFP<1>] >;
+
+// Move H <-> R, clearing top 16 bits
 def arm_vmovhr : SDNode<"ARMISD::VMOVhr", SDT_VMOVhr>;
 def arm_vmovrh : SDNode<"ARMISD::VMOVrh", SDT_VMOVrh>;
 
