@@ -905,7 +905,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
   }
 
-  assert(ChainBytes % DL.getTypeStoreSize(VecElemTy) == 0);
+  assert(8 * ChainBytes % DL.getTypeSizeInBits(VecElemTy) == 0);
   // VecTy is a power of 2 and 1 byte at smallest, but VecElemTy may be smaller
   // than 1 byte (e.g. VecTy == <32 x i1>).
   unsigned NumElem = 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy);
