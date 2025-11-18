@@ -556,13 +556,13 @@ foreach mx = SchedMxListF in {
     }
 
     // Slightly increased latency for sew == 64
-    defvar VFMulVLatAndOcc = !if(!eq(sew, 64), ConstValueUntilLMULThenDoubleBase<"M8", 5, 8, mx>.c,
+    defvar VFMulVLat = !if(!eq(sew, 64), ConstValueUntilLMULThenDoubleBase<"M8", 5, 8, mx>.c,
                                                Get4458Latency<mx>.c);
-    let Latency = VFMulVLatAndOcc, ReleaseAtCycles = [VFMulVLatAndOcc] in {
+    let Latency = VFMulVLat, ReleaseAtCycles = [ConstOneUntilM1ThenDouble<mx>.c] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV", [SMX60_VFP], mx, sew, IsWorstCase>;
     }
     // VFMulF has the same latency as VFMulV, but slighlty lower ReleaseAtCycles
-    let Latency = VFMulVLatAndOcc, ReleaseAtCycles = [ConstOneUntilM1ThenDouble<mx>.c] in {
+    let Latency = VFMulVLat, ReleaseAtCycles = [ConstOneUntilM1ThenDouble<mx>.c] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF", [SMX60_VFP], mx, sew, IsWorstCase>;
     }
 
