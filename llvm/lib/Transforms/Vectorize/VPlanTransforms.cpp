@@ -1418,7 +1418,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
                "Not consecutive memory recipes shouldn't be reversed");
         VPValue *Mask = WidenStoreR->getMask();
 
-        // Only convert the scatter to a scalar store if it is unmasked. or
+        // Only convert the scatter to a scalar store if it is unmasked.
         // TODO: Support converting scatter masked by the header mask to scalar
         // store.
         if (Mask)
