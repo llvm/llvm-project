@@ -526,7 +526,8 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
   bool needsDtor =
       d.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
-  assert(!cir::MissingFeatures::opGlobalConstant());
+  gv.setConstant(d.getType().isConstantStorage(
+      getContext(), /*ExcludeCtor=*/true, !needsDtor));
   gv.setInitialValueAttr(init);
 
   emitter.finalize(gv);
