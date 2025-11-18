@@ -2,7 +2,7 @@
 
 __author__ = "Daniel Dunbar"
 __email__ = "daniel@minormatter.com"
-__versioninfo__ = (21, 1, 6)
+__versioninfo__ = (21, 1, 7)
 __version__ = ".".join(str(v) for v in __versioninfo__) + "dev"
 
 __all__ = []
