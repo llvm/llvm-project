@@ -1322,8 +1322,38 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
   return true;
 }
 
+// Iterate over all globals in the module and remove any metadata that
+// references to the given GV.
+static void removeMetadataReferencesToGlobal(Module &M, GlobalValue &GV) {
+  for (auto &MGV : M.globals()) {
+    SmallVector<std::pair<unsigned, llvm::MDNode *>, 4> MDs;
+    MGV.getAllMetadata(MDs);
+
+    for (auto &pair : MDs) {
+      auto Node = pair.second;
+
+      for (const llvm::MDOperand &Op : Node->operands()) {
+        llvm::Metadata *MD = Op.get();
+        if (!MD)
+          continue;
+
+        auto *VM = llvm::dyn_cast<llvm::ValueAsMetadata>(MD);
+        if (!VM)
+          continue;
+
+        auto *V = llvm::dyn_cast<GlobalValue>(VM->getValue());
+        if (!V)
+          continue;
+
+        if (V == &GV)
+          MGV.eraseMetadata(pair.first);
+      }
+    }
+  }
+}
+
 static bool
-deleteIfDead(GlobalValue &GV,
+deleteIfDead(Module &M, GlobalValue &GV,
              SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats,
              function_ref<void(Function &)> DeleteFnCallback = nullptr) {
   GV.removeDeadConstantUsers();
@@ -1348,6 +1378,9 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
+
+  removeMetadataReferencesToGlobal(M, GV);
+
   ReplaceableMetadataImpl::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
@@ -1950,7 +1983,7 @@ OptimizeFunctions(Module &M,
     if (!F.hasName() && !F.isDeclaration() && !F.hasLocalLinkage())
       F.setLinkage(GlobalValue::InternalLinkage);
 
-    if (deleteIfDead(F, NotDiscardableComdats, DeleteFnCallback)) {
+    if (deleteIfDead(M, F, NotDiscardableComdats, DeleteFnCallback)) {
       Changed = true;
       continue;
     }
@@ -2062,7 +2095,7 @@ OptimizeGlobalVars(Module &M,
           GV.setInitializer(New);
       }
 
-    if (deleteIfDead(GV, NotDiscardableComdats)) {
+    if (deleteIfDead(M, GV, NotDiscardableComdats)) {
       Changed = true;
       continue;
     }
@@ -2278,7 +2311,7 @@ OptimizeGlobalAliases(Module &M,
     if (!J.hasName() && !J.isDeclaration() && !J.hasLocalLinkage())
       J.setLinkage(GlobalValue::InternalLinkage);
 
-    if (deleteIfDead(J, NotDiscardableComdats)) {
+    if (deleteIfDead(M, J, NotDiscardableComdats)) {
       Changed = true;
       continue;
     }
@@ -2478,7 +2511,7 @@ DeleteDeadIFuncs(Module &M,
                  SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
   bool Changed = false;
   for (GlobalIFunc &IF : make_early_inc_range(M.ifuncs()))
-    if (deleteIfDead(IF, NotDiscardableComdats)) {
+    if (deleteIfDead(M, IF, NotDiscardableComdats)) {
       NumIFuncsDeleted++;
       Changed = true;
     }
