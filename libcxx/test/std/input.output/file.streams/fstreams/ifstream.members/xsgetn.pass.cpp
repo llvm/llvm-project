@@ -39,7 +39,7 @@ int main(int, char**) {
 
   { // Check that a read smaller than the buffer works fine
     assert(fb->sgetn(test_buffer.data(), 5) == 5);
-    assert(std::string(test_buffer.data()) == "this ");
+    assert(std::string(test_buffer.data(), 5) == "this ");
   }
   { // Check that reading up to the buffer end works fine
     assert(fb->sgetn(test_buffer.data(), 5) == 5);
