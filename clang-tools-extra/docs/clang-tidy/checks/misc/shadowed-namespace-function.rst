@@ -60,5 +60,5 @@ Limitations
     return LHS.MergedFunctions == RHS.MergedFunctions;
   }
 
-- Does not warn about template functions
+- Does not warn about template functions;
 - Does not warn about variadic functions.
