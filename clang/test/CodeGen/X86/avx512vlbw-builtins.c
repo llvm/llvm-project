@@ -3052,9 +3052,7 @@ __mmask16 test_mm_movepi8_mask(__m128i __A) {
 }
 
 TEST_CONSTEXPR(_mm_movepi8_mask(
-    ((__m128i)(__v16qi){0, 1, char(129), 3, 4, 5, 6, 7,
-                        8, 9, 10, 11, 12, 13, 14, 15})
-) == (__mmask16)0x0004); 
+    ((__m128i)(__v16qi){0, 1, char(129), 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15})) == (__mmask16)0x0004); 
 
 __mmask32 test_mm256_movepi8_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi8_mask
@@ -3454,12 +3452,16 @@ __mmask8 test_mm_movepi16_mask(__m128i __A) {
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i16> %{{.*}}, zeroinitializer
   return _mm_movepi16_mask(__A); 
 }
+TEST_CONSTEXPR(_mm_movepi16_mask(((__m128i)(__v8hi){0, 1, -1, 3, 4, 5, 6, 7})) == (__mmask8)0x04);
 
 __mmask16 test_mm256_movepi16_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi16_mask
   // CHECK: [[CMP:%.*]] = icmp slt <16 x i16> %{{.*}}, zeroinitializer
   return _mm256_movepi16_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm256_movepi16_mask(
+    ((__m256i)(__v16hi){0, 1, short(32769), 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, short(65535)})) == (__mmask16)0x8004);
 
 __m128i test_mm_mask_shufflehi_epi16(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_shufflehi_epi16

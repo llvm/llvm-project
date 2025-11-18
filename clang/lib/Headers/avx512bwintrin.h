@@ -1776,15 +1776,13 @@ _mm512_mask_testn_epi16_mask (__mmask32 __U, __m512i __A, __m512i __B)
                                        _mm512_setzero_si512());
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS512
-_mm512_movepi8_mask (__m512i __A)
-{
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_movepi8_mask(__m512i __A) {
   return (__mmask64) __builtin_ia32_cvtb2mask512 ((__v64qi) __A);
 }
 
-static __inline__ __mmask32 __DEFAULT_FN_ATTRS512
-_mm512_movepi16_mask (__m512i __A)
-{
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_movepi16_mask(__m512i __A) {
   return (__mmask32) __builtin_ia32_cvtw2mask512 ((__v32hi) __A);
 }
 
