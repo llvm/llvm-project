@@ -90,6 +90,9 @@ inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
           ID.getInductionBinOp()))
     return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
                                   OBO->hasNoSignedWrap());
+
+  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
+         "Expected int induction");
   return VPIRFlags::WrapFlagsTy(false, false);
 }
 } // namespace vputils
