@@ -4,9 +4,11 @@ misc-shadowed-namespace-function
 ================================
 
 Detects free functions in the global namespace that shadow functions declared 
-in other namespaces. This check helps prevent accidental shadowing of namespace
-functions, which can lead to confusion about which function is being called and
-potential linking errors.
+in other namespaces.
+
+This check helps prevent accidental shadowing of namespace functions, which can
+lead to confusion about which function is being called and potential linking
+errors.
 
 Examples
 --------
@@ -59,5 +61,4 @@ Limitations
   }
 
 - Does not warn about template functions
-- Does not warn about variadic functions
-
+- Does not warn about variadic functions.

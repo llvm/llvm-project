@@ -28,12 +28,6 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
-
-private:
-  std::pair<const FunctionDecl *, const NamespaceDecl *>
-  findShadowedInNamespace(const NamespaceDecl *NS,
-                          const FunctionDecl *GlobalFunc,
-                          const std::string &GlobalFuncName);
 };
 
 } // namespace clang::tidy::misc
