@@ -447,12 +447,12 @@ class LLVMPRAutomator:
         # Get the subject and body from git show. Insert "\n\n" between to make
         # parsing simple to do w/ split.
         result = self._run_cmd(
-            ["git", "show", "-s", "--format=%s%n%n%b", commit_hash],
+            ["git", "show", "-s", "--format=%B", commit_hash],
             capture_output=True,
             text=True,
             read_only=True,
         )
-        parts = result.stdout.strip().split("\n\n", 1)
+        parts = [item.strip() for item in result.stdout.split("\n", 1)]
         title = parts[0]
         body = parts[1] if len(parts) > 1 else ""
         return title, body
