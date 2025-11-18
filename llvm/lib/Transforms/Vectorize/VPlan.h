@@ -2416,6 +2416,9 @@ public:
   /// Get the factor that the VF of this recipe's output should be scaled by.
   unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
+  /// Set the factor that the VF of this recipe's output should be scaled by.
+  void setVFScaleFactor(unsigned Factor) { VFScaleFactor = Factor; }
+
   /// Returns the number of incoming values, also number of incoming blocks.
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
   /// incoming value, its start value.
@@ -2843,8 +2846,7 @@ public:
 
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getCondOp(), VFScaleFactor,
-                                        getUnderlyingInstr());
+                                        getCondOp(), VFScaleFactor);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)

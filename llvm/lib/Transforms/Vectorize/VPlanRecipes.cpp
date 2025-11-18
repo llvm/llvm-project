@@ -400,7 +400,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
-  assert(getOpcode() == Instruction::Add &&
+  assert((getOpcode() == Instruction::Add || getOpcode() == Instruction::Sub) &&
          "Unhandled partial reduction opcode");
 
   Value *BinOpVal = State.get(getVecOp());
