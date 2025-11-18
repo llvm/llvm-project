@@ -15,132 +15,10 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/RegionUtils.h"
 
 using namespace mlir;
 
 namespace {
-/// Move a scf.if op that is directly before the scf.condition op in the while
-/// before region, and whose condition matches the condition of the
-/// scf.condition op, down into the while after region.
-///
-/// scf.while (..) : (...) -> ... {
-///  %additional_used_values = ...
-///  %cond = ...
-///  ...
-///  %res = scf.if %cond -> (...) {
-///    use(%additional_used_values)
-///    ... // then block
-///    scf.yield %then_value
-///  } else {
-///    scf.yield %else_value
-///  }
-///  scf.condition(%cond) %res, ...
-/// } do {
-/// ^bb0(%res_arg, ...):
-///    use(%res_arg)
-///    ...
-///
-/// becomes
-/// scf.while (..) : (...) -> ... {
-///  %additional_used_values = ...
-///  %cond = ...
-///  ...
-///  scf.condition(%cond) %else_value, ..., %additional_used_values
-/// } do {
-/// ^bb0(%res_arg ..., %additional_args): :
-///    use(%additional_args)
-///    ... // if then block
-///    use(%then_value)
-///    ...
-struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
-  using OpRewritePattern<scf::WhileOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(scf::WhileOp op,
-                                PatternRewriter &rewriter) const override {
-    auto conditionOp =
-        cast<scf::ConditionOp>(op.getBeforeBody()->getTerminator());
-    auto ifOp = dyn_cast_or_null<scf::IfOp>(conditionOp->getPrevNode());
-
-    // Check that the ifOp is directly before the conditionOp and that it
-    // matches the condition of the conditionOp. Also ensure that the ifOp has
-    // no else block with content, as that would complicate the transformation.
-    // TODO: support else blocks with content.
-    if (!ifOp || ifOp.getCondition() != conditionOp.getCondition() ||
-        (ifOp.elseBlock() && !ifOp.elseBlock()->without_terminator().empty()))
-      return failure();
-
-    assert(ifOp->use_empty() || (llvm::all_equal(ifOp->getUsers()) &&
-                                 *ifOp->user_begin() == conditionOp) &&
-                                    "ifOp has unexpected uses");
-
-    Location loc = op.getLoc();
-
-    // Replace uses of ifOp results in the conditionOp with the yielded values
-    // from the ifOp branches.
-    for (auto [idx, arg] : llvm::enumerate(conditionOp.getArgs())) {
-      auto it = llvm::find(ifOp->getResults(), arg);
-      if (it != ifOp->getResults().end()) {
-        size_t ifOpIdx = it.getIndex();
-        Value thenValue = ifOp.thenYield()->getOperand(ifOpIdx);
-        Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
-
-        rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx], elseValue);
-        rewriter.replaceAllUsesWith(op.getAfterArguments()[idx], thenValue);
-      }
-    }
-
-    // Collect additional used values from before region.
-    SetVector<Value> additionalUsedValues;
-    visitUsedValuesDefinedAbove(ifOp.getThenRegion(), [&](OpOperand *operand) {
-      if (op.getBefore().isAncestor(operand->get().getParentRegion()))
-        additionalUsedValues.insert(operand->get());
-    });
-
-    // Create new whileOp with additional used values as results.
-    auto additionalValueTypes = llvm::map_to_vector(
-        additionalUsedValues, [](Value val) { return val.getType(); });
-    size_t additionalValueSize = additionalUsedValues.size();
-    SmallVector<Type> newResultTypes(op.getResultTypes());
-    newResultTypes.append(additionalValueTypes);
-
-    auto newWhileOp =
-        scf::WhileOp::create(rewriter, loc, newResultTypes, op.getInits());
-
-    newWhileOp.getBefore().takeBody(op.getBefore());
-    newWhileOp.getAfter().takeBody(op.getAfter());
-    newWhileOp.getAfter().addArguments(
-        additionalValueTypes, SmallVector<Location>(additionalValueSize, loc));
-
-    SmallVector<Value> conditionArgs = conditionOp.getArgs();
-    llvm::append_range(conditionArgs, additionalUsedValues);
-
-    // Update conditionOp inside new whileOp before region.
-    rewriter.setInsertionPoint(conditionOp);
-    rewriter.replaceOpWithNewOp<scf::ConditionOp>(
-        conditionOp, conditionOp.getCondition(), conditionArgs);
-
-    // Replace uses of additional used values inside the ifOp then region with
-    // the whileOp after region arguments.
-    rewriter.replaceUsesWithIf(
-        additionalUsedValues.takeVector(),
-        newWhileOp.getAfterArguments().take_back(additionalValueSize),
-        [&](OpOperand &use) {
-          return ifOp.getThenRegion().isAncestor(
-              use.getOwner()->getParentRegion());
-        });
-
-    // Inline ifOp then region into new whileOp after region.
-    rewriter.eraseOp(ifOp.thenYield());
-    rewriter.inlineBlockBefore(ifOp.thenBlock(), newWhileOp.getAfterBody(),
-                               newWhileOp.getAfterBody()->begin());
-    rewriter.eraseOp(ifOp);
-    rewriter.replaceOp(op,
-                       newWhileOp->getResults().drop_back(additionalValueSize));
-    return success();
-  }
-};
-
 struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -389,6 +267,5 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
 }
 
 void mlir::scf::populateUpliftWhileToForPatterns(RewritePatternSet &patterns) {
-  patterns.add<WhileMoveIfDown, UpliftWhileOp>(patterns.getContext());
-  scf::WhileOp::getCanonicalizationPatterns(patterns, patterns.getContext());
+  patterns.add<UpliftWhileOp>(patterns.getContext());
 }

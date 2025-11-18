@@ -974,6 +974,38 @@ func.func @replace_if_with_cond3(%arg0 : i1, %arg2: i64) -> (i32, i64) {
 
 // -----
 
+// CHECK-LABEL: @while_move_if_down
+// CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: i32)
+func.func @while_move_if_down(%arg0: index, %arg1: i32) -> i32 {
+  %0:2 = scf.while (%init0 = %arg0, %init1 = %arg1) : (index, i32) -> (index, i32) {
+    %condition = "test.condition"() : () -> i1
+    %res:2 = scf.if %condition -> (index, i32) {
+      %then_val:2 = "test.use1"(%init0, %init1) : (index, i32) -> (i32, index)
+      scf.yield %then_val#1, %then_val#0 : index, i32
+    } else {
+      scf.yield %init0, %init1 : index, i32
+    }
+    scf.condition(%condition) %res#0, %res#1 : index, i32
+  } do {
+  ^bb0(%arg2: index, %arg3: i32):
+    %1:2 = "test.use2"(%arg2, %arg3) : (index, i32) -> (i32, index)
+    scf.yield %1#1, %1#0 : index, i32
+  }
+  return %0#1 : i32
+}
+// CHECK-NEXT:      %[[WHILE_0:.*]]:2 = scf.while (%[[VAL_0:.*]] = %[[ARG0]], %[[VAL_1:.*]] = %[[ARG1]]) : (index, i32) -> (index, i32) {
+// CHECK-NEXT:        %[[VAL_2:.*]] = "test.condition"() : () -> i1
+// CHECK-NEXT:        scf.condition(%[[VAL_2]]) %[[VAL_0]], %[[VAL_1]] : index, i32
+// CHECK-NEXT:      } do {
+// CHECK-NEXT:      ^bb0(%[[VAL_3:.*]]: index, %[[VAL_4:.*]]: i32):
+// CHECK-NEXT:        %[[VAL_5:.*]]:2 = "test.use1"(%[[VAL_3]], %[[VAL_4]]) : (index, i32) -> (i32, index)
+// CHECK-NEXT:        %[[VAL_6:.*]]:2 = "test.use2"(%[[VAL_5]]#1, %[[VAL_5]]#0) : (index, i32) -> (i32, index)
+// CHECK-NEXT:        scf.yield %[[VAL_6]]#1, %[[VAL_6]]#0 : index, i32
+// CHECK-NEXT:      }
+// CHECK-NEXT:      return %[[VAL_7:.*]]#1 : i32
+
+// -----
+
 // CHECK-LABEL: @while_cond_true
 func.func @while_cond_true() -> i1 {
   %0 = scf.while () : () -> i1 {

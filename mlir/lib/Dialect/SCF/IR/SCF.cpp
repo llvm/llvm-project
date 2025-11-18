@@ -3546,6 +3546,82 @@ LogicalResult scf::WhileOp::verify() {
 }
 
 namespace {
+/// Move an scf.if op that is directly before the scf.condition op in the while
+/// before region, and whose condition matches the condition of the
+/// scf.condition op, down into the while after region.
+///
+/// scf.while (%init) : (...) -> ... {
+///   %cond = ...
+///   %res = scf.if %cond -> (...) {
+///     use1(%init)
+///     %then_val = ...
+///      ... // then block
+///     scf.yield %then_val
+///   } else {
+///     scf.yield %init
+///   }
+///   scf.condition(%cond) %res
+/// } do {
+/// ^bb0(%arg):
+///   use2(%arg)
+///    ...
+///
+/// becomes
+/// scf.while (%init) : (...) -> ... {
+///   %cond = ...
+///   scf.condition(%cond) %init
+/// } do {
+/// ^bb0(%arg): :
+///   use1(%arg)
+///    ... // if then block
+///   %then_val = ...
+///   use2(%then_val)
+///    ...
+struct WhileMoveIfDown : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    // Check that the first operation in the before region is an scf.if whose
+    // condition matches the condition of the scf.condition op.
+    Operation &condOp = op.getBeforeBody()->front();
+    if (condOp.getNumResults() != 1 || !condOp.getResult(0).hasNUses(2))
+      return failure();
+
+    Value condVal = condOp.getResult(0);
+    auto ifOp = dyn_cast<scf::IfOp>(condOp.getNextNode());
+    if (condOp.getNumResults() != 1 || !ifOp || ifOp.getCondition() != condVal)
+      return failure();
+
+    auto term = dyn_cast<scf::ConditionOp>(ifOp->getNextNode());
+    if (!term || term.getCondition() != condVal)
+      return failure();
+
+    // Check that if results and else yield operands match the scf.condition op
+    // arguments and while before arguments respectively.
+    if (!llvm::equal(ifOp->getResults(), term.getArgs()) ||
+        !llvm::equal(ifOp.elseYield()->getOperands(), op.getBeforeArguments()))
+      return failure();
+
+    // Update uses and move the if op into the after region.
+    rewriter.replaceAllUsesWith(op.getAfterArguments(),
+                                ifOp.thenYield()->getOperands());
+    rewriter.replaceUsesWithIf(op.getBeforeArguments(), op.getAfterArguments(),
+                               [&](OpOperand &use) {
+                                 return ifOp.getThenRegion().isAncestor(
+                                     use.getOwner()->getParentRegion());
+                               });
+    rewriter.modifyOpInPlace(
+        term, [&]() { term.getArgsMutable().assign(op.getBeforeArguments()); });
+
+    rewriter.eraseOp(ifOp.thenYield());
+    rewriter.inlineBlockBefore(ifOp.thenBlock(), op.getAfterBody(),
+                               op.getAfterBody()->begin());
+    rewriter.eraseOp(ifOp);
+    return success();
+  }
+};
+
 /// Replace uses of the condition within the do block with true, since otherwise
 /// the block would not be evaluated.
 ///
@@ -4258,7 +4334,8 @@ void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<RemoveLoopInvariantArgsFromBeforeBlock,
               RemoveLoopInvariantValueYielded, WhileConditionTruth,
               WhileCmpCond, WhileUnusedResult, WhileRemoveDuplicatedResults,
-              WhileRemoveUnusedArgs, WhileOpAlignBeforeArgs>(context);
+              WhileRemoveUnusedArgs, WhileOpAlignBeforeArgs, WhileMoveIfDown>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
