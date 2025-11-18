@@ -93,6 +93,34 @@ const BlockConstruct *GetFortranBlockConstruct(
   return nullptr;
 }
 
+/// parser::Block is a list of executable constructs, parser::BlockConstruct
+/// is Fortran's BLOCK/ENDBLOCK construct.
+/// Strip the outermost BlockConstructs, return the reference to the Block
+/// in the executable part of the innermost of the stripped constructs.
+/// Specifically, if the given `block` has a single entry (it's a list), and
+/// the entry is a BlockConstruct, get the Block contained within. Repeat
+/// this step as many times as possible.
+const Block &GetInnermostExecPart(const Block &block) {
+  const Block *iter{&block};
+  while (iter->size() == 1) {
+    const ExecutionPartConstruct &ep{iter->front()};
+    if (auto *bc{GetFortranBlockConstruct(ep)}) {
+      iter = &std::get<Block>(bc->t);
+    } else {
+      break;
+    }
+  }
+  return *iter;
+}
+
+bool IsStrictlyStructuredBlock(const Block &block) {
+  if (block.size() == 1) {
+    return GetFortranBlockConstruct(block.front()) != nullptr;
+  } else {
+    return false;
+  }
+}
+
 const OmpCombinerExpression *GetCombinerExpr(
     const OmpReductionSpecifier &rspec) {
   return addr_if(std::get<std::optional<OmpCombinerExpression>>(rspec.t));

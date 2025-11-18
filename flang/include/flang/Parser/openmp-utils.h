@@ -137,6 +137,8 @@ const T *GetFirstArgument(const OmpDirectiveSpecification &spec) {
 
 const BlockConstruct *GetFortranBlockConstruct(
     const ExecutionPartConstruct &epc);
+const Block &GetInnermostExecPart(const Block &block);
+bool IsStrictlyStructuredBlock(const Block &block);
 
 const OmpCombinerExpression *GetCombinerExpr(
     const OmpReductionSpecifier &rspec);
