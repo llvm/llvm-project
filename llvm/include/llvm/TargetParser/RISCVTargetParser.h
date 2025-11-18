@@ -48,6 +48,22 @@ struct CPUInfo {
   bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
+/// Fatal errors encountered during parsing.
+struct ParserError : public ErrorInfo<ParserError, StringError> {
+  using ErrorInfo<ParserError, StringError>::ErrorInfo;
+  explicit ParserError(const Twine &S)
+      : ErrorInfo(S, inconvertibleErrorCode()) {}
+  static char ID;
+};
+
+/// Warnings encountered during parsing.
+struct ParserWarning : public ErrorInfo<ParserWarning, StringError> {
+  using ErrorInfo<ParserWarning, StringError>::ErrorInfo;
+  explicit ParserWarning(const Twine &S)
+      : ErrorInfo(S, inconvertibleErrorCode()) {}
+  static char ID;
+};
+
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
 static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;

@@ -23,6 +23,9 @@
 namespace llvm {
 namespace RISCV {
 
+char ParserError::ID = 0;
+char ParserWarning::ID = 0;
+
 enum CPUKind : unsigned {
 #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
              FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)                  \
@@ -174,23 +177,22 @@ Error parseTuneFeatureString(StringRef TFString,
     std::tie(FeatureStr, TFString) = TFString.split(",");
     if (AllTuneFeatureSet.count(FeatureStr)) {
       if (!PositiveFeatures.insert(FeatureStr).second)
-        return createStringError(inconvertibleErrorCode(),
-                                 "cannot specify more than one instance of '" +
-                                     Twine(FeatureStr) + "'");
+        return make_error<ParserError>(
+            "cannot specify more than one instance of '" + Twine(FeatureStr) +
+            "'");
     } else if (FeatureStr.starts_with("no-")) {
       // Check if this is a negative feature, like `no-foo` for `foo`.
       StringRef ActualFeature = FeatureStr.drop_front(3);
       if (AllTuneFeatureSet.count(ActualFeature)) {
         if (!NegativeFeatures.insert(ActualFeature).second)
-          return createStringError(
-              inconvertibleErrorCode(),
+          return make_error<ParserError>(
               "cannot specify more than one instance of '" + Twine(FeatureStr) +
-                  "'");
+              "'");
       }
     } else {
-      return createStringError(inconvertibleErrorCode(),
-                               "unrecognized tune feature directive '" +
-                                   Twine(FeatureStr) + "'");
+      // Raise it as a warning for better compatibilities.
+      return make_error<ParserWarning>("unrecognized tune feature directive '" +
+                                       Twine(FeatureStr) + "'");
     }
   } while (!TFString.empty());
 
@@ -198,10 +200,9 @@ Error parseTuneFeatureString(StringRef TFString,
       llvm::set_intersection(PositiveFeatures, NegativeFeatures);
   if (!Intersection.empty()) {
     std::string IntersectedStr = join(Intersection, "', '");
-    return createStringError(inconvertibleErrorCode(),
-                             "Feature(s) '" + Twine(IntersectedStr) +
-                                 "' cannot appear in both "
-                                 "positive and negative directives");
+    return make_error<ParserError>("Feature(s) '" + Twine(IntersectedStr) +
+                                   "' cannot appear in both "
+                                   "positive and negative directives");
   }
 
   // Phase 2: Derive implied features.
@@ -228,10 +229,9 @@ Error parseTuneFeatureString(StringRef TFString,
   Intersection = llvm::set_intersection(PositiveFeatures, NegativeFeatures);
   if (!Intersection.empty()) {
     std::string IntersectedStr = join(Intersection, "', '");
-    return createStringError(inconvertibleErrorCode(),
-                             "Feature(s) '" + Twine(IntersectedStr) +
-                                 "' were implied by both "
-                                 "positive and negative directives");
+    return make_error<ParserError>("Feature(s) '" + Twine(IntersectedStr) +
+                                   "' were implied by both "
+                                   "positive and negative directives");
   }
 
   // Export the result.

@@ -95,7 +95,10 @@ TEST(RISCVTuneFeature, LegalTuneFeatureStrings) {
 
 TEST(RISCVTuneFeature, UnrecognizedTuneFeature) {
   SmallVector<std::string> Result;
-  EXPECT_EQ(toString(RISCV::parseTuneFeatureString("32bit", Result)),
+  auto Err = RISCV::parseTuneFeatureString("32bit", Result);
+  // This should be an warning.
+  EXPECT_TRUE(Err.isA<RISCV::ParserWarning>());
+  EXPECT_EQ(toString(std::move(Err)),
             "unrecognized tune feature directive '32bit'");
 }
 
