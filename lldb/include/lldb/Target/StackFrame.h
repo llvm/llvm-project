@@ -354,7 +354,7 @@ public:
   /// \param [in] frame_marker
   ///   Optional string that will be prepended to the frame output description.
   void DumpUsingSettingsFormat(Stream *strm, bool show_unique = false,
-                               const std::wstring &frame_marker = L"");
+                               const std::string &frame_marker = "");
 
   /// Print a description for this frame using a default format.
   ///
@@ -391,7 +391,7 @@ public:
   ///   Returns true if successful.
   bool GetStatus(Stream &strm, bool show_frame_info, bool show_source,
                  bool show_unique = false,
-                 const std::wstring &frame_marker = L"");
+                 const std::string &frame_marker = "");
 
   /// Query whether this frame is a concrete frame on the call stack, or if it
   /// is an inlined frame derived from the debug information and presented by
