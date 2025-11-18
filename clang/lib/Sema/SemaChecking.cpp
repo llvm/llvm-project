@@ -7021,6 +7021,7 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
   NamedDecl *Caller = S->getCurFunctionOrMethodDecl();
   if (!Caller)
     return;
+  Caller = dyn_cast<NamedDecl>(Caller->getCanonicalDecl());
 
   unsigned NumCallerParams = getFunctionOrMethodNumParams(Caller);
 
@@ -7069,29 +7070,39 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
   }
 
   // Emit the diagnostic and fixit.
-  unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
-  StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
-  {
-    std::string Attr =
-        ("format(" + FormatTypeName + ", " + llvm::Twine(FormatStringIndex) +
-         ", " + llvm::Twine(FirstArgumentIndex) + ")")
-            .str();
+  do {
+    unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
+    StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
+    std::string Attr, Fixit;
+    llvm::raw_string_ostream(Attr)
+        << "format(" << FormatTypeName << ", " << FormatStringIndex << ", "
+        << FirstArgumentIndex << ")";
     auto DB = S->Diag(Loc, diag::warn_missing_format_attribute)
               << Attr << Caller;
+    
+    SourceLocation SL;
+    llvm::raw_string_ostream IS(Fixit);
+    // The attribute goes at the start of the declaration in C/C++ functions
+    // and methods, but after the declaration for Objective-C methods.
+    if (isa<ObjCMethodDecl>(Caller)) {
+      IS << ' ';
+      SL = Caller->getEndLoc();
+    }
     const LangOptions &LO = S->getLangOpts();
-    StringRef AttrPrefix, AttrSuffix;
-    if (LO.C23 || LO.CPlusPlus11) {
-      AttrPrefix = "[[gnu::";
-      AttrSuffix = "]] ";
-    } else if (LO.ObjC || LO.GNUMode) {
-      AttrPrefix = "__attribute__((";
-      AttrSuffix = ")) ";
+    if (LO.C23 || LO.CPlusPlus11)
+      IS << "[[gnu::" << Attr << "]]";
+    else if (LO.ObjC || LO.GNUMode)
+      IS << "__attribute__((" << Attr << "))";
+    else
+      break;
+    if (!isa<ObjCMethodDecl>(Caller)) {
+      IS << ' ';
+      SL = Caller->getBeginLoc();
     }
-    if (!AttrPrefix.empty()) {
-      DB << FixItHint::CreateInsertion(Caller->getBeginLoc(),
-                                       (AttrPrefix + Attr + AttrSuffix).str());
-    }
-  }
+    IS.flush();
+
+    DB << FixItHint::CreateInsertion(SL, Fixit);
+  } while (false);
   S->Diag(Caller->getLocation(), diag::note_entity_declared_at) << Caller;
 }
 

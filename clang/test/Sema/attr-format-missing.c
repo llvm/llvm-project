@@ -216,3 +216,13 @@ void f22(char *out, const size_t len, const char *format, int x, int y) // #f22
   strfmon(out, len, format, x, y); // expected-warning {{diagnostic behavior may be improved by adding the 'format(strfmon, 3, 4)' attribute to the declaration of 'f22'}}
                                    // expected-note@#f22 {{'f22' declared here}}
 }
+
+// CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(printf, 1, 2)]] "
+void f23(const char *fmt, ... /* args */); // #f23
+
+void f23(const char *fmt, ... /* args */)
+{
+  va_list args;
+  vprintf(fmt, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f23'}}
+                      // expected-note@#f23 {{'f23' declared here}}
+}
