@@ -3,7 +3,8 @@
 readability-avoid-default-lambda-capture
 ========================================
 
-Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``).
+Tries to replace default lambda captures (e.g. ``[&](){ ... }``, 
+``[=](){ ... }``) with explicit lists of captures.
   
 Captures can lead to subtle bugs including dangling references and unnecessary
 copies. Writing out the name of the variables being captured reminds programmers
@@ -12,6 +13,8 @@ and reviewers about what is being captured.
 This check does not warn on variable-length array (VLA) captures. VLAs are not
 ISO C++, and it is impossible to explicitly capture them as the syntax for doing
 so does not exist.
+
+This check does not provide automatic fixes for macros.
 
 Coding guidelines that recommend against defaulted lambda captures include:
 
