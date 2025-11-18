@@ -36,7 +36,7 @@ class DuplicateIncludeCallbacks : public PPCallbacks {
 public:
   DuplicateIncludeCallbacks(DuplicateIncludeCheck &Check,
                             const SourceManager &SM,
-                            const std::vector<StringRef> &IgnoredList);
+                            llvm::ArrayRef<StringRef> IgnoredList);
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -70,12 +70,13 @@ private:
 DuplicateIncludeCheck::DuplicateIncludeCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoredFilesList(utils::options::parseStringList(
-          Options.get("IgnoredFilesList", ""))) {}
+      IgnoredFilesList(
+          llvm::ArrayRef<llvm::StringRef>(utils::options::parseStringList(
+              Options.get("IgnoredFilesList", "")))) {}
 
 DuplicateIncludeCallbacks::DuplicateIncludeCallbacks(
     DuplicateIncludeCheck &Check, const SourceManager &SM,
-    const std::vector<StringRef> &IgnoredList)
+    llvm::ArrayRef<StringRef> IgnoredList)
     : Check(Check), SM(SM) {
   // The main file doesn't participate in the FileChanged notification.
   Files.emplace_back();

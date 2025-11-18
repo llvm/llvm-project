@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATEINCLUDECHECK_H
 
 #include "../ClangTidyCheck.h"
-#include <vector>
 
 namespace clang::tidy::readability {
 
@@ -29,7 +28,7 @@ public:
 private:
   // Semicolon-separated list of regexes or file names to ignore from duplicate
   // warnings.
-  const std::vector<StringRef> IgnoredFilesList;
+  const llvm::SmallVector<StringRef, 0> IgnoredFilesList;
 };
 
 } // namespace clang::tidy::readability
