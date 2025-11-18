@@ -1708,6 +1708,11 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::MINU:  return RISCV::PseudoCCMINU;
   case RISCV::MUL:   return RISCV::PseudoCCMUL;
   case RISCV::LUI:   return RISCV::PseudoCCLUI;
+  case RISCV::LB:    return RISCV::PseudoCCLB;
+  case RISCV::LBU:   return RISCV::PseudoCCLBU;
+  case RISCV::LH:    return RISCV::PseudoCCLH;
+  case RISCV::LHU:   return RISCV::PseudoCCLHU;
+  case RISCV::LW:    return RISCV::PseudoCCLW;
   case RISCV::QC_LI:   return RISCV::PseudoCCQC_LI;
   case RISCV::QC_E_LI:   return RISCV::PseudoCCQC_E_LI;
 
@@ -1747,7 +1752,8 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
 static MachineInstr *canFoldAsPredicatedOp(Register Reg,
                                            const MachineRegisterInfo &MRI,
                                            const TargetInstrInfo *TII,
-                                           const RISCVSubtarget &STI) {
+                                           const RISCVSubtarget &STI,
+                                           const MachineInstr *UseMI) {
   if (!Reg.isVirtual())
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
@@ -1759,6 +1765,12 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   if (!STI.hasShortForwardBranchIMinMax() &&
       (MI->getOpcode() == RISCV::MAX || MI->getOpcode() == RISCV::MIN ||
        MI->getOpcode() == RISCV::MINU || MI->getOpcode() == RISCV::MAXU))
+    return nullptr;
+
+  if (!STI.hasShortForwardBranchILoad() &&
+      (MI->getOpcode() == RISCV::LB || MI->getOpcode() == RISCV::LBU ||
+       MI->getOpcode() == RISCV::LW || MI->getOpcode() == RISCV::LH ||
+       MI->getOpcode() == RISCV::LHU))
     return nullptr;
 
   if (!STI.hasShortForwardBranchIMul() && MI->getOpcode() == RISCV::MUL)
@@ -1788,6 +1800,37 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
+
+  if (MI->getOpcode() == RISCV::LB || MI->getOpcode() == RISCV::LBU ||
+      MI->getOpcode() == RISCV::LW || MI->getOpcode() == RISCV::LH ||
+      MI->getOpcode() == RISCV::LHU) {
+    if (MI && UseMI && MI->getParent() == UseMI->getParent()) {
+      // For the simple case, when both the def and use of Load are in the same
+      // basic block, instructions can be scanned linearly if there are any
+      // stores between def and use.
+      auto &MBB = *MI->getParent();
+      DontMoveAcrossStores = false;
+
+      auto DefIt = MBB.begin();
+      auto UseIt = MBB.begin();
+
+      for (auto It = MBB.begin(); It != MBB.end(); ++It) {
+        if (&*It == MI)
+          DefIt = It;
+        if (&*It == UseMI)
+          UseIt = It;
+      }
+      if (DefIt != MBB.end() && UseIt != MBB.end() && DefIt != UseIt) {
+        for (auto I = std::next(DefIt); I != UseIt; ++I) {
+          if (I->mayStore()) {
+            DontMoveAcrossStores = true;
+            LLVM_DEBUG(dbgs() << "Store found between def and use\n");
+          }
+        }
+      }
+    }
+  }
+
   if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
@@ -1827,10 +1870,11 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   MachineInstr *DefMI =
-      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this, STI);
+      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this, STI, &MI);
   bool Invert = !DefMI;
   if (!DefMI)
-    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this, STI);
+    DefMI =
+        canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this, STI, &MI);
   if (!DefMI)
     return nullptr;
 

@@ -80,6 +80,17 @@ class SFBLUI
   let Constraints = "$dst = $falsev";
 }
 
+class SFBLoad
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  simm12_lo:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
 class SFBShift_ri
     : Pseudo<(outs GPR:$dst),
              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
@@ -122,6 +133,11 @@ def PseudoCCMIN : SFBALU_rr;
 def PseudoCCMAXU : SFBALU_rr;
 def PseudoCCMINU : SFBALU_rr;
 def PseudoCCMUL : SFBALU_rr;
+def PseudoCCLB : SFBLoad;
+def PseudoCCLH : SFBLoad;
+def PseudoCCLW : SFBLoad;
+def PseudoCCLHU : SFBLoad;
+def PseudoCCLBU : SFBLoad;
 
 def PseudoCCADDI : SFBALU_ri;
 def PseudoCCANDI : SFBALU_ri;

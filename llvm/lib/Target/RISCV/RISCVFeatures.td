@@ -1864,6 +1864,12 @@ def TuneShortForwardBranchIMul
                        "true", "Enable short forward branch optimization for mul instruction",
                        [TuneShortForwardBranchOpt]>;
 
+
+def TuneShortForwardBranchILoad
+    : SubtargetFeature<"short-forward-branch-i-load", "HasShortForwardBranchILoad",
+                       "true", "Enable short forward branch optimization for load instructions",
+                       [TuneShortForwardBranchOpt]>;
+
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands
