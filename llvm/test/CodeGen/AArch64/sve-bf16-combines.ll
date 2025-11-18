@@ -632,7 +632,6 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nxv8bf16(<vscale x 8 x bfloa
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    uunpkhi z3.s, z2.h
 ; SVE-NEXT:    uunpkhi z4.s, z1.h
-; SVE-NEXT:    mov w8, #32768 // =0x8000
 ; SVE-NEXT:    uunpklo z2.s, z2.h
 ; SVE-NEXT:    uunpklo z1.s, z1.h
 ; SVE-NEXT:    ptrue p1.s
@@ -643,9 +642,8 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nxv8bf16(<vscale x 8 x bfloa
 ; SVE-NEXT:    fmul z3.s, z4.s, z3.s
 ; SVE-NEXT:    fmul z1.s, z1.s, z2.s
 ; SVE-NEXT:    bfcvt z2.h, p1/m, z3.s
-; SVE-NEXT:    fmov h3, w8
+; SVE-NEXT:    dupm z3.h, #0x8000
 ; SVE-NEXT:    bfcvt z1.h, p1/m, z1.s
-; SVE-NEXT:    mov z3.h, h3
 ; SVE-NEXT:    uzp1 z1.h, z1.h, z2.h
 ; SVE-NEXT:    sel z1.h, p0, z1.h, z3.h
 ; SVE-NEXT:    uunpkhi z3.s, z0.h
@@ -665,10 +663,8 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nxv8bf16(<vscale x 8 x bfloa
 ;
 ; SVE-B16B16-LABEL: fsub_sel_fmul_negzero_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    mov w8, #32768 // =0x8000
+; SVE-B16B16-NEXT:    dupm z3.h, #0x8000
 ; SVE-B16B16-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16-NEXT:    fmov h3, w8
-; SVE-B16B16-NEXT:    mov z3.h, h3
 ; SVE-B16B16-NEXT:    sel z1.h, p0, z1.h, z3.h
 ; SVE-B16B16-NEXT:    bfsub z0.h, z0.h, z1.h
 ; SVE-B16B16-NEXT:    ret

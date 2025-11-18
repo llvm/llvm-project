@@ -347,6 +347,11 @@ def SVELogicalImm16Pat : ComplexPattern<i32, 1, "SelectSVELogicalImm<MVT::i16>",
 def SVELogicalImm32Pat : ComplexPattern<i32, 1, "SelectSVELogicalImm<MVT::i32>", []>;
 def SVELogicalImm64Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i64>", []>;
 
+def SVELogicalFPImm16Pat : ComplexPattern<f16, 1, "SelectSVELogicalImm<MVT::i16>", []>;
+def SVELogicalFPImm32Pat : ComplexPattern<f32, 1, "SelectSVELogicalImm<MVT::i32>", []>;
+def SVELogicalFPImm64Pat : ComplexPattern<f64, 1, "SelectSVELogicalImm<MVT::i64>", []>;
+def SVELogicalBFPImmPat : ComplexPattern<bf16, 1, "SelectSVELogicalImm<MVT::i16>", []>;
+
 def SVELogicalImm8NotPat  : ComplexPattern<i32, 1, "SelectSVELogicalImm<MVT::i8, true>", []>;
 def SVELogicalImm16NotPat : ComplexPattern<i32, 1, "SelectSVELogicalImm<MVT::i16, true>", []>;
 def SVELogicalImm32NotPat : ComplexPattern<i32, 1, "SelectSVELogicalImm<MVT::i32, true>", []>;
@@ -2159,6 +2164,26 @@ multiclass sve_int_dup_mask_imm<string asm> {
   def : Pat<(nxv4i32 (splat_vector (i32 (SVELogicalImm32Pat i64:$imm)))),
             (!cast<Instruction>(NAME) i64:$imm)>;
   def : Pat<(nxv2i64 (splat_vector (i64 (SVELogicalImm64Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+
+  def : Pat<(nxv8f16 (splat_vector (f16 (SVELogicalFPImm16Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv4f16 (splat_vector (f16 (SVELogicalFPImm16Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv2f16 (splat_vector (f16 (SVELogicalFPImm16Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv4f32 (splat_vector (f32 (SVELogicalFPImm32Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv2f32 (splat_vector (f32 (SVELogicalFPImm32Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv2f64 (splat_vector (f64 (SVELogicalFPImm64Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+
+  def : Pat<(nxv8bf16 (splat_vector (bf16 (SVELogicalBFPImmPat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv4bf16 (splat_vector (bf16 (SVELogicalBFPImmPat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv2bf16 (splat_vector (bf16 (SVELogicalBFPImmPat i64:$imm)))),
             (!cast<Instruction>(NAME) i64:$imm)>;
 }
 
