@@ -117,9 +117,7 @@ static bool ReturnsDataPointer(const Symbol &symbol) {
 }
 
 static bool LoopConstructIsSIMD(parser::OpenMPLoopConstruct *ompLoop) {
-  auto &begin = std::get<parser::OmpBeginLoopDirective>(ompLoop->t);
-  auto directive = std::get<parser::OmpLoopDirective>(begin.t).v;
-  return llvm::omp::allSimdSet.test(directive);
+  return llvm::omp::allSimdSet.test(ompLoop->BeginDir().DirName().v);
 }
 
 // Remove non-SIMD OpenMPConstructs once they are parsed.
@@ -197,18 +195,16 @@ void RewriteMutator::OpenMPSimdOnly(
             ++it;
             continue;
           }
-          auto &nest =
-              std::get<std::optional<parser::NestedConstruct>>(ompLoop->t);
-
           if (auto *doConstruct =
-                  std::get_if<parser::DoConstruct>(&nest.value())) {
+                  const_cast<parser::DoConstruct *>(ompLoop->GetNestedLoop())) {
             auto &loopBody = std::get<parser::Block>(doConstruct->t);
             // We can only remove some constructs from a loop when it's _not_ a
             // OpenMP simd loop
-            OpenMPSimdOnly(loopBody, /*isNonSimdLoopBody=*/true);
-            auto newDoConstruct = std::move(*doConstruct);
+            OpenMPSimdOnly(const_cast<parser::Block &>(loopBody),
+                /*isNonSimdLoopBody=*/true);
+
             auto newLoop = parser::ExecutionPartConstruct{
-                parser::ExecutableConstruct{std::move(newDoConstruct)}};
+                parser::ExecutableConstruct{std::move(*doConstruct)}};
             it = block.erase(it);
             block.insert(it, std::move(newLoop));
             continue;
@@ -388,11 +384,8 @@ bool RewriteMutator::Pre(parser::OpenMPLoopConstruct &ompLoop) {
     // If we're looking at a non-simd OpenMP loop, we need to explicitly
     // call OpenMPSimdOnly on the nested loop block while indicating where
     // the block comes from.
-    auto &nest = std::get<std::optional<parser::NestedConstruct>>(ompLoop.t);
-    if (!nest.has_value()) {
-      return true;
-    }
-    if (auto *doConstruct = std::get_if<parser::DoConstruct>(&*nest)) {
+    if (auto *doConstruct =
+            const_cast<parser::DoConstruct *>(ompLoop.GetNestedLoop())) {
       auto &innerBlock = std::get<parser::Block>(doConstruct->t);
       OpenMPSimdOnly(innerBlock, /*isNonSimdLoopBody=*/true);
     }

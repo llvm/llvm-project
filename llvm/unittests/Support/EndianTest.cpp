@@ -24,16 +24,15 @@ TEST(Endian, Read) {
   unsigned char littleval[] = {0x00, 0x04, 0x03, 0x02, 0x01};
   int32_t BigAsHost = 0x00010203;
   EXPECT_EQ(BigAsHost,
-            (endian::read<int32_t, llvm::endianness::big, unaligned>(bigval)));
+            (endian::read<int32_t, unaligned>(bigval, llvm::endianness::big)));
   int32_t LittleAsHost = 0x02030400;
-  EXPECT_EQ(
-      LittleAsHost,
-      (endian::read<int32_t, llvm::endianness::little, unaligned>(littleval)));
+  EXPECT_EQ(LittleAsHost, (endian::read<int32_t, unaligned>(
+                              littleval, llvm::endianness::little)));
 
   EXPECT_EQ(
-      (endian::read<int32_t, llvm::endianness::big, unaligned>(bigval + 1)),
-      (endian::read<int32_t, llvm::endianness::little, unaligned>(littleval +
-                                                                  1)));
+      (endian::read<int32_t, unaligned>(bigval + 1, llvm::endianness::big)),
+      (endian::read<int32_t, unaligned>(littleval + 1,
+                                        llvm::endianness::little)));
 }
 
 TEST(Endian, WriteNext) {

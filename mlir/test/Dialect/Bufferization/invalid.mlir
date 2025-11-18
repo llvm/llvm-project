@@ -127,3 +127,63 @@ func.func @invalid_manual_deallocation() {
   // expected-error @below{{op attribute 'bufferization.manual_deallocation' can be used only on ops that have an allocation and/or free side effect}}
   arith.constant {bufferization.manual_deallocation} 0  : index
 }
+
+// -----
+
+func.func @invalid_rank_to_buffer(%t: tensor<1x2x3x4xf32>) {
+  // expected-error @below{{'bufferization.to_buffer' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{shapes do not match}}
+  %b = bufferization.to_buffer %t
+    : tensor<1x2x3x4xf32> to memref<1x2x3xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_rank_to_tensor(%b: memref<1x2x3xf32>) {
+  // expected-error @below{{'bufferization.to_tensor' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{shapes do not match}}
+  %t = bufferization.to_tensor %b
+    : memref<1x2x3xf32> to tensor<1x2x3x4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_shape_to_buffer(%t: tensor<1x2x3x4xf32>) {
+  // expected-error @below{{'bufferization.to_buffer' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{shapes do not match}}
+  %b = bufferization.to_buffer %t
+    : tensor<1x2x3x4xf32> to memref<1x2x4x3xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_shape_to_tensor(%b: memref<1x2x4x3xf32>) {
+  // expected-error @below{{'bufferization.to_tensor' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{shapes do not match}}
+  %t = bufferization.to_tensor %b
+    : memref<1x2x4x3xf32> to tensor<1x2x3x4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_type_to_buffer(%t: tensor<1x2x3x4xf32>) {
+  // expected-error @below{{'bufferization.to_buffer' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{element types do not match}}
+  %b = bufferization.to_buffer %t
+    : tensor<1x2x3x4xf32> to memref<1x2x3x4xf16>
+  return
+}
+
+// -----
+
+func.func @invalid_type_to_tensor(%b: memref<1x2x3x4xf16>) {
+  // expected-error @below{{'bufferization.to_tensor' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{element types do not match}}
+  %t2 = bufferization.to_tensor %b
+    : memref<1x2x3x4xf16> to tensor<1x2x3x4xf32>
+  return
+}

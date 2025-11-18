@@ -54,6 +54,7 @@ using namespace llvm::SCEVPatternMatch;
 STATISTIC(NumPeeled, "Number of loops peeled");
 STATISTIC(NumPeeledEnd, "Number of loops peeled from end");
 
+namespace llvm {
 static cl::opt<unsigned> UnrollPeelCount(
     "unroll-peel-count", cl::Hidden,
     cl::desc("Set the unroll peeling count, for testing purposes"));
@@ -86,6 +87,9 @@ static cl::opt<bool> EnablePeelingForIV(
     cl::desc("Enable peeling to convert Phi nodes into IVs"));
 
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 // Check whether we are capable of peeling this loop.
 bool llvm::canPeel(const Loop *L) {
@@ -883,84 +887,6 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   }
 }
 
-struct WeightInfo {
-  // Weights for current iteration.
-  SmallVector<uint32_t> Weights;
-  // Weights to subtract after each iteration.
-  const SmallVector<uint32_t> SubWeights;
-};
-
-/// Update the branch weights of an exiting block of a peeled-off loop
-/// iteration.
-/// Let F is a weight of the edge to continue (fallthrough) into the loop.
-/// Let E is a weight of the edge to an exit.
-/// F/(F+E) is a probability to go to loop and E/(F+E) is a probability to
-/// go to exit.
-/// Then, Estimated ExitCount = F / E.
-/// For I-th (counting from 0) peeled off iteration we set the weights for
-/// the peeled exit as (EC - I, 1). It gives us reasonable distribution,
-/// The probability to go to exit 1/(EC-I) increases. At the same time
-/// the estimated exit count in the remainder loop reduces by I.
-/// To avoid dealing with division rounding we can just multiple both part
-/// of weights to E and use weight as (F - I * E, E).
-static void updateBranchWeights(Instruction *Term, WeightInfo &Info) {
-  setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
-  for (auto [Idx, SubWeight] : enumerate(Info.SubWeights))
-    if (SubWeight != 0)
-      // Don't set the probability of taking the edge from latch to loop header
-      // to less than 1:1 ratio (meaning Weight should not be lower than
-      // SubWeight), as this could significantly reduce the loop's hotness,
-      // which would be incorrect in the case of underestimating the trip count.
-      Info.Weights[Idx] =
-          Info.Weights[Idx] > SubWeight
-              ? std::max(Info.Weights[Idx] - SubWeight, SubWeight)
-              : SubWeight;
-}
-
-/// Initialize the weights for all exiting blocks.
-static void initBranchWeights(DenseMap<Instruction *, WeightInfo> &WeightInfos,
-                              Loop *L) {
-  SmallVector<BasicBlock *> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
-  for (BasicBlock *ExitingBlock : ExitingBlocks) {
-    Instruction *Term = ExitingBlock->getTerminator();
-    SmallVector<uint32_t> Weights;
-    if (!extractBranchWeights(*Term, Weights))
-      continue;
-
-    // See the comment on updateBranchWeights() for an explanation of what we
-    // do here.
-    uint32_t FallThroughWeights = 0;
-    uint32_t ExitWeights = 0;
-    for (auto [Succ, Weight] : zip(successors(Term), Weights)) {
-      if (L->contains(Succ))
-        FallThroughWeights += Weight;
-      else
-        ExitWeights += Weight;
-    }
-
-    // Don't try to update weights for degenerate case.
-    if (FallThroughWeights == 0)
-      continue;
-
-    SmallVector<uint32_t> SubWeights;
-    for (auto [Succ, Weight] : zip(successors(Term), Weights)) {
-      if (!L->contains(Succ)) {
-        // Exit weights stay the same.
-        SubWeights.push_back(0);
-        continue;
-      }
-
-      // Subtract exit weights on each iteration, distributed across all
-      // fallthrough edges.
-      double W = (double)Weight / (double)FallThroughWeights;
-      SubWeights.push_back((uint32_t)(ExitWeights * W));
-    }
-
-    WeightInfos.insert({Term, {std::move(Weights), std::move(SubWeights)}});
-  }
-}
-
 /// Clones the body of the loop L, putting it between \p InsertTop and \p
 /// InsertBot.
 /// \param IterNumber The serial number of the iteration currently being
@@ -1268,7 +1194,24 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       IRBuilder<> B(PreHeaderBR);
       Value *Cond =
           B.CreateICmpNE(BTCValue, ConstantInt::get(BTCValue->getType(), 0));
-      B.CreateCondBr(Cond, NewPreHeader, InsertTop);
+      auto *BI = B.CreateCondBr(Cond, NewPreHeader, InsertTop);
+      SmallVector<uint32_t> Weights;
+      auto *OrigLatchBr = Latch->getTerminator();
+      auto HasBranchWeights = !ProfcheckDisableMetadataFixes &&
+                              extractBranchWeights(*OrigLatchBr, Weights);
+      if (HasBranchWeights) {
+        // The probability that the new guard skips the loop to execute just one
+        // iteration is the original loop's probability of exiting at the latch
+        // after any iteration. That should maintain the original loop body
+        // frequency. Upon arriving at the loop, due to the guard, the
+        // probability of reaching iteration i of the new loop is the
+        // probability of reaching iteration i+1 of the original loop. The
+        // probability of reaching the peeled iteration is 1, which is the
+        // probability of reaching iteration 0 of the original loop.
+        if (L->getExitBlock() == OrigLatchBr->getSuccessor(0))
+          std::swap(Weights[0], Weights[1]);
+        setBranchWeights(*BI, Weights, /*IsExpected=*/false);
+      }
       PreHeaderBR->eraseFromParent();
 
       // PreHeader now dominates InsertTop.
@@ -1332,11 +1275,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   Instruction *LatchTerm =
       cast<Instruction>(cast<BasicBlock>(Latch)->getTerminator());
 
-  // If we have branch weight information, we'll want to update it for the
-  // newly created branches.
-  DenseMap<Instruction *, WeightInfo> Weights;
-  initBranchWeights(Weights, L);
-
   // Identify what noalias metadata is inside the loop: if it is inside the
   // loop, the associated metadata must be cloned for each iteration.
   SmallVector<MDNode *, 6> LoopLocalNoAliasDeclScopes;
@@ -1382,11 +1320,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
 #endif
 
-    for (auto &[Term, Info] : Weights) {
-      auto *TermCopy = cast<Instruction>(VMap[Term]);
-      updateBranchWeights(TermCopy, Info);
-    }
-
     // Remove Loop metadata from the latch branch instruction
     // because it is not the Loop's latch branch anymore.
     auto *LatchTermCopy = cast<Instruction>(VMap[LatchTerm]);
@@ -1426,15 +1359,38 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     }
   }
 
-  for (const auto &[Term, Info] : Weights) {
-    setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
-  }
-
   // Update Metadata for count of peeled off iterations.
   unsigned AlreadyPeeled = 0;
   if (auto Peeled = getOptionalIntLoopAttribute(L, PeeledCountMetaData))
     AlreadyPeeled = *Peeled;
-  addStringMetadataToLoop(L, PeeledCountMetaData, AlreadyPeeled + PeelCount);
+  unsigned TotalPeeled = AlreadyPeeled + PeelCount;
+  addStringMetadataToLoop(L, PeeledCountMetaData, TotalPeeled);
+
+  // Update metadata for the estimated trip count.  The original branch weight
+  // metadata is already correct for both the remaining loop and the peeled loop
+  // iterations, so do not adjust it.
+  //
+  // For example, consider what happens when peeling 2 iterations from a loop
+  // with an estimated trip count of 10 and inserting them before the remaining
+  // loop.  Each of the peeled iterations and each iteration in the remaining
+  // loop still has the same probability of exiting the *entire original* loop
+  // as it did when in the original loop, and thus it should still have the same
+  // branch weights.  The peeled iterations' non-zero probabilities of exiting
+  // already appropriately reduce the probability of reaching the remaining
+  // iterations just as they did in the original loop.  Trying to also adjust
+  // the remaining loop's branch weights to reflect its new trip count of 8 will
+  // erroneously further reduce its block frequencies.  However, in case an
+  // analysis later needs to determine the trip count of the remaining loop
+  // while examining it in isolation without considering the probability of
+  // actually reaching it, we store the new trip count as separate metadata.
+  if (auto EstimatedTripCount = getLoopEstimatedTripCount(L)) {
+    unsigned EstimatedTripCountNew = *EstimatedTripCount;
+    if (EstimatedTripCountNew < TotalPeeled)
+      EstimatedTripCountNew = 0;
+    else
+      EstimatedTripCountNew -= TotalPeeled;
+    setLoopEstimatedTripCount(L, EstimatedTripCountNew);
+  }
 
   if (Loop *ParentLoop = L->getParentLoop())
     L = ParentLoop;

@@ -8,17 +8,17 @@ declare double @llvm.sqrt.f64(double %0)
 define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr noalias nocapture readonly %b.in, ptr noalias nocapture %c.out) {
 ; CHECK-LABEL: define void @widen_call_instruction(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[A_IN:%.*]], ptr noalias readonly captures(none) [[B_IN:%.*]], ptr noalias captures(none) [[C_OUT:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A_IN]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[TMP0]], i32 8, <4 x i1> splat (i1 true), <4 x double> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP0]], <4 x i1> splat (i1 true), <4 x double> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B_IN]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[TMP1]], i32 8, <4 x i1> splat (i1 true), <4 x double> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP1]], <4 x i1> splat (i1 true), <4 x double> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x double> @llvm.sqrt.v4f64(<4 x double> [[WIDE_MASKED_GATHER1]])
 ; CHECK-NEXT:    br label %[[FOR2_HEADER2:.*]]
 ; CHECK:       [[FOR2_HEADER2]]:
@@ -30,20 +30,19 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[FOR2_HEADER2]]
 ; CHECK:       [[VECTOR_LATCH]]:
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x double> [ [[TMP3]], %[[FOR2_HEADER2]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x double> [ [[TMP3]], %[[FOR2_HEADER2]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[C_OUT]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[VEC_PHI4]], <4 x ptr> [[TMP7]], i32 8, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP9]], <4 x ptr> align 8 [[TMP7]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
 ; CHECK:       [[FOR1_HEADER]]:
-; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVAR11:%.*]], %[[FOR1_LATCH:.*]] ]
+; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ 1000, %[[SCALAR_PH]] ], [ [[INDVAR11:%.*]], %[[FOR1_LATCH:.*]] ]
 ; CHECK-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds double, ptr [[A_IN]], i64 [[INDVAR1]]
 ; CHECK-NEXT:    [[A:%.*]] = load double, ptr [[A_PTR]], align 8
 ; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds double, ptr [[B_IN]], i64 [[INDVAR1]]

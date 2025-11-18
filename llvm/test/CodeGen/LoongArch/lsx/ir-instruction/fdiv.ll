@@ -53,8 +53,7 @@ define void @one_fdiv_v2f64(ptr %res, ptr %a0) nounwind {
 ; LA32-LABEL: one_fdiv_v2f64:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_0)
-; LA32-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI3_0)
+; LA32-NEXT:    vldi $vr1, -912
 ; LA32-NEXT:    vfdiv.d $vr0, $vr1, $vr0
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret

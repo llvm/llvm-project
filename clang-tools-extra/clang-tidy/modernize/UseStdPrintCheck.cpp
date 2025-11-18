@@ -1,4 +1,4 @@
-//===--- UseStdPrintCheck.cpp - clang-tidy-----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -70,8 +70,8 @@ void UseStdPrintCheck::registerPPCallbacks(const SourceManager &SM,
   this->PP = PP;
 }
 
-static clang::ast_matchers::StatementMatcher
-unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
+static clang::ast_matchers::StatementMatcher unusedReturnValue(
+    const clang::ast_matchers::StatementMatcher &MatchedCallExpr) {
   auto UnusedInCompoundStmt =
       compoundStmt(forEach(MatchedCallExpr),
                    // The checker can't currently differentiate between the

@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/misc-intrinsic.h"
 #include "flang/Runtime/pointer.h"
@@ -165,30 +166,6 @@ void Fortran::lower::genUnlockStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::UnlockStmt &) {
   TODO(converter.getCurrentLocation(), "coarray: UNLOCK runtime");
-}
-
-void Fortran::lower::genSyncAllStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncAllStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC ALL runtime");
-}
-
-void Fortran::lower::genSyncImagesStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncImagesStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC IMAGES runtime");
-}
-
-void Fortran::lower::genSyncMemoryStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncMemoryStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC MEMORY runtime");
-}
-
-void Fortran::lower::genSyncTeamStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncTeamStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC TEAM runtime");
 }
 
 void Fortran::lower::genPauseStatement(

@@ -13,10 +13,6 @@
 // iter_type get(iter_type in, iter_type end, ios_base&,
 //               ios_base::iostate& err, long& v) const;
 
-// This test exercises the fix for http://llvm.org/PR28704 (2dda1ff), which
-// isn't in the dylib for some systems.
-// XFAIL: using-built-library-before-llvm-9
-
 #include <locale>
 #include <ios>
 #include <cassert>

@@ -906,6 +906,10 @@ public:
     return CUDieMap.lookup(Die);
   }
 
+  /// Find the matching DwarfCompileUnit for the given SP referenced from SrcCU.
+  DwarfCompileUnit &getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
+                                                    DwarfCompileUnit &SrcCU);
+
   unsigned getStringTypeLoc(const DIStringType *ST) const {
     return StringTypeLocMap.lookup(ST);
   }

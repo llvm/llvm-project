@@ -37,6 +37,15 @@ func.func @bad_array_declare(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
 }
 
 // -----
+func.func @bad_declare_skip_rebox(%arg0: !fir.ref<f32>) {
+  // expected-error@+1 {{'hlfir.declare' op skip_rebox attribute must only be set when the input is a box}}
+  %0:2 = hlfir.declare %arg0 skip_rebox {uniq_name = "x"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// -----
 func.func @bad_assign_scalar_character(%arg0: !fir.boxchar<1>, %arg1: !fir.char<1,?>) {
   // expected-error@+1 {{'hlfir.assign' op operand #0 must be any Fortran value or variable type, but got '!fir.char<1,?>'}}
   hlfir.assign %arg1 to %arg0 : !fir.char<1,?>, !fir.boxchar<1>

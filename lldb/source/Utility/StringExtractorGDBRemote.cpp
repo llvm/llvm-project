@@ -280,6 +280,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qSupported;
       if (PACKET_MATCHES("qSyncThreadStateSupported"))
         return eServerPacketType_qSyncThreadStateSupported;
+      if (PACKET_MATCHES("qStructuredDataPlugins"))
+        return eServerPacketType_qStructuredDataPlugins;
       break;
 
     case 'T':

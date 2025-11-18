@@ -99,10 +99,13 @@ private:
   ASTNodeUP ParseNumericLiteral();
   ASTNodeUP ParseIntegerLiteral();
   ASTNodeUP ParseFloatingPointLiteral();
+  ASTNodeUP ParseBooleanLiteral();
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
   void Expect(Token::Kind kind);
+
+  void ExpectOneOf(std::vector<Token::Kind> kinds_vec);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
     if (m_error)

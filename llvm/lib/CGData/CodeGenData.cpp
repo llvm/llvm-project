@@ -31,11 +31,14 @@ static cl::opt<bool>
 static cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
+
+namespace llvm {
 cl::opt<bool> CodeGenDataThinLTOTwoRounds(
     "codegen-data-thinlto-two-rounds", cl::init(false), cl::Hidden,
     cl::desc("Enable two-round ThinLTO code generation. The first round "
              "emits codegen data, while the second round uses the emitted "
              "codegen data for further optimizations."));
+} // end namespace llvm
 
 static std::string getCGDataErrString(cgdata_error Err,
                                       const std::string &ErrMsg = "") {

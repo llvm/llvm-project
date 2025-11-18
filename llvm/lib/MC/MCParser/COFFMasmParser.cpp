@@ -20,7 +20,6 @@
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 
@@ -510,8 +509,8 @@ bool COFFMasmParser::parseDirectiveAlias(StringRef Directive, SMLoc Loc) {
       getParser().parseAngleBracketString(ActualName))
     return Error(getTok().getLoc(), "expected <actualName>");
 
-  MCSymbol *Alias = getContext().getOrCreateSymbol(AliasName);
-  MCSymbol *Actual = getContext().getOrCreateSymbol(ActualName);
+  MCSymbol *Alias = getContext().parseSymbol(AliasName);
+  MCSymbol *Actual = getContext().parseSymbol(ActualName);
 
   getStreamer().emitWeakReference(Alias, Actual);
 

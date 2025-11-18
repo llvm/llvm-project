@@ -15,14 +15,14 @@ define void @test(ptr %mdct_forward_x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x ptr> [[TMP1]], <3 x ptr> poison, <3 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <3 x ptr> [[TMP2]], <3 x i64> <i64 32, i64 36, i64 48>
 ; CHECK-NEXT:    [[ARRAYIDX2_I_I:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
-; CHECK-NEXT:    [[TMP6:%.*]] = call <3 x float> @llvm.masked.load.v3f32.p0(ptr [[ARRAYIDX5_I_I]], i32 4, <3 x i1> <i1 true, i1 false, i1 true>, <3 x float> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <3 x float> @llvm.masked.load.v3f32.p0(ptr align 4 [[ARRAYIDX5_I_I]], <3 x i1> <i1 true, i1 false, i1 true>, <3 x float> poison)
 ; CHECK-NEXT:    [[TMP20:%.*]] = call <2 x float> @llvm.experimental.vp.strided.load.v2f32.p0.i64(ptr align 4 [[ARRAYIDX10_I_I]], i64 -4, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP20]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <3 x float> <float 0.000000e+00, float poison, float 0.000000e+00>, <3 x float> [[TMP6]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fsub <3 x float> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <3 x float> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <3 x float> [[TMP9]], <3 x float> [[TMP10]], <3 x i32> <i32 0, i32 1, i32 5>
-; CHECK-NEXT:    [[TMP12:%.*]] = call <3 x float> @llvm.masked.gather.v3f32.v3p0(<3 x ptr> [[TMP3]], i32 4, <3 x i1> splat (i1 true), <3 x float> poison)
+; CHECK-NEXT:    [[TMP12:%.*]] = call <3 x float> @llvm.masked.gather.v3f32.v3p0(<3 x ptr> align 4 [[TMP3]], <3 x i1> splat (i1 true), <3 x float> poison)
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <3 x i32> <i32 poison, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <3 x float> <float poison, float 0.000000e+00, float 0.000000e+00>, <3 x float> [[TMP6]], <3 x i32> <i32 5, i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP15:%.*]] = fsub <3 x float> [[TMP14]], [[TMP12]]

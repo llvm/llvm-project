@@ -27,6 +27,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -75,7 +76,15 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   CodeGenTarget TGT;
   CodeGenSchedModels &SchedModels;
 
+  FeatureMapTy emitEnums(raw_ostream &OS);
   void emitSubtargetInfoMacroCalls(raw_ostream &OS);
+  std::tuple<unsigned, unsigned, unsigned>
+  emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+  void emitTargetDesc(raw_ostream &OS);
+  void emitHeader(raw_ostream &OS);
+  void emitCtor(raw_ostream &OS, unsigned NumNames, unsigned NumFeatures,
+                unsigned NumProcs);
+
   unsigned featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
   unsigned cpuKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
   unsigned cpuNames(raw_ostream &OS);
@@ -141,7 +150,9 @@ public:
 /// Emit some information about the SubtargetFeature as calls to a macro so
 /// that they can be used from C++.
 void SubtargetEmitter::emitSubtargetInfoMacroCalls(raw_ostream &OS) {
-  OS << "\n#ifdef GET_SUBTARGETINFO_MACRO\n";
+  // Undef the GET_SUBTARGETINFO_MACRO macro at the end of the scope since it's
+  // used within the scope.
+  IfDefEmitter IfDefMacro(OS, "GET_SUBTARGETINFO_MACRO", /*LateUndef=*/true);
 
   std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
@@ -167,14 +178,6 @@ void SubtargetEmitter::emitSubtargetInfoMacroCalls(raw_ostream &OS) {
     OS << "GET_SUBTARGETINFO_MACRO(" << FieldName << ", " << Default << ", "
        << Getter << ")\n";
   }
-  OS << "#undef GET_SUBTARGETINFO_MACRO\n";
-  OS << "#endif // GET_SUBTARGETINFO_MACRO\n\n";
-
-  OS << "\n#ifdef GET_SUBTARGETINFO_MC_DESC\n";
-  OS << "#undef GET_SUBTARGETINFO_MC_DESC\n\n";
-
-  if (Target == "AArch64")
-    OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
 }
 
 //
@@ -440,26 +443,24 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
       continue;
 
     StringRef Name = ProcModel.ItinsDef->getName();
-    OS << "\n// Functional units for \"" << Name << "\"\n"
-       << "namespace " << Name << "FU {\n";
+    {
+      OS << "\n// Functional units for \"" << Name << "\"\n";
+      NamespaceEmitter FUNamespace(OS, (Name + Twine("FU")).str());
 
-    for (const auto &[Idx, FU] : enumerate(FUs))
-      OS << "  const InstrStage::FuncUnits " << FU->getName() << " = 1ULL << "
-         << Idx << ";\n";
-
-    OS << "} // end namespace " << Name << "FU\n";
+      for (const auto &[Idx, FU] : enumerate(FUs))
+        OS << "  const InstrStage::FuncUnits " << FU->getName() << " = 1ULL << "
+           << Idx << ";\n";
+    }
 
     ConstRecVec BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (BPs.empty())
       continue;
-    OS << "\n// Pipeline forwarding paths for itineraries \"" << Name << "\"\n"
-       << "namespace " << Name << "Bypass {\n";
+    OS << "\n// Pipeline forwarding paths for itineraries \"" << Name << "\"\n";
+    NamespaceEmitter BypassNamespace(OS, (Name + Twine("Bypass")).str());
 
     OS << "  const unsigned NoBypass = 0;\n";
     for (const auto &[Idx, BP] : enumerate(BPs))
       OS << "  const unsigned " << BP->getName() << " = 1 << " << Idx << ";\n";
-
-    OS << "} // end namespace " << Name << "Bypass\n";
   }
 
   // Begin stages table
@@ -1586,6 +1587,24 @@ static void emitPredicates(const CodeGenSchedTransition &T,
         continue;
       }
 
+      if (Rec->isSubClassOf("FeatureSchedPredicate")) {
+        const Record *FR = Rec->getValueAsDef("Feature");
+        if (PE.shouldExpandForMC()) {
+          // MC version of this predicate will be emitted into
+          // resolveVariantSchedClassImpl, which accesses MCSubtargetInfo
+          // through argument STI.
+          SS << "STI.";
+        } else {
+          // Otherwise, this predicate will be emitted directly into
+          // TargetGenSubtargetInfo::resolveSchedClass, which can just access
+          // TargetSubtargetInfo / MCSubtargetInfo through `this`.
+          SS << "this->";
+        }
+        SS << "hasFeature(" << PE.getTargetName() << "::" << FR->getName()
+           << ")";
+        continue;
+      }
+
       // Expand this legacy predicate and wrap it around braces if there is more
       // than one predicate to expand.
       SS << ((NumNonTruePreds > 1) ? "(" : "")
@@ -1618,7 +1637,8 @@ static void emitSchedModelHelperEpilogue(raw_ostream &OS,
 
 static bool hasMCSchedPredicates(const CodeGenSchedTransition &T) {
   return all_of(T.PredTerm, [](const Record *Rec) {
-    return Rec->isSubClassOf("MCSchedPredicate");
+    return Rec->isSubClassOf("MCSchedPredicate") ||
+           Rec->isSubClassOf("FeatureSchedPredicate");
   });
 }
 
@@ -1761,7 +1781,7 @@ void SubtargetEmitter::emitSchedModelHelpers(const std::string &ClassName,
      << "\n::resolveVariantSchedClass(unsigned SchedClass, const MCInst *MI,"
      << " const MCInstrInfo *MCII, unsigned CPUID) const {\n"
      << "  return " << Target << "_MC"
-     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n"
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);\n"
      << "} // " << ClassName << "::resolveVariantSchedClass\n\n";
 
   STIPredicateExpander PE(Target, /*Indent=*/0);
@@ -1792,7 +1812,8 @@ void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
       if (P.second->isSubClassOf("ValueType")) {
         ValueTypeModes |= (1 << (P.first - 1));
       } else if (P.second->isSubClassOf("RegInfo") ||
-                 P.second->isSubClassOf("SubRegRange")) {
+                 P.second->isSubClassOf("SubRegRange") ||
+                 P.second->isSubClassOf("RegisterClassLike")) {
         RegInfoModes |= (1 << (P.first - 1));
       } else if (P.second->isSubClassOf("InstructionEncoding")) {
         EncodingInfoModes |= (1 << (P.first - 1));
@@ -1920,12 +1941,14 @@ void SubtargetEmitter::parseFeaturesFunction(raw_ostream &OS) {
 }
 
 void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
-  OS << "namespace " << Target << "_MC {\n"
-     << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,\n"
-     << "    const MCInst *MI, const MCInstrInfo *MCII, unsigned CPUID) {\n";
-  emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
-  OS << "}\n";
-  OS << "} // end namespace " << Target << "_MC\n\n";
+  {
+    NamespaceEmitter NS(OS, (Target + Twine("_MC")).str());
+    OS << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,\n"
+       << "    const MCInst *MI, const MCInstrInfo *MCII, "
+       << "const MCSubtargetInfo &STI, unsigned CPUID) {\n";
+    emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
+    OS << "}\n";
+  }
 
   OS << "struct " << Target
      << "GenMCSubtargetInfo : public MCSubtargetInfo {\n";
@@ -1944,7 +1967,7 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
      << "      unsigned CPUID) const override {\n"
      << "    return " << Target << "_MC"
-     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n";
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);\n";
   OS << "  }\n";
   if (TGT.getHwModes().getNumModeIds() > 1) {
     OS << "  unsigned getHwModeSet() const override;\n";
@@ -1961,46 +1984,37 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
 }
 
 void SubtargetEmitter::emitMcInstrAnalysisPredicateFunctions(raw_ostream &OS) {
-  OS << "\n#ifdef GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n";
-  OS << "#undef GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n\n";
-
   STIPredicateExpander PE(Target, /*Indent=*/0);
-  PE.setExpandForMC(true);
-  PE.setByRef(true);
-  for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
-    PE.expandSTIPredicate(OS, Fn);
 
-  OS << "#endif // GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n\n";
+  {
+    IfDefEmitter IfDefDecls(OS, "GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS");
+    PE.setExpandForMC(true);
+    PE.setByRef(true);
+    for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
+      PE.expandSTIPredicate(OS, Fn);
+  }
 
-  OS << "\n#ifdef GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS\n";
-  OS << "#undef GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS\n\n";
-
+  IfDefEmitter IfDefDefs(OS, "GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS");
   std::string ClassPrefix = Target + "MCInstrAnalysis";
   PE.setExpandDefinition(true);
   PE.setClassPrefix(ClassPrefix);
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
     PE.expandSTIPredicate(OS, Fn);
-
-  OS << "#endif // GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS\n\n";
 }
 
-//
-// SubtargetEmitter::run - Main subtarget enumeration emitter.
-//
-void SubtargetEmitter::run(raw_ostream &OS) {
-  emitSourceFileHeader("Subtarget Enumeration Source Fragment", OS);
+FeatureMapTy SubtargetEmitter::emitEnums(raw_ostream &OS) {
+  IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_ENUM");
+  NamespaceEmitter NS(OS, "llvm");
+  return enumeration(OS);
+}
 
-  OS << "\n#ifdef GET_SUBTARGETINFO_ENUM\n";
-  OS << "#undef GET_SUBTARGETINFO_ENUM\n\n";
+std::tuple<unsigned, unsigned, unsigned>
+SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
+  IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_MC_DESC");
+  if (Target == "AArch64")
+    OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
-  OS << "namespace llvm {\n";
-  auto FeatureMap = enumeration(OS);
-  OS << "} // end namespace llvm\n\n";
-  OS << "#endif // GET_SUBTARGETINFO_ENUM\n\n";
-
-  emitSubtargetInfoMacroCalls(OS);
-
-  OS << "namespace llvm {\n";
   unsigned NumFeatures = featureKeyValues(OS, FeatureMap);
   OS << "\n";
   emitSchedModel(OS);
@@ -2046,13 +2060,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
     OS << "nullptr, nullptr, nullptr";
   }
   OS << ");\n}\n\n";
+  return {NumNames, NumFeatures, NumProcs};
+}
 
-  OS << "} // end namespace llvm\n\n";
-
-  OS << "#endif // GET_SUBTARGETINFO_MC_DESC\n\n";
-
-  OS << "\n#ifdef GET_SUBTARGETINFO_TARGET_DESC\n";
-  OS << "#undef GET_SUBTARGETINFO_TARGET_DESC\n\n";
+void SubtargetEmitter::emitTargetDesc(raw_ostream &OS) {
+  IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_TARGET_DESC");
 
   OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
   OS << "#include \"llvm/Support/Debug.h\"\n";
@@ -2060,20 +2072,21 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (Target == "AArch64")
     OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
   parseFeaturesFunction(OS);
+}
 
-  OS << "#endif // GET_SUBTARGETINFO_TARGET_DESC\n\n";
-
+void SubtargetEmitter::emitHeader(raw_ostream &OS) {
   // Create a TargetSubtargetInfo subclass to hide the MC layer initialization.
-  OS << "\n#ifdef GET_SUBTARGETINFO_HEADER\n";
-  OS << "#undef GET_SUBTARGETINFO_HEADER\n\n";
+  IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_HEADER");
+  NamespaceEmitter LLVMNS(OS, "llvm");
 
   std::string ClassName = Target + "GenSubtargetInfo";
-  OS << "namespace llvm {\n";
   OS << "class DFAPacketizer;\n";
-  OS << "namespace " << Target << "_MC {\n"
-     << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,"
-     << " const MCInst *MI, const MCInstrInfo *MCII, unsigned CPUID);\n"
-     << "} // end namespace " << Target << "_MC\n\n";
+  {
+    NamespaceEmitter MCNS(OS, (Target + Twine("_MC")).str());
+    OS << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,"
+       << " const MCInst *MI, const MCInstrInfo *MCII, "
+       << "const MCSubtargetInfo &STI, unsigned CPUID);\n";
+  }
   OS << "struct " << ClassName << " : public TargetSubtargetInfo {\n"
      << "  explicit " << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef TuneCPU, StringRef FS);\n"
@@ -2118,17 +2131,15 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   PE.setByRef(false);
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
     PE.expandSTIPredicate(OS, Fn);
+  OS << "};\n";
+}
 
-  OS << "};\n"
-     << "} // end namespace llvm\n\n";
-
-  OS << "#endif // GET_SUBTARGETINFO_HEADER\n\n";
-
-  OS << "\n#ifdef GET_SUBTARGETINFO_CTOR\n";
-  OS << "#undef GET_SUBTARGETINFO_CTOR\n\n";
-
+void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
+                                unsigned NumFeatures, unsigned NumProcs) {
+  IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_CTOR");
   OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n\n";
-  OS << "namespace llvm {\n";
+
+  NamespaceEmitter LLVMNS(OS, "llvm");
   OS << "extern const llvm::StringRef " << Target << "Names[];\n";
   OS << "extern const llvm::SubtargetFeatureKV " << Target << "FeatureKV[];\n";
   OS << "extern const llvm::SubtargetSubTypeKV " << Target << "SubTypeKV[];\n";
@@ -2145,6 +2156,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
     OS << "extern const unsigned " << Target << "ForwardingPaths[];\n";
   }
 
+  std::string ClassName = Target + "GenSubtargetInfo";
   OS << ClassName << "::" << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef TuneCPU, StringRef FS)\n";
 
@@ -2182,11 +2194,20 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   emitSchedModelHelpers(ClassName, OS);
   emitHwModeCheck(ClassName, OS, /*IsMC=*/false);
   emitGetMacroFusions(ClassName, OS);
+}
 
-  OS << "} // end namespace llvm\n\n";
+//
+// SubtargetEmitter::run - Main subtarget enumeration emitter.
+//
+void SubtargetEmitter::run(raw_ostream &OS) {
+  emitSourceFileHeader("Subtarget Enumeration Source Fragment", OS);
 
-  OS << "#endif // GET_SUBTARGETINFO_CTOR\n\n";
-
+  auto FeatureMap = emitEnums(OS);
+  emitSubtargetInfoMacroCalls(OS);
+  auto [NumNames, NumFeatures, NumProcs] = emitMCDesc(OS, FeatureMap);
+  emitTargetDesc(OS);
+  emitHeader(OS);
+  emitCtor(OS, NumNames, NumFeatures, NumProcs);
   emitMcInstrAnalysisPredicateFunctions(OS);
 }
 

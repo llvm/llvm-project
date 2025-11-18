@@ -1,4 +1,4 @@
-//===--- AvoidCArraysCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,14 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
+
+template <typename TargetType, typename NodeType>
+static const TargetType *getAs(const NodeType *Node) {
+  if constexpr (std::is_same_v<NodeType, clang::DynTypedNode>)
+    return Node->template get<TargetType>();
+  else
+    return llvm::dyn_cast<TargetType>(Node);
+}
 
 namespace {
 
@@ -37,14 +45,6 @@ AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
   const clang::DeclContext *DC = Node.getDeclContext();
   const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(DC);
   return FD ? FD->isMain() : false;
-}
-
-template <typename TargetType, typename NodeType>
-const TargetType *getAs(const NodeType *Node) {
-  if constexpr (std::is_same_v<NodeType, clang::DynTypedNode>)
-    return Node->template get<TargetType>();
-  else
-    return llvm::dyn_cast<TargetType>(Node);
 }
 
 AST_MATCHER(clang::TypeLoc, isWithinImplicitTemplateInstantiation) {

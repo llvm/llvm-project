@@ -45,7 +45,7 @@ public:
     static RegClassWeight Bogus{1, 16};
     return Bogus;
   }
-  unsigned getRegUnitWeight(unsigned RegUnit) const override { return 1; }
+  unsigned getRegUnitWeight(MCRegUnit RegUnit) const override { return 1; }
   unsigned getNumRegPressureSets() const override { return 0; }
   const char *getRegPressureSetName(unsigned Idx) const override {
     return "bogus";
@@ -59,7 +59,7 @@ public:
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
   }
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override {
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override {
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
   }
@@ -76,8 +76,10 @@ public:
 };
 
 class BogusTargetInstrInfo : public TargetInstrInfo {
+  BogusRegisterInfo RegInfo;
+
 public:
-  BogusTargetInstrInfo() : TargetInstrInfo() {}
+  BogusTargetInstrInfo() : TargetInstrInfo(RegInfo) {}
 };
 
 class BogusSubtarget : public TargetSubtargetInfo {
@@ -86,7 +88,7 @@ public:
       : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
                             nullptr, nullptr, nullptr, nullptr, nullptr),
         FL(), TL(TM) {}
-  ~BogusSubtarget() override {}
+  ~BogusSubtarget() override = default;
 
   const TargetFrameLowering *getFrameLowering() const override { return &FL; }
 
@@ -117,7 +119,7 @@ public:
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
-  ~BogusTargetMachine() override {}
+  ~BogusTargetMachine() override = default;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override {
     return &ST;
@@ -132,10 +134,10 @@ BogusTargetMachine *createTargetMachine() {
   return &BogusTM;
 }
 
-std::unique_ptr<MachineFunction> createMachineFunction(LLVMContext &Ctx,
-                                                       Module &M) {
+std::unique_ptr<MachineFunction>
+createMachineFunction(LLVMContext &Ctx, Module &M, const Twine &Name = "Test") {
   auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &M);
+  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, Name, &M);
 
   auto TM = createTargetMachine();
   unsigned FunctionNum = 42;
@@ -145,4 +147,3 @@ std::unique_ptr<MachineFunction> createMachineFunction(LLVMContext &Ctx,
   return std::make_unique<MachineFunction>(*F, *TM, STI, MMI.getContext(),
                                            FunctionNum);
 }
-

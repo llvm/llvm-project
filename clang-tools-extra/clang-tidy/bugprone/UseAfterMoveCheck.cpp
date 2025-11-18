@@ -1,4 +1,4 @@
-//===--- UseAfterMoveCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -255,7 +255,7 @@ static bool isStandardSmartPointer(const ValueDecl *VD) {
   if (!ID)
     return false;
 
-  StringRef Name = ID->getName();
+  const StringRef Name = ID->getName();
   if (Name != "unique_ptr" && Name != "shared_ptr" && Name != "weak_ptr")
     return false;
 
@@ -369,7 +369,7 @@ void UseAfterMoveFinder::getReinits(
     if (!S)
       continue;
 
-    SmallVector<BoundNodes, 1> Matches =
+    const SmallVector<BoundNodes, 1> Matches =
         match(findAll(ReinitMatcher), *S->getStmt(), *Context);
 
     for (const auto &Match : Matches) {
@@ -506,7 +506,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     if (ContainingCtorInit) {
       // Collect the constructor initializer expressions.
       bool BeforeMove{true};
-      for (CXXCtorInitializer *Init : ContainingCtor->inits()) {
+      for (const CXXCtorInitializer *Init : ContainingCtor->inits()) {
         if (BeforeMove && Init->getInit()->IgnoreImplicit() ==
                               ContainingCtorInit->IgnoreImplicit())
           BeforeMove = false;

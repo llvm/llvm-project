@@ -74,7 +74,7 @@ endif()
 if (NOT LLVM_FOUND)
   set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
   set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
-  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
+  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 endif()
 
 # Setting these variables will allow the sub-build to put their outputs into
@@ -181,14 +181,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   endif()
 endif()
 
+# The NVPTX target needs to override linking to pass compiler flag checks.
+if("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c")
+endif()
+
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
-
-# This can be used to detect whether we're targeting a GPU architecture.
-if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
-   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
-  set(LLVM_RUNTIMES_GPU_BUILD ON)
-endif()
 
 # Handle common options used by all runtimes.
 include(AddLLVM)
@@ -234,6 +233,20 @@ endif()
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
 option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
+option(RUNTIMES_EXECUTE_ONLY_CODE "Compile runtime libraries as execute-only." OFF)
+
+if (RUNTIMES_EXECUTE_ONLY_CODE)
+  # If a target doesn't support or recognise -mexecute-only, Clang will simply ignore the flag.
+  # We can check for this case using -Werror=unused-command-line-argument.
+  check_c_compiler_flag("-mexecute-only -Werror=unused-command-line-argument" C_SUPPORTS_MEXECUTE_ONLY)
+  if (NOT C_SUPPORTS_MEXECUTE_ONLY)
+    message(FATAL_ERROR "RUNTIMES_EXECUTE_ONLY_CODE was turned on, but the target '${LLVM_TARGET_TRIPLE}'"
+                        " doesn't support the -mexecute-only flag")
+  endif()
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mexecute-only")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mexecute-only")
+endif()
 
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
@@ -242,6 +255,20 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
+
+# Make GTest available to all runtimes
+# The runtime must call make_gtest_target() for it to become available. This is
+# to avoid build failures when gtest is not actually needed. In particular,
+# mingw-incomplete-sysroot is missing C++ header files that GTest needs to
+# compile.
+function(build_gtest)
+  if(TARGET default_gtest)
+    # Already available
+    return()
+  endif()
+
+  add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
+endfunction()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)

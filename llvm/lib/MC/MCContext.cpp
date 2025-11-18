@@ -203,27 +203,6 @@ MCInst *MCContext::createMCInst() {
 MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
-  if (NameRef.contains('\\')) {
-    NameSV = NameRef;
-    size_t S = 0;
-    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
-    // other characters following \\, which we do not implement due to code
-    // structure.
-    for (size_t I = 0, E = NameSV.size(); I != E; ++I) {
-      char C = NameSV[I];
-      if (C == '\\' && I + 1 != E) {
-        switch (NameSV[I + 1]) {
-        case '"':
-        case '\\':
-          C = NameSV[++I];
-          break;
-        }
-      }
-      NameSV[S++] = C;
-    }
-    NameSV.resize(S);
-    NameRef = NameSV;
-  }
 
   assert(!NameRef.empty() && "Normal symbols cannot be unnamed!");
 
@@ -242,6 +221,34 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   }
 
   return Entry.second.Symbol;
+}
+
+MCSymbol *MCContext::parseSymbol(const Twine &Name) {
+  SmallString<128> SV;
+  StringRef NameRef = Name.toStringRef(SV);
+  if (NameRef.contains('\\')) {
+    SV = NameRef;
+    size_t S = 0;
+    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
+    // other characters following \\, which we do not implement due to code
+    // structure.
+    for (size_t I = 0, E = SV.size(); I != E; ++I) {
+      char C = SV[I];
+      if (C == '\\' && I + 1 != E) {
+        switch (SV[I + 1]) {
+        case '"':
+        case '\\':
+          C = SV[++I];
+          break;
+        }
+      }
+      SV[S++] = C;
+    }
+    SV.resize(S);
+    NameRef = SV;
+  }
+
+  return getOrCreateSymbol(NameRef);
 }
 
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,

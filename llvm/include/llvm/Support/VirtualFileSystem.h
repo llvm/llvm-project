@@ -268,7 +268,7 @@ class LLVM_ABI FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem>,
                             public RTTIExtends<FileSystem, RTTIRoot> {
 public:
   static const char ID;
-  virtual ~FileSystem();
+  ~FileSystem() override;
 
   /// Get the status of the entry at \p Path, if one exists.
   virtual llvm::ErrorOr<Status> status(const Twine &Path) = 0;
@@ -495,7 +495,7 @@ protected:
 private:
   IntrusiveRefCntPtr<FileSystem> FS;
 
-  virtual void anchor() override;
+  void anchor() override;
 };
 
 namespace detail {
@@ -1114,14 +1114,11 @@ protected:
 };
 
 /// Collect all pairs of <virtual path, real path> entries from the
-/// \p YAMLFilePath. This is used by the module dependency collector to forward
+/// \p VFS. This is used by the module dependency collector to forward
 /// the entries into the reproducer output VFS YAML file.
-LLVM_ABI void collectVFSFromYAML(
-    std::unique_ptr<llvm::MemoryBuffer> Buffer,
-    llvm::SourceMgr::DiagHandlerTy DiagHandler, StringRef YAMLFilePath,
-    SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-    void *DiagContext = nullptr,
-    IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
+LLVM_ABI void
+collectVFSEntries(RedirectingFileSystem &VFS,
+                  SmallVectorImpl<YAMLVFSEntry> &CollectedEntries);
 
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;

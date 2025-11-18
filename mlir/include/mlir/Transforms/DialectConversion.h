@@ -40,6 +40,10 @@ class Value;
 /// registered using addConversion and addMaterialization, respectively.
 class TypeConverter {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = TypeConverter;
+
   virtual ~TypeConverter() = default;
   TypeConverter() = default;
   // Copy the registered conversions, but not the caches
@@ -223,7 +227,7 @@ public:
   }
 
   /// Register a conversion function for attributes within types. Type
-  /// converters may call this function in order to allow hoking into the
+  /// converters may call this function in order to allow hooking into the
   /// translation of attributes that exist within types. For example, a type
   /// converter for the `memref` type could use these conversions to convert
   /// memory spaces or layouts in an extensible way.
@@ -679,6 +683,10 @@ protected:
 template <typename SourceOp>
 class OpConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpConversionPattern;
+
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
@@ -729,6 +737,10 @@ private:
 template <typename SourceOp>
 class OpInterfaceConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpInterfaceConversionPattern;
+
   OpInterfaceConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(Pattern::MatchInterfaceOpTypeTag(),
                           SourceOp::getInterfaceID(), benefit, context) {}
@@ -773,6 +785,10 @@ private:
 template <template <typename> class TraitType>
 class OpTraitConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpTraitConversionPattern;
+
   OpTraitConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(Pattern::MatchTraitOpTypeTag(),
                           TypeID::get<TraitType>(), benefit, context) {}
@@ -795,17 +811,19 @@ convertOpResultTypes(Operation *op, ValueRange operands,
 /// ops which use FunctionType to represent their type.
 void populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
-    const TypeConverter &converter);
+    const TypeConverter &converter, PatternBenefit benefit = 1);
 
 template <typename FuncOpT>
 void populateFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter) {
-  populateFunctionOpInterfaceTypeConversionPattern(FuncOpT::getOperationName(),
-                                                   patterns, converter);
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit = 1) {
+  populateFunctionOpInterfaceTypeConversionPattern(
+      FuncOpT::getOperationName(), patterns, converter, benefit);
 }
 
 void populateAnyFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter);
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // Conversion PatternRewriter
@@ -963,6 +981,28 @@ public:
   /// Return a reference to the internal implementation.
   detail::ConversionPatternRewriterImpl &getImpl();
 
+  /// Attempt to legalize the given operation. This can be used within
+  /// conversion patterns to change the default pre-order legalization order.
+  /// Returns "success" if the operation was legalized, "failure" otherwise.
+  ///
+  /// Note: In a partial conversion, this function returns "success" even if
+  /// the operation could not be legalized, as long as it was not explicitly
+  /// marked as illegal in the conversion target.
+  LogicalResult legalize(Operation *op);
+
+  /// Attempt to legalize the given region. This can be used within
+  /// conversion patterns to change the default pre-order legalization order.
+  /// Returns "success" if the region was legalized, "failure" otherwise.
+  ///
+  /// If the current pattern runs with a type converter, the entry block
+  /// signature will be converted before legalizing the operations in the
+  /// region.
+  ///
+  /// Note: In a partial conversion, this function returns "success" even if
+  /// an operation could not be legalized, as long as it was not explicitly
+  /// marked as illegal in the conversion target.
+  LogicalResult legalize(Region *r);
+
 private:
   // Allow OperationConverter to construct new rewriters.
   friend struct OperationConverter;
@@ -971,7 +1011,8 @@ private:
   /// conversions. They apply some IR rewrites in a delayed fashion and could
   /// bring the IR into an inconsistent state when used standalone.
   explicit ConversionPatternRewriter(MLIRContext *ctx,
-                                     const ConversionConfig &config);
+                                     const ConversionConfig &config,
+                                     OperationConverter &converter);
 
   // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;
@@ -1428,6 +1469,9 @@ struct ConversionConfig {
 ///
 /// In the above example, %0 can be used instead of %3 and all cast ops are
 /// folded away.
+void reconcileUnrealizedCasts(
+    const DenseSet<UnrealizedConversionCastOp> &castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
 void reconcileUnrealizedCasts(
     ArrayRef<UnrealizedConversionCastOp> castOps,
     SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);

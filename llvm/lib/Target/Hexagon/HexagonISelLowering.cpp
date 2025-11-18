@@ -2145,7 +2145,9 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::hexagon_V6_vgathermhq:
   case Intrinsic::hexagon_V6_vgathermhq_128B:
   case Intrinsic::hexagon_V6_vgathermhwq:
-  case Intrinsic::hexagon_V6_vgathermhwq_128B: {
+  case Intrinsic::hexagon_V6_vgathermhwq_128B:
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B: {
     const Module &M = *I.getParent()->getParent()->getParent();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Type *VecTy = I.getArgOperand(1)->getType();
@@ -3352,7 +3354,6 @@ HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
-
   // Handle INLINEASM first.
   if (Opc == ISD::INLINEASM || Opc == ISD::INLINEASM_BR)
     return LowerINLINEASM(Op, DAG);
@@ -3946,4 +3947,52 @@ TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
+}
+
+bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(
+    const Instruction &AndI) const {
+  // Only sink 'and' mask to cmp use block if it is masking a single bit since
+  // this will fold the and/cmp/br into a single tstbit instruction.
+  ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
+  if (!Mask)
+    return false;
+  return Mask->getValue().isPowerOf2();
+}
+
+// Check if the result of the node is only used as a return value, as
+// otherwise we can't perform a tail-call.
+bool HexagonTargetLowering::isUsedByReturnOnly(SDNode *N,
+                                               SDValue &Chain) const {
+  if (N->getNumValues() != 1)
+    return false;
+  if (!N->hasNUsesOfValue(1, 0))
+    return false;
+
+  SDNode *Copy = *N->user_begin();
+
+  if (Copy->getOpcode() == ISD::BITCAST) {
+    return isUsedByReturnOnly(Copy, Chain);
+  }
+
+  if (Copy->getOpcode() != ISD::CopyToReg) {
+    return false;
+  }
+
+  // If the ISD::CopyToReg has a glue operand, we conservatively assume it
+  // isn't safe to perform a tail call.
+  if (Copy->getOperand(Copy->getNumOperands() - 1).getValueType() == MVT::Glue)
+    return false;
+
+  // The copy must be used by a HexagonISD::RET_GLUE, and nothing else.
+  bool HasRet = false;
+  for (SDNode *Node : Copy->users()) {
+    if (Node->getOpcode() != HexagonISD::RET_GLUE)
+      return false;
+    HasRet = true;
+  }
+  if (!HasRet)
+    return false;
+
+  Chain = Copy->getOperand(0);
+  return true;
 }

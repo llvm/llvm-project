@@ -9,14 +9,9 @@ define <4 x i64> @should_not_be_optimized(ptr %ptr, ptr %dst) {
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    st.w $a2, $a1, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a2, 2
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 3
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a2, 4
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 5
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a2, 6
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 7
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    st.w $a0, $a1, 4
 ; LA32-NEXT:    ret
 ;
@@ -64,14 +59,9 @@ define <4 x i64> @xvldrepl_d_unaligned_offset(ptr %ptr) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a1, $a0, 4
 ; LA32-NEXT:    ld.w $a0, $a0, 8
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 2
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 3
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 4
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 5
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 6
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 7
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xvldrepl_d_unaligned_offset:
@@ -162,14 +152,9 @@ define <4 x i64> @xvldrepl_d(ptr %ptr) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a1, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 2
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 3
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 4
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 5
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 6
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 7
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xvldrepl_d:
@@ -187,14 +172,9 @@ define <4 x i64> @xvldrepl_d_offset(ptr %ptr) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a1, $a0, 264
 ; LA32-NEXT:    ld.w $a0, $a0, 268
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 2
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 3
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 4
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 5
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 6
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 7
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xvldrepl_d_offset:

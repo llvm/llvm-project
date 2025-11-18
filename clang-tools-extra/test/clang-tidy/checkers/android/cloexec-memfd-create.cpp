@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s android-cloexec-memfd-create %t
+// RUN: %check_clang_tidy %s android-cloexec-memfd-create %t
 
 #define MFD_ALLOW_SEALING 1
 #define __O_CLOEXEC 3
@@ -17,19 +17,19 @@ extern "C" int memfd_create(const char *name, unsigned int flags);
 void a() {
   memfd_create(NULL, MFD_ALLOW_SEALING);
   // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: 'memfd_create' should use MFD_CLOEXEC where possible [android-cloexec-memfd-create]
-  // CHECK-FIXES: memfd_create(NULL, MFD_ALLOW_SEALING | MFD_CLOEXEC)
+  // CHECK-FIXES: memfd_create(NULL, MFD_ALLOW_SEALING | MFD_CLOEXEC);
   TEMP_FAILURE_RETRY(memfd_create(NULL, MFD_ALLOW_SEALING));
   // CHECK-MESSAGES: :[[@LINE-1]]:58: warning: 'memfd_create'
-  // CHECK-FIXES: TEMP_FAILURE_RETRY(memfd_create(NULL, MFD_ALLOW_SEALING | MFD_CLOEXEC))
+  // CHECK-FIXES: TEMP_FAILURE_RETRY(memfd_create(NULL, MFD_ALLOW_SEALING | MFD_CLOEXEC));
 }
 
 void f() {
   memfd_create(NULL, 3);
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 'memfd_create'
-  // CHECK-FIXES: memfd_create(NULL, 3 | MFD_CLOEXEC)
+  // CHECK-FIXES: memfd_create(NULL, 3 | MFD_CLOEXEC);
   TEMP_FAILURE_RETRY(memfd_create(NULL, 3));
   // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: 'memfd_create'
-  // CHECK-FIXES: TEMP_FAILURE_RETRY(memfd_create(NULL, 3 | MFD_CLOEXEC))
+  // CHECK-FIXES: TEMP_FAILURE_RETRY(memfd_create(NULL, 3 | MFD_CLOEXEC));
 
   int flag = 3;
   memfd_create(NULL, flag);

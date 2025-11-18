@@ -867,6 +867,10 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
       if (Insert->isDebugValue())
         continue;
 
+      // Ignore FAKE_USEs, which are no-ops and will be deleted later.
+      if (Insert->isFakeUse())
+        continue;
+
       // Iterate through the inputs in reverse order, since we'll be pulling
       // operands off the stack in LIFO order.
       CommutingState Commuting;

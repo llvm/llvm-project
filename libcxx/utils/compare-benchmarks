@@ -1,32 +1,40 @@
 #!/usr/bin/env python3
 
 import argparse
+import functools
+import pathlib
 import re
 import statistics
 import sys
+import tempfile
 
-import plotly
+import numpy
+import pandas
+import plotly.express
 import tabulate
 
-def parse_lnt(lines):
+def parse_lnt(lines, aggregate=statistics.median):
     """
-    Parse lines in LNT format and return a dictionnary of the form:
+    Parse lines in LNT format and return a list of dictionnaries of the form:
 
-        {
-            'benchmark1': {
-                'metric1': [float],
-                'metric2': [float],
+        [
+            {
+                'benchmark': <benchmark1>,
+                <metric1>: float,
+                <metric2>: float,
                 ...
             },
-            'benchmark2': {
-                'metric1': [float],
-                'metric2': [float],
+            {
+                'benchmark': <benchmark2>,
+                <metric1>: float,
+                <metric2>: float,
                 ...
             },
             ...
-        }
+        ]
 
-    Each metric may have multiple values.
+    If a metric has multiple values associated to it, they are aggregated into a single
+    value using the provided aggregation function.
     """
     results = {}
     for line in lines:
@@ -35,90 +43,154 @@ def parse_lnt(lines):
             continue
 
         (identifier, value) = line.split(' ')
-        (name, metric) = identifier.split('.')
-        if name not in results:
-            results[name] = {}
-        if metric not in results[name]:
-            results[name][metric] = []
-        results[name][metric].append(float(value))
-    return results
+        (benchmark, metric) = identifier.split('.')
+        if benchmark not in results:
+            results[benchmark] = {'benchmark': benchmark}
 
-def plain_text_comparison(benchmarks, baseline, candidate):
-    """
-    Create a tabulated comparison of the baseline and the candidate.
-    """
-    headers = ['Benchmark', 'Baseline', 'Candidate', 'Difference', '% Difference']
-    fmt = (None, '.2f', '.2f', '.2f', '.2f')
-    table = []
-    for (bm, base, cand) in zip(benchmarks, baseline, candidate):
-        diff = (cand - base) if base and cand else None
-        percent = 100 * (diff / base) if base and cand else None
-        row = [bm, base, cand, diff, percent]
-        table.append(row)
-    return tabulate.tabulate(table, headers=headers, floatfmt=fmt, numalign='right')
+        entry = results[benchmark]
+        if metric not in entry:
+            entry[metric] = []
+        entry[metric].append(float(value))
 
-def create_chart(benchmarks, baseline, candidate):
+    for (bm, entry) in results.items():
+        for metric in entry:
+            if isinstance(entry[metric], list):
+                entry[metric] = aggregate(entry[metric])
+
+    return list(results.values())
+
+def plain_text_comparison(data, metric, baseline_name=None, candidate_name=None):
     """
-    Create a bar chart comparing 'baseline' and 'candidate'.
+    Create a tabulated comparison of the baseline and the candidate for the given metric.
     """
-    figure = plotly.graph_objects.Figure()
-    figure.add_trace(plotly.graph_objects.Bar(x=benchmarks, y=baseline, name='Baseline'))
-    figure.add_trace(plotly.graph_objects.Bar(x=benchmarks, y=candidate, name='Candidate'))
+    data = data.replace(numpy.nan, None) # avoid NaNs in tabulate output
+    headers = ['Benchmark', baseline_name, candidate_name, 'Difference', '% Difference']
+    fmt = (None, '.2f', '.2f', '.2f', '.2%')
+    table = data[['benchmark', f'{metric}_0', f'{metric}_1', 'difference', 'percent']]
+
+    # Compute the geomean and report on their difference
+    geomean_0 = statistics.geometric_mean(data[f'{metric}_0'].dropna())
+    geomean_1 = statistics.geometric_mean(data[f'{metric}_1'].dropna())
+    geomean_row = ['Geomean', geomean_0, geomean_1, (geomean_1 - geomean_0), (geomean_1 - geomean_0) / geomean_0]
+    table.loc[table.index.max() + 1] = geomean_row
+
+    return tabulate.tabulate(table.set_index('benchmark'), headers=headers, floatfmt=fmt, numalign='right')
+
+def create_chart(data, metric, subtitle=None, series_names=None):
+    """
+    Create a bar chart comparing the given metric across the provided series.
+    """
+    data = data.rename(columns={f'{metric}_{i}': series_names[i] for i in range(len(series_names))})
+    title = ' vs '.join(series_names)
+    figure = plotly.express.bar(data, title=title, subtitle=subtitle, x='benchmark', y=series_names, barmode='group')
+    figure.update_layout(xaxis_title='', yaxis_title='', legend_title='')
     return figure
-
-def prepare_series(baseline, candidate, metric, aggregate=statistics.median):
-    """
-    Prepare the data for being formatted or displayed as a chart.
-
-    Metrics that have more than one value are aggregated using the given aggregation function.
-    """
-    all_benchmarks = sorted(list(set(baseline.keys()) | set(candidate.keys())))
-    baseline_series = []
-    candidate_series = []
-    for bm in all_benchmarks:
-        baseline_series.append(aggregate(baseline[bm][metric]) if bm in baseline and metric in baseline[bm] else None)
-        candidate_series.append(aggregate(candidate[bm][metric]) if bm in candidate and metric in candidate[bm] else None)
-    return (all_benchmarks, baseline_series, candidate_series)
 
 def main(argv):
     parser = argparse.ArgumentParser(
         prog='compare-benchmarks',
-        description='Compare the results of two sets of benchmarks in LNT format.',
-        epilog='This script requires the `tabulate` and the `plotly` Python modules.')
-    parser.add_argument('baseline', type=argparse.FileType('r'),
-        help='Path to a LNT format file containing the benchmark results for the baseline.')
-    parser.add_argument('candidate', type=argparse.FileType('r'),
-        help='Path to a LNT format file containing the benchmark results for the candidate.')
+        description='Compare the results of multiple sets of benchmarks in LNT format.',
+        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.')
+    parser.add_argument('files', type=argparse.FileType('r'), nargs='+',
+        help='Path to LNT format files containing the benchmark results to compare. In the text format, '
+             'exactly two files must be compared.')
+    parser.add_argument('--output', '-o', type=pathlib.Path, required=False,
+        help='Path of a file where to output the resulting comparison. If the output format is `text`, '
+             'default to stdout. If the output format is `chart`, default to a temporary file which is '
+             'opened automatically once generated, but not removed after creation.')
     parser.add_argument('--metric', type=str, default='execution_time',
         help='The metric to compare. LNT data may contain multiple metrics (e.g. code size, execution time, etc) -- '
-             'this option allows selecting which metric is being analyzed. The default is "execution_time".')
-    parser.add_argument('--output', '-o', type=argparse.FileType('w'), default=sys.stdout,
-        help='Path of a file where to output the resulting comparison. Default to stdout.')
+             'this option allows selecting which metric is being analyzed. The default is `execution_time`.')
     parser.add_argument('--filter', type=str, required=False,
         help='An optional regular expression used to filter the benchmarks included in the comparison. '
              'Only benchmarks whose names match the regular expression will be included.')
+    parser.add_argument('--sort', type=str, required=False, default='benchmark',
+                        choices=['benchmark', 'baseline', 'candidate', 'percent_diff'],
+        help='Optional sorting criteria for displaying results. By default, results are displayed in '
+             'alphabetical order of the benchmark. Supported sorting criteria are: '
+             '`benchmark` (sort using the alphabetical name of the benchmark), '
+             '`baseline` (sort using the absolute number of the baseline run), '
+             '`candidate` (sort using the absolute number of the candidate run), '
+             'and `percent_diff` (sort using the percent difference between the baseline and the candidate). '
+             'Note that when more than two input files are compared, the only valid sorting order is `benchmark`.')
     parser.add_argument('--format', type=str, choices=['text', 'chart'], default='text',
-        help='Select the output format. "text" generates a plain-text comparison in tabular form, and "chart" '
-             'generates a self-contained HTML graph that can be opened in a browser. The default is text.')
+        help='Select the output format. `text` generates a plain-text comparison in tabular form, and `chart` '
+             'generates a self-contained HTML graph that can be opened in a browser. The default is `text`.')
+    parser.add_argument('--open', action='store_true',
+        help='Whether to automatically open the generated HTML file when finished. This option only makes sense '
+             'when the output format is `chart`.')
+    parser.add_argument('--series-names', type=str, required=False,
+        help='Optional comma-delimited list of names to use for the various series. By default, we use '
+             'Baseline and Candidate for two input files, and CandidateN for subsequent inputs.')
+    parser.add_argument('--subtitle', type=str, required=False,
+        help='Optional subtitle to use for the chart. This can be used to help identify the contents of the chart. '
+             'This option cannot be used with the plain text output.')
     args = parser.parse_args(argv)
 
-    baseline = parse_lnt(args.baseline.readlines())
-    candidate = parse_lnt(args.candidate.readlines())
+    # Validate arguments (the values admissible for various arguments depend on other
+    # arguments, the number of inputs, etc)
+    if args.format == 'text':
+        if len(args.files) != 2:
+            parser.error('--format=text requires exactly two input files to compare')
+        if args.subtitle is not None:
+            parser.error('Passing --subtitle makes no sense with --format=text')
+        if args.open:
+            parser.error('Passing --open makes no sense with --format=text')
+
+    if len(args.files) != 2 and args.sort != 'benchmark':
+        parser.error('Using any sort order other than `benchmark` requires exactly two input files.')
+
+    if args.series_names is None:
+        args.series_names = ['Baseline']
+        if len(args.files) == 2:
+            args.series_names += ['Candidate']
+        elif len(args.files) > 2:
+            args.series_names.extend(f'Candidate{n}' for n in range(1, len(args.files)))
+    else:
+        args.series_names = args.series_names.split(',')
+        if len(args.series_names) != len(args.files):
+            parser.error(f'Passed incorrect number of series names: got {len(args.series_names)} series names but {len(args.files)} inputs to compare')
+
+    # Parse the raw LNT data and store each input in a dataframe
+    lnt_inputs = [parse_lnt(file.readlines()) for file in args.files]
+    inputs = [pandas.DataFrame(lnt).rename(columns={args.metric: f'{args.metric}_{i}'}) for (i, lnt) in enumerate(lnt_inputs)]
+
+    # Join the inputs into a single dataframe
+    data = functools.reduce(lambda a, b: a.merge(b, how='outer', on='benchmark'), inputs)
+
+    # If we have exactly two data sets, compute additional info in new columns
+    if len(lnt_inputs) == 2:
+        data['difference'] = data[f'{args.metric}_1'] - data[f'{args.metric}_0']
+        data['percent'] = data['difference'] / data[f'{args.metric}_0']
 
     if args.filter is not None:
-        regex = re.compile(args.filter)
-        baseline = {k: v for (k, v) in baseline.items() if regex.search(k)}
-        candidate = {k: v for (k, v) in candidate.items() if regex.search(k)}
+        keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]
+        data = data[data['benchmark'].isin(keeplist)]
 
-    (benchmarks, baseline_series, candidate_series) = prepare_series(baseline, candidate, args.metric)
+    # Sort the data by the appropriate criteria
+    if args.sort == 'benchmark':
+        data = data.sort_values(by='benchmark')
+    elif args.sort == 'baseline':
+        data = data.sort_values(by=f'{args.metric}_0')
+    elif args.sort == 'candidate':
+        data = data.sort_values(by=f'{args.metric}_1')
+    elif args.sort == 'percent_diff':
+        data = data.sort_values(by=f'percent')
 
     if args.format == 'chart':
-        figure = create_chart(benchmarks, baseline_series, candidate_series)
-        plotly.io.write_html(figure, file=args.output)
+        figure = create_chart(data, args.metric, subtitle=args.subtitle, series_names=args.series_names)
+        do_open = args.output is None or args.open
+        output = args.output or tempfile.NamedTemporaryFile(suffix='.html').name
+        plotly.io.write_html(figure, file=output, auto_open=do_open)
     else:
-        diff = plain_text_comparison(benchmarks, baseline_series, candidate_series)
-        args.output.write(diff)
-        args.output.write('\n')
+        diff = plain_text_comparison(data, args.metric, baseline_name=args.series_names[0],
+                                                        candidate_name=args.series_names[1])
+        diff += '\n'
+        if args.output is not None:
+            with open(args.output, 'w') as out:
+                out.write(diff)
+        else:
+            sys.stdout.write(diff)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -80,6 +80,7 @@ class TypeAliasTemplateDecl;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
+struct UsualDeleteParams;
 
 // Holds a constraint expression along with a pack expansion index, if
 // expanded.
@@ -2334,7 +2335,7 @@ public:
   }
 
   void setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo *Info);
-  DefaultedOrDeletedFunctionInfo *getDefalutedOrDeletedInfo() const;
+  DefaultedOrDeletedFunctionInfo *getDefaultedOrDeletedInfo() const;
 
   /// Whether this function is variadic.
   bool isVariadic() const;
@@ -2645,6 +2646,8 @@ public:
   /// Determine whether this is a type aware operator new or delete.
   bool isTypeAwareOperatorNewOrDelete() const;
   void setIsTypeAwareOperatorNewOrDelete(bool IsTypeAwareOperator = true);
+
+  UsualDeleteParams getUsualDeleteParams() const;
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
@@ -4519,6 +4522,23 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
+  }
+
+  /// noload_fields - Iterate over the fields stored in this record
+  /// that are currently loaded; don't attempt to retrieve anything
+  /// from an external source.
+  field_range noload_fields() const {
+    return field_range(noload_field_begin(), noload_field_end());
+  }
+
+  field_iterator noload_field_begin() const;
+  field_iterator noload_field_end() const {
+    return field_iterator(decl_iterator());
+  }
+
+  // Whether there are any fields (non-static data members) in this record.
+  bool noload_field_empty() const {
+    return noload_field_begin() == noload_field_end();
   }
 
   /// Note that the definition of this type is now complete.

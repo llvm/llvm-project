@@ -404,7 +404,11 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         const Archive::Symbol &sym,
                                         StringRef parentName) {
 
-  auto reportBufferError = [=](Error &&e, StringRef childName) {
+  auto reportBufferError = [=](Error &&e) {
+    StringRef childName =
+      CHECK(c.getName(),
+            "could not get child name for archive " + parentName +
+            " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
                << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);
@@ -414,7 +418,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     uint64_t offsetInArchive = c.getChildOffset();
     Expected<MemoryBufferRef> mbOrErr = c.getMemoryBufferRef();
     if (!mbOrErr)
-      reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
+      reportBufferError(mbOrErr.takeError());
     MemoryBufferRef mb = mbOrErr.get();
     enqueueTask([=]() {
       llvm::TimeTraceScope timeScope("Archive: ", mb.getBufferIdentifier());
@@ -433,7 +437,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
-      reportBufferError(errorCodeToError(mbOrErr.second), childName);
+      reportBufferError(errorCodeToError(mbOrErr.second));
     llvm::TimeTraceScope timeScope("Archive: ",
                                    mbOrErr.first->getBufferIdentifier());
     ctx.driver.addThinArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
@@ -2100,18 +2104,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor);
 
   // Handle /thinlto-distributor-arg:<arg>
-  for (auto *arg : args.filtered(OPT_thinlto_distributor_arg))
-    config->dtltoDistributorArgs.push_back(arg->getValue());
+  config->dtltoDistributorArgs =
+      args::getStrings(args, OPT_thinlto_distributor_arg);
 
   // Handle /thinlto-remote-compiler:<path>
-  config->dtltoCompiler = args.getLastArgValue(OPT_thinlto_compiler);
+  config->dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler);
   if (!config->dtltoDistributor.empty() && config->dtltoCompiler.empty())
     Err(ctx) << "A value must be specified for /thinlto-remote-compiler if "
                 "/thinlto-distributor is specified.";
 
+  // Handle /thinlto-remote-compiler-prepend-arg:<arg>
+  config->dtltoCompilerPrependArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg);
+
   // Handle /thinlto-remote-compiler-arg:<arg>
-  for (auto *arg : args.filtered(OPT_thinlto_compiler_arg))
-    config->dtltoCompilerArgs.push_back(arg->getValue());
+  config->dtltoCompilerArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
 
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);
@@ -2337,6 +2345,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->highEntropyVA =
       config->is64() &&
       args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
+
+  // Handle /nodbgdirmerge
+  config->mergeDebugDirectory = !args.hasArg(OPT_nodbgdirmerge);
 
   if (!config->dynamicBase &&
       (config->machine == ARMNT || isAnyArm64(config->machine)))

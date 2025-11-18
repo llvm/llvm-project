@@ -23,7 +23,9 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/InterestingMemoryOperand.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -86,6 +88,8 @@ struct MemIntrinsicInfo {
   bool ReadMem = false;
   bool WriteMem = false;
   bool IsVolatile = false;
+
+  SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
 
   bool isUnordered() const {
     return (Ordering == AtomicOrdering::NotAtomic ||
@@ -223,6 +227,9 @@ public:
   /// Get the kind of extension that an instruction represents.
   LLVM_ABI static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction *I);
+  /// Get the kind of extension that a cast opcode represents.
+  LLVM_ABI static PartialReductionExtendKind
+  getPartialReductionExtendKind(Instruction::CastOps CastOpc);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
@@ -796,10 +803,13 @@ public:
                            LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                            TargetLibraryInfo *LibInfo) const;
 
+  /// Which addressing mode Loop Strength Reduction will try to generate.
   enum AddressingModeKind {
-    AMK_PreIndexed,
-    AMK_PostIndexed,
-    AMK_None
+    AMK_None = 0x0,        ///< Don't prefer any addressing mode
+    AMK_PreIndexed = 0x1,  ///< Prefer pre-indexed addressing mode
+    AMK_PostIndexed = 0x2, ///< Prefer post-indexed addressing mode
+    AMK_All = 0x3,         ///< Consider all addressing modes
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/AMK_All)
   };
 
   /// Return the preferred addressing mode LSR should make efforts to generate.
@@ -1324,7 +1334,7 @@ public:
 
   /// \return The cost of a partial reduction, which is a reduction from a
   /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
+  /// represented by the llvm.vector.partial.reduce.add intrinsic, which
   /// takes an accumulator of type \p AccumType and a second vector operand to
   /// be accumulated, whose element count is specified by \p VF. The type of
   /// reduction is specified by \p Opcode. The second operand passed to the
@@ -1544,12 +1554,6 @@ public:
       OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
       const Instruction *I = nullptr) const;
 
-  /// \return The cost of VP Load and Store instructions.
-  LLVM_ABI InstructionCost getVPMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
   /// \return The cost of masked Load and Store instructions.
   LLVM_ABI InstructionCost getMaskedMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
@@ -1760,7 +1764,7 @@ public:
   /// \param Types List of types to check.
   LLVM_ABI bool areTypesABICompatible(const Function *Caller,
                                       const Function *Callee,
-                                      const ArrayRef<Type *> &Types) const;
+                                      ArrayRef<Type *> Types) const;
 
   /// The type of load/store indexing.
   enum MemIndexedMode {

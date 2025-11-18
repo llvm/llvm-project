@@ -978,7 +978,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
   assert(getMF() && "Can't have an MF reference here!");
   // Most opcodes have fixed constraints in their MCInstrDesc.
   if (!isInlineAsm())
-    return TII->getRegClass(getDesc(), OpIdx, TRI);
+    return TII->getRegClass(getDesc(), OpIdx);
 
   if (!getOperand(OpIdx).isReg())
     return nullptr;
@@ -1547,10 +1547,14 @@ bool MachineInstr::mayAlias(BatchAAResults *AA, const MachineInstr &Other,
 
   // Check each pair of memory operands from both instructions, which can't
   // alias only if all pairs won't alias.
-  for (auto *MMOa : memoperands())
-    for (auto *MMOb : Other.memoperands())
+  for (auto *MMOa : memoperands()) {
+    for (auto *MMOb : Other.memoperands()) {
+      if (!MMOa->isStore() && !MMOb->isStore())
+        continue;
       if (MemOperandsHaveAlias(MFI, AA, UseTBAA, MMOa, MMOb))
         return true;
+    }
+  }
 
   return false;
 }
@@ -2746,4 +2750,19 @@ bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
   if (F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind())
     return F.getRegMayBeFolded();
   return false;
+}
+
+unsigned MachineInstr::removePHIIncomingValueFor(const MachineBasicBlock &MBB) {
+  assert(isPHI());
+
+  // Phi might have multiple entries for MBB. Need to remove them all.
+  unsigned RemovedCount = 0;
+  for (unsigned N = getNumOperands(); N > 2; N -= 2) {
+    if (getOperand(N - 1).getMBB() == &MBB) {
+      removeOperand(N - 1);
+      removeOperand(N - 2);
+      RemovedCount += 2;
+    }
+  }
+  return RemovedCount;
 }

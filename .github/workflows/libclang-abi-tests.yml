@@ -84,6 +84,8 @@ jobs:
     if: github.repository_owner == 'llvm'
     needs: abi-dump-setup
     runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:f80125c0f767e29b8616210c0fd5cea2cd1f4fb6f2ca86d89f6016b6329b8d7f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
     strategy:
       matrix:
         name:
@@ -100,23 +102,12 @@ jobs:
             repo: ${{ github.repository }}
     steps:
       - name: Install Ninja
-        uses: llvm/actions/install-ninja@main
-      - name: Install abi-compliance-checker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y abi-dumper autoconf pkg-config
-      - name: Install universal-ctags
-        run: |
-          git clone https://github.com/universal-ctags/ctags.git
-          cd ctags
-          ./autogen.sh
-          ./configure
-          sudo make install
+        uses: llvm/actions/install-ninja@5dd955034a6742a2e21d82bf165fcb1050ae7b49 # main
       - name: Download source code
-        uses: llvm/actions/get-llvm-project-src@main
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ matrix.ref }}
-          repo: ${{ matrix.repo }}
+          repository: ${{ matrix.repo }}
       - name: Configure
         run: |
           mkdir install
@@ -131,7 +122,7 @@ jobs:
             sed -i 's/LLVM_[0-9]\+/LLVM_NOVERSION/' $lib-${{ matrix.ref }}.abi
           done
       - name: Upload ABI file
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
         with:
           name: ${{ matrix.name }}
           path: '*${{ matrix.ref }}.abi'
@@ -139,25 +130,23 @@ jobs:
   abi-compare:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:f80125c0f767e29b8616210c0fd5cea2cd1f4fb6f2ca86d89f6016b6329b8d7f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
     needs:
       - abi-dump-setup
       - abi-dump
     steps:
       - name: Download baseline
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # 4.1.8
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: build-baseline
           path: build-baseline
       - name: Download latest
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # 4.1.8
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: build-latest
           path: build-latest
 
-      - name: Install abi-compliance-checker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y abi-compliance-checker
       - name: Compare ABI
         run: |
           for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do
@@ -165,7 +154,7 @@ jobs:
           done
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/

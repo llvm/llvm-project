@@ -300,7 +300,7 @@ namespace {
 ///   %x = vector.insert .., .. [.., ..]
 class TransposeOpLowering : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   TransposeOpLowering(vector::VectorTransposeLowering vectorTransposeLowering,
                       MLIRContext *context, PatternBenefit benefit = 1)
@@ -395,7 +395,7 @@ private:
 class Transpose2DWithUnitDimToShapeCast
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   Transpose2DWithUnitDimToShapeCast(MLIRContext *context,
                                     PatternBenefit benefit = 1)
@@ -433,7 +433,7 @@ public:
 class TransposeOp2DToShuffleLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   TransposeOp2DToShuffleLowering(
       vector::VectorTransposeLowering vectorTransposeLowering,

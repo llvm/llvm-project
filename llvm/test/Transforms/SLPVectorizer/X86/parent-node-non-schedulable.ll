@@ -6,16 +6,13 @@ define void @test(ptr %0, i64 %1, i64 %2, i1 %3, i64 %4, i64 %5) {
 ; CHECK-SAME: ptr [[TMP0:%.*]], i64 [[TMP1:%.*]], i64 [[TMP2:%.*]], i1 [[TMP3:%.*]], i64 [[TMP4:%.*]], i64 [[TMP5:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 240
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr null, align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 136
-; CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr [[TMP16]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i64> poison, i64 [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i64> [[TMP18]], i64 [[TMP17]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = sub <2 x i64> zeroinitializer, [[TMP19]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> poison, i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> <i64 1, i64 1, i64 1, i64 poison>, i64 [[TMP2]], i32 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i64> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 136
+; CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <4 x i64> [[TMP10]], <4 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub <2 x i64> zeroinitializer, [[TMP39]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x i64>, ptr [[TMP7]], align 4
@@ -24,6 +21,9 @@ define void @test(ptr %0, i64 %1, i64 %2, i1 %3, i64 %4, i64 %5) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x i64> [[TMP23]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i64> [[TMP10]], <4 x i64> <i64 0, i64 poison, i64 undef, i64 undef>, <2 x i32> <i32 4, i32 0>
 ; CHECK-NEXT:    [[TMP26:%.*]] = add <2 x i64> [[TMP24]], [[TMP25]]
+; CHECK-NEXT:    [[TMP85:%.*]] = insertelement <2 x i64> poison, i64 [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i64> [[TMP85]], i64 [[TMP17]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = sub <2 x i64> zeroinitializer, [[TMP19]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = sub <2 x i64> zeroinitializer, [[TMP13]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = sub <2 x i64> zeroinitializer, [[TMP26]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <2 x i64> [[TMP19]], <2 x i64> poison, <2 x i32> zeroinitializer

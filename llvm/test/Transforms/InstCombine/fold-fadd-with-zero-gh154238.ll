@@ -24,14 +24,3 @@ define float @src2(float %arg1) {
   %v4 = fsub float %v2, %v3
   ret float %v4
 }
-
-define float @src_sub(float %arg1) {
-; CHECK-LABEL: define float @src_sub(
-; CHECK-SAME: float [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[V3:%.*]] = call float @llvm.fabs.f32(float [[ARG1]])
-; CHECK-NEXT:    ret float [[V3]]
-;
-  %v2 = fsub float %arg1, 0.000000e+00
-  %v3 = call float @llvm.fabs.f32(float %v2)
-  ret float %v3
-}

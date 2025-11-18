@@ -54,6 +54,10 @@ DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
       Fragment(DVR->getExpression()->getFragmentInfo()),
       InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
 
+DebugVariableAggregate::DebugVariableAggregate(const DbgVariableRecord *DVR)
+    : DebugVariable(DVR->getVariable(), std::nullopt,
+                    DVR->getDebugLoc()->getInlinedAt()) {}
+
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
                        ArrayRef<Metadata *> MDs, bool ImplicitCode)
@@ -868,15 +872,18 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, Metadata *SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
-                                  uint32_t NumExtraInhabitants, DIFlags Flags,
+                                  uint32_t NumExtraInhabitants,
+                                  uint32_t DataSizeInBits, DIFlags Flags,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, SizeInBits, AlignInBits,
-                                      Encoding, NumExtraInhabitants, Flags));
+  DEFINE_GETIMPL_LOOKUP(DIBasicType,
+                        (Tag, Name, SizeInBits, AlignInBits, Encoding,
+                         NumExtraInhabitants, DataSizeInBits, Flags));
   Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(DIBasicType,
-                       (Tag, AlignInBits, Encoding, NumExtraInhabitants, Flags),
-                       Ops);
+  DEFINE_GETIMPL_STORE(
+      DIBasicType,
+      (Tag, AlignInBits, Encoding, NumExtraInhabitants, DataSizeInBits, Flags),
+      Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
@@ -955,16 +962,29 @@ DIType *DIDerivedType::getClassType() const {
   assert(getTag() == dwarf::DW_TAG_ptr_to_member_type);
   return cast_or_null<DIType>(getExtraData());
 }
+
+// Helper function to extract ConstantAsMetadata from ExtraData,
+// handling extra data MDTuple unwrapping if needed.
+static ConstantAsMetadata *extractConstantMetadata(Metadata *ExtraData) {
+  Metadata *ED = ExtraData;
+  if (auto *Tuple = dyn_cast_or_null<MDTuple>(ED)) {
+    if (Tuple->getNumOperands() != 1)
+      return nullptr;
+    ED = Tuple->getOperand(0);
+  }
+  return cast_or_null<ConstantAsMetadata>(ED);
+}
+
 uint32_t DIDerivedType::getVBPtrOffset() const {
   assert(getTag() == dwarf::DW_TAG_inheritance);
-  if (auto *CM = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *CM = extractConstantMetadata(getExtraData()))
     if (auto *CI = dyn_cast_or_null<ConstantInt>(CM->getValue()))
       return static_cast<uint32_t>(CI->getZExtValue());
   return 0;
 }
 Constant *DIDerivedType::getStorageOffsetInBits() const {
   assert(getTag() == dwarf::DW_TAG_member && isBitField());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
@@ -973,13 +993,13 @@ Constant *DIDerivedType::getConstant() const {
   assert((getTag() == dwarf::DW_TAG_member ||
           getTag() == dwarf::DW_TAG_variable) &&
          isStaticMember());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
 Constant *DIDerivedType::getDiscriminantValue() const {
   assert(getTag() == dwarf::DW_TAG_member && !isStaticMember());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
@@ -1180,9 +1200,10 @@ DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
   DEFINE_GETIMPL_STORE(DIFile, (CS, Source), Ops);
 }
 DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
-                             unsigned SourceLanguage, bool IsOptimized,
-                             unsigned RuntimeVersion, unsigned EmissionKind,
-                             uint64_t DWOId, bool SplitDebugInlining,
+                             DISourceLanguageName SourceLanguage,
+                             bool IsOptimized, unsigned RuntimeVersion,
+                             unsigned EmissionKind, uint64_t DWOId,
+                             bool SplitDebugInlining,
                              bool DebugInfoForProfiling, unsigned NameTableKind,
                              bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
     : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
@@ -1195,7 +1216,7 @@ DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
 }
 
 DICompileUnit *DICompileUnit::getImpl(
-    LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
+    LLVMContext &Context, DISourceLanguageName SourceLanguage, Metadata *File,
     MDString *Producer, bool IsOptimized, MDString *Flags,
     unsigned RuntimeVersion, MDString *SplitDebugFilename,
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
@@ -1420,6 +1441,19 @@ bool DISubprogram::describes(const Function *F) const {
   assert(F && "Invalid function");
   return F->getSubprogram() == this;
 }
+
+const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
+  return visitRetainedNode<DIScope *>(
+      N, [](const DILocalVariable *LV) { return LV->getScope(); },
+      [](const DILabel *L) { return L->getScope(); },
+      [](const DIImportedEntity *IE) { return IE->getScope(); },
+      [](const Metadata *N) { return nullptr; });
+}
+
+const DILocalScope *DISubprogram::getRetainedNodeScope(const MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
                                        StorageType Storage,
                                        ArrayRef<Metadata *> Ops)
@@ -1764,6 +1798,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_bregx:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_rot:
     case dwarf::DW_OP_consts:
     case dwarf::DW_OP_eq:
     case dwarf::DW_OP_ne:
@@ -1771,6 +1806,8 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
+    case dwarf::DW_OP_neg:
+    case dwarf::DW_OP_abs:
       break;
     }
   }

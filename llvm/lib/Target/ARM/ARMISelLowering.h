@@ -447,6 +447,12 @@ class VectorType;
     void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                        SDNode *Node) const override;
 
+    bool supportKCFIBundles() const override;
+
+    MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
+                                MachineBasicBlock::instr_iterator &MBBI,
+                                const TargetInstrInfo *TII) const override;
+
     SDValue PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformCMOVToBFICombine(SDNode *N, SelectionDAG &DAG) const;
@@ -605,7 +611,7 @@ class VectorType;
 
     bool preferZeroCompareBranch() const override { return true; }
 
-    bool shouldExpandCmpUsingSelects(EVT VT) const override;
+    bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
 
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
@@ -702,7 +708,6 @@ class VectorType;
     bool useLoadStackGuardNode(const Module &M) const override;
 
     void insertSSPDeclarations(Module &M) const override;
-    Function *getSSPStackGuardCheck(const Module &M) const override;
 
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
@@ -772,8 +777,17 @@ class VectorType;
 
     bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
 
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
+
+    /// Return true if it is profitable to fold a pair of shifts into a mask.
+    bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override {
+      EVT VT = Y.getValueType();
+
+      if (VT.isVector())
+        return false;
+
+      return VT.getScalarSizeInBits() <= 32;
+    }
 
     bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                               unsigned SelectOpcode, SDValue X,
@@ -887,7 +901,6 @@ class VectorType;
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                               const ARMSubtarget *ST) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDivRem(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed) const;
     void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed,
@@ -908,6 +921,7 @@ class VectorType;
                    SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
@@ -993,6 +1007,8 @@ class VectorType;
     bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
     bool isUnsupportedFloatingType(EVT VT) const;
+
+    ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
     SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
                     SDValue ARMcc, SDValue Flags, SelectionDAG &DAG) const;

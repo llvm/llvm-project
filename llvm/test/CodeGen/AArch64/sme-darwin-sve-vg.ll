@@ -12,7 +12,7 @@ define void @locally_streaming_fn() #0 {
 ; CHECK-NEXT:    stp     d11, d10, [sp, #32]             ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp     d9, d8, [sp, #48]               ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp     x29, x30, [sp, #64]             ; 16-byte Folded Spill
-; CHECK-NEXT:    str     x9, [sp, #80]                   ; 8-byte Folded Spill
+; CHECK-NEXT:    str     x9, [sp, #80]                   ; 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32

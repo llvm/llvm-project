@@ -25,6 +25,8 @@ def Is32Bit : SubtargetFeature<"32bit-mode", "Is32Bit", "true",
                                "32-bit mode (80386)">;
 def Is16Bit : SubtargetFeature<"16bit-mode", "Is16Bit", "true",
                                "16-bit mode (i8086)">;
+def IsX32 : SubtargetFeature<"x32", "IsX32", "true",
+                             "64-bit with ILP32 programming model (e.g. x32 ABI)">;
 
 //===----------------------------------------------------------------------===//
 // X86 Subtarget ISA features
@@ -272,9 +274,6 @@ def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
 def FeatureAMXMOVRS : SubtargetFeature<"amx-movrs", "HasAMXMOVRS", "true",
                                        "Support AMX-MOVRS instructions",
                                        [FeatureAMXTILE]>;
-def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
-                                           "Support AMX amx-transpose instructions",
-                                           [FeatureAMXTILE]>;
 def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
                                         "HasAMXAVX512", "true",
                                         "Support AMX-AVX512 instructions",
@@ -1162,7 +1161,6 @@ def ProcessorFeatures {
                                                   FeatureAVXNECONVERT,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXVNNIINT16,
-                                                  FeatureUSERMSR,
                                                   FeatureSHA512,
                                                   FeatureSM3,
                                                   FeatureEGPR,
@@ -1176,8 +1174,7 @@ def ProcessorFeatures {
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
                                                   FeatureAMXFP8,
-                                                  FeatureAMXTF32,
-                                                  FeatureAMXTRANSPOSE];
+                                                  FeatureAMXTF32];
   list<SubtargetFeature> DMRFeatures =
     !listconcat(GNRDFeatures, DMRAdditionalFeatures);
 
@@ -1333,10 +1330,22 @@ def ProcessorFeatures {
     !listconcat(ARLFeatures, ARLSAdditionalFeatures);
 
   // Pantherlake
-  list<SubtargetFeature> PTLAdditionalFeatures = [FeaturePREFETCHI];
   list<SubtargetFeature> PTLFeatures =
-    !listremove(!listconcat(ARLSFeatures, PTLAdditionalFeatures), [FeatureWIDEKL]);
+    !listremove(ARLSFeatures, [FeatureWIDEKL]);
 
+  // Novalake
+  list<SubtargetFeature> NVLAdditionalFeatures = [FeatureAVX10_2,
+                                                  FeatureMOVRS,
+                                                  FeatureEGPR,
+                                                  FeaturePush2Pop2,
+                                                  FeaturePPX,
+                                                  FeatureNF,
+                                                  FeatureNDD,
+                                                  FeatureZU,
+                                                  FeatureCCMP,
+                                                  FeaturePREFETCHI];
+  list<SubtargetFeature> NVLFeatures =
+      !listconcat(PTLFeatures, NVLAdditionalFeatures);
 
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,
@@ -1879,8 +1888,13 @@ def : ProcModel<P, AlderlakePModel,
 }
 def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
                 ProcessorFeatures.ADLTuning>;
-def : ProcModel<"pantherlake", AlderlakePModel,
+foreach P = ["pantherlake", "wildcatlake"] in {
+def : ProcModel<P, AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
+}
+def : ProcModel<"novalake", AlderlakePModel, ProcessorFeatures.NVLFeatures,
+                ProcessorFeatures.ADLTuning>;
+
 def : ProcModel<"clearwaterforest", AlderlakePModel,
                 ProcessorFeatures.CWFFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"emeraldrapids", SapphireRapidsModel,
