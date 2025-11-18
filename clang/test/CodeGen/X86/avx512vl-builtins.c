@@ -7951,6 +7951,13 @@ __m128d test_mm_mask_permute_pd(__m128d __W, __mmask8 __U, __m128d __X) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_mask_permute_pd(__W, __U, __X, 1); 
 }
+TEST_CONSTEXPR(match_m128d(_mm_mask_permute_pd(
+  ((__m128d){0.0, 1.0}),
+  (__mmask8)0b10,
+  ((__m128d){2.0, 3.0}),
+  1),
+  0.0, 2.0
+));
 
 __m128d test_mm_maskz_permute_pd(__mmask8 __U, __m128d __X) {
   // CHECK-LABEL: test_mm_maskz_permute_pd
@@ -7958,6 +7965,12 @@ __m128d test_mm_maskz_permute_pd(__mmask8 __U, __m128d __X) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_maskz_permute_pd(__U, __X, 1); 
 }
+TEST_CONSTEXPR(match_m128d(_mm_maskz_permute_pd(
+  (__mmask8)0b10,
+  ((__m128d){1.0, 2.0}),
+  1),
+  0.0, 1.0
+));
 
 __m256d test_mm256_mask_permute_pd(__m256d __W, __mmask8 __U, __m256d __X) {
   // CHECK-LABEL: test_mm256_mask_permute_pd
@@ -7965,6 +7978,13 @@ __m256d test_mm256_mask_permute_pd(__m256d __W, __mmask8 __U, __m256d __X) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_mask_permute_pd(__W, __U, __X, 5); 
 }
+TEST_CONSTEXPR(match_m256d(_mm256_mask_permute_pd(
+  ((__m256d){0.0, 1.0, 2.0, 3.0}),
+  (__mmask8)0b1010,
+  ((__m256d){4.0, 5.0, 6.0, 7.0}),
+  5),
+  0.0, 4.0, 2.0, 6.0
+));
 
 __m256d test_mm256_maskz_permute_pd(__mmask8 __U, __m256d __X) {
   // CHECK-LABEL: test_mm256_maskz_permute_pd
@@ -7972,6 +7992,12 @@ __m256d test_mm256_maskz_permute_pd(__mmask8 __U, __m256d __X) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_maskz_permute_pd(__U, __X, 5); 
 }
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_permute_pd(
+  (__mmask8)0b1010,
+  ((__m256d){4.0, 5.0, 6.0, 7.0}),
+  5),
+  0.0, 4.0, 0.0, 6.0
+));
 
 __m128 test_mm_mask_permute_ps(__m128 __W, __mmask8 __U, __m128 __X) {
   // CHECK-LABEL: test_mm_mask_permute_ps
@@ -7979,6 +8005,13 @@ __m128 test_mm_mask_permute_ps(__m128 __W, __mmask8 __U, __m128 __X) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_permute_ps(__W, __U, __X, 0x1b); 
 }
+TEST_CONSTEXPR(match_m128(_mm_mask_permute_ps(
+  ((__m128){0.0, 1.0, 2.0, 3.0}),
+  (__mmask8)0b1010,
+  ((__m128){4.0, 5.0, 6.0, 7.0}),
+  0x1b),
+  0, 6.0, 2.0, 4.0
+));
 
 __m128 test_mm_maskz_permute_ps(__mmask8 __U, __m128 __X) {
   // CHECK-LABEL: test_mm_maskz_permute_ps
@@ -7986,6 +8019,13 @@ __m128 test_mm_maskz_permute_ps(__mmask8 __U, __m128 __X) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_permute_ps(__U, __X, 0x1b); 
 }
+TEST_CONSTEXPR(match_m128(_mm_maskz_permute_ps(
+  (__mmask8)0b1010,
+  ((__m128){4.0, 5.0, 6.0, 7.0}),
+  0x1b),
+  0.0, 6.0, 0.0, 4.0
+));
+
 
 __m256 test_mm256_mask_permute_ps(__m256 __W, __mmask8 __U, __m256 __X) {
   // CHECK-LABEL: test_mm256_mask_permute_ps
@@ -7993,6 +8033,13 @@ __m256 test_mm256_mask_permute_ps(__m256 __W, __mmask8 __U, __m256 __X) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_permute_ps(__W, __U, __X, 0x1b); 
 }
+TEST_CONSTEXPR(match_m256(_mm256_mask_permute_ps(
+  ((__m256){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}),
+  (__mmask8)0b10101010,
+  ((__m256){8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0}),
+  0x1b),
+  0.0, 10.0, 2.0, 8.0, 4.0, 14.0, 6.0, 12.0
+));
 
 __m256 test_mm256_maskz_permute_ps(__mmask8 __U, __m256 __X) {
   // CHECK-LABEL: test_mm256_maskz_permute_ps
@@ -8000,6 +8047,12 @@ __m256 test_mm256_maskz_permute_ps(__mmask8 __U, __m256 __X) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_permute_ps(__U, __X, 0x1b); 
 }
+TEST_CONSTEXPR(match_m256(_mm256_maskz_permute_ps(
+  (__mmask8)0b10101010,
+  ((__m256){8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0}),
+  0x1b),
+  0.0, 10.0, 0.0, 8.0, 0.0, 14.0, 0.0, 12.0
+));
 
 __m128d test_mm_mask_permutevar_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128i __C) {
   // CHECK-LABEL: test_mm_mask_permutevar_pd
