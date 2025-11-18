@@ -795,32 +795,37 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return false;
 }
 
-static OpFoldResult foldUseDominateCast(CastOp castOp) {
-  auto funcOp = castOp->getParentOfType<FunctionOpInterface>();
-  if (!funcOp)
-    return {};
-  auto castOps = castOp->getBlock()->getOps<CastOp>();
-  CastOp dominateCastOp = castOp;
-  SmallVector<CastOp> ops(castOps);
-  mlir::DominanceInfo dominanceInfo(castOp);
-  for (auto it : castOps) {
-    if (it.getSource() == dominateCastOp.getSource() &&
-        it.getDest().getType() == dominateCastOp.getDest().getType() &&
-        dominanceInfo.dominates(it.getOperation(),
-                                dominateCastOp.getOperation())) {
-      dominateCastOp = it;
-    }
-  }
-  return dominateCastOp == castOp ? Value() : dominateCastOp.getResult();
+OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
+  return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
 }
 
-OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
-  OpFoldResult result;
-  if (OpFoldResult value = foldUseDominateCast(*this))
-    result = value;
-  if (succeeded(foldMemRefCast(*this)))
-    result = getResult();
-  return result;
+namespace {
+struct HoistCastPos : public OpRewritePattern<CastOp> {
+  using OpRewritePattern<CastOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CastOp castOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto *defineOp = castOp.getSource().getDefiningOp()) {
+      if (defineOp->getBlock() != castOp->getBlock()) {
+        rewriter.moveOpAfter(castOp.getOperation(), defineOp);
+        return success();
+      }
+      return failure();
+    } else {
+      auto argument = cast<BlockArgument>(castOp.getSource());
+      if (argument.getOwner() != castOp->getBlock()) {
+        rewriter.moveOpBefore(castOp.getOperation(),
+                              &argument.getOwner()->front());
+        return success();
+      }
+      return failure();
+    }
+  }
+};
+} // namespace
+
+void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<HoistCastPos>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>

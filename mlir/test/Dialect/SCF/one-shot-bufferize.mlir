@@ -922,13 +922,13 @@ func.func @elide_copy_of_non_writing_scf_if(%c: i1, %p1: index, %p2: index, %f: 
 //  CHECK-SAME:     %[[pred:.*]]: index, %[[b:.*]]: memref<{{.*}}>, %[[c:.*]]: memref<{{.*}}>) -> memref<{{.*}}>
 func.func @index_switch(%pred: index, %b: tensor<5xf32>, %c: tensor<5xf32>) -> tensor<5xf32> {
   // Throw in a tensor that bufferizes to a different layout map.
-  // CHECK: %[[a:.*]] = memref.alloc() {{.*}} : memref<5xf32>
+  // CHECK: %[[a:.*]] = memref.alloc() {{.*}} : memref<5xf32>  
+  // CHECK:   %[[cast:.*]] = memref.cast %[[a]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
   %a = bufferization.alloc_tensor() : tensor<5xf32>
 
   // CHECK: %[[r:.*]] = scf.index_switch %[[pred]] -> memref<5xf32, strided<[?], offset: ?>>
   %0 = scf.index_switch %pred -> tensor<5xf32>
   // CHECK: case 2 {
-  // CHECK:   %[[cast:.*]] = memref.cast %[[a]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
   // CHECK:   scf.yield %[[cast]]
   case 2 {
     scf.yield %a: tensor<5xf32>

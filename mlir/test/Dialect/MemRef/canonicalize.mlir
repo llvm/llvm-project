@@ -1370,19 +1370,41 @@ func.func @non_fold_view_same_source_res_types(%0: memref<?xi8>, %arg0 : index) 
 
 // -----
 
-func.func @fold_use_dominate_cast_foo(%arg0: memref<?xf32, strided<[?], offset:?>>) {
-  return
+// CHECK-LABEL: func @hoist_cast_pos
+//  CHECK-SAME:   %[[ARG0:.*]]: memref<10xf32>,
+//  CHECK-SAME:   %[[ARG1:.*]]: i1
+func.func @hoist_cast_pos(%arg: memref<10xf32>, %arg1: i1) -> (memref<?xf32>) {
+  //      CHECK: %[[CAST_0:.*]] = memref.cast %[[ARG0]]
+  //      CHECK: %[[CAST_1:.*]] = memref.cast %[[ARG0]]
+  // CHECK-NEXT: cf.cond_br %[[ARG1]]
+  cf.cond_br %arg1, ^bb1, ^bb2
+^bb1:
+  %cast = memref.cast %arg : memref<10xf32> to memref<?xf32>
+  // CHECK: return %[[CAST_1]]
+  return %cast : memref<?xf32>
+^bb2:
+  %cast1 = memref.cast %arg : memref<10xf32> to memref<?xf32>
+  // CHECK: return %[[CAST_0]]
+  return %cast1 : memref<?xf32> 
 }
 
-// CHECK-LABEL: func @fold_use_dominate_cast(
-//  CHECK-SAME:   %[[ARG0:.*]]: memref<?xf32>)
-func.func @fold_use_dominate_cast(%arg: memref<?xf32>) {
-  // CHECK: %[[CAST_0:.*]] = memref.cast %[[ARG0]]
-  %cast0 = memref.cast %arg : memref<?xf32> to memref<?xf32, strided<[?], offset:?>>
-  %cast1 = memref.cast %arg : memref<?xf32> to memref<?xf32, strided<[?], offset:?>>
-  // CHECK: call @fold_use_dominate_cast_foo(%[[CAST_0]])
-  call @fold_use_dominate_cast_foo(%cast0) : (memref<?xf32, strided<[?], offset:?>>) -> ()
-  // CHECK: call @fold_use_dominate_cast_foo(%[[CAST_0]])
-  call @fold_use_dominate_cast_foo(%cast1) : (memref<?xf32, strided<[?], offset:?>>) -> () 
-  return
+// -----
+
+// CHECK-LABEL: func.func @hoist_cast_pos_alloc
+//  CHECK-SAME:   %[[ARG0:.*]]: i1
+func.func @hoist_cast_pos_alloc(%arg: i1) -> (memref<?xf32>) {
+  //      CHECK: %[[ALLOC_0:.*]] = memref.alloc()
+  //      CHECK: %[[CAST_0:.*]] = memref.cast %[[ALLOC_0]]
+  //      CHECK: %[[CAST_1:.*]] = memref.cast %[[ALLOC_0]]
+  // CHECK-NEXT: cf.cond_br %[[ARG0]]
+  %alloc = memref.alloc() : memref<10xf32>
+  cf.cond_br %arg, ^bb1, ^bb2
+^bb1:
+  %cast = memref.cast %alloc : memref<10xf32> to memref<?xf32>
+  // CHECK: return %[[CAST_1]]
+  return %cast : memref<?xf32>
+^bb2:
+  %cast1 = memref.cast %alloc : memref<10xf32> to memref<?xf32>
+  // CHECK: return %[[CAST_0]]
+  return %cast1 : memref<?xf32> 
 }
