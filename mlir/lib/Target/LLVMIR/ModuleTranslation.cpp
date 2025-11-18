@@ -2254,8 +2254,11 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
         /* HasRequiresUnifiedSharedMemory = */ false,
         /* HasRequiresDynamicAllocators = */ false);
     unsigned int defaultAS =
-        getLLVMModule()->getDataLayout().getProgramAddressSpace();
+        llvmModule->getDataLayout().getProgramAddressSpace();
     config.setDefaultTargetAS(defaultAS);
+    config.setRuntimeCC(llvmModule->getTargetTriple().isSPIRV()
+                            ? llvm::CallingConv::SPIR_FUNC
+                            : llvm::CallingConv::C);
     ompBuilder->setConfig(std::move(config));
     ompBuilder->initialize();
   }
