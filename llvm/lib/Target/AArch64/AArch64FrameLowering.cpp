@@ -973,8 +973,7 @@ bool AArch64FrameLowering::shouldSignReturnAddressEverywhere(
   if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
     return false;
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  bool SignReturnAddressAll = AFI->shouldSignReturnAddress(/*SpillsLR=*/false);
-  return SignReturnAddressAll;
+  return AFI->getSignReturnAddressCondition() == SignReturnAddress::All;
 }
 
 // Given a load or a store instruction, generate an appropriate unwinding SEH
