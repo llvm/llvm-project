@@ -1,38 +1,98 @@
 // RUN: %clang_cc1 -fsyntax-only -Wenum-compare-typo -verify %s 
 // RUN: %clang_cc1 -fsyntax-only -Wenum-compare-typo -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
-enum E {
-  kOptionGood1 = 1ull << 0,
-  kOptionGood2 = 1ull >> 0,
-  // expected-warning@+3 {{comparison operator '<' in enumerator constant is likely a typo for the shift operator '<<'}} 
+
+enum PossibleTypoLeft { 
+  Val1 = 1 << 0,
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
   // expected-note@+2 {{use '<<' to perform a bitwise shift}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:22-[[@LINE+1]]:23}:"<<"
-  kOptionBad1 = 1ull < 1,
-  // expected-warning@+3 {{comparison operator '>' in enumerator constant is likely a typo for the shift operator '>>'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:12-[[@LINE+1]]:13}:"<<"
+  Bad1 = 1 < 2, 
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
   // expected-note@+2 {{use '>>' to perform a bitwise shift}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:19-[[@LINE+1]]:20}:">>"
-  kOptionBad2 = 1 > 3,
-  // expected-warning@+3 {{comparison operator '>' in enumerator constant is likely a typo for the shift operator '>>'}} 
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:12-[[@LINE+1]]:13}:">>"
+  Bad2 = 1 > 3,
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
   // expected-note@+2 {{use '>>' to perform a bitwise shift}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:20-[[@LINE+1]]:21}:">>"
-  kOptionBad3 = (1 > 2)
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:13-[[@LINE+1]]:14}:">>"
+  Bad3 = (1 > 3) 
 };
 
-// Ensure the warning does not fire on valid code
-enum F {
-  kSomeValue = 10,
-  kComparison = kSomeValue > 5, // No warning
-  kMaxEnum = 255,
-  kIsValid = kMaxEnum > 0, // No warning
-  kSum = 10 + 20,          // No warning
-  kShift = 2 << 5          // No warning
+enum PossibleTypoRight { 
+  Val2 = 1 >> 0,
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-note@+2 {{use '<<' to perform a bitwise shift}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:12-[[@LINE+1]]:13}:"<<"
+  Bad4 = 1 < 2, 
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
+  // expected-note@+2 {{use '>>' to perform a bitwise shift}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:12-[[@LINE+1]]:13}:">>"
+  Bad5 = 1 > 3,
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-note@+2 {{use '<<' to perform a bitwise shift}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:13-[[@LINE+1]]:14}:"<<"
+  Bad6 = (1 < 3) 
+};
+
+// Case 3: Context provided by other bitwise operators (&, |)
+// Even though there are no shifts, the presence of '|' implies flags.
+enum PossibleTypoBitwiseOr {
+  FlagA = 0x1,
+  FlagB = 0x2,
+  FlagCombo = FlagA | FlagB,
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-note@+2 {{use '<<' to perform a bitwise shift}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:17-[[@LINE+1]]:18}:"<<"
+  FlagTypo1 = 1 < FlagCombo,
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
+  // expected-note@+2 {{use '>>' to perform a bitwise shift}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:17-[[@LINE+1]]:18}:">>"
+  FlagTypo2 = 1 > FlagCombo
+};
+
+enum PossibleTypoBitwiseAnd {
+  FlagAnd = FlagA & FlagB,
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-note@+2 {{use '<<' to perform a bitwise shift}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:17-[[@LINE+1]]:18}:"<<"
+  FlagTypo3 = 1 < FlagAnd,
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
+  // expected-note@+2 {{use '>>' to perform a bitwise shift}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:17-[[@LINE+1]]:18}:">>"
+  FlagTypo4 = 1 > FlagAnd
+};
+
+enum NoWarningOnDirectInit {
+  A = 0,
+  B = 1,
+  Ok1 = 1 < 2, // No warning expected
+  Ok2 = 1 > 2 // No warning expected
+};
+
+enum NoWarningOnArith {
+  D = 0 + 1,
+  E = D * 10,
+  F = E - D,
+  G = F / D,
+  Ok3 = 1 < E, // No warning expected
+  Ok4 = 1 > E // No warning expected
+};
+
+enum NoWarningOnExplicitCast {
+  Bit1 = 1 << 0,
+  Ok5 = (int)(1 < 2) // No warning expected
+};
+
+enum NoWarningOnNoneBitShift {
+  Bit2 = 1 << 0,
+  Ok6 = (3 < 2) // No warning expected
 };
 
 // Ensure the diagnostic group works
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wenum-compare-typo"
-enum G {
-  kIgnored = 1 < 10 // No warning
+enum IGNORED {
+  Ok7 = 1 << 1,
+  Ignored3 = 1 < 10 // No warning
 };
 #pragma clang diagnostic pop
