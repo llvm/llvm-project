@@ -626,22 +626,25 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   std::vector<Chain> Ret;
   Ret.push_back({C.front()});
 
-  unsigned ElemBytes = DL.getTypeStoreSize(getChainElemTy(C));
+  unsigned ChainElemTyBits = DL.getTypeSizeInBits(getChainElemTy(C));
   APInt PrevReadEnd = C[0].OffsetFromLeader +
                       DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
-    // `prev` accesses offsets [PrevDistFromBase, PrevReadEnd).
     auto &CurChain = Ret.back();
     unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
 
     // Add this instruction to the end of the current chain, or start a new one.
-    assert(SzBytes % ElemBytes == 0);
+    assert(
+        8 * SzBytes % ChainElemTyBits == 0 &&
+        "Every chain-element size must be a multiple of the element size after "
+        "vectorization.");
     APInt ReadEnd = It->OffsetFromLeader + SzBytes;
     // Allow redundancy: partial or full overlap counts as contiguous.
     bool AreContiguous = false;
     if (It->OffsetFromLeader.sle(PrevReadEnd)) {
+      // Check overlap is a multiple of the element size after vectorization.
       uint64_t Overlap = (PrevReadEnd - It->OffsetFromLeader).getZExtValue();
-      if (Overlap % ElemBytes == 0)
+      if (8 * Overlap % ChainElemTyBits == 0)
         AreContiguous = true;
     }
 
@@ -736,14 +739,14 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
     // These chains are over the closed interval [CBegin, CEnd].
     SmallVector<std::pair<unsigned /*CEnd*/, unsigned /*SizeBytes*/>, 8>
         CandidateChains;
-
-    unsigned BytesAdded = DL.getTypeStoreSize(getLoadStoreType(C[CBegin].Inst));
-    APInt PrevReadEnd = C[CBegin].OffsetFromLeader + BytesAdded;
-    unsigned Sz = BytesAdded;
+    // Need to compute the size of every candidate chain from its beginning
+    // because of possible overlapping among chain elements.
+    unsigned Sz = DL.getTypeStoreSize(getLoadStoreType(C[CBegin].Inst));
+    APInt PrevReadEnd = C[CBegin].OffsetFromLeader + Sz;
     for (unsigned CEnd = CBegin + 1, Size = C.size(); CEnd < Size; ++CEnd) {
       APInt ReadEnd = C[CEnd].OffsetFromLeader +
                       DL.getTypeStoreSize(getLoadStoreType(C[CEnd].Inst));
-      BytesAdded =
+      unsigned BytesAdded =
           PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
       Sz += BytesAdded;
       if (Sz > VecRegBytes)
@@ -947,8 +950,9 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       Instruction *I = E.Inst;
       Value *V;
       Type *T = getLoadStoreType(I);
-      int EOffset = (E.OffsetFromLeader - C[0].OffsetFromLeader).getSExtValue();
-      int VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
+      unsigned EOffset =
+          (E.OffsetFromLeader - C[0].OffsetFromLeader).getSExtValue();
+      unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (auto *VT = dyn_cast<FixedVectorType>(T)) {
         auto Mask = llvm::to_vector<8>(
             llvm::seq<int>(VecIdx, VecIdx + VT->getNumElements()));
@@ -999,8 +1003,9 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     };
     for (const ChainElem &E : C) {
       auto *I = cast<StoreInst>(E.Inst);
-      int EOffset = (E.OffsetFromLeader - C[0].OffsetFromLeader).getSExtValue();
-      int VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
+      unsigned EOffset =
+          (E.OffsetFromLeader - C[0].OffsetFromLeader).getSExtValue();
+      unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (FixedVectorType *VT =
               dyn_cast<FixedVectorType>(getLoadStoreType(I))) {
         for (int J = 0, JE = VT->getNumElements(); J < JE; ++J) {
