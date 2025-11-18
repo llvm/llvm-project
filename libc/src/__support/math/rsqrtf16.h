@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
+#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
@@ -77,44 +78,10 @@ LIBC_INLINE static constexpr float16 rsqrtf16(float16 x) {
   return fputil::cast<float16>(result);
 
 #else
-  // Range reduction:
-  // x can be expressed as m*2^e, where e - int exponent and m - mantissa
-  // rsqrtf16(x) = rsqrtf16(m*2^e)
-  // rsqrtf16(m*2^e) = 1/sqrt(m) * 1/sqrt(2^e) = 1/sqrt(m) * 1/2^(e/2)
-  // 1/sqrt(m) * 1/2^(e/2) = 1/sqrt(m) * 2^(-e/2)
+  float xf = fputil::cast<float>(x);
 
-  // Compute reduction directly from half bits to avoid frexp/ldexp overhead.
   int exponent = 0;
-  int signifcand = 0; // same as mantissa, but int
-  uint16_t eh = static_cast<uint16_t>((x_abs >> 10) & 0x1F);
-  uint16_t frac = static_cast<uint16_t>(x_abs & 0x3FF);
-
-  int result;
-  if (eh != 0) {
-    // ((2^-1 + frac/2^11) * 2) * 2^(eh-15)
-
-    // Normal: x = (1 + frac/2^10) * 2^(eh-15) = ((0.5 + frac/2^11) * 2) *
-    // 2^(eh-15)
-    // => mantissa in [0.5,1): m = 0.5 + frac/2^11, exponent = (eh - 15) + 1 =
-    // eh - 14
-    exponent = static_cast<int>(eh) - 14;
-    mantissa = 0.5f + static_cast<float>(frac) * 0x1.0p-11f;
-  } else {
-    // Subnormal: x = (frac/2^10) * 2^(1-15) = frac * 2^-24.
-    // Normalize frac so that bit 9 becomes 1; then mantissa m = (frac <<
-    // t)/2^10 ∈ [0.5,1) and exponent E = -14 - t so that x = m * 2^E.
-    if (LIBC_UNLIKELY(frac == 0)) {
-      // Should have been handled by zero check above, but keep safe.
-      return FPBits::inf(Sign::POS).get_val();
-    }
-    int shifts = 0;
-    while ((frac & 0x200u) == 0u) { // bring into [0x200, 0x3FF]
-      frac <<= 1;
-      ++shifts;
-    }
-    exponent = -14 - shifts;
-    mantissa = static_cast<float>(frac) * 0x1.0p-10f;
-  }
+  float mantissa = fputil::frexp(xf, exponent);
 
   float result = 0.0f;
   int exp_floored = -(exponent >> 1);
@@ -139,8 +106,9 @@ LIBC_INLINE static constexpr float16 rsqrtf16(float16 x) {
     }
   } else {
     // 4 Degree minimax polynomial (single-precision coefficients) generated
-    // with Sollya: P = fpminimax(1/sqrt(x), 4,
-    // [|single,single,single,single,single|], [0.5;1])
+    // with Sollya:
+    //   P = fpminimax(1/sqrt(x), 4,
+    //       [|single,single,single,single,single|], [0.5;1])
     float y = fputil::polyeval(mantissa,
                                0x1.771256p1f,  // c0
                                -0x1.5e7c4ap2f, // c1
@@ -175,6 +143,7 @@ LIBC_INLINE static constexpr float16 rsqrtf16(float16 x) {
                                     result); // result *= (1 - 2^-21)
     }
   }
+
   return fputil::cast<float16>(result);
 #endif
 }
