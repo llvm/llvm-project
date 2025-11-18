@@ -6887,8 +6887,9 @@ SDValue RISCVTargetLowering::expandUnalignedVPLoad(SDValue Op,
   VL = DAG.getNode(ISD::MUL, DL, VL.getValueType(), VL,
                    DAG.getConstant((EltSizeBits / 8), DL, VL.getValueType()));
 
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, NewVT.getVectorElementCount());
   SDValue L = DAG.getLoadVP(NewVT, DL, Load->getChain(), Load->getBasePtr(),
-                            DAG.getAllOnesConstant(DL, Mask.getValueType()), VL,
+                            DAG.getAllOnesConstant(DL, MaskVT), VL,
                             Load->getPointerInfo(), Load->getBaseAlign(),
                             Load->getMemOperand()->getFlags(), AAMDNodes());
   return DAG.getMergeValues({DAG.getBitcast(VT, L), L.getValue(1)}, DL);
@@ -6938,10 +6939,11 @@ SDValue RISCVTargetLowering::expandUnalignedVPStore(SDValue Op,
       Store->getPointerInfo(), Store->getMemOperand()->getFlags(), Size,
       Store->getBaseAlign());
 
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, NewVT.getVectorElementCount());
   return DAG.getStoreVP(Store->getChain(), DL, StoredVal, Store->getBasePtr(),
                         DAG.getUNDEF(Store->getBasePtr().getValueType()),
-                        DAG.getAllOnesConstant(DL, Mask.getValueType()), VL,
-                        NewVT, MMO, ISD::UNINDEXED);
+                        DAG.getAllOnesConstant(DL, MaskVT), VL, NewVT, MMO,
+                        ISD::UNINDEXED);
 }
 
 static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
