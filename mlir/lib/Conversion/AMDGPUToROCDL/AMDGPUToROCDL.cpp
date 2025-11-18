@@ -1742,12 +1742,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   auto targetType = cast<VectorType>(op.getResult().getType());
   auto destElemType = cast<FloatType>(targetType.getElementType());
 
-  std::optional<StringRef> maybeIntrinsic =
-      scaledExtPacked816ToIntrinsic(srcElemType, destElemType);
-  if (!maybeIntrinsic.has_value())
-    return op.emitOpError(
-        "no intrinsic matching packed scaled conversion on the given chipset");
-
   IntegerType i32 = rewriter.getI32Type();
   Value source = adaptor.getSource();
   Type llvmResultType = typeConverter->convertType(op.getResult().getType());
@@ -1768,6 +1762,12 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   if (!packedType || !llvmResultType) {
     return rewriter.notifyMatchFailure(op, "type conversion failed");
   }
+
+  std::optional<StringRef> maybeIntrinsic =
+      scaledExtPacked816ToIntrinsic(srcElemType, destElemType);
+  if (!maybeIntrinsic.has_value())
+    return op.emitOpError(
+        "no intrinsic matching packed scaled conversion on the given chipset");
 
   int32_t scaleSel =
       getScaleSel(blockSize, bitWidth, firstScaleLane, firstScaleByte);
