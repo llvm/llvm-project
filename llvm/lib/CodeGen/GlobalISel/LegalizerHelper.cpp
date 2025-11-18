@@ -7678,6 +7678,18 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     unsigned Size = Ty.getSizeInBits();
     MachineIRBuilder &B = MIRBuilder;
 
+    // Lift small odd-size integer to 8-bit integer.
+    if (Size < 8) {
+      LLT NewTy = LLT::scalar(8);
+      auto ZExt = B.buildZExt(NewTy, SrcReg);
+      auto NewCTPOP = B.buildCTPOP(NewTy, ZExt);
+      Observer.changingInstr(MI);
+      MI.setDesc(TII.get(TargetOpcode::G_TRUNC));
+      MI.getOperand(1).setReg(NewCTPOP.getReg(0));
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
+
     // Count set bits in blocks of 2 bits. Default approach would be
     // B2Count = { val & 0x55555555 } + { (val >> 1) & 0x55555555 }
     // We use following formula instead:
