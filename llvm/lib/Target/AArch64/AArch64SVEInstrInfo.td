@@ -464,13 +464,11 @@ def AArch64fmlsidx : PatFrags<(ops node:$acc, node:$op1, node:$op2, node:$idx),
 def AArch64fnmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                               [(AArch64fnmla_p_node node:$pg, node:$zn, node:$zm, node:$za),
                                (int_aarch64_sve_fnmla_u node:$pg, node:$za, node:$zn, node:$zm),
-                               (AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef))),
                                (AArch64fneg_mt_nsz node:$pg, (AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za), (undef))]>;
 
 def AArch64fnmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                               [(AArch64fnmls_p_node node:$pg, node:$zn, node:$zm, node:$za),
-                               (int_aarch64_sve_fnmls_u node:$pg, node:$za, node:$zn, node:$zm),
-                               (AArch64fma_p node:$pg, node:$zn, node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef)))]>;
+                               (int_aarch64_sve_fnmls_u node:$pg, node:$za, node:$zn, node:$zm)]>;
 
 def AArch64fsubr_p : PatFrag<(ops node:$pg, node:$op1, node:$op2),
                              (AArch64fsub_p node:$pg, node:$op2, node:$op1)>;
