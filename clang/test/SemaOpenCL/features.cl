@@ -26,7 +26,7 @@
 // RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=clc++1.0 \
 // RUN:   | FileCheck -match-full-lines %s  --check-prefix=FEATURES-CL20
 
-// Features can be disabled using -cl-ext.
+// Features can be disabled using -cl-ext=-<feature>.
 // RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header \
 // RUN:    -cl-ext=-__opencl_c_integer_dot_product_input_4x8bit \
 // RUN:    -cl-ext=-__opencl_c_integer_dot_product_input_4x8bit_packed \
