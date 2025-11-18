@@ -3362,7 +3362,8 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
-                                          const CallExpr *Call, unsigned ID) {
+                                              const CallExpr *Call,
+                                              unsigned ID) {
   assert(Call->getNumArgs() == 1);
 
   const Pointer &Vec = S.Stk.pop<Pointer>();
