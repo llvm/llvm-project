@@ -774,7 +774,9 @@ static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
 // Returns true if the instruction is a packed f32 instruction that only reads
 // 32 bits from a scalar operand (SGPR or literal) and replicates the bits to
 // both channels.
-static bool isPKF32Instr(const GCNSubtarget *ST, MachineInstr *MI) {
+static bool
+isPKF32InstrReplicatingLow32BitsOfScalarInput(const GCNSubtarget *ST,
+                                              MachineInstr *MI) {
   if (!ST->hasPKF32InstsReplicatingLow32BitsOfScalarInput())
     return false;
   switch (MI->getOpcode()) {
@@ -954,7 +956,8 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
 
   // Special case for PK_F32 instructions if we are trying to fold an imm to
   // src0 or src1.
-  if (OpToFold.isImm() && isPKF32Instr(ST, MI) &&
+  if (OpToFold.isImm() &&
+      isPKF32InstrReplicatingLow32BitsOfScalarInput(ST, MI) &&
       !checkImmOpForPKF32Instr(OpToFold))
     return false;
 
@@ -1173,7 +1176,8 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
     return false;
 
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
-    if (isPKF32Instr(ST, UseMI) && !checkImmOpForPKF32Instr(OpToFold))
+    if (isPKF32InstrReplicatingLow32BitsOfScalarInput(ST, UseMI) &&
+        !checkImmOpForPKF32Instr(OpToFold))
       return false;
     appendFoldCandidate(FoldList, UseMI, UseOpIdx, OpToFold);
     return true;
