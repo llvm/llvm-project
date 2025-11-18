@@ -369,7 +369,7 @@ public:
     DerivedT &LHS = derived();
     DerivedT Tmp;
     Tmp.destroyAll();
-    Tmp.derived().kill();
+    Tmp.kill();
     Tmp.moveWithoutRehash(std::move(LHS));
     LHS.moveWithoutRehash(std::move(RHS));
     RHS.moveWithoutRehash(std::move(Tmp));
@@ -443,7 +443,7 @@ protected:
   // - *this is valid.
   // - RHS is valid or killed (but not uninitialized).
   void moveWithoutRehash(DerivedT &&RHS) {
-    if (derived().maybeMoveFast(std::move(RHS.derived())))
+    if (derived().maybeMoveFast(std::move(RHS)))
       return;
 
     derived().allocateBuckets(RHS.getNumBuckets());
@@ -467,7 +467,7 @@ protected:
         R->getSecond().~ValueT();
       }
     }
-    RHS.derived().kill();
+    RHS.kill();
   }
 
   // Move key/value from Other to *this.
