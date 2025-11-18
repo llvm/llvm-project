@@ -18,6 +18,11 @@ constinit ExitCallbackList atexit_callbacks;
 Mutex handler_list_mtx(false, false, false, false);
 [[gnu::weak]] extern void teardown_main_tls();
 
+#ifdef LIBC_USE_MALLOC_THREAD_CLEANUP
+// This symbol may not be defined if libc is not built with allocator
+extern "C" [[gnu::weak]] void _malloc_thread_cleanup();
+#endif
+
 extern "C" {
 
 int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
@@ -27,6 +32,10 @@ int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
 void __cxa_finalize(void *dso) {
   if (!dso) {
     call_exit_callbacks(atexit_callbacks);
+#ifdef LIBC_USE_MALLOC_THREAD_CLEANUP
+    if (_malloc_thread_cleanup)
+      _malloc_thread_cleanup();
+#endif
     if (teardown_main_tls)
       teardown_main_tls();
   }

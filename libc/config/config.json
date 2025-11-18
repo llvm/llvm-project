@@ -130,5 +130,11 @@
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
     }
+  },
+  "stdlib": {
+    "LIBC_MALLOC_IMPLEMENTATION": {
+      "value": "",
+      "doc": "Select the implementation of memory allocator. Leave empty to disable malloc symbols. Possible values are scudo/snmalloc/baremetal"
+    }
   }
 }
