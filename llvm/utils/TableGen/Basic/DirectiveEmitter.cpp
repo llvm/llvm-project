@@ -276,80 +276,81 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#include <utility>\n"; // for std::pair
   OS << "\n";
   NamespaceEmitter LlvmNS(OS, "llvm");
-  NamespaceEmitter DirLangNS(OS, DirLang.getCppNamespace());
+  {
+    NamespaceEmitter DirLangNS(OS, DirLang.getCppNamespace());
 
-  if (DirLang.hasEnableBitmaskEnumInNamespace())
-    OS << "LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n\n";
+    if (DirLang.hasEnableBitmaskEnumInNamespace())
+      OS << "LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n\n";
 
-  // Emit Directive associations
-  std::vector<const Record *> Associations;
-  copy_if(DirLang.getAssociations(), std::back_inserter(Associations),
-          // Skip the "special" value
-          [](const Record *Def) { return Def->getName() != "AS_FromLeaves"; });
-  generateEnumClass(Associations, OS, "Association",
-                    /*Prefix=*/"", /*ExportEnums=*/false);
-
-  generateEnumClass(DirLang.getCategories(), OS, "Category", /*Prefix=*/"",
-                    /*ExportEnums=*/false);
-
-  generateEnumBitmask(DirLang.getSourceLanguages(), OS, "SourceLanguage",
+    // Emit Directive associations
+    std::vector<const Record *> Associations;
+    copy_if(
+        DirLang.getAssociations(), std::back_inserter(Associations),
+        // Skip the "special" value
+        [](const Record *Def) { return Def->getName() != "AS_FromLeaves"; });
+    generateEnumClass(Associations, OS, "Association",
                       /*Prefix=*/"", /*ExportEnums=*/false);
 
-  // Emit Directive enumeration
-  generateEnumClass(DirLang.getDirectives(), OS, "Directive",
-                    DirLang.getDirectivePrefix(),
-                    DirLang.hasMakeEnumAvailableInNamespace());
+    generateEnumClass(DirLang.getCategories(), OS, "Category", /*Prefix=*/"",
+                      /*ExportEnums=*/false);
 
-  // Emit Clause enumeration
-  generateEnumClass(DirLang.getClauses(), OS, "Clause",
-                    DirLang.getClausePrefix(),
-                    DirLang.hasMakeEnumAvailableInNamespace());
+    generateEnumBitmask(DirLang.getSourceLanguages(), OS, "SourceLanguage",
+                        /*Prefix=*/"", /*ExportEnums=*/false);
 
-  // Emit ClauseVals enumeration
-  std::string EnumHelperFuncs;
-  generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
+    // Emit Directive enumeration
+    generateEnumClass(DirLang.getDirectives(), OS, "Directive",
+                      DirLang.getDirectivePrefix(),
+                      DirLang.hasMakeEnumAvailableInNamespace());
 
-  // Generic function signatures
-  OS << "// Enumeration helper functions\n";
+    // Emit Clause enumeration
+    generateEnumClass(DirLang.getClauses(), OS, "Clause",
+                      DirLang.getClausePrefix(),
+                      DirLang.hasMakeEnumAvailableInNamespace());
 
-  OS << "LLVM_ABI std::pair<Directive, directive::VersionRange> get" << Lang
-     << "DirectiveKindAndVersions(StringRef Str);\n";
+    // Emit ClauseVals enumeration
+    std::string EnumHelperFuncs;
+    generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
 
-  OS << "inline Directive get" << Lang << "DirectiveKind(StringRef Str) {\n";
-  OS << "  return get" << Lang << "DirectiveKindAndVersions(Str).first;\n";
-  OS << "}\n";
-  OS << "\n";
+    // Generic function signatures
+    OS << "// Enumeration helper functions\n";
 
-  OS << "LLVM_ABI StringRef get" << Lang
-     << "DirectiveName(Directive D, unsigned Ver = 0);\n";
-  OS << "\n";
+    OS << "LLVM_ABI std::pair<Directive, directive::VersionRange> get" << Lang
+       << "DirectiveKindAndVersions(StringRef Str);\n";
 
-  OS << "LLVM_ABI std::pair<Clause, directive::VersionRange> get" << Lang
-     << "ClauseKindAndVersions(StringRef Str);\n";
-  OS << "\n";
+    OS << "inline Directive get" << Lang << "DirectiveKind(StringRef Str) {\n";
+    OS << "  return get" << Lang << "DirectiveKindAndVersions(Str).first;\n";
+    OS << "}\n";
+    OS << "\n";
 
-  OS << "inline Clause get" << Lang << "ClauseKind(StringRef Str) {\n";
-  OS << "  return get" << Lang << "ClauseKindAndVersions(Str).first;\n";
-  OS << "}\n";
-  OS << "\n";
+    OS << "LLVM_ABI StringRef get" << Lang
+       << "DirectiveName(Directive D, unsigned Ver = 0);\n";
+    OS << "\n";
 
-  OS << "LLVM_ABI StringRef get" << Lang
-     << "ClauseName(Clause C, unsigned Ver = 0);\n";
-  OS << "\n";
+    OS << "LLVM_ABI std::pair<Clause, directive::VersionRange> get" << Lang
+       << "ClauseKindAndVersions(StringRef Str);\n";
+    OS << "\n";
 
-  OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
-     << "Version.\n";
-  OS << "LLVM_ABI bool isAllowedClauseForDirective(Directive D, "
-     << "Clause C, unsigned Version);\n";
-  OS << "\n";
-  OS << "constexpr std::size_t getMaxLeafCount() { return "
-     << getMaxLeafCount(DirLang) << "; }\n";
-  OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
-  OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
-  OS << "LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);\n";
-  OS << EnumHelperFuncs;
+    OS << "inline Clause get" << Lang << "ClauseKind(StringRef Str) {\n";
+    OS << "  return get" << Lang << "ClauseKindAndVersions(Str).first;\n";
+    OS << "}\n";
+    OS << "\n";
 
-  DirLangNS.close();
+    OS << "LLVM_ABI StringRef get" << Lang
+       << "ClauseName(Clause C, unsigned Ver = 0);\n";
+    OS << "\n";
+
+    OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
+       << "Version.\n";
+    OS << "LLVM_ABI bool isAllowedClauseForDirective(Directive D, "
+       << "Clause C, unsigned Version);\n";
+    OS << "\n";
+    OS << "constexpr std::size_t getMaxLeafCount() { return "
+       << getMaxLeafCount(DirLang) << "; }\n";
+    OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
+    OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
+    OS << "LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);\n";
+    OS << EnumHelperFuncs;
+  } // close DirLangNS
 
   // These specializations need to be in ::llvm.
   for (StringRef Enum : {"Association", "Category", "Directive", "Clause"}) {

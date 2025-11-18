@@ -7698,6 +7698,10 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     unsigned Size = Ty.getSizeInBits();
     MachineIRBuilder &B = MIRBuilder;
 
+    // Bail out on irregular type lengths.
+    if (Size > 128 || Size % 8 != 0)
+      return UnableToLegalize;
+
     // Count set bits in blocks of 2 bits. Default approach would be
     // B2Count = { val & 0x55555555 } + { (val >> 1) & 0x55555555 }
     // We use following formula instead:

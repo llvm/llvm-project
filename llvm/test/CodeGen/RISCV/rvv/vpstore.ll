@@ -511,6 +511,19 @@ define void @vpstore_nxv17f64(<vscale x 17 x double> %val, ptr %ptr, <vscale x 1
   ret void
 }
 
+define void @unaligned_vpstore_nxv1i64_allones_mask(<vscale x 1 x i64> %val, <vscale x 1 x i64>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: unaligned_vpstore_nxv1i64_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
+  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
+  call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, <vscale x 1 x i64>* align 1 %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  ret void
+}
+
 define void @vpstore_all_active_nxv8i8(<vscale x 8 x i8> %val, ptr %ptr) {
 ; CHECK-LABEL: vpstore_all_active_nxv8i8:
 ; CHECK:       # %bb.0:

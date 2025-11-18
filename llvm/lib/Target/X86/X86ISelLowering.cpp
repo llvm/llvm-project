@@ -5369,12 +5369,12 @@ bool isConstantSplat(SDValue Op, APInt &SplatVal, bool AllowPartialUndefs) {
 int getRoundingModeX86(unsigned RM) {
   switch (static_cast<::llvm::RoundingMode>(RM)) {
     // clang-format off
-  case ::llvm::RoundingMode::NearestTiesToEven: return X86::rmToNearest; break;
-  case ::llvm::RoundingMode::TowardNegative:    return X86::rmDownward; break;
-  case ::llvm::RoundingMode::TowardPositive:    return X86::rmUpward; break;
-  case ::llvm::RoundingMode::TowardZero:        return X86::rmTowardZero; break;
-  default:
-    return X86::rmInvalid; // Invalid rounding mode
+  case ::llvm::RoundingMode::NearestTiesToEven: return X86::rmToNearest;
+  case ::llvm::RoundingMode::TowardNegative:    return X86::rmDownward;
+  case ::llvm::RoundingMode::TowardPositive:    return X86::rmUpward;
+  case ::llvm::RoundingMode::TowardZero:        return X86::rmTowardZero;
+  default:                                      return X86::rmInvalid;
+    // clang-format on
   }
 }
 

@@ -1659,6 +1659,12 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::vector_extract:
   case Intrinsic::vector_insert:
   case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_interleave3:
+  case Intrinsic::vector_interleave4:
+  case Intrinsic::vector_interleave5:
+  case Intrinsic::vector_interleave6:
+  case Intrinsic::vector_interleave7:
+  case Intrinsic::vector_interleave8:
   case Intrinsic::vector_deinterleave2:
   // Target intrinsics
   case Intrinsic::amdgcn_perm:
@@ -4207,16 +4213,23 @@ static Constant *ConstantFoldFixedVectorCall(
     }
     return ConstantVector::get(Result);
   }
-  case Intrinsic::vector_interleave2: {
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_interleave3:
+  case Intrinsic::vector_interleave4:
+  case Intrinsic::vector_interleave5:
+  case Intrinsic::vector_interleave6:
+  case Intrinsic::vector_interleave7:
+  case Intrinsic::vector_interleave8: {
     unsigned NumElements =
         cast<FixedVectorType>(Operands[0]->getType())->getNumElements();
+    unsigned NumOperands = Operands.size();
     for (unsigned I = 0; I < NumElements; ++I) {
-      Constant *Elt0 = Operands[0]->getAggregateElement(I);
-      Constant *Elt1 = Operands[1]->getAggregateElement(I);
-      if (!Elt0 || !Elt1)
-        return nullptr;
-      Result[2 * I] = Elt0;
-      Result[2 * I + 1] = Elt1;
+      for (unsigned J = 0; J < NumOperands; ++J) {
+        Constant *Elt = Operands[J]->getAggregateElement(I);
+        if (!Elt)
+          return nullptr;
+        Result[NumOperands * I + J] = Elt;
+      }
     }
     return ConstantVector::get(Result);
   }
