@@ -49,12 +49,10 @@ public:
   /// Resets the selected frame index of this object.
   void ClearSelectedFrameIndex();
 
-  /// Return \code true if the next frame is hidden. False otherwise or if it's
-  /// the last frame.
+  /// Return \code true if the next frame is hidden.
   bool IsNextFrameHidden(lldb_private::StackFrame &frame);
 
-  /// Return \code true if the previous frame is hidden. False otherwise or if
-  /// it's the first frame.
+  /// Return \code true if the previous frame is hidden.
   bool IsPreviousFrameHidden(lldb_private::StackFrame &frame);
 
   std::wstring FrameMarker(lldb::StackFrameSP frame_sp,

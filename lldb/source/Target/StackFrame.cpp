@@ -1936,7 +1936,7 @@ bool StackFrame::DumpUsingFormat(Stream &strm,
 }
 
 void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
-                                         const std::wstring frame_marker) {
+                                         const std::wstring &frame_marker) {
   if (strm == nullptr)
     return;
 
@@ -2038,7 +2038,7 @@ bool StackFrame::HasCachedData() const {
 }
 
 bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                           bool show_unique, const std::wstring frame_marker) {
+                           bool show_unique, const std::wstring &frame_marker) {
   if (show_frame_info) {
     strm.Indent();
     DumpUsingSettingsFormat(&strm, show_unique, frame_marker);
