@@ -480,6 +480,10 @@ Bug Fixes in This Version
 - Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix an ambiguous reference to the builtin `type_info` (available when using
