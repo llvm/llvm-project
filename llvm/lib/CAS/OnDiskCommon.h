@@ -29,7 +29,7 @@ Expected<std::optional<uint64_t>> getOverriddenMaxMappingSize();
 /// Set MaxMappingSize for ondisk CAS. This function is not thread-safe and
 /// should be set before creaing any ondisk CAS and does not affect CAS already
 /// created. Set value 0 to use default size.
-void setMaxMappingSize(uint64_t Size);
+LLVM_ABI_FOR_TEST void setMaxMappingSize(uint64_t Size);
 
 /// Whether to use a small file mapping for ondisk databases created in \p Path.
 ///

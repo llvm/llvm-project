@@ -22,6 +22,7 @@ def _appendToSubstitution(substitutions, key, value):
 
 def configure(parameters, features, config, lit_config):
     note = lambda s: lit_config.note("({}) {}".format(config.name, s))
+    debug = lambda s: lit_config.dbg("({}) {}".format(config.name, s))
     config.environment = dict(os.environ)
 
     # Apply the actions supplied by parameters to the configuration first, since
@@ -31,25 +32,23 @@ def configure(parameters, features, config, lit_config):
         actions = param.getActions(config, lit_config.params)
         for action in actions:
             action.applyTo(config)
-            if lit_config.debug:
-                note(
-                    "Applied '{}' as a result of parameter '{}'".format(
-                        action.pretty(config, lit_config.params),
-                        param.pretty(config, lit_config.params),
-                    )
+            debug(
+                "Applied '{}' as a result of parameter '{}'".format(
+                    action.pretty(config, lit_config.params),
+                    param.pretty(config, lit_config.params),
                 )
+            )
 
     # Then, apply the automatically-detected features.
     for feature in features:
         actions = feature.getActions(config)
         for action in actions:
             action.applyTo(config)
-            if lit_config.debug:
-                note(
-                    "Applied '{}' as a result of implicitly detected feature '{}'".format(
-                        action.pretty(config, lit_config.params), feature.pretty(config)
-                    )
+            debug(
+                "Applied '{}' as a result of implicitly detected feature '{}'".format(
+                    action.pretty(config, lit_config.params), feature.pretty(config)
                 )
+            )
 
     # Print the basic substitutions
     for sub in ("%{cxx}", "%{flags}", "%{compile_flags}", "%{link_flags}", "%{benchmark_flags}", "%{exec}"):

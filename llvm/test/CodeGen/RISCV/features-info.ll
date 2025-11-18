@@ -27,6 +27,7 @@
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
+; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmp              - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
 ; CHECK-NEXT:   experimental-xqcia               - 'Xqcia' (Qualcomm uC Arithmetic Extension).
@@ -81,6 +82,7 @@
 ; CHECK-NEXT:   optimized-nf7-segment-load-store - vlseg7eN.v and vsseg7eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-nf8-segment-load-store - vlseg8eN.v and vsseg8eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-zero-stride-load       - Optimized (perform fewer memory operations)zero-stride vector load.
+; CHECK-NEXT:   permissive-zalrsc                - Implementation permits non-base instructions between LR/SC pairs.
 ; CHECK-NEXT:   predictable-select-expensive     - Prefer likely predicted branches over selects.
 ; CHECK-NEXT:   prefer-vsetvli-over-read-vlenb   - Prefer vsetvli over read vlenb CSR to calculate VLEN.
 ; CHECK-NEXT:   prefer-w-inst                    - Prefer instructions with W suffix.
@@ -135,6 +137,8 @@
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
 ; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
+; CHECK-NEXT:   short-forward-branch-i-minmax    - Enable short forward branch optimization for min,max instructions in Zbb.
+; CHECK-NEXT:   short-forward-branch-i-mul       - Enable short forward branch optimization for mul instruction.
 ; CHECK-NEXT:   short-forward-branch-opt         - Enable short forward branch optimization.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).

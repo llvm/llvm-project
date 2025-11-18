@@ -141,7 +141,7 @@ parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
   std::vector<UnsafeFunctionsCheck::CheckedFunction> Result;
   Result.reserve(Functions.size());
 
-  for (StringRef Function : Functions) {
+  for (const StringRef Function : Functions) {
     if (Function.empty())
       continue;
 
@@ -304,11 +304,17 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
         StringRef Reason =
             Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
 
-        if (Entry.Replacement.empty()) {
+        // Omit the replacement, when a fully-custom reason is given.
+        if (Reason.consume_front(">")) {
+          diag(SourceExpr->getExprLoc(), "function %0 %1")
+              << FuncDecl << Reason.trim() << SourceExpr->getSourceRange();
+          // Do not recommend a replacement when it is not present.
+        } else if (Entry.Replacement.empty()) {
           diag(SourceExpr->getExprLoc(),
                "function %0 %1; it should not be used")
               << FuncDecl << Reason << Entry.Replacement
               << SourceExpr->getSourceRange();
+          // Otherwise, emit the replacement.
         } else {
           diag(SourceExpr->getExprLoc(),
                "function %0 %1; '%2' should be used instead")

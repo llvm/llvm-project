@@ -67,28 +67,28 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
 
   // Initialize cached types
-  VoidTy = cir::VoidType::get(&getMLIRContext());
-  VoidPtrTy = cir::PointerType::get(VoidTy);
-  SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
-  SInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
-  SInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
-  SInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/true);
-  SInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
-  UInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
-  UInt8PtrTy = cir::PointerType::get(UInt8Ty);
+  voidTy = cir::VoidType::get(&getMLIRContext());
+  voidPtrTy = cir::PointerType::get(voidTy);
+  sInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
+  sInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
+  sInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
+  sInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/true);
+  sInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
+  uInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
+  uInt8PtrTy = cir::PointerType::get(uInt8Ty);
   cirAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
-  UInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
-  UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
-  UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
-  UInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
-  FP16Ty = cir::FP16Type::get(&getMLIRContext());
-  BFloat16Ty = cir::BF16Type::get(&getMLIRContext());
-  FloatTy = cir::SingleType::get(&getMLIRContext());
-  DoubleTy = cir::DoubleType::get(&getMLIRContext());
-  FP80Ty = cir::FP80Type::get(&getMLIRContext());
-  FP128Ty = cir::FP128Type::get(&getMLIRContext());
+  uInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
+  uInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
+  uInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
+  uInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
+  fP16Ty = cir::FP16Type::get(&getMLIRContext());
+  bFloat16Ty = cir::BF16Type::get(&getMLIRContext());
+  floatTy = cir::SingleType::get(&getMLIRContext());
+  doubleTy = cir::DoubleType::get(&getMLIRContext());
+  fP80Ty = cir::FP80Type::get(&getMLIRContext());
+  fP128Ty = cir::FP128Type::get(&getMLIRContext());
 
-  AllocaInt8PtrTy = cir::PointerType::get(UInt8Ty, cirAllocaAddressSpace);
+  allocaInt8PtrTy = cir::PointerType::get(uInt8Ty, cirAllocaAddressSpace);
 
   PointerAlignInBytes =
       astContext
@@ -97,16 +97,16 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           .getQuantity();
 
   const unsigned charSize = astContext.getTargetInfo().getCharWidth();
-  UCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
+  uCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
 
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
   SizeSizeInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
   // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
-  UIntPtrTy =
+  uIntPtrTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
-  PtrDiffTy =
+  ptrDiffTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
 
   std::optional<cir::SourceLanguage> sourceLanguage = getCIRSourceLanguage();
@@ -1422,6 +1422,23 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
 
   return builder.getGlobalViewAttr(ptrTy, gv);
+}
+
+// TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
+LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
+  if (getLangOpts().OpenCL)
+    return LangAS::opencl_private;
+
+  // For temporaries inside functions, CUDA treats them as normal variables.
+  // LangAS::cuda_device, on the other hand, is reserved for those variables
+  // explicitly marked with __device__.
+  if (getLangOpts().CUDAIsDevice)
+    return LangAS::Default;
+
+  if (getLangOpts().SYCLIsDevice ||
+      (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
+    errorNYI("SYCL or OpenMP temp address space");
+  return LangAS::Default;
 }
 
 void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,

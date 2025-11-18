@@ -776,7 +776,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
     break;
   case TargetOpcode::G_MEMCPY:
     RTLibcall = RTLIB::MEMCPY;
-    Name = TLI.getMemcpyName();
+    Name = TLI.getLibcallImplName(TLI.getMemcpyImpl()).data();
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMMOVE:
@@ -3065,6 +3065,14 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
 
+  case TargetOpcode::G_FPEXT:
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_INTRINSIC_LRINT:
@@ -3431,6 +3439,18 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+    Observer.changingInstr(MI);
+
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy);
+    else
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_INTTOPTR:
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -7677,6 +7697,10 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     LLT Ty = MRI.getType(SrcReg);
     unsigned Size = Ty.getSizeInBits();
     MachineIRBuilder &B = MIRBuilder;
+
+    // Bail out on irregular type lengths.
+    if (Size > 128 || Size % 8 != 0)
+      return UnableToLegalize;
 
     // Count set bits in blocks of 2 bits. Default approach would be
     // B2Count = { val & 0x55555555 } + { (val >> 1) & 0x55555555 }

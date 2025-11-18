@@ -1,0 +1,38 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+"""bzlmod configuration for llvm-project"""
+module(name = "llvm-project-overlay")
+
+bazel_dep(name = "apple_support", version = "1.24.1", repo_name = "build_bazel_apple_support")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_android", version = "0.6.6")
+bazel_dep(name = "rules_cc", version = "0.2.11")
+bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
+bazel_dep(name = "rules_python", version = "1.6.3")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+
+llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
+
+use_repo(
+    llvm_repos_extension,
+    "llvm-raw",
+    "llvm_zlib",
+    "vulkan_headers",
+    "vulkan_sdk_setup",
+    "gmp",
+    "mpfr",
+    "mpc",
+    "pfm",
+    "llvm_zstd",
+    "pybind11",
+    "pyyaml",
+    "robin_map",
+    "nanobind",
+)
+
+llvm_configure = use_repo_rule("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
+
+llvm_configure(name = "llvm-project")

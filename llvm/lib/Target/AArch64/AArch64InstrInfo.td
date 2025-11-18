@@ -346,10 +346,10 @@ def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCacheDeepPersist), "ccdp">;
 def HasBTI           : Predicate<"Subtarget->hasBTI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureBranchTargetId), "bti">;
+def HasBTIE          : Predicate<"Subtarget->hasBTIE()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureBTIE), "btie">;
 def HasMTE           : Predicate<"Subtarget->hasMTE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTE), "mte">;
-def HasTME           : Predicate<"Subtarget->hasTME()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureTME), "tme">;
 def HasETE           : Predicate<"Subtarget->hasETE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureETE), "ete">;
 def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
@@ -405,6 +405,12 @@ def HasMTETC         : Predicate<"Subtarget->hasMTETC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTETC), "mtetc">;
 def HasGCIE          : Predicate<"Subtarget->hasGCIE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureGCIE), "gcie">;
+def HasMOPS_GO       : Predicate<"Subtarget->hasMOPS_GO()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureMOPS_GO), "mops-go">;
+def HasS1POE2        : Predicate<"Subtarget->hasS1POE2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureS1POE2), "poe2">;
+def HasTEV           : Predicate<"Subtarget->hasTEV()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureTEV), "tev">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -1034,11 +1040,11 @@ def AArch64uitof: SDNode<"AArch64ISD::UITOF", SDT_AArch64ITOF>;
 // offset of a variable into X0, using the TLSDesc model.
 def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
-                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
+                                    [SDNPOutGlue, SDNPOptInGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64tlsdesc_auth_callseq : SDNode<"AArch64ISD::TLSDESC_AUTH_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
-                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
+                                    [SDNPOutGlue, SDNPOptInGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
                                  SDT_AArch64WrapperLarge>;
@@ -1178,7 +1184,7 @@ def AArch64msrr : SDNode<"AArch64ISD::MSRR",
                                                SDTCisVT<2, i64>]>,
                           [SDNPHasChain]>;
 
-def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
+def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVT<2, i32>]>;
 // Vector narrowing shift by immediate (bottom)
 def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
 def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
@@ -1540,6 +1546,7 @@ let Predicates = [HasPCDPHINT] in {
 // should not emit these mnemonics unless BTI is enabled.
 def : InstAlias<"bti",  (HINT 32), 0>;
 def : InstAlias<"bti $op", (HINT btihint_op:$op), 0>;
+def : InstAlias<"bti r", (HINT 32)>, Requires<[HasBTIE]>;
 def : InstAlias<"bti",  (HINT 32)>, Requires<[HasBTI]>;
 def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
 
@@ -1805,14 +1812,22 @@ def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v8i16>;
 def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v4i32>;
 def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v2i64>;
 
-class EOR3_pattern<ValueType VecTy>
-  : Pat<(xor (xor (VecTy V128:$Vn), (VecTy V128:$Vm)), (VecTy V128:$Va)),
-        (EOR3 (VecTy V128:$Vn), (VecTy V128:$Vm), (VecTy V128:$Va))>;
+multiclass EOR3_pattern<ValueType Vec128Ty, ValueType Vec64Ty>{
+  def : Pat<(xor (xor (Vec128Ty V128:$Vn), (Vec128Ty V128:$Vm)), (Vec128Ty V128:$Va)),
+        (EOR3 (Vec128Ty V128:$Vn), (Vec128Ty V128:$Vm), (Vec128Ty V128:$Va))>;
+  def : Pat<(xor (xor (Vec64Ty V64:$Vn), (Vec64Ty V64:$Vm)), (Vec64Ty V64:$Va)),
+            (EXTRACT_SUBREG
+              (EOR3
+                (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vn, dsub),
+                (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vm, dsub),
+                (INSERT_SUBREG (IMPLICIT_DEF), V64:$Va, dsub)),
+              dsub)>;
+}
 
-def : EOR3_pattern<v16i8>;
-def : EOR3_pattern<v8i16>;
-def : EOR3_pattern<v4i32>;
-def : EOR3_pattern<v2i64>;
+defm : EOR3_pattern<v16i8, v8i8>;
+defm : EOR3_pattern<v8i16, v4i16>;
+defm : EOR3_pattern<v4i32, v2i32>;
+defm : EOR3_pattern<v2i64, v1i64>;
 
 class BCAX_pattern<ValueType VecTy>
   : Pat<(xor (VecTy V128:$Vn), (and (VecTy V128:$Vm), (vnot (VecTy V128:$Va)))),
@@ -2479,22 +2494,6 @@ def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt imm0_7:$op1, sys_cr_op:$Cn,
                  sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
 
-
-let Predicates = [HasTME] in {
-
-def TSTART : TMSystemI<0b0000, "tstart",
-                      [(set GPR64:$Rt, (int_aarch64_tstart))]>;
-
-def TCOMMIT : TMSystemINoOperand<0b0000, "tcommit", [(int_aarch64_tcommit)]>;
-
-def TCANCEL : TMSystemException<0b011, "tcancel",
-                                [(int_aarch64_tcancel timm64_0_65535:$imm)]>;
-
-def TTEST : TMSystemI<0b0001, "ttest", [(set GPR64:$Rt, (int_aarch64_ttest))]> {
-  let mayLoad = 0;
-  let mayStore = 0;
-}
-} // HasTME
 
 //===----------------------------------------------------------------------===//
 // Move immediate instructions.
@@ -4436,6 +4435,11 @@ defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
                   [(AArch64Prefetch timm:$Rt,
                                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset))]>;
 
+// PRFM falls back to PRFUM for negative or unaligned offsets (not a multiple
+// of 8).
+def : InstAlias<"prfm $Rt, [$Rn, $offset]",
+                (PRFUMi prfop:$Rt, GPR64sp:$Rn, simm9_offset_fb64:$offset), 0>;
+
 //---
 // (unscaled immediate, unprivileged)
 defm LDTRX : LoadUnprivileged<0b11, 0, 0b01, GPR64, "ldtr">;
@@ -5658,6 +5662,8 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_SaveAnyRegI : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegIP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQPX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_AllocZ : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
@@ -10853,6 +10859,15 @@ let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, maySt
 }
 
 //-----------------------------------------------------------------------------
+// MOPS Granule Only Protection (FEAT_MOPS_GO)
+
+let Predicates = [HasMOPS_GO, HasMTE] in {
+    defm SETGOP : MOPSGoMemorySetTaggingInsns<0b00, "setgop">;
+    defm SETGOM : MOPSGoMemorySetTaggingInsns<0b01, "setgom">;
+    defm SETGOE : MOPSGoMemorySetTaggingInsns<0b10, "setgoe">;
+}
+
+//-----------------------------------------------------------------------------
 // v8.3 Pointer Authentication late patterns
 
 def : Pat<(int_ptrauth_blend GPR64:$Rd, imm64_0_65535:$imm),
@@ -11303,23 +11318,37 @@ let Predicates = [HasCMPBR] in {
  defm : CmpBranchWRegisterAlias<"cbhlt", "CBHGT">;
 
   // Pseudos for codegen
-  def CBWPrr : CmpBranchRegisterPseudo<GPR32>;
-  def CBXPrr : CmpBranchRegisterPseudo<GPR64>;
-  def CBWPri : CmpBranchImmediatePseudo<GPR32, uimm6_32b>;
-  def CBXPri : CmpBranchImmediatePseudo<GPR64, uimm6_64b>;
+ def CBBAssertExt : CmpBranchExtRegisterPseudo;
+ def CBHAssertExt : CmpBranchExtRegisterPseudo;
+ def CBWPrr : CmpBranchRegisterPseudo<GPR32>;
+ def CBXPrr : CmpBranchRegisterPseudo<GPR64>;
+ def CBWPri : CmpBranchImmediatePseudo<GPR32, uimm6_32b>;
+ def CBXPri : CmpBranchImmediatePseudo<GPR64, uimm6_64b>;
 
-  def : Pat<(AArch64CB i32:$Cond, GPR32:$Rn, CmpBranchUImm6Operand_32b:$Imm,
-                bb:$Target),
-            (CBWPri i32:$Cond, GPR32:$Rn, uimm6_32b:$Imm,
-                am_brcmpcond:$Target)>;
-  def : Pat<(AArch64CB i32:$Cond, GPR64:$Rn, CmpBranchUImm6Operand_64b:$Imm,
-                bb:$Target),
-            (CBXPri i32:$Cond, GPR64:$Rn, uimm6_64b:$Imm,
-                am_brcmpcond:$Target)>;
-  def : Pat<(AArch64CB i32:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target),
-            (CBWPrr ccode:$Cond, GPR32:$Rn, GPR32:$Rt, am_brcmpcond:$Target)>;
-  def : Pat<(AArch64CB i32:$Cond, GPR64:$Rn, GPR64:$Rt, bb:$Target),
-            (CBXPrr ccode:$Cond, GPR64:$Rn, GPR64:$Rt, am_brcmpcond:$Target)>;
+ def : Pat<(AArch64CB i32:$Cond, GPR32:$Rn, CmpBranchUImm6Operand_32b:$Imm,
+               bb:$Target),
+           (CBWPri i32:$Cond, GPR32:$Rn, uimm6_32b:$Imm, am_brcmpcond:$Target)>;
+ def : Pat<(AArch64CB i32:$Cond, GPR64:$Rn, CmpBranchUImm6Operand_64b:$Imm,
+               bb:$Target),
+           (CBXPri i32:$Cond, GPR64:$Rn, uimm6_64b:$Imm, am_brcmpcond:$Target)>;
+ def : Pat<(AArch64CB i32:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target),
+           (CBWPrr ccode:$Cond, GPR32:$Rn, GPR32:$Rt, am_brcmpcond:$Target)>;
+ def : Pat<(AArch64CB i32:$Cond, GPR64:$Rn, GPR64:$Rt, bb:$Target),
+           (CBXPrr ccode:$Cond, GPR64:$Rn, GPR64:$Rt, am_brcmpcond:$Target)>;
+
+ def : Pat<(AArch64CB i32:$Cond,
+               (CmpBranchBExtOperand GPR32:$Rn, simm8_32b:$ExtTypeRn),
+               (CmpBranchBExtOperand GPR32:$Rt, simm8_32b:$ExtTypeRt),
+               bb:$Target),
+           (CBBAssertExt ccode:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target,
+               simm8_32b:$ExtTypeRn, simm8_32b:$ExtTypeRt)>;
+
+ def : Pat<(AArch64CB i32:$Cond,
+               (CmpBranchHExtOperand GPR32:$Rn, simm8_32b:$ExtTypeRn),
+               (CmpBranchHExtOperand GPR32:$Rt, simm8_32b:$ExtTypeRt),
+               bb:$Target),
+           (CBHAssertExt ccode:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target,
+               simm8_32b:$ExtTypeRn, simm8_32b:$ExtTypeRt)>;
 } // HasCMPBR
 
 
@@ -11407,7 +11436,7 @@ let Predicates = [HasF16F32MM] in
   defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
 
 let Uses = [FPMR, FPCR] in
-  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
 
 //===----------------------------------------------------------------------===//
 // Contention Management Hints (FEAT_CMH)
@@ -11416,6 +11445,26 @@ let Uses = [FPMR, FPCR] in
 let Predicates = [HasCMH] in {
   defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
   def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
+}
+
+//===----------------------------------------------------------------------===//
+// Permission Overlays Extension 2 (FEAT_S1POE2)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasS1POE2] in {
+  defm TCHANGEBrr : TCHANGEReg<"tchangeb", true>;
+  defm TCHANGEFrr : TCHANGEReg<"tchangef", false>;
+  defm TCHANGEBri : TCHANGEImm<"tchangeb", true>;
+  defm TCHANGEFri : TCHANGEImm<"tchangef", false>;
+}
+
+//===----------------------------------------------------------------------===//
+// TIndex Exception-like Vector (FEAT_TEV)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasTEV] in {
+  defm TENTER : TENTER<"tenter">;
+  defm TEXIT : TEXIT<"texit">;
 }
 
 include "AArch64InstrAtomics.td"

@@ -362,7 +362,7 @@ static Address applyNonVirtualAndVirtualOffset(
   // not bytes.  So the pointer must be cast to a byte pointer and back.
 
   mlir::Value ptr = addr.getPointer();
-  mlir::Type charPtrType = cgf.cgm.UInt8PtrTy;
+  mlir::Type charPtrType = cgf.cgm.uInt8PtrTy;
   mlir::Value charPtr = cgf.getBuilder().createBitcast(ptr, charPtrType);
   mlir::Value adjusted = cir::PtrStrideOp::create(
       cgf.getBuilder(), loc, charPtrType, charPtr, baseOffset);
@@ -1105,9 +1105,28 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
     // We're the complete constructor, so get the VTT by name.
     cir::GlobalOp vtt = cgm.getVTables().getAddrOfVTT(rd);
     return builder.createVTTAddrPoint(
-        loc, builder.getPointerTo(cgm.VoidPtrTy),
+        loc, builder.getPointerTo(cgm.voidPtrTy),
         mlir::FlatSymbolRefAttr::get(vtt.getSymNameAttr()), subVTTIndex);
   }
+}
+
+Address CIRGenFunction::getAddressOfDerivedClass(
+    mlir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
+    llvm::iterator_range<CastExpr::path_const_iterator> path,
+    bool nullCheckValue) {
+  assert(!path.empty() && "Base path should not be empty!");
+
+  QualType derivedTy = getContext().getCanonicalTagType(derived);
+  mlir::Type derivedValueTy = convertType(derivedTy);
+  CharUnits nonVirtualOffset =
+      cgm.computeNonVirtualBaseClassOffset(derived, path);
+
+  // Note that in OG, no offset (nonVirtualOffset.getQuantity() == 0) means it
+  // just gives the address back. In CIR a `cir.derived_class` is created and
+  // made into a nop later on during lowering.
+  return builder.createDerivedClassAddr(loc, baseAddr, derivedValueTy,
+                                        nonVirtualOffset.getQuantity(),
+                                        /*assumeNotNull=*/!nullCheckValue);
 }
 
 Address CIRGenFunction::getAddressOfBaseClass(

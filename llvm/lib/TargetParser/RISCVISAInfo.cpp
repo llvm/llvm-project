@@ -14,7 +14,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <array>
 #include <atomic>
 #include <optional>
 #include <string>

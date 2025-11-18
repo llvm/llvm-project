@@ -497,6 +497,10 @@ class CpAsyncBulkStr<bit mc, bit ch, bit mask = 0> {
                # !if(mc, ".multicast::cluster", "")
                # !if(ch, ".L2::cache_hint", "");
 
+  // Global to Shared CTA memory
+  string G2S_CTA = "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes"
+                   # !if(ch, ".L2::cache_hint", "");
+
   // Shared CTA to Cluster memory
   string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
 }
@@ -542,6 +546,21 @@ multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch> {
 }
 defm CP_ASYNC_BULK_G2S    : CP_ASYNC_BULK_G2S_INTR<has_ch = 0>;
 defm CP_ASYNC_BULK_G2S_CH : CP_ASYNC_BULK_G2S_INTR<has_ch = 1>;
+
+multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch> {
+  defvar Intr = int_nvvm_cp_async_bulk_global_to_shared_cta;
+
+  def "" : NVPTXInst<(outs),
+      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
+           B32:$size, B64:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<0, 1>.G2S_CTA # " [$dst], [$src], $size, [$mbar], $ch;",
+          CpAsyncBulkStr<0, 0>.G2S_CTA # " [$dst], [$src], $size, [$mbar];"),
+      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<86>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_G2S_CTA    : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_G2S_CTA_CH : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 1>;
 
 def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
   (ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
@@ -599,75 +618,15 @@ class TMA_IM2COL_UTIL<int dim, string mode> {
   string base_str = !interleave(!foreach(i, !range(offsets), "$im2col" # i), ", ");
 }
 
-// From Global to Shared memory (G2S)
-class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
-  string prefix = "cp.async.bulk.tensor";
-  string dir = "shared::cluster.global";
-  string completion = "mbarrier::complete_tx::bytes";
-  string inst_name = prefix
-                     # "." # dim # "d"
-                     # "." # dir
-                     # "." # mode
-                     # "." # completion
-                     # !if(mc, ".multicast::cluster", "")
-                     # !if(ch, ".L2::cache_hint", "");
-  string intr_name = "CP_ASYNC_BULK_TENSOR_G2S_"
-                     # dim # "D"
-                     # !if(is_shared32, "_SHARED32", "")
-                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
-}
-
 def CTAGroupFlags : Operand<i32> {
   let PrintMethod = "printCTAGroup";
 }
 
-multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> {
-  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
-  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
-  defvar asm_str_default = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
-  defvar rc = !if(is_shared32, B32, B64);
+def tma_cta_group_imm0 : TImmLeaf<i32, [{return Imm == 0;}]>;
+def tma_cta_group_imm_any : TImmLeaf<i32, [{return Imm >= 0;}]>;
 
-  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
-  defvar im2col_dag = !if(!eq(mode, "im2col"),
-    !dag(ins, !listsplat(B16, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
-    (ins));
-  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
-  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
-
-  defvar asm_str = !if(!eq(mode, "im2col"),
-    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
-
-  def "" : NVPTXInst<(outs),
-            !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag, (ins CTAGroupFlags:$cg)),
-            !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";")>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
-  def _MC : NVPTXInst<(outs),
-                  !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
-                       (ins B16:$mc, CTAGroupFlags:$cg)),
-                  !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;")>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-  def _CH : NVPTXInst<(outs),
-                  !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
-                       (ins B64:$ch, CTAGroupFlags:$cg)),
-                  !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;")>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-  def _MC_CH : NVPTXInst<(outs),
-                     !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
-                          (ins B16:$mc, B64:$ch, CTAGroupFlags:$cg)),
-                     !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;")>,
-                     Requires<[hasPTX<80>, hasSM<90>]>;
-}
-
-foreach dim = [1, 2, 3, 4, 5] in {
-  foreach shared32 = [true, false] in {
-    foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-      defm G2S_STRINGS<dim, mode, 0, 0, shared32>.intr_name :
-        CP_ASYNC_BULK_TENSOR_G2S_INTR<dim, shared32, mode>;
-    }
-  }
-}
-
-multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred = []> {
+multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred,
+                               TImmLeaf cta_group_type = tma_cta_group_imm_any> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str_base = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
@@ -697,10 +656,10 @@ multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred = []> 
                          !setdagop(dims_dag, intr),
                          !setdagop(im2col_dag, intr),
                          (intr B16:$mc, B64:$ch));
-  defvar intr_dag_no_hints   = !con(intr_dag_base, (intr 0,  0,  timm:$cg));
-  defvar intr_dag_with_mc    = !con(intr_dag_base, (intr -1, 0,  timm:$cg));
-  defvar intr_dag_with_ch    = !con(intr_dag_base, (intr 0, -1,  timm:$cg));
-  defvar intr_dag_with_mc_ch = !con(intr_dag_base, (intr -1, -1, timm:$cg));
+  defvar intr_dag_no_hints   = !con(intr_dag_base, (intr 0,  0,  cta_group_type:$cg));
+  defvar intr_dag_with_mc    = !con(intr_dag_base, (intr -1, 0,  cta_group_type:$cg));
+  defvar intr_dag_with_ch    = !con(intr_dag_base, (intr 0, -1,  cta_group_type:$cg));
+  defvar intr_dag_with_mc_ch = !con(intr_dag_base, (intr -1, -1, cta_group_type:$cg));
 
   def "" : NVPTXInst<(outs), ins_dag,
              inst_name # asm_str # ";",
@@ -719,14 +678,30 @@ multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred = []> 
                  [intr_dag_with_mc_ch]>,
                  Requires<pred>;
 }
+
+foreach dim = 1...5 in {
+  defm TMA_G2S_TILE_CG0_ # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, "tile", [hasPTX<80>, hasSM<90>],
+                            tma_cta_group_imm0>;
+  defm TMA_G2S_TILE_ # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, "tile",
+                            [callSubtarget<"hasTMABlackwellSupport">]>;
+}
 foreach dim = 3...5 in {
+  defm TMA_G2S_IM2COL_CG0_ # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, "im2col", [hasPTX<80>, hasSM<90>],
+                            tma_cta_group_imm0>;
+  defm TMA_G2S_IM2COL_ # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, "im2col",
+                            [callSubtarget<"hasTMABlackwellSupport">]>;
   foreach mode = ["im2col_w", "im2col_w_128"] in {
     defm TMA_G2S_ # !toupper(mode) # "_" # dim # "D"
-      : TMA_TENSOR_G2S_INTR<dim, mode, [hasTMACTAGroupSupport]>;
+        : TMA_TENSOR_G2S_INTR<dim, mode,
+                              [callSubtarget<"hasTMABlackwellSupport">]>;
   }
 }
 defm TMA_G2S_TILE_GATHER4_2D : TMA_TENSOR_G2S_INTR<5, "tile_gather4",
-                               [hasTMACTAGroupSupport]>;
+                               [callSubtarget<"hasTMABlackwellSupport">]>;
 
 multiclass TMA_TENSOR_G2S_CTA_INTR<int dim, string mode, list<Predicate> pred = []> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
@@ -784,7 +759,8 @@ foreach dim = 3...5 in {
     : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col_w", [hasPTX<86>, hasSM<100>]>;
 
   defm TMA_G2S_CTA_IM2COL_W_128_ # dim # "D"
-    : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col_w_128", [hasTMACTAGroupSupport]>;
+    : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col_w_128",
+                              [callSubtarget<"hasTMABlackwellSupport">]>;
 }
 defm TMA_G2S_CTA_TILE_GATHER4_2D : TMA_TENSOR_G2S_CTA_INTR<5, "tile_gather4",
                                    [hasPTX<86>, hasSM<100>]>;
@@ -835,7 +811,7 @@ foreach dim = 1...5 in {
   }
 }
 defm TMA_S2G_TILE_SCATTER4_2D : TMA_TENSOR_S2G_INTR<5, "tile_scatter4",
-                                [hasTMACTAGroupSupport]>;
+                                [callSubtarget<"hasTMABlackwellSupport">]>;
 
 def TMAReductionFlags : Operand<i32> {
   let PrintMethod = "printTmaReductionMode";
@@ -930,11 +906,11 @@ foreach dim = 3...5 in {
   foreach mode = ["im2col_w", "im2col_w_128"] in {
     defvar suffix = !toupper(mode) # "_" # dim # "D";
     defm TMA_TENSOR_PF_ # suffix : TMA_TENSOR_PREFETCH_INTR<dim, mode,
-                                   [hasTMACTAGroupSupport]>;
+                                   [callSubtarget<"hasTMABlackwellSupport">]>;
   }
 }
 defm TMA_TENSOR_PF_TILE_GATHER4_2D : TMA_TENSOR_PREFETCH_INTR<5, "tile_gather4",
-                                     [hasTMACTAGroupSupport]>;
+                                     [callSubtarget<"hasTMABlackwellSupport">]>;
 
 //Prefetchu and Prefetch
 
@@ -1605,12 +1581,17 @@ def : Pat<(int_nvvm_saturate_d f64:$a),     (CVT_f64_f64 $a, CvtSAT)>;
 // Exp2  Log2
 //
 
-def : Pat<(int_nvvm_ex2_approx_ftz_f f32:$a), (EX2_APPROX_f32 $a, FTZ)>;
-def : Pat<(int_nvvm_ex2_approx_f f32:$a), (EX2_APPROX_f32 $a, NoFTZ)>;
+def : Pat<(f32 (int_nvvm_ex2_approx_ftz f32:$a)), (EX2_APPROX_f32 $a, FTZ)>;
+def : Pat<(f32 (int_nvvm_ex2_approx f32:$a)), (EX2_APPROX_f32 $a, NoFTZ)>;
 
 let Predicates = [hasPTX<70>, hasSM<75>] in {
-  def : Pat<(int_nvvm_ex2_approx_f16 f16:$a), (EX2_APPROX_f16 $a)>;
-  def : Pat<(int_nvvm_ex2_approx_f16x2 v2f16:$a), (EX2_APPROX_f16x2 $a)>;
+  def : Pat<(f16 (int_nvvm_ex2_approx f16:$a)), (EX2_APPROX_f16 $a)>;
+  def : Pat<(v2f16 (int_nvvm_ex2_approx v2f16:$a)), (EX2_APPROX_f16x2 $a)>;
+}
+
+let Predicates = [hasPTX<78>, hasSM<90>] in {
+  def : Pat<(bf16 (int_nvvm_ex2_approx_ftz bf16:$a)), (EX2_APPROX_bf16 $a)>;
+  def : Pat<(v2bf16 (int_nvvm_ex2_approx_ftz v2bf16:$a)), (EX2_APPROX_bf16x2 $a)>;
 }
 
 def LG2_APPROX_f32 :

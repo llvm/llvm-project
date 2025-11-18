@@ -30,7 +30,7 @@ namespace {
 class RegisterBank {
 
   /// A vector of register classes that are included in the register bank.
-  typedef std::vector<const CodeGenRegisterClass *> RegisterClassesTy;
+  using RegisterClassesTy = std::vector<const CodeGenRegisterClass *>;
 
 private:
   const Record &TheDef;
@@ -100,8 +100,7 @@ public:
     return RCsWithLargestRegSize[HwMode];
   }
 
-  iterator_range<typename RegisterClassesTy::const_iterator>
-  register_classes() const {
+  iterator_range<RegisterClassesTy::const_iterator> register_classes() const {
     return RCs;
   }
 };

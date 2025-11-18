@@ -737,8 +737,7 @@ TEST(TargetParserTest, ARMFPUNeonSupportLevel) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
-    if (FK == ARM::FK_LAST ||
-        ARM::getFPUName(FK).find("neon") == std::string::npos)
+    if (FK == ARM::FK_LAST || !ARM::getFPUName(FK).contains("neon"))
       EXPECT_EQ(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
     else
       EXPECT_NE(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
@@ -748,9 +747,8 @@ TEST(TargetParserTest, ARMFPURestriction) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1)) {
-    if (FK == ARM::FK_LAST ||
-        (ARM::getFPUName(FK).find("d16") == std::string::npos &&
-         ARM::getFPUName(FK).find("vfpv3xd") == std::string::npos))
+    if (FK == ARM::FK_LAST || (!ARM::getFPUName(FK).contains("d16") &&
+                               !ARM::getFPUName(FK).contains("vfpv3xd")))
       EXPECT_EQ(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
     else
       EXPECT_NE(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
@@ -1415,7 +1413,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSBS,         AArch64::AEK_SB,
       AArch64::AEK_PREDRES,      AArch64::AEK_BF16,
       AArch64::AEK_I8MM,         AArch64::AEK_F32MM,
-      AArch64::AEK_F64MM,        AArch64::AEK_TME,
       AArch64::AEK_LS64,         AArch64::AEK_BRBE,
       AArch64::AEK_PAUTH,        AArch64::AEK_FLAGM,
       AArch64::AEK_SME,          AArch64::AEK_SMEF64F64,
@@ -1454,7 +1451,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
       AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
       AArch64::AEK_F16MM,        AArch64::AEK_F16F32DOT,
-      AArch64::AEK_F16F32MM,
+      AArch64::AEK_F16F32MM,     AArch64::AEK_MOPS_GO,
+      AArch64::AEK_POE2,         AArch64::AEK_TEV,
+      AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
   };
 
   std::vector<StringRef> Features;
@@ -1513,7 +1512,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+i8mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f32mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f64mm"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+tme"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ls64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+brbe"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pauth"));
@@ -1578,6 +1576,10 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+f16mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16f32dot"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16f32mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mops-go"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+poe2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+tev"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+btie"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1698,7 +1700,6 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"rcpc", "norcpc", "+rcpc", "-rcpc"},
       {"rng", "norng", "+rand", "-rand"},
       {"memtag", "nomemtag", "+mte", "-mte"},
-      {"tme", "notme", "+tme", "-tme"},
       {"pauth", "nopauth", "+pauth", "-pauth"},
       {"ssbs", "nossbs", "+ssbs", "-ssbs"},
       {"sb", "nosb", "+sb", "-sb"},
@@ -1756,6 +1757,10 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"f16mm", "nof16mm", "+f16mm", "-f16mm"},
       {"f16f32dot", "nof16f32dot", "+f16f32dot", "-f16f32dot"},
       {"f16f32mm", "nof16f32mm", "+f16f32mm", "-f16f32mm"},
+      {"mops-go", "nomops-go", "+mops-go", "-mops-go"},
+      {"poe2", "nopoe2", "+poe2", "-poe2"},
+      {"tev", "notev", "+tev", "-tev"},
+      {"btie", "nobtie", "+btie", "-btie"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {

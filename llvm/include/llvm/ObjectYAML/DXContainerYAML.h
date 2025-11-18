@@ -115,7 +115,7 @@ struct RootParameterHeaderYaml {
   dxbc::ShaderVisibility Visibility;
   uint32_t Offset;
 
-  RootParameterHeaderYaml(){};
+  RootParameterHeaderYaml() = default;
   RootParameterHeaderYaml(dxbc::RootParameterType T) : Type(T) {}
 };
 
@@ -123,7 +123,7 @@ struct RootParameterLocationYaml {
   RootParameterHeaderYaml Header;
   std::optional<size_t> IndexInSignature;
 
-  RootParameterLocationYaml(){};
+  RootParameterLocationYaml() = default;
   explicit RootParameterLocationYaml(RootParameterHeaderYaml Header)
       : Header(Header) {}
 };
