@@ -1249,6 +1249,10 @@ bool MachProcess::GetInferiorSharedCacheFilepath(
   if (kr != KERN_SUCCESS)
     return false;
   void *cache = m_dyld_process_snapshot_get_shared_cache(snapshot);
+
+  // The shared cache is a collection of files on disk, this callback
+  // will iterate over all of them.
+  // The first filepath provided is the base filename of the cache.
   __block bool done = false;
   m_dyld_shared_cache_for_each_file(cache, ^(const char *path) {
     if (done) {
