@@ -89,11 +89,6 @@ struct FoldableDef {
 
   bool isImm() const { return Kind == MachineOperand::MO_Immediate; }
 
-  uint64_t getImm() const {
-    assert(isImm());
-    return ImmToFold;
-  }
-
   bool isFI() const {
     return Kind == MachineOperand::MO_FrameIndex;
   }
@@ -795,7 +790,7 @@ isPKF32InstrReplicatingLow32BitsOfScalarInput(const GCNSubtarget *ST,
 // lo are not same, we can't fold it.
 static bool checkImmOpForPKF32Instr(const FoldableDef &OpToFold) {
   assert(OpToFold.isImm() && "Expected immediate operand");
-  uint64_t ImmVal = OpToFold.getImm();
+  uint64_t ImmVal = OpToFold.getEffectiveImmVal().value();
   uint32_t Lo = Lo_32(ImmVal);
   uint32_t Hi = Hi_32(ImmVal);
   return Lo == Hi;
