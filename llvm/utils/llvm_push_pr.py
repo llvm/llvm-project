@@ -539,13 +539,7 @@ class LLVMPRAutomator:
         self.runner.print(f"On branch: {self.original_branch}")
 
         try:
-            # Rebase on top of the upstream to make sure we have an accurate
-            # stack of commits. If we don't, running the script again (e.g.,
-            # due to partially landing a stack may make a PR against the
-            # upstream that is empty.
-            self._rebase_current_branch()
             commits = self._get_commit_stack()
-
             if not commits:
                 self.runner.print("No new commits to process.")
                 return
