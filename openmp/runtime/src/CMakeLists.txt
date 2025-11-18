@@ -332,6 +332,7 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
 # objects depend on : .inc files
 add_custom_target(libomp-needed-headers DEPENDS kmp_i18n_id.inc kmp_i18n_default.inc)
 set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Sourcegenning")
+add_dependencies(omp_objects libomp-needed-headers)
 add_dependencies(omp libomp-needed-headers)
 
 # Windows specific build rules
