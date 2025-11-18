@@ -36,7 +36,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include <cassert>
 
 using namespace llvm;
@@ -1674,17 +1673,6 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPIRMetadata::VPIRMetadata(Instruction &I, LoopVersioning *LVer)
-    : VPIRMetadata(I) {
-  if (!LVer || !isa<LoadInst, StoreInst>(&I))
-    return;
-  const auto &[AliasScopeMD, NoAliasMD] = LVer->getNoAliasMetadataFor(&I);
-  if (AliasScopeMD)
-    Metadata.emplace_back(LLVMContext::MD_alias_scope, AliasScopeMD);
-  if (NoAliasMD)
-    Metadata.emplace_back(LLVMContext::MD_noalias, NoAliasMD);
-}
-
 void VPIRMetadata::applyMetadata(Instruction &I) const {
   for (const auto &[Kind, Node] : Metadata)
     I.setMetadata(Kind, Node);
@@ -2068,24 +2056,26 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   switch (OpType) {
   case OperationType::OverflowingBinOp:
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::Mul ||
+           Opcode == Instruction::Mul || Opcode == Instruction::Shl ||
            Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
   case OperationType::Trunc:
     return Opcode == Instruction::Trunc;
   case OperationType::DisjointOp:
     return Opcode == Instruction::Or;
   case OperationType::PossiblyExactOp:
-    return Opcode == Instruction::AShr;
+    return Opcode == Instruction::AShr || Opcode == Instruction::LShr ||
+           Opcode == Instruction::UDiv || Opcode == Instruction::SDiv;
   case OperationType::GEPOp:
     return Opcode == Instruction::GetElementPtr ||
            Opcode == VPInstruction::PtrAdd ||
            Opcode == VPInstruction::WidePtrAdd;
   case OperationType::FPMathOp:
-    return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
-           Opcode == Instruction::FSub || Opcode == Instruction::FNeg ||
-           Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-           Opcode == Instruction::FPExt || Opcode == Instruction::FPTrunc ||
-           Opcode == Instruction::FCmp || Opcode == Instruction::Select ||
+    return Opcode == Instruction::Call || Opcode == Instruction::FAdd ||
+           Opcode == Instruction::FMul || Opcode == Instruction::FSub ||
+           Opcode == Instruction::FNeg || Opcode == Instruction::FDiv ||
+           Opcode == Instruction::FRem || Opcode == Instruction::FPExt ||
+           Opcode == Instruction::FPTrunc || Opcode == Instruction::FCmp ||
+           Opcode == Instruction::Select ||
            Opcode == VPInstruction::WideIVStep ||
            Opcode == VPInstruction::ReductionStartVector ||
            Opcode == VPInstruction::ComputeReductionResult;

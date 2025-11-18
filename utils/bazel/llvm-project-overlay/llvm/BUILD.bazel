@@ -2934,6 +2934,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-exegesis"],
                 "lib/Target/PowerPC/PPCGenExegesis.inc",
             ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/PowerPC/PPCGenSDNodeInfo.inc",
+            ),
         ],
     },
     {
@@ -3176,6 +3180,10 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-subtarget"],
                 "lib/Target/SystemZ/SystemZGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/SystemZ/SystemZGenSDNodeInfo.inc",
             ),
         ],
     },
@@ -4092,6 +4100,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":JITLink",
+        ":Object",
         ":OrcJIT",
         ":OrcShared",
         ":Support",
