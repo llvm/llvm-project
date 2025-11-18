@@ -103,6 +103,11 @@ static cl::opt<bool>
                            cl::desc("Enable Machine Pipeliner for RISC-V"),
                            cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EnableCFIInstrInserter(
+    "riscv-enable-cfi-instr-inserter",
+    cl::desc("Enable CFI Instruction Inserter for RISC-V"), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -169,7 +174,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
   if (TT.isOSFuchsia() && !TT.isArch64Bit())
     report_fatal_error("Fuchsia is only supported for 64-bit");
 
-  setCFIFixup(true);
+  setCFIFixup(!EnableCFIInstrInserter);
 }
 
 const RISCVSubtarget *
@@ -578,6 +583,9 @@ void RISCVPassConfig::addPreEmitPass2() {
   addPass(createUnpackMachineBundles([&](const MachineFunction &MF) {
     return MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
+
+  if (EnableCFIInstrInserter)
+    addPass(createCFIInstrInserter());
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
