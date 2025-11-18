@@ -50,8 +50,8 @@ void AvoidDefaultLambdaCaptureCheck::check(
   }
 
   auto Diag = diag(DefaultCaptureLoc,
-                   "lambda default captures are discouraged; "
-                   "prefer to capture specific variables explicitly");
+                   "lambda uses default capture mode; explicitly capture "
+                   "variables instead");
 
   // For template-dependent lambdas, the list of captures hasn't been created
   // yet, so the list of implicit captures is empty.

@@ -6,19 +6,19 @@ void test_default_captures() {
   int another = 10;
 
   auto lambda1 = [=](int x) { return value + x; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: auto lambda1 = [value](int x) { return value + x; };
 
   auto lambda2 = [&](int x) { return value + x; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: auto lambda2 = [&value](int x) { return value + x; };
 
   auto lambda3 = [=, &another](int x) { return value + another + x; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: auto lambda3 = [value, &another](int x) { return value + another + x; };
 
   auto lambda4 = [&, value](int x) { return value + another + x; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: auto lambda4 = [&another, value](int x) { return value + another + x; };
 }
 
@@ -28,22 +28,22 @@ void test_pack_expansion_captures(Args... args) {
   int local = 5;
 
   auto lambda1 = [=]() { return (args + ...); };
-  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
 
   auto lambda2 = [&]() { return (args + ...); };
-  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
 
   auto lambda3 = [=]() { return (args + ...) + local; };
-  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
 
   auto lambda4 = [&]() { return (args + ...) + local; };
-  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
 
   auto lambda5 = [=, ...copied = args]() { return (copied + ...); };
-  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
 
   auto lambda6 = [&, ...refs = args]() { return (refs + ...); };
-  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
 }
 
 void instantiate_pack_expansion_tests() {
@@ -77,11 +77,11 @@ void test_nested_lambdas() {
   int inner_var = 3;
 
   auto outer = [=]() {
-    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
     // CHECK-FIXES: auto outer = [outer_var, middle_var, inner_var]() {
 
     auto inner = [&](int x) { return outer_var + middle_var + inner_var + x; };
-    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
     // CHECK-FIXES: auto inner = [&outer_var, &middle_var, &inner_var](int x) { return outer_var + middle_var + inner_var + x; };
 
     return inner(10);
@@ -92,17 +92,17 @@ void test_lambda_returns() {
   int a = 1, b = 2, c = 3;
 
   auto create_adder = [=](int x) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
     // CHECK-FIXES: auto create_adder = [](int x) {
     return [x](int y) { return x + y; }; // Inner lambda is fine - explicit capture
   };
 
   auto func1 = [&]() { return a; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: auto func1 = [&a]() { return a; };
 
   auto func2 = [=]() { return b; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: auto func2 = [b]() { return b; };
 }
 
@@ -114,11 +114,11 @@ public:
     int local = 10;
 
     auto lambda1 = [=]() { return member + local; };
-    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
     // CHECK-FIXES: auto lambda1 = [this, local]() { return member + local; };
 
     auto lambda2 = [&]() { return member + local; };
-    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
     // CHECK-FIXES: auto lambda2 = [this, &local]() { return member + local; };
 
     auto lambda3 = [this, local]() { return member + local; };
@@ -132,7 +132,7 @@ void test_template_lambdas() {
   T value{};
 
   auto lambda = [=](T x) { return value + x; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
 }
 
 void instantiate_templates() {
@@ -145,20 +145,20 @@ void test_init_captures() {
   int nx = 5;
 
   int y1 = [&, z = x + 5]() -> int {
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: int y1 = [&nx, z = x + 5]() -> int {
     return z * z + nx;
   }();
 
   int y2 = [=, &ref = x]() {
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: int y2 = [nx, &ref = x]() {
     ref += 1;
     return nx - ref;
   }();
 
   int y3 = [=, &ref = x, z = x + 5]() {
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda default captures are discouraged; prefer to capture specific variables explicitly [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES: int y3 = [nx, &ref = x, z = x + 5]() {
     ref += 2;
     return nx + z - ref;
