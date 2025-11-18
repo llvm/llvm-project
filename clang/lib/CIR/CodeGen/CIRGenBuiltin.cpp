@@ -72,7 +72,7 @@ getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
   unsigned Width = Type->isBooleanType()  ? 1
                    : Type->isBitIntType() ? astContext.getIntWidth(Type)
                                           : astContext.getTypeInfo(Type).Width;
-  bool Signed = Type->isSignedIntegerType();
+  bool signed = Type->isSignedIntegerType();
   return {Width, Signed};
 }
 
