@@ -10,6 +10,7 @@
 #include "Common/CodeGenDAGPatterns.h" // For SDNodeInfo.
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -129,9 +130,8 @@ SDNodeInfoEmitter::SDNodeInfoEmitter(const RecordKeeper &RK)
 }
 
 void SDNodeInfoEmitter::emitEnum(raw_ostream &OS) const {
-  OS << "#ifdef GET_SDNODE_ENUM\n";
-  OS << "#undef GET_SDNODE_ENUM\n\n";
-  OS << "namespace llvm::" << TargetSDNodeNamespace << " {\n\n";
+  IfDefEmitter IfDef(OS, "GET_SDNODE_ENUM");
+  NamespaceEmitter NS(OS, "llvm::" + TargetSDNodeNamespace);
 
   if (!NodesByName.empty()) {
     StringRef FirstName = NodesByName.begin()->first;
@@ -145,14 +145,11 @@ void SDNodeInfoEmitter::emitEnum(raw_ostream &OS) const {
 
     OS << "};\n\n";
     OS << "static constexpr unsigned GENERATED_OPCODE_END = " << LastName
-       << " + 1;\n\n";
+       << " + 1;\n";
   } else {
     OS << "static constexpr unsigned GENERATED_OPCODE_END = "
-          "ISD::BUILTIN_OP_END;\n\n";
+          "ISD::BUILTIN_OP_END;\n";
   }
-
-  OS << "} // namespace llvm::" << TargetSDNodeNamespace << "\n\n";
-  OS << "#endif // GET_SDNODE_ENUM\n\n";
 }
 
 std::vector<unsigned> SDNodeInfoEmitter::emitNodeNames(raw_ostream &OS) const {
@@ -198,15 +195,29 @@ static StringRef getTypeConstraintKindName(SDTypeConstraint::KindTy Kind) {
 #undef CASE
 }
 
-static void emitTypeConstraint(raw_ostream &OS, SDTypeConstraint C) {
+static void emitTypeConstraint(
+    raw_ostream &OS, SDTypeConstraint C,
+    const std::map<ValueTypeByHwMode, unsigned> &VTByHwModeTable) {
   unsigned OtherOpNo = 0;
-  MVT VT;
+  unsigned NumHwModes = 0;
+  unsigned VTByHwModeOffset = 0;
+  MVT::SimpleValueType VT = MVT::INVALID_SIMPLE_VALUE_TYPE;
 
   switch (C.ConstraintType) {
   case SDTypeConstraint::SDTCisVT:
+    // SequenceToOffsetTable::emit() prints a "dummy" (default-constructed)
+    // element if the table would otherwise be empty. VVT is empty in this case.
+    if (C.VVT.empty())
+      break;
+    [[fallthrough]];
   case SDTypeConstraint::SDTCVecEltisVT:
-    if (C.VVT.isSimple())
-      VT = C.VVT.getSimple();
+    if (C.VVT.isSimple()) {
+      VT = C.VVT.getSimple().SimpleTy;
+    } else {
+      NumHwModes = C.VVT.size();
+      assert(NumHwModes && "Empty type set?");
+      VTByHwModeOffset = VTByHwModeTable.at(C.VVT);
+    }
     break;
   case SDTypeConstraint::SDTCisPtrTy:
   case SDTypeConstraint::SDTCisInt:
@@ -224,15 +235,22 @@ static void emitTypeConstraint(raw_ostream &OS, SDTypeConstraint C) {
     break;
   }
 
-  StringRef KindName = getTypeConstraintKindName(C.ConstraintType);
-  StringRef VTName = VT.SimpleTy == MVT::INVALID_SIMPLE_VALUE_TYPE
-                         ? "MVT::INVALID_SIMPLE_VALUE_TYPE"
-                         : getEnumName(VT.SimpleTy);
-  OS << formatv("{{{}, {}, {}, {}}", KindName, C.OperandNo, OtherOpNo, VTName);
+  OS << '{' << getTypeConstraintKindName(C.ConstraintType) << ", "
+     << C.OperandNo << ", " << OtherOpNo << ", " << NumHwModes << ", ";
+  if (NumHwModes) {
+    OS << VTByHwModeOffset;
+  } else {
+    OS << (VT == MVT::INVALID_SIMPLE_VALUE_TYPE
+               ? "MVT::INVALID_SIMPLE_VALUE_TYPE"
+               : getEnumName(VT));
+  }
+  OS << '}';
 }
 
 std::vector<std::pair<unsigned, unsigned>>
 SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
+  std::map<ValueTypeByHwMode, unsigned> VTByHwModeTable;
+
   using ConstraintsVecTy = SmallVector<SDTypeConstraint, 0>;
   SequenceToOffsetTable<ConstraintsVecTy> ConstraintTable(
       /*Terminator=*/std::nullopt);
@@ -261,6 +279,16 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
     if (Constraints.empty())
       continue;
 
+    for (const SDTypeConstraint &C : Constraints) {
+      if (C.ConstraintType == SDTypeConstraint::SDTCisVT ||
+          C.ConstraintType == SDTypeConstraint::SDTCVecEltisVT) {
+        if (!C.VVT.isSimple()) {
+          assert(!C.VVT.empty() && "Unexpected empty type set");
+          VTByHwModeTable.try_emplace(C.VVT);
+        }
+      }
+    }
+
     // SequenceToOffsetTable reuses the storage if a sequence matches another
     // sequence's *suffix*. It is more likely that we have a matching *prefix*,
     // so reverse the order to increase the likelihood of a match.
@@ -269,9 +297,26 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
 
   ConstraintTable.layout();
 
+  OS << "static const VTByHwModePair " << Target.getName()
+     << "VTByHwModeTable[] = {\n";
+  unsigned VTByHwModeOffset = 0;
+  for (auto &[VTByHwMode, Offset] : VTByHwModeTable) {
+    OS << "  /* " << VTByHwModeOffset << " */ ";
+    for (auto [Mode, VT] : VTByHwMode)
+      OS << '{' << Mode << ", " << getEnumName(VT.SimpleTy) << "}, ";
+    OS << '\n';
+    Offset = VTByHwModeOffset;
+    VTByHwModeOffset += VTByHwMode.size();
+  }
+  // Avoid "zero size arrays are an extension" warning.
+  if (VTByHwModeTable.empty())
+    OS << "  /* dummy */ {0, MVT::INVALID_SIMPLE_VALUE_TYPE}\n";
+  OS << "};\n\n";
+
   OS << "static const SDTypeConstraint " << Target.getName()
      << "SDTypeConstraints[] = {\n";
-  ConstraintTable.emit(OS, emitTypeConstraint);
+  ConstraintTable.emit(OS, std::bind(emitTypeConstraint, std::placeholders::_1,
+                                     std::placeholders::_2, VTByHwModeTable));
   OS << "};\n\n";
 
   for (const auto &[EnumName, Nodes] : NodesByName) {
@@ -324,9 +369,8 @@ static void emitDesc(raw_ostream &OS, StringRef EnumName,
 void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
   StringRef TargetName = Target.getName();
 
-  OS << "#ifdef GET_SDNODE_DESC\n";
-  OS << "#undef GET_SDNODE_DESC\n\n";
-  OS << "namespace llvm {\n";
+  IfDefEmitter IfDef(OS, "GET_SDNODE_DESC");
+  NamespaceEmitter NS(OS, "llvm");
 
   std::vector<unsigned> NameOffsets = emitNodeNames(OS);
   std::vector<std::pair<unsigned, unsigned>> ConstraintOffsetsAndCounts =
@@ -342,12 +386,9 @@ void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
   OS << "};\n\n";
 
   OS << formatv("static const SDNodeInfo {0}GenSDNodeInfo(\n"
-                "    /*NumOpcodes=*/{1}, {0}SDNodeDescs,\n"
-                "    {0}SDNodeNames, {0}SDTypeConstraints);\n\n",
+                "    /*NumOpcodes=*/{1}, {0}SDNodeDescs, {0}SDNodeNames,\n"
+                "    {0}VTByHwModeTable, {0}SDTypeConstraints);\n",
                 TargetName, NodesByName.size());
-
-  OS << "} // namespace llvm\n\n";
-  OS << "#endif // GET_SDNODE_DESC\n\n";
 }
 
 void SDNodeInfoEmitter::run(raw_ostream &OS) const {

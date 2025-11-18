@@ -152,6 +152,9 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *> fnArgs;
+
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
   /// declarations.
@@ -218,6 +221,10 @@ public:
 
   const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
+
+  const TargetCIRGenInfo &getTargetHooks() const {
+    return cgm.getTargetCIRGenInfo();
+  }
 
   // ---------------------
   // Opaque value handling
@@ -496,6 +503,12 @@ public:
   /// the type has already been emitted with emitVariablyModifiedType.
   VlaSizePair getVLASize(const VariableArrayType *type);
   VlaSizePair getVLASize(QualType type);
+
+  Address getAsNaturalAddressOf(Address addr, QualType pointeeTy);
+
+  mlir::Value getAsNaturalPointerTo(Address addr, QualType pointeeType) {
+    return getAsNaturalAddressOf(addr, pointeeType).getBasePointer();
+  }
 
   void finishFunction(SourceLocation endLoc);
 
@@ -810,6 +823,11 @@ public:
       llvm::iterator_range<CastExpr::path_const_iterator> path,
       bool nullCheckValue, SourceLocation loc);
 
+  Address getAddressOfDerivedClass(
+      mlir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
+      llvm::iterator_range<CastExpr::path_const_iterator> path,
+      bool nullCheckValue);
+
   /// Return the VTT parameter that should be passed to a base
   /// constructor/destructor with virtual bases.
   /// FIXME: VTTs are Itanium ABI-specific, so the definition should move
@@ -916,9 +934,15 @@ public:
     return false;
   }
 
+  void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
+                              cir::TryOp tryOp);
+
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
+
+  bool isCatchOrCleanupRequired();
+  void populateCatchHandlersIfRequired(cir::TryOp tryOp);
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
@@ -1063,7 +1087,7 @@ public:
     bool isSwitch() { return scopeKind == Kind::Switch; }
     bool isTernary() { return scopeKind == Kind::Ternary; }
     bool isTry() { return scopeKind == Kind::Try; }
-
+    cir::TryOp getClosestTryParent();
     void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
     void setAsSwitch() { scopeKind = Kind::Switch; }
     void setAsTernary() { scopeKind = Kind::Ternary; }
@@ -1264,6 +1288,8 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
+  LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
+
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
@@ -1271,6 +1297,9 @@ public:
 
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
+  void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
+  void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
+                       bool isVolatile, bool isInit);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1303,6 +1332,30 @@ public:
 
   RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
                          const clang::CallExpr *e, ReturnValueSlot returnValue);
+
+  /// Returns a Value corresponding to the size of the given expression by
+  /// emitting a `cir.objsize` operation.
+  ///
+  /// \param e The expression whose object size to compute
+  /// \param type Determines the semantics of the object size computation.
+  ///   The type parameter is a 2-bit value where:
+  ///     bit 0 (type & 1): 0 = whole object, 1 = closest subobject
+  ///     bit 1 (type & 2): 0 = maximum size, 2 = minimum size
+  /// \param resType The result type for the size value
+  /// \param emittedE Optional pre-emitted pointer value. If non-null, we'll
+  ///   call `cir.objsize` on this value rather than emitting e.
+  /// \param isDynamic If true, allows runtime evaluation via dynamic mode
+  mlir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
+                                    cir::IntType resType, mlir::Value emittedE,
+                                    bool isDynamic);
+
+  mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
+                                              unsigned type,
+                                              cir::IntType resType,
+                                              mlir::Value emittedE,
+                                              bool isDynamic);
+
+  int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1501,7 +1554,8 @@ public:
                               llvm::ArrayRef<mlir::Value> args = {});
 
   /// Emit the computation of the specified expression of scalar type.
-  mlir::Value emitScalarExpr(const clang::Expr *e);
+  mlir::Value emitScalarExpr(const clang::Expr *e,
+                             bool ignoreResultAssign = false);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
                                       cir::UnaryOpKind kind, bool isPre);
@@ -1587,6 +1641,8 @@ public:
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
   void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
 
+  void populateCatchHandlers(cir::TryOp tryOp);
+
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,
@@ -1597,6 +1653,8 @@ public:
 
   /// Load a complex number from the specified l-value.
   mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
+
+  RValue emitLoadOfExtVectorElementLValue(LValue lv);
 
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
@@ -1673,14 +1731,17 @@ public:
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
 
+  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
+                                          const Expr *argExpr);
+
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
   void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
                           bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
-                         clang::QualType ty, bool isInit = false,
-                         bool isNontemporal = false);
+                         clang::QualType ty, LValueBaseInfo baseInfo,
+                         bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   /// Store the specified rvalue into the specified

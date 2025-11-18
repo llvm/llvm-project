@@ -101,6 +101,9 @@ public:
   /// Returns whether we have currently fetched all the frames of a stack.
   bool WereAllFramesFetched() const;
 
+  /// Get the thread associated with this frame list.
+  Thread &GetThread() const { return m_thread; }
+
 protected:
   friend class Thread;
   friend class ScriptedThread;

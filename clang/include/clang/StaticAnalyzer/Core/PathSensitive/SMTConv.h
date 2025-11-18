@@ -456,17 +456,15 @@ public:
       llvm::SMTExprRef OperandExp =
           getSymExpr(Solver, Ctx, USE->getOperand(), &OperandTy, hasComparison);
 
-      if (const BinarySymExpr *BSE =
-              dyn_cast<BinarySymExpr>(USE->getOperand())) {
-        if (USE->getOpcode() == UO_Minus &&
-            BinaryOperator::isComparisonOp(BSE->getOpcode()))
-          // The comparison operator yields a boolean value in the Z3
-          // language and applying the unary minus operator on a boolean
-          // crashes Z3. However, the unary minus does nothing in this
-          // context (a number is truthy if and only if its negative is
-          // truthy), so let's just ignore the unary minus.
-          // TODO: Replace this with a more general solution.
-          return OperandExp;
+      // When the operand is a bool expr, but the operator is an integeral
+      // operator, casting the bool expr to the integer before creating the
+      // unary operator.
+      // E.g. -(5 && a)
+      if (OperandTy == Ctx.BoolTy && OperandTy != *RetTy &&
+          (*RetTy)->isIntegerType()) {
+        OperandExp = fromCast(Solver, OperandExp, (*RetTy),
+                              Ctx.getTypeSize(*RetTy), OperandTy, 1);
+        OperandTy = (*RetTy);
       }
 
       llvm::SMTExprRef UnaryExp =
