@@ -21,6 +21,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_macros.h"
 #include "types.h"
 
 constexpr void test_basic_bindings() {
@@ -342,6 +343,23 @@ constexpr void test_return_type() {
     auto never_noexcept = std::bind_front<MaybeNoexceptFn<false>{}>();
     static_assert(!noexcept(never_noexcept()));
   }
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+#  ifndef __cpp_constexpr_exceptions
+  if !consteval
+#  endif
+  { // Test exception propagation
+    auto throws = [](int x, int y) { throw x + y; };
+    auto f      = std::bind_front<throws>(10);
+    static_assert(!noexcept(f(20)));
+
+    try {
+      f(20);
+    } catch (int z) {
+      assert(z == 30);
+    }
+  }
+#endif // TEST_HAS_NO_EXCEPTIONS
 
   { // Test calling volatile wrapper -- we allow it as an extension
     using Fn = decltype(std::bind_front<std::integral_constant<int, 0>{}>());
