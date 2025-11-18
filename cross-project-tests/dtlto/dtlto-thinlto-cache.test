@@ -29,7 +29,7 @@ RUN:   -Wl,--thinlto-cache-dir=cache.dir \
 RUN:   -Wl,--save-temps
 
 # Check that there are two backend compilation jobs occurred.
-RUN: grep -wo args populate1.*.dist-file.json | wc -l | grep -qx 3
+RUN: grep -wo args populate1.*.dist-file.json | wc -l | grep -qx "\s*3"
 RUN: ls cache.dir | count 5
 
 # Clean up cache directory.
@@ -45,7 +45,7 @@ RUN:   -Wl,--thinlto-cache-dir=cache.dir \
 RUN:   -Wl,--save-temps
 
 # Check that there are two backend compilation jobs occurred.
-RUN: grep -wo args populate2.*.dist-file.json | wc -l | grep -qx 3
+RUN: grep -wo args populate2.*.dist-file.json | wc -l | grep -qx "\s*3"
 RUN: ls cache.dir/llvmcache.timestamp
 RUN: ls cache.dir | count 3
 

@@ -43,17 +43,10 @@ THINLTO-DAG: {{^}}t.o.2{{$}}
 
 RUN: %{command}
 
-; Check that the expected output files have been created.
 RUN: ls | count 3
-; Check that two native object files has been created
 RUN: ls | FileCheck %s --check-prefix=THINLTO
-; Check that DTLTO cache directory has been created
 RUN: ls cache-dir/* | count 2
-; Check that 2 cache entries are created
 RUN: ls cache-dir/llvmcache-* | count 2
-
-
-
 
 ;--- t1.ll
 
