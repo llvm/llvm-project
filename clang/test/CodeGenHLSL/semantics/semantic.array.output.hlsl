@@ -6,6 +6,7 @@ struct S0 {
   float4 color;
 };
 
+// CHECK-SPIRV-DAG:    @A0 = external hidden thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations ![[#METADATA_0:]]
 
 [shader("pixel")]
 S0 main1(float4 input : A) : B {
@@ -29,3 +30,8 @@ S0 main1(float4 input : A) : B {
   output.color = input;
   return output;
 }
+
+// CHECK-SPIRV-DAG: ![[#METADATA_0]] = !{![[#METADATA_1:]]}
+// CHECK-SPIRV-DAG: ![[#METADATA_1]] = !{i32 30, i32 0}
+//                                            |      `- Location index
+//                                            `-> Decoration "Location"
