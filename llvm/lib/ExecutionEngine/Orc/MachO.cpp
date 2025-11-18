@@ -282,7 +282,7 @@ Expected<bool> ForceLoadMachOArchiveMembers::operator()(
   return true;
 }
 
-LLVM_ABI SmallVector<std::pair<uint32_t, uint32_t>>
+SmallVector<std::pair<uint32_t, uint32_t>>
 noFallbackArchs(uint32_t CPUType, uint32_t CPUSubType) {
   SmallVector<std::pair<uint32_t, uint32_t>> Result;
   Result.push_back({CPUType, CPUSubType});
