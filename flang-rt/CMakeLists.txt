@@ -31,6 +31,7 @@ list(APPEND CMAKE_MODULE_PATH
 include(AddFlangRT)
 include(GetToolchainDirs)
 include(FlangCommon)
+include(FlangRTIntrospection)
 include(HandleCompilerRT)
 include(ExtendPath)
 include(CheckFortranSourceCompiles)
@@ -154,21 +155,9 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
-
-# Look for support of REAL(16), if not already defined via command line.
-# NOTE: Does not work with Flang and CMake < 3.24
-cmake_push_check_state(RESET)
-set(CMAKE_REQUIRED_FLAGS "-ffree-form")
-set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
-check_fortran_source_compiles([[
-    subroutine test_quadmath
-      real(16) :: var1
-    end
-  ]]
-  FORTRAN_SUPPORTS_REAL16
-)
-cmake_pop_check_state()
-
+# Look for support of REAL(16), if not already defined via command
+# line via -DFORTRAN_SUPPORTS_REAL16=YES/NO
+check_fortran_quadmath_support()
 
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
