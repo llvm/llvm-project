@@ -743,6 +743,7 @@ Bug Fixes to Attribute Support
 - Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
 - Fix handling of parameter indexes when an attribute is applied to a C++23 explicit object member function.
 - Fixed several false positives and false negatives in function effect (`nonblocking`) analysis. (#GH166078) (#GH166101) (#GH166110)
+- Fix ``cleanup`` attribute by delaying type checks until after the type is deduced. (#GH129631)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
