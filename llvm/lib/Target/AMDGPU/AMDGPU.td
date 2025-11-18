@@ -934,13 +934,13 @@ def FeatureCvtNormInsts : SubtargetFeature<"V_CVT_NORM-insts",
 def FeatureCvtPkNormVOP2Insts : SubtargetFeature<"V_CVT_PKNORM-VOP2-insts",
   "HasCvtPkNormVOP2Insts",
   "true",
-  "Has V_CVT_PK_NORM_*_F32 instructions/Has V_CVT_PK_NORM_*_F16 instructions"
+  "Has V_CVT_PK_NORM_* instructions/Has V_CVT_PK_NORM_*_F16 instructions"
 >;
 
 def FeatureCvtPkNormVOP3Insts : SubtargetFeature<"V_CVT_PKNORM-VOP3-insts",
   "HasCvtPkNormVOP3Insts",
   "true",
-  "Has V_CVT_PK_NORM_*_F32 instructions/Has V_CVT_PK_NORM_*_F16 instructions"
+  "Has V_CVT_PK_NORM_* instructions/Has V_CVT_PK_NORM_*_F16 instructions"
 >;
 
 def FeatureAtomicDsPkAdd16Insts : SubtargetFeature<"atomic-ds-pk-add-16-insts",
