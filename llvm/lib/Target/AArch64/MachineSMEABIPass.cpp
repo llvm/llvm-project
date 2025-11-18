@@ -842,6 +842,7 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
           .addReg(TPIDR2EL0)
           .addImm(ZeroZA ? 1 : 0)
+          .addImm(/*ZeroZT0=*/false)
           .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
           .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
   if (ZeroZA)
