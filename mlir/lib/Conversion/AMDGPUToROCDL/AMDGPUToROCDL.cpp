@@ -1771,10 +1771,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
 
   int32_t scaleSel =
       getScaleSel(blockSize, bitWidth, firstScaleLane, firstScaleByte);
-
   Value castedScale =
       LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getScale());
-
   Value castedSource =
       LLVM::BitcastOp::create(rewriter, loc, packedType, source);
 
