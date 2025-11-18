@@ -576,6 +576,7 @@ if(build_runtimes)
           CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${ROCM_DEVICE_LIBS_INSTALL_PREFIX_PATH}
                      -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW=${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC}
                      -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD=amdgcn
+                     -DCMAKE_INSTALL_LIBDIR=lib
                      ${extra_cmake_args})
       else()
         ExternalProject_Add(rocm-device-libs
