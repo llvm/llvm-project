@@ -3886,22 +3886,30 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
 /// \param MustBeFirst  Set to true if this subtree needs to be negated and we
 ///                     cannot do the negation naturally. We are required to
 ///                     emit the subtree first in this case.
+/// \param PreferFirst  Set to true if processing this subtree first may
+///                     result in more efficient code.
 /// \param WillNegate   Is true if are called when the result of this
 ///                     subexpression must be negated. This happens when the
 ///                     outer expression is an OR. We can use this fact to know
 ///                     that we have a double negation (or (or ...) ...) that
 ///                     can be implemented for free.
-static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
-                               bool &MustBeFirst, bool WillNegate,
+static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
+                               bool &CanNegate, bool &MustBeFirst,
+                               bool &PreferFirst, bool WillNegate,
                                unsigned Depth = 0) {
   if (!Val.hasOneUse())
     return false;
   unsigned Opcode = Val->getOpcode();
   if (Opcode == ISD::SETCC) {
-    if (Val->getOperand(0).getValueType() == MVT::f128)
+    EVT VT = Val->getOperand(0).getValueType();
+    if (VT == MVT::f128)
       return false;
     CanNegate = true;
     MustBeFirst = false;
+    // Designate this operation as a preferred first operation if the result
+    // of a SUB operation can be reused.
+    PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
+                                    {Val->getOperand(0), Val->getOperand(1)});
     return true;
   }
   // Protect against exponential runtime and stack overflow.
@@ -3913,11 +3921,15 @@ static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
     SDValue O1 = Val->getOperand(1);
     bool CanNegateL;
     bool MustBeFirstL;
-    if (!canEmitConjunction(O0, CanNegateL, MustBeFirstL, IsOR, Depth+1))
+    bool PreferFirstL;
+    if (!canEmitConjunction(DAG, O0, CanNegateL, MustBeFirstL, PreferFirstL,
+                            IsOR, Depth + 1))
       return false;
     bool CanNegateR;
     bool MustBeFirstR;
-    if (!canEmitConjunction(O1, CanNegateR, MustBeFirstR, IsOR, Depth+1))
+    bool PreferFirstR;
+    if (!canEmitConjunction(DAG, O1, CanNegateR, MustBeFirstR, PreferFirstR,
+                            IsOR, Depth + 1))
       return false;
 
     if (MustBeFirstL && MustBeFirstR)
@@ -3940,6 +3952,7 @@ static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
       CanNegate = false;
       MustBeFirst = MustBeFirstL || MustBeFirstR;
     }
+    PreferFirst = PreferFirstL || PreferFirstR;
     return true;
   }
   return false;
@@ -4001,19 +4014,25 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
   SDValue LHS = Val->getOperand(0);
   bool CanNegateL;
   bool MustBeFirstL;
-  bool ValidL = canEmitConjunction(LHS, CanNegateL, MustBeFirstL, IsOR);
+  bool PreferFirstL;
+  bool ValidL = canEmitConjunction(DAG, LHS, CanNegateL, MustBeFirstL,
+                                   PreferFirstL, IsOR);
   assert(ValidL && "Valid conjunction/disjunction tree");
   (void)ValidL;
 
   SDValue RHS = Val->getOperand(1);
   bool CanNegateR;
   bool MustBeFirstR;
-  bool ValidR = canEmitConjunction(RHS, CanNegateR, MustBeFirstR, IsOR);
+  bool PreferFirstR;
+  bool ValidR = canEmitConjunction(DAG, RHS, CanNegateR, MustBeFirstR,
+                                   PreferFirstR, IsOR);
   assert(ValidR && "Valid conjunction/disjunction tree");
   (void)ValidR;
 
-  // Swap sub-tree that must come first to the right side.
-  if (MustBeFirstL) {
+  bool ShouldFirstL = PreferFirstL && !PreferFirstR && !MustBeFirstR;
+
+  // Swap sub-tree that must or should come first to the right side.
+  if (MustBeFirstL || ShouldFirstL) {
     assert(!MustBeFirstR && "Valid conjunction/disjunction tree");
     std::swap(LHS, RHS);
     std::swap(CanNegateL, CanNegateR);
@@ -4069,7 +4088,9 @@ static SDValue emitConjunction(SelectionDAG &DAG, SDValue Val,
                                AArch64CC::CondCode &OutCC) {
   bool DummyCanNegate;
   bool DummyMustBeFirst;
-  if (!canEmitConjunction(Val, DummyCanNegate, DummyMustBeFirst, false))
+  bool DummyPreferFirst;
+  if (!canEmitConjunction(DAG, Val, DummyCanNegate, DummyMustBeFirst,
+                          DummyPreferFirst, false))
     return SDValue();
 
   return emitConjunctionRec(DAG, Val, OutCC, false, SDValue(), AArch64CC::AL);
