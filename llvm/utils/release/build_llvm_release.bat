@@ -220,7 +220,6 @@ set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
-  -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
@@ -279,7 +278,6 @@ REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build_%arch%_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
-  -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DCLANG_DEFAULT_LINKER=lld
