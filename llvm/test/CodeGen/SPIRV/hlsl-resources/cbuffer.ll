@@ -21,7 +21,7 @@
 %MyStruct = type { <4 x float> }
 %__cblayout_MyCBuffer = type <{ %MyStruct, <4 x float> }>
 
-@MyCBuffer.cb = local_unnamed_addr global target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_MyCBuffer, 32, 0, 16), 2, 0) poison
+@MyCBuffer.cb = local_unnamed_addr global target("spirv.VulkanBuffer", %__cblayout_MyCBuffer, 2, 0) poison
 @s = external hidden local_unnamed_addr addrspace(12) global %MyStruct, align 16
 @v = external hidden local_unnamed_addr addrspace(12) global <4 x float>, align 16
 @MyCBuffer.str = private unnamed_addr constant [10 x i8] c"MyCBuffer\00", align 1
@@ -30,10 +30,10 @@
 define void @main() {
 entry:
 ; CHECK: %[[tmp:[0-9]+]] = OpCopyObject %[[wrapper_ptr_t]] %[[MyCBuffer]]
-  %MyCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_MyCBuffer, 32, 0, 16), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_MyCBuffers_32_0_16t_2_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @MyCBuffer.str)
-  store target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_MyCBuffer, 32, 0, 16), 2, 0) %MyCBuffer.cb_h.i.i, ptr @MyCBuffer.cb, align 8
+  %MyCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", %__cblayout_MyCBuffer, 2, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @MyCBuffer.str)
+  store target("spirv.VulkanBuffer", %__cblayout_MyCBuffer, 2, 0) %MyCBuffer.cb_h.i.i, ptr @MyCBuffer.cb, align 8
   %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 3) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_3t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
-  
+
 ; CHECK: %[[tmp_ptr:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[tmp]] %[[uint_0]] %[[uint_0]]
 ; CHECK: %[[v_ptr:.+]] = OpAccessChain %[[_ptr_Uniform_v4float]] %[[tmp]] %[[uint_0]] %[[uint_1]]
 ; CHECK: %[[s_ptr_gep:[0-9]+]] = OpInBoundsAccessChain %[[_ptr_Uniform_float]] %[[tmp_ptr]] %[[uint_0]] %[[uint_1]]
