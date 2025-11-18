@@ -14,12 +14,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: clang-modules-build
 
-#include "test_macros.h"
-
 #include <cstdbool>
 
-#if TEST_STD_VER >= 20
-// expected-warning@cstdbool:* {{'__standard_header_cstdbool' is deprecated: removed in C++20.}}
-#else
-// expected-warning@cstdbool:* {{'__standard_header_cstdbool' is deprecated}}
-#endif
+// expected-warning@cstdbool:* {{<cstdbool> is deprecated in C++17 and removed in C++20.}}
