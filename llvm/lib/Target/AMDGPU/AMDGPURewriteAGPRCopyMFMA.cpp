@@ -302,6 +302,10 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::attemptReassignmentsToAGPR(
     const TargetRegisterClass *EquivalentAGPRRegClass =
         TRI.getEquivalentAGPRClass(MRI.getRegClass(InterferingReg));
 
+    // Do not reassign scale operands
+    if (EquivalentAGPRRegClass == &AMDGPU::AGPR_32RegClass)
+      return false;
+
     MCPhysReg Assignable = AMDGPU::NoRegister;
     if (EquivalentAGPRRegClass->contains(PrefPhysReg) &&
         LRM.checkInterference(ReassignLI, PrefPhysReg) ==
