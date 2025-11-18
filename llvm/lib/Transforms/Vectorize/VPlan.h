@@ -1525,10 +1525,9 @@ public:
   ~VPWidenCastRecipe() override = default;
 
   VPWidenCastRecipe *clone() override {
-    return new VPWidenCastRecipe(
-        Opcode, getOperand(0), ResultTy,
-        dyn_cast_or_null<CastInst>(getUnderlyingValue()), *this, *this,
-        getDebugLoc());
+    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
+                                 cast_or_null<CastInst>(getUnderlyingValue()),
+                                 *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
