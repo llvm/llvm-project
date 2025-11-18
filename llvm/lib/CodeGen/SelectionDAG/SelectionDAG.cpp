@@ -12971,6 +12971,11 @@ bool llvm::isZeroOrZeroSplat(SDValue N, bool AllowUndefs) {
   return C && C->isZero();
 }
 
+bool llvm::isZeroOrZeroSplatFP(SDValue N, bool AllowUndefs) {
+  ConstantFPSDNode *C = isConstOrConstSplatFP(N, AllowUndefs);
+  return C && C->isZero();
+}
+
 HandleSDNode::~HandleSDNode() {
   DropOperands();
 }
