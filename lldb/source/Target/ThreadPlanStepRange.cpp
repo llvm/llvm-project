@@ -434,7 +434,7 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
             top_most_line_entry.file_sp = std::make_shared<SupportFile>();
             top_most_line_entry.ApplyFileMappings(
                 GetThread().CalculateTarget());
-            if (!top_most_line_entry.file_sp)
+            if (!top_most_line_entry.file_sp->GetSpecOnly())
               top_most_line_entry.file_sp =
                   top_most_line_entry.original_file_sp;
           }
