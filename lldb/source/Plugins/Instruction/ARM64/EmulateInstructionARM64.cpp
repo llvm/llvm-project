@@ -946,10 +946,12 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
 
   MemOp memop;
   if (vr) {
-    if (Bit32(opc, 1) == 1)
-      size += 4;
-    if (size > 4)
+    // opc<1> == 1 && size != 0 is an undefined encoding.
+    if (Bit32(opc, 1) == 1 && size != 0)
       return false;
+    // opc<1> == 1 && size == 0 encode the 128-bit variant.
+    if (Bit32(opc, 1) == 1)
+      size = 4;
     memop = Bit32(opc, 0) == 1 ? MemOp_LOAD : MemOp_STORE;
   } else {
     if (Bit32(opc, 1) == 0) {
