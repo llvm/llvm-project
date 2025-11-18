@@ -12214,8 +12214,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     SmallVector<APValue, 4> Res;
     Res.reserve(Len);
     Res.push_back(TakeA0 ? AVal.getVectorElt(0) : WVal.getVectorElt(0));
-    for (unsigned i = 1; i < Len; ++i)
-      Res.push_back(WVal.getVectorElt(i));
+    for (unsigned I = 1; I < Len; ++I)
+      Res.push_back(WVal.getVectorElt(I));
     APValue V(Res.data(), Res.size());
     return Success(V, E);
   };

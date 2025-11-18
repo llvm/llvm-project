@@ -2419,27 +2419,6 @@ static bool interp__builtin_elementwise_int_unaryop(
   return false;
 }
 
-static bool interp__builtin_select_scalar(InterpState &S,
-                                          const CallExpr *Call) {
-  unsigned N =
-      Call->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
-
-  const Pointer &W = S.Stk.pop<Pointer>();
-  const Pointer &A = S.Stk.pop<Pointer>();
-  APSInt U = popToAPSInt(S, Call->getArg(0));
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  bool TakeA0 = U.getZExtValue() & 1ULL;
-
-  for (unsigned I = TakeA0; I != N; ++I)
-    Dst.elem<Floating>(I) = W.elem<Floating>(I);
-  if (TakeA0)
-    Dst.elem<Floating>(0) = A.elem<Floating>(0);
-
-  Dst.initializeAllElements();
-  return true;
-}
-
 static bool interp__builtin_elementwise_int_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
@@ -2826,6 +2805,30 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
   }
   Dst.initializeAllElements();
 
+  return true;
+}
+
+/// Scalar variant of AVX512 predicated select:
+/// Result[i] = (Mask bit 0) ? LHS[i] : RHS[i], but only element 0 may change.
+/// All other elements are taken from RHS.
+static bool interp__builtin_select_scalar(InterpState &S,
+                                          const CallExpr *Call) {
+  unsigned N =
+      Call->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+
+  const Pointer &W = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  APSInt U = popToAPSInt(S, Call->getArg(0));
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  bool TakeA0 = U.getZExtValue() & 1ULL;
+
+  for (unsigned I = TakeA0; I != N; ++I)
+    Dst.elem<Floating>(I) = W.elem<Floating>(I);
+  if (TakeA0)
+    Dst.elem<Floating>(0) = A.elem<Floating>(0);
+
+  Dst.initializeAllElements();
   return true;
 }
 
