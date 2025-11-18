@@ -172,8 +172,8 @@ define dso_local i32 @pow2minuspow2(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; RV32IM-LABEL: pow2minuspow2:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    slli a2, a1, 7
-; RV32IM-NEXT:    slli a1, a1, 9
-; RV32IM-NEXT:    sub a1, a1, a2
+; RV32IM-NEXT:    slli a1, a1, 8
+; RV32IM-NEXT:    add a1, a1, a2
 ; RV32IM-NEXT:    add a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;

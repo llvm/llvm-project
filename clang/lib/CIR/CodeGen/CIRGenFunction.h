@@ -1277,6 +1277,8 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
+  LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
+
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
@@ -1341,6 +1343,8 @@ public:
                                               cir::IntType resType,
                                               mlir::Value emittedE,
                                               bool isDynamic);
+
+  int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1542,6 +1546,9 @@ public:
   mlir::Value emitScalarExpr(const clang::Expr *e,
                              bool ignoreResultAssign = false);
 
+  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned index,
+                                          const Expr *arg);
+
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
                                       cir::UnaryOpKind kind, bool isPre);
 
@@ -1636,6 +1643,8 @@ public:
 
   /// Load a complex number from the specified l-value.
   mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
+
+  RValue emitLoadOfExtVectorElementLValue(LValue lv);
 
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
