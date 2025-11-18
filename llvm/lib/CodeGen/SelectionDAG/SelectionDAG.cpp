@@ -5703,10 +5703,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   }
 
   case ISD::VECTOR_COMPRESS:
-    // Return true only if undef is checked and at least one element is
-    // demanded.
-    if (Op.getOperand(2).isUndef())
-      return !PoisonOnly && !DemandedElts.isZero();
     return false;
 
   default:
