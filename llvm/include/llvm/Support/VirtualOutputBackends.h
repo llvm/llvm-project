@@ -64,14 +64,14 @@ private:
 
 /// An output backend that creates files on disk, wrapping APIs in sys::fs.
 class OnDiskOutputBackend : public OutputBackend {
-  void anchor() override;
+  LLVM_ABI void anchor() override;
 
 protected:
   IntrusiveRefCntPtr<OutputBackend> cloneImpl() const override {
     return clone();
   }
 
-  Expected<std::unique_ptr<OutputFileImpl>>
+  LLVM_ABI Expected<std::unique_ptr<OutputFileImpl>>
   createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override;
 
 public:
