@@ -15,4 +15,5 @@
 // UNSUPPORTED: clang-modules-build
 
 #include <ciso646>
-// expected-warning@ciso646:* {{'__standard_header_ciso646' is deprecated: removed in C++20. Include <version> instead.}}
+
+// expected-warning@ciso646:* {{<ciso646> is removed in C++20. Include <version> instead.}}
