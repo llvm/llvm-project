@@ -89,13 +89,14 @@ def NeoverseZeroMove : MCSchedPredicate<
                                      CheckSameRegOperand<1, 2>]>,
                          ]>>;
 
-def NeoverseAllElement : MCSchedPredicate<
-                         CheckAny<[
-                           // PTRUE Pd, ALL
-                           // PTRUES Pd, ALL
-                           CheckAll<[CheckOpcode<[
-                                        PTRUE_B, PTRUE_H, PTRUE_S, PTRUE_D,
-                                        PTRUES_B, PTRUES_H, PTRUES_S, PTRUES_D]>,
-                                     CheckIsImmOperand<1>,
-                                     CheckImmOperand<1, 31>]>,
-                         ]>>;
+def NeoverseAllActivePredicate : MCSchedPredicate<
+                                   CheckAny<[
+                                     // PTRUE Pd, ALL
+                                     // PTRUES Pd, ALL
+                                     CheckAll<[
+                                       CheckOpcode<[
+                                         PTRUE_B, PTRUE_H, PTRUE_S, PTRUE_D,
+                                         PTRUES_B, PTRUES_H, PTRUES_S, PTRUES_D]>,
+                                       CheckIsImmOperand<1>,
+                                       CheckImmOperand<1, 31>]>,
+                                   ]>>;

@@ -91,9 +91,10 @@ def : WriteRes<WriteHint,    []> { let Latency = 1; }
 //===----------------------------------------------------------------------===//
 // Define generic 0 micro-op types
 
-let Latency = 0, NumMicroOps = 1 in
+let Latency = 0, NumMicroOps = 0 in
 def V1Write_0c_0Z : SchedWriteRes<[]>;
 
+def V1Write_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 //===----------------------------------------------------------------------===//
 // Define generic 1 micro-op types
@@ -476,11 +477,11 @@ def V1Write_11c_9L01_9S_9V : SchedWriteRes<[V1UnitL01, V1UnitL01, V1UnitL01,
 // Define predicate-controlled types
 
 def V1Write_0or1c_1I : SchedWriteVariant<[
-                      SchedVar<NeoverseZeroMove, [V1Write_0c_0Z]>,
+                      SchedVar<NeoverseZeroMove, [V1Write_0c]>,
                       SchedVar<NoSchedPred,      [V1Write_1c_1I]>]>;
 
 def V1Write_0or3c_1M0 : SchedWriteVariant<[
-                      SchedVar<NeoverseZeroMove, [V1Write_0c_0Z]>,
+                      SchedVar<NeoverseZeroMove, [V1Write_0c]>,
                       SchedVar<NoSchedPred,      [V1Write_3c_1M0]>]>;
 
 //===----------------------------------------------------------------------===//
