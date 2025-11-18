@@ -824,6 +824,30 @@ define i16 @icmp_fold_to_llvm_ucmp_when_eq(i16 %x, i16 %y) {
   ret i16 %6
 }
 
+define i16 @icmp_fold_to_llvm_ucmp_when_ult_and_Z_zero(i16 %x, i16 %y) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_when_ult_and_Z_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ucmp.i16.i16(i16 [[X:%.*]], i16 [[Y:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %3 = icmp eq i16 %x, %y
+  %4 = icmp ult i16 %x, %y
+  %5 = select i1 %4, i16 -1, i16 1
+  %6 = select i1 %3, i16 0, i16 %5
+  ret i16 %6
+}
+
+define i16 @icmp_fold_to_llvm_ucmp_when_slt_and_Z_zero(i16 %x, i16 %y) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_when_slt_and_Z_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.scmp.i16.i16(i16 [[X:%.*]], i16 [[Y:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %3 = icmp eq i16 %x, %y
+  %4 = icmp slt i16 %x, %y
+  %5 = select i1 %4, i16 -1, i16 1
+  %6 = select i1 %3, i16 0, i16 %5
+  ret i16 %6
+}
+
 define i16 @icmp_fold_to_llvm_ucmp_when_cmp_slt(i16 %x, i16 %y) {
 ; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_when_cmp_slt(
 ; CHECK-NEXT:    [[Y_FRZ:%.*]] = freeze i16 [[Y:%.*]]
