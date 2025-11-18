@@ -173,8 +173,8 @@
 #ifdef cl_ext_float_atomics
 #error "Incorrect cl_ext_float_atomics define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_ext_float_atomics' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_ext_float_atomics' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_ext_float_atomics : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -185,8 +185,8 @@
 #ifdef cl_khr_extended_bit_ops
 #error "Incorrect cl_khr_extended_bit_ops define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_extended_bit_ops' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_extended_bit_ops' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_extended_bit_ops : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -197,8 +197,8 @@
 #ifdef cl_khr_integer_dot_product
 #error "Incorrect cl_khr_integer_dot_product define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_integer_dot_product' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_integer_dot_product' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_integer_dot_product : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -209,8 +209,8 @@
 #ifdef cl_khr_kernel_clock
 #error "Incorrect cl_khr_kernel_clock define"
 #endif
-// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_kernel_clock' - ignoring}}
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_kernel_clock' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION cl_khr_kernel_clock : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
