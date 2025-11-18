@@ -25,7 +25,7 @@
 
 // Ensure that there is no dynamic dylib linked.
 // RUN: otool -L %t > %t.libs 
-// not grep -q "dynamic.dylib" < %t.libs
+// RUN: not grep -q "dynamic.dylib" < %t.libs
 
 // UNSUPPORTED: ios
 

@@ -13,26 +13,19 @@
 // RUN: %clangxx -DSHARED_LIB %s \
 // RUN:     -dynamiclib -o %t/dummy-so.dylib
 
-// RUN: pushd %t
+// RUN: cd %t
 // RUN: env DYLD_INSERT_LIBRARIES=@executable_path/libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN: %run ./a.out 2>&1 | FileCheck %s
-// RUN: popd
 
-// RUN: pushd %t
 // RUN: env DYLD_INSERT_LIBRARIES=libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN: %run ./a.out 2>&1 | FileCheck %s
-// RUN: popd
 
-// RUN: pushd %t
 // RUN: %env_asan_opts=strip_env=0 \
 // RUN: DYLD_INSERT_LIBRARIES=libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN: %run ./a.out 2>&1 | FileCheck %s --check-prefix=CHECK-KEEP
-// RUN: popd
 
-// RUN: pushd %t
 // RUN: env DYLD_INSERT_LIBRARIES=%t/libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN: %run ./a.out 2>&1 | FileCheck %s
-// RUN: popd
 
 #if !defined(SHARED_LIB)
 #include <stdio.h>
