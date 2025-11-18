@@ -1674,7 +1674,7 @@ defm customizable_functions : BoolFOption<"customizable-functions",
   LangOpts<"CustomizableFunctions">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Enable support for customizable functions with tag_invoke">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 
 defm experimental_library : BoolFOption<"experimental-library",
   LangOpts<"ExperimentalLibrary">, DefaultFalse,
