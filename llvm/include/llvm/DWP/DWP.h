@@ -22,7 +22,7 @@ enum OnCuIndexOverflow {
   Continue,
 };
 
-enum Dwarf64StrOffsets {
+enum Dwarf64StrOffsetsPromotion {
   Disabled, ///< Don't do any conversion of .debug_str_offsets tables.
   Enabled,  ///< Convert any .debug_str_offsets tables to DWARF64 if needed.
   Always,   ///< Always emit .debug_str_offsets talbes as DWARF64 for testing.
@@ -75,7 +75,7 @@ struct CompileUnitIdentifiers {
 
 LLVM_ABI Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
                      OnCuIndexOverflow OverflowOptValue,
-                     Dwarf64StrOffsets StrOffsetsOptValue);
+                     Dwarf64StrOffsetsPromotion StrOffsetsOptValue);
 
 typedef std::vector<std::pair<DWARFSectionKind, uint32_t>> SectionLengths;
 

@@ -7,11 +7,11 @@
 
 # RUN: yaml2obj %s -o %t.dwo
 # RUN: llvm-dwp %t.dwo -o %t.dwp
-# RUN: llvm-dwp %t.dwo -o %t.default.dwp --dwarf64-str-offsets
-# RUN: llvm-dwp %t.dwo -o %t.disabled.dwp --dwarf64-str-offsets=disabled
-# RUN: llvm-dwp %t.dwo -o %t.enabled.dwp --dwarf64-str-offsets=enabled
-# RUN: llvm-dwp %t.dwo -o %t.always.dwp --dwarf64-str-offsets=always
-# RUN: not llvm-dwp %t.dwo -o %t.invalid.dwp --dwarf64-str-offsets=invalid 2>&1 | FileCheck --check-prefixes=ERROR %s
+# RUN: llvm-dwp %t.dwo -o %t.default.dwp --dwarf64-str-offsets-promotion
+# RUN: llvm-dwp %t.dwo -o %t.disabled.dwp --dwarf64-str-offsets-promotion=disabled
+# RUN: llvm-dwp %t.dwo -o %t.enabled.dwp --dwarf64-str-offsets-promotion=enabled
+# RUN: llvm-dwp %t.dwo -o %t.always.dwp --dwarf64-str-offsets-promotion=always
+# RUN: not llvm-dwp %t.dwo -o %t.invalid.dwp --dwarf64-str-offsets-promotion=invalid 2>&1 | FileCheck --check-prefixes=ERROR %s
 # RUN: llvm-dwarfdump --debug-str-offsets %t.dwp | FileCheck --check-prefixes=DWARF32 %s
 # RUN: llvm-dwarfdump --debug-str-offsets %t.default.dwp | FileCheck --check-prefixes=DWARF32 %s
 # RUN: llvm-dwarfdump --debug-str-offsets %t.disabled.dwp | FileCheck --check-prefixes=DWARF32 %s
@@ -40,7 +40,7 @@
 # DWARF64-NEXT: 0x00000040: 0000000000000046 "simple.cpp"
 # DWARF64-NEXT: 0x00000048: 0000000000000051 "simple.dwo"
 
-# ERROR: invalid value for --dwarf64-str-offsets. Valid values are one of: "enabled", "disabled" or "always".
+# ERROR: invalid value for --dwarf64-str-offsets-promotion. Valid values are one of: "enabled", "disabled" or "always".
 
 --- !ELF
 FileHeader:

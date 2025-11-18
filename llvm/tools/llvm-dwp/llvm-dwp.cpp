@@ -125,7 +125,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
   OnCuIndexOverflow OverflowOptValue = OnCuIndexOverflow::HardStop;
-  Dwarf64StrOffsets Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Disabled;
+  Dwarf64StrOffsetsPromotion Dwarf64StrOffsetsValue =
+      Dwarf64StrOffsetsPromotion::Disabled;
 
   opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
@@ -166,19 +167,19 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (Arg *Arg = Args.getLastArg(OPT_dwarf64StringOffsets,
                                  OPT_dwarf64StringOffsets_EQ)) {
     if (Arg->getOption().matches(OPT_dwarf64StringOffsets)) {
-      Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Enabled;
+      Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Enabled;
     } else {
       std::string OptValue = Arg->getValue();
       if (OptValue == "disabled") {
-        Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Disabled;
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Disabled;
       } else if (OptValue == "enabled") {
-        Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Enabled;
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Enabled;
       } else if (OptValue == "always") {
-        Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Always;
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Always;
       } else {
         llvm::errs()
-            << "invalid value for --dwarf64-str-offsets. Valid values "
-               "are one of: \"enabled\", \"disabled\" or \"always\".\n";
+            << "invalid value for --dwarf64-str-offsets-promotion. Valid "
+               "values are one of: \"enabled\", \"disabled\" or \"always\".\n";
         exit(1);
       }
     }

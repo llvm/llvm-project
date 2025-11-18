@@ -428,12 +428,11 @@ static void writeNewOffsetsTo(MCStreamer &Out, DataExtractor &Data,
   }
 }
 
-void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
-                            MCSection *StrOffsetSection,
-                            StringRef CurStrSection,
-                            StringRef CurStrOffsetSection, uint16_t Version,
-                            SectionLengths &SectionLength,
-                            const Dwarf64StrOffsets StrOffsetsOptValue) {
+void writeStringsAndOffsets(
+    MCStreamer &Out, DWPStringPool &Strings, MCSection *StrOffsetSection,
+    StringRef CurStrSection, StringRef CurStrOffsetSection, uint16_t Version,
+    SectionLengths &SectionLength,
+    const Dwarf64StrOffsetsPromotion StrOffsetsOptValue) {
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
@@ -447,16 +446,16 @@ void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 
   // Keep track if any new string offsets exceed UINT32_MAX. If any do, we can
   // emit a DWARF64 .debug_str_offsets table for this compile unit. If the
-  // \a StrOffsetsOptValue argument is Dwarf64StrOffsets::Always, then force
-  // the emission of DWARF64 .debug_str_offsets for testing.
+  // \a StrOffsetsOptValue argument is Dwarf64StrOffsetsPromotion::Always, then
+  // force the emission of DWARF64 .debug_str_offsets for testing.
   uint32_t OldOffsetSize = 4;
   uint32_t NewOffsetSize =
-      StrOffsetsOptValue == Dwarf64StrOffsets::Always ? 8 : 4;
+      StrOffsetsOptValue == Dwarf64StrOffsetsPromotion::Always ? 8 : 4;
   while (const char *S = Data.getCStr(&LocalOffset)) {
     uint64_t NewOffset = Strings.getOffset(S, LocalOffset - PrevOffset);
     OffsetRemapping[PrevOffset] = NewOffset;
     // Only promote the .debug_str_offsets to DWARF64 if our setting allows it.
-    if (StrOffsetsOptValue != Dwarf64StrOffsets::Disabled &&
+    if (StrOffsetsOptValue != Dwarf64StrOffsetsPromotion::Disabled &&
         NewOffset > UINT32_MAX) {
       NewOffsetSize = 8;
     }
@@ -677,7 +676,7 @@ Error handleSection(
 
 Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
             OnCuIndexOverflow OverflowOptValue,
-            Dwarf64StrOffsets StrOffsetsOptValue) {
+            Dwarf64StrOffsetsPromotion StrOffsetsOptValue) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
   MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
