@@ -1,0 +1,15 @@
+RUN: rm -rf %t && split-file %s %t && cd %t
+RUN: clang++ -g -gsplit-dwarf -gdwarf-5 -c %t/a.cpp -o %t/a.o
+RUN: clang++ -g -gsplit-dwarf -gdwarf-4 -c %t/b.cpp -o %t/b.o
+RUN: clang++ %t/a.o %t/b.o -o %t/main.exe
+RUN: not llvm-dwp -e %t/main.exe -o %t/main.exe.dwp 2>&1 | FileCheck %s
+
+# CHECK: error: {{.*}}b.dwo: incompatible DWARF compile unit version, found 4 and expecting 5
+
+;--- a.cpp
+int main() {
+    return 0;
+}
+
+;--- b.cpp
+void b() {}

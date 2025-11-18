@@ -709,7 +709,9 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
       Version = Header.Version;
       IndexVersion = Version < 5 ? 2 : 5;
     } else if (Version != Header.Version) {
-      return make_error<DWPError>("incompatible DWARF compile unit versions.");
+      return make_error<DWPError>(
+          Input + ": incompatible DWARF compile unit version, found " +
+          utostr(Header.Version) + " and expecting " + utostr(Version));
     }
 
     writeStringsAndOffsets(Out, Strings, StrOffsetSection, CurStrSection,
