@@ -18463,7 +18463,8 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
 
   // For non-zero memset, use NEON even for smaller sizes as dup + scalar store
   // is efficient
-  if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset)
+  if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset &&
+      AlignmentIsAcceptable(MVT::v16i8, Align(1)))
     return MVT::v16i8;
   if (CanUseFP && !IsSmallZeroMemset &&
       AlignmentIsAcceptable(MVT::f128, Align(16)))
@@ -18473,6 +18474,39 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   if (Op.size() >= 4 && AlignmentIsAcceptable(MVT::i32, Align(4)))
     return MVT::i32;
   return MVT::Other;
+}
+
+bool AArch64TargetLowering::findOptimalMemOpLowering(
+    LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
+    const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+    const AttributeList &FuncAttributes) const {
+  // For non-zero memset with v16i8, don't downgrade if we can extract
+  // the needed size efficiently using
+  // shallExtractConstSplatVectorElementToStore
+  EVT VT = getOptimalMemOpType(Context, Op, FuncAttributes);
+  if (VT == MVT::v16i8 && Op.isMemset() && !Op.isZeroMemset() &&
+      Op.size() < 16) {
+    // Check if we can extract the needed size
+    unsigned Index;
+    Type *VectorTy = VT.getTypeForEVT(Context);
+    if (shallExtractConstSplatVectorElementToStore(VectorTy, Op.size() * 8,
+                                                   Index)) {
+      // To generate the vector splat (DUP), we need v16i8 to be the LargestVT.
+      // getMemsetStores requires oversized stores to be last with at least 2
+      // operations. We add the target size first (extracts from v16i8), then
+      // v16i8 last (satisfies assertion, and is LargestVT for splat
+      // generation). After the first store, Size becomes 0, so the oversized
+      // store is skipped by the early continue in getMemsetStores, avoiding
+      // redundant stores.
+      EVT TargetVT = (Op.size() >= 8) ? MVT::i64 : MVT::i32;
+      MemOps.push_back(TargetVT); // First: extract from v16i8
+      MemOps.push_back(VT);       // Last: v16i8 (LargestVT, oversized)
+      return true;
+    }
+  }
+  // Otherwise, use the default implementation
+  return TargetLowering::findOptimalMemOpLowering(Context, MemOps, Limit, Op,
+                                                  DstAS, SrcAS, FuncAttributes);
 }
 
 LLT AArch64TargetLowering::getOptimalMemOpLLT(
@@ -18496,7 +18530,8 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
 
   // For non-zero memset, use NEON for all sizes where it's beneficial.
   // NEON dup + scalar store works for any alignment and is efficient.
-  if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset)
+  if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset &&
+      AlignmentIsAcceptable(MVT::v16i8, Align(1)))
     return LLT::fixed_vector(2, 64);
   if (CanUseFP && !IsSmallZeroMemset &&
       AlignmentIsAcceptable(MVT::f128, Align(16)))
@@ -29887,16 +29922,13 @@ bool AArch64TargetLowering::shallExtractConstSplatVectorElementToStore(
   // This is useful for memset where we generate a v16i8 splat and need to store
   // a smaller scalar (e.g., i32 for a 4-byte memset).
   if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(VectorTy)) {
-    // Only handle v16i8 splat (128 bits total, 16 elements of 8 bits each)
-    if (VTy->getNumElements() == 16 && VTy->getElementType()->isIntegerTy(8)) {
+    // Handle v16i8 splat (128 bits total, 16 elements of 8 bits each) and
+    // v8i8 splat (64 bits total, 8 elements of 8 bits each)
+    if ((VTy->getNumElements() == 16 || VTy->getNumElements() == 8) &&
+        VTy->getElementType()->isIntegerTy(8)) {
       // Check if we're extracting a 32-bit or 64-bit element
-      if (ElemSizeInBits == 32) {
-        // Extract element 0 of the 128-bit vector as a 32-bit scalar
-        Index = 0;
-        return true;
-      }
-      if (ElemSizeInBits == 64) {
-        // Extract elements 0-7 as a 64-bit scalar
+      if (ElemSizeInBits == 32 || ElemSizeInBits == 64) {
+        // Extract element 0 from the vector as a scalar
         Index = 0;
         return true;
       }

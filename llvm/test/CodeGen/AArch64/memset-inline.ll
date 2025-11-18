@@ -37,7 +37,7 @@ define void @memset_4(ptr %a, i8 %value) nounwind {
 ;
 ; NEON-LABEL: memset_4:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    dup v0.8b, w1
+; NEON-NEXT:    dup v0.16b, w1
 ; NEON-NEXT:    str s0, [x0]
 ; NEON-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 4, i1 0)
@@ -56,7 +56,7 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 ;
 ; NEON-LABEL: memset_8:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    dup v0.8b, w1
+; NEON-NEXT:    dup v0.16b, w1
 ; NEON-NEXT:    str d0, [x0]
 ; NEON-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 8, i1 0)
@@ -316,5 +316,163 @@ define void @aligned_bzero_64(ptr %a) nounwind {
 ; NEON-NEXT:    stp q0, q0, [x0, #32]
 ; NEON-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr align 64 %a, i8 0, i64 64, i1 0)
+  ret void
+}
+
+; /////////////////////////////////////////////////////////////////////////////
+; Test cases for non-zero constants
+
+define void @memset_4_const_42(ptr %a) nounwind {
+; GPR-LABEL: memset_4_const_42:
+; GPR:       // %bb.0:
+; GPR-NEXT:    mov w8, #10794
+; GPR-NEXT:    movk w8, #10794, lsl #16
+; GPR-NEXT:    str w8, [x0]
+; GPR-NEXT:    ret
+;
+; NEON-LABEL: memset_4_const_42:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mov w8, #10794
+; NEON-NEXT:    movk w8, #10794, lsl #16
+; NEON-NEXT:    str w8, [x0]
+; NEON-NEXT:    ret
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 42, i64 4, i1 0)
+  ret void
+}
+
+define void @memset_8_const_255(ptr %a) nounwind {
+; GPR-LABEL: memset_8_const_255:
+; GPR:       // %bb.0:
+; GPR-NEXT:    mov x8, #-1
+; GPR-NEXT:    str x8, [x0]
+; GPR-NEXT:    ret
+;
+; NEON-LABEL: memset_8_const_255:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mov x8, #-1
+; NEON-NEXT:    str x8, [x0]
+; NEON-NEXT:    ret
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 255, i64 8, i1 0)
+  ret void
+}
+
+define void @memset_16_const_128(ptr %a) nounwind {
+; GPR-LABEL: memset_16_const_128:
+; GPR:       // %bb.0:
+; GPR-NEXT:    adrp
+; GPR-NEXT:    ldr q0,
+; GPR-NEXT:    str q0, [x0]
+; GPR-NEXT:    ret
+;
+; NEON-LABEL: memset_16_const_128:
+; NEON:       // %bb.0:
+; NEON-NEXT:    movi v0.16b, #128
+; NEON-NEXT:    str q0, [x0]
+; NEON-NEXT:    ret
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 128, i64 16, i1 0)
+  ret void
+}
+
+; /////////////////////////////////////////////////////////////////////////////
+; Test cases for non-power-of-two lengths
+
+define void @memset_3(ptr %a, i8 %value) nounwind {
+; ALL-LABEL: memset_3:
+; ALL:       // %bb.0:
+; ALL-NEXT:    strb w1, [x0, #2]
+; ALL-NEXT:    bfi w1, w1, #8, #24
+; ALL-NEXT:    strh w1, [x0]
+; ALL-NEXT:    ret
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 3, i1 0)
+  ret void
+}
+
+define void @memset_5(ptr %a, i8 %value) nounwind {
+; GPR-LABEL: memset_5:
+; GPR:       // %bb.0:
+; GPR-NEXT:    mov w8, #16843009
+; GPR-NEXT:    and w9, w1, #0xff
+; GPR-NEXT:    mul w8, w9, w8
+; GPR-NEXT:    strb w8, [x0, #4]
+; GPR-NEXT:    str w8, [x0]
+; GPR-NEXT:    ret
+;
+; NEON-LABEL: memset_5:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mov w8, #16843009
+; NEON-NEXT:    and w9, w1, #0xff
+; NEON-NEXT:    mul w8, w9, w8
+; NEON-NEXT:    strb w8, [x0, #4]
+; NEON-NEXT:    str w8, [x0]
+; NEON-NEXT:    ret
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 5, i1 0)
+  ret void
+}
+
+define void @memset_6(ptr %a, i8 %value) nounwind {
+; GPR-LABEL: memset_6:
+; GPR:       // %bb.0:
+; GPR-NEXT:    mov w8, #16843009
+; GPR-NEXT:    and w9, w1, #0xff
+; GPR-NEXT:    mul w8, w9, w8
+; GPR-NEXT:    strh w8, [x0, #4]
+; GPR-NEXT:    str w8, [x0]
+; GPR-NEXT:    ret
+;
+; NEON-LABEL: memset_6:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mov w8, #16843009
+; NEON-NEXT:    and w9, w1, #0xff
+; NEON-NEXT:    mul w8, w9, w8
+; NEON-NEXT:    strh w8, [x0, #4]
+; NEON-NEXT:    str w8, [x0]
+; NEON-NEXT:    ret
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 6, i1 0)
+  ret void
+}
+
+define void @memset_7(ptr %a, i8 %value) nounwind {
+; GPR-LABEL: memset_7:
+; GPR:       // %bb.0:
+; GPR-NEXT:    mov w8, #16843009
+; GPR-NEXT:    and w9, w1, #0xff
+; GPR-NEXT:    mul w8, w9, w8
+; GPR-NEXT:    stur w8, [x0, #3]
+; GPR-NEXT:    str w8, [x0]
+; GPR-NEXT:    ret
+;
+; NEON-LABEL: memset_7:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mov w8, #16843009
+; NEON-NEXT:    and w9, w1, #0xff
+; NEON-NEXT:    mul w8, w9, w8
+; NEON-NEXT:    stur w8, [x0, #3]
+; NEON-NEXT:    str w8, [x0]
+; NEON-NEXT:    ret
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 7, i1 0)
+  ret void
+}
+
+define void @memset_12(ptr %a, i8 %value) nounwind {
+; GPR-LABEL: memset_12:
+; GPR:       // %bb.0:
+; GPR-NEXT:    // kill: def $w1 killed $w1 def $x1
+; GPR-NEXT:    mov x8, #72340172838076673
+; GPR-NEXT:    and x9, x1, #0xff
+; GPR-NEXT:    mul x8, x9, x8
+; GPR-NEXT:    str x8, [x0]
+; GPR-NEXT:    str w8, [x0, #8]
+; GPR-NEXT:    ret
+;
+; NEON-LABEL: memset_12:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $w1 killed $w1 def $x1
+; NEON-NEXT:    mov x8, #72340172838076673
+; NEON-NEXT:    and x9, x1, #0xff
+; NEON-NEXT:    mul x8, x9, x8
+; NEON-NEXT:    str x8, [x0]
+; NEON-NEXT:    str w8, [x0, #8]
+; NEON-NEXT:    ret
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 12, i1 0)
   ret void
 }
