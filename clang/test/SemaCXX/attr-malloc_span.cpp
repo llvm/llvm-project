@@ -20,7 +20,7 @@ struct DataMemberSpan {
 };
 
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class fields are not a supported combination}}
+// expected-note@+1 {{returned struct fields are not a supported combination}}
 DataMemberSpan returns_data_member_span(void) __attribute((malloc_span)) {
   return DataMemberSpan{};
 }
@@ -32,7 +32,7 @@ struct MemberFuncSpan {
 };
 
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class fields are not a supported combination}}
+// expected-note@+1 {{returned struct fields are not a supported combination}}
 MemberFuncSpan returns_member_func_span(void) __attribute((malloc_span)) {
   return MemberFuncSpan{};
 }
@@ -52,7 +52,7 @@ Pair<int*, int*> returns_templated_span2(void) __attribute((malloc_span)) { // n
 }
 
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class fields are not a supported combination for a span-like type}}
+// expected-note@+1 {{returned struct fields are not a supported combination for a span-like type}}
 Pair<int, int> returns_templated_span3(void) __attribute((malloc_span)) {
   return Pair<int, int>{};
 }
@@ -70,7 +70,7 @@ struct BadSpan {
 
 template <typename T>
 // expected-warning@+2 {{'malloc_span' attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class has 1 fields, expected 2}}
+// expected-note@+1 {{returned struct has 1 fields, expected 2}}
 T produce_span() __attribute((malloc_span)) {
   return T{};
 }
@@ -88,7 +88,7 @@ __attribute__((malloc_span)) auto trailing_return_type(int size)  -> GoodSpan { 
 
 template<typename T>
 // expected-warning@+2 {{'malloc_span' attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class has 1 fields, expected 2}}
+// expected-note@+1 {{returned struct has 1 fields, expected 2}}
 __attribute__((malloc_span)) auto templated_trailing_return_type()  -> T {
   return T{};
 }
@@ -104,7 +104,7 @@ __attribute((malloc_span)) auto trailing_return_temmplate_good(void) -> Pair<int
 }
 
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class fields are not a supported combination for a span-like type}}
+// expected-note@+1 {{returned struct fields are not a supported combination for a span-like type}}
 __attribute((malloc_span)) auto trailing_return_temmplate_bad(void) -> Pair<int, int> {
   return Pair<int, int>{};
 }
@@ -129,5 +129,5 @@ struct BadChildSpan : EmptyBase, NonEmptyBase {
 };
 
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class inherits from a non-empty base}}
+// expected-note@+1 {{returned class inherits from a non-empty base}}
 __attribute((malloc_span)) BadChildSpan return_span_with_bad_base(void);

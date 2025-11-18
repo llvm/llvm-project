@@ -32,7 +32,7 @@ typedef struct incomplete_span incomplete_span;
 incomplete_span returns_incomplete_span (void) __attribute((malloc_span));
 
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned type is not a struct/class type}}
+// expected-note@+1 {{returned type is not a struct type}}
 int *returns_int_ptr  (void) __attribute((malloc_span));
 
 typedef struct {
@@ -41,7 +41,7 @@ typedef struct {
   size_t n2;
 } too_long_span;
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class has 3 fields, expected 2}}
+// expected-note@+1 {{returned struct has 3 fields, expected 2}}
 too_long_span  returns_too_long_span  (void) __attribute((malloc_span));
 
 // Function pointers are not allowed.
@@ -50,7 +50,7 @@ typedef struct {
   size_t n;
 } func_span;
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned struct/class fields are not a supported combination}}
+// expected-note@+1 {{returned struct fields are not a supported combination}}
 func_span  returns_func_span  (void) __attribute((malloc_span));
 
 // Integer should not be an enum.
@@ -60,7 +60,7 @@ typedef struct {
   enum some_enum field;
 } enum_span;
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{field #2 expected to be an integer}}
+// expected-note@+1 {{2nd field is expected to be an integer}}
 enum_span  returns_enum_span  (void) __attribute((malloc_span));
 
 // Bit integers are also not supported.
@@ -69,7 +69,7 @@ typedef struct {
   _BitInt(16) n;
 } bit_span;
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{field #2 expected to be an integer}}
+// expected-note@+1 {{2nd field is expected to be an integer}}
 bit_span  returns_bit_span  (void) __attribute((malloc_span));
 
 // Integer must be at least as big as int.
@@ -78,5 +78,5 @@ typedef struct {
   short n;
 } short_span;
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{integer field #2 of span-like type is not wide enough (minimum width: 32)}}
+// expected-note@+1 {{2nd field of span-like type is not a wide enough integer (minimum width: 32)}}
 short_span  returns_short_span  (void) __attribute((malloc_span));
