@@ -4619,7 +4619,8 @@ def INT_PTX_SREG_WARPSIZE :
 // the fields commonly used to implement specific PTX instruction -- register
 // types and names, constraints, parts of assembly, etc.
 class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "">
-      : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type, !eq(op, "mma.sp")> {
+      : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type,
+                  !or(!eq(op, "mma.sp"), !eq(op, "mma.sp.block_scale"))> {
   // NVPTX register types used to carry fragment data.
   NVPTXRegClass regclass = !cond(
     !eq(ptx_elt_type, "e4m3") : B32,
@@ -4659,6 +4660,9 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
   // longer the case, we can concat all per-fragment predicates to enforce that
   // all fragments of the instruction are viable.
   list<Predicate> Predicates = !cond(
+    !or(!eq(op, "mma.block_scale"),
+        !eq(op, "mma.sp.block_scale")) : [hasSM120a, hasPTX<88>],
+
     !or(!eq(ptx_elt_type, "e3m2"),
         !eq(ptx_elt_type, "e2m3"),
         !eq(ptx_elt_type, "e2m1"),
@@ -4671,9 +4675,9 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
     !or(!eq(ptx_elt_type, "e4m3"),
         !eq(ptx_elt_type, "e5m2")) : [hasSM<89>, hasPTX<84>],
 
-    !and(!eq(op, "mma.sp"),
+    !and(isSparse,
          !ne(metadata, "sp")) : [hasSM<80>, hasPTX<85>],
-    !eq(op, "mma.sp") : [hasSM<80>, hasPTX<71>],
+    isSparse : [hasSM<80>, hasPTX<71>],
 
     // fp16 -> fp16/fp32 @ m16n16k16
     !and(!eq(geom, "m16n16k16"),
@@ -5027,7 +5031,7 @@ class MMA_BLOCK_SCALE<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                       WMMA_REGINFO FragC, WMMA_REGINFO FragD,
                       string Kind, string SType, string ScaleVecSize>
   : WMMA_INSTR<MMA_BLOCK_SCALE_NAME<Kind, SType, ScaleVecSize,
-                                    FragA, FragB, FragC, FragD>.record,
+                                    FragA, FragB, FragC, FragD>.record_name,
                                     [FragA.Ins, FragB.Ins, FragC.Ins,
                                      (ins B32:$scale_a, B16:$byte_id_a,
                                           B16:$thread_id_a, B32:$scale_b,
@@ -5144,7 +5148,7 @@ class MMA_SP_BLOCK_SCALE<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                          WMMA_REGINFO FragC, WMMA_REGINFO FragD,
                          string Kind, string SType, string ScaleVecSize>
   : WMMA_INSTR<MMA_SP_BLOCK_SCALE_NAME<Kind, SType, ScaleVecSize,
-                                       FragA, FragB, FragC, FragD>.record,
+                                       FragA, FragB, FragC, FragD>.record_name,
                [FragA.Ins, FragB.Ins, FragC.Ins,
                 (ins B32:$metadata, i32imm:$selector,
                      B32:$scale_a, B16:$byte_id_a, B16:$thread_id_a,
@@ -5192,10 +5196,10 @@ defset list<WMMA_INSTR> MMA_SP_BLOCK_SCALEs = {
       foreach stype = ["ue8m0", "ue4m3"] in {
       foreach op = NVVM_MMA_OPS.all_mma_sp_block_scale_ops in {
         if NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
-          def : MMA_SP_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.sp", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[1], "mma.sp", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[2], "mma.sp", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[3], "mma.sp", "sp::ordered_metadata", kind>,
+          def : MMA_SP_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[1], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[2], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[3], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
                        kind, stype, scale_vec_size>;
         }
       } // op

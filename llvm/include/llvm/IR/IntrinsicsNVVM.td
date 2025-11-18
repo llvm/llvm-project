@@ -178,7 +178,8 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType, bit IsSparse = fals
   string gft = Geom#":"#Frag#":"#ptx_elt_type;
   string gf = Geom#":"#Frag;
   string ft = frag#":"#ptx_elt_type;
-  list<LLVMType> regs = !if(!eq(IsSparse, true),
+  bit isSparse = IsSparse;
+  list<LLVMType> regs = !if(!eq(isSparse, true),
     !cond(
       // mma sparse ops use other fragments for some arguments
       !eq(gft,"m16n8k16:a:bf16") : !listsplat(llvm_i32_ty, 2),

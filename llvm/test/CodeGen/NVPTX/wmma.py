@@ -1246,7 +1246,7 @@ define ${ret_ty} @test_${function}(
 
 
 def gen_mma_block_scale_tests():
-    if not (ptx_version >= 87 and gpu_arch >= 120 and aa):
+    if not (ptx_version >= 88 and gpu_arch >= 120 and aa):
         return []
 
     mma_block_scale_intrinsic_template = "llvm.nvvm.mma.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
@@ -1646,7 +1646,7 @@ define ${ret_ty} @test_${function}_${selector}(
 
 
 def gen_mma_sp_block_scale_tests():
-    if not (ptx_version >= 87 and gpu_arch >= 120 and aa):
+    if not (ptx_version >= 88 and gpu_arch >= 120 and aa):
         return []
 
     mma_sp_block_scale_intrinsic_template = "llvm.nvvm.mma.sp.ordered.metadata.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
