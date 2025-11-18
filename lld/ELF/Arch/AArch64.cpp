@@ -762,7 +762,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     relocateNoSym(loc, R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC, val);
     break;
   default:
-    llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
+    llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
   }
 }
 
