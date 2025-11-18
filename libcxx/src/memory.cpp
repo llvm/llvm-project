@@ -132,4 +132,12 @@ __sp_mut& __get_sp_mut(const void* p) {
 
 #endif // _LIBCPP_HAS_THREADS
 
+#if !defined(_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN)
+
+_LIBCPP_EXPORTED_FROM_ABI void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
+  return __align_inline::align(alignment, size, ptr, space);
+}
+
+#endif // _LIBCPP_ABI_DO_NOT_EXPORT_ALIGN
+
 _LIBCPP_END_NAMESPACE_STD

@@ -104,12 +104,6 @@
 #  endif
 #endif
 
-// The PE/COFF format reports a linking error when encountering multiple symbol definitions where at least one is a
-// strong symbol. So we can't inline a function that also has a non-inline definition visible.
-#if defined(_LIBCPP_OBJECT_FORMAT_COFF)
-#  define _LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR
-#endif
-
 // TODO(LLVM 22): Remove this check
 #if defined(_LIBCPP_ABI_NO_ITERATOR_BASES) && !defined(_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER)
 #  ifndef _LIBCPP_ONLY_NO_ITERATOR_BASES

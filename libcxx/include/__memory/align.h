@@ -19,12 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR) && !defined(_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN)
-
-_LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
-
-#else
-
+inline namespace __align_inline {
 _LIBCPP_HIDE_FROM_ABI inline void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   void* __r = nullptr;
   if (__sz <= __space) {
@@ -40,7 +35,7 @@ _LIBCPP_HIDE_FROM_ABI inline void* align(size_t __align, size_t __sz, void*& __p
   return __r;
 }
 
-#endif
+} // namespace __align_inline
 
 _LIBCPP_END_NAMESPACE_STD
 
