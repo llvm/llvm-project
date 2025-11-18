@@ -69,6 +69,12 @@ tablegen("AMDGPUGenRegisterBank") {
   td_file = "AMDGPU.td"
 }
 
+tablegen("AMDGPUGenSDNodeInfo") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "AMDGPU.td"
+}
+
 tablegen("InstCombineTables") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [ "-gen-searchable-tables" ]
@@ -103,6 +109,7 @@ static_library("LLVMAMDGPUCodeGen") {
     ":AMDGPUGenPreLegalizeGICombiner",
     ":AMDGPUGenRegBankGICombiner",
     ":AMDGPUGenRegisterBank",
+    ":AMDGPUGenSDNodeInfo",
     ":InstCombineTables",
     ":R600GenCallingConv",
     ":R600GenDAGISel",
@@ -161,6 +168,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPULibCalls.cpp",
     "AMDGPULibFunc.cpp",
     "AMDGPULowerBufferFatPointers.cpp",
+    "AMDGPULowerExecSync.cpp",
     "AMDGPULowerIntrinsics.cpp",
     "AMDGPULowerKernelArguments.cpp",
     "AMDGPULowerKernelAttributes.cpp",

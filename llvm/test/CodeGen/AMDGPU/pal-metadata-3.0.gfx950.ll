@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1250 <%s | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx950 <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
-; CHECK: ; TotalNumSgprs: 4
-; CHECK: ; NumVgprs: 2
+; CHECK: ; TotalNumSgprs: 6
+; CHECK: ; NumVgprs: 1
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
 ; CHECK-NEXT: amdpal.pipelines:
@@ -51,20 +51,21 @@
 ; CHECK-NEXT:        .sample_coverage_ena: false
 ; CHECK-NEXT:    .hardware_stages:
 ; CHECK-NEXT:      .cs:
+; CHECK-NEXT:	     .agpr_count:     0
 ; CHECK-NEXT:        .checksum_value: 0x9444d7d0
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_cs
 ; CHECK-NEXT:        .entry_point_symbol:    _amdgpu_cs_main
 ; CHECK-NEXT:        .excp_en:        0
 ; CHECK-NEXT:        .float_mode:     0xc0
-; CHECK-NEXT:        .forward_progress: true
-; GFX11-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .forward_progress: false
+; CHECK-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .image_op:       false
 ; CHECK-NEXT:        .lds_size:       0
-; CHECK-NEXT:        .mem_ordered:    true
+; CHECK-NEXT:        .mem_ordered:    false
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x4
+; CHECK-NEXT:        .sgpr_count:     0xa
 ; CHECK-NEXT:        .sgpr_limit:     0x6a
 ; CHECK-NEXT:        .threadgroup_dimensions:
 ; CHECK-NEXT:          - 0x1
@@ -110,39 +111,45 @@
 ; CHECK-NEXT:        .wavefront_size: 0x20
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .gs:
+; CHECK-NEXT:        .agpr_count:     0
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_gs
 ; CHECK-NEXT:        .entry_point_symbol:    gs_shader
-; CHECK-NEXT:        .forward_progress: true
-; CHECK-NEXT:      .lds_size:       0x800
-; CHECK-NEXT:        .mem_ordered:    true
+; CHECK-NEXT:        .forward_progress: false
+; CHECK-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .lds_size:       0x500
+; CHECK-NEXT:        .mem_ordered:    false
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x6
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .hs:
+; CHECK-NEXT:        .agpr_count:     0
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_hs
 ; CHECK-NEXT:        .entry_point_symbol:    hs_shader
-; CHECK-NEXT:        .forward_progress: true
-; CHECK-NEXT:        .lds_size:       0x1000
-; CHECK-NEXT:        .mem_ordered:    true
+; CHECK-NEXT:        .forward_progress: false
+; CHECK-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .lds_size:       0xa00
+; CHECK-NEXT:        .mem_ordered:    false
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x6
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .ps:
+; CHECK-NEXT:        .agpr_count:     0
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_ps
 ; CHECK-NEXT:        .entry_point_symbol:    ps_shader
-; CHECK-NEXT:        .forward_progress: true
+; CHECK-NEXT:        .forward_progress: false
+; CHECK-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0
-; CHECK-NEXT:        .mem_ordered:    true
+; CHECK-NEXT:        .mem_ordered:    false
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x6
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK:    .registers:      {}
@@ -152,7 +159,7 @@
 ; CHECK-NEXT:...
 ; CHECK-NEXT:        .end_amdgpu_pal_metadata
 
-define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg1, i32 %arg2) #0 !lgc.shaderstage !1 {
+define amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg1, i32 %arg2) #0 !lgc.shaderstage !1 {
 .entry:
   %i = call i64 @llvm.amdgcn.s.getpc()
   %i1 = and i64 %i, -4294967296
@@ -169,13 +176,13 @@ define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg1, i32 %arg2) #0 
   ret void
 }
 
-define dllexport amdgpu_ps void @ps_shader() #1 {
+define amdgpu_ps void @ps_shader() #1 {
   ret void
 }
 
 @LDS.GS = external addrspace(3) global [1 x i32], align 4
 
-define dllexport amdgpu_gs void @gs_shader() #2 {
+define amdgpu_gs void @gs_shader() {
   %ptr = getelementptr i32, ptr addrspace(3) @LDS.GS, i32 0
   store i32 0, ptr addrspace(3) %ptr, align 4
   ret void
@@ -183,7 +190,7 @@ define dllexport amdgpu_gs void @gs_shader() #2 {
 
 @LDS.HS = external addrspace(3) global [1024 x i32], align 4
 
-define dllexport amdgpu_hs void @hs_shader() #2 {
+define amdgpu_hs void @hs_shader() {
   %ptr = getelementptr i32, ptr addrspace(3) @LDS.HS, i32 0
   store i32 0, ptr addrspace(3) %ptr, align 4
   ret void
