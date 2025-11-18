@@ -879,6 +879,7 @@ TEST_F(TestArm64InstEmulation, TestPrologueStartsWithStrD8) {
   // The function uses one floating point register and spills it with
   // 'str d8, [sp, #-0x20]!'.
 
+  // clang-format off
   uint8_t data[] = {
       // prologue
       0xe8, 0x0f, 0x1e, 0xfc, //  0: fc1e0fe8    str  d8, [sp, #-0x20]!
@@ -892,6 +893,7 @@ TEST_F(TestArm64InstEmulation, TestPrologueStartsWithStrD8) {
       0xe8, 0x07, 0x42, 0xfc, // 24: fc4207e8    ldr  d8, [sp], #0x20
       0xc0, 0x03, 0x5f, 0xd6, // 28: d65f03c0    ret
   };
+  // clang-format on
 
   // UnwindPlan we expect:
   //   0: CFA=sp +0 =>
