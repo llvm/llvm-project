@@ -71,9 +71,11 @@ Potentially Breaking Changes
     <clang-tidy/checks/bugprone/signed-char-misuse>`
   
 - Modified the custom message format of :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>` by hiding the default suffix
-  when the reason starts with the character `>` in the `CustomFunctions` option.
-  The warning locations are not changed, but the message is different.
+  <clang-tidy/checks/bugprone/unsafe-functions>` by assigning a special meaning
+  to the character ``>`` at the start of the value of the option
+  ``CustomFunctions``. If the option value starts with ``>``, then the
+  replacement suggestion part of the message (which would be included by
+  default) is omitted. (This does not change the warning locations.)
 
 Improvements to clangd
 ----------------------
