@@ -707,6 +707,12 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["sad-insts"] = true;
     Features["qsad-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
+    Features["image-insts"] = true;
+    Features["s-memtime-inst"] = true;
+    Features["gws"] = true;
+    Features["atomic-fmin-fmax-global-f32"] = true;
+    Features["atomic-fmin-fmax-global-f64"] = true;
+    Features["wavefrontsize64"] = true;
     break;
   case GK_GFX602:
   case GK_GFX601:
