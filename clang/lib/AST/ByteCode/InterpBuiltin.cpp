@@ -3361,7 +3361,7 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ia32_cvt_mask(InterpState &S, CodePtr OpPC,
+static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
                                           const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 1);
 
@@ -4790,7 +4790,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvtq2mask128:
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
-    return interp__builtin_ia32_cvt_mask(S, OpPC, Call, BuiltinID);
+    return interp__builtin_ia32_cvt_vec2mask(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpw128_mask:
