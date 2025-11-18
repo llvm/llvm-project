@@ -33,11 +33,9 @@ static bool hasSameParameters(const FunctionDecl *Func1,
       });
 }
 
-static
-std::pair<const FunctionDecl *, const NamespaceDecl *>
-findShadowedInNamespace(
-    const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
-    const std::string &GlobalFuncName) {
+static std::pair<const FunctionDecl *, const NamespaceDecl *>
+findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
+                        const std::string &GlobalFuncName) {
 
   if (NS->isAnonymousNamespace())
     return {nullptr, nullptr};
@@ -69,9 +67,13 @@ findShadowedInNamespace(
 }
 
 void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(functionDecl(isDefinition(), decl(hasDeclContext(translationUnitDecl())), unless(
-    anyOf(isImplicit(), isVariadic(), isMain(), isStaticStorageClass(), ast_matchers::isTemplateInstantiation())
-  )).bind("func"), this);
+  Finder->addMatcher(
+      functionDecl(isDefinition(), decl(hasDeclContext(translationUnitDecl())),
+                   unless(anyOf(isImplicit(), isVariadic(), isMain(),
+                                isStaticStorageClass(),
+                                ast_matchers::isTemplateInstantiation())))
+          .bind("func"),
+      this);
 }
 
 void ShadowedNamespaceFunctionCheck::check(
