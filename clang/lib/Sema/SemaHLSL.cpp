@@ -816,9 +816,11 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   return true;
 }
 
-bool SemaHLSL::determineActiveSemantic(
-    FunctionDecl *FD, DeclaratorDecl *OutputDecl, DeclaratorDecl *D,
-    SemanticInfo &ActiveSemantic, llvm::StringSet<> &UsedSemantics) {
+bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
+                                       DeclaratorDecl *OutputDecl,
+                                       DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic,
+                                       llvm::StringSet<> &UsedSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -836,8 +838,7 @@ bool SemaHLSL::determineActiveSemantic(
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!determineActiveSemantic(FD, OutputDecl, Field, Info,
-                                 UsedSemantics)) {
+    if (!determineActiveSemantic(FD, OutputDecl, Field, Info, UsedSemantics)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
