@@ -139,7 +139,8 @@ RangeSelector transformer::node(std::string ID) {
             (Node->get<Stmt>() != nullptr && Node->get<Expr>() == nullptr))
                ? tooling::getExtendedRange(*Node, tok::TokenKind::semi,
                                            *Result.Context)
-               : CharSourceRange::getTokenRange(Node->getSourceRange(true));
+               : CharSourceRange::getTokenRange(
+                     Node->getSourceRange(/*IncludeQualifier=*/true));
   };
 }
 
