@@ -13,6 +13,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
+#include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -20,6 +21,42 @@
 #include <memory>
 
 namespace lldb_private::dil {
+
+lldb::ValueObjectSP
+GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
+                           lldb::DynamicValueType use_dynamic,
+                           bool use_synthetic) {
+  Status error;
+  if (!in_valobj_sp) {
+    error = Status("invalid value object");
+    return in_valobj_sp;
+  }
+  lldb::ValueObjectSP value_sp = in_valobj_sp;
+  Target *target = value_sp->GetTargetSP().get();
+  // If this ValueObject holds an error, then it is valuable for that.
+  if (value_sp->GetError().Fail())
+    return value_sp;
+
+  if (!target)
+    return lldb::ValueObjectSP();
+
+  if (use_dynamic != lldb::eNoDynamicValues) {
+    lldb::ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(use_dynamic);
+    if (dynamic_sp)
+      value_sp = dynamic_sp;
+  }
+
+  if (use_synthetic) {
+    lldb::ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
+    if (synthetic_sp)
+      value_sp = synthetic_sp;
+  }
+
+  if (!value_sp)
+    error = Status("invalid value object");
+
+  return value_sp;
+}
 
 static lldb::VariableSP DILFindVariable(ConstString name,
                                         VariableList &variable_list) {
@@ -499,16 +536,6 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
   return child_valobj_sp;
 }
 
-static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
-  SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
-}
-
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
                                  lldb::BasicType basic_type) {
   if (type_system)
@@ -606,6 +633,207 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BooleanLiteralNode *node) {
   bool value = node->GetValue();
   return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
+}
+
+llvm::Expected<CompilerType> Interpreter::VerifyCStyleCastType(
+    lldb::ValueObjectSP &operand, CompilerType &op_type,
+    CompilerType target_type, CastPromoKind &promo_kind,
+    CStyleCastKind &cast_kind, int location) {
+
+  promo_kind = CastPromoKind::eNone;
+  if (op_type.IsReferenceType())
+    op_type = op_type.GetNonReferenceType();
+  if (target_type.IsScalarType()) {
+    if (op_type.IsArrayType()) {
+      // Do array-to-pointer conversion.
+      CompilerType deref_type =
+          op_type.IsReferenceType() ? op_type.GetNonReferenceType() : op_type;
+      CompilerType result_type =
+          deref_type.GetArrayElementType(nullptr).GetPointerType();
+      uint64_t addr = operand->GetLoadAddress();
+      llvm::StringRef name = operand->GetName().GetStringRef();
+      operand = ValueObject::CreateValueObjectFromAddress(
+          name, addr, m_exe_ctx_scope, result_type, /*do_deref=*/false);
+      op_type = result_type;
+    }
+
+    if (op_type.IsPointerType() || op_type.IsNullPtrType()) {
+      // C-style cast from pointer to float/double is not allowed.
+      if (target_type.IsFloat()) {
+        std::string errMsg = llvm::formatv(
+            "C-style cast from {0} to {1} is not allowed",
+            op_type.TypeDescription(), target_type.TypeDescription());
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, std::move(errMsg), location,
+            op_type.TypeDescription().length());
+      }
+      // Casting pointer to bool is valid. Otherwise check if the result type
+      // is at least as big as the pointer size.
+      uint64_t type_byte_size = 0;
+      uint64_t rhs_type_byte_size = 0;
+      if (auto temp = target_type.GetByteSize(m_exe_ctx_scope.get()))
+        type_byte_size = *temp;
+      if (auto temp = op_type.GetByteSize(m_exe_ctx_scope.get()))
+        rhs_type_byte_size = *temp;
+      if (!target_type.IsBoolean() && type_byte_size < rhs_type_byte_size) {
+        std::string errMsg = llvm::formatv(
+            "cast from pointer to smaller type {0} loses information",
+            target_type.TypeDescription());
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, std::move(errMsg), location,
+            op_type.TypeDescription().length());
+      }
+    } else if (!op_type.IsScalarType() && !op_type.IsEnumerationType()) {
+      // Otherwise accept only arithmetic types and enums.
+      std::string errMsg = llvm::formatv(
+          "cannot convert {0} to {1} without a conversion operator",
+          op_type.TypeDescription(), target_type.TypeDescription());
+
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, std::move(errMsg), location,
+          op_type.TypeDescription().length());
+    }
+    promo_kind = CastPromoKind::eArithmetic;
+  } else if (target_type.IsEnumerationType()) {
+    // Cast to enum type.
+    if (!op_type.IsScalarType() && !op_type.IsEnumerationType()) {
+      std::string errMsg = llvm::formatv(
+          "C-style cast from {0} to {1} is not allowed",
+          op_type.TypeDescription(), target_type.TypeDescription());
+
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, std::move(errMsg), location,
+          op_type.TypeDescription().length());
+    }
+    cast_kind = CStyleCastKind::eEnumeration;
+
+  } else if (target_type.IsPointerType()) {
+    if (!op_type.IsInteger() && !op_type.IsEnumerationType() &&
+        !op_type.IsArrayType() && !op_type.IsPointerType() &&
+        !op_type.IsNullPtrType()) {
+      std::string errMsg = llvm::formatv(
+          "cannot cast from type {0} to pointer type {1}",
+          op_type.TypeDescription(), target_type.TypeDescription());
+
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, std::move(errMsg), location,
+          op_type.TypeDescription().length());
+    }
+    promo_kind = CastPromoKind::ePointer;
+
+  } else if (target_type.IsNullPtrType()) {
+    // Cast to nullptr type.
+    bool is_signed;
+    if (!target_type.IsNullPtrType() &&
+        (!operand->IsIntegerType(is_signed) ||
+         (is_signed && operand->GetValueAsSigned(0) != 0) ||
+         (!is_signed && operand->GetValueAsUnsigned(0) != 0))) {
+      std::string errMsg = llvm::formatv(
+          "C-style cast from {0} to {1} is not allowed",
+          op_type.TypeDescription(), target_type.TypeDescription());
+
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, std::move(errMsg), location,
+          op_type.TypeDescription().length());
+    }
+    cast_kind = CStyleCastKind::eNullptr;
+
+  } else if (target_type.IsReferenceType()) {
+    // Cast to a reference type.
+    cast_kind = CStyleCastKind::eReference;
+  } else {
+    // Unsupported cast.
+    std::string errMsg =
+        llvm::formatv("casting of {0} to {1} is not implemented yet",
+                      op_type.TypeDescription(), target_type.TypeDescription());
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, std::move(errMsg), location,
+        op_type.TypeDescription().length());
+  }
+
+  return target_type;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const CStyleCastNode *node) {
+  auto operand_or_err = Evaluate(node->GetOperand());
+  if (!operand_or_err)
+    return operand_or_err;
+
+  lldb::ValueObjectSP operand = *operand_or_err;
+  CompilerType op_type = operand->GetCompilerType();
+  CStyleCastKind cast_kind = CStyleCastKind::eNone;
+  CastPromoKind promo_kind = CastPromoKind::eNone;
+
+  auto type_or_err =
+      VerifyCStyleCastType(operand, op_type, node->GetType(), promo_kind,
+                           cast_kind, node->GetLocation());
+  if (!type_or_err)
+    return type_or_err.takeError();
+
+  CompilerType target_type = *type_or_err;
+  if (op_type.IsReferenceType()) {
+    Status error;
+    operand = operand->Dereference(error);
+    if (error.Fail())
+      return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
+                                                  node->GetLocation());
+  }
+
+  switch (cast_kind) {
+  case CStyleCastKind::eEnumeration: {
+    if (op_type.IsFloat() || op_type.IsInteger() || op_type.IsEnumerationType())
+      return operand->CastToEnumType(target_type);
+
+    std::string errMsg =
+        "invalid ast: operand is not convertible to enumeration type";
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                node->GetLocation());
+  }
+  case CStyleCastKind::eNullptr: {
+    return ValueObject::CreateValueObjectFromNullptr(m_target, target_type,
+                                                     "result");
+  }
+  case CStyleCastKind::eReference: {
+    lldb::ValueObjectSP operand_sp(
+        GetDynamicOrSyntheticValue(operand, m_use_dynamic, m_use_synthetic));
+    return lldb::ValueObjectSP(
+        operand_sp->Cast(target_type.GetNonReferenceType()));
+  }
+  case CStyleCastKind::eNone: {
+    switch (promo_kind) {
+    case CastPromoKind::eArithmetic: {
+      if (op_type.IsPointerType() || op_type.IsNullPtrType() ||
+          op_type.IsScalarType() || op_type.IsEnumerationType()) {
+        return operand->CastToBasicType(target_type);
+      }
+
+      std::string errMsg =
+          "invalid ast: operand is not convertible to arithmetic type";
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                  node->GetLocation());
+    }
+    case CastPromoKind::ePointer: {
+      uint64_t addr =
+          op_type.IsArrayType()
+              ? operand->GetLoadAddress()
+              : (op_type.IsSigned() ? operand->GetValueAsSigned(0)
+                                    : operand->GetValueAsUnsigned(0));
+      llvm::StringRef name = "result";
+      ExecutionContext exe_ctx(m_target.get(), false);
+      return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                       target_type,
+                                                       /* do_deref */ false);
+    }
+    case CastPromoKind::eNone: {
+      return lldb::ValueObjectSP();
+    }
+    } // switch promo_kind
+  } // case CStyleCastKind::eNone
+  } // switch cast_kind
+  std::string errMsg = "invalid ast: unexpected c-style cast kind";
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              node->GetLocation());
 }
 
 } // namespace lldb_private::dil

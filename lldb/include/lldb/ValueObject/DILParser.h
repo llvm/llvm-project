@@ -10,6 +10,7 @@
 #define LLDB_VALUEOBJECT_DILPARSER_H
 
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -30,6 +31,9 @@ enum class ErrorCode : unsigned char {
   kUndeclaredIdentifier,
   kUnknown,
 };
+
+llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
 
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
@@ -100,6 +104,15 @@ private:
   ASTNodeUP ParseIntegerLiteral();
   ASTNodeUP ParseFloatingPointLiteral();
   ASTNodeUP ParseBooleanLiteral();
+
+  ASTNodeUP ParseCastExpression();
+  std::optional<CompilerType> ParseBuiltinType();
+  std::optional<CompilerType> ParseTypeId();
+  void ParseTypeSpecifierSeq(std::string &type_name);
+  bool ParseTypeSpecifier(std::string &user_type_name);
+  std::string ParseTypeName();
+  CompilerType ResolveTypeDeclarators(CompilerType type,
+                                      const std::vector<Token> &ptr_operators);
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 

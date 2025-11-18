@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILParser.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
@@ -40,6 +42,72 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   m_detail.severity = lldb::eSeverityError;
   m_detail.message = message;
   m_detail.rendered = std::move(rendered_msg);
+}
+
+llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+}
+
+CompilerType
+ResolveTypeByName(const std::string &name,
+                  std::shared_ptr<ExecutionContextScope> ctx_scope) {
+  // Internally types don't have global scope qualifier in their names and
+  // LLDB doesn't support queries with it too.
+  llvm::StringRef name_ref(name);
+
+  if (name_ref.starts_with("::"))
+    name_ref = name_ref.drop_front(2);
+
+  std::vector<CompilerType> result_type_list;
+  lldb::TargetSP target_sp = ctx_scope->CalculateTarget();
+  const char *type_name = name_ref.data();
+  if (type_name && type_name[0] && target_sp) {
+    ModuleList &images = target_sp->GetImages();
+    ConstString const_type_name(type_name);
+    TypeQuery query(type_name);
+    TypeResults results;
+    images.FindTypes(nullptr, query, results);
+    for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types())
+      if (type_sp)
+        result_type_list.push_back(type_sp->GetFullCompilerType());
+
+    if (auto process_sp = target_sp->GetProcessSP()) {
+      for (auto *runtime : process_sp->GetLanguageRuntimes()) {
+        if (auto *vendor = runtime->GetDeclVendor()) {
+          auto types = vendor->FindTypes(const_type_name, UINT32_MAX);
+          for (auto type : types)
+            result_type_list.push_back(type);
+        }
+      }
+    }
+  }
+
+  // We've found multiple types, try finding the "correct" one.
+  CompilerType full_match;
+  std::vector<CompilerType> partial_matches;
+
+  for (uint32_t i = 0; i < result_type_list.size(); ++i) {
+    CompilerType type = result_type_list[i];
+    llvm::StringRef type_name_ref = type.GetTypeName().GetStringRef();
+
+    if (type_name_ref == name_ref && type.IsValid())
+      return type;
+
+    if (type_name_ref.ends_with(name_ref))
+      partial_matches.push_back(type);
+  }
+
+  // If we have partial matches, pick a "random" one.
+  if (partial_matches.size() > 0)
+    return partial_matches.back();
+
+  return {};
 }
 
 llvm::Expected<ASTNodeUP>
@@ -80,15 +148,62 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    unary_expression
+//    cast_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseCastExpression(); }
+
+// Parse a cast_expression.
+//
+// cast_expression:
+//   unary_expression
+//   "(" type_id ")" cast_expression
+
+ASTNodeUP DILParser::ParseCastExpression() {
+  // This can be a C-style cast, try parsing the contents as a type declaration.
+  if (CurToken().Is(Token::l_paren)) {
+    Token token = CurToken();
+    uint32_t loc = token.GetLocation();
+
+    // Enable lexer backtracking, so that we can rollback in case it's not
+    // actually a type declaration.
+
+    // Start tentative parsing (save token location/idx, for possible rollback).
+    uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+
+    // Consume the token only after enabling the backtracking.
+    m_dil_lexer.Advance();
+
+    // Try parsing the type declaration. If the returned value is not valid,
+    // then we should rollback and try parsing the expression.
+    auto type_id = ParseTypeId();
+    if (type_id) {
+      // Successfully parsed the type declaration. Commit the backtracked
+      // tokens and parse the cast_expression.
+
+      if (!type_id.value().IsValid())
+        return std::make_unique<ErrorNode>();
+
+      Expect(Token::r_paren);
+      m_dil_lexer.Advance();
+      auto rhs = ParseCastExpression();
+
+      return std::make_unique<CStyleCastNode>(
+          loc, type_id.value(), std::move(rhs), CStyleCastKind::eNone);
+    }
+
+    // Failed to parse the contents of the parentheses as a type declaration.
+    // Rollback the lexer and try parsing it as unary_expression.
+    TentativeParsingRollback(save_token_idx);
+  }
+
+  return ParseUnaryExpression();
+}
 
 // Parse an unary_expression.
 //
 //  unary_expression:
 //    postfix_expression
-//    unary_operator expression
+//    unary_operator cast_expression
 //
 //  unary_operator:
 //    "&"
@@ -99,7 +214,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
-    auto rhs = ParseExpression();
+    auto rhs = ParseCastExpression();
     switch (token.GetKind()) {
     case Token::star:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Deref,
@@ -274,6 +389,167 @@ std::string DILParser::ParseNestedNameSpecifier() {
   }
 }
 
+// Parse a built-in type
+//
+// A built-in type can be a single identifier or a space-separated
+// list of identifiers (e.g. "short" or "long long").
+std::optional<CompilerType> DILParser::ParseBuiltinType() {
+  std::string type_name = "";
+  uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+  bool first_word = true;
+  while (CurToken().GetKind() == Token::identifier) {
+    if (CurToken().GetSpelling() == "const" ||
+        CurToken().GetSpelling() == "volatile")
+      continue;
+    if (!first_word)
+      type_name.push_back(' ');
+    else
+      first_word = false;
+    type_name.append(CurToken().GetSpelling());
+    m_dil_lexer.Advance();
+  }
+
+  if (type_name.size() > 0) {
+    lldb::TargetSP target_sp = m_ctx_scope->CalculateTarget();
+    ConstString const_type_name(type_name.c_str());
+    for (auto type_system_sp : target_sp->GetScratchTypeSystems())
+      if (auto compiler_type =
+              type_system_sp->GetBuiltinTypeByName(const_type_name))
+        return compiler_type;
+  }
+
+  TentativeParsingRollback(save_token_idx);
+  return {};
+}
+
+std::optional<CompilerType> DILParser::ParseTypeId() {
+  CompilerType type;
+  auto maybe_builtin_type = ParseBuiltinType();
+  if (maybe_builtin_type) {
+    type = *maybe_builtin_type;
+  } else {
+    // Check to see if we have a user-defined type here.
+    // First build  up the user-defined type name.
+    std::string type_name;
+    ParseTypeSpecifierSeq(type_name);
+
+    if (type_name.size() == 0)
+      return {};
+    type = ResolveTypeByName(type_name, m_ctx_scope);
+    if (!type.IsValid())
+      return {};
+
+    // Same-name identifiers should be preferred over typenames.
+    if (LookupIdentifier(type_name, m_ctx_scope, m_use_dynamic))
+      // TODO: Make type accessible with 'class', 'struct' and 'union' keywords.
+      return {};
+
+    // Same-name identifiers should be preferred over typenames.
+    if (LookupGlobalIdentifier(type_name, m_ctx_scope,
+                               m_ctx_scope->CalculateTarget(), m_use_dynamic))
+      // TODO: Make type accessible with 'class', 'struct' and 'union' keywords
+      return {};
+  }
+
+  //
+  //  abstract_declarator:
+  //    ptr_operator [abstract_declarator]
+  //
+  std::vector<Token> ptr_operators;
+  while (CurToken().IsOneOf({Token::star, Token::amp})) {
+    Token tok = CurToken();
+    ptr_operators.push_back(std::move(tok));
+    m_dil_lexer.Advance();
+  }
+  type = ResolveTypeDeclarators(type, ptr_operators);
+
+  return type;
+}
+
+// Parse a type_specifier_seq.
+//
+//  type_specifier_seq:
+//    type_specifier [type_specifier_seq]
+//
+void DILParser::ParseTypeSpecifierSeq(std::string &type_name) {
+  while (true) {
+    bool type_specifier = ParseTypeSpecifier(type_name);
+    if (!type_specifier) {
+      break;
+    }
+  }
+}
+
+// Parse a type_specifier.
+//
+//  type_specifier:
+//    ["::"] [nested_name_specifier] type_name
+//
+// Returns TRUE if a type_specifier was successfully parsed at this location.
+//
+bool DILParser::ParseTypeSpecifier(std::string &user_type_name) {
+  // The type_specifier must be a user-defined type. Try parsing a
+  // simple_type_specifier.
+  {
+    // Try parsing optional global scope operator.
+    bool global_scope = false;
+    if (CurToken().Is(Token::coloncolon)) {
+      global_scope = true;
+      m_dil_lexer.Advance();
+    }
+
+    // uint32_t loc = CurToken().GetLocation();
+
+    // Try parsing optional nested_name_specifier.
+    auto nested_name_specifier = ParseNestedNameSpecifier();
+
+    // Try parsing required type_name.
+    auto type_name = ParseTypeName();
+
+    // If there is a type_name, then this is indeed a simple_type_specifier.
+    // Global and qualified (namespace/class) scopes can be empty, since they're
+    // optional. In this case type_name is type we're looking for.
+    if (!type_name.empty()) {
+      // User-defined typenames can't be combined with builtin keywords.
+      user_type_name = llvm::formatv("{0}{1}{2}", global_scope ? "::" : "",
+                                     nested_name_specifier, type_name);
+      return true;
+    }
+  }
+
+  // No type_specifier was found here.
+  return false;
+}
+
+// Parse a type_name.
+//
+//  type_name:
+//    class_name
+//    enum_name
+//    typedef_name
+//
+//  class_name
+//    identifier
+//
+//  enum_name
+//    identifier
+//
+//  typedef_name
+//    identifier
+//
+std::string DILParser::ParseTypeName() {
+  // Typename always starts with an identifier.
+  if (CurToken().IsNot(Token::identifier)) {
+    return "";
+  }
+
+  // Otherwise look for a class_name, enum_name or a typedef_name.
+  std::string identifier = CurToken().GetSpelling();
+  m_dil_lexer.Advance();
+
+  return identifier;
+}
+
 // Parse an id_expression.
 //
 //  id_expression:
@@ -337,6 +613,40 @@ std::string DILParser::ParseUnqualifiedId() {
   std::string identifier = CurToken().GetSpelling();
   m_dil_lexer.Advance();
   return identifier;
+}
+
+CompilerType
+DILParser::ResolveTypeDeclarators(CompilerType type,
+                                  const std::vector<Token> &ptr_operators) {
+  CompilerType bad_type;
+  // Resolve pointers/references.
+  for (Token tk : ptr_operators) {
+    uint32_t loc = tk.GetLocation();
+    if (tk.GetKind() == Token::star) {
+      // Pointers to reference types are forbidden.
+      if (type.IsReferenceType()) {
+        BailOut(llvm::formatv("'type name' declared as a pointer to a "
+                              "reference of type {0}",
+                              type.TypeDescription()),
+                loc, CurToken().GetSpelling().length());
+        return bad_type;
+      }
+      // Get pointer type for the base type: e.g. int* -> int**.
+      type = type.GetPointerType();
+
+    } else if (tk.GetKind() == Token::amp) {
+      // References to references are forbidden.
+      if (type.IsReferenceType()) {
+        BailOut("type name declared as a reference to a reference", loc,
+                CurToken().GetSpelling().length());
+        return bad_type;
+      }
+      // Get reference type for the base type: e.g. int -> int&.
+      type = type.GetLValueReferenceType();
+    }
+  }
+
+  return type;
 }
 
 // Parse an boolean_literal.
