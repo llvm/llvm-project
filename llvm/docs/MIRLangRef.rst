@@ -808,13 +808,12 @@ For an int eq predicate ``ICMP_EQ``, the syntax is:
    %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
 
 LaneMask Operands
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 A LaneMask operand contains a LaneBitmask struct representing the covering of a
-register with sub-registers. [That's what it says in LaneBitmask.h!] Instructions
-typically associate a LaneMask operand with one or more Register operands, and
-use it to represent sub-register granularity information like liveness for those
-associated Register operands.
+register with sub-registers. Instructions typically associate a LaneMask operand
+with one or more Register operands, and use it to represent sub-register
+granularity information like liveness for those associated Register operands.
 
 
 For example, the COPY_LANEMASK instruction uses this operand to copy only active

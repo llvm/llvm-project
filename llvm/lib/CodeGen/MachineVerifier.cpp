@@ -2458,8 +2458,8 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (SrcMaxLaneMask == LaneMask)
       report("COPY_LANEMASK cannot be used to do full copy", MI);
 
-    // If LaneMask is equal to OR greater than the SrcMaxLaneMask, it
-    // implies COPY_LANEMASK is attempting to read from the lanes that
+    // If LaneMask is greater than the SrcMaxLaneMask, it implies
+    // COPY_LANEMASK is attempting to read from the lanes that
     // don't exists in the source register.
     if (SrcMaxLaneMask < LaneMask)
       report("COPY_LANEMASK attempts to read from the lanes that "
