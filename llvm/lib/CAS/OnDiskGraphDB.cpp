@@ -938,8 +938,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
       // Check offset is a postive value, and large enough to hold the
       // header for the data record.
       if (D.Offset.get() <= 0 ||
-          (uint64_t)D.Offset.get() + sizeof(DataRecordHandle::Header) >=
-              DataPool.size())
+          D.Offset.get() + sizeof(DataRecordHandle::Header) >= DataPool.size())
         return formatError("datapool record out of bound");
       break;
     case TrieRecord::StorageKind::Standalone:
