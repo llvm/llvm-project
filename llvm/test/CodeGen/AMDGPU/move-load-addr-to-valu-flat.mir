@@ -16,7 +16,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64_align2 = PHI [[COPY]], %bb.0, %7, %bb.1
-  ; GCN-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[PHI]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
@@ -156,7 +156,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64_align2 = PHI [[COPY]], %bb.0, %7, %bb.1
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   FLAT_STORE_DWORD [[PHI]], [[DEF]], 0, 0, implicit $exec
+  ; GCN-NEXT:   FLAT_STORE_DWORD [[PHI]], [[DEF]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
@@ -202,7 +202,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64_align2 = PHI [[COPY]], %bb.0, %6, %bb.1
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN-NEXT:   FLAT_ATOMIC_ADD [[PHI]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec
+  ; GCN-NEXT:   FLAT_ATOMIC_ADD [[PHI]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
@@ -247,7 +247,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64_align2 = PHI [[COPY]], %bb.0, %7, %bb.1
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN-NEXT:   [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[PHI]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[PHI]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
