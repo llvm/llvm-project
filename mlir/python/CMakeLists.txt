@@ -511,7 +511,9 @@ declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/IRDLOps.td
-  SOURCES dialects/irdl.py
+  SOURCES
+    dialects/irdl/__init__.py
+    dialects/irdl/dsl.py
   DIALECT_NAME irdl
   GEN_ENUM_BINDINGS
 )
