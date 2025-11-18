@@ -46,6 +46,24 @@ private:
   bool LateUndef;
 };
 
+// Simple RAII helper for emitting #if guard. It emits:
+// <IfGuard> <Condition>
+// #endif // <Condition>
+class IfGuardEmitter {
+public:
+  IfGuardEmitter(raw_ostream &OS, StringRef Condition,
+                 StringRef IfGuard = "#if")
+      : Condition(Condition.str()), OS(OS) {
+    OS << IfGuard << " " << Condition << "\n\n";
+  }
+
+  ~IfGuardEmitter() { OS << "\n#endif // " << Condition << "\n\n"; }
+
+private:
+  std::string Condition;
+  raw_ostream &OS;
+};
+
 // Simple RAII helper for emitting header include guard (ifndef-define-endif).
 class IncludeGuardEmitter {
 public:
