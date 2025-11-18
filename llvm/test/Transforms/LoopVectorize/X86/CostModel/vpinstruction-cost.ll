@@ -10,7 +10,7 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK:  Cost of 0 for VF 2: ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%0>
+; CHECK:  Cost of 0 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
 ; CHECK:  Cost of 0 for VF 2: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>, vp<%0>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<%4>
 ; CHECK:  Cost of 0 for VF 2: vp<%5> = vector-pointer ir<%g.src>
@@ -35,7 +35,7 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%0>
+; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
 ; CHECK:  Cost of 0 for VF 4: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>, vp<%0>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<%4>
 ; CHECK:  Cost of 0 for VF 4: vp<%5> = vector-pointer ir<%g.src>

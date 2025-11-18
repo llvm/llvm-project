@@ -291,12 +291,12 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
   // which affects other passes.
   TII->storeRegToStackSlot(MBB, MBBI, RISCV::X8, /* IsKill=*/true,
                            RVFI->getInterruptCSRFrameIndex(0),
-                           &RISCV::GPRRegClass, STI.getRegisterInfo(),
-                           Register(), MachineInstr::FrameSetup);
+                           &RISCV::GPRRegClass, Register(),
+                           MachineInstr::FrameSetup);
   TII->storeRegToStackSlot(MBB, MBBI, RISCV::X9, /* IsKill=*/true,
                            RVFI->getInterruptCSRFrameIndex(1),
-                           &RISCV::GPRRegClass, STI.getRegisterInfo(),
-                           Register(), MachineInstr::FrameSetup);
+                           &RISCV::GPRRegClass, Register(),
+                           MachineInstr::FrameSetup);
 
   // Put `mcause` into X8 (s0), and `mepc` into X9 (s1). If either of these are
   // used in the function, then they will appear in `getUnmanagedCSI` and will
@@ -357,14 +357,12 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
 
   // X8 and X9 need to be restored to their values on function entry, which we
   // saved onto the stack in `emitSiFiveCLICPreemptibleSaves`.
-  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X9,
-                            RVFI->getInterruptCSRFrameIndex(1),
-                            &RISCV::GPRRegClass, STI.getRegisterInfo(),
-                            Register(), MachineInstr::FrameSetup);
-  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X8,
-                            RVFI->getInterruptCSRFrameIndex(0),
-                            &RISCV::GPRRegClass, STI.getRegisterInfo(),
-                            Register(), MachineInstr::FrameSetup);
+  TII->loadRegFromStackSlot(
+      MBB, MBBI, RISCV::X9, RVFI->getInterruptCSRFrameIndex(1),
+      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
+  TII->loadRegFromStackSlot(
+      MBB, MBBI, RISCV::X8, RVFI->getInterruptCSRFrameIndex(0),
+      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
 }
 
 // Get the ID of the libcall used for spilling and restoring callee saved
@@ -2177,7 +2175,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg),
-                              CS.getFrameIdx(), RC, TRI, Register(),
+                              CS.getFrameIdx(), RC, Register(),
                               MachineInstr::FrameSetup);
     }
   };
@@ -2267,8 +2265,8 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     for (auto &CS : CSInfo) {
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
-                               Register(), MachineInstr::FrameDestroy);
+      TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, Register(),
+                               MachineInstr::FrameDestroy);
       assert(MI != MBB.begin() &&
              "loadRegFromStackSlot didn't insert any code!");
     }
@@ -2508,4 +2506,13 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
       MBBI->eraseFromParent();
     }
   }
+}
+
+int RISCVFrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {
+  return 0;
+}
+
+Register
+RISCVFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
+  return RISCV::X2;
 }

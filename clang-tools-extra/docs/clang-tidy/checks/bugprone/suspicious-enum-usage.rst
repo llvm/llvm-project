@@ -3,11 +3,11 @@
 bugprone-suspicious-enum-usage
 ==============================
 
-The checker detects various cases when an enum is probably misused (as a bitmask
-).
+The checker detects various cases when an enum is probably misused
+(as a bitmask).
 
-1. When "ADD" or "bitwise OR" is used between two enum which come from different
-   types and these types value ranges are not disjoint.
+1. When "ADD" or "bitwise OR" is used between two enum which come
+   from different types and these types value ranges are not disjoint.
 
 The following cases will be investigated only using :option:`StrictMode`. We
 regard the enum as a (suspicious)
@@ -17,17 +17,17 @@ bitmask if the three conditions below are true at the same time:
   short enumerations)
 * there is another non pow-of-2 number than the enum constant representing all
   choices (the result "bitwise OR" operation of all enum elements)
-* enum type variable/enumconstant is used as an argument of a `+` or "bitwise OR
-  " operator
+* enum type variable/enumconstant is used as an argument of a `+` or "bitwise
+  OR" operator
 
 So whenever the non pow-of-2 element is used as a bitmask element we diagnose a
 misuse and give a warning.
 
-2. Investigating the right hand side of `+=` and `|=` operator.
-3. Check only the enum value side of a `|` and `+` operator if one of them is not
-   enum val.
-4. Check both side of `|` or `+` operator where the enum values are from the
-   same enum type.
+2. Investigating the right hand side of ``+=`` and ``|=`` operator.
+3. Check only the enum value side of a ``|`` and ``+`` operator if one of
+   them is not enum val.
+4. Check both side of ``|`` or ``+`` operator where the enum values are from
+   the same enum type.
 
 Examples:
 
