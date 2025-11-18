@@ -40,8 +40,6 @@ EXTERN void ompx_dump_mapping_tables() {
 using namespace llvm::omp::target::ompt;
 #endif
 
-using GenericDeviceTy = llvm::omp::target::plugin::GenericDeviceTy;
-
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name);
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
@@ -68,62 +66,6 @@ EXTERN int omp_get_device_num(void) {
   DP("Call to omp_get_device_num returning %d\n", HostDevice);
 
   return HostDevice;
-}
-
-static inline bool is_initial_device_uid(const char *DeviceUid) {
-  return strcmp(DeviceUid, GenericPluginTy::getHostDeviceUid()) == 0;
-}
-
-EXTERN int omp_get_device_from_uid(const char *DeviceUid) {
-  TIMESCOPE();
-  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-
-  if (!DeviceUid) {
-    DP("Call to omp_get_device_from_uid returning omp_invalid_device\n");
-    return omp_invalid_device;
-  }
-  if (is_initial_device_uid(DeviceUid)) {
-    DP("Call to omp_get_device_from_uid returning initial device number %d\n",
-       omp_get_initial_device());
-    return omp_get_initial_device();
-  }
-
-  int DeviceNum = omp_invalid_device;
-
-  auto ExclusiveDevicesAccessor = PM->getExclusiveDevicesAccessor();
-  for (const DeviceTy &Device : PM->devices(ExclusiveDevicesAccessor)) {
-    const char *Uid = Device.RTL->getDevice(Device.RTLDeviceID).getDeviceUid();
-    if (Uid && strcmp(DeviceUid, Uid) == 0) {
-      DeviceNum = Device.DeviceID;
-      break;
-    }
-  }
-
-  DP("Call to omp_get_device_from_uid returning %d\n", DeviceNum);
-  return DeviceNum;
-}
-
-EXTERN const char *omp_get_uid_from_device(int DeviceNum) {
-  TIMESCOPE();
-  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-
-  if (DeviceNum == omp_invalid_device) {
-    DP("Call to omp_get_uid_from_device returning nullptr\n");
-    return nullptr;
-  }
-  if (DeviceNum == omp_get_initial_device()) {
-    DP("Call to omp_get_uid_from_device returning initial device UID\n");
-    return GenericPluginTy::getHostDeviceUid();
-  }
-
-  auto DeviceOrErr = PM->getDevice(DeviceNum);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
-
-  const char *Uid =
-      DeviceOrErr->RTL->getDevice(DeviceOrErr->RTLDeviceID).getDeviceUid();
-  DP("Call to omp_get_uid_from_device returning %s\n", Uid);
-  return Uid;
 }
 
 EXTERN int omp_get_initial_device(void) {

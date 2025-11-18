@@ -403,12 +403,6 @@ int omp_get_num_devices(void) { return config::getNumDevices(); }
 
 int omp_get_device_num(void) { return config::getDeviceNum(); }
 
-int omp_get_device_from_uid(const char *DeviceUid) {
-  return omp_invalid_device;
-}
-
-const char *omp_get_uid_from_device(int DeviceNum) { return nullptr; }
-
 int omp_get_num_teams(void) { return mapping::getNumberOfBlocksInKernel(); }
 
 int omp_get_team_num() { return mapping::getBlockIdInKernel(); }

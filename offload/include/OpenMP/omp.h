@@ -30,13 +30,6 @@
 
 extern "C" {
 
-/// Definitions
-///{
-
-#define omp_invalid_device -2
-
-///}
-
 /// Type declarations
 ///{
 
