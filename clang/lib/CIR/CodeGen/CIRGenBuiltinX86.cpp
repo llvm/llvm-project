@@ -650,6 +650,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_sqrtpd:
   case X86::BI__builtin_ia32_sqrtps256:
   case X86::BI__builtin_ia32_sqrtps:
+    CGF.CGM.getDiags().Report(E->getExprLoc(), diag::err_cir_nyi)
+        << "__builtin_ia32_sqrtps";
+    return CIRGenFunction::IgnoreValue();
+
   case X86::BI__builtin_ia32_sqrtph256:
   case X86::BI__builtin_ia32_sqrtph:
   case X86::BI__builtin_ia32_sqrtph512:
