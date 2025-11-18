@@ -142,19 +142,25 @@ std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP) {
   if (InvalidSpelling)
     return std::nullopt;
 
-  llvm::APInt IntValue;
+  llvm::APSInt IntValue(0, true);
   constexpr unsigned AutoSenseRadix = 0;
-  if (ValueStr.getAsInteger(AutoSenseRadix, IntValue))
+  if (ValueStr.getAsInteger(AutoSenseRadix,
+                            static_cast<llvm::APInt &>(IntValue)))
     return std::nullopt;
 
   // Parse an optional minus sign.
   size_t Size = FilteredTokens.size();
   if (Size >= 2) {
-    if (FilteredTokens[Size - 2].is(tok::minus))
+    if (FilteredTokens[Size - 2].is(tok::minus)) {
+      // Make sure there's space for a sign bit
+      if (IntValue.isSignBitSet())
+        IntValue = IntValue.extend(IntValue.getBitWidth() + 1);
+      IntValue.setIsUnsigned(false);
       IntValue = -IntValue;
+    }
   }
 
-  return IntValue.getSExtValue();
+  return IntValue.getExtValue();
 }
 
 OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
