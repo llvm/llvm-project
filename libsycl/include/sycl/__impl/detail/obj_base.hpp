@@ -18,6 +18,7 @@
 #include <sycl/__impl/detail/config.hpp>
 
 #include <cassert>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -25,10 +26,12 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-template <class Impl, class SyclObject> class ObjBase {
+template <typename Impl, typename SyclObject> class ObjBase;
+template <typename Impl, typename SyclObject>
+class ObjBase<Impl &, SyclObject> {
 public:
   using ImplType = Impl;
-  using Base = ObjBase<Impl, SyclObject>;
+  using Base = ObjBase<Impl &, SyclObject>;
 
 protected:
   ImplType &impl;
@@ -56,6 +59,19 @@ Obj createSyclObjFromImpl(
     std::add_lvalue_reference_t<typename Obj::ImplType> ImplObj) {
   return Obj::Base::createSyclProxy(ImplObj);
 }
+
+// std::hash support (4.5.2. Common reference semantics)
+template <typename T> struct HashBase {
+  size_t operator()(const T &Obj) const {
+#ifdef __SYCL_DEVICE_ONLY__
+    (void)Obj;
+    return 0;
+#else
+    auto &Impl = sycl::detail::getSyclObjImpl(Obj);
+    return std::hash<std::decay_t<decltype(Impl)>>{}(Impl);
+#endif
+  }
+};
 
 } // namespace detail
 

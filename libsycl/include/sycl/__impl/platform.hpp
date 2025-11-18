@@ -31,7 +31,7 @@ class platform_impl;
 
 // 4.6.2. Platform class
 class _LIBSYCL_EXPORT platform
-    : public detail::ObjBase<detail::platform_impl, platform> {
+    : public detail::ObjBase<detail::platform_impl &, platform> {
 public:
   /// Constructs a platform object that is a copy of the platform which contains
   /// the device returned by default_selector_v.
@@ -104,9 +104,13 @@ private:
   typename detail::is_platform_info_desc<Param>::return_type
   get_info_impl() const;
 
-  friend detail::ObjBase<detail::platform_impl, platform>;
+  friend detail::ObjBase<detail::platform_impl &, platform>;
 }; // class platform
 
 _LIBSYCL_END_NAMESPACE_SYCL
+
+template <>
+struct std::hash<sycl::platform>
+    : public sycl::detail::HashBase<sycl::platform> {};
 
 #endif // _LIBSYCL___IMPL_PLATFORM_HPP
