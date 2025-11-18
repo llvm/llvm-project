@@ -27,6 +27,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -45,6 +46,9 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
+#include "llvm/Support/RISCVAttributes.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
@@ -1405,6 +1409,112 @@ void ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length,
   }
 }
 
+static std::optional<lldb::offset_t>
+FindSubSectionOffsetByName(const DataExtractor &data, lldb::offset_t offset,
+                           uint32_t length, llvm::StringRef name) {
+  uint32_t section_length = 0;
+  llvm::StringRef section_name;
+  do {
+    offset += section_length;
+    // Sub-section's size and name are included in the total sub-section length.
+    // Don't shift the offset here, so it will point at the beginning of the
+    // sub-section and could be used as a return value.
+    auto tmp_offset = offset;
+    section_length = data.GetU32(&tmp_offset);
+    section_name = data.GetCStr(&tmp_offset);
+  } while (section_name != name && offset + section_length < length);
+  if (section_name == name)
+    return offset;
+  return std::nullopt;
+}
+
+static std::optional<lldb::offset_t>
+FindSubSubSectionOffsetByTag(const DataExtractor &data, lldb::offset_t offset,
+                             unsigned tag) {
+  // Consume a sub-section size and name to shift the offset at the beginning of
+  // the sub-sub-sections list.
+  auto upper_section_length = data.GetU32(&offset);
+  data.GetCStr(&offset);
+  auto upper_section_end_offset = offset + upper_section_length;
+
+  uint32_t section_length = 0;
+  unsigned section_tag = 0;
+  do {
+    offset += section_length;
+    // Similar to sub-section sub-sub-section's tag and size are included in the
+    // total sub-sub-section length.
+    auto tmp_offset = offset;
+    section_tag = data.GetULEB128(&tmp_offset);
+    section_length = data.GetU32(&tmp_offset);
+  } while (section_tag != tag &&
+           offset + section_length < upper_section_end_offset);
+  if (section_tag == tag)
+    return offset;
+  return std::nullopt;
+}
+
+static std::optional<std::variant<uint64_t, llvm::StringRef>>
+GetSubSubSubSectionValue(const DataExtractor &data, lldb::offset_t offset,
+                         unsigned tag) {
+  // Consume a sub-sub-section tag and size to shift the offset at the beginning
+  // of the sub-sub-sub-sections list.
+  data.GetULEB128(&offset);
+  auto upper_section_length = data.GetU32(&offset);
+  auto upper_section_end_offset = offset + upper_section_length;
+
+  std::variant<uint64_t, llvm::StringRef> result;
+  unsigned section_tag = 0;
+  do {
+    section_tag = data.GetULEB128(&offset);
+    // From the riscv psABI document:
+    // RISC-V attributes have a string value if the tag number is odd and an
+    // integer value if the tag number is even.
+    if (section_tag % 2)
+      result = data.GetCStr(&offset);
+    else
+      result = data.GetULEB128(&offset);
+  } while (section_tag != tag && offset < upper_section_end_offset);
+  if (section_tag == tag)
+    return result;
+  return std::nullopt;
+}
+
+void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
+                                         ArchSpec &arch_spec) {
+  lldb::offset_t offset = 0;
+
+  uint8_t format_version = data.GetU8(&offset);
+  if (format_version != llvm::ELFAttrs::Format_Version)
+    return;
+
+  auto subsection_or_opt =
+      FindSubSectionOffsetByName(data, offset, length, "riscv");
+  if (!subsection_or_opt.has_value()) {
+    // In fact 'riscv' sub-section is mandatory, so we shouldn't be here.
+    return;
+  }
+
+  auto subsubsection_or_opt = FindSubSubSectionOffsetByTag(
+      data, *subsection_or_opt, llvm::ELFAttrs::File);
+  if (!subsubsection_or_opt.has_value())
+    return;
+
+  auto value_or_opt = GetSubSubSubSectionValue(data, *subsubsection_or_opt,
+                                               llvm::RISCVAttrs::ARCH);
+  if (!value_or_opt.has_value())
+    return;
+
+  auto isa_info = llvm::RISCVISAInfo::parseArchString(
+      std::get<llvm::StringRef>(*value_or_opt),
+      /* EnableExperimentalExtension=*/true);
+  if (llvm::errorToBool(isa_info.takeError()))
+    return;
+
+  llvm::SubtargetFeatures features;
+  features.addFeaturesVector((*isa_info)->toFeatures());
+  arch_spec.SetSubtargetFeatures(std::move(features));
+}
+
 // GetSectionHeaderInfo
 size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                                            DataExtractor &object_data,
@@ -1620,6 +1730,17 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           if (sheader.sh_type == SHT_ARM_ATTRIBUTES && section_size != 0 &&
               data.SetData(object_data, sheader.sh_offset, section_size) == section_size)
             ParseARMAttributes(data, section_size, arch_spec);
+        }
+
+        if (arch_spec.GetMachine() == llvm::Triple::riscv32 ||
+            arch_spec.GetMachine() == llvm::Triple::riscv64) {
+          DataExtractor data;
+
+          if (sheader.sh_type == llvm::ELF::SHT_RISCV_ATTRIBUTES &&
+              section_size != 0 &&
+              data.SetData(object_data, sheader.sh_offset, section_size) ==
+                  section_size)
+            ParseRISCVAttributes(data, section_size, arch_spec);
         }
 
         if (name == g_sect_name_gnu_debuglink) {
