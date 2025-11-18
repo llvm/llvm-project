@@ -6,6 +6,8 @@ add_lldb_library(lldbPluginCPPRuntime
     lldbCore
     lldbSymbol
     lldbTarget
+  CLANG_LIBS
+    clangCodeGen
 )
 
 add_subdirectory(ItaniumABI)

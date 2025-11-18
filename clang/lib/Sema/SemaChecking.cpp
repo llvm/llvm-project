@@ -2218,6 +2218,39 @@ static bool BuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
   return false;
 }
 
+/// Checks that __builtin_bswapg was called with a single argument, which is an
+/// unsigned integer, and overrides the return value type to the integer type.
+static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+  if (Arg->isTypeDependent())
+    return false;
+
+  QualType ArgTy = Arg->getType();
+
+  if (!ArgTy->isIntegerType()) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*scalar=*/1 << /*unsigned integer=*/1 << /*floating point=*/0
+        << ArgTy;
+    return true;
+  }
+  if (const auto *BT = dyn_cast<BitIntType>(ArgTy)) {
+    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8) {
+      S.Diag(Arg->getBeginLoc(), diag::err_bswapg_invalid_bit_width)
+          << ArgTy << BT->getNumBits();
+      return true;
+    }
+  }
+  TheCall->setType(ArgTy);
+  return false;
+}
+
 /// Checks that __builtin_popcountg was called with a single argument, which is
 /// an unsigned integer.
 static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
@@ -2607,6 +2640,18 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
   }
   return S.ActOnCallExpr(S.getCurScope(), Args.front(), TheCall->getBeginLoc(),
                          Args.drop_front(), TheCall->getRParenLoc());
+}
+
+// Performs a similar job to Sema::UsualUnaryConversions, but without any
+// implicit promotion of integral/enumeration types.
+static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
+  // First, convert to an r-value.
+  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
+  if (Res.isInvalid())
+    return ExprError();
+
+  // Promote floating-point types.
+  return S.UsualUnaryFPConversions(Res.get());
 }
 
 ExprResult
@@ -3273,6 +3318,46 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  case Builtin::BI__builtin_elementwise_ldexp: {
+    if (checkArgCount(TheCall, 2))
+      return ExprError();
+
+    ExprResult A = BuiltinVectorMathConversions(*this, TheCall->getArg(0));
+    if (A.isInvalid())
+      return ExprError();
+    QualType TyA = A.get()->getType();
+    if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA,
+                                    EltwiseBuiltinArgTyRestriction::FloatTy, 1))
+      return ExprError();
+
+    ExprResult Exp = UsualUnaryConversions(TheCall->getArg(1));
+    if (Exp.isInvalid())
+      return ExprError();
+    QualType TyExp = Exp.get()->getType();
+    if (checkMathBuiltinElementType(*this, Exp.get()->getBeginLoc(), TyExp,
+                                    EltwiseBuiltinArgTyRestriction::IntegerTy,
+                                    2))
+      return ExprError();
+
+    // Check the two arguments are either scalars or vectors of equal length.
+    const auto *Vec0 = TyA->getAs<VectorType>();
+    const auto *Vec1 = TyExp->getAs<VectorType>();
+    unsigned Arg0Length = Vec0 ? Vec0->getNumElements() : 0;
+    unsigned Arg1Length = Vec1 ? Vec1->getNumElements() : 0;
+    if (Arg0Length != Arg1Length) {
+      Diag(Exp.get()->getBeginLoc(),
+           diag::err_typecheck_vector_lengths_not_equal)
+          << TyA << TyExp << A.get()->getSourceRange()
+          << Exp.get()->getSourceRange();
+      return ExprError();
+    }
+
+    TheCall->setArg(0, A.get());
+    TheCall->setArg(1, Exp.get());
+    TheCall->setType(TyA);
+    break;
+  }
+
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
   case Builtin::BI__builtin_elementwise_minnum:
@@ -3470,6 +3555,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_bswapg:
+    if (BuiltinBswapg(*this, TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_popcountg:
     if (BuiltinPopcountg(*this, TheCall))
       return ExprError();
@@ -15990,18 +16079,6 @@ void Sema::CheckAddressOfPackedMember(Expr *rhs) {
   RefersToMemberWithReducedAlignment(
       rhs, std::bind(&Sema::AddPotentialMisalignedMembers, std::ref(*this), _1,
                      _2, _3, _4));
-}
-
-// Performs a similar job to Sema::UsualUnaryConversions, but without any
-// implicit promotion of integral/enumeration types.
-static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
-  // First, convert to an r-value.
-  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
-  if (Res.isInvalid())
-    return ExprError();
-
-  // Promote floating-point types.
-  return S.UsualUnaryFPConversions(Res.get());
 }
 
 bool Sema::PrepareBuiltinElementwiseMathOneArgCall(

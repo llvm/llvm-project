@@ -103,10 +103,6 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_DEFAULT,
 };
 
-inline KernelArgsTy CTorDTorKernelArgs = {
-    1,       0, nullptr,   nullptr,   nullptr,   nullptr, nullptr,
-    nullptr, 0, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}, 0};
-
 struct DeviceTy;
 
 /// The libomptarget wrapper around a __tgt_async_info object directly
@@ -274,6 +270,8 @@ extern "C" {
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
+int omp_get_device_from_uid(const char *DeviceUid);
+const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);

@@ -308,7 +308,7 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   int64_t rankDiff = srcShapeRank - targetShapeRank;
   std::fill(adjustedTargetShape.begin(), adjustedTargetShape.begin() + rankDiff,
             1);
-  std::copy(shape.begin(), shape.end(), adjustedTargetShape.begin() + rankDiff);
+  llvm::copy(shape, adjustedTargetShape.begin() + rankDiff);
 
   SmallVector<Value> result;
   for (SmallVector<int64_t> offsets :
@@ -555,3 +555,29 @@ xegpu::addWithRightAligned(OpBuilder &builder, Location loc,
   results.append(addElementwise(builder, loc, a, b));
   return results;
 }
+
+template <typename T>
+int xegpu::getLargestDivisor(T dim, ArrayRef<T> candidates,
+                             ArrayRef<T> candidateMultiples) {
+  static_assert(std::is_integral<T>::value, "T must be an integer type");
+  int largest = -1;
+  SmallVector<T> multiples = {1};
+  if (!candidateMultiples.empty())
+    multiples =
+        SmallVector<T>(candidateMultiples.begin(), candidateMultiples.end());
+  for (T candidate : candidates) {
+    for (T multiple : multiples) {
+      int value = static_cast<int>(candidate * multiple);
+      if (value != 0 && dim % value == 0 && value > largest)
+        largest = value;
+    }
+  }
+  return largest;
+}
+
+/// Explicit instantiations
+template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
+                                           ArrayRef<int> candidateMultiples);
+template int
+xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
+                                   ArrayRef<unsigned> candidateMultiples);
