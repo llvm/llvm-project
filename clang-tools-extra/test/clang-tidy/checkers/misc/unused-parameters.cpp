@@ -1,7 +1,7 @@
 // RUN: mkdir -p %t.dir
 // RUN: echo "static void staticFunctionHeader(int i) {;}" > %t.dir/header.h
 // RUN: echo "static void staticFunctionHeader(int  /*i*/) {;}" > %t.dir/header-fixed.h
-// RUN: %check_clang_tidy  --match-partial-fixes -std=c++11 %s misc-unused-parameters %t.dir/code -- -header-filter='.*' -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11 %s misc-unused-parameters %t.dir/code -- -header-filter='.*' -- -fno-delayed-template-parsing
 // RUN: diff %t.dir/header.h %t.dir/header-fixed.h
 // FIXME: Make the test work in all language modes.
 
@@ -67,41 +67,41 @@ static void staticFunctionA(int i);
 // CHECK-FIXES: static void staticFunctionA();
 static void staticFunctionA(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: static void staticFunctionA()
+// CHECK-FIXES: static void staticFunctionA() {;}
 
 static void staticFunctionB(int i, int j) { (void)i; }
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning
-// CHECK-FIXES: static void staticFunctionB(int i)
+// CHECK-FIXES: static void staticFunctionB(int i) { (void)i; }
 
 static void staticFunctionC(int i, int j) { (void)j; }
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: static void staticFunctionC(int j)
+// CHECK-FIXES: static void staticFunctionC(int j) { (void)j; }
 
 static void staticFunctionD(int i, int j, int k) { (void)i; (void)k; }
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning
-// CHECK-FIXES: static void staticFunctionD(int i, int k)
+// CHECK-FIXES: static void staticFunctionD(int i, int k) { (void)i; (void)k; }
 
 static void staticFunctionE(int i = 4) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: static void staticFunctionE()
+// CHECK-FIXES: static void staticFunctionE() {;}
 
 static void staticFunctionF(int i = 4);
 // CHECK-FIXES: static void staticFunctionF();
 static void staticFunctionF(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: static void staticFunctionF()
+// CHECK-FIXES: static void staticFunctionF() {;}
 
 static void staticFunctionG(int i[]);
 // CHECK-FIXES: static void staticFunctionG();
 static void staticFunctionG(int i[]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: static void staticFunctionG()
+// CHECK-FIXES: static void staticFunctionG() {;}
 
 static void staticFunctionH(void (*fn)());
 // CHECK-FIXES: static void staticFunctionH();
 static void staticFunctionH(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:36: warning
-// CHECK-FIXES: static void staticFunctionH()
+// CHECK-FIXES: static void staticFunctionH() {;}
 
 static void someCallSites() {
   staticFunctionA(1);
@@ -298,7 +298,7 @@ using fn = void(int);
 void f(fn *);
 void test() {
   // CHECK-MESSAGES: :[[@LINE+2]]:12: warning: parameter 'I' is unused
-  // CHECK-FIXES: f([](int  /*I*/) {
+  // CHECK-FIXES: f([](int  /*I*/) { return; });
   f([](int I) { return; });
 }
 } // namespace lambda

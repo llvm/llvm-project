@@ -419,7 +419,10 @@ struct LowerGpuOpsToNVVMOpsPass final
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
     configureGpuToNVVMConversionLegality(target);
-    if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
+    ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
+    if (failed(
+            applyPartialConversion(m, target, std::move(llvmPatterns), config)))
       signalPassFailure();
   }
 };
@@ -500,19 +503,19 @@ struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
           op->getParentWithTrait<mlir::OpTrait::AutomaticAllocationScope>();
       assert(scope && "Expected op to be inside automatic allocation scope");
       rewriter.setInsertionPointToStart(&scope->getRegion(0).front());
-      auto one = rewriter.create<LLVM::ConstantOp>(
-          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(1));
+      auto one = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
+                                          rewriter.getI32IntegerAttr(1));
       sinPtr =
-          rewriter.create<LLVM::AllocaOp>(loc, ptrType, computeType, one, 0);
+          LLVM::AllocaOp::create(rewriter, loc, ptrType, computeType, one, 0);
       cosPtr =
-          rewriter.create<LLVM::AllocaOp>(loc, ptrType, computeType, one, 0);
+          LLVM::AllocaOp::create(rewriter, loc, ptrType, computeType, one, 0);
     }
 
     createSincosCall(rewriter, loc, sincosFunc, convertedInput, sinPtr, cosPtr,
                      op);
 
-    auto sinResult = rewriter.create<LLVM::LoadOp>(loc, computeType, sinPtr);
-    auto cosResult = rewriter.create<LLVM::LoadOp>(loc, computeType, cosPtr);
+    auto sinResult = LLVM::LoadOp::create(rewriter, loc, computeType, sinPtr);
+    auto cosResult = LLVM::LoadOp::create(rewriter, loc, computeType, cosPtr);
 
     rewriter.replaceOp(op, {maybeTrunc(sinResult, inputType, rewriter),
                             maybeTrunc(cosResult, inputType, rewriter)});
@@ -522,14 +525,15 @@ struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
 private:
   Value maybeExt(Value operand, PatternRewriter &rewriter) const {
     if (isa<Float16Type, BFloat16Type>(operand.getType()))
-      return rewriter.create<LLVM::FPExtOp>(
-          operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
+      return LLVM::FPExtOp::create(rewriter, operand.getLoc(),
+                                   Float32Type::get(rewriter.getContext()),
+                                   operand);
     return operand;
   }
 
   Value maybeTrunc(Value operand, Type type, PatternRewriter &rewriter) const {
     if (operand.getType() != type)
-      return rewriter.create<LLVM::FPTruncOp>(operand.getLoc(), type, operand);
+      return LLVM::FPTruncOp::create(rewriter, operand.getLoc(), type, operand);
     return operand;
   }
 
@@ -556,7 +560,7 @@ private:
     }
 
     SmallVector<Value> callOperands = {input, sinPtr, cosPtr};
-    rewriter.create<LLVM::CallOp>(loc, funcOp, callOperands);
+    LLVM::CallOp::create(rewriter, loc, funcOp, callOperands);
   }
 };
 

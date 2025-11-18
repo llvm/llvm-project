@@ -843,7 +843,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
+      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
+      OptionalAttr<DistributeLayoutAttr>:$layout);
   let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -895,7 +896,14 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
                     "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>
+                    "xegpu::CachePolicyAttr": $l3_hint)>,
+    OpBuilder<(ins "Type": $value, "Value": $source,
+                    "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
+                    "IntegerAttr": $chunk_size,
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
    ];
 
   let hasVerifier = 1;
@@ -979,7 +987,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
+      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
+      OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
@@ -1030,7 +1039,14 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
                     "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>
+                    "xegpu::CachePolicyAttr": $l3_hint)>,
+    OpBuilder<(ins "Value": $value, "Value": $dest,
+                    "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
+                    "IntegerAttr": $chunk_size,
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
    ];
 
   let hasVerifier = 1;
@@ -1298,14 +1314,14 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
 }
 
 def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
-                              AllElementTypesMatch<["mem_desc", "res"]>,
-                              AllRanksMatch<["mem_desc", "res"]>]>  {
+                              AllElementTypesMatch<["mem_desc", "res"]>]>  {
   let arguments = (ins XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<UnitAttr>:$subgroup_block_io,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
-  let results = (outs XeGPU_ValueType:$res);
+  let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$res);  
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `` `:` type(operands) `->` type(results)
@@ -1319,6 +1335,9 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     Arguments:
      - `mem_desc`: the memory descriptor identifying the SLM region.
      - `offsets`: the coordinates within the matrix to read from.
+     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be 
+                 lowered to a subgroup block load. When this attribute is present, 
+                 the offsets are subgroup-uniform across all lanes.
      - `layout`: [optional] An attribute for guiding distributions among
                  subgroups and/or work-items. It currently can accept either
                  LayoutAttr or SliceAttr.
@@ -1336,7 +1355,10 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     }
 
     ArrayRef<int64_t> getDataShape() {
-      return getRes().getType().getShape();
+      auto resTy = getRes().getType();
+      if (auto vecTy = llvm::dyn_cast<VectorType>(resTy))
+        return vecTy.getShape();
+      return {};
     }
   }];
 
@@ -1344,13 +1366,13 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
 }
 
 def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
-                              AllElementTypesMatch<["mem_desc", "data"]>,
-                              AllRanksMatch<["mem_desc", "data"]>]> {
+                              AllElementTypesMatch<["mem_desc", "data"]>]> {
   let arguments = (ins
-    XeGPU_ValueType:$data,
+    AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$data,
     XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<UnitAttr>:$subgroup_block_io,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
@@ -1364,6 +1386,9 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
      - `mem_desc`: the memory descriptor specifying the SLM region.
      - `offsets`: the coordinates within the matrix where the data will be written.
      - `data`: the values to be stored in the matrix.
+     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be 
+                 lowered to a subgroup block store. When this attribute is present, 
+                 the offsets are subgroup-uniform across all lanes.     
      - `layout`: [optional] An attribute for guiding distributions among
                  subgroups and/or work-items. It currently can accept either
                  LayoutAttr or SliceAttr.
@@ -1378,49 +1403,15 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     }
 
     ArrayRef<int64_t> getDataShape() {
-      return getData().getType().getShape();
+      auto DataTy = getData().getType();
+      if (auto vecTy = llvm::dyn_cast<VectorType>(DataTy))
+        return vecTy.getShape();
+      return {};
     }
 
   }];
 
   let hasVerifier = 1;
 }
-
-def XeGPU_MemDescSubviewOp: XeGPU_Op<"mem_desc_subview",
-          [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
-  let description = [{
-    Creates a subview of a memory descriptor. The resulting memory descriptor can have
-    a lower rank than the source; in this case, the result dimensions correspond to the
-    higher-order dimensions of the source memory descriptor.
-
-    Arguments:
-     - `src` : a memory descriptor.
-     - `offsets` : the coordinates within the matrix the subview will be created from.
-
-    Results:
-    - `res` : a memory descriptor with smaller size.
-
-  }];
-  let arguments = (ins XeGPU_MemDesc:$src,
-                       Variadic<Index>:$offsets,
-                       DenseI64ArrayAttr:$const_offsets);
-  let results = (outs XeGPU_MemDesc:$res);
-  let assemblyFormat = [{$src `` custom<DynamicIndexList>($offsets, $const_offsets) prop-dict
-                         attr-dict `` `:` qualified(type($src)) `->` qualified(type($res))}];
-  let builders = [
-    OpBuilder<(ins "Type": $res, "Value":$src, "llvm::ArrayRef<OpFoldResult>": $offsets)>
-  ];
-
-  let extraClassDeclaration = [{
-    mlir::Value getViewSource() { return getSrc(); }
-
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
-    }
-  }];
-
-  let hasVerifier = 1;
-}
-
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD

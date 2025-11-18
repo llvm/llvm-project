@@ -112,6 +112,112 @@ def AMDGPU_ExtPackedFp8Op :
   }];
 }
 
+def IsValidBlockSize: AttrConstraint<
+    CPred<"::llvm::is_contained({16, 32}, ::llvm::cast<::mlir::IntegerAttr>($_self).getInt())">,
+    "whose value is 16 or 32">;
+
+def AMDGPU_ScaledExtPacked816Op
+    : AMDGPU_Op<"scaled_ext_packed816", [Pure, AllShapesMatch<["source", "res"]>]>,
+      Arguments<(
+          ins AnyTypeOf<[FixedVectorOfShapeAndType<[8], F4E2M1FN>,
+                         FixedVectorOfShapeAndType<[8], F8E4M3FN>,
+                         FixedVectorOfShapeAndType<[8], F8E5M2>,
+                         FixedVectorOfShapeAndType<[16], F6E2M3FN>,
+                         FixedVectorOfShapeAndType<[16], F6E3M2FN>]>:$source,
+          FixedVectorOfShapeAndType<[4], F8E8M0FNU>:$scale,
+          ConfinedAttr<I32Attr, [IsValidBlockSize]>:$blockSize,
+          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$firstScaleLane,
+          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]>:$firstScaleByte)>,
+      Results<(
+          outs AnyTypeOf<[FixedVectorOfShapeAndType<[8], F32>,
+                          FixedVectorOfShapeAndType<[8], F16>,
+                          FixedVectorOfShapeAndType<[8], BF16>,
+                          FixedVectorOfShapeAndType<[16], F32>,
+                          FixedVectorOfShapeAndType<[16], F16>,
+                          FixedVectorOfShapeAndType<[16], BF16>]>:$res)> {
+
+  let summary = "Extend a vector of packed floating point values";
+
+  let description = [{
+    The scales applied to the input microfloats are stored in bytes which
+    come from the `scales` input provided in a *half* of the wave identified
+    by `firstScaleLane`. The bytes used is selected by `firstScaleByte` and depends
+    on the type of `source`. The 16 vectors in consecutive lanes starting from
+    `firstScaleLane` (which we'll call the scale vectors) will be used by both
+    halves of the wave (with lane L reading from L % 16'th scale vector).
+
+    When `source` is either F4E2M1FN, F6E2M3FN, or F6E3M2FN each half of the
+    wave will use a different byte. The first one being `firstScaleByte` and
+    the second one being `firstScaleByte` + 1. When the block size is 32,
+    `firstScaleByte` can be either 0 or 2, selecting halves of the scale vectors.
+    Lanes 0-15 will read from `firstScaleByte` and lanes 16-31 will read
+    from `firstScaleByte` + 1.
+
+
+    For example:
+    ```mlir
+    // Input: 8-element vector of F8E4M3FN, converting to F32
+    // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 1
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(32) firstScaleLane(0) firstScaleByte(0)
+      : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xf32>
+
+    // Input: 16-element vector of F6E2M3FN, converting to F16
+    // Lanes 0-15 read from byte 2, lanes 16-31 read from byte 3
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(32) firstScaleLane(1) firstScaleByte(2)
+      : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
+    ```
+
+    When `source` is either F4E2M1FN, F6E2M3FN, or F6E3M2FN and
+    the block size is 16, `firstScaleByte` can be 0 or 1.
+    Lanes 0-15 read from the `firstScaleByte`th element of the scale vectors,
+    while lanes 16-31 read from `firstScaleByte` + 2.
+    For example:
+    ```mlir
+    // Input: 8-element vector of F8E5M2, converting to BF16
+    // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 2 (0+2)
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(16) firstScaleLane(0) firstScaleByte(0)
+      : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xbf16>
+
+    // Input: 16-element vector of F6E3M2FN, converting to F32
+    // Lanes 0-15 read from byte 1, lanes 16-31 read from byte 3 (1+2)
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(16) firstScaleLane(1) firstScaleByte(1)
+      : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf32>
+    ```
+
+    Note: the layout for the scales generally mirrors how the WMMA
+    instructions use for matix scales. These selection operands allows
+    one to choose portions of the matrix to convert.
+
+    When `source` is either F8E4M3FN or F8E5M2 and `blockSize` is 32,
+    then the same byte will be used by both halves of the wave.
+    In this case, `firstScaleByte` can be any value from 0 to 3.
+
+    When `source` is either F8E4M3FN or F8E5M2 and `blockSize` is 16,
+    following combinations are allowed:
+    * `firstScaleLane(0), firstScaleByte(0)`
+    * `firstScaleLane(1), firstScaleByte(2)`
+    all other combinations are reserved.
+
+    Available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    attr-dict $source
+    `scale` `(` $scale `)`
+    `blockSize` `(` $blockSize `)`
+    `firstScaleLane` `(` $firstScaleLane`)`
+    `firstScaleByte` `(` $firstScaleByte `)`
+    `:` type($source) `,` type($scale) `->` type($res)
+  }];
+
+  let hasVerifier = 1;
+
+}
+
 def AMDGPU_ScaledExtPackedOp
     : AMDGPU_Op<"scaled_ext_packed", [Pure]>,
       Arguments<(
@@ -821,12 +927,11 @@ def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN
                                    VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
 def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16], [F32]>]>;
 // wmma
-def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
-                             [4, 8, 16],
-                             [F16, BF16,
-                              I8, SI8, UI8,
-                              I<4>, SI<4>, UI<4>,
-                              F8E4M3FN, F8E5M2]>]>;
+def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[2], [F32]>,
+                             VectorOfLengthAndType<[4, 8, 16], [F16, BF16]>,
+                             VectorOfLengthAndType<[4, 8, 16, 32], [I8, SI8, UI8]>,
+                             VectorOfLengthAndType<[4, 8, 32, 64], [F8E4M3FN, F8E5M2]>,
+                             VectorOfLengthAndType<[4, 8, 16], [I<4>, SI<4>, UI<4>]>]>;
 def WMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32, I32]>,
                               VectorOfLengthAndType<[4, 8, 16], [F16, BF16]>]>;
 
@@ -834,10 +939,10 @@ def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,
     Arguments<(ins
-                   I32Attr:$m,
-                   I32Attr:$n,
-                   I32Attr:$k,
-                   I32Attr:$blocks,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[4, 16, 32]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[4, 16, 32]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[1, 2, 4, 8, 16, 32, 64, 128]>]>:$k,
+                   DefaultValuedAttr<ConfinedAttr<I32Attr, [IntIsOneOf<[1, 2, 4, 16]>]>, "1">:$blocks,
                    MFMAInTypes:$sourceA,
                    MFMAInTypes:$sourceB,
                    MFMAOutTypes:$destC,
@@ -860,7 +965,7 @@ def AMDGPU_MFMAOp :
     based on the provided `m`, `k`, `n`, and `nBlks` attributes, along with the
     types of the source and destination arguments.
 
-    For information on the layouts of the input and output matrces (which are stored
+    For information on the layouts of the input and output matrices (which are stored
     in `sourceA`, `sourceB`, `destC`, and `destD`), see the CDNA ISA documentation.
 
     The `cbsz`, `abid`, and `blgp` parameters control how the lanes of the wave
@@ -877,9 +982,19 @@ def AMDGPU_MFMAOp :
 
     The negateA, negateB, and negateC flags are only supported for double-precision
     operations on gfx94x.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.mfma 16x16x16 %matA * %matB + %matC
+        : vector<4xf16>, vector<4xf16>, vector<4xf32>
+
+      %1 = amdgpu.mfma 32x32x1 %matD * %matE + %matF
+        { abid = 1 : i32, cbsz = 1 : i32, blocks = 2 : i32 }
+        blgp = bcast_second_32 : f32, f32, vector<32xf32>
+    ```
   }];
   let assemblyFormat = [{
-    $sourceA `*` $sourceB `+` $destC
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     attr-dict
     `blgp` `=` $blgp
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
@@ -891,36 +1006,55 @@ def AMDGPU_WMMAOp :
     AMDGPU_Op<"wmma", [AllTypesMatch<["destC", "destD"]>,
                        Pure]>,
     Arguments<(ins
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[4, 16, 32, 64, 128]>]>:$k,
                    WMMAInTypes:$sourceA,
                    WMMAInTypes:$sourceB,
                    WMMAOutTypes:$destC,
-                   DefaultValuedAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>, "0">:$subwordOffset,
+                   DefaultValuedAttr<ConfinedAttr<I32Attr, [IntIsOneOf<[0, 1]>]>, "0">:$subwordOffset,
                    UnitAttr:$unsignedA,
                    UnitAttr:$unsignedB,
                    UnitAttr:$clamp)>,
     Results<(outs WMMAOutTypes: $destD)> {
-  let summary = "MLIR wrapper for RDNA3 wmma instructions";
+  let summary = "MLIR wrapper for wmma instructions";
   let description = [{
-    The `amdgpu.wmma` op is an MLIR wrapper around intrinsics
-    for various `wmma` instructions in the RDNA3 or RDNA4 architecture, which
-    perform a 16x16 * 16x16 matrix multiplication for different data types.
-    Note that in gfx12/RDNA4, there is also a 16x32 * 32x16 instruction for 4-bit
-    integer inputs.
+    The `amdgpu.wmma` op is an MLIR wrapper around intrinsics for various `wmma`
+    instructions in the AMDGPU architecture, which perform matrix multiplication.
+
+    On gfx11/RDNA3, wmma intrinsics have M=N=K=16 dimensions.
+
+    On gfx12/RDNA4, wmma intrinsics have M=N=16 dimensions and support K=16 for
+    all element types, and K=32 for i4 sources.
+
+    On gfx1250, wmma intrinsics have M=N=16 and K dimensions of 4, 32, 64, or 128,
+    depending on the element types.
 
     On gfx11/RDNA3, emitting f16->f16 (or bf16->bf16) wmma the output is a 16xf16
     (or 16xbf16) vector containing only 8 valid values:
       - If `subwordOffset` is 0, then the output is stored at indices 0, 2, 4, ..., 14.
       - If `subwordOffset` is 1, then the output is stored at indices 1, 3, 5, ..., 15.
-    On gfx12/RDNA4, the result is instead returned as a vector<8 x f16/bf16> where
-    all values are valid and the `subwordOffset` must be `0`, as it cannot be used.
+    On gfx12/RDNA4 and gfx1250, the result is instead returned as vector where all
+    the values are valid and the `subwordOffset` must be `0`, as it cannot be used.
 
     `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
 
-    The `clamp` flag is used to saturate the output of type T to numeric_limits<T>::max()
+    The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
     in case of overflow.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.wmma 16x16x16 %matA * %matB + %matC : vector<8xf16>, vector<8xf16>, vector<8xf16>
+
+      %1 = amdgpu.wmma 16x16x64 %matD * %matE + %matF : vector<32xi8>, vector<8xf32>, vector<8xf32>
+
+      %2 = amdgpu.wmma 16x16x128 %matG * %matH + %matI : vector<64xf4E2M1FN>, vector<64xf4E2M1FN>, vector<8xf32>
+
+      %3 = amdgpu.wmma 16x16x4 %matJ * %matK + %matL : vector<2xf32>, vector<2xf32>, vector<8xf32>
+    ```
   }];
   let assemblyFormat = [{
-    $sourceA `*` $sourceB `+` $destC
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
@@ -1005,9 +1139,9 @@ def AMDGPU_ScaledMFMAOp :
     AMDGPU_Op<"scaled_mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,
     Arguments<(ins
-                   I32Attr:$m,
-                   I32Attr:$n,
-                   I32Attr:$k,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[64, 128]>]>:$k,
                    ScaledMFMAInTypes:$sourceA,
                    ScaledMFMAInTypes:$sourceB,
                    ScaledMFMAOutTypes:$destC,
@@ -1020,8 +1154,8 @@ def AMDGPU_ScaledMFMAOp :
   let summary = "MLIR wrapper for CDNA scaled mfma instructions";
   let description = [{
     The `amdgpu.scaled_mfma` op is an MLIR wrapper around intrinsics
-    for various scaled versions of `mfma` instructions in the CDNA architecture, which perform
-    multiple outer products in order to allow fast matrix multiplication.
+    for various scaled versions of `mfma` instructions in the CDNA architecture, which
+    perform multiple outer products in order to allow fast matrix multiplication.
 
     The wrapper will select an appropriate `mfma` instruction, if one is available,
     based on the provided `m`, `k`, `n`, and `nBlks` attributes, along with the
@@ -1036,15 +1170,23 @@ def AMDGPU_ScaledMFMAOp :
 
     This wrapper takes inspiration from `amdgpu.mfma`, but has some key differences:
     - `amdgpu.scaled_mfma` operates on fp4 (f4E2M1FN), fp6 (f6E2M3FN and f6E3M2FN) and
-    fp8 (f8E4M3FN and f8E5M2) types using either M=N=16, K=128 or M=N=32, K=64 as their tile
-    size.
+      fp8 (f8E4M3FN and f8E5M2) types using either M=N=16, K=128 or M=N=32, K=64 as
+      their tile size.
     - `amdgpu.scaled_mfma` does not support broadcasting. So, `cbsz`, `abid`, and `blgp`
-    are omitted from this wrapper.
-    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for
-    double-precision operations on gfx94x and so are not included here.
+      are omitted from this wrapper.
+    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported
+      for double-precision operations on gfx94x and so are not included here.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2
+        : vector<4xf8E8M0FNU>, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+    ```
   }];
   let assemblyFormat = [{
-    `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*` `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
+    custom<MNKDimensionList>($m, $n, $k) ` `
+    `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*`
+    `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
     attr-dict
     `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
   }];

@@ -10,7 +10,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
 
-define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -120,7 +120,7 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -231,7 +231,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_f32(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_commute0_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -342,7 +342,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute0_f32(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute1_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute1_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_commute1_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -453,7 +453,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute1_f32(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_constant_order_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_constant_order_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_constant_order_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -569,7 +569,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_constant_order_f32(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_multi_use_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_multi_use_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_fmed3_nnan_r_i_i_multi_use_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -740,7 +740,7 @@ define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_multi_use_f32(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @v_test_fmed3_r_i_i_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_f64:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -955,14 +955,14 @@ define amdgpu_kernel void @v_test_fmed3_r_i_i_no_nans_f32(ptr addrspace(1) %out,
   %outgep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %a = load float, ptr addrspace(1) %gep0
 
-  %max = call float @llvm.maxnum.f32(float %a, float 2.0)
-  %med = call float @llvm.minnum.f32(float %max, float 4.0)
+  %max = call nnan float @llvm.maxnum.f32(float %a, float 2.0)
+  %med = call nnan float @llvm.minnum.f32(float %max, float 4.0)
 
   store float %med, ptr addrspace(1) %outgep
   ret void
 }
 
-define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_legacy_fmed3_r_i_i_f32:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -1297,10 +1297,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(ptr addrspa
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
   %a.fneg = fsub float -0.0, %a
-  %tmp0 = call float @llvm.minnum.f32(float %a.fneg, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %a.fneg, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a.fneg, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a.fneg, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -1487,10 +1487,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod1(ptr addrspa
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
   %b.fneg = fsub float -0.0, %b
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b.fneg)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b.fneg)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b.fneg)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b.fneg)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -1677,10 +1677,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod2(ptr addrspa
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
   %c.fneg = fsub float -0.0, %c
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c.fneg)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c.fneg)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -1872,14 +1872,14 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(ptr addrs
   %c = load volatile float, ptr addrspace(1) %gep2
 
   %a.fneg = fsub float -0.0, %a
-  %b.fabs = call float @llvm.fabs.f32(float %b)
-  %c.fabs = call float @llvm.fabs.f32(float %c)
+  %b.fabs = call nnan float @llvm.fabs.f32(float %b)
+  %c.fabs = call nnan float @llvm.fabs.f32(float %c)
   %c.fabs.fneg = fsub float -0.0, %c.fabs
 
-  %tmp0 = call float @llvm.minnum.f32(float %a.fneg, float %b.fabs)
-  %tmp1 = call float @llvm.maxnum.f32(float %a.fneg, float %b.fabs)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c.fabs.fneg)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a.fneg, float %b.fabs)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a.fneg, float %b.fabs)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c.fabs.fneg)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
 
   store float %med3, ptr addrspace(1) %outgep
   ret void
@@ -2082,16 +2082,16 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(ptr addrs
   %c.fabs = call float @llvm.fabs.f32(float %c)
   %c.fabs.fneg = fsub float -0.0, %c.fabs
 
-  %tmp0 = call float @llvm.minnum.f32(float %a.fabs.fneg, float %b.fabs.fneg)
-  %tmp1 = call float @llvm.maxnum.f32(float %a.fabs.fneg, float %b.fabs.fneg)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c.fabs.fneg)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a.fabs.fneg, float %b.fabs.fneg)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a.fabs.fneg, float %b.fabs.fneg)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c.fabs.fneg)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
 
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_nnan_inputs_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -2266,7 +2266,7 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_input_calls_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_input_calls_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_nnan_input_calls_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -2418,7 +2418,7 @@ define amdgpu_kernel void @v_nnan_input_calls_med3_f32_pat0(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_call_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_call_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_nnan_call_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -2570,7 +2570,7 @@ define amdgpu_kernel void @v_nnan_call_med3_f32_pat0(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @v_fast_call_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_fast_call_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_fast_call_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -2878,10 +2878,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -3030,10 +3030,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -3220,10 +3220,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1_srcmod0(ptr addrspa
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
   %a.fneg = fsub float -0.0, %a
-  %tmp0 = call float @llvm.maxnum.f32(float %a.fneg, float %b)
-  %tmp1 = call float @llvm.minnum.f32(float %a.fneg, float %b)
-  %tmp2 = call float @llvm.maxnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.minnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.maxnum.f32(float %a.fneg, float %b)
+  %tmp1 = call nnan float @llvm.minnum.f32(float %a.fneg, float %b)
+  %tmp2 = call nnan float @llvm.maxnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.minnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -3372,10 +3372,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat2(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -3524,10 +3524,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat3(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -3676,10 +3676,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat4(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %b, float %a)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %b, float %a)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -3828,10 +3828,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat5(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %b, float %a)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %b, float %a)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -3980,10 +3980,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat6(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %b, float %a)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %b, float %a)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -4132,10 +4132,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat7(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %b, float %a)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %b, float %a)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -4284,10 +4284,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat8(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp2, float %tmp0)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp2, float %tmp0)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -4436,10 +4436,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat9(ptr addrspace(1) %o
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp2, float %tmp0)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp2, float %tmp0)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -4588,10 +4588,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat10(ptr addrspace(1) %
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp2, float %tmp0)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp2, float %tmp0)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -4740,10 +4740,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat11(ptr addrspace(1) %
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp2, float %tmp0)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp2, float %tmp0)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -4892,10 +4892,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat12(ptr addrspace(1) %
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %b, float %a)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp2, float %tmp0)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %b, float %a)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp2, float %tmp0)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -5044,10 +5044,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat13(ptr addrspace(1) %
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %b, float %a)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp2, float %tmp0)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %b, float %a)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp2, float %tmp0)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -5196,10 +5196,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat14(ptr addrspace(1) %
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %b, float %a)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp2, float %tmp0)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %b, float %a)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp2, float %tmp0)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -5348,10 +5348,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat15(ptr addrspace(1) %
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.minnum.f32(float %b, float %a)
-  %tmp1 = call float @llvm.maxnum.f32(float %b, float %a)
-  %tmp2 = call float @llvm.minnum.f32(float %c, float %tmp1)
-  %med3 = call float @llvm.maxnum.f32(float %tmp2, float %tmp0)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %b, float %a)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %b, float %a)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %c, float %tmp1)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp2, float %tmp0)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -5503,10 +5503,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat16(ptr addrspace(1) %
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %tmp0 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp1 = call float @llvm.minnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.maxnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.minnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp1 = call nnan float @llvm.minnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.maxnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.minnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -5515,7 +5515,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat16(ptr addrspace(1) %
 ; Negative patterns
 ; ---------------------------------------------------------------------
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_test_safe_med3_f32_pat0_multi_use0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -5717,7 +5717,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_test_safe_med3_f32_pat0_multi_use1:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -5944,7 +5944,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_test_safe_med3_f32_pat0_multi_use2:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -6146,7 +6146,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_test_safe_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -6352,7 +6352,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr 
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_missing0_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing0_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_nnan_inputs_missing0_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -6527,7 +6527,7 @@ define amdgpu_kernel void @v_nnan_inputs_missing0_med3_f32_pat0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_missing1_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing1_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_nnan_inputs_missing1_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -6702,7 +6702,7 @@ define amdgpu_kernel void @v_nnan_inputs_missing1_med3_f32_pat0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_missing2_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing2_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_nnan_inputs_missing2_med3_f32_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -6877,7 +6877,7 @@ define amdgpu_kernel void @v_nnan_inputs_missing2_med3_f32_pat0(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @v_test_nnan_on_call_med3_f32_pat0_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_test_nnan_on_call_med3_f32_pat0_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_test_nnan_on_call_med3_f32_pat0_srcmod0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -7270,10 +7270,10 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(pt
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
   %a.fneg = fsub float -0.0, %a
-  %tmp0 = call float @llvm.minnum.f32(float %a.fneg, float %b)
-  %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
+  %tmp0 = call nnan float @llvm.minnum.f32(float %a.fneg, float %b)
+  %tmp1 = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %tmp2 = call nnan float @llvm.minnum.f32(float %tmp1, float %c)
+  %med3 = call nnan float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
 }
@@ -7428,13 +7428,13 @@ define amdgpu_kernel void @v_test_global_nnans_min_max_f32(ptr addrspace(1) %out
   %a = load volatile float, ptr addrspace(1) %gep0
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
-  %max = call float @llvm.maxnum.f32(float %a, float %b)
-  %minmax = call float @llvm.minnum.f32(float %max, float %c)
+  %max = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  %minmax = call nnan float @llvm.minnum.f32(float %max, float %c)
   store float %minmax, ptr addrspace(1) %outgep
   ret void
 }
 
-define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -7597,7 +7597,7 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
 ; SI-SDAG-LABEL: v_nnan_inputs_med3_f16_pat0:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
@@ -7865,7 +7865,7 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
   ret void
 }
 
-define amdgpu_kernel void @two_non_inline_constant(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @two_non_inline_constant(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: two_non_inline_constant:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -7998,7 +7998,7 @@ define amdgpu_kernel void @two_non_inline_constant(ptr addrspace(1) %out, ptr ad
 }
 
 ; FIXME: Simple stores do not work as a multiple use because they are bitcasted to integer constants.
-define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: one_non_inline_constant:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -8137,7 +8137,7 @@ define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
+define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %aptr) {
 ; SI-SDAG-LABEL: two_non_inline_constant_multi_use:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
@@ -8343,7 +8343,7 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
   ret void
 }
 
-define float @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) #1 {
+define float @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) {
 ; SI-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8384,7 +8384,7 @@ define float @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) #1 {
   ret float %med
 }
 
-define <2 x float> @v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum(<2 x float> %a) #1 {
+define <2 x float> @v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum(<2 x float> %a) {
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8452,7 +8452,7 @@ define <2 x float> @v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum(<2 x float> %
   ret <2 x float> %med
 }
 
-define { float, float } @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use(float %a) #1 {
+define { float, float } @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use(float %a) {
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8525,7 +8525,7 @@ define { float, float } @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use(
   ret { float, float } %ins.1
 }
 
-define float @v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) #1 {
+define float @v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) {
 ; SI-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8567,7 +8567,7 @@ define float @v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) 
   ret float %med
 }
 
-define float @v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum(float %a) #1 {
+define float @v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum(float %a) {
 ; SI-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8609,7 +8609,7 @@ define float @v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum(float %a) 
   ret float %med
 }
 
-define float @v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum(float %a) #1 {
+define float @v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum(float %a) {
 ; SI-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8651,7 +8651,7 @@ define float @v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum(float %a) #1 {
   ret float %med
 }
 
-define float @v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum(float %a) #1 {
+define float @v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum(float %a) {
 ; SI-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8693,7 +8693,7 @@ define float @v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum(float %a) #1 {
   ret float %med
 }
 
-define half @v_test_fmed3_r_i_i_f16_minimumnum_maximumnum(half %a) #1 {
+define half @v_test_fmed3_r_i_i_f16_minimumnum_maximumnum(half %a) {
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8772,7 +8772,7 @@ define half @v_test_fmed3_r_i_i_f16_minimumnum_maximumnum(half %a) #1 {
   ret half %med
 }
 
-define <2 x half> @v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum(<2 x half> %a) #1 {
+define <2 x half> @v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum(<2 x half> %a) {
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8848,7 +8848,7 @@ define <2 x half> @v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum(<2 x half> %a)
   ret <2 x half> %med
 }
 
-define double @v_test_fmed3_r_i_i_f64_minimumnum_maximumnum(double %a) #1 {
+define double @v_test_fmed3_r_i_i_f64_minimumnum_maximumnum(double %a) {
 ; SI-LABEL: v_test_fmed3_r_i_i_f64_minimumnum_maximumnum:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8894,6 +8894,501 @@ define double @v_test_fmed3_r_i_i_f64_minimumnum_maximumnum(double %a) #1 {
   ret double %med
 }
 
+define float @v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum(float %a) {
+; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; SI-GISEL-NEXT:    v_max_f32_e32 v2, 2.0, v0
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; SI-GISEL-NEXT:    v_min_f32_e32 v2, 4.0, v0
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v0
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-GISEL-NEXT:    v_min_f32_e32 v1, 4.0, v0
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v0
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX9-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GFX9-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX9-GISEL-NEXT:    v_min_f32_e32 v1, 4.0, v0
+; GFX9-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v0
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximum_minimum:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; GFX11-GISEL-NEXT:    v_cmp_o_f32_e32 vcc_lo, 2.0, v0
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc_lo
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-NEXT:    v_min_f32_e32 v1, 4.0, v0
+; GFX11-GISEL-NEXT:    v_cmp_o_f32_e32 vcc_lo, 4.0, v0
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc_lo
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a.add = fadd nnan float %a, 1.0
+  %max = call float @llvm.maximum.f32(float %a.add, float 2.0)
+  %med = call float @llvm.minimum.f32(float %max, float 4.0)
+  ret float %med
+}
+
+define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half> %a) {
+; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-SDAG-NEXT:    v_add_f32_e32 v1, 1.0, v1
+; SI-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-SDAG-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; SI-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-GISEL-NEXT:    v_add_f32_e32 v1, 1.0, v1
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, 2.0, v0
+; SI-GISEL-NEXT:    v_max_f32_e32 v4, 2.0, v1
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v1
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-GISEL-NEXT:    v_min_f32_e32 v3, 4.0, v0
+; SI-GISEL-NEXT:    v_min_f32_e32 v4, 4.0, v1
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v0
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v1
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x3c00
+; VI-SDAG-NEXT:    v_add_f16_e32 v1, 1.0, v0
+; VI-SDAG-NEXT:    v_add_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-SDAG-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; VI-SDAG-NEXT:    v_max_f16_e32 v1, 2.0, v1
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x4400
+; VI-SDAG-NEXT:    v_min_f16_e32 v1, 4.0, v1
+; VI-SDAG-NEXT:    v_min_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_add_f16_e32 v1, 1.0, v0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x3c00
+; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; VI-GISEL-NEXT:    v_add_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; VI-GISEL-NEXT:    v_max_f32_e32 v2, 2.0, v1
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v1
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
+; VI-GISEL-NEXT:    v_max_f32_e32 v2, 2.0, v0
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
+; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; VI-GISEL-NEXT:    v_min_f32_e32 v2, 4.0, v1
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v1
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
+; VI-GISEL-NEXT:    v_min_f32_e32 v2, 4.0, v0
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v0
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; VI-GISEL-NEXT:    v_cvt_f16_f32_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; VI-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, 2.0 op_sel_hi:[1,0]
+; GFX9-SDAG-NEXT:    v_pk_min_f16 v0, v0, 4.0 op_sel_hi:[1,0]
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x4000
+; GFX9-GISEL-NEXT:    v_pk_max_f16 v1, v0, 2.0 op_sel_hi:[1,0]
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_sdwa vcc, v0, v2 src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x7e00
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[4:5], 2.0, v0
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, v1, s[4:5]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v2, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v0
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v3, v1, 16, v3
+; GFX9-GISEL-NEXT:    v_pk_min_f16 v3, v3, 4.0 op_sel_hi:[1,0]
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[4:5], 4.0, v0
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e32 vcc, 4.0, v1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, v3, s[4:5]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_pk_max_f16 v0, v0, 2.0 op_sel_hi:[1,0]
+; GFX11-SDAG-NEXT:    v_pk_min_f16 v0, v0, 4.0 op_sel_hi:[1,0]
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-FAKE16-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; GFX11-GISEL-FAKE16:       ; %bb.0:
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-GISEL-FAKE16-NEXT:    v_pk_max_f16 v1, v0, 2.0 op_sel_hi:[1,0]
+; GFX11-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 2.0, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v1, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 2.0, v2
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v3, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v2, v1, 16, v2
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_pk_min_f16 v2, v2, 4.0 op_sel_hi:[1,0]
+; GFX11-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v2, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v1
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v3, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-TRUE16-LABEL: v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum:
+; GFX11-GISEL-TRUE16:       ; %bb.0:
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-GISEL-TRUE16-NEXT:    v_pk_max_f16 v1, v0, 2.0 op_sel_hi:[1,0]
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 2.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e64 s0, 2.0, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v1.l, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v1.h, s0
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_pk_min_f16 v1, v0, 4.0 op_sel_hi:[1,0]
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e64 s0, 4.0, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v1.l, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v1.h, s0
+; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+  %a.add = fadd nnan <2 x half> %a, splat (half 1.0)
+  %max = call <2 x half> @llvm.maximum.v2f16(<2 x half> %a.add, <2 x half> splat (half 2.0))
+  %med = call <2 x half> @llvm.minimum.v2f16(<2 x half> %max, <2 x half> splat (half 4.0))
+  ret <2 x half> %med
+}
+
+define half @v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum(half %a) {
+; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; SI-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_max_f32_e32 v2, 2.0, v0
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_min_f32_e32 v2, 4.0, v0
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v0
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; VI-SDAG-NEXT:    v_min_f16_e32 v0, 4.0, v0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; VI-GISEL-NEXT:    v_max_f32_e32 v2, 2.0, v0
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; VI-GISEL-NEXT:    v_min_f32_e32 v2, 4.0, v0
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 4.0, v0
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; GFX9-SDAG-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; GFX9-GISEL-NEXT:    v_max_f16_e32 v1, 2.0, v0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x7e00
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e32 vcc, 2.0, v0
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX9-GISEL-NEXT:    v_min_f16_e32 v1, 4.0, v0
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e32 vcc, 4.0, v0
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-FAKE16-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; GFX11-SDAG-FAKE16:       ; %bb.0:
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
+; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-FAKE16-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; GFX11-GISEL-FAKE16:       ; %bb.0:
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-FAKE16-NEXT:    v_max_f16_e32 v1, 2.0, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 2.0, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v1, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-FAKE16-NEXT:    v_min_f16_e32 v1, 4.0, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v1, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-TRUE16-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; GFX11-SDAG-TRUE16:       ; %bb.0:
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
+; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-TRUE16-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:
+; GFX11-GISEL-TRUE16:       ; %bb.0:
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_max_f16_e32 v0.h, 2.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 2.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.h, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_min_f16_e32 v1.l, 4.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v1, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+  %a.add = fadd nnan half %a, 1.0
+  %max = call half @llvm.maximum.f16(half %a.add, half 2.0)
+  %med = call half @llvm.minimum.f16(half %max, half 4.0)
+  ret half %med
+}
+
+define double @v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum(double %a) {
+; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
+; SI-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; SI-SDAG-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
+; SI-GISEL-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
+; SI-GISEL-NEXT:    v_max_f64 v[2:3], v[0:1], 2.0
+; SI-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, 2.0, v[0:1]
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; SI-GISEL-NEXT:    v_min_f64 v[2:3], v[0:1], 4.0
+; SI-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, 4.0, v[0:1]
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
+; VI-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; VI-SDAG-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
+; VI-GISEL-NEXT:    v_max_f64 v[2:3], v[0:1], 2.0
+; VI-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, 2.0, v[0:1]
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; VI-GISEL-NEXT:    v_min_f64 v[2:3], v[0:1], 4.0
+; VI-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, 4.0, v[0:1]
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
+; GFX9-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; GFX9-SDAG-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
+; GFX9-GISEL-NEXT:    v_max_f64 v[2:3], v[0:1], 2.0
+; GFX9-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, 2.0, v[0:1]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX9-GISEL-NEXT:    v_min_f64 v[2:3], v[0:1], 4.0
+; GFX9-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, 4.0, v[0:1]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; GFX11-SDAG-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-NEXT:    v_max_f64 v[2:3], v[0:1], 2.0
+; GFX11-GISEL-NEXT:    v_cmp_o_f64_e32 vcc_lo, 2.0, v[0:1]
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc_lo
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x7ff80000, v3, vcc_lo
+; GFX11-GISEL-NEXT:    v_min_f64 v[2:3], v[0:1], 4.0
+; GFX11-GISEL-NEXT:    v_cmp_o_f64_e32 vcc_lo, 4.0, v[0:1]
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x7ff80000, v3, vcc_lo
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a.add = fadd nnan double %a, 1.0
+  %max = call double @llvm.maximum.f64(double %a.add, double 2.0)
+  %med = call double @llvm.minimum.f64(double %max, double 4.0)
+  ret double %med
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare float @llvm.fabs.f32(float) #0
 declare float @llvm.minnum.f32(float, float) #0
@@ -8905,5 +9400,4 @@ declare half @llvm.minnum.f16(half, half) #0
 declare half @llvm.maxnum.f16(half, half) #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" }
-attributes #2 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }
+attributes #2 = { nounwind "no-nans-fp-math"="true" }

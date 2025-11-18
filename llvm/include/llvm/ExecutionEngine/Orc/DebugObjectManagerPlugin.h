@@ -15,8 +15,8 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
@@ -48,10 +48,6 @@ class DebugObject;
 ///
 class LLVM_ABI DebugObjectManagerPlugin : public ObjectLinkingLayer::Plugin {
 public:
-  // DEPRECATED - Please specify options explicitly
-  DebugObjectManagerPlugin(ExecutionSession &ES,
-                           std::unique_ptr<DebugObjectRegistrar> Target);
-
   /// Create the plugin to submit DebugObjects for JITLink artifacts. For all
   /// options the recommended setting is true.
   ///
@@ -67,16 +63,14 @@ public:
   ///   sequence. When turning this off, the user has to issue the call to
   ///   __jit_debug_register_code() on the executor side manually.
   ///
-  DebugObjectManagerPlugin(ExecutionSession &ES,
-                           std::unique_ptr<DebugObjectRegistrar> Target,
-                           bool RequireDebugSections, bool AutoRegisterCode);
-  ~DebugObjectManagerPlugin();
+  DebugObjectManagerPlugin(ExecutionSession &ES, bool RequireDebugSections,
+                           bool AutoRegisterCode, Error &Err);
+  ~DebugObjectManagerPlugin() override;
 
   void notifyMaterializing(MaterializationResponsibility &MR,
                            jitlink::LinkGraph &G, jitlink::JITLinkContext &Ctx,
                            MemoryBufferRef InputObject) override;
 
-  Error notifyEmitted(MaterializationResponsibility &MR) override;
   Error notifyFailed(MaterializationResponsibility &MR) override;
   Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
 
@@ -97,7 +91,7 @@ private:
   std::mutex PendingObjsLock;
   std::mutex RegisteredObjsLock;
 
-  std::unique_ptr<DebugObjectRegistrar> Target;
+  ExecutorAddr RegistrationAction;
   bool RequireDebugSections;
   bool AutoRegisterCode;
 };

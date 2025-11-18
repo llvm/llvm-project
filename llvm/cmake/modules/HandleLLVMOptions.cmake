@@ -450,13 +450,16 @@ if( LLVM_ENABLE_PIC )
     # Enable interprocedural optimizations for non-inline functions which would
     # otherwise be disabled due to GCC -fPIC's default.
     # Note: GCC<10.3 has a bug on SystemZ.
-    #
+    # Note: Default on AIX is "no semantic interposition".
     # Note: Clang allows IPO for -fPIC so this optimization is less effective.
     # Clang 13 has a bug related to -fsanitize-coverage
     # -fno-semantic-interposition (https://reviews.llvm.org/D117183).
-    if ((CMAKE_COMPILER_IS_GNUCXX AND
-         NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
-       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14))
+    if ((NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
+        AND ((CMAKE_COMPILER_IS_GNUCXX AND
+              NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ"
+                   AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
+             OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+                 AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14)))
       add_flag_if_supported("-fno-semantic-interposition" FNO_SEMANTIC_INTERPOSITION)
     endif()
   endif()
@@ -948,6 +951,15 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Enable -Wstring-conversion to catch misuse of string literals.
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     append("-Wstring-conversion" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+    # Disable -Wno-pass-failed flag, which reports failure to perform
+    # optimizations suggested by pragmas. This warning is not relevant for LLVM
+    # projects and may be injected by pragmas in libstdc++.
+    # FIXME: Reconsider this choice if warnings from STL headers can be reliably
+    # avoided (https://github.com/llvm/llvm-project/issues/157666).
+    # This option has been available since Clang 3.5, and we do require a newer
+    # version.
+    append("-Wno-pass-failed" CMAKE_CXX_FLAGS)
   endif()
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -962,13 +974,6 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
   # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
   add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSPPORTED_FLAG)
-
-  # Disable -Wno-pass-failed flag, which reports failure to perform
-  # optimizations suggested by pragmas. This warning is not relevant for LLVM
-  # projects and may be injected by pragmas in libstdc++.
-  # FIXME: Reconsider this choice if warnings from STL headers can be reliably
-  # avoided (https://github.com/llvm/llvm-project/issues/157666).
-  add_flag_if_supported("-Wno-pass-failed" NO_PASS_FAILED_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)

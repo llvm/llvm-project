@@ -606,16 +606,24 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 
 void X86TargetLowering::insertSSPDeclarations(Module &M) const {
   // MSVC CRT provides functionalities for stack protection.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
+    // MSVC CRT provides functionalities for stack protection.
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal("__security_cookie",
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
                         PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
-    FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-        "__security_check_cookie", Type::getVoidTy(M.getContext()),
-        PointerType::getUnqual(M.getContext()));
+    FunctionCallee SecurityCheckCookie =
+        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
+                              Type::getVoidTy(M.getContext()),
+                              PointerType::getUnqual(M.getContext()));
+
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::X86_FastCall);
       F->addParamAttr(0, Attribute::AttrKind::InReg);
@@ -630,15 +638,6 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
       hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Function *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
-    return M.getFunction("__security_check_cookie");
-  }
-  return TargetLowering::getSSPStackGuardCheck(M);
 }
 
 Value *

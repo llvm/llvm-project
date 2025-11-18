@@ -78,11 +78,10 @@ enum DefaultDataSharingAttributes {
 /// Not mentioning any Variable category attribute indicates
 /// the modifier (DefaultDataSharingAttributes) is for all variables.
 enum DefaultDataSharingVCAttributes {
-  DSA_VC_all = 0,     /// for all variables.
-  DSA_VC_aggregate,   /// for aggregate variables.
-  DSA_VC_allocatable, /// for allocatable variables.
-  DSA_VC_pointer,     /// for pointer variables.
-  DSA_VC_scalar,      /// for scalar variables.
+  DSA_VC_all = 0,   /// for all variables.
+  DSA_VC_aggregate, /// for aggregate variables.
+  DSA_VC_pointer,   /// for pointer variables.
+  DSA_VC_scalar,    /// for scalar variables.
 };
 
 /// Stack for tracking declarations used in OpenMP directives and
@@ -760,11 +759,6 @@ public:
     getTopOfStack().DefaultVCAttr = DSA_VC_all;
     getTopOfStack().DefaultAttrVCLoc = VCLoc;
   }
-  /// Set default data sharing variable category attribute to allocatable.
-  void setDefaultDSAVCAllocatable(SourceLocation VCLoc) {
-    getTopOfStack().DefaultVCAttr = DSA_VC_allocatable;
-    getTopOfStack().DefaultAttrVCLoc = VCLoc;
-  }
   /// Set default data sharing variable category attribute to pointer.
   void setDefaultDSAVCPointer(SourceLocation VCLoc) {
     getTopOfStack().DefaultVCAttr = DSA_VC_pointer;
@@ -1371,11 +1365,6 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   switch (Iter->DefaultVCAttr) {
   case DSA_VC_aggregate:
     if (!VD->getType()->isAggregateType())
-      IterDA = DSA_none;
-    break;
-  case DSA_VC_allocatable:
-    if (!(VD->getType()->isPointerType() ||
-          VD->getType()->isVariableArrayType()))
       IterDA = DSA_none;
     break;
   case DSA_VC_pointer:
@@ -7246,7 +7235,9 @@ void SemaOpenMP::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
     FunctionDecl *UDecl = nullptr;
     if (IsTemplated && isa<FunctionTemplateDecl>(CandidateDecl)) {
       auto *FTD = cast<FunctionTemplateDecl>(CandidateDecl);
-      if (FTD->getTemplateParameters()->size() == TemplateParamLists.size())
+      // FIXME: Should this compare the template parameter lists on all levels?
+      if (SemaRef.Context.isSameTemplateParameterList(
+              FTD->getTemplateParameters(), TemplateParamLists.back()))
         UDecl = FTD->getTemplatedDecl();
     } else if (!IsTemplated)
       UDecl = dyn_cast<FunctionDecl>(CandidateDecl);
@@ -16491,6 +16482,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_ordered:
     Res = ActOnOpenMPOrderedClause(StartLoc, EndLoc, LParenLoc, Expr);
     break;
+  case OMPC_nowait:
+    Res = ActOnOpenMPNowaitClause(StartLoc, EndLoc, LParenLoc, Expr);
+    break;
   case OMPC_priority:
     Res = ActOnOpenMPPriorityClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -16527,6 +16521,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_holds:
     Res = ActOnOpenMPHoldsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_dyn_groupprivate:
   case OMPC_grainsize:
   case OMPC_num_tasks:
   case OMPC_num_threads:
@@ -16546,7 +16541,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_aligned:
   case OMPC_copyin:
   case OMPC_copyprivate:
-  case OMPC_nowait:
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
@@ -16654,6 +16648,8 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_ompx_dyn_cgroup_mem:
+  case OMPC_dyn_groupprivate:
+    // TODO: This may need to consider teams too.
     if (Leafs[0] == OMPD_target)
       return OMPD_target;
     break;
@@ -17212,6 +17208,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
         static_cast<OpenMPSeverityClauseKind>(Argument), ArgumentLoc, StartLoc,
         LParenLoc, EndLoc);
     break;
+  case OMPC_threadset:
+    Res = ActOnOpenMPThreadsetClause(static_cast<OpenMPThreadsetKind>(Argument),
+                                     ArgumentLoc, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -17308,47 +17308,120 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(
         << getOpenMPClauseNameForDiag(OMPC_default);
     return nullptr;
   }
-
-  switch (M) {
-  case OMP_DEFAULT_none:
-    DSAStack->setDefaultDSANone(MLoc);
-    break;
-  case OMP_DEFAULT_shared:
-    DSAStack->setDefaultDSAShared(MLoc);
-    break;
-  case OMP_DEFAULT_firstprivate:
-    DSAStack->setDefaultDSAFirstPrivate(MLoc);
-    break;
-  case OMP_DEFAULT_private:
-    DSAStack->setDefaultDSAPrivate(MLoc);
-    break;
-  default:
-    llvm_unreachable("DSA unexpected in OpenMP default clause");
-  }
-
-  switch (VCKind) {
-  case OMPC_DEFAULT_VC_aggregate:
-    DSAStack->setDefaultDSAVCAggregate(VCKindLoc);
-    break;
-  case OMPC_DEFAULT_VC_all:
-    DSAStack->setDefaultDSAVCAll(VCKindLoc);
-    break;
-  case OMPC_DEFAULT_VC_allocatable:
-    DSAStack->setDefaultDSAVCAllocatable(VCKindLoc);
-    break;
-  case OMPC_DEFAULT_VC_pointer:
-    DSAStack->setDefaultDSAVCPointer(VCKindLoc);
-    break;
-  case OMPC_DEFAULT_VC_scalar:
-    DSAStack->setDefaultDSAVCScalar(VCKindLoc);
-    break;
-  default:
+  if (VCKind == OMPC_DEFAULT_VC_unknown) {
     Diag(VCKindLoc, diag::err_omp_default_vc)
         << getOpenMPSimpleClauseTypeName(OMPC_default, unsigned(M));
+    return nullptr;
+  }
+
+  bool IsTargetDefault =
+      getLangOpts().OpenMP >= 60 &&
+      isOpenMPTargetExecutionDirective(DSAStack->getCurrentDirective());
+
+  // OpenMP 6.0, page 224, lines 3-4 default Clause, Semantics
+  // If data-sharing-attribute is shared then the clause has no effect
+  // on a target construct;
+  if (IsTargetDefault && M == OMP_DEFAULT_shared)
+    return nullptr;
+
+  auto SetDefaultClauseAttrs = [&](llvm::omp::DefaultKind M,
+                                   OpenMPDefaultClauseVariableCategory VCKind) {
+    OpenMPDefaultmapClauseModifier DefMapMod;
+    OpenMPDefaultmapClauseKind DefMapKind;
+    // default data-sharing-attribute
+    switch (M) {
+    case OMP_DEFAULT_none:
+      if (IsTargetDefault)
+        DefMapMod = OMPC_DEFAULTMAP_MODIFIER_none;
+      else
+        DSAStack->setDefaultDSANone(MLoc);
+      break;
+    case OMP_DEFAULT_firstprivate:
+      if (IsTargetDefault)
+        DefMapMod = OMPC_DEFAULTMAP_MODIFIER_firstprivate;
+      else
+        DSAStack->setDefaultDSAFirstPrivate(MLoc);
+      break;
+    case OMP_DEFAULT_private:
+      if (IsTargetDefault)
+        DefMapMod = OMPC_DEFAULTMAP_MODIFIER_private;
+      else
+        DSAStack->setDefaultDSAPrivate(MLoc);
+      break;
+    case OMP_DEFAULT_shared:
+      assert(!IsTargetDefault && "DSA shared invalid with target directive");
+      DSAStack->setDefaultDSAShared(MLoc);
+      break;
+    default:
+      llvm_unreachable("unexpected DSA in OpenMP default clause");
+    }
+    // default variable-category
+    switch (VCKind) {
+    case OMPC_DEFAULT_VC_aggregate:
+      if (IsTargetDefault)
+        DefMapKind = OMPC_DEFAULTMAP_aggregate;
+      else
+        DSAStack->setDefaultDSAVCAggregate(VCKindLoc);
+      break;
+    case OMPC_DEFAULT_VC_pointer:
+      if (IsTargetDefault)
+        DefMapKind = OMPC_DEFAULTMAP_pointer;
+      else
+        DSAStack->setDefaultDSAVCPointer(VCKindLoc);
+      break;
+    case OMPC_DEFAULT_VC_scalar:
+      if (IsTargetDefault)
+        DefMapKind = OMPC_DEFAULTMAP_scalar;
+      else
+        DSAStack->setDefaultDSAVCScalar(VCKindLoc);
+      break;
+    case OMPC_DEFAULT_VC_all:
+      if (IsTargetDefault)
+        DefMapKind = OMPC_DEFAULTMAP_all;
+      else
+        DSAStack->setDefaultDSAVCAll(VCKindLoc);
+      break;
+    default:
+      llvm_unreachable("unexpected variable category in OpenMP default clause");
+    }
+    // OpenMP 6.0, page 224, lines 4-5 default Clause, Semantics
+    // otherwise, its effect on a target construct is equivalent to
+    // specifying the defaultmap clause with the same data-sharing-attribute
+    // and variable-category.
+    //
+    // If earlier than OpenMP 6.0, or not a target directive, the default DSA
+    // is/was set as before.
+    if (IsTargetDefault) {
+      if (DefMapKind == OMPC_DEFAULTMAP_all) {
+        DSAStack->setDefaultDMAAttr(DefMapMod, OMPC_DEFAULTMAP_aggregate, MLoc);
+        DSAStack->setDefaultDMAAttr(DefMapMod, OMPC_DEFAULTMAP_scalar, MLoc);
+        DSAStack->setDefaultDMAAttr(DefMapMod, OMPC_DEFAULTMAP_pointer, MLoc);
+      } else {
+        DSAStack->setDefaultDMAAttr(DefMapMod, DefMapKind, MLoc);
+      }
+    }
+  };
+
+  SetDefaultClauseAttrs(M, VCKind);
+  return new (getASTContext())
+      OMPDefaultClause(M, MLoc, VCKind, VCKindLoc, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
+                                                  SourceLocation KindLoc,
+                                                  SourceLocation StartLoc,
+                                                  SourceLocation LParenLoc,
+                                                  SourceLocation EndLoc) {
+  if (Kind == OMPC_THREADSET_unknown) {
+    Diag(KindLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_threadset, /*First=*/0,
+                                   /*Last=*/unsigned(OMPC_THREADSET_unknown))
+        << getOpenMPClauseName(OMPC_threadset);
+    return nullptr;
   }
 
   return new (getASTContext())
-      OMPDefaultClause(M, MLoc, VCKind, VCKindLoc, StartLoc, LParenLoc, EndLoc);
+      OMPThreadsetClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,
@@ -17680,7 +17753,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
     SourceLocation EndLoc) {
   OMPClause *Res = nullptr;
   switch (Kind) {
-  case OMPC_schedule:
+  case OMPC_schedule: {
     enum { Modifier1, Modifier2, ScheduleKind, NumberOfElements };
     assert(Argument.size() == NumberOfElements &&
            ArgumentLoc.size() == NumberOfElements);
@@ -17691,6 +17764,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
         StartLoc, LParenLoc, ArgumentLoc[Modifier1], ArgumentLoc[Modifier2],
         ArgumentLoc[ScheduleKind], DelimLoc, EndLoc);
     break;
+  }
   case OMPC_if:
     assert(Argument.size() == 1 && ArgumentLoc.size() == 1);
     Res = ActOnOpenMPIfClause(static_cast<OpenMPDirectiveKind>(Argument.back()),
@@ -17746,6 +17820,20 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
         static_cast<OpenMPNumTasksClauseModifier>(Argument.back()), Expr,
         StartLoc, LParenLoc, ArgumentLoc.back(), EndLoc);
     break;
+  case OMPC_dyn_groupprivate: {
+    enum { Modifier1, Modifier2, NumberOfElements };
+    assert(Argument.size() == NumberOfElements &&
+           ArgumentLoc.size() == NumberOfElements &&
+           "Modifiers for dyn_groupprivate clause and their locations are "
+           "expected.");
+    Res = ActOnOpenMPDynGroupprivateClause(
+        static_cast<OpenMPDynGroupprivateClauseModifier>(Argument[Modifier1]),
+        static_cast<OpenMPDynGroupprivateClauseFallbackModifier>(
+            Argument[Modifier2]),
+        Expr, StartLoc, LParenLoc, ArgumentLoc[Modifier1],
+        ArgumentLoc[Modifier2], EndLoc);
+    break;
+  }
   case OMPC_num_threads:
     assert(Argument.size() == 1 && ArgumentLoc.size() == 1 &&
            "Modifier for num_threads clause and its location are expected.");
@@ -17955,7 +18043,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPOrderedClause(StartLoc, EndLoc);
     break;
   case OMPC_nowait:
-    Res = ActOnOpenMPNowaitClause(StartLoc, EndLoc);
+    Res = ActOnOpenMPNowaitClause(StartLoc, EndLoc,
+                                  /*LParenLoc=*/SourceLocation(),
+                                  /*Condition=*/nullptr);
     break;
   case OMPC_untied:
     Res = ActOnOpenMPUntiedClause(StartLoc, EndLoc);
@@ -18100,6 +18190,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_ompx_dyn_cgroup_mem:
+  case OMPC_dyn_groupprivate:
   default:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -18107,9 +18198,24 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPNowaitClause(SourceLocation StartLoc,
-                                               SourceLocation EndLoc) {
+                                               SourceLocation EndLoc,
+                                               SourceLocation LParenLoc,
+                                               Expr *Condition) {
+  Expr *ValExpr = Condition;
+  if (Condition && LParenLoc.isValid()) {
+    if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
+        !Condition->isInstantiationDependent() &&
+        !Condition->containsUnexpandedParameterPack()) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(StartLoc, Condition);
+      if (Val.isInvalid())
+        return nullptr;
+
+      ValExpr = Val.get();
+    }
+  }
   DSAStack->setNowaitRegion();
-  return new (getASTContext()) OMPNowaitClause(StartLoc, EndLoc);
+  return new (getASTContext())
+      OMPNowaitClause(ValExpr, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPUntiedClause(SourceLocation StartLoc,
@@ -25202,6 +25308,49 @@ OMPClause *SemaOpenMP::ActOnOpenMPXDynCGroupMemClause(Expr *Size,
 
   return new (getASTContext()) OMPXDynCGroupMemClause(
       ValExpr, HelperValStmt, CaptureRegion, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPDynGroupprivateClause(
+    OpenMPDynGroupprivateClauseModifier M1,
+    OpenMPDynGroupprivateClauseFallbackModifier M2, Expr *Size,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation M1Loc,
+    SourceLocation M2Loc, SourceLocation EndLoc) {
+
+  if ((M1Loc.isValid() && M1 == OMPC_DYN_GROUPPRIVATE_unknown) ||
+      (M2Loc.isValid() && M2 == OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown)) {
+    std::string Values = getListOfPossibleValues(
+        OMPC_dyn_groupprivate, /*First=*/0, OMPC_DYN_GROUPPRIVATE_unknown);
+    Diag((M1Loc.isValid() && M1 == OMPC_DYN_GROUPPRIVATE_unknown) ? M1Loc
+                                                                  : M2Loc,
+         diag::err_omp_unexpected_clause_value)
+        << Values << getOpenMPClauseName(OMPC_dyn_groupprivate);
+    return nullptr;
+  }
+
+  Expr *ValExpr = Size;
+  Stmt *HelperValStmt = nullptr;
+
+  // OpenMP [2.5, Restrictions]
+  //  The dyn_groupprivate expression must evaluate to a positive integer
+  //  value.
+  if (!isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_dyn_groupprivate,
+                                 /*StrictlyPositive=*/false))
+    return nullptr;
+
+  OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+  OpenMPDirectiveKind CaptureRegion = getOpenMPCaptureRegionForClause(
+      DKind, OMPC_dyn_groupprivate, getLangOpts().OpenMP);
+  if (CaptureRegion != OMPD_unknown &&
+      !SemaRef.CurContext->isDependentContext()) {
+    ValExpr = SemaRef.MakeFullExpr(ValExpr).get();
+    llvm::MapVector<const Expr *, DeclRefExpr *> Captures;
+    ValExpr = tryBuildCapture(SemaRef, ValExpr, Captures).get();
+    HelperValStmt = buildPreInits(getASTContext(), Captures);
+  }
+
+  return new (getASTContext()) OMPDynGroupprivateClause(
+      StartLoc, LParenLoc, EndLoc, ValExpr, HelperValStmt, CaptureRegion, M1,
+      M1Loc, M2, M2Loc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPDoacrossClause(

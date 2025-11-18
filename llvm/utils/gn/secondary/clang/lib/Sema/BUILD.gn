@@ -29,7 +29,6 @@ static_library("Sema") {
     "//clang/lib/APINotes",
     "//clang/lib/AST",
     "//clang/lib/Analysis",
-    "//clang/lib/Analysis/LifetimeSafety",
     "//clang/lib/Basic",
     "//clang/lib/Edit",
     "//clang/lib/Lex",

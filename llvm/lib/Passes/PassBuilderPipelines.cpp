@@ -519,16 +519,14 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   invokeLoopOptimizerEndEPCallbacks(LPM2, Level);
 
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1),
-                                              /*UseMemorySSA=*/true,
-                                              /*UseBlockFrequencyInfo=*/true));
+                                              /*UseMemorySSA=*/true));
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
   // The loop passes in LPM2 (LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2),
-                                              /*UseMemorySSA=*/false,
-                                              /*UseBlockFrequencyInfo=*/false));
+                                              /*UseMemorySSA=*/false));
 
   // Delete small array after loop unroll.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
@@ -710,8 +708,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   invokeLoopOptimizerEndEPCallbacks(LPM2, Level);
 
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1),
-                                              /*UseMemorySSA=*/true,
-                                              /*UseBlockFrequencyInfo=*/true));
+                                              /*UseMemorySSA=*/true));
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
@@ -719,8 +716,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // LoopDeletionPass and LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2),
-                                              /*UseMemorySSA=*/false,
-                                              /*UseBlockFrequencyInfo=*/false));
+                                              /*UseMemorySSA=*/false));
 
   // Delete small array after loop unroll.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
@@ -773,7 +769,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                /*AllowSpeculation=*/true),
-      /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
+      /*UseMemorySSA=*/true));
 
   FPM.addPass(CoroElidePass());
 
@@ -842,8 +838,7 @@ void PassBuilder::addPostPGOLoopRotation(ModulePassManager &MPM,
         createFunctionToLoopPassAdaptor(
             LoopRotatePass(EnableLoopHeaderDuplication ||
                            Level != OptimizationLevel::Oz),
-            /*UseMemorySSA=*/false,
-            /*UseBlockFrequencyInfo=*/false),
+            /*UseMemorySSA=*/false),
         PTO.EagerlyInvalidateAnalyses));
   }
 }
@@ -1303,9 +1298,17 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
 /// TODO: Should LTO cause any differences to this set of passes?
 void PassBuilder::addVectorPasses(OptimizationLevel Level,
-                                  FunctionPassManager &FPM, bool IsFullLTO) {
+                                  FunctionPassManager &FPM,
+                                  ThinOrFullLTOPhase LTOPhase) {
+  const bool IsFullLTO = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink;
+
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
+
+  // Drop dereferenceable assumes after vectorization, as they are no longer
+  // needed and can inhibit further optimization.
+  if (!isLTOPreLink(LTOPhase))
+    FPM.addPass(DropUnnecessaryAssumesPass(/*DropDereferenceable=*/true));
 
   FPM.addPass(InferAlignmentPass());
   if (IsFullLTO) {
@@ -1358,8 +1361,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     LPM.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ Level ==
                                        OptimizationLevel::O3));
     ExtraPasses.addPass(
-        createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true,
-                                        /*UseBlockFrequencyInfo=*/true));
+        createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true));
     ExtraPasses.addPass(
         SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
     ExtraPasses.addPass(InstCombinePass());
@@ -1438,7 +1440,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                /*AllowSpeculation=*/true),
-      /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
+      /*UseMemorySSA=*/true));
 
   // Now that we've vectorized and unrolled loops, we may have more refined
   // alignment information, try to re-derive it here.
@@ -1520,7 +1522,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     OptimizePM.addPass(createFunctionToLoopPassAdaptor(
         LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                  /*AllowSpeculation=*/true),
-        /*USeMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
+        /*USeMemorySSA=*/true));
   }
 
   OptimizePM.addPass(Float2IntPass());
@@ -1560,8 +1562,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (PTO.LoopInterchange)
     LPM.addPass(LoopInterchangePass());
 
-  OptimizePM.addPass(createFunctionToLoopPassAdaptor(
-      std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
+  OptimizePM.addPass(
+      createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/false));
 
   // FIXME: This may not be the right place in the pipeline.
   // We need to have the data to support the right place.
@@ -1578,7 +1580,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // from the TargetLibraryInfo.
   OptimizePM.addPass(InjectTLIMappings());
 
-  addVectorPasses(Level, OptimizePM, /* IsFullLTO */ false);
+  addVectorPasses(Level, OptimizePM, LTOPhase);
 
   invokeVectorizerEndEPCallbacks(OptimizePM, Level);
 
@@ -1657,6 +1659,16 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
     return buildO0DefaultPipeline(Level, Phase);
 
   ModulePassManager MPM;
+
+  // Currently this pipeline is only invoked in an LTO pre link pass or when we
+  // are not running LTO. If that changes the below checks may need updating.
+  assert(isLTOPreLink(Phase) || Phase == ThinOrFullLTOPhase::None);
+
+  // If we are invoking this in non-LTO mode, remove any MemProf related
+  // attributes and metadata, as we don't know whether we are linking with
+  // a library containing the necessary interfaces.
+  if (Phase == ThinOrFullLTOPhase::None)
+    MPM.addPass(MemProfRemoveInfo());
 
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());
@@ -1803,6 +1815,12 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
 
+  // If we are invoking this without a summary index noting that we are linking
+  // with a library containing the necessary APIs, remove any MemProf related
+  // attributes and metadata.
+  if (!ImportSummary || !ImportSummary->withSupportsHotColdNew())
+    MPM.addPass(MemProfRemoveInfo());
+
   if (ImportSummary) {
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
@@ -1873,6 +1891,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   ModulePassManager MPM;
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
+
+  // If we are invoking this without a summary index noting that we are linking
+  // with a library containing the necessary APIs, remove any MemProf related
+  // attributes and metadata.
+  if (!ExportSummary || !ExportSummary->withSupportsHotColdNew())
+    MPM.addPass(MemProfRemoveInfo());
 
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.
@@ -2111,7 +2135,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MainFPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                /*AllowSpeculation=*/true),
-      /*USeMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
+      /*USeMemorySSA=*/true));
 
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());
@@ -2141,12 +2165,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                  PTO.ForgetAllSCEVInLoopUnroll));
   // The loop passes in LPM (LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
-  MainFPM.addPass(createFunctionToLoopPassAdaptor(
-      std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/true));
+  MainFPM.addPass(
+      createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/false));
 
   MainFPM.addPass(LoopDistributePass());
 
-  addVectorPasses(Level, MainFPM, /* IsFullLTO */ true);
+  addVectorPasses(Level, MainFPM, ThinOrFullLTOPhase::FullLTOPostLink);
 
   invokeVectorizerEndEPCallbacks(MainFPM, Level);
 

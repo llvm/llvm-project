@@ -60,7 +60,7 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
     OS << "\n";
 }
 
-LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line) {
+[[maybe_unused]] static void printDebugInfo(const UnwrappedLine &Line) {
   printLine(llvm::dbgs(), Line);
 }
 
@@ -948,7 +948,11 @@ static bool isIIFE(const UnwrappedLine &Line,
 }
 
 static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
-                                   const FormatToken &InitialToken) {
+                                   const FormatToken &InitialToken,
+                                   const bool IsJavaRecord) {
+  if (IsJavaRecord)
+    return Style.BraceWrapping.AfterClass;
+
   tok::TokenKind Kind = InitialToken.Tok.getKind();
   if (InitialToken.is(TT_NamespaceMacro))
     Kind = tok::kw_namespace;
@@ -1588,15 +1592,14 @@ void UnwrappedLineParser::parseStructuralElement(
     parseTryCatch();
     return;
   case tok::kw_extern:
-    nextToken();
     if (Style.isVerilog()) {
-      // In Verilog and extern module declaration looks like a start of module.
+      // In Verilog an extern module declaration looks like a start of module.
       // But there is no body and endmodule. So we handle it separately.
-      if (Keywords.isVerilogHierarchy(*FormatTok)) {
-        parseVerilogHierarchyHeader();
-        return;
-      }
-    } else if (FormatTok->is(tok::string_literal)) {
+      parseVerilogExtern();
+      return;
+    }
+    nextToken();
+    if (FormatTok->is(tok::string_literal)) {
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         if (Style.BraceWrapping.AfterExternBlock)
@@ -1619,6 +1622,10 @@ void UnwrappedLineParser::parseStructuralElement(
   case tok::kw_export:
     if (Style.isJavaScript()) {
       parseJavaScriptEs6ImportExport();
+      return;
+    }
+    if (Style.isVerilog()) {
+      parseVerilogExtern();
       return;
     }
     if (IsCpp) {
@@ -1667,6 +1674,10 @@ void UnwrappedLineParser::parseStructuralElement(
         if (FormatTok->is(tok::semi))
           nextToken();
         addUnwrappedLine();
+        return;
+      }
+      if (Style.isVerilog()) {
+        parseVerilogExtern();
         return;
       }
       if (IsCpp && parseModuleImport())
@@ -2569,6 +2580,12 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
         addUnwrappedLine();
       break;
+    case tok::kw_requires: {
+      auto *RequiresToken = FormatTok;
+      nextToken();
+      parseRequiresExpression(RequiresToken);
+      break;
+    }
     default:
       nextToken();
       break;
@@ -3194,7 +3211,7 @@ void UnwrappedLineParser::parseNamespace() {
   if (FormatTok->is(tok::l_brace)) {
     FormatTok->setFinalizedType(TT_NamespaceLBrace);
 
-    if (ShouldBreakBeforeBrace(Style, InitialToken))
+    if (ShouldBreakBeforeBrace(Style, InitialToken, /*IsJavaRecord=*/false))
       addUnwrappedLine();
 
     unsigned AddLevels =
@@ -3859,7 +3876,7 @@ bool UnwrappedLineParser::parseEnum() {
   }
 
   if (!Style.AllowShortEnumsOnASingleLine &&
-      ShouldBreakBeforeBrace(Style, InitialToken)) {
+      ShouldBreakBeforeBrace(Style, InitialToken, /*IsJavaRecord=*/false)) {
     addUnwrappedLine();
   }
   // Parse enum body.
@@ -4154,7 +4171,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
     if (ParseAsExpr) {
       parseChildBlock();
     } else {
-      if (ShouldBreakBeforeBrace(Style, InitialToken))
+      if (ShouldBreakBeforeBrace(Style, InitialToken, IsJavaRecord))
         addUnwrappedLine();
 
       unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
@@ -4547,6 +4564,23 @@ void UnwrappedLineParser::parseVerilogCaseLabel() {
   if (CurrentLines->size() > FirstLine)
     (*CurrentLines)[FirstLine].Level = OrigLevel;
   Line->Level = OrigLevel;
+}
+
+void UnwrappedLineParser::parseVerilogExtern() {
+  assert(
+      FormatTok->isOneOf(tok::kw_extern, tok::kw_export, Keywords.kw_import));
+  nextToken();
+  // "DPI-C"
+  if (FormatTok->is(tok::string_literal))
+    nextToken();
+  if (FormatTok->isOneOf(Keywords.kw_context, Keywords.kw_pure))
+    nextToken();
+  if (Keywords.isVerilogIdentifier(*FormatTok))
+    nextToken();
+  if (FormatTok->is(tok::equal))
+    nextToken();
+  if (Keywords.isVerilogHierarchy(*FormatTok))
+    parseVerilogHierarchyHeader();
 }
 
 bool UnwrappedLineParser::containsExpansion(const UnwrappedLine &Line) const {

@@ -2,6 +2,7 @@
 # than 255 chars when combined with the fact that pip wants to install into a tmp directory buried under
 # C/Users/ContainerAdministrator/AppData/Local/Temp.
 # UNSUPPORTED: target={{.*(windows).*}}
+# REQUIRES: expensive_checks
 # REQUIRES: non-shared-libs-build
 # REQUIRES: bindings-python
 

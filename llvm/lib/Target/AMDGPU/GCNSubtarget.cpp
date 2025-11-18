@@ -169,7 +169,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetTriple(TT),
     TargetID(*this),
     InstrItins(getInstrItineraryForCPU(GPU)),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),

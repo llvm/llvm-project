@@ -54,6 +54,14 @@
     </div>
     {{/CodeComments}}
 {{/HasCodeComments}}
+{{#HasThrowsComments}}
+    <h3>Throws</h3>
+    {{#ThrowsComments}}
+    <div>
+        <b>{{Exception}}</b> {{#Children}}{{TextComment}}{{/Children}}
+    </div>
+    {{/ThrowsComments}}
+{{/HasThrowsComments}}
 {{#BlockCommandComment}}
     <div class="block-command-comment__command">
         <div class="block-command-command">

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !defined(__wasm__)
+
 #include "assembly.h"
 
 #define FROM_0_TO_15 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
@@ -16,13 +18,17 @@
 
 #if defined(_AIX)
   .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+  .section .text,"axy",@progbits,unique,0
 #else
   .text
 #endif
 
-#if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
+#if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
+
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
 #
 # extern "C" void __libunwind_Registers_x86_jumpto(Registers_x86 *);
@@ -67,6 +73,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip gs
 
 #elif defined(__x86_64__) && !defined(__arm64ec__)
+.att_syntax
 
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 #
@@ -629,18 +636,35 @@ Lnovec:
 
 #elif defined(__aarch64__)
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
 #if defined(__ARM_FEATURE_GCS_DEFAULT)
 .arch_extension gcs
 #endif
 
 //
-// extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
+// extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *, unsigned);
 //
 // On entry:
 //  thread_state pointer is in x0
+//  walked_frames counter is in x1
 //
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
+
+  #if defined(_LIBUNWIND_TRACE_RET_INJECT)
+    cbz     w1, 1f
+  0:
+    subs    w1, w1, #1
+    adr     x16, #8
+    ret     x16
+
+    b.ne    0b
+  1:
+  #endif
+
   // skip restore of x0,x1 for now
   ldp    x2, x3,  [x0, #0x010]
   ldp    x4, x5,  [x0, #0x020]
@@ -657,7 +681,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x24,x25, [x0, #0x0C0]
   ldp    x26,x27, [x0, #0x0D0]
   ldp    x28,x29, [x0, #0x0E0]
-  ldr    x30,     [x0, #0x100]  // restore pc into lr
+
 #if defined(__ARM_FP) && __ARM_FP != 0
   ldp    d0, d1,  [x0, #0x110]
   ldp    d2, d3,  [x0, #0x120]
@@ -681,7 +705,18 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been
   // restored.
-  ldr    x16,     [x0, #0x0F8]
+
+  ldr    x16,     [x0, #0x0F8]  // load sp into scratch
+  ldr    lr,      [x0, #0x100]  // restore pc into lr
+
+#if __has_feature(ptrauth_calls)
+  // The LR is signed with its address inside the register state.  Time
+  // to resign to be a regular ROP protected signed pointer
+  add    x1, x0, #0x100
+  autib  lr, x1
+  pacib  lr, x16  // signed the scratch register for sp
+#endif
+
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x16                 // restore sp
 #if defined(__ARM_FEATURE_GCS_DEFAULT)
@@ -694,7 +729,12 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   gcspushm x30
 Lnogcs:
 #endif
+
+#if __has_feature(ptrauth_calls)
+  retab
+#else
   ret    x30                    // jump to pc
+#endif
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
@@ -1253,7 +1293,8 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
 
 #endif
 
-#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__) */
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
 
 NO_EXEC_STACK_DIRECTIVE
 
+#endif /* !defined(__wasm__) */

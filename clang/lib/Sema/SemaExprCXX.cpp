@@ -1988,7 +1988,7 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   DeclarationName deleteName =
     S.Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
   LookupResult ops(S, deleteName, loc, Sema::LookupOrdinaryName);
-  S.LookupQualifiedName(ops, record->getOriginalDecl()->getDefinitionOrSelf());
+  S.LookupQualifiedName(ops, record->getDecl()->getDefinitionOrSelf());
 
   // We're just doing this for information.
   ops.suppressDiagnostics();
@@ -3612,11 +3612,9 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD,
-                                                          bool Diagnose,
-                                                          bool LookForGlobal) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, bool Diagnose, bool LookForGlobal,
+    DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   CanQualType DeallocType = Context.getCanonicalTagType(RD);
@@ -3649,8 +3647,11 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous())
+  if (Found.isAmbiguous()) {
+    if (!Diagnose)
+      Found.suppressDiagnostics();
     return true;
+  }
 
   Found.suppressDiagnostics();
 
@@ -6667,8 +6668,7 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
 
   // That should be enough to guarantee that this type is complete, if we're
   // not processing a decltype expression.
-  CXXRecordDecl *RD =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  auto *RD = cast<CXXRecordDecl>(RT->getDecl())->getDefinitionOrSelf();
   if (RD->isInvalidDecl() || RD->isDependentContext())
     return E;
 
