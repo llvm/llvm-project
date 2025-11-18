@@ -362,13 +362,13 @@ set PATH=%OLDPATH%
 set python_dir=%1
 
 REM Set Python environment
-if "%local-python%" == "true" (
-  FOR /F "delims=" %%i IN ('where python.exe ^| head -1') DO set python_exe=%%i
+::if "%local-python%" == "true" (
+::  FOR /F "delims=" %%i IN ('where python.exe ^| head -1') DO set python_exe=%%i
 ::  set PYTHONHOME=!python_exe:~0,-11!
-) else (
-  %python_dir%/python.exe --version || exit /b 1
+::) else (
+::  %python_dir%/python.exe --version || exit /b 1
 ::  set PYTHONHOME=%python_dir%
-)
+::)
 ::set PATH=%PYTHONHOME%;%PATH%
 
 set "VSCMD_START_DIR=%build_dir%"
