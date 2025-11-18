@@ -68,6 +68,28 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
   return bitCast;
 }
 
+static mlir::Value getMaskVecValue(CIRGenFunction &cgf, const CallExpr *e,
+                                   mlir::Value mask, unsigned numElts) {
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  auto maskTy =
+      cir::VectorType::get(builder.getBoolTy(),
+                           cast<cir::IntType>(mask.getType()).getWidth());
+  mlir::Value maskVec = builder.createBitcast(mask, maskTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (numElts < 8) {
+    SmallVector<int64_t, 4> indices;
+    for (auto i : llvm::seq<unsigned>(0, numElts))
+      indices.push_back(i);
+
+    maskVec = builder.createVecShuffle(cgf.getLoc(e->getExprLoc()),
+                                                maskVec, maskVec, indices);
+  }
+  return maskVec;
+}
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -578,11 +600,51 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_kshiftliqi:
   case X86::BI__builtin_ia32_kshiftlihi:
   case X86::BI__builtin_ia32_kshiftlisi:
-  case X86::BI__builtin_ia32_kshiftlidi:
+  case X86::BI__builtin_ia32_kshiftlidi: {
+    unsigned shiftVal =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
+        0xff;
+    auto numElts = cast<cir::IntType>(ops[0].getType()).getWidth();
+
+    if (shiftVal >= numElts)
+      return builder.getNullValue(ops[0].getType(), getLoc(e->getExprLoc()));
+
+    mlir::Value in = getMaskVecValue(*this, e, ops[0], numElts);
+
+    SmallVector<int64_t, 64> indices;
+    for (auto i : llvm::seq<unsigned>(0, numElts))
+      indices.push_back(numElts + i - shiftVal);
+
+    mlir::Value zero =
+        builder.getNullValue(in.getType(), getLoc(e->getExprLoc()));
+    mlir::Value sv =
+        builder.createVecShuffle(getLoc(e->getExprLoc()), zero, in, indices);
+    return builder.createBitcast(sv, ops[0].getType());
+  }
   case X86::BI__builtin_ia32_kshiftriqi:
   case X86::BI__builtin_ia32_kshiftrihi:
   case X86::BI__builtin_ia32_kshiftrisi:
-  case X86::BI__builtin_ia32_kshiftridi:
+  case X86::BI__builtin_ia32_kshiftridi: {
+    unsigned shiftVal =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
+        0xff;
+    auto numElts = cast<cir::IntType>(ops[0].getType()).getWidth();
+
+    if (shiftVal >= numElts)
+      return builder.getNullValue(ops[0].getType(), getLoc(e->getExprLoc()));
+
+    mlir::Value in = getMaskVecValue(*this, e, ops[0], numElts);
+
+    SmallVector<int64_t, 64> indices;
+    for (auto i : llvm::seq<unsigned>(0, numElts))
+      indices.push_back(i + shiftVal);
+
+    mlir::Value zero =
+        builder.getNullValue(in.getType(), getLoc(e->getExprLoc()));
+    mlir::Value sv =
+        builder.createVecShuffle(getLoc(e->getExprLoc()), in, zero, indices);
+    return builder.createBitcast(sv, ops[0].getType());
+  }
   case X86::BI__builtin_ia32_vprotbi:
   case X86::BI__builtin_ia32_vprotwi:
   case X86::BI__builtin_ia32_vprotdi:
