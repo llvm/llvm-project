@@ -4813,13 +4813,13 @@ private:
 
   // Generate pointer assignment with possibly empty bounds-spec. R1035: a
   // bounds-spec is a lower bound value.
-  void genPointerAssignment(
+  void genNoHLFIRPointerAssignment(
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
     Fortran::lower::StatementContext stmtCtx;
 
-    if (!lowerToHighLevelFIR() &&
-        Fortran::evaluate::IsProcedureDesignator(assign.rhs))
+    assert(!lowerToHighLevelFIR() && "code should not be called with HFLIR");
+    if (Fortran::evaluate::IsProcedureDesignator(assign.rhs))
       TODO(loc, "procedure pointer assignment");
     if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
       hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
@@ -4846,7 +4846,7 @@ private:
     // to the runtime. element size, type code, attribute and of
     // course base_addr might need to be updated.
     if (lhsType && lhsType->IsPolymorphic()) {
-      if (!lowerToHighLevelFIR() && explicitIterationSpace())
+      if (explicitIterationSpace())
         TODO(loc, "polymorphic pointer assignment in FORALL");
       llvm::SmallVector<mlir::Value> lbounds;
       for (const Fortran::evaluate::ExtentExpr &lbExpr : lbExprs)
@@ -4873,7 +4873,7 @@ private:
     llvm::SmallVector<mlir::Value> lbounds;
     for (const Fortran::evaluate::ExtentExpr &lbExpr : lbExprs)
       lbounds.push_back(fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
-    if (!lowerToHighLevelFIR() && explicitIterationSpace()) {
+    if (explicitIterationSpace()) {
       // Pointer assignment in FORALL context. Copy the rhs box value
       // into the lhs box variable.
       genArrayAssignment(assign, stmtCtx, lbounds);
@@ -4882,6 +4882,21 @@ private:
     fir::MutableBoxValue lhs = genExprMutableBox(loc, assign.lhs);
     Fortran::lower::associateMutableBox(*this, loc, lhs, assign.rhs, lbounds,
                                         stmtCtx);
+  }
+
+  void genPointerAssignment(mlir::Location loc,
+                            const Fortran::evaluate::Assignment &assign) {
+    if (isInsideHlfirForallOrWhere()) {
+      // Generate Pointer assignment as hlfir.region_assign.
+      genForallPointerAssignment(loc, assign);
+      return;
+    }
+    Fortran::lower::StatementContext stmtCtx;
+    hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
+        loc, *this, assign.lhs, localSymbols, stmtCtx);
+    mlir::Value rhs = genPointerAssignmentRhs(loc, lhs, assign, stmtCtx);
+    builder->createStoreWithConvert(loc, rhs, lhs);
+    cuf::genPointerSync(lhs, *builder);
   }
 
   void genForallPointerAssignment(mlir::Location loc,
@@ -4904,8 +4919,7 @@ private:
     // Lower RHS in its own region.
     builder->createBlock(&regionAssignOp.getRhsRegion());
     Fortran::lower::StatementContext rhsContext;
-    mlir::Value rhs =
-        genForallPointerAssignmentRhs(loc, lhs, assign, rhsContext);
+    mlir::Value rhs = genPointerAssignmentRhs(loc, lhs, assign, rhsContext);
     auto rhsYieldOp = hlfir::YieldOp::create(*builder, loc, rhs);
     Fortran::lower::genCleanUpInRegionIfAny(
         loc, *builder, rhsYieldOp.getCleanup(), rhsContext);
@@ -4921,9 +4935,9 @@ private:
   }
 
   mlir::Value
-  genForallPointerAssignmentRhs(mlir::Location loc, mlir::Value lhs,
-                                const Fortran::evaluate::Assignment &assign,
-                                Fortran::lower::StatementContext &rhsContext) {
+  genPointerAssignmentRhs(mlir::Location loc, hlfir::Entity lhs,
+                          const Fortran::evaluate::Assignment &assign,
+                          Fortran::lower::StatementContext &rhsContext) {
     if (Fortran::evaluate::IsProcedureDesignator(assign.lhs)) {
       if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
               assign.rhs))
@@ -4935,11 +4949,31 @@ private:
     // Data target.
     auto lhsBoxType =
         llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(lhs.getType()));
-    // For NULL, create disassociated descriptor whose dynamic type is
-    // the static type of the LHS.
+    // For NULL, create disassociated descriptor whose dynamic type is the
+    // static type of the LHS (fulfills 7.3.2.3 requirements that the dynamic
+    // type of a deallocated polymorphic pointer is its static type).
     if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
-            assign.rhs))
-      return fir::factory::createUnallocatedBox(*builder, loc, lhsBoxType, {});
+            assign.rhs)) {
+      llvm::SmallVector<mlir::Value, 1> lenParams;
+      hlfir::genLengthParameters(loc, *builder, lhs, lenParams);
+      if (isInsideHlfirForallOrWhere()) {
+        // Inside FORALL, the non deferred type parameters may only be
+        // accessible in the hlfir.region_assign lhs region if they were
+        // computed there.
+        for (mlir::Value &param : lenParams)
+          if (!param.getParentRegion()->isAncestor(
+                  builder->getBlock()->getParent())) {
+            if (llvm::isa_and_nonnull<mlir::arith::ConstantOp>(
+                    param.getDefiningOp()))
+              param = builder->clone(*param.getDefiningOp())->getResult(0);
+            else
+              TODO(loc, "Pointer assignment with non deferred type parameter "
+                        "inside FORALL");
+          }
+      }
+      return fir::factory::createUnallocatedBox(*builder, loc, lhsBoxType,
+                                                lenParams);
+    }
     hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.rhs, localSymbols, rhsContext);
     auto rhsBoxType = rhs.getBoxType();
@@ -5032,9 +5066,10 @@ private:
 
   // Pointer assignment with bounds-remapping. R1036: a bounds-remapping is a
   // pair, lower bound and upper bound.
-  void genPointerAssignment(
+  void genNoHLFIRPointerAssignment(
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsRemapping &boundExprs) {
+    assert(!lowerToHighLevelFIR() && "code should not be called with HFLIR");
     Fortran::lower::StatementContext stmtCtx;
     llvm::SmallVector<mlir::Value> lbounds;
     llvm::SmallVector<mlir::Value> ubounds;
@@ -5053,7 +5088,7 @@ private:
     // Polymorphic lhs/rhs need more care. See F2018 10.2.2.3.
     if ((lhsType && lhsType->IsPolymorphic()) ||
         (rhsType && rhsType->IsPolymorphic())) {
-      if (!lowerToHighLevelFIR() && explicitIterationSpace())
+      if (explicitIterationSpace())
         TODO(loc, "polymorphic pointer assignment in FORALL");
 
       fir::MutableBoxValue lhsMutableBox = genExprMutableBox(loc, assign.lhs);
@@ -5071,7 +5106,7 @@ private:
               rhsType->IsPolymorphic());
       return;
     }
-    if (!lowerToHighLevelFIR() && explicitIterationSpace()) {
+    if (explicitIterationSpace()) {
       // Pointer assignment in FORALL context. Copy the rhs box value
       // into the lhs box variable.
       genArrayAssignment(assign, stmtCtx, lbounds, ubounds);
@@ -5083,13 +5118,6 @@ private:
       fir::factory::disassociateMutableBox(*builder, loc, lhs);
       return;
     }
-    if (lowerToHighLevelFIR()) {
-      fir::ExtendedValue rhs = genExprAddr(assign.rhs, stmtCtx);
-      fir::factory::associateMutableBoxWithRemap(*builder, loc, lhs, rhs,
-                                                 lbounds, ubounds);
-      return;
-    }
-    // Legacy lowering below.
     // Do not generate a temp in case rhs is an array section.
     fir::ExtendedValue rhs =
         Fortran::lower::isArraySectionWithoutVectorSubscript(assign.rhs)
@@ -5479,18 +5507,10 @@ private:
                                   dirs);
               },
               [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
-                if (isInsideHlfirForallOrWhere())
-                  genForallPointerAssignment(loc, assign);
-                else
-                  genPointerAssignment(loc, assign, lbExprs);
+                genPointerAssignment(loc, assign);
               },
               [&](const Fortran::evaluate::Assignment::BoundsRemapping
-                      &boundExprs) {
-                if (isInsideHlfirForallOrWhere())
-                  genForallPointerAssignment(loc, assign);
-                else
-                  genPointerAssignment(loc, assign, boundExprs);
-              },
+                      &boundExprs) { genPointerAssignment(loc, assign); },
           },
           assign.u);
       return;
@@ -5692,11 +5712,11 @@ private:
             },
 
             [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
-              return genPointerAssignment(loc, assign, lbExprs);
+              return genNoHLFIRPointerAssignment(loc, assign, lbExprs);
             },
             [&](const Fortran::evaluate::Assignment::BoundsRemapping
                     &boundExprs) {
-              return genPointerAssignment(loc, assign, boundExprs);
+              return genNoHLFIRPointerAssignment(loc, assign, boundExprs);
             },
         },
         assign.u);
