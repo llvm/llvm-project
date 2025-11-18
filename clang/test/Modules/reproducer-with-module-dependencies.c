@@ -3,10 +3,12 @@
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
+// RUN: sed -e "s|DIR|%/t|g" %t/existing.yaml.in > %t/existing.yaml
 //
 // RUN: c-index-test core -gen-deps-reproducer -working-dir %t \
 // RUN:   -- clang-executable -c %t/reproducer.c -o %t/reproducer.o \
-// RUN:      -fmodules -fmodules-cache-path=%t | FileCheck %t/reproducer.c
+// RUN:      -fmodules -fmodules-cache-path=%t \
+// RUN:      -ivfsoverlay %t/existing.yaml -I /virtual | FileCheck %t/reproducer.c
 
 // Test a failed attempt at generating a reproducer.
 // RUN: not c-index-test core -gen-deps-reproducer -working-dir %t \
@@ -17,18 +19,19 @@
 // RUN: c-index-test core -gen-deps-reproducer -working-dir %t -o %t/repro-content \
 // RUN:   -- clang-executable -c %t/reproducer.c -o %t/reproducer.o \
 // RUN:      -fmodules -fmodules-cache-path=%t \
-// RUN:      -DMACRO="\$foo"
+// RUN:      -DMACRO="\$foo" \
+// RUN:      -ivfsoverlay %t/existing.yaml -I /virtual
 // RUN: FileCheck %t/script-expectations.txt --input-file %t/repro-content/reproducer.sh
 
-//--- modular-header.h
+//--- include/modular-header.h
 void fn_in_modular_header(void);
 
-//--- module.modulemap
+//--- include/module.modulemap
 module Test { header "modular-header.h" export * }
 
 //--- reproducer.c
 // CHECK: Sources and associated run script(s) are located at:
-#include "modular-header.h"
+#include <modular-header.h>
 
 void test(void) {
   fn_in_modular_header();
@@ -38,7 +41,34 @@ void test(void) {
 // CHECK: fatal error: 'non-existing-header.h' file not found
 #include "non-existing-header.h"
 
+//--- existing.yaml.in
+{
+   "version":0,
+   "case-sensitive":"false",
+   "roots":[
+      {
+         "name":"/virtual",
+         "type":"directory",
+         "contents":[
+            {
+               "external-contents":"DIR/include/module.modulemap",
+               "name":"module.modulemap",
+               "type":"file"
+            },
+            {
+               "external-contents":"DIR/include/modular-header.h",
+               "name":"modular-header.h",
+               "type":"file"
+            }
+         ]
+      }
+   ]
+}
+
 //--- script-expectations.txt
 CHECK: CLANG:-clang-executable
 CHECK: -fmodule-file=Test=reproducer.cache/explicitly-built-modules/Test-{{.*}}.pcm
+Verify the reproducer VFS overlay is added before the existing overlay provided on a command line.
+CHECK: -ivfsoverlay "reproducer.cache/vfs/vfs.yaml"
+CHECK: "-ivfsoverlay" "{{.*}}/existing.yaml"
 CHECK: MACRO=\$foo

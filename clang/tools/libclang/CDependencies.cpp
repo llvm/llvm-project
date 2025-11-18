@@ -844,8 +844,15 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
         ClangOpts.ParseArgs(CharArgs, MissingArgIndex, MissingArgCount,
                             llvm::opt::Visibility(options::CC1Option));
 
+    bool DidAddVFSOverlay = false;
     OS << ReproExecutable;
     for (const llvm::opt::Arg *Arg : ParsedArgs) {
+      if (Arg->getOption().matches(options::OPT_ivfsoverlay)) {
+        if (!DidAddVFSOverlay) {
+          OS << " -ivfsoverlay \"" << FileCacheName << "/vfs/vfs.yaml\"";
+          DidAddVFSOverlay = true;
+        }
+      }
       llvm::opt::ArgStringList OutArgs;
       Arg->render(ParsedArgs, OutArgs);
       for (const auto &OutArg : OutArgs) {
@@ -853,7 +860,10 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
         llvm::sys::printArg(OS, OutArg, /*Quote=*/true);
       }
     }
-    OS << " -ivfsoverlay \"" << FileCacheName << "/vfs/vfs.yaml\"";
+    if (!DidAddVFSOverlay) {
+      OS << " -ivfsoverlay \"" << FileCacheName << "/vfs/vfs.yaml\"";
+      DidAddVFSOverlay = true;
+    }
     OS << '\n';
   };
   for (ModuleDeps &Dep : TU.ModuleGraph)
