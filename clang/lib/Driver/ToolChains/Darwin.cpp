@@ -1573,13 +1573,9 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     return;
   }
 
-  // Reject -static-libgcc for now, we can deal with this when and if someone
-  // cares. This is useful in situations where someone wants to statically link
-  // something like libstdc++, and needs its runtime support routines.
-  if (const Arg *A = Args.getLastArg(options::OPT_static_libgcc)) {
-    getDriver().Diag(diag::err_drv_unsupported_opt) << A->getAsString(Args);
-    return;
-  }
+  // Don't complain about -static-libgcc as it is commonly used, but not
+  // necessary for our builds
+  Args.getLastArg(options::OPT_static_libgcc);
 
   const SanitizerArgs &Sanitize = getSanitizerArgs(Args);
 
