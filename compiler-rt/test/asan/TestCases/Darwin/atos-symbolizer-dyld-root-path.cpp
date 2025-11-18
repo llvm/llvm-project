@@ -1,6 +1,7 @@
 // Check that when having a DYLD_ROOT_PATH set, the symbolizer still works.
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: %env_asan_opts=verbosity=2 DYLD_ROOT_PATH="/" ASAN_SYMBOLIZER_PATH=$(which atos) \
+// RUN: which atos | tr -d '\n' > %t.symbolizer_path
+// RUN: %env_asan_opts=verbosity=2 DYLD_ROOT_PATH="/" ASAN_SYMBOLIZER_PATH=%{readfile:%t.symbolizer_path} \
 // RUN:   not %run %t 2>&1 | FileCheck %s
 //
 // Due to a bug in atos, this only works on x86_64.

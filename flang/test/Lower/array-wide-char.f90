@@ -2,7 +2,7 @@
 
 character(LEN=128, KIND=4), PARAMETER :: conarr(3) = &
      [ character(128,4) :: "now is the time", "for all good men to come", &
-     "to the aid of the country" ]       
+     "to the aid of the country" ]
 character(LEN=10, KIND=4) :: arr(3) = &
      [ character(10,4) :: "good buddy", "best buddy", " " ]
 call action_on_char4(conarr)
