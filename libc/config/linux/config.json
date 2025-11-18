@@ -1,10 +1,10 @@
 {
   "string": {
     "LIBC_CONF_STRING_LENGTH_IMPL": {
-      "value": "generic",
+      "value": "clang_vector",
     },
     "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
-      "value": "wide",
+      "value": "word",
     }
   }
 }

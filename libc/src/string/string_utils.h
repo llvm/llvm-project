@@ -37,9 +37,9 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 #if !LIBC_HAS_VECTOR_TYPE
-// Forward any generic vector impls to architecture specific ones
-namespace arch {}
-namespace generic = arch;
+// Forward any clang vector impls to architecture specific ones
+namespace arch_vector {}
+namespace clang_vector = arch_vector;
 #endif
 
 namespace element {
@@ -70,9 +70,9 @@ LIBC_INLINE void *find_first_character(const unsigned char *src,
 }
 } // namespace element
 
-namespace wide {
-// Generic, non-vector, implementations of functions that search for data
-// by reading from memory block-by-block.
+namespace word {
+// Non-vector, implementations of functions that search for data by reading from
+// memory word-by-word.
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
   static_assert(CHAR_BIT == 8, "repeat_byte assumes a byte is 8 bits.");
@@ -179,16 +179,17 @@ find_first_character(const unsigned char *src, unsigned char ch,
   return const_cast<unsigned char *>(char_ptr);
 }
 
-} // namespace wide
+} // namespace word
 
 // Dispatch mechanism for implementations of performance-sensitive
 // functions. Always measure, but generally from lower- to higher-performance
 // order:
 //
 // 1. element - read char-by-char or wchar-by-wchar
-// 3. wide - read word-by-word
-// 3. generic - read using clang's internal vector types
-// 4. arch - hand-coded per architecture. Possibly in asm, or with intrinsics.
+// 3. word - read word-by-word
+// 3. clang_vector - read using clang's internal vector types
+// 4. arch_vector - hand-coded per architecture. Possibly in asm, or with
+// intrinsics.
 //
 // The called implemenation is chosen at build-time by setting
 // LIBC_CONF_{FUNC}_IMPL in config.json

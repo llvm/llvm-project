@@ -14,7 +14,7 @@
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace generic {
+namespace clang_vector {
 
 // Exploit the underlying integer representation to do a variable shift.
 LIBC_INLINE constexpr cpp::simd_mask<char> shift_mask(cpp::simd_mask<char> m,
@@ -46,7 +46,7 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
              cpp::find_first_set(mask);
   }
 }
-} // namespace generic
+} // namespace clang_vector
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -67,11 +67,11 @@
   "string": {
     "LIBC_CONF_STRING_LENGTH_IMPL": {
       "value": "element",
-      "doc": "Selects the implementation for string-length: 'element', 'wide', 'generic' (vector), or 'arch'."
+      "doc": "Selects the implementation for string-length: 'element', 'word', 'clang_vector', or 'arch_vector'."
     },
     "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
       "value": "element",
-      "doc": "Selects the implementation for find-first-character-related functions: 'element', 'wide', 'generic' (vector), or 'arch'."
+      "doc": "Selects the implementation for find-first-character-related functions: 'element', 'word', 'clang_vector', or 'arch_vector'."
     },
     "LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING": {
       "value": false,

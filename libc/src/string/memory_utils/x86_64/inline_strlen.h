@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal::arch {
+namespace internal::arch_vector {
 
 // Return a bit-mask with the nth bit set if the nth-byte in block_ptr is zero.
 template <typename Vector, typename Mask>
@@ -104,7 +104,7 @@ namespace avx512 {
 #endif
 }
 
-} // namespace internal::arch
+} // namespace internal::arch_vector
 
 } // namespace LIBC_NAMESPACE_DECL
 

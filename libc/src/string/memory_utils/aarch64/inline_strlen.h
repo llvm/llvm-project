@@ -16,7 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal::arch {
+namespace internal::arch_vector {
 [[maybe_unused]] LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
 string_length(const char *src) {
   using Vector __attribute__((may_alias)) = uint8x8_t;
@@ -44,7 +44,7 @@ string_length(const char *src) {
                                  (cpp::countr_zero(cmp) >> 3));
   }
 }
-} // namespace internal::arch
+} // namespace internal::arch_vector
 
 } // namespace LIBC_NAMESPACE_DECL
 #endif // __ARM_NEON
