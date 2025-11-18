@@ -115,7 +115,9 @@ you want to make your pull request up-to-date with main, you might consider
 updating your branch, as described in the previous section.
 
 Sometimes, a rebase might be needed to update your branch with a fix for a test
-or in some dependent code.
+or in some dependent code. This is especially encouraged if it turns out that
+the upstream base commit used for your branch had test failures, meaning the
+pre-commit CI results can't be shown as cleanly passing.
 
 After your PR is reviewed and accepted, you want to rebase your branch to ensure
 you won't encounter merge conflicts when landing the PR.
