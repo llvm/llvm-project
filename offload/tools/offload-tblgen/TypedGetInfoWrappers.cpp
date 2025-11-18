@@ -57,7 +57,7 @@ void EmitTypedGetInfoWrappers(const llvm::RecordKeeper &Records,
                     Object.getType(), Object.getName());
       if (TaggedType.ends_with("[]")) {
         OS << TAB_1 << formatv("{0} Result;\n", ResultType);
-        OS << TAB_1 << "size_t ResultSize = 0;";
+        OS << TAB_1 << "size_t ResultSize = 0;\n";
         OS << TAB_1
            << formatv("if (auto Err = {}Size({}, {}, &ResultSize))\n",
                       F.getName(), Object.getName(), Desc);
