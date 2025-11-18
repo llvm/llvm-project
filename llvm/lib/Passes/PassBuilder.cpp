@@ -45,7 +45,6 @@
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
-#include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
@@ -67,6 +66,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -897,6 +897,11 @@ Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
 Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "post-inline",
                                             "EntryExitInstrumenter");
+}
+
+Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "drop-deref",
+                                            "DropUnnecessaryAssumes");
 }
 
 Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {

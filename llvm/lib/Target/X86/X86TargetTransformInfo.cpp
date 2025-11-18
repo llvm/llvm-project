@@ -6562,7 +6562,7 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
-                                       const ArrayRef<Type *> &Types) const {
+                                       ArrayRef<Type *> Types) const {
   if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
     return false;
 

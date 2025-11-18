@@ -28,7 +28,6 @@
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include <cassert>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 

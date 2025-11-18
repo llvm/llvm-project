@@ -579,7 +579,7 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset(ptr %out, ptr %ptr) #0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_store_dword v[0:1], v2
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i32, ptr %ptr, i32 4
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 4
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
   store i32 %result, ptr %out
   ret void
@@ -665,7 +665,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset(ptr %ptr) nounwind {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i32, ptr %ptr, i32 4
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 4
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
@@ -729,9 +729,9 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset_addr64(ptr %out, ptr %
 ; GFX9-NEXT:    flat_store_dword v[0:1], v3
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i32, ptr %ptr, i32 %id
-  %out.gep = getelementptr i32, ptr %out, i32 %id
-  %gep = getelementptr i32, ptr %gep.tid, i32 5
+  %gep.tid = getelementptr inbounds i32, ptr %ptr, i32 %id
+  %out.gep = getelementptr inbounds i32, ptr %out, i32 %id
+  %gep = getelementptr inbounds i32, ptr %gep.tid, i32 5
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
   store i32 %result, ptr %out.gep
   ret void
@@ -784,8 +784,8 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset_addr64(ptr %ptr) #0 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i32, ptr %ptr, i32 %id
-  %gep = getelementptr i32, ptr %gep.tid, i32 5
+  %gep.tid = getelementptr inbounds i32, ptr %ptr, i32 %id
+  %gep = getelementptr inbounds i32, ptr %gep.tid, i32 5
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
   ret void
 }
@@ -895,7 +895,7 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset(ptr %out, ptr %ptr) #0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX9-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i64, ptr %ptr, i32 4
+  %gep = getelementptr inbounds i64, ptr %ptr, i32 4
   %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
   store i64 %result, ptr %out
   ret void
@@ -987,7 +987,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset(ptr %ptr) nounwind {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_endpgm
-  %gep = getelementptr i64, ptr %ptr, i32 4
+  %gep = getelementptr inbounds i64, ptr %ptr, i32 4
   %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
   ret void
 }
@@ -1054,9 +1054,9 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset_addr64(ptr %out, ptr %
 ; GFX9-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i64, ptr %ptr, i32 %id
-  %out.gep = getelementptr i64, ptr %out, i32 %id
-  %gep = getelementptr i64, ptr %gep.tid, i32 5
+  %gep.tid = getelementptr inbounds i64, ptr %ptr, i32 %id
+  %out.gep = getelementptr inbounds i64, ptr %out, i32 %id
+  %gep = getelementptr inbounds i64, ptr %gep.tid, i32 5
   %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
   store i64 %result, ptr %out.gep
   ret void
@@ -1112,8 +1112,8 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset_addr64(ptr %ptr) #0 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.tid = getelementptr i64, ptr %ptr, i32 %id
-  %gep = getelementptr i64, ptr %gep.tid, i32 5
+  %gep.tid = getelementptr inbounds i64, ptr %ptr, i32 %id
+  %gep = getelementptr inbounds i64, ptr %gep.tid, i32 5
   %result = call i64 @llvm.amdgcn.atomic.dec.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
   ret void
 }

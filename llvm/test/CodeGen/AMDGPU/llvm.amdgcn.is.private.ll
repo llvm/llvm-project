@@ -66,7 +66,6 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x4000000, v0

@@ -22,5 +22,31 @@ std::string OpenACCSupport::getVariableName(Value v) {
   return acc::getVariableName(v);
 }
 
+std::string OpenACCSupport::getRecipeName(RecipeKind kind, Type type,
+                                          Value var) {
+  if (impl)
+    return impl->getRecipeName(kind, type, var);
+  // The default implementation assumes that only type matters
+  // and the actual instance of variable is not relevant.
+  auto recipeName = acc::getRecipeName(kind, type);
+  if (recipeName.empty())
+    emitNYI(var ? var.getLoc() : UnknownLoc::get(type.getContext()),
+            "variable privatization (incomplete recipe name handling)");
+  return recipeName;
+}
+
+InFlightDiagnostic OpenACCSupport::emitNYI(Location loc, const Twine &message) {
+  if (impl)
+    return impl->emitNYI(loc, message);
+  return mlir::emitError(loc, "not yet implemented: " + message);
+}
+
+bool OpenACCSupport::isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
+                                      Operation **definingOpPtr) {
+  if (impl)
+    return impl->isValidSymbolUse(user, symbol, definingOpPtr);
+  return acc::isValidSymbolUse(user, symbol, definingOpPtr);
+}
+
 } // namespace acc
 } // namespace mlir

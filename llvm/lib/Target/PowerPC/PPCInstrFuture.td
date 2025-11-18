@@ -360,6 +360,10 @@ let Predicates = [HasVSX, IsISAFuture] in {
     def LXVPRLL : XForm_XTp5_RAB5<31, 621, (outs vsrprc:$XTp),
                                   (ins (memr $RA):$addr, g8rc:$RB),
                                   "lxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
+    def LXVPB32X
+        : XForm_XTp5_RAB5<31, 877, (outs vsrprc:$XTp),
+                          (ins (memr $RA):$addr, g8rc:$RB),
+                          "lxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   let mayStore = 1 in {
@@ -376,6 +380,10 @@ let Predicates = [HasVSX, IsISAFuture] in {
         : XForm_XTp5_RAB5<31, 749, (outs),
                           (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
                           "stxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
+    def STXVPB32X
+        : XForm_XTp5_RAB5<31, 1005, (outs),
+                          (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
+                          "stxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   def VUPKHSNTOB : VXForm_VRTB5<387, 0, (outs vrrc:$VRT), (ins vrrc:$VRB),
@@ -411,6 +419,11 @@ let Predicates = [HasVSX, IsISAFuture] in {
   def VUCMPRLH
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                       "vucmprlh $VRT, $VRA, $VRB", []>;
+
+  def XVRLW : XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                            "xvrlw $XT, $XA, $XB",
+                            [(set v4i32:$XT, (int_ppc_vsx_xvrlw v4i32:$XA,
+                                                 v4i32:$XB))]>;
 
   // AES Acceleration Instructions
   def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
@@ -539,6 +552,10 @@ def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRL $XTp,
                                                                     $RA, $RB)>;
 def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
                                                                      $RA, $RB)>;
+let Predicates = [HasVSX, IsISAFuture] in {
+  def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
+                                                     v4i32:$vB))>;
+}
 
 //---------------------------- Instruction aliases ---------------------------//
 // Predicate combinations available:

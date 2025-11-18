@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
-#include "mlir/Dialect/XeGPU/IR/XeGPUTargetInfo.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -38,55 +37,61 @@ void XeGPUDialect::initialize() {
       >();
 }
 
-/// Generates instructions to compute offsets for a subgroup identified by
-/// its multidimensional indices (sgId), using the specified subgroup layout
-/// (sgLayout), subgroup data dimensions (sizePerSg), and the overall data
-/// dimensions (sizePerWg).
+// A `srcShape` consists of N distribution units, each being `subShapesLayout` x
+// `subShape`. A `delinearizedId` is used to identify a particular `subShape`
+// within each distribution unit.
+// Example:
+// WG data is 128x256. SG data is 16x32, in 4x2 layout, this gives a
+// distribution unit of shape 64x64, we have 2x4 such distribution units.
+// `delinearizedId` is used to identify a 16x32 of a subgroup in each
+// distribution unit.
 static SmallVector<SmallVector<Value>>
-genOffsetsComputingInsts(OpBuilder &builder, Location loc,
-                         SmallVector<Value> sgId, ArrayRef<int64_t> sgLayout,
-                         ArrayRef<int64_t> sizePerSg,
-                         ArrayRef<int64_t> sizePerWg) {
+genCoordinates(OpBuilder &builder, Location loc,
+               SmallVector<Value> delinearizedId,
+               ArrayRef<int64_t> subShapesLayout, ArrayRef<int64_t> subShape,
+               ArrayRef<int64_t> srcShape) {
+  SmallVector<SmallVector<Value>> coordinates;
 
-  SmallVector<SmallVector<Value>> offsets;
+  // A distribution unit must be less than or equal to `srcShape`
+  SmallVector<int64_t> distUnitShape = llvm::map_to_vector(
+      llvm::zip_equal(srcShape,
+                      computeElementwiseMul(subShapesLayout, subShape)),
+      [](const auto &t) { return std::min(std::get<0>(t), std::get<1>(t)); });
 
-  // nd local offset, localOffset[i] = sgId[i] * sizePerSg[i]
-  SmallVector<Value> localOffsets = llvm::map_to_vector(
-      llvm::zip(sgId, sizePerSg), [&](const auto &t) -> Value {
+  // Get the offset of `subShape` within a distribution unit.
+  SmallVector<Value> distUnitLocalOffset = llvm::map_to_vector(
+      llvm::zip(delinearizedId, subShape), [&](const auto &t) -> Value {
         return builder.createOrFold<index::MulOp>(
             loc, std::get<0>(t),
             builder.createOrFold<arith::ConstantIndexOp>(loc, std::get<1>(t)));
       });
 
-  // distUnit[i] is the minimum value between sizePerWg[i] and
-  // sgLayout[i] * sizePerSg[i]
-  SmallVector<int64_t> distUnit = llvm::map_to_vector(
-      llvm::zip_equal(sizePerWg, computeElementwiseMul(sgLayout, sizePerSg)),
-      [](const auto &t) { return std::min(std::get<0>(t), std::get<1>(t)); });
-
+  // For each dist unit
   for (SmallVector<int64_t> unitOffs :
-       StaticTileOffsetRange(sizePerWg, distUnit)) {
+       StaticTileOffsetRange(srcShape, distUnitShape)) {
+    // Get dist unit offset within `srcShape`.
     SmallVector<Value> base =
         llvm::map_to_vector(unitOffs, [&](int64_t d) -> Value {
           return arith::ConstantIndexOp::create(builder, loc, d);
         });
-
-    SmallVector<Value> adds = llvm::map_to_vector(
-        llvm::zip_equal(base, localOffsets), [&](const auto &t) -> Value {
-          return builder.createOrFold<arith::AddIOp>(loc, std::get<0>(t),
-                                                     std::get<1>(t));
-        });
-
+    // Calculate `subShape` offset within `srcShape`.
+    SmallVector<Value> adds =
+        llvm::map_to_vector(llvm::zip_equal(base, distUnitLocalOffset),
+                            [&](const auto &t) -> Value {
+                              return builder.createOrFold<arith::AddIOp>(
+                                  loc, std::get<0>(t), std::get<1>(t));
+                            });
+    // Do not go beyond `srcShape` bounds.
     SmallVector<Value> mods = llvm::map_to_vector(
-        llvm::zip_equal(adds, sizePerWg), [&](const auto &t) -> Value {
+        llvm::zip_equal(adds, srcShape), [&](const auto &t) -> Value {
           return builder.createOrFold<index::RemUOp>(
               loc, std::get<0>(t),
               arith::ConstantIndexOp::create(builder, loc, std::get<1>(t)));
         });
 
-    offsets.push_back(mods);
+    coordinates.push_back(mods);
   }
-  return offsets;
+  return coordinates;
 }
 
 // Checks if the given shape can be evenly distributed based on the layout
@@ -229,8 +234,10 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   }
 
   if (inst_data && lane_layout && inst_data.size() != lane_layout.size()) {
-    return emitError()
-           << "expected inst_data and lane_layout to have the same rank";
+    return emitError() << "expected inst_data and lane_layout to have the same "
+                          "rank, got inst_data "
+                       << inst_data.size() << ", lane_layout "
+                       << lane_layout.size();
   }
 
   // sg_data is optional for Workgroup layout, but its presence requires
@@ -271,56 +278,117 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 FailureOr<SmallVector<Value>>
-LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
-                                  Value linearId) {
-  // delinearizeSubgroupId is only available for
-  // workgroup-level layout attribute
-  if (!isForWorkgroup())
+LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
+
+  SmallVector<int64_t> sgLayoutInt;
+  if (isForWorkgroup()) {
+    sgLayoutInt = getEffectiveSgLayoutAsInt();
+  } else if (isForSubgroup()) {
+    sgLayoutInt = getEffectiveLaneLayoutAsInt();
+  } else {
     return failure();
+  }
 
-  // TODO: handle order attribute
-  auto hasDefaultOrder = [&]() {
-    DenseI32ArrayAttr order = getOrder();
-    return !order || isIdentityPermutation(llvm::to_vector_of<int64_t>(
-                         llvm::reverse(order.asArrayRef())));
-  };
-  if (!hasDefaultOrder())
-    return mlir::emitError(loc, "order attribute is currently not supported.");
+  DenseI32ArrayAttr orderAttr = getOrder();
 
-  auto dims =
-      llvm::map_to_vector(getEffectiveSgLayoutAsInt(), [&](int64_t d) -> Value {
-        return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
-      });
+  // Handle order attribute
+  SmallVector<int64_t> order;
+  if (orderAttr && !orderAttr.empty()) {
+    order = llvm::to_vector(
+        llvm::map_range(orderAttr.asArrayRef(),
+                        [](int32_t idx) { return static_cast<int64_t>(idx); }));
+  } else {
+    // Default order: [1, 0] for 2D (row-major), [2, 1, 0] for 3D, etc.
+    order = llvm::to_vector(
+        llvm::reverse(llvm::seq<int64_t>(0, sgLayoutInt.size())));
+  }
 
-  return affine::delinearizeIndex(builder, loc, linearId, dims);
+  if (order.size() != sgLayoutInt.size()) {
+    return failure();
+  }
+
+  SmallVector<Value> result(sgLayoutInt.size());
+  Value remaining = linearId;
+
+  /// Process dimensions in the order they appear in the order array
+  /// The first dimension in order is the fastest-changing
+  ///
+  /// Example walkthrough for linearId=22, sgLayout=[2,4,4], order=[2,1,0]:
+  ///
+  /// Initial: remaining=22, dimIdx = order[i], dimSize = sgLayout[dimIdx],
+  /// result=[?,?,?]
+  ///
+  /// i=0 (process columns, dimIdx=2, dimSize=4):
+  ///   result[2] = 22 % 4 = 2  (column coordinate)
+  ///   remaining = 22 / 4 = 5  (5 complete groups of 4 columns processed)
+  ///
+  /// i=1 (process rows, dimIdx=1, dimSize=4):
+  ///   result[1] = 5 % 4 = 1   (row coordinate)
+  ///   remaining = 5 / 4 = 1   (1 complete group of 4 rows processed)
+  ///
+  /// i=2 (process layers, dimIdx=0, dimSize=2):
+  ///   result[0] = 1 % 2 = 1   (layer coordinate)
+  ///   (no remaining update - last iteration)
+  ///
+  /// Final result: [1,1,2] = Layer 1, Row 1, Column 2
+  for (size_t i = 0; i < order.size(); ++i) {
+    int64_t dimIdx = order[i];
+    int64_t dimSize = sgLayoutInt[dimIdx];
+
+    Value dimSizeVal =
+        builder.createOrFold<arith::ConstantIndexOp>(loc, dimSize);
+
+    /// Extract the coordinate for this dimension using modulo operation
+    /// This gives us "how far within this dimension" we are
+    /// e.g., linearId=22, dimSize=4: 22 % 4 = 2 (we're at position 2 within
+    /// this dimension)
+    result[dimIdx] =
+        builder.createOrFold<index::RemUOp>(loc, remaining, dimSizeVal);
+
+    /// Update remaining for the next dimension by removing what we've already
+    /// processed. Division tells us "how many complete groups of this dimension
+    /// we've gone through" e.g., linearId=22, dimSize=4: 22 / 4 = 5 (we've
+    /// completed 5 groups of 4) Skip this for the last iteration since there's
+    /// no next dimension to process
+    if (i < order.size() - 1) {
+      remaining =
+          builder.createOrFold<index::DivUOp>(loc, remaining, dimSizeVal);
+    }
+  }
+  return result;
 }
 
-/// Implements DistributeLayoutAttr::getOffsets to generate
+/// Implements DistributeLayoutAttr::computeDistributedCoords to generate
 /// instructions for computing multi-dimensional offsets when distributed by
 /// LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
-LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
-                       ArrayRef<int64_t> shape) {
-  if (!isForWorkgroup())
+LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
+                                     Value linearId, ArrayRef<int64_t> shape) {
+  SmallVector<int64_t> layout;
+  SmallVector<int64_t> subShape;
+  if (isForWorkgroup()) {
+    layout = getEffectiveSgLayoutAsInt();
+    subShape = getEffectiveSgDataAsInt();
+  } else if (isForSubgroup()) {
+    layout = getEffectiveLaneLayoutAsInt();
+    subShape = getEffectiveLaneDataAsInt();
+  } else {
     return failure();
-
-  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
-  SmallVector<int64_t> sgShape = getEffectiveSgDataAsInt();
-  if (sgShape.empty()) {
-    if (auto derivedShape = computeShapeRatio(shape, sgLayout))
-      sgShape = derivedShape.value();
+  }
+  if (subShape.empty()) {
+    if (auto derivedShape = computeShapeRatio(shape, layout))
+      subShape = derivedShape.value();
     else
       return failure();
   }
 
   // delinearize Ids
-  auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
+  auto maybeIds = delinearizeId(builder, loc, linearId);
   if (failed(maybeIds))
     return failure();
-  SmallVector<Value> sgIds = *maybeIds;
+  SmallVector<Value> ids = *maybeIds;
 
-  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
-                                  shape);
+  return genCoordinates(builder, loc, ids, layout, subShape, shape);
 }
 
 //===----------------------------------------------------------------------===//
@@ -374,34 +442,43 @@ SliceAttr SliceAttr::flatten() const {
 }
 
 FailureOr<SmallVector<Value>>
-SliceAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
-                                 Value linearId) {
+SliceAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
   SliceAttr attr = flatten();
   auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-  return parent.delinearizeSubgroupId(builder, loc, linearId);
+  return parent.delinearizeId(builder, loc, linearId);
 }
 
-/// Implements DistributeLayoutAttr::getOffsets to generate
-/// instructions for computing multi-dimensional offsets when distributed by
-/// SliceAttr.
+// Implements DistributeLayoutAttr::computeDistributedCoords to generate
+// instructions for computing multi-dimensional offsets when distributed by
+// LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
-SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
-                      ArrayRef<int64_t> shape) {
+SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
+                                    Value linearId, ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
   if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
-  SmallVector<int64_t> sgShape = getEffectiveSgDataAsInt();
-  if (sgShape.empty()) {
-    if (auto derivedShape = computeShapeRatio(shape, sgLayout))
-      sgShape = derivedShape.value();
+  SmallVector<int64_t> layout;
+  SmallVector<int64_t> subShape;
+  if (isForWorkgroup()) {
+    layout = getEffectiveSgLayoutAsInt();
+    subShape = getEffectiveSgDataAsInt();
+  } else if (isForSubgroup()) {
+    layout = getEffectiveLaneLayoutAsInt();
+    subShape = getEffectiveLaneDataAsInt();
+  } else {
+    return failure();
+  }
+
+  if (subShape.empty()) {
+    if (auto derivedShape = computeShapeRatio(shape, layout))
+      subShape = derivedShape.value();
     else
       return failure();
   }
 
   // delinearize Ids
-  auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
+  auto maybeIds = delinearizeId(builder, loc, linearId);
   if (failed(maybeIds))
     return failure();
 
@@ -411,8 +488,7 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   SmallVector<Value> sgIds =
       XeGPUDialect::slice(ArrayRef<Value>(*maybeIds), dims);
 
-  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
-                                  shape);
+  return genCoordinates(builder, loc, sgIds, layout, subShape, shape);
 }
 
 bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
@@ -569,8 +645,8 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
   // for gather and scatter ops, Low-precision types are packed in 32-bit units.
   unsigned bitWidth = elementType.getIntOrFloatBitWidth();
   int chunkAlignmentFactor =
-      bitWidth < targetinfo::packedSizeInBitsForGatherScatter
-          ? targetinfo::packedSizeInBitsForGatherScatter / bitWidth
+      bitWidth < xegpu::uArch::generalPackedFormatBitSize
+          ? xegpu::uArch::generalPackedFormatBitSize / bitWidth
           : 1;
   auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
   if (scatterAttr) {

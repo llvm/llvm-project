@@ -7,52 +7,54 @@
 
 program allocate_tree
     use omp_lib
-    integer, allocatable :: w, xarray(:), zarray(:, :)
-    integer :: z, t
+    integer, allocatable :: xarray(:), zarray(:, :)
+    integer :: z, t, w
+!$omp allocate(w) allocator(omp_const_mem_alloc)
     t = 2
     z = 3
-!$omp allocate(w) allocator(omp_const_mem_alloc)
 !$omp allocate(xarray) allocator(omp_large_cap_mem_alloc)
 !$omp allocate(zarray) allocator(omp_default_mem_alloc)
 !$omp allocate
-    allocate(w, xarray(4), zarray(t, z))
+    allocate(xarray(4), zarray(t, z))
 end program allocate_tree
 
-!CHECK: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
-!CHECK-NEXT: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
-!CHECK-NEXT: | | | AttrSpec -> Allocatable
-!CHECK-NEXT: | | | EntityDecl
-!CHECK-NEXT: | | | | Name = 'w'
-!CHECK-NEXT: | | | EntityDecl
-!CHECK-NEXT: | | | | Name = 'xarray'
-!CHECK-NEXT: | | | | ArraySpec -> DeferredShapeSpecList -> int = '1'
-!CHECK-NEXT: | | | EntityDecl
-!CHECK-NEXT: | | | | Name = 'zarray'
-!CHECK-NEXT: | | | | ArraySpec -> DeferredShapeSpecList -> int = '2'
+!CHECK:      DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpAllocateDirective
+!CHECK-NEXT: | OmpBeginDirective
+!CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = allocate
+!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'w'
+!CHECK-NEXT: | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '3_8'
+!CHECK-NEXT: | | | Designator -> DataRef -> Name = 'omp_const_mem_alloc'
+!CHECK-NEXT: | | Flags = None
+!CHECK-NEXT: | Block
 
+!CHECK:      ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
+!CHECK-NEXT: | OmpBeginDirective
+!CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = allocate
+!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
+!CHECK-NEXT: | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '2_8'
+!CHECK-NEXT: | | | Designator -> DataRef -> Name = 'omp_large_cap_mem_alloc'
+!CHECK-NEXT: | | Flags = None
+!CHECK-NEXT: | Block
+!CHECK-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
+!CHECK-NEXT: | | | OmpBeginDirective
+!CHECK-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = allocate
+!CHECK-NEXT: | | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'zarray'
+!CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '1_8'
+!CHECK-NEXT: | | | | | Designator -> DataRef -> Name = 'omp_default_mem_alloc'
+!CHECK-NEXT: | | | | Flags = None
+!CHECK-NEXT: | | | Block
+!CHECK-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
+!CHECK-NEXT: | | | | | OmpBeginDirective
+!CHECK-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = allocate
+!CHECK-NEXT: | | | | | | OmpClauseList ->
+!CHECK-NEXT: | | | | | | Flags = None
+!CHECK-NEXT: | | | | | Block
+!CHECK-NEXT: | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
 
-!CHECK: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPExecutableAllocate
-!CHECK-NEXT: | | | Verbatim
-!CHECK-NEXT: | | | OmpClauseList ->
-!CHECK-NEXT: | | | OpenMPDeclarativeAllocate
-!CHECK-NEXT: | | | | Verbatim
-!CHECK-NEXT: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'w'
-!CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr =
-!CHECK-NEXT: | | | | | Designator -> DataRef -> Name =
-!CHECK-NEXT: | | | OpenMPDeclarativeAllocate
-!CHECK-NEXT: | | | | Verbatim
-!CHECK-NEXT: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
-!CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr =
-!CHECK-NEXT: | | | | | Designator -> DataRef -> Name =
-!CHECK-NEXT: | | | OpenMPDeclarativeAllocate
-!CHECK-NEXT: | | | | Verbatim
-!CHECK-NEXT: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'zarray'
-!CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr =
-!CHECK-NEXT: | | | | | Designator -> DataRef -> Name =
-!CHECK-NEXT: | | | AllocateStmt
-
-!UNPARSE: !$OMP ALLOCATE (w) ALLOCATOR(3_8)
-!UNPARSE-NEXT: !$OMP ALLOCATE (xarray) ALLOCATOR(2_8)
-!UNPARSE-NEXT: !$OMP ALLOCATE (zarray) ALLOCATOR(1_8)
+!UNPARSE:      !$OMP ALLOCATE(w) ALLOCATOR(3_8)
+!UNPARSE-NEXT:   t=2_4
+!UNPARSE-NEXT:   z=3_4
+!UNPARSE-NEXT: !$OMP ALLOCATE(xarray) ALLOCATOR(2_8)
+!UNPARSE-NEXT: !$OMP ALLOCATE(zarray) ALLOCATOR(1_8)
 !UNPARSE-NEXT: !$OMP ALLOCATE
-!UNPARSE-NEXT: ALLOCATE(w, xarray(4_4), zarray(t,z))
+!UNPARSE-NEXT:  ALLOCATE(xarray(4_4), zarray(t,z))

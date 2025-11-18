@@ -9,7 +9,7 @@
 #include "HIPUtility.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Archive.h"

@@ -692,9 +692,6 @@ private:
       if (!targetShapeCreationInfo.isShapedValue())
         return {};
 
-      llvm::SmallVector<mlir::Value> extentOperands;
-      llvm::SmallVector<mlir::Value> startIndexOperands;
-
       if (targetShapeCreationInfo.isShapeShiftedValue()) {
         llvm::SmallVector<mlir::Value> shapeShiftOperands;
 

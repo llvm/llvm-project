@@ -333,6 +333,11 @@ public:
     return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
   }
 
+  // Return true if the target wants to optimize the mul overflow intrinsic
+  // for the given \p VT.
+  bool shouldOptimizeMulOverflowWithZeroHighBits(LLVMContext &Context,
+                                                 EVT VT) const override;
+
   Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
@@ -745,7 +750,6 @@ private:
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOOP_DEPENDENCE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;

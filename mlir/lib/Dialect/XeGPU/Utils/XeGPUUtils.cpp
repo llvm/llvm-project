@@ -144,6 +144,11 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+
+    // check for "permament" layout only after "temporary" layout name lookup
+    // for backward compatibility
+    if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(defOp))
+      return loadGatherOp.getLayoutAttr();
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
@@ -171,27 +176,77 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+
+  // check for "permament" layout only after "temporary" layout name lookup
+  if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
+    if (auto layout = storeScatterOp.getLayoutAttr())
+      return layout;
+
   return getDistributeLayoutAttr(opr.get());
+}
+
+// Returns the permanent layout attribute for the given result if it's
+// available on the defining op. Otherwise returns the provided layout.
+xegpu::DistributeLayoutAttr
+maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
+                         const OpResult &result, mlir::Operation *owner,
+                         const std::string &name) {
+  xegpu::DistributeLayoutAttr candidate = layout;
+
+  if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(owner)) {
+    if (auto perm = loadOp.getLayoutAttr())
+      candidate = perm;
+  }
+
+  return candidate;
+}
+
+// Returns the permanent layout attribute for the given operand if it's
+// available on the defining op. Otherwise returns the provided layout.
+xegpu::DistributeLayoutAttr
+maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
+                         const OpOperand &operand, mlir::Operation *owner,
+                         const std::string &name) {
+  xegpu::DistributeLayoutAttr candidate = layout;
+  unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
+
+  if (auto storeOp = dyn_cast<xegpu::StoreScatterOp>(owner)) {
+    if (idx == 0) {
+      if (auto perm = storeOp.getLayoutAttr())
+        candidate = perm;
+    }
+  }
+
+  return candidate;
 }
 
 template <typename T, typename>
 void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
-                                    const DistributeLayoutAttr layout) {
+                                    const DistributeLayoutAttr layout,
+                                    bool respectPermLayout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getLayoutName(operandOrResult);
-  if (layout && !owner->hasAttrOfType<DistributeLayoutAttr>(name))
-    owner->setAttr(name, layout);
+
+  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
+    return;
+
+  DistributeLayoutAttr candidate = layout;
+  if (respectPermLayout)
+    candidate = maybePickPermanentLayout(layout, operandOrResult, owner, name);
+
+  if (candidate)
+    owner->setAttr(name, candidate);
 }
 
 // Explicit instantiation for OpResult
 template void xegpu::setDistributeLayoutAttr<mlir::OpResult>(
     const mlir::OpResult &result,
-    const mlir::xegpu::DistributeLayoutAttr layout);
+    const mlir::xegpu::DistributeLayoutAttr layout, bool respectPermLayout);
 
 // Explicit instantiation for OpOperand
 template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
     const mlir::OpOperand &operand,
-    const mlir::xegpu::DistributeLayoutAttr layout);
+    const mlir::xegpu::DistributeLayoutAttr layout, bool respectPermLayout);
 
 void xegpu::setDistributeLayoutAttrs(
     Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
@@ -253,7 +308,7 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   int64_t rankDiff = srcShapeRank - targetShapeRank;
   std::fill(adjustedTargetShape.begin(), adjustedTargetShape.begin() + rankDiff,
             1);
-  std::copy(shape.begin(), shape.end(), adjustedTargetShape.begin() + rankDiff);
+  llvm::copy(shape, adjustedTargetShape.begin() + rankDiff);
 
   SmallVector<Value> result;
   for (SmallVector<int64_t> offsets :
@@ -500,3 +555,29 @@ xegpu::addWithRightAligned(OpBuilder &builder, Location loc,
   results.append(addElementwise(builder, loc, a, b));
   return results;
 }
+
+template <typename T>
+int xegpu::getLargestDivisor(T dim, ArrayRef<T> candidates,
+                             ArrayRef<T> candidateMultiples) {
+  static_assert(std::is_integral<T>::value, "T must be an integer type");
+  int largest = -1;
+  SmallVector<T> multiples = {1};
+  if (!candidateMultiples.empty())
+    multiples =
+        SmallVector<T>(candidateMultiples.begin(), candidateMultiples.end());
+  for (T candidate : candidates) {
+    for (T multiple : multiples) {
+      int value = static_cast<int>(candidate * multiple);
+      if (value != 0 && dim % value == 0 && value > largest)
+        largest = value;
+    }
+  }
+  return largest;
+}
+
+/// Explicit instantiations
+template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
+                                           ArrayRef<int> candidateMultiples);
+template int
+xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
+                                   ArrayRef<unsigned> candidateMultiples);

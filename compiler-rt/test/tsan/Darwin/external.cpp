@@ -1,14 +1,17 @@
+// RUN: basename %t-lib-instrumented.dylib | tr -d '\n' > %t.basename
 // RUN: %clangxx_tsan %p/external-lib.cpp -shared \
 // RUN:                               -o %t-lib-instrumented.dylib \
-// RUN:   -install_name @rpath/`basename %t-lib-instrumented.dylib`
+// RUN:   -install_name @rpath/%{readfile:%t.basename}
 
+// RUN: basename %t-lib-noninstrumented.dylib | tr -d '\n' > %t.basename
 // RUN: %clangxx_tsan %p/external-lib.cpp -shared -fno-sanitize=thread \
 // RUN:                               -o %t-lib-noninstrumented.dylib \
-// RUN:   -install_name @rpath/`basename %t-lib-noninstrumented.dylib`
+// RUN:   -install_name @rpath/%{readfile:%t.basename}
 
+// RUN: basename %t-lib-noninstrumented-callbacks.dylib | tr -d '\n' > %t.basename
 // RUN: %clangxx_tsan %p/external-lib.cpp -shared -fno-sanitize=thread -DUSE_TSAN_CALLBACKS \
 // RUN:                               -o %t-lib-noninstrumented-callbacks.dylib \
-// RUN:   -install_name @rpath/`basename %t-lib-noninstrumented-callbacks.dylib`
+// RUN:   -install_name @rpath/%{readfile:%t.basename}
 
 // RUN: %clangxx_tsan %s %t-lib-instrumented.dylib -o %t-lib-instrumented
 // RUN: %clangxx_tsan %s %t-lib-noninstrumented.dylib -o %t-lib-noninstrumented
@@ -70,7 +73,7 @@ int main(int argc, char *argv[]) {
   // TEST3: WARNING: ThreadSanitizer: race on MyLibrary::MyObject
   // TEST3: {{Modifying|Read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}
-  // TEST3: Previous {{modifying|Read-only}} access of MyLibrary::MyObject at
+  // TEST3: Previous {{modifying|read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}
   // TEST3: Location is MyLibrary::MyObject of size 16 at
   // TEST3: {{ObjectCreate}}

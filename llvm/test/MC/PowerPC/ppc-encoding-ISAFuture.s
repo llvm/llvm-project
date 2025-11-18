@@ -105,6 +105,10 @@
 # CHECK-LE: lxvprll 6, 2, 1               # encoding: [0xda,0x0c,0xc2,0x7c]
             lxvprll 6, 2, 1
 
+           lxvpb32x 2, 15, 16
+#CHECK-BE: lxvpb32x 2, 15, 16            # encoding: [0x7c,0x4f,0x86,0xda]
+#CHECK-LE: lxvpb32x 2, 15, 16            # encoding: [0xda,0x86,0x4f,0x7c]
+
 # CHECK-BE: stxvprl 0, 1, 2               # encoding: [0x7c,0x01,0x15,0x9a]
 # CHECK-LE: stxvprl 0, 1, 2               # encoding: [0x9a,0x15,0x01,0x7c]
             stxvprl 0, 1, 2
@@ -112,6 +116,10 @@
 # CHECK-BE: stxvprll 6, 0, 1              # encoding: [0x7c,0xc0,0x0d,0xda]
 # CHECK-LE: stxvprll 6, 0, 1              # encoding: [0xda,0x0d,0xc0,0x7c]
             stxvprll 6, 0, 1
+
+           stxvpb32x 2, 15, 16
+#CHECK-BE: stxvpb32x 2, 15, 16            # encoding: [0x7c,0x4f,0x87,0xda]
+#CHECK-LE: stxvpb32x 2, 15, 16            # encoding: [0xda,0x87,0x4f,0x7c]
 
             dmxvi8gerx4 1, 2, 4
 # CHECK-BE: dmxvi8gerx4 1, 2, 4                     # encoding: [0xec,0x82,0x20,0x58]
@@ -346,6 +354,10 @@
            vucmprhh 1, 3, 6
 #CHECK-BE: vucmprhh 1, 3, 6               # encoding: [0x10,0x23,0x31,0x03]
 #CHECK-LE: vucmprhh 1, 3, 6               # encoding: [0x03,0x31,0x23,0x10]
+
+           xvrlw 34, 15, 16
+#CHECK-BE: xvrlw 34, 15, 16              # encoding: [0xf0,0x4f,0x85,0xc1]
+#CHECK-LE: xvrlw 34, 15, 16              # encoding: [0xc1,0x85,0x4f,0xf0]
 
            xxaes192encp 8, 10, 14
 #CHECK-BE: xxaes192encp 8, 10, 14         # encoding: [0xf1,0x0b,0x76,0x10]

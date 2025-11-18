@@ -2116,8 +2116,10 @@ class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = p
   let vaddr2 = !if(ps.UpTo2D, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding), ?);
   let vaddr3 = !if(ps.UpTo2D, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding), ?);
 
+  // Set VADDR4 to NULL
+  let vaddr4 = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
+
   // set to 0 based on SPG.
-  let vaddr4 = 0;
   let rsrc = 0;
   let vdata = 0;
   let d16 = 0;

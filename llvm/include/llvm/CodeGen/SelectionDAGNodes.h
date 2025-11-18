@@ -1949,6 +1949,10 @@ LLVM_ABI bool isNullOrNullSplat(SDValue V, bool AllowUndefs = false);
 /// be zero.
 LLVM_ABI bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 
+/// Return true if the value is a constant floating-point value, or a splatted
+/// vector of a constant floating-point value, of 1.0 (with no undefs).
+LLVM_ABI bool isOneOrOneSplatFP(SDValue V, bool AllowUndefs = false);
+
 /// Return true if the value is a constant -1 integer or a splatted vector of a
 /// constant -1 integer (with no undefs).
 /// Does not permit build vector implicit truncation.
@@ -1963,6 +1967,10 @@ LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
 /// constant 0 integer (with no undefs).
 /// Build vector implicit truncation is allowed.
 LLVM_ABI bool isZeroOrZeroSplat(SDValue N, bool AllowUndefs = false);
+
+/// Return true if the value is a constant (+/-)0.0 floating-point value or a
+/// splatted vector thereof (with no undefs).
+LLVM_ABI bool isZeroOrZeroSplatFP(SDValue N, bool AllowUndefs = false);
 
 /// Return true if \p V is either a integer or FP constant.
 inline bool isIntOrFPConstant(SDValue V) {
