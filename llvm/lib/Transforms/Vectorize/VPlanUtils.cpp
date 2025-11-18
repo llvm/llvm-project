@@ -11,6 +11,7 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
@@ -18,12 +19,12 @@ using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstPartOnly(Def); });
 }
 
 bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
@@ -32,22 +33,17 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
-  VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
-    Expanded = Plan.getOrAddLiveIn(E->getValue());
-  else {
-    auto *U = dyn_cast<SCEVUnknown>(Expr);
-    // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
-    // value. Otherwise the value may be defined in a loop and using it directly
-    // will break LCSSA form. The SCEV expansion takes care of preserving LCSSA
-    // form.
-    if (U && !isa<Instruction>(U->getValue())) {
-      Expanded = Plan.getOrAddLiveIn(U->getValue());
-    } else {
-      Expanded = new VPExpandSCEVRecipe(Expr);
-      Plan.getEntry()->appendRecipe(Expanded->getDefiningRecipe());
-    }
-  }
+    return Plan.getOrAddLiveIn(E->getValue());
+  // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
+  // value. Otherwise the value may be defined in a loop and using it directly
+  // will break LCSSA form. The SCEV expansion takes care of preserving LCSSA
+  // form.
+  auto *U = dyn_cast<SCEVUnknown>(Expr);
+  if (U && !isa<Instruction>(U->getValue()))
+    return Plan.getOrAddLiveIn(U->getValue());
+  auto *Expanded = new VPExpandSCEVRecipe(Expr);
+  Plan.getEntry()->appendRecipe(Expanded);
   return Expanded;
 }
 
@@ -63,19 +59,28 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 
   VPValue *A, *B;
 
+  auto m_CanonicalScalarIVSteps =
+      m_ScalarIVSteps(m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                      m_One(), m_Specific(&Plan.getVF()));
+
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A,
-                  m_ScalarIVSteps(
-                      m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
-                      m_One(), m_Specific(&Plan.getVF()))) ||
-            IsWideCanonicalIV(A));
+           (match(A, m_CanonicalScalarIVSteps) || IsWideCanonicalIV(A));
+
+  // For scalar plans, the header mask uses the scalar steps.
+  if (match(V, m_ICmp(m_CanonicalScalarIVSteps,
+                      m_Specific(Plan.getBackedgeTakenCount())))) {
+    assert(Plan.hasScalarVFOnly() &&
+           "Non-scalar VF using scalar IV steps for header mask?");
+    return true;
+  }
 
   return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
          B == Plan.getBackedgeTakenCount();
 }
 
-const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
+const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
+                                           ScalarEvolution &SE, const Loop *L) {
   if (V->isLiveIn()) {
     if (Value *LiveIn = V->getLiveInIRValue())
       return SE.getSCEV(LiveIn);
@@ -86,6 +91,62 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+      .Case<VPCanonicalIVPHIRecipe>([&SE, L](const VPCanonicalIVPHIRecipe *R) {
+        if (!L)
+          return SE.getCouldNotCompute();
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
+                                SCEV::FlagAnyWrap);
+      })
+      .Case<VPWidenIntOrFpInductionRecipe>(
+          [&SE, L](const VPWidenIntOrFpInductionRecipe *R) {
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), SE, L);
+            if (!L || isa<SCEVCouldNotCompute>(Step))
+              return SE.getCouldNotCompute();
+            const SCEV *Start =
+                getSCEVExprForVPValue(R->getStartValue(), SE, L);
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+          })
+      .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), SE, L);
+        if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
+          return SE.getCouldNotCompute();
+
+        return SE.getAddExpr(SE.getTruncateOrSignExtend(Start, IV->getType()),
+                             SE.getMulExpr(IV, SE.getTruncateOrSignExtend(
+                                                   Scale, IV->getType())));
+      })
+      .Case<VPScalarIVStepsRecipe>([&SE, L](const VPScalarIVStepsRecipe *R) {
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+        if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step) ||
+            !Step->isOne())
+          return SE.getCouldNotCompute();
+        return SE.getMulExpr(SE.getTruncateOrSignExtend(IV, Step->getType()),
+                             Step);
+      })
+      .Case<VPReplicateRecipe>([&SE, L](const VPReplicateRecipe *R) {
+        if (R->getOpcode() != Instruction::GetElementPtr)
+          return SE.getCouldNotCompute();
+
+        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        if (isa<SCEVCouldNotCompute>(Base))
+          return SE.getCouldNotCompute();
+
+        SmallVector<const SCEV *> IndexExprs;
+        for (VPValue *Index : drop_begin(R->operands())) {
+          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, SE, L);
+          if (isa<SCEVCouldNotCompute>(IndexExpr))
+            return SE.getCouldNotCompute();
+          IndexExprs.push_back(IndexExpr);
+        }
+
+        Type *SrcElementTy = cast<GetElementPtrInst>(R->getUnderlyingInstr())
+                                 ->getSourceElementType();
+        return SE.getGEPExpr(Base, IndexExprs, SrcElementTy);
+      })
       .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 }
 
@@ -332,4 +393,21 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
   // successor.
   return VPB->getNumSuccessors() == 2 &&
          VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
+}
+
+std::optional<MemoryLocation>
+vputils::getMemoryLocation(const VPRecipeBase &R) {
+  return TypeSwitch<const VPRecipeBase *, std::optional<MemoryLocation>>(&R)
+      .Case<VPWidenMemoryRecipe, VPInterleaveBase, VPReplicateRecipe>(
+          [](auto *S) {
+            MemoryLocation Loc;
+            // Populate noalias metadata from VPIRMetadata.
+            if (MDNode *NoAliasMD = S->getMetadata(LLVMContext::MD_noalias))
+              Loc.AATags.NoAlias = NoAliasMD;
+            if (MDNode *AliasScopeMD =
+                    S->getMetadata(LLVMContext::MD_alias_scope))
+              Loc.AATags.Scope = AliasScopeMD;
+            return Loc;
+          })
+      .Default([](auto *) { return std::nullopt; });
 }

@@ -10,8 +10,10 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 } // namespace llvm
@@ -37,7 +39,8 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+const SCEV *getSCEVExprForVPValue(const VPValue *V, ScalarEvolution &SE,
+                                  const Loop *L = nullptr);
 
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.
@@ -66,10 +69,29 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// generating the values for the comparison. The recipes are stored in
 /// \p Recipes, and recipes forming an address for a load are also added to
 /// \p GEPs.
+LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
 getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &Recipes,
                              SmallVectorImpl<VPRecipeBase *> &GEPs);
+
+/// Return a MemoryLocation for \p R with noalias metadata populated from
+/// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
+/// the location is conservatively set to nullptr.
+std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
+
+/// Extracts and returns NoWrap and FastMath flags from the induction binop in
+/// \p ID.
+inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
+  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return ID.getInductionBinOp()->getFastMathFlags();
+
+  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
+          ID.getInductionBinOp()))
+    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
+                                  OBO->hasNoSignedWrap());
+  return {};
+}
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

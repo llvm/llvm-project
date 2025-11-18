@@ -293,7 +293,7 @@ public:
                                  SmallVectorImpl<Register> &Ops) const;
   /// Replace \p MI with a concat_vectors with \p Ops.
   void applyCombineShuffleVector(MachineInstr &MI,
-                                 const ArrayRef<Register> Ops) const;
+                                 ArrayRef<Register> Ops) const;
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
@@ -646,6 +646,12 @@ public:
   void applyFunnelShiftToRotate(MachineInstr &MI) const;
   bool matchRotateOutOfRange(MachineInstr &MI) const;
   void applyRotateOutOfRange(MachineInstr &MI) const;
+
+  bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                Register &UnmergeSrc) const;
+  void applyCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B,
+                                Register &UnmergeSrc) const;
 
   bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
   void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;

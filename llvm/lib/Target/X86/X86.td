@@ -274,9 +274,6 @@ def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
 def FeatureAMXMOVRS : SubtargetFeature<"amx-movrs", "HasAMXMOVRS", "true",
                                        "Support AMX-MOVRS instructions",
                                        [FeatureAMXTILE]>;
-def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
-                                           "Support AMX amx-transpose instructions",
-                                           [FeatureAMXTILE]>;
 def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
                                         "HasAMXAVX512", "true",
                                         "Support AMX-AVX512 instructions",
@@ -1177,8 +1174,7 @@ def ProcessorFeatures {
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
                                                   FeatureAMXFP8,
-                                                  FeatureAMXTF32,
-                                                  FeatureAMXTRANSPOSE];
+                                                  FeatureAMXTF32];
   list<SubtargetFeature> DMRFeatures =
     !listconcat(GNRDFeatures, DMRAdditionalFeatures);
 
@@ -1338,8 +1334,18 @@ def ProcessorFeatures {
     !listremove(ARLSFeatures, [FeatureWIDEKL]);
 
   // Novalake
+  list<SubtargetFeature> NVLAdditionalFeatures = [FeatureAVX10_2,
+                                                  FeatureMOVRS,
+                                                  FeatureEGPR,
+                                                  FeaturePush2Pop2,
+                                                  FeaturePPX,
+                                                  FeatureNF,
+                                                  FeatureNDD,
+                                                  FeatureZU,
+                                                  FeatureCCMP,
+                                                  FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
-      !listconcat(PTLFeatures, [FeaturePREFETCHI]);
+      !listconcat(PTLFeatures, NVLAdditionalFeatures);
 
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,

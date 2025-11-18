@@ -367,45 +367,45 @@ Error SimpleNativeMemoryMap::recordDeallocActions(
 }
 
 ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_SessionRef Session, uint64_t CallId,
     orc_rt_WrapperFunctionReturn Return,
     orc_rt_WrapperFunctionBuffer ArgBytes) {
   using Sig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize);
   SPSWrapperFunction<Sig>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      Session, CallId, Return, ArgBytes,
       WrapperFunction::handleWithAsyncMethod(&SimpleNativeMemoryMap::reserve));
 }
 
 ORC_RT_SPS_INTERFACE void
 orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_SessionRef Session, uint64_t CallId,
     orc_rt_WrapperFunctionReturn Return,
     orc_rt_WrapperFunctionBuffer ArgBytes) {
   using Sig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
-  SPSWrapperFunction<Sig>::handle(Session, CallCtx, Return, ArgBytes,
+  SPSWrapperFunction<Sig>::handle(Session, CallId, Return, ArgBytes,
                                   WrapperFunction::handleWithAsyncMethod(
                                       &SimpleNativeMemoryMap::releaseMultiple));
 }
 
 ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_SessionRef Session, uint64_t CallId,
     orc_rt_WrapperFunctionReturn Return,
     orc_rt_WrapperFunctionBuffer ArgBytes) {
   using Sig = SPSExpected<SPSExecutorAddr>(
       SPSExecutorAddr, SPSSimpleNativeMemoryMapInitializeRequest);
-  SPSWrapperFunction<Sig>::handle(Session, CallCtx, Return, ArgBytes,
+  SPSWrapperFunction<Sig>::handle(Session, CallId, Return, ArgBytes,
                                   WrapperFunction::handleWithAsyncMethod(
                                       &SimpleNativeMemoryMap::initialize));
 }
 
 ORC_RT_SPS_INTERFACE void
 orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_SessionRef Session, uint64_t CallId,
     orc_rt_WrapperFunctionReturn Return,
     orc_rt_WrapperFunctionBuffer ArgBytes) {
   using Sig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
   SPSWrapperFunction<Sig>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      Session, CallId, Return, ArgBytes,
       WrapperFunction::handleWithAsyncMethod(
           &SimpleNativeMemoryMap::deinitializeMultiple));
 }

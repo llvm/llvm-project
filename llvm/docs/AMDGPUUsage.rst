@@ -883,8 +883,9 @@ supported for the ``amdgcn`` target.
      Buffer Fat Pointer                    7               N/A         N/A              160     0
      Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
-     *reserved for downstream use*         10
-     *reserved for downstream use*         11
+     *reserved for future use*             10
+     *reserved for future use*             11
+     *reserved for downstream use (LLPC)*  12
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
@@ -1010,33 +1011,68 @@ supported for the ``amdgcn`` target.
   bounds checking may be disabled, buffer fat pointers may choose to enable
   it or not). The cache swizzle support introduced in gfx942 may be used.
 
-  These pointers can be created by `addrspacecast` from a buffer resource
-  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
-  `ptr addrspace(7)` directly, which produces a buffer fat pointer with an initial
+  These pointers can be created by ``addrspacecast`` from a buffer resource
+  (``ptr addrspace(8)```) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
+  ``ptr addrspace(7)`` directly, which produces a buffer fat pointer with an initial
   offset of 0 and prevents the address space cast from being rewritten away.
+
+  The ``align`` attribute on operations from buffer fat pointers is deemed to apply
+  to all componenents of the pointer - that is, an ``align 4`` load is expected to
+  both have the offset be a multiple of 4 and to have a base pointer with an
+  alignment of 4.
+
+  This componentwise definition of alignment is needed to allow for promotion of
+  aligned loads to ``s_buffer_load``, which requires that both the base pointer and
+  offset be appropriately aligned.
 
 **Buffer Resource**
   The buffer resource pointer, in address space 8, is the newer form
   for representing buffer descriptors in AMDGPU IR, replacing their
-  previous representation as `<4 x i32>`. It is a non-integral pointer
-  that represents a 128-bit buffer descriptor resource (`V#`).
+  previous representation as ``<4 x i32>``. It is a non-integral pointer
+  that represents a 128-bit buffer descriptor resource (``V#``).
 
   Since, in general, a buffer resource supports complex addressing modes that cannot
   be easily represented in LLVM (such as implicit swizzled access to structured
-  buffers), it is **illegal** to perform non-trivial address computations, such as
-  ``getelementptr`` operations, on buffer resources. They may be passed to
-  AMDGPU buffer intrinsics, and they may be converted to and from ``i128``.
+  buffers), performing address computations such as ``getelementptr`` is not
+  recommended on ``ptr addrspace(8)``s (if such computations are performed, the
+  offset must be wavefront-uniform.) Note that such a usage of GEP is currently
+  **unimplemented** in the backend, as it would require a wrapping 48-bit
+  addition. Buffer resources may be passed to AMDGPU buffer intrinsics, and they
+  may be converted to and from ``i128``.
 
   Casting a buffer resource to a buffer fat pointer is permitted and adds an offset
   of 0.
 
   Buffer resources can be created from 64-bit pointers (which should be either
-  generic or global) using the `llvm.amdgcn.make.buffer.rsrc` intrinsic, which
+  generic or global) using the ``llvm.amdgcn.make.buffer.rsrc`` intrinsic, which
   takes the pointer, which becomes the base of the resource,
   the 16-bit stride (and swzizzle control) field stored in bits `63:48` of a `V#`,
   the 32-bit NumRecords/extent field (bits `95:64`), and the 32-bit flags field
   (bits `127:96`). The specific interpretation of these fields varies by the
   target architecture and is detailed in the ISA descriptions.
+
+  On gfx1250, the base pointer is instead truncated to 57 bits and the NumRecords
+  field is 45 bits, which necessitated a change to ``make.buffer.rsrcs``'s arguments
+  in order to make that field an ``i64``.
+
+  When buffer resources are passed to buffer intrinsics such as
+  ``llvm.amdgcn.raw.ptr.buffer.load`` or
+  ``llvm.amdgcn.struct.ptr.buffer.store``, the ``align`` attribute on the
+  pointer is assumed to apply to both the offset and the base pointer value.
+  That is, ``align 8`` means that both the base address within the ``ptr
+  addrspace(8)`` and the ``offset`` argument have their three lowest bits set
+  to 0. If the stride of the resource is nonzero, the stride must be a multiple
+  of the given alignment.
+
+  In other words, the ``align`` attribute specifies the alignment of the effective
+  address being loaded from/stored to *and* acts as a guarantee that this is
+  not achieved from adding lower-alignment parts (as hardware may not always
+  allow for such an addition). For example, if a buffer resource has the base
+  address ``0xfffe`` and is accessed with a ``raw.ptr.buffer.load`` with an offset
+  of ``2``, the load must **not** be marked ``align 4`` (even though the
+  effective adddress ``0x10000`` is so aligned) as this would permit the compiler
+  to make incorrect transformations (such as promotion to ``s_buffer_load``,
+  which requires such componentwise alignment).
 
 **Buffer Strided Pointer**
   The buffer index pointer is an experimental address space. It represents
@@ -1050,11 +1086,17 @@ supported for the ``amdgcn`` target.
   the stride is the size of a structured element, the "add tid" flag must be 0,
   and the swizzle enable bits must be off.
 
-  These pointers can be created by `addrspacecast` from a buffer resource
-  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
-  `ptr addrspace(9)` directly, which produces a buffer strided pointer whose initial
+  These pointers can be created by ``addrspacecast`` from a buffer resource
+  (``ptr addrspace(8)``) or by using ``llvm.amdgcn.make.buffer.rsrc`` to produce a
+  ``ptr addrspace(9)``` directly, which produces a buffer strided pointer whose initial
   index and offset values are both 0. This prevents the address space cast from
   being rewritten away.
+
+  As with buffer fat pointers, alignment of a buffer strided pointer applies to
+  both the base pointer address and the offset. In addition, the alignment also
+  constrains the stride of the pointer. That is, if you do an ``align 4`` load from
+  a buffer strided pointer, this means that the base pointer is ``align(4)``, that
+  the offset is a multiple of 4 bytes, and that the stride is a multiple of 4.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
@@ -1178,6 +1220,51 @@ is conservatively correct for OpenCL.
      ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
                              other operations within the same address space.
      ======================= ===================================================
+
+Target Types
+------------
+
+The AMDGPU backend implements some target extension types.
+
+.. _amdgpu-types-named-barriers:
+
+Named Barriers
+~~~~~~~~~~~~~~
+
+Named barriers are fixed function hardware barrier objects that are available
+in gfx12.5+ in addition to the traditional default barriers.
+
+In LLVM IR, named barriers are represented by global variables of type
+``target("amdgcn.named.barrier", 0)`` in the LDS address space. Named barrier
+global variables do not occupy actual LDS memory, but their lifetime and
+allocation scope matches that of global variables in LDS. Programs in LLVM IR
+refer to named barriers using pointers.
+
+The following named barrier types are supported in global variables, defined
+recursively:
+
+* a single, standalone ``target("amdgcn.named.barrier", 0)``
+* an array of supported types
+* a struct containing a single element of supported type
+
+.. code-block:: llvm
+
+      @bar = addrspace(3) global target("amdgcn.named.barrier", 0) undef
+      @foo = addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] undef
+      @baz = addrspace(3) global { target("amdgcn.named.barrier", 0) } undef
+
+      ...
+
+      %foo.i = getelementptr [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(3) @foo, i32 0, i32 %i
+      call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %foo.i, i32 0)
+
+Named barrier types may not be used in ``alloca``.
+
+Named barriers do not have an underlying byte representation.
+It is undefined behavior to use a pointer to any part of a named barrier object
+as the pointer operand of a regular memory access instruction or intrinsic.
+Pointers to named barrier objects are intended to be used with dedicated
+intrinsics. Reading from or writing to such pointers is undefined behavior.
 
 LLVM IR Intrinsics
 ------------------
@@ -2644,7 +2731,7 @@ are deprecated and should not be used.
   ``vendor_name_size`` and ``architecture_name_size`` are the length of the
   vendor and architecture names respectively, including the NUL character.
 
-  ``vendor_and_architecture_name`` contains the NUL terminates string for the
+  ``vendor_and_architecture_name`` contains the NUL terminated string for the
   vendor, immediately followed by the NUL terminated string for the
   architecture.
 
@@ -3336,7 +3423,7 @@ location.
 
 If the lane is inactive, but was active on entry to the subprogram, then this is
 the program location in the subprogram at which execution of the lane is
-conceptual positioned.
+conceptually positioned.
 
 If the lane was not active on entry to the subprogram, then this will be the
 undefined location. A client debugger can check if the lane is part of a valid
@@ -4708,7 +4795,7 @@ same *vendor-name*.
                                                      "image", or "pipe". This may be
                                                      more restrictive than indicated
                                                      by ".access" to reflect what the
-                                                     kernel actual does. If not
+                                                     kernel actually does. If not
                                                      present then the runtime must
                                                      assume what is implied by
                                                      ".access" and ".is_const"      . Values
@@ -5087,7 +5174,7 @@ supported except by flat and scratch instructions in GFX9-GFX11.
 
 The generic address space uses the hardware flat address support available in
 GFX7-GFX11. This uses two fixed ranges of virtual addresses (the private and
-local apertures), that are outside the range of addressible global memory, to
+local apertures), that are outside the range of addressable global memory, to
 map from a flat address to a private or local address.
 
 FLAT instructions can take a flat address and access global, private (scratch)
@@ -5809,7 +5896,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
                                                      GFX125*
-                                                       roundup(lds-size / (256 * 4))
+                                                       roundup(lds-size / (512 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
@@ -6540,7 +6627,7 @@ Acquire memory ordering is not meaningful on store atomic instructions and is
 treated as non-atomic.
 
 Release memory ordering is not meaningful on load atomic instructions and is
-treated a non-atomic.
+treated as non-atomic.
 
 Acquire-release memory ordering is not meaningful on load or store atomic
 instructions and is treated as acquire and release respectively.
@@ -18899,8 +18986,8 @@ On entry to a function:
     objects and to convert this address to a flat address by adding the flat
     scratch aperture base address.
 
-    The swizzled SP value is always 4 bytes aligned for the ``r600``
-    architecture and 16 byte aligned for the ``amdgcn`` architecture.
+    The swizzled SP value is always 4-byte aligned for the ``r600``
+    architecture and 16-byte aligned for the ``amdgcn`` architecture.
 
     .. note::
 
@@ -19191,7 +19278,7 @@ describes how the AMDGPU implements function calls:
       The CFI will reflect the changed calculation needed to compute the CFA
       from SP.
 
-7.  4 byte spill slots are used in the stack frame. One slot is allocated for an
+7.  4-byte spill slots are used in the stack frame. One slot is allocated for an
     emergency spill slot. Buffer instructions are used for stack accesses and
     not the ``flat_scratch`` instruction.
 

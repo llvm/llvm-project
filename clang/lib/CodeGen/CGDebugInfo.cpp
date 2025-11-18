@@ -345,7 +345,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (Loc.isInvalid())
     return;
 
-  CurLoc = CGM.getContext().getSourceManager().getExpansionLoc(Loc);
+  CurLoc = CGM.getContext().getSourceManager().getFileLoc(Loc);
 
   // If we've changed files in the middle of a lexical scope go ahead
   // and create a new lexical scope with file node if it's different
@@ -572,7 +572,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+    PresumedLoc PLoc = SM.getPresumedLoc(SM.getFileLoc(Loc));
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
@@ -599,7 +599,8 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(FileName, CSInfo, getSource(SM, SM.getFileID(Loc)));
+  return createFile(FileName, CSInfo,
+                    getSource(SM, SM.getFileID(SM.getFileLoc(Loc))));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -654,7 +655,7 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM.getPresumedLoc(Loc).getLine();
+  return SM.getPresumedLoc(SM.getFileLoc(Loc)).getLine();
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
@@ -666,7 +667,8 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc.isValid() ? Loc : CurLoc);
+  PresumedLoc PLoc =
+      SM.getPresumedLoc(Loc.isValid() ? SM.getFileLoc(Loc) : CurLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
 }
 
@@ -1174,14 +1176,16 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
-
-  StringRef Name = Ty->isUnsigned() ? "unsigned _BitInt" : "_BitInt";
+  SmallString<32> Name;
+  llvm::raw_svector_ostream OS(Name);
+  OS << (Ty->isUnsigned() ? "unsigned _BitInt(" : "_BitInt(")
+     << Ty->getNumBits() << ")";
   llvm::dwarf::TypeKind Encoding = Ty->isUnsigned()
                                        ? llvm::dwarf::DW_ATE_unsigned
                                        : llvm::dwarf::DW_ATE_signed;
-
   return DBuilder.createBasicType(Name, CGM.getContext().getTypeSize(Ty),
-                                  Encoding);
+                                  Encoding, llvm::DINode::FlagZero, 0,
+                                  Ty->getNumBits());
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
@@ -2359,7 +2363,13 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       // Emit MS ABI vftable information.  There is only one entry for the
       // deleting dtor.
       const auto *DD = dyn_cast<CXXDestructorDecl>(Method);
-      GlobalDecl GD = DD ? GlobalDecl(DD, Dtor_Deleting) : GlobalDecl(Method);
+      GlobalDecl GD =
+          DD ? GlobalDecl(
+                   DD, CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+                           CGM.getContext().getLangOpts())
+                           ? Dtor_VectorDeleting
+                           : Dtor_Deleting)
+             : GlobalDecl(Method);
       MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
       VIndex = ML.Index;
@@ -4953,7 +4963,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           QualType CalleeType,
-                                          const FunctionDecl *CalleeDecl) {
+                                          GlobalDecl CalleeGlobalDecl) {
   if (!CallOrInvoke)
     return;
   auto *Func = dyn_cast<llvm::Function>(CallOrInvoke->getCalledOperand());
@@ -4961,6 +4971,9 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
     return;
   if (Func->getSubprogram())
     return;
+
+  const FunctionDecl *CalleeDecl =
+      cast<FunctionDecl>(CalleeGlobalDecl.getDecl());
 
   // Do not emit a declaration subprogram for a function with nodebug
   // attribute, or if call site info isn't required.
@@ -4972,7 +4985,8 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   // create the one describing the function in order to have complete
   // call site debug info.
   if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
-    EmitFunctionDecl(CalleeDecl, CalleeDecl->getLocation(), CalleeType, Func);
+    EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
+                     Func);
 }
 
 void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {
@@ -5000,7 +5014,7 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   // Update our current location
   setLocation(Loc);
 
-  if (CurLoc.isInvalid() || CurLoc.isMacroID() || LexicalBlockStack.empty())
+  if (CurLoc.isInvalid() || LexicalBlockStack.empty())
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
@@ -6276,7 +6290,8 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
 void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
   SourceLocation Loc = S->getStrTokenLoc(0);
-  PresumedLoc PLoc = CGM.getContext().getSourceManager().getPresumedLoc(Loc);
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(SM.getFileLoc(Loc));
   if (!PLoc.isValid())
     return;
 
