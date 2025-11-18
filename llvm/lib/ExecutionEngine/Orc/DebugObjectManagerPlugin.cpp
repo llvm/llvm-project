@@ -38,6 +38,13 @@ Section *getDebugELFObjectSection(LinkGraph &LG) {
 namespace llvm {
 namespace orc {
 
+/// Function addresses for memory access.
+struct SymbolAddrs {
+  ExecutorAddr Instance;
+  ExecutorAddr Open;
+  ExecutorAddr Lookup;
+};
+
 static const std::set<StringRef> DwarfSectionNames = {
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   ELF_NAME,
