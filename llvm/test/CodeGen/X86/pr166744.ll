@@ -31,13 +31,13 @@ define i1 @PR166744(ptr %v, i64 %idx, i1 zeroext %b) {
 ; NOPOSTRA-LABEL: PR166744:
 ; NOPOSTRA:       # %bb.0:
 ; NOPOSTRA-NEXT:    movl %esi, %eax
-; NOPOSTRA-NEXT:    shrl $3, %eax
-; NOPOSTRA-NEXT:    andl $60, %eax
-; NOPOSTRA-NEXT:    movl (%rdi,%rax), %ecx
-; NOPOSTRA-NEXT:    btrl %esi, %ecx
-; NOPOSTRA-NEXT:    shlxl %esi, %edx, %edx
-; NOPOSTRA-NEXT:    orl %ecx, %edx
-; NOPOSTRA-NEXT:    movl %edx, (%rdi,%rax)
+; NOPOSTRA-NEXT:    shrl $3, %esi
+; NOPOSTRA-NEXT:    andl $60, %esi
+; NOPOSTRA-NEXT:    movl (%rdi,%rsi), %ecx
+; NOPOSTRA-NEXT:    btrl %eax, %ecx
+; NOPOSTRA-NEXT:    shlxl %eax, %edx, %eax
+; NOPOSTRA-NEXT:    orl %ecx, %eax
+; NOPOSTRA-NEXT:    movl %eax, (%rdi,%rsi)
 ; NOPOSTRA-NEXT:    movq 16(%rdi), %rax
 ; NOPOSTRA-NEXT:    movq (%rdi), %rcx
 ; NOPOSTRA-NEXT:    movq 8(%rdi), %rdx

@@ -7,6 +7,7 @@ from .._transform_ops_gen import *
 from .._transform_ops_gen import _Dialect
 from ..._mlir_libs._mlirDialectsTransform import *
 from ..._mlir_libs._mlirDialectsTransform import AnyOpType, OperationType
+from . import interpreter
 
 try:
     from ...ir import *
@@ -323,6 +324,25 @@ class NamedSequenceOp(NamedSequenceOp):
     @property
     def bodyExtraArgs(self) -> BlockArgumentList:
         return self.body.arguments[1:]
+
+    def apply(
+        self,
+        payload: Module,
+        transform_options: Optional[interpreter.TransformOptions] = None,
+    ) -> Module:
+        assert self.parent
+        assert "transform.with_named_sequence" in self.parent.attributes
+        assert isinstance(
+            self.parent.attributes["transform.with_named_sequence"], UnitAttr
+        )
+
+        interpreter.apply_named_sequence(
+            payload_root=payload,
+            transform_root=self,
+            transform_module=self.parent,
+            transform_options=transform_options,
+        )
+        return payload  # NB: was modified in-place (if any transformation happened)
 
 
 def named_sequence(

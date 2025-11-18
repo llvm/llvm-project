@@ -8,7 +8,7 @@
 
 #include "PPCFreeBSD.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang::driver::toolchains;
@@ -16,7 +16,7 @@ using namespace llvm::opt;
 
 void PPCFreeBSDToolChain::AddClangSystemIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(clang::driver::options::OPT_nostdinc) &&
+  if (!DriverArgs.hasArg(options::OPT_nostdinc) &&
       !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     const Driver &D = getDriver();
     SmallString<128> P(D.ResourceDir);
