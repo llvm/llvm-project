@@ -419,7 +419,10 @@ struct LowerGpuOpsToNVVMOpsPass final
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
     configureGpuToNVVMConversionLegality(target);
-    if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
+    ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
+    if (failed(
+            applyPartialConversion(m, target, std::move(llvmPatterns), config)))
       signalPassFailure();
   }
 };
