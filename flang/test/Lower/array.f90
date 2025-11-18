@@ -93,7 +93,7 @@ subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   ! CHECK: fir.coordinate_of %[[a7]], %[[t7]] :
   ! CHECK-LABEL: EndIoStatement
   print *, a7(kk, jj, ii)
-  
+
 end subroutine s
 
 ! CHECK-LABEL: range
