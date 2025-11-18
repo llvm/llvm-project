@@ -497,6 +497,10 @@ class CpAsyncBulkStr<bit mc, bit ch, bit mask = 0> {
                # !if(mc, ".multicast::cluster", "")
                # !if(ch, ".L2::cache_hint", "");
 
+  // Global to Shared CTA memory
+  string G2S_CTA = "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes"
+                   # !if(ch, ".L2::cache_hint", "");
+
   // Shared CTA to Cluster memory
   string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
 }
@@ -542,6 +546,21 @@ multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch> {
 }
 defm CP_ASYNC_BULK_G2S    : CP_ASYNC_BULK_G2S_INTR<has_ch = 0>;
 defm CP_ASYNC_BULK_G2S_CH : CP_ASYNC_BULK_G2S_INTR<has_ch = 1>;
+
+multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch> {
+  defvar Intr = int_nvvm_cp_async_bulk_global_to_shared_cta;
+
+  def "" : NVPTXInst<(outs),
+      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
+           B32:$size, B64:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<0, 1>.G2S_CTA # " [$dst], [$src], $size, [$mbar], $ch;",
+          CpAsyncBulkStr<0, 0>.G2S_CTA # " [$dst], [$src], $size, [$mbar];"),
+      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<86>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_G2S_CTA    : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_G2S_CTA_CH : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 1>;
 
 def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
   (ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
@@ -5606,7 +5625,7 @@ class Tcgen05MMADisableOutputLaneSDNode<bit Sp, string ASpace,
                 # "_DISABLE_OUTPUT_LANE_CG" # CtaGroup
                 # !if(!eq(AShift, 1), "_ASHIFT", ""),
         Tcgen05MMADisableOutputLaneTypeProfile<Sp, ASpace, CtaGroup, ScaleInput>,
-                    [SDNPHasChain, SDNPSideEffect]>;
+                    [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
 
 class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace,
                      string Kind, int CtaGroup, string CollectorUsageStr,

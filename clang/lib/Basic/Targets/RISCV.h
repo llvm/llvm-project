@@ -126,7 +126,7 @@ public:
   llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
-    return std::make_pair(32, 32);
+    return std::make_pair(64, 64);
   }
 
   bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }

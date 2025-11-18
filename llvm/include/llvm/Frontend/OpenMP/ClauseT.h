@@ -50,7 +50,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <iterator>
 #include <optional>
 #include <tuple>
@@ -242,7 +241,7 @@ ENUM(MotionExpectation, Present);
 // V5.2: [15.9.1] `task-dependence-type` modifier
 ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
      Source);
-ENUM(Prescriptiveness, Strict, Fallback);
+ENUM(Prescriptiveness, Strict);
 
 template <typename I, typename E> //
 struct LoopIterationT {
@@ -592,10 +591,10 @@ struct DynamicAllocatorsT {
 template <typename T, typename I, typename E> //
 struct DynGroupprivateT {
   ENUM(AccessGroup, Cgroup);
-  using Prescriptiveness = type::Prescriptiveness;
+  ENUM(Fallback, Abort, Default_Mem, Null);
   using Size = E;
   using TupleTrait = std::true_type;
-  std::tuple<OPT(AccessGroup), OPT(Prescriptiveness), Size> t;
+  std::tuple<OPT(AccessGroup), OPT(Fallback), Size> t;
 };
 
 // V5.2: [5.8.4] `enter` clause

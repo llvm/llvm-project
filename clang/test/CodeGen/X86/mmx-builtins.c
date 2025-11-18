@@ -102,6 +102,8 @@ __m64 test_mm_alignr_pi8(__m64 a, __m64 b) {
   // CHECK: shufflevector <16 x i8> {{%.*}}, <16 x i8> zeroinitializer, <16 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17>
   return _mm_alignr_pi8(a, b, 2);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_alignr_pi8(((__m64)(__v8qs){1, 2, 3, 4, 5, 6, 7, 8}), ((__m64)(__v8qs){9, 10, 11, 12, 13, 14, 15, 16}), 2), 11, 12, 13, 14, 15, 16, 1, 2));
+TEST_CONSTEXPR(match_v8qi(_mm_alignr_pi8(((__m64)(__v8qs){1, 2, 3, 4, 5, 6, 7, 8}), ((__m64)(__v8qs){9, 10, 11, 12, 13, 14, 15, 16}), 16), 0, 0, 0, 0, 0, 0, 0, 0));
 
 __m64 test_mm_and_si64(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_and_si64

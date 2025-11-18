@@ -66,7 +66,7 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
 // we would be accessing `getLangOpts` and `Options` before the underlying
 // `ClangTidyCheck` instance was properly initialized.
 TransformerClangTidyCheck::TransformerClangTidyCheck(
-    std::function<std::optional<RewriteRuleWith<std::string>>(
+    llvm::function_ref<std::optional<RewriteRuleWith<std::string>>(
         const LangOptions &, const OptionsView &)>
         MakeRule,
     StringRef Name, ClangTidyContext *Context)

@@ -65,6 +65,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::std::optional< ::llvm::APFloat > getSomeAttr2();
 // CHECK:   ::mlir::Region &getSomeRegion() {
 // CHECK:   ::mlir::RegionRange getSomeRegions() {
+// CHECK-NEXT:     return odsRegions.drop_front(1);
+// CHECK:   ::mlir::RegionRange getRegions() {
+// CHECK-NEXT:     return odsRegions;
 // CHECK: };
 // CHECK: }
 
@@ -151,10 +154,6 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // DEFS-LABEL: NS::AOp definitions
 
 // Check that `getAttrDictionary()` is used when not using properties.
-
-// DECLS: ::mlir::RegionRange AOpGenericAdaptorBase::getSomeRegions()
-// DECLS-NEXT: return odsRegions.drop_front(1);
-// DECLS: ::mlir::RegionRange AOpGenericAdaptorBase::getRegions()
 
 // Check AttrSizedOperandSegments
 // ---

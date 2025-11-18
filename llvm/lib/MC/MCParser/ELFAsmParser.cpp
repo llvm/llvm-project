@@ -25,7 +25,6 @@
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 

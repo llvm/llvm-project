@@ -24,6 +24,8 @@ int main(int argc, char **argv) {
   for (int i=0; i<200; i++) foo();
 #pragma omp target  default(x) // expected-error {{expected 'none', 'shared', 'private' or 'firstprivate' in OpenMP clause 'default'}}
   for (int i=0; i<200; i++) foo();
+#pragma omp target default(none) // expected-note {{explicit data sharing attribute, data mapping attribute, or is_device_ptr clause requested here}}
+  x++; // expected-error {{variable 'x' must have explicitly specified data sharing attributes, data mapping attributes, or in an is_device_ptr clause}}
 #endif 
 
 #ifdef OMP52

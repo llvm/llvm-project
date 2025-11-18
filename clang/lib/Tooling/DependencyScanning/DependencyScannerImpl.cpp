@@ -358,9 +358,8 @@ void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
 }
 } // namespace
 
-namespace clang::tooling::dependencies {
 std::unique_ptr<DiagnosticOptions>
-createDiagOptions(ArrayRef<std::string> CommandLine) {
+dependencies::createDiagOptions(ArrayRef<std::string> CommandLine) {
   std::vector<const char *> CLI;
   for (const std::string &Arg : CommandLine)
     CLI.push_back(Arg.c_str());
@@ -382,9 +381,10 @@ DignosticsEngineWithDiagOpts::DignosticsEngineWithDiagOpts(
 }
 
 std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
-buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
-                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                 llvm::BumpPtrAllocator &Alloc) {
+dependencies::buildCompilation(ArrayRef<std::string> ArgStrs,
+                               DiagnosticsEngine &Diags,
+                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                               llvm::BumpPtrAllocator &Alloc) {
   SmallVector<const char *, 256> Argv;
   Argv.reserve(ArgStrs.size());
   for (const std::string &Arg : ArgStrs)
@@ -417,8 +417,8 @@ buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
 }
 
 std::unique_ptr<CompilerInvocation>
-createCompilerInvocation(ArrayRef<std::string> CommandLine,
-                         DiagnosticsEngine &Diags) {
+dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
+                                       DiagnosticsEngine &Diags) {
   llvm::opt::ArgStringList Argv;
   for (const std::string &Str : ArrayRef(CommandLine).drop_front())
     Argv.push_back(Str.c_str());
@@ -432,10 +432,10 @@ createCompilerInvocation(ArrayRef<std::string> CommandLine,
 }
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                          ArrayRef<std::string> CommandLine,
-                          StringRef WorkingDirectory,
-                          llvm::MemoryBufferRef TUBuffer) {
+dependencies::initVFSForTUBuferScanning(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
+    llvm::MemoryBufferRef TUBuffer) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -459,9 +459,10 @@ initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
-initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                         ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory, StringRef ModuleName) {
+dependencies::initVFSForByNameScanning(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
+    StringRef ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -486,7 +487,7 @@ initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
   return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
-bool initializeScanCompilerInstance(
+bool dependencies::initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
@@ -559,7 +560,7 @@ bool initializeScanCompilerInstance(
 }
 
 llvm::SmallVector<StringRef>
-getInitialStableDirs(const CompilerInstance &ScanInstance) {
+dependencies::getInitialStableDirs(const CompilerInstance &ScanInstance) {
   // Create a collection of stable directories derived from the ScanInstance
   // for determining whether module dependencies would fully resolve from
   // those directories.
@@ -571,8 +572,8 @@ getInitialStableDirs(const CompilerInstance &ScanInstance) {
 }
 
 std::optional<PrebuiltModulesAttrsMap>
-computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
-                             llvm::SmallVector<StringRef> &StableDirs) {
+dependencies::computePrebuiltModulesASTMap(
+    CompilerInstance &ScanInstance, llvm::SmallVector<StringRef> &StableDirs) {
   // Store a mapping of prebuilt module files and their properties like header
   // search options. This will prevent the implicit build to create duplicate
   // modules and will force reuse of the existing prebuilt module files
@@ -590,7 +591,8 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 }
 
 std::unique_ptr<DependencyOutputOptions>
-takeAndUpdateDependencyOutputOptionsFrom(CompilerInstance &ScanInstance) {
+dependencies::takeAndUpdateDependencyOutputOptionsFrom(
+    CompilerInstance &ScanInstance) {
   // This function moves the existing dependency output options from the
   // invocation to the collector. The options in the invocation are reset,
   // which ensures that the compiler won't create new dependency collectors,
@@ -607,7 +609,8 @@ takeAndUpdateDependencyOutputOptionsFrom(CompilerInstance &ScanInstance) {
   return Opts;
 }
 
-std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
+std::shared_ptr<ModuleDepCollector>
+dependencies::initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
     StringRef WorkingDirectory, DependencyConsumer &Consumer,
@@ -633,7 +636,6 @@ std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
 
   return MDC;
 }
-} // namespace clang::tooling::dependencies
 
 bool DependencyScanningAction::runInvocation(
     std::unique_ptr<CompilerInvocation> Invocation,
@@ -714,11 +716,11 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
     DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
   }
 
-  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
-      CommandLine, OverlayFS, *DiagConsumer);
-
   std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
       Worker.BaseFS, CommandLine, CWD, "ScanningByName");
+
+  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
+      CommandLine, OverlayFS, *DiagConsumer);
 
   std::tie(Driver, Compilation) = buildCompilation(
       CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS, Alloc);

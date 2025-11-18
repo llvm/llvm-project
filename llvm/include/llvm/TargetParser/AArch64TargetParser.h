@@ -23,7 +23,6 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include <array>
 #include <set>
 #include <vector>
 

@@ -21,18 +21,29 @@
 
 namespace llvm {
 
-// Simple RAII helper for emitting ifdef-undef-endif scope.
+// Simple RAII helper for emitting ifdef-undef-endif scope. `LateUndef` controls
+// whether the undef is emitted at the start of the scope (false) or at the end
+// of the scope (true).
 class IfDefEmitter {
 public:
-  IfDefEmitter(raw_ostream &OS, StringRef Name) : Name(Name.str()), OS(OS) {
-    OS << "#ifdef " << Name << "\n"
-       << "#undef " << Name << "\n\n";
+  IfDefEmitter(raw_ostream &OS, StringRef Name, bool LateUndef = false)
+      : Name(Name.str()), OS(OS), LateUndef(LateUndef) {
+    OS << "#ifdef " << Name << "\n";
+    if (!LateUndef)
+      OS << "#undef " << Name << "\n";
+    OS << "\n";
   }
-  ~IfDefEmitter() { OS << "\n#endif // " << Name << "\n\n"; }
+  ~IfDefEmitter() {
+    OS << "\n";
+    if (LateUndef)
+      OS << "#undef " << Name << "\n";
+    OS << "#endif // " << Name << "\n\n";
+  }
 
 private:
   std::string Name;
   raw_ostream &OS;
+  bool LateUndef;
 };
 
 // Simple RAII helper for emitting header include guard (ifndef-define-endif).
@@ -43,7 +54,7 @@ public:
     OS << "#ifndef " << Name << "\n"
        << "#define " << Name << "\n\n";
   }
-  ~IncludeGuardEmitter() { OS << "\n#endif // " << Name << "\n"; }
+  ~IncludeGuardEmitter() { OS << "\n#endif // " << Name << "\n\n"; }
 
 private:
   std::string Name;
@@ -61,13 +72,9 @@ public:
       OS << "namespace " << Name << " {\n\n";
   }
 
-  ~NamespaceEmitter() { close(); }
-
-  // Explicit function to close the namespace scopes.
-  void close() {
-    if (!Closed && !Name.empty())
+  ~NamespaceEmitter() {
+    if (!Name.empty())
       OS << "\n} // namespace " << Name << "\n";
-    Closed = true;
   }
 
 private:
@@ -84,7 +91,6 @@ private:
   }
   std::string Name;
   raw_ostream &OS;
-  bool Closed = false;
 };
 
 } // end namespace llvm
