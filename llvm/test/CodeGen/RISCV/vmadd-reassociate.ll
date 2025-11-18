@@ -64,11 +64,11 @@ entry:
 define <vscale x 1 x i32> @vmadd_vscale(<vscale x 1 x i32> %m00, <vscale x 1 x i32> %m01, <vscale x 1 x i32> %m10, <vscale x 1 x i32> %m11) {
 ; CHECK-LABEL: vmadd_vscale:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmul.vv v8, v8, v9
-; CHECK-NEXT:    vmacc.vv v8, v11, v10
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v12, a0
+; CHECK-NEXT:    vmadd.vv v8, v9, v12
+; CHECK-NEXT:    vmacc.vv v8, v11, v10
 ; CHECK-NEXT:    ret
 entry:
   %vset = tail call i32 @llvm.experimental.get.vector.length.i64(i64 8, i32 1, i1 true)
@@ -82,11 +82,11 @@ entry:
 define <8 x i32> @vmadd_fixed(<8 x i32> %m00, <8 x i32> %m01, <8 x i32> %m10, <8 x i32> %m11) {
 ; CHECK-LABEL: vmadd_fixed:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmul.vv v8, v8, v10
-; CHECK-NEXT:    vmacc.vv v8, v14, v12
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.x v16, a0
+; CHECK-NEXT:    vmadd.vv v8, v10, v16
+; CHECK-NEXT:    vmacc.vv v8, v14, v12
 ; CHECK-NEXT:    ret
 entry:
   %mul0 = mul nsw <8 x i32> %m00, %m01
@@ -99,13 +99,13 @@ entry:
 define <vscale x 1 x i32> @vmadd_vscale_long(<vscale x 1 x i32> %m00, <vscale x 1 x i32> %m01, <vscale x 1 x i32> %m10, <vscale x 1 x i32> %m11,
 ; CHECK-LABEL: vmadd_vscale_long:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v16, a0
+; CHECK-NEXT:    vmadd.vv v8, v9, v16
 ; CHECK-NEXT:    vmacc.vv v8, v11, v10
 ; CHECK-NEXT:    vmacc.vv v8, v13, v12
 ; CHECK-NEXT:    vmacc.vv v8, v15, v14
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    ret
                                              <vscale x 1 x i32> %m20, <vscale x 1 x i32> %m21, <vscale x 1 x i32> %m30, <vscale x 1 x i32> %m31) {
 entry:
@@ -124,13 +124,13 @@ entry:
 define <8 x i32> @vmadd_fixed_long(<8 x i32> %m00, <8 x i32> %m01, <8 x i32> %m10, <8 x i32> %m11,
 ; CHECK-LABEL: vmadd_fixed_long:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmul.vv v8, v8, v10
+; CHECK-NEXT:    vmv.v.x v24, a0
+; CHECK-NEXT:    vmadd.vv v8, v10, v24
 ; CHECK-NEXT:    vmacc.vv v8, v14, v12
 ; CHECK-NEXT:    vmacc.vv v8, v18, v16
 ; CHECK-NEXT:    vmacc.vv v8, v22, v20
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    ret
                                    <8 x i32> %m20, <8 x i32> %m21, <8 x i32> %m30, <8 x i32> %m31) {
 entry:
