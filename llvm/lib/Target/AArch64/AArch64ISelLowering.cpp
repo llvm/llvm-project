@@ -29109,9 +29109,7 @@ SDValue AArch64TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
   if (FailureBB) {
     return DAG.getNode(
         ISD::ADD, DL, Val.getValueType(),
-        DAG.getCopyFromReg(DAG.getEntryNode(), DL,
-                           getStackPointerRegisterToSaveRestore(), MVT::i64),
-        Val);
+        DAG.getRegister(getStackPointerRegisterToSaveRestore(), MVT::i64), Val);
   }
   return Val;
 }
