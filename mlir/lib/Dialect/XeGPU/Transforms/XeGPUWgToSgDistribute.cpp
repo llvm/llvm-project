@@ -889,8 +889,8 @@ struct WgToSgLoadGatherOpWithOffset
       return failure();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::LayoutAttr layout = dyn_cast_if_present<xegpu::LayoutAttr>(
-        xegpu::getDistributeLayoutAttr(op.getResult()));
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -913,10 +913,12 @@ struct WgToSgLoadGatherOpWithOffset
     VectorType newTy = VectorType::get(sgShape, resultType.getElementType());
     for (auto [offsets, mask] :
          llvm::zip(adaptor.getOffsets(), adaptor.getMask())) {
+      auto newLayout = layout.dropSgLayoutAndData();
       auto newLoadOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
-          layout.dropSgLayoutAndData());
+          newLayout);
+      xegpu::setDistributeLayoutAttr(newLoadOp->getResult(0), newLayout);
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -941,8 +943,8 @@ struct WgToSgStoreScatterOpWithOffset
     if (!valueType)
       return failure();
 
-    xegpu::LayoutAttr layout = dyn_cast_if_present<xegpu::LayoutAttr>(
-        xegpu::getDistributeLayoutAttr(op.getOperand(0)));
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getOperand(0));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 

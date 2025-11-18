@@ -749,7 +749,7 @@ TEST_F(VPBasicBlockTest, print) {
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
-    I3->print(OS, "", SlotTracker);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
     EXPECT_EQ("EMIT store <badref>, <badref>", I3Dump);
   }
 
@@ -818,7 +818,7 @@ Successor(s): ir-bb<scalar.header>
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
-    I3->print(OS, "", SlotTracker);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
     EXPECT_EQ("EMIT store vp<%1>, vp<%2>", I3Dump);
   }
 
@@ -1009,7 +1009,7 @@ TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   SmallVector<VPValue *, 2> Args;
   Args.push_back(Op1);
   Args.push_back(Op2);
-  VPWidenRecipe WidenR(*AI, make_range(Args.begin(), Args.end()));
+  VPWidenRecipe WidenR(*AI, Args, VPIRMetadata(), DebugLoc());
 
   checkVPRecipeCastImpl<VPWidenRecipe, VPUser>(&WidenR);
   delete AI;
@@ -1092,7 +1092,7 @@ TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
   IntegerType *Int64 = IntegerType::get(C, 64);
   auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, *Cast);
+  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, *Cast, {});
 
   checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser>(&Recipe);
   delete Cast;
@@ -1263,7 +1263,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     SmallVector<VPValue *, 2> Args;
     Args.push_back(Op1);
     Args.push_back(Op2);
-    VPWidenRecipe Recipe(*AI, make_range(Args.begin(), Args.end()));
+    VPWidenRecipe Recipe(*AI, Args, VPIRMetadata(), DebugLoc());
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1468,7 +1468,7 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
   VPWidenRecipe *WidenR =
-      new VPWidenRecipe(*AI, make_range(Args.begin(), Args.end()));
+      new VPWidenRecipe(*AI, Args, VPIRMetadata(), DebugLoc());
   VPBB1->appendRecipe(WidenR);
 
   {
@@ -1726,8 +1726,8 @@ struct VPDoubleValueDef : public VPRecipeBase {
 
   void execute(struct VPTransformState &State) override {}
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override {}
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override {}
 #endif
 };
 
