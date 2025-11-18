@@ -1303,7 +1303,7 @@ struct WgToSgVectorConstantMaskOp
     VectorType type = op.getResult().getType();
     auto wgShape = type.getShape();
 
-    ArrayRef<int64_t> originalMaskDimSizes = op.getMaskDimSizes();
+    ArrayRef<int64_t> wgMaskDimSizes = op.getMaskDimSizes();
 
     // Get subgroup ID.
     Value sgId =
@@ -1316,35 +1316,32 @@ struct WgToSgVectorConstantMaskOp
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType resultType = VectorType::get(sgShape, type.getElementType());
 
-    // Each subgroup computes its local mask size as: min(max(originalMaskSize -
+    // Each subgroup computes its local mask size as: min(max(wgMaskSize -
     // offset, 0), sgDimSize)
     SmallVector<Value> newCreateMaskOps;
     for (auto offsetSet : *sgOffsets) {
       SmallVector<Value> maskOperands;
 
-      for (auto [i, originalMaskSize] : llvm::enumerate(originalMaskDimSizes)) {
-        Value originalMaskSizeVal =
-            arith::ConstantIndexOp::create(rewriter, loc, originalMaskSize);
+      for (auto [i, wgMaskSize] : llvm::enumerate(wgMaskDimSizes)) {
+        Value wgMaskSizeVal =
+            arith::ConstantIndexOp::create(rewriter, loc, wgMaskSize);
         Value dimSizeVal =
             arith::ConstantIndexOp::create(rewriter, loc, sgShape[i]);
         Value offset = offsetSet[i];
-        // Compute: originalMaskSize - offset.
         Value adjustedMaskSize =
-            arith::SubIOp::create(rewriter, loc, originalMaskSizeVal, offset);
+            arith::SubIOp::create(rewriter, loc, wgMaskSizeVal, offset);
         Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-        Value clampedLow =
+        Value nonNegative =
             arith::MaxSIOp::create(rewriter, loc, adjustedMaskSize, zero);
-        Value clampedHigh =
-            arith::MinSIOp::create(rewriter, loc, clampedLow, dimSizeVal);
-        maskOperands.push_back(clampedHigh);
+        Value sgMaskSize =
+            arith::MinSIOp::create(rewriter, loc, nonNegative, dimSizeVal);
+        maskOperands.push_back(sgMaskSize);
       }
 
       auto newCreateMaskOp =
           vector::CreateMaskOp::create(rewriter, loc, resultType, maskOperands);
-      if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
-          !layout.getEffectiveInstDataAsInt().empty())
-        xegpu::setDistributeLayoutAttr(newCreateMaskOp->getResult(0),
-                                       layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newCreateMaskOp->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newCreateMaskOps.push_back(newCreateMaskOp.getResult());
     }
 
