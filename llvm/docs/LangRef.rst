@@ -2178,7 +2178,8 @@ For example:
     This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (``none``,
     ``read``, ``write``, or ``readwrite``) for the possible memory location
-    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, as well as a default).
+    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, ``target_mem0``,
+    ``target_mem1``, as well as a default).
     It is best understood by example:
 
     - ``memory(none)``: Does not access any memory.
@@ -2220,6 +2221,11 @@ For example:
       accessing inaccessible memory itself). Inaccessible memory is often used
       to model control dependencies of intrinsics.
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
+    - ``target_mem#`` : These refer to target specific state that cannot be
+      accessed by any other means. # is a number between 0 and 1 inclusive.
+      Note: The target_mem locations are experimental and intended for internal
+      testing only. They must not be used in production code.
+
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
       don't currently have a dedicated location kind (e.g., accesses to globals
