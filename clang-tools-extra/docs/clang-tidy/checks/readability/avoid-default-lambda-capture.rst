@@ -18,7 +18,7 @@ This check does not provide automatic fixes for macros.
 
 Coding guidelines that recommend against defaulted lambda captures include:
 
-* Item 31 of Effective Modern C++ by Scott Meyers
+* Item 31 of Effective Modern C++ by Scott Meyers.
 
 Example
 -------
