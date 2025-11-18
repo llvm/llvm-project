@@ -717,7 +717,6 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   case GK_GFX602:
   case GK_GFX601:
   case GK_GFX600:
-    Features["ci-insts"] = true;
     Features["image-insts"] = true;
     Features["s-memtime-inst"] = true;
     Features["gws"] = true;
