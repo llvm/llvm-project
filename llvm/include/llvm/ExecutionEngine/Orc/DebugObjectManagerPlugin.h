@@ -36,10 +36,18 @@ namespace orc {
 ///
 class DebugObjectManagerPlugin : public LinkGraphLinkingLayer::Plugin {
 public:
+
+  /// Function addresses for memory access.
+  struct SymbolAddrs {
+    ExecutorAddr Instance;
+    ExecutorAddr Open;
+    ExecutorAddr Lookup;
+  };
+  
   // DEPRECATED - Please specify options explicitly
   DebugObjectManagerPlugin(ExecutionSession &ES);
 
-  /// Create the plugin to submit DebugObjects for JITLink artifacts. For all
+  /// Create the plugin to submit DebugObjects for JITLink artifacts with given function addresses. For all
   /// options the recommended setting is true.
   ///
   /// RequireDebugSections:
@@ -56,6 +64,7 @@ public:
   ///
   DebugObjectManagerPlugin(ExecutorSymbolDef RegisterDebugObject,
                            ExecutorSymbolDef DeregisterDebugObject,
+                           SymbolAddrs SAs,
                            bool RequireDebugSections, bool AutoRegisterCode);
   ~DebugObjectManagerPlugin();
 
@@ -77,6 +86,7 @@ public:
 private:
   ExecutorSymbolDef RegisterDebugObject;
   ExecutorSymbolDef DeregisterDebugObject;
+  SymbolAddrs SAs;
   bool RequireDebugSections = false;
   bool AutoRegisterCode = true;
 };
