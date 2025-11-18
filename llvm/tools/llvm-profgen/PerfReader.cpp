@@ -1310,7 +1310,7 @@ void PerfScriptReader::warnInvalidRange() {
       continue;
     }
 
-    if (FRange->Func->FromSymtab)
+    if (FRange->Func->HasSymtabName)
       RecoveredRange += I.second;
 
     if (EndAddress >= FRange->EndAddress) {

@@ -471,11 +471,11 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
   } else {
     for (auto *F : ProfiledFunctions) {
       GuidFilter.insert(Function::getGUIDAssumingExternalLinkage(F->FuncName));
-      // Function name may be changed when symbol table is loaded. Adding
-      // back the original GUID if possible
-      auto OldGuid = OverriddenBinaryFunctions.find(F);
-      if (OldGuid != OverriddenBinaryFunctions.end())
-        GuidFilter.insert(OldGuid->second);
+      // Function may have different names in symbol table. Adding
+      // back all the GUIDs if possible
+      auto AltGUIDs = AlternativeFunctionGUIDs.equal_range(F);
+      for (const auto &[_, Func] : make_range(AltGUIDs))
+        GuidFilter.insert(Func);
       for (auto &Range : F->Ranges) {
         auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
         for (const auto &[StartAddr, Func] : make_range(GUIDs))
@@ -875,7 +875,7 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
         HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
       }
 
-      Func.FromSymtab = true;
+      Func.HasSymtabName = true;
       Func.Ranges.emplace_back(StartAddr, EndAddr);
 
       auto R = StartAddrToFuncRangeMap.emplace(StartAddr, FuncRange());
@@ -887,7 +887,8 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
 
     } else if (SymName != Range->getFuncName()) {
       // Function range already found from DWARF, but the symbol name from
-      // symbol table is inconsistent with debug info.
+      // symbol table is inconsistent with debug info. Log this discrepaency and
+      // the alternative function GUID.
       if (ShowDetailedWarning)
         WithColor::warning()
             << "Conflicting name for symbol " << Name << " with range ("
@@ -901,33 +902,10 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
       assert(StartAddr == Range->StartAddress && EndAddr == Range->EndAddress &&
              "Mismatched function range");
 
-      auto ErrSym = BinaryFunctions.find(Range->getFuncName().str());
-      auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
-      auto &Func = Ret.first->second;
+      Range->Func->HasSymtabName = true;
+      AlternativeFunctionGUIDs.emplace(Range->Func,
+                                       MD5Hash(StringRef(SymName)));
 
-      // Symbol table may contain multiple symbol names of the same starting
-      // address. Only need to pick one from these.
-      if (!Ret.second)
-        continue;
-
-      uint64_t OldGUID = MD5Hash(Range->getFuncName());
-
-      Func.FuncName = Ret.first->first;
-      Func.Ranges = ErrSym->second.Ranges;
-      Func.FromSymtab = true;
-
-      HashBinaryFunctions.erase(OldGUID);
-      BinaryFunctions.erase(ErrSym);
-
-      OverriddenBinaryFunctions[&Func] = OldGUID;
-      HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
-      Range->Func = &Func;
-      for (auto [RangeStart, _] : Func.Ranges) {
-        if (auto FRange = findFuncRangeForStartAddr(RangeStart)) {
-          assert(FRange && "Cannot find function range");
-          FRange->Func = &Func;
-        }
-      }
     } else if (StartAddr != Range->StartAddress &&
                EndAddr != Range->EndAddress) {
       // Function already found in DWARF, but the address range from symbol

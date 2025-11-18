@@ -733,7 +733,7 @@ ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress,
   if (!FRange || !FRange->IsFuncEntry)
     return StringRef();
 
-  if (RestoreSymbolName && FRange->Func->FromSymtab) {
+  if (RestoreSymbolName && FRange->Func->HasSymtabName) {
     const AddressProbesMap &Address2ProbesMap = Binary->getAddress2ProbesMap();
     for (const MCDecodedPseudoProbe &Probe :
          Address2ProbesMap.find(TargetAddress)) {

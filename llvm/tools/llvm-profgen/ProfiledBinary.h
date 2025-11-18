@@ -76,7 +76,7 @@ struct BinaryFunction {
   StringRef FuncName;
   // End of range is an exclusive bound.
   RangesTy Ranges;
-  bool FromSymtab = false;
+  bool HasSymtabName = false;
 
   uint64_t getFuncSize() {
     uint64_t Sum = 0;
@@ -232,10 +232,10 @@ class ProfiledBinary {
   // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
 
-  // GUID mapping of the overridden DWARF symbol names by the binary functions
-  // with the symbol table names
-  std::unordered_map<const BinaryFunction *, uint64_t>
-      OverriddenBinaryFunctions;
+  // Binary function to GUID mapping that stores the alternative names in symbol
+  // table, despite the original name from DWARF info
+  std::unordered_multimap<const BinaryFunction *, uint64_t>
+      AlternativeFunctionGUIDs;
 
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
