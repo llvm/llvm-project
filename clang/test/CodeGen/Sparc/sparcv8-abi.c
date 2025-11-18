@@ -28,7 +28,7 @@ s(long double a)
     return 0;
 }
 
-// CHECK-LABEL: define{{.*}} { fp128, fp128 } @t(ptr noundef byval({ fp128, fp128 }) align 8 %a) #0
+// CHECK-LABEL: define{{.*}}inreg{{.*}} { fp128, fp128 } @t(ptr noundef byval({ fp128, fp128 }) align 8 %a) #0
 long double _Complex
 t(long double _Complex a)
 {

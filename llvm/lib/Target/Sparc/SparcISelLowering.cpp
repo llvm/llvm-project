@@ -106,6 +106,23 @@ static bool CC_Sparc_Assign_Ret_Split_64(unsigned &ValNo, MVT &ValVT,
   return true;
 }
 
+static bool CC_Sparc_Assign_Ret_F128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                     CCValAssign::LocInfo &LocInfo,
+                                     ISD::ArgFlagsTy &ArgFlags,
+                                     CCState &State) {
+  static const MCPhysReg RegList[] = {SP::Q0, SP::Q1};
+
+  if (!ArgFlags.isInReg())
+    return false;
+
+  if (Register Reg = State.AllocateReg(RegList))
+    State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+  else
+    return false;
+
+  return true;
+}
+
 // Allocate a full-sized argument for the 64-bit ABI.
 static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
                                     MVT &LocVT, CCValAssign::LocInfo &LocInfo,
@@ -289,8 +306,7 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
 
     SDValue Arg = OutVals[realRVLocIdx];
 
-    if (VA.needsCustom()) {
-      assert(VA.getLocVT() == MVT::v2i32);
+    if (VA.needsCustom() && VA.getLocVT() == MVT::v2i32) {
       // Legalize ret v2i32 -> ret 2 x i32 (Basically: do what would
       // happen by default if this wasn't a legal type)
 

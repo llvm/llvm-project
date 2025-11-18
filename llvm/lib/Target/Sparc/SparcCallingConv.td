@@ -34,7 +34,7 @@ def RetCC_Sparc32 : CallingConv<[
   CCIfType<[i32], CCAssignToReg<[I0, I1, I2, I3, I4, I5]>>,
   CCIfType<[f32], CCAssignToReg<[F0, F1, F2, F3]>>,
   CCIfType<[f64], CCAssignToReg<[D0, D1]>>,
-  CCIfType<[f128], CCAssignToReg<[Q0, Q1]>>,
+  CCIfType<[f128], CCCustom<"CC_Sparc_Assign_Ret_F128">>,
   CCIfType<[v2i32], CCCustom<"CC_Sparc_Assign_Ret_Split_64">>
 ]>;
 
