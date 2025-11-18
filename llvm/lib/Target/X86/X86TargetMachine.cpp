@@ -50,7 +50,6 @@
 #include "llvm/Transforms/CFGuard.h"
 #include <memory>
 #include <optional>
-#include <string>
 
 using namespace llvm;
 
@@ -77,7 +76,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeFixupBWInstPassPass(PR);
   initializeCompressEVEXPassPass(PR);
   initializeFixupLEAPassPass(PR);
-  initializeFPSPass(PR);
+  initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
@@ -90,14 +89,14 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
-  initializeX86AvoidTrailingCallPassPass(PR);
+  initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
   initializeX86FlagsCopyLoweringPassPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAPassPass(PR);
-  initializeX86PartialReductionPass(PR);
+  initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
@@ -105,7 +104,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
-  initializeX86DynAllocaExpanderPass(PR);
+  initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
 }
@@ -422,14 +421,14 @@ void X86PassConfig::addIRPasses() {
 
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
-  addPass(createX86LowerAMXIntrinsicsPass());
-  addPass(createX86LowerAMXTypePass());
+  addPass(createX86LowerAMXIntrinsicsLegacyPass());
+  addPass(createX86LowerAMXTypeLegacyPass());
 
   TargetPassConfig::addIRPasses();
 
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInterleavedAccessPass());
-    addPass(createX86PartialReductionPass());
+    addPass(createX86PartialReductionLegacyPass());
   }
 
   // Add passes that handle indirect branch removal and insertion of a retpoline
@@ -517,7 +516,7 @@ void X86PassConfig::addPreRegAlloc() {
 
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
-  addPass(createX86DynAllocaExpander());
+  addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
@@ -532,7 +531,7 @@ void X86PassConfig::addMachineSSAOptimization() {
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86LowerTileCopyPass());
-  addPass(createX86FloatingPointStackifierPass());
+  addPass(createX86FPStackifierLegacyPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
   // to using the Speculative Execution Side Effect Suppression pass for
   // mitigation. This is to prevent slow downs due to
@@ -564,8 +563,6 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupVectorConstants());
   }
   addPass(createX86CompressEVEXPass());
-  addPass(createX86DiscriminateMemOpsPass());
-  addPass(createX86InsertPrefetchPass());
   addPass(createX86InsertX87waitPass());
 }
 
@@ -589,7 +586,7 @@ void X86PassConfig::addPreEmitPass2() {
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
   if (TT.isOSWindows() && TT.isX86_64())
-    addPass(createX86AvoidTrailingCallPass());
+    addPass(createX86AvoidTrailingCallLegacyPass());
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI

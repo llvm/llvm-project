@@ -31,7 +31,7 @@ define void @za_with_raii(i1 %fail) "aarch64_inout_za" personality ptr @__gxx_pe
 ; CHECK-NEXT:    .cfi_lsda 28, .Lexception0
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
@@ -46,7 +46,7 @@ define void @za_with_raii(i1 %fail) "aarch64_inout_za" personality ptr @__gxx_pe
 ; CHECK-NEXT:    tbnz w0, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %return_normally
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    b shared_za_call
 ; CHECK-NEXT:  .LBB0_2: // %throw_exception
@@ -63,25 +63,17 @@ define void @za_with_raii(i1 %fail) "aarch64_inout_za" personality ptr @__gxx_pe
 ; CHECK-NEXT:    ldr x1, [x1, :got_lo12:typeinfo_for_char_const_ptr]
 ; CHECK-NEXT:    bl __cxa_throw
 ; CHECK-NEXT:  .Ltmp1: // EH_LABEL
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    sub x0, x29, #16
-; CHECK-NEXT:    cbnz x8, .LBB0_4
-; CHECK-NEXT:  // %bb.3: // %throw_exception
-; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB0_4: // %throw_exception
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:  // %bb.5: // %throw_fail
-; CHECK-NEXT:  .LBB0_6: // %unwind_dtors
+; CHECK-NEXT:  // %bb.3: // %throw_fail
+; CHECK-NEXT:  .LBB0_4: // %unwind_dtors
 ; CHECK-NEXT:  .Ltmp2: // EH_LABEL
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #16
-; CHECK-NEXT:    cbnz x8, .LBB0_8
-; CHECK-NEXT:  // %bb.7: // %unwind_dtors
+; CHECK-NEXT:    cbnz x8, .LBB0_6
+; CHECK-NEXT:  // %bb.5: // %unwind_dtors
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB0_8: // %unwind_dtors
+; CHECK-NEXT:  .LBB0_6: // %unwind_dtors
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:    sub x8, x29, #16
@@ -268,7 +260,7 @@ define void @try_catch() "aarch64_inout_za" personality ptr @__gxx_personality_v
 ; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception1
 ; CHECK-SDAG-NEXT:  // %bb.0:
 ; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-SDAG-NEXT:    mov x29, sp
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa w29, 32
@@ -295,7 +287,7 @@ define void @try_catch() "aarch64_inout_za" personality ptr @__gxx_personality_v
 ; CHECK-SDAG-NEXT:  .Ltmp4: // EH_LABEL
 ; CHECK-SDAG-NEXT:  .LBB1_3: // %after_catch
 ; CHECK-SDAG-NEXT:    mov sp, x29
-; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SDAG-NEXT:    b shared_za_call
 ; CHECK-SDAG-NEXT:  .LBB1_4: // %catch
@@ -425,7 +417,7 @@ define void @try_catch_shared_za_callee() "aarch64_new_za" personality ptr @__gx
 ; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception2
 ; CHECK-SDAG-NEXT:  // %bb.0: // %prelude
 ; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-SDAG-NEXT:    mov x29, sp
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa w29, 32
@@ -451,7 +443,7 @@ define void @try_catch_shared_za_callee() "aarch64_new_za" personality ptr @__gx
 ; CHECK-SDAG-NEXT:  .LBB2_3: // %exit
 ; CHECK-SDAG-NEXT:    smstop za
 ; CHECK-SDAG-NEXT:    mov sp, x29
-; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SDAG-NEXT:    ret
 ; CHECK-SDAG-NEXT:  .LBB2_4: // %catch
@@ -581,7 +573,7 @@ define void @try_catch_shared_zt0_callee() "aarch64_inout_zt0" personality ptr @
 ; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception3
 ; CHECK-SDAG-NEXT:  // %bb.0:
 ; CHECK-SDAG-NEXT:    sub sp, sp, #96
-; CHECK-SDAG-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-SDAG-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-SDAG-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-SDAG-NEXT:    .cfi_offset w19, -8
@@ -597,7 +589,7 @@ define void @try_catch_shared_zt0_callee() "aarch64_inout_zt0" personality ptr @
 ; CHECK-SDAG-NEXT:  .Ltmp10: // EH_LABEL
 ; CHECK-SDAG-NEXT:  // %bb.1: // %return_normally
 ; CHECK-SDAG-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-SDAG-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-SDAG-NEXT:    add sp, sp, #96
 ; CHECK-SDAG-NEXT:    ret
 ; CHECK-SDAG-NEXT:  .LBB3_2: // %unwind_dtors
@@ -646,7 +638,7 @@ define void @try_catch_agnostic_za() "aarch64_za_state_agnostic" personality ptr
 ; CHECK-NEXT:    .cfi_lsda 28, .Lexception4
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -664,7 +656,7 @@ define void @try_catch_agnostic_za() "aarch64_za_state_agnostic" personality ptr
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    bl __arm_sme_restore
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB4_2: // %catch
@@ -680,7 +672,7 @@ define void @try_catch_agnostic_za() "aarch64_za_state_agnostic" personality ptr
 ; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception4
 ; CHECK-SDAG-NEXT:  // %bb.0:
 ; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-SDAG-NEXT:    mov x29, sp
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-SDAG-NEXT:    .cfi_offset w19, -16
@@ -698,7 +690,7 @@ define void @try_catch_agnostic_za() "aarch64_za_state_agnostic" personality ptr
 ; CHECK-SDAG-NEXT:  .Ltmp13: // EH_LABEL
 ; CHECK-SDAG-NEXT:  .LBB4_1: // %exit
 ; CHECK-SDAG-NEXT:    mov sp, x29
-; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SDAG-NEXT:    ret
 ; CHECK-SDAG-NEXT:  .LBB4_2: // %catch
@@ -756,7 +748,7 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-NEXT:    .cfi_lsda 28, .Lexception5
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -774,7 +766,7 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    bl __arm_sme_restore
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_2: // %catch
@@ -790,7 +782,7 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception5
 ; CHECK-SDAG-NEXT:  // %bb.0: // %entry
 ; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-SDAG-NEXT:    mov x29, sp
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-SDAG-NEXT:    .cfi_offset w19, -16
@@ -808,7 +800,7 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-SDAG-NEXT:  .Ltmp16: // EH_LABEL
 ; CHECK-SDAG-NEXT:  .LBB5_1: // %exit
 ; CHECK-SDAG-NEXT:    mov sp, x29
-; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SDAG-NEXT:    ret
 ; CHECK-SDAG-NEXT:  .LBB5_2: // %catch
@@ -829,7 +821,7 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-SDAG-NEXT:    bl __arm_sme_restore
 ; CHECK-SDAG-NEXT:    b .LBB5_1
 entry:
-  invoke void @agnostic_za_call()
+  invoke void @agnostic_za_call() "aarch64_za_state_agnostic"
           to label %exit unwind label %catch
 
 catch:
@@ -894,7 +886,7 @@ define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personal
 ; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception6
 ; CHECK-SDAG-NEXT:  // %bb.0: // %entry
 ; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-SDAG-NEXT:    mov x29, sp
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa w29, 32
@@ -921,7 +913,7 @@ define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personal
 ; CHECK-SDAG-NEXT:  .Ltmp19: // EH_LABEL
 ; CHECK-SDAG-NEXT:  .LBB6_3: // %exit
 ; CHECK-SDAG-NEXT:    mov sp, x29
-; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SDAG-NEXT:    ret
 ; CHECK-SDAG-NEXT:  .LBB6_4: // %catch

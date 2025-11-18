@@ -56,11 +56,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+import configparser
 import io
 
 import obj_diff

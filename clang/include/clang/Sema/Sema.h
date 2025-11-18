@@ -1321,15 +1321,11 @@ public:
 
   /// Callback to the parser to parse templated functions when needed.
   typedef void LateTemplateParserCB(void *P, LateParsedTemplate &LPT);
-  typedef void LateTemplateParserCleanupCB(void *P);
   LateTemplateParserCB *LateTemplateParser;
-  LateTemplateParserCleanupCB *LateTemplateParserCleanup;
   void *OpaqueParser;
 
-  void SetLateTemplateParser(LateTemplateParserCB *LTP,
-                             LateTemplateParserCleanupCB *LTPCleanup, void *P) {
+  void SetLateTemplateParser(LateTemplateParserCB *LTP, void *P) {
     LateTemplateParser = LTP;
-    LateTemplateParserCleanup = LTPCleanup;
     OpaqueParser = P;
   }
 
@@ -2612,13 +2608,13 @@ public:
   };
 
   /// Given a function and its FormatAttr or FormatMatchesAttr info, attempts to
-  /// populate the FomatStringInfo parameter with the attribute's correct
+  /// populate the FormatStringInfo parameter with the attribute's correct
   /// format_idx and firstDataArg. Returns true when the format fits the
   /// function and the FormatStringInfo has been populated.
   static bool getFormatStringInfo(const Decl *Function, unsigned FormatIdx,
                                   unsigned FirstArg, FormatStringInfo *FSI);
   static bool getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
-                                  bool IsCXXMember, bool IsVariadic,
+                                  bool HasImplicitThisParam, bool IsVariadic,
                                   FormatStringInfo *FSI);
 
   // Used by C++ template instantiation.
@@ -2684,11 +2680,6 @@ public:
   /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
   /// function without this attribute.
   bool DiscardingCFIUncheckedCallee(QualType From, QualType To) const;
-
-  /// Returns true if `From` is a function or pointer to a function without the
-  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
-  /// function with this attribute.
-  bool AddingCFIUncheckedCallee(QualType From, QualType To) const;
 
   /// This function calls Action when it determines that E designates a
   /// misaligned member due to the packed attribute. This is used to emit
@@ -3961,6 +3952,13 @@ public:
                                      bool &AddToScope,
                                      ArrayRef<BindingDecl *> Bindings = {});
 
+private:
+  // Perform a check on an AsmLabel to verify its consistency and emit
+  // diagnostics in case of an error.
+  void CheckAsmLabel(Scope *S, Expr *AsmLabelExpr, StorageClass SC,
+                     TypeSourceInfo *TInfo, VarDecl *);
+
+public:
   /// Perform semantic checking on a newly-created variable
   /// declaration.
   ///
@@ -4458,6 +4456,10 @@ public:
       NamedDecl *New, Decl *Old,
       AvailabilityMergeKind AMK = AvailabilityMergeKind::Redeclaration);
 
+  /// CheckAttributesOnDeducedType - Calls Sema functions for attributes that
+  /// requires the type to be deduced.
+  void CheckAttributesOnDeducedType(Decl *D);
+
   /// MergeTypedefNameDecl - We just parsed a typedef 'New' which has the
   /// same name and scope as a previous declaration 'Old'.  Figure out
   /// how to resolve this situation, merging decls or emitting
@@ -4762,6 +4764,8 @@ private:
   // linkage or not.
   static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
 
+#include "clang/Sema/AttrIsTypeDependent.inc"
+
   ///@}
 
   //
@@ -5010,6 +5014,14 @@ public:
   void AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
                            Expr *MaxThreads, Expr *MinBlocks, Expr *MaxBlocks);
 
+  /// Add a cluster_dims attribute to a particular declaration.
+  CUDAClusterDimsAttr *createClusterDimsAttr(const AttributeCommonInfo &CI,
+                                             Expr *X, Expr *Y, Expr *Z);
+  void addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
+                          Expr *Y, Expr *Z);
+  /// Add a no_cluster attribute to a particular declaration.
+  void addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI);
+
   enum class RetainOwnershipKind { NS, CF, OS };
 
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -5113,7 +5125,7 @@ public:
     // In C++ the implicit 'this' function parameter also counts.
     // Parameters are counted from one.
     bool HP = hasFunctionProto(D);
-    bool HasImplicitThisParam = isInstanceMethod(D);
+    bool HasImplicitThisParam = hasImplicitObjectParameter(D);
     bool IV = HP && isFunctionOrMethodVariadic(D);
     unsigned NumParams =
         (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
@@ -6749,6 +6761,11 @@ public:
     /// and block literals if the normal declaration context does not
     /// suffice, e.g., in a default function argument.
     Decl *ManglingContextDecl;
+
+    /// Declaration for initializer if one is currently being
+    /// parsed. Used when an expression has a possibly unreachable
+    /// diagnostic to reference the declaration as a whole.
+    VarDecl *DeclForInitializer = nullptr;
 
     /// If we are processing a decltype type, a set of call expressions
     /// for which we have deferred checking the completeness of the return type.
@@ -8559,7 +8576,8 @@ public:
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
                                                       CXXRecordDecl *RD,
                                                       bool Diagnose,
-                                                      bool LookForGlobal);
+                                                      bool LookForGlobal,
+                                                      DeclarationName Name);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
   /// @code ::delete ptr; @endcode
@@ -10006,7 +10024,7 @@ public:
   public:
     DeferDiagsRAII(Sema &S, bool DeferDiags)
         : S(S), SavedDeferDiags(S.DeferDiags) {
-      S.DeferDiags = DeferDiags;
+      S.DeferDiags = SavedDeferDiags || DeferDiags;
     }
     ~DeferDiagsRAII() { S.DeferDiags = SavedDeferDiags; }
   };
@@ -11303,9 +11321,6 @@ public:
                           InventedParameterInfos.end());
   }
 
-  /// The number of SFINAE diagnostics that have been trapped.
-  unsigned NumSFINAEErrors;
-
   ArrayRef<sema::FunctionScopeInfo *> getFunctionScopes() const {
     return llvm::ArrayRef(FunctionScopes.begin() + FunctionScopesStart,
                           FunctionScopes.end());
@@ -11662,7 +11677,7 @@ public:
       ASTTemplateArgsPtr TemplateArgsIn, SourceLocation RAngleLoc);
 
   DeclResult ActOnVarTemplateSpecialization(
-      Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
+      Scope *S, Declarator &D, TypeSourceInfo *TSI, LookupResult &Previous,
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
       StorageClass SC, bool IsPartialSpecialization);
 
@@ -12379,49 +12394,65 @@ public:
   ///@{
 
 public:
-  /// When true, access checking violations are treated as SFINAE
-  /// failures rather than hard errors.
-  bool AccessCheckingSFINAE;
+  class SFINAETrap;
+
+  struct SFINAEContextBase {
+    SFINAEContextBase(Sema &S, SFINAETrap *Cur)
+        : S(S), Prev(std::exchange(S.CurrentSFINAEContext, Cur)) {}
+
+  protected:
+    Sema &S;
+    ~SFINAEContextBase() { S.CurrentSFINAEContext = Prev; }
+
+  private:
+    SFINAETrap *Prev;
+  };
+
+  struct NonSFINAEContext : SFINAEContextBase {
+    NonSFINAEContext(Sema &S) : SFINAEContextBase(S, nullptr) {}
+  };
 
   /// RAII class used to determine whether SFINAE has
   /// trapped any errors that occur during template argument
   /// deduction.
-  class SFINAETrap {
-    Sema &SemaRef;
-    unsigned PrevSFINAEErrors;
-    bool PrevInNonInstantiationSFINAEContext;
-    bool PrevAccessCheckingSFINAE;
-    bool PrevLastDiagnosticIgnored;
+  class SFINAETrap : SFINAEContextBase {
+    bool HasErrorOcurred = false;
+    bool WithAccessChecking = false;
+    bool PrevLastDiagnosticIgnored =
+        S.getDiagnostics().isLastDiagnosticIgnored();
+    sema::TemplateDeductionInfo *DeductionInfo = nullptr;
+
+    SFINAETrap(Sema &S, sema::TemplateDeductionInfo *Info,
+               bool WithAccessChecking)
+        : SFINAEContextBase(S, this), WithAccessChecking(WithAccessChecking),
+          DeductionInfo(Info) {}
 
   public:
-    /// \param ForValidityCheck If true, discard all diagnostics (from the
+    /// \param WithAccessChecking If true, discard all diagnostics (from the
     /// immediate context) instead of adding them to the currently active
-    /// \ref TemplateDeductionInfo (as returned by \ref isSFINAEContext).
-    explicit SFINAETrap(Sema &SemaRef, bool ForValidityCheck = false)
-        : SemaRef(SemaRef), PrevSFINAEErrors(SemaRef.NumSFINAEErrors),
-          PrevInNonInstantiationSFINAEContext(
-              SemaRef.InNonInstantiationSFINAEContext),
-          PrevAccessCheckingSFINAE(SemaRef.AccessCheckingSFINAE),
-          PrevLastDiagnosticIgnored(
-              SemaRef.getDiagnostics().isLastDiagnosticIgnored()) {
-      if (ForValidityCheck || !SemaRef.isSFINAEContext())
-        SemaRef.InNonInstantiationSFINAEContext = true;
-      SemaRef.AccessCheckingSFINAE = ForValidityCheck;
-    }
+    /// \ref TemplateDeductionInfo.
+    explicit SFINAETrap(Sema &S, bool WithAccessChecking = false)
+        : SFINAETrap(S, /*Info=*/nullptr, WithAccessChecking) {}
+
+    SFINAETrap(Sema &S, sema::TemplateDeductionInfo &Info)
+        : SFINAETrap(S, &Info, /*WithAccessChecking=*/false) {}
 
     ~SFINAETrap() {
-      SemaRef.NumSFINAEErrors = PrevSFINAEErrors;
-      SemaRef.InNonInstantiationSFINAEContext =
-          PrevInNonInstantiationSFINAEContext;
-      SemaRef.AccessCheckingSFINAE = PrevAccessCheckingSFINAE;
-      SemaRef.getDiagnostics().setLastDiagnosticIgnored(
-          PrevLastDiagnosticIgnored);
+      S.getDiagnostics().setLastDiagnosticIgnored(PrevLastDiagnosticIgnored);
+    }
+
+    SFINAETrap(const SFINAETrap &) = delete;
+    SFINAETrap &operator=(const SFINAETrap &) = delete;
+
+    sema::TemplateDeductionInfo *getDeductionInfo() const {
+      return DeductionInfo;
     }
 
     /// Determine whether any SFINAE errors have been trapped.
-    bool hasErrorOccurred() const {
-      return SemaRef.NumSFINAEErrors > PrevSFINAEErrors;
-    }
+    bool hasErrorOccurred() const { return HasErrorOcurred; }
+    void setErrorOccurred() { HasErrorOcurred = true; }
+
+    bool withAccessChecking() const { return WithAccessChecking; }
   };
 
   /// RAII class used to indicate that we are performing provisional
@@ -12992,6 +13023,37 @@ public:
   /// default arguments of its methods have been parsed.
   UnparsedDefaultArgInstantiationsMap UnparsedDefaultArgInstantiations;
 
+  using InstantiatingSpecializationsKey = llvm::PointerIntPair<Decl *, 2>;
+
+  struct RecursiveInstGuard {
+    enum class Kind {
+      Template,
+      DefaultArgument,
+      ExceptionSpec,
+    };
+
+    RecursiveInstGuard(Sema &S, Decl *D, Kind Kind)
+        : S(S), Key(D->getCanonicalDecl(), unsigned(Kind)) {
+      auto [_, Created] = S.InstantiatingSpecializations.insert(Key);
+      if (!Created)
+        Key = {};
+    }
+
+    ~RecursiveInstGuard() {
+      if (Key.getOpaqueValue()) {
+        [[maybe_unused]] bool Erased =
+            S.InstantiatingSpecializations.erase(Key);
+        assert(Erased);
+      }
+    }
+
+    operator bool() const { return Key.getOpaqueValue() == nullptr; }
+
+  private:
+    Sema &S;
+    Sema::InstantiatingSpecializationsKey Key;
+  };
+
   /// A context in which code is being synthesized (where a source location
   /// alone is not sufficient to identify the context). This covers template
   /// instantiation and various forms of implicitly-generated functions.
@@ -13111,9 +13173,6 @@ public:
       PartialOrderingTTP,
     } Kind;
 
-    /// Was the enclosing context a non-instantiation SFINAE context?
-    bool SavedInNonInstantiationSFINAEContext;
-
     /// Whether we're substituting into constraints.
     bool InConstraintSubstitution;
 
@@ -13158,22 +13217,15 @@ public:
       return {TemplateArgs, NumTemplateArgs};
     }
 
-    /// The template deduction info object associated with the
-    /// substitution or checking of explicit or deduced template arguments.
-    sema::TemplateDeductionInfo *DeductionInfo;
-
     /// The source range that covers the construct that cause
     /// the instantiation, e.g., the template-id that causes a class
     /// template instantiation.
     SourceRange InstantiationRange;
 
     CodeSynthesisContext()
-        : Kind(TemplateInstantiation),
-          SavedInNonInstantiationSFINAEContext(false),
-          InConstraintSubstitution(false),
+        : Kind(TemplateInstantiation), InConstraintSubstitution(false),
           InParameterMappingSubstitution(false), Entity(nullptr),
-          Template(nullptr), TemplateArgs(nullptr), NumTemplateArgs(0),
-          DeductionInfo(nullptr) {}
+          Template(nullptr), TemplateArgs(nullptr), NumTemplateArgs(0) {}
 
     /// Determines whether this template is an actual instantiation
     /// that should be counted toward the maximum instantiation depth.
@@ -13225,7 +13277,6 @@ public:
                           FunctionTemplateDecl *FunctionTemplate,
                           ArrayRef<TemplateArgument> TemplateArgs,
                           CodeSynthesisContext::SynthesisKind Kind,
-                          sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are instantiating as part of template
@@ -13233,7 +13284,6 @@ public:
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateDecl *Template,
                           ArrayRef<TemplateArgument> TemplateArgs,
-                          sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are instantiating as part of template
@@ -13242,7 +13292,6 @@ public:
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ClassTemplatePartialSpecializationDecl *PartialSpec,
                           ArrayRef<TemplateArgument> TemplateArgs,
-                          sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are instantiating as part of template
@@ -13251,7 +13300,6 @@ public:
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           VarTemplatePartialSpecializationDecl *PartialSpec,
                           ArrayRef<TemplateArgument> TemplateArgs,
-                          sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are instantiating a default argument for a function
@@ -13297,7 +13345,6 @@ public:
     /// concept.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ConstraintSubstitution, NamedDecl *Template,
-                          sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange);
 
     struct ConstraintNormalization {};
@@ -13317,7 +13364,6 @@ public:
     /// a requirement of a requires expression.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           concepts::Requirement *Req,
-                          sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
     /// \brief Note that we are checking the satisfaction of the constraint
@@ -13329,7 +13375,6 @@ public:
     /// \brief Note that we are checking a requires clause.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           const RequiresExpr *E,
-                          sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange);
 
     struct BuildingDeductionGuidesTag {};
@@ -13353,22 +13398,16 @@ public:
     /// recursive template instantiations.
     bool isInvalid() const { return Invalid; }
 
-    /// Determine whether we are already instantiating this
-    /// specialization in some surrounding active instantiation.
-    bool isAlreadyInstantiating() const { return AlreadyInstantiating; }
-
   private:
     Sema &SemaRef;
     bool Invalid;
-    bool AlreadyInstantiating;
 
     InstantiatingTemplate(Sema &SemaRef,
                           CodeSynthesisContext::SynthesisKind Kind,
                           SourceLocation PointOfInstantiation,
                           SourceRange InstantiationRange, Decl *Entity,
                           NamedDecl *Template = nullptr,
-                          ArrayRef<TemplateArgument> TemplateArgs = {},
-                          sema::TemplateDeductionInfo *DeductionInfo = nullptr);
+                          ArrayRef<TemplateArgument> TemplateArgs = {});
 
     InstantiatingTemplate(const InstantiatingTemplate &) = delete;
 
@@ -13384,6 +13423,13 @@ public:
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
                          TemplateArgumentListInfo &Outputs);
+
+  /// Substitute concept template arguments in the constraint expression
+  /// of a concept-id. This is used to implement [temp.constr.normal].
+  ExprResult
+  SubstConceptTemplateArguments(const ConceptSpecializationExpr *CSE,
+                                const Expr *ConstraintExpr,
+                                const MultiLevelTemplateArgumentList &MLTAL);
 
   bool SubstTemplateArgumentsInParameterMapping(
       ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
@@ -13483,7 +13529,7 @@ public:
   SmallVector<CodeSynthesisContext, 16> CodeSynthesisContexts;
 
   /// Specializations whose definitions are currently being instantiated.
-  llvm::DenseSet<std::pair<Decl *, unsigned>> InstantiatingSpecializations;
+  llvm::DenseSet<InstantiatingSpecializationsKey> InstantiatingSpecializations;
 
   /// Non-dependent types used in templates that have already been instantiated
   /// by some template instantiation.
@@ -13502,12 +13548,7 @@ public:
   /// recent visible declaration of that namespace.
   llvm::DenseMap<NamedDecl *, NamedDecl *> VisibleNamespaceCache;
 
-  /// Whether we are in a SFINAE context that is not associated with
-  /// template instantiation.
-  ///
-  /// This is used when setting up a SFINAE trap (\c see SFINAETrap) outside
-  /// of a template instantiation or template argument deduction.
-  bool InNonInstantiationSFINAEContext;
+  SFINAETrap *CurrentSFINAEContext = nullptr;
 
   /// The number of \p CodeSynthesisContexts that are not template
   /// instantiations and, therefore, should not be counted as part of the
@@ -13578,15 +13619,13 @@ public:
     PrintInstantiationStack(getDefaultDiagFunc());
   }
 
-  /// Determines whether we are currently in a context where
-  /// template argument substitution failures are not considered
-  /// errors.
-  ///
-  /// \returns An empty \c Optional if we're not in a SFINAE context.
-  /// Otherwise, contains a pointer that, if non-NULL, contains the nearest
-  /// template-deduction context object, which can be used to capture
-  /// diagnostics that will be suppressed.
-  std::optional<sema::TemplateDeductionInfo *> isSFINAEContext() const;
+  /// Returns a pointer to the current SFINAE context, if any.
+  [[nodiscard]] SFINAETrap *getSFINAEContext() const {
+    return CurrentSFINAEContext;
+  }
+  [[nodiscard]] bool isSFINAEContext() const {
+    return CurrentSFINAEContext != nullptr;
+  }
 
   /// Perform substitution on the type T with a given set of template
   /// arguments.
@@ -13758,6 +13797,14 @@ public:
                         const MultiLevelTemplateArgumentList &TemplateArgs,
                         TemplateSpecializationKind TSK, bool Complain = true);
 
+private:
+  bool InstantiateClassImpl(SourceLocation PointOfInstantiation,
+                            CXXRecordDecl *Instantiation,
+                            CXXRecordDecl *Pattern,
+                            const MultiLevelTemplateArgumentList &TemplateArgs,
+                            TemplateSpecializationKind TSK, bool Complain);
+
+public:
   /// Instantiate the definition of an enum from a given pattern.
   ///
   /// \param PointOfInstantiation The point of instantiation within the
@@ -14590,7 +14637,8 @@ public:
       ArrayRef<UnexpandedParameterPack> Unexpanded,
       const MultiLevelTemplateArgumentList &TemplateArgs,
       bool FailOnPackProducingTemplates, bool &ShouldExpand,
-      bool &RetainExpansion, UnsignedOrNone &NumExpansions);
+      bool &RetainExpansion, UnsignedOrNone &NumExpansions,
+      bool Diagnose = true);
 
   /// Determine the number of arguments in the given pack expansion
   /// type.
@@ -15426,6 +15474,8 @@ public:
   /// optional on error.
   std::optional<FunctionEffectMode>
   ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
+
+  void ActOnCleanupAttr(Decl *D, const Attr *A);
 
 private:
   /// The implementation of RequireCompleteType

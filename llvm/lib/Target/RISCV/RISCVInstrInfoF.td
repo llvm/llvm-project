@@ -330,6 +330,7 @@ class PseudoFROUND<DAGOperand Ty, ValueType vt, ValueType intvt = XLenVT>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtF] in {
+let canFoldAsLoad = 1 in
 def FLW : FPLoad_r<0b010, "flw", FPR32, WriteFLD32>;
 
 // Operands for stores are in the order srcreg, base, offset rather than

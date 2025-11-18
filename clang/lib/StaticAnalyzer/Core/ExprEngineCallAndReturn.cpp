@@ -628,6 +628,8 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
 
 ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
                                                        const CallEvent &Call) {
+  // WARNING: The state attached to 'Call' may be obsolete, do not call any
+  // methods that rely on it!
   const Expr *E = Call.getOriginExpr();
   // FIXME: Constructors to placement arguments of operator new
   // are not supported yet.
@@ -653,6 +655,8 @@ ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
 void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
                                             ExplodedNode *Pred,
                                             const CallEvent &Call) {
+  // WARNING: The state attached to 'Call' may be obsolete, do not call any
+  // methods that rely on it!
   ProgramStateRef State = Pred->getState();
   ProgramStateRef CleanedState = finishArgumentConstruction(State, Call);
   if (CleanedState == State) {
@@ -670,35 +674,33 @@ void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
 }
 
 void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
-                          const CallEvent &Call) {
-  // WARNING: At this time, the state attached to 'Call' may be older than the
-  // state in 'Pred'. This is a minor optimization since CheckerManager will
-  // use an updated CallEvent instance when calling checkers, but if 'Call' is
-  // ever used directly in this function all callers should be updated to pass
-  // the most recent state. (It is probably not worth doing the work here since
-  // for some callers this will not be necessary.)
+                          const CallEvent &CallTemplate) {
+  // NOTE: CallTemplate is called a "template" because its attached state may
+  // be obsolete (compared to the state of Pred). The state-dependent methods
+  // of CallEvent should be used only after a `cloneWithState` call that
+  // attaches the up-to-date state to this template object.
 
   // Run any pre-call checks using the generic call interface.
   ExplodedNodeSet dstPreVisit;
-  getCheckerManager().runCheckersForPreCall(dstPreVisit, Pred,
-                                            Call, *this);
+  getCheckerManager().runCheckersForPreCall(dstPreVisit, Pred, CallTemplate,
+                                            *this);
 
   // Actually evaluate the function call.  We try each of the checkers
   // to see if the can evaluate the function call, and get a callback at
   // defaultEvalCall if all of them fail.
   ExplodedNodeSet dstCallEvaluated;
-  getCheckerManager().runCheckersForEvalCall(dstCallEvaluated, dstPreVisit,
-                                             Call, *this, EvalCallOptions());
+  getCheckerManager().runCheckersForEvalCall(
+      dstCallEvaluated, dstPreVisit, CallTemplate, *this, EvalCallOptions());
 
   // If there were other constructors called for object-type arguments
   // of this call, clean them up.
   ExplodedNodeSet dstArgumentCleanup;
   for (ExplodedNode *I : dstCallEvaluated)
-    finishArgumentConstruction(dstArgumentCleanup, I, Call);
+    finishArgumentConstruction(dstArgumentCleanup, I, CallTemplate);
 
   ExplodedNodeSet dstPostCall;
   getCheckerManager().runCheckersForPostCall(dstPostCall, dstArgumentCleanup,
-                                             Call, *this);
+                                             CallTemplate, *this);
 
   // Escaping symbols conjured during invalidating the regions above.
   // Note that, for inlined calls the nodes were put back into the worklist,
@@ -708,12 +710,13 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
   // Run pointerEscape callback with the newly conjured symbols.
   SmallVector<std::pair<SVal, SVal>, 8> Escaped;
   for (ExplodedNode *I : dstPostCall) {
-    NodeBuilder B(I, Dst, *currBldrCtx);
     ProgramStateRef State = I->getState();
+    CallEventRef<> Call = CallTemplate.cloneWithState(State);
+    NodeBuilder B(I, Dst, *currBldrCtx);
     Escaped.clear();
     {
       unsigned Arg = -1;
-      for (const ParmVarDecl *PVD : Call.parameters()) {
+      for (const ParmVarDecl *PVD : Call->parameters()) {
         ++Arg;
         QualType ParamTy = PVD->getType();
         if (ParamTy.isNull() ||
@@ -722,13 +725,13 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
         QualType Pointee = ParamTy->getPointeeType();
         if (Pointee.isConstQualified() || Pointee->isVoidType())
           continue;
-        if (const MemRegion *MR = Call.getArgSVal(Arg).getAsRegion())
+        if (const MemRegion *MR = Call->getArgSVal(Arg).getAsRegion())
           Escaped.emplace_back(loc::MemRegionVal(MR), State->getSVal(MR, Pointee));
       }
     }
 
     State = processPointerEscapedOnBind(State, Escaped, I->getLocationContext(),
-                                        PSK_EscapeOutParameters, &Call);
+                                        PSK_EscapeOutParameters, &*Call);
 
     if (State == I->getState())
       Dst.insert(I);
@@ -1212,48 +1215,47 @@ static bool isTrivialObjectAssignment(const CallEvent &Call) {
 }
 
 void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
-                                 const CallEvent &CallTemplate,
+                                 const CallEvent &Call,
                                  const EvalCallOptions &CallOpts) {
   // Make sure we have the most recent state attached to the call.
   ProgramStateRef State = Pred->getState();
-  CallEventRef<> Call = CallTemplate.cloneWithState(State);
 
   // Special-case trivial assignment operators.
-  if (isTrivialObjectAssignment(*Call)) {
-    performTrivialCopy(Bldr, Pred, *Call);
+  if (isTrivialObjectAssignment(Call)) {
+    performTrivialCopy(Bldr, Pred, Call);
     return;
   }
 
   // Try to inline the call.
   // The origin expression here is just used as a kind of checksum;
   // this should still be safe even for CallEvents that don't come from exprs.
-  const Expr *E = Call->getOriginExpr();
+  const Expr *E = Call.getOriginExpr();
 
   ProgramStateRef InlinedFailedState = getInlineFailedState(State, E);
   if (InlinedFailedState) {
     // If we already tried once and failed, make sure we don't retry later.
     State = InlinedFailedState;
   } else {
-    RuntimeDefinition RD = Call->getRuntimeDefinition();
-    Call->setForeign(RD.isForeign());
+    RuntimeDefinition RD = Call.getRuntimeDefinition();
+    Call.setForeign(RD.isForeign());
     const Decl *D = RD.getDecl();
-    if (shouldInlineCall(*Call, D, Pred, CallOpts)) {
+    if (shouldInlineCall(Call, D, Pred, CallOpts)) {
       if (RD.mayHaveOtherDefinitions()) {
         AnalyzerOptions &Options = getAnalysisManager().options;
 
         // Explore with and without inlining the call.
         if (Options.getIPAMode() == IPAK_DynamicDispatchBifurcate) {
-          BifurcateCall(RD.getDispatchRegion(), *Call, D, Bldr, Pred);
+          BifurcateCall(RD.getDispatchRegion(), Call, D, Bldr, Pred);
           return;
         }
 
         // Don't inline if we're not in any dynamic dispatch mode.
         if (Options.getIPAMode() != IPAK_DynamicDispatch) {
-          conservativeEvalCall(*Call, Bldr, Pred, State);
+          conservativeEvalCall(Call, Bldr, Pred, State);
           return;
         }
       }
-      ctuBifurcate(*Call, D, Bldr, Pred, State);
+      ctuBifurcate(Call, D, Bldr, Pred, State);
       return;
     }
   }
@@ -1261,10 +1263,10 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
   // If we can't inline it, clean up the state traits used only if the function
   // is inlined.
   State = removeStateTraitsUsedForArrayEvaluation(
-      State, dyn_cast_or_null<CXXConstructExpr>(E), Call->getLocationContext());
+      State, dyn_cast_or_null<CXXConstructExpr>(E), Call.getLocationContext());
 
   // Also handle the return value and invalidate the regions.
-  conservativeEvalCall(*Call, Bldr, Pred, State);
+  conservativeEvalCall(Call, Bldr, Pred, State);
 }
 
 void ExprEngine::BifurcateCall(const MemRegion *BifurReg,

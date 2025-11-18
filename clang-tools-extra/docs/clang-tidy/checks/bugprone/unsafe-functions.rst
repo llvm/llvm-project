@@ -19,7 +19,8 @@ The check implements the following rules from the CERT C Coding Standard:
 Unsafe functions
 ----------------
 
-The following functions are reported if :option:`ReportDefaultFunctions` is enabled.
+The following functions are reported if :option:`ReportDefaultFunctions`
+is enabled.
 
 If *Annex K.* is available, a replacement from *Annex K.* is suggested for the
 following functions:
@@ -42,7 +43,8 @@ following functions from the previous list:
  - ``asctime``, ``asctime_r``, suggested replacement: ``strftime``
  - ``gets``, suggested replacement: ``fgets``
 
-The following functions are always checked, regardless of *Annex K* availability:
+The following functions are always checked, regardless of *Annex K*
+availability:
 
  - ``rewind``, suggested replacement: ``fseek``
  - ``setbuf``, suggested replacement: ``setvbuf``
@@ -86,7 +88,7 @@ to be checked. The format is the following, without newlines:
 .. code::
 
    bugprone-unsafe-functions.CustomFunctions="
-     functionRegex1[, replacement1[, reason1]]; 
+     functionRegex1[, replacement1[, reason1]];
      functionRegex2[, replacement2[, reason2]];
      ...
    "
@@ -115,9 +117,9 @@ custom reason.
    // bugprone-unsafe-functions.CustomFunctions:
    //   ^original$, replacement, is deprecated;
    // Using the fully custom message syntax:
-   //   ^original$,,> is deprecated, 'replacement' should be used instead;
-  
-   original(); // warning: function 'original' is deprecated; 'replacement' should be used instead
+   //   ^suspicious$,,> should be avoided if possible.
+   original(); // warning: function 'original' is deprecated; 'replacement' should be used instead.
+   suspicious(); // warning: function 'suspicious' should be avoided if possible.
    ::std::original(); // no-warning
    original_function(); // no-warning
 

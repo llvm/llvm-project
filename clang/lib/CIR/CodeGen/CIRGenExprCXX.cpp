@@ -234,6 +234,89 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
 }
 
+static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
+                                            Address destPtr,
+                                            const CXXRecordDecl *base) {
+  if (base->isEmpty())
+    return;
+
+  cgf.cgm.errorNYI(base->getSourceRange(),
+                   "emitNullBaseClassInitialization: not empty");
+}
+
+void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
+                                          AggValueSlot dest) {
+  assert(!dest.isIgnored() && "Must have a destination!");
+  const CXXConstructorDecl *cd = e->getConstructor();
+
+  // If we require zero initialization before (or instead of) calling the
+  // constructor, as can be the case with a non-user-provided default
+  // constructor, emit the zero initialization now, unless destination is
+  // already zeroed.
+  if (e->requiresZeroInitialization() && !dest.isZeroed()) {
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Delegating:
+    case CXXConstructionKind::Complete:
+      emitNullInitialization(getLoc(e->getSourceRange()), dest.getAddress(),
+                             e->getType());
+      break;
+    case CXXConstructionKind::VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
+      emitNullBaseClassInitialization(*this, dest.getAddress(),
+                                      cd->getParent());
+      break;
+    }
+  }
+
+  // If this is a call to a trivial default constructor, do nothing.
+  if (cd->isTrivial() && cd->isDefaultConstructor())
+    return;
+
+  // Elide the constructor if we're constructing from a temporary
+  if (getLangOpts().ElideConstructors && e->isElidable()) {
+    // FIXME: This only handles the simplest case, where the source object is
+    //        passed directly as the first argument to the constructor. This
+    //        should also handle stepping through implicit casts and conversion
+    //        sequences which involve two steps, with a conversion operator
+    //        follwed by a converting constructor.
+    const Expr *srcObj = e->getArg(0);
+    assert(srcObj->isTemporaryObject(getContext(), cd->getParent()));
+    assert(
+        getContext().hasSameUnqualifiedType(e->getType(), srcObj->getType()));
+    emitAggExpr(srcObj, dest);
+    return;
+  }
+
+  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
+    assert(!cir::MissingFeatures::sanitizers());
+    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
+  } else {
+
+    clang::CXXCtorType type = Ctor_Complete;
+    bool forVirtualBase = false;
+    bool delegating = false;
+
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Complete:
+      type = Ctor_Complete;
+      break;
+    case CXXConstructionKind::Delegating:
+      // We should be emitting a constructor; GlobalDecl will assert this
+      type = curGD.getCtorType();
+      delegating = true;
+      break;
+    case CXXConstructionKind::VirtualBase:
+      forVirtualBase = true;
+      [[fallthrough]];
+    case CXXConstructionKind::NonVirtualBase:
+      type = Ctor_Base;
+      break;
+    }
+
+    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
+  }
+}
+
 static CharUnits calculateCookiePadding(CIRGenFunction &cgf,
                                         const CXXNewExpr *e) {
   if (!e->isArray())
@@ -257,12 +340,12 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
   if (!e->isArray()) {
     CharUnits typeSize = cgf.getContext().getTypeSizeInChars(type);
     sizeWithoutCookie = cgf.getBuilder().getConstant(
-        loc, cir::IntAttr::get(cgf.SizeTy, typeSize.getQuantity()));
+        loc, cir::IntAttr::get(cgf.sizeTy, typeSize.getQuantity()));
     return sizeWithoutCookie;
   }
 
   // The width of size_t.
-  unsigned sizeWidth = cgf.cgm.getDataLayout().getTypeSizeInBits(cgf.SizeTy);
+  unsigned sizeWidth = cgf.cgm.getDataLayout().getTypeSizeInBits(cgf.sizeTy);
 
   // The number of elements can be have an arbitrary integer type;
   // essentially, we need to multiply it by a constant factor, add a
@@ -306,6 +389,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
         mlir::cast<cir::IntAttr>(constNumElements).getValue();
 
     unsigned numElementsWidth = count.getBitWidth();
+    bool hasAnyOverflow = false;
 
     // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
     // overflow, but that should never happen. The size argument is implicitly
@@ -336,11 +420,22 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
 
     // Add in the cookie, and check whether it's overflowed.
     if (cookieSize != 0) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "emitCXXNewAllocSize: array cookie");
+      // Save the current size without a cookie.  This shouldn't be
+      // used if there was overflow
+      sizeWithoutCookie = cgf.getBuilder().getConstInt(
+          loc, allocationSize.zextOrTrunc(sizeWidth));
+
+      allocationSize = allocationSize.uadd_ov(cookieSize, overflow);
+      hasAnyOverflow |= overflow;
     }
 
-    size = cgf.getBuilder().getConstInt(loc, allocationSize);
+    // On overflow, produce a -1 so operator new will fail
+    if (hasAnyOverflow) {
+      size =
+          cgf.getBuilder().getConstInt(loc, llvm::APInt::getAllOnes(sizeWidth));
+    } else {
+      size = cgf.getBuilder().getConstInt(loc, allocationSize);
+    }
   } else {
     // TODO: Handle the variable size case
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -390,7 +485,50 @@ void CIRGenFunction::emitNewArrayInitializer(
   if (!e->hasInitializer())
     return;
 
-  cgm.errorNYI(e->getSourceRange(), "emitNewArrayInitializer");
+  unsigned initListElements = 0;
+
+  const Expr *init = e->getInitializer();
+  const InitListExpr *ile = dyn_cast<InitListExpr>(init);
+  if (ile) {
+    cgm.errorNYI(ile->getSourceRange(), "emitNewArrayInitializer: init list");
+    return;
+  }
+
+  // If all elements have already been initialized, skip any further
+  // initialization.
+  auto constOp = mlir::dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
+  if (constOp) {
+    auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constOp.getValue());
+    // Just skip out if the constant count is zero.
+    if (constIntAttr && constIntAttr.getUInt() <= initListElements)
+      return;
+  }
+
+  assert(init && "have trailing elements to initialize but no initializer");
+
+  // If this is a constructor call, try to optimize it out, and failing that
+  // emit a single loop to initialize all remaining elements.
+  if (const CXXConstructExpr *cce = dyn_cast<CXXConstructExpr>(init)) {
+    CXXConstructorDecl *ctor = cce->getConstructor();
+    if (ctor->isTrivial()) {
+      // If new expression did not specify value-initialization, then there
+      // is no initialization.
+      if (!cce->requiresZeroInitialization())
+        return;
+
+      cgm.errorNYI(cce->getSourceRange(),
+                   "emitNewArrayInitializer: trivial ctor zero-init");
+      return;
+    }
+
+    cgm.errorNYI(cce->getSourceRange(),
+                 "emitNewArrayInitializer: ctor initializer");
+    return;
+  }
+
+  cgm.errorNYI(init->getSourceRange(),
+               "emitNewArrayInitializer: unsupported initializer");
+  return;
 }
 
 static void emitNewInitializer(CIRGenFunction &cgf, const CXXNewExpr *e,
@@ -510,8 +648,10 @@ static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
       dtor = rd->getDestructor();
 
       if (dtor->isVirtual()) {
-        cgf.cgm.errorNYI(de->getSourceRange(),
-                         "emitObjectDelete: virtual destructor");
+        assert(!cir::MissingFeatures::devirtualizeDestructor());
+        cgf.cgm.getCXXABI().emitVirtualObjectDelete(cgf, de, ptr, elementType,
+                                                    dtor);
+        return;
       }
     }
   }
@@ -568,6 +708,13 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   deleteTy = getContext().getBaseElementType(deleteTy);
   ptr = ptr.withElementType(builder, convertTypeForMem(deleteTy));
 
+  if (e->isArrayForm() &&
+      cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
+          cgm.getASTContext().getLangOpts())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXDeleteExpr: emitVectorDeletingDtors");
+  }
+
   if (e->isArrayForm()) {
     assert(!cir::MissingFeatures::deleteArray());
     cgm.errorNYI(e->getSourceRange(), "emitCXXDeleteExpr: array delete");
@@ -586,9 +733,6 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   // If there is a brace-initializer, cannot allocate fewer elements than inits.
   unsigned minElements = 0;
-  if (e->isArray() && e->hasInitializer()) {
-    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: array initializer");
-  }
 
   mlir::Value numElements = nullptr;
   mlir::Value allocSizeWithoutCookie = nullptr;
@@ -667,8 +811,11 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
       !e->getOperatorDelete()->isReservedGlobalPlacementOperator())
     cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: operator delete");
 
-  if (allocSize != allocSizeWithoutCookie)
-    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: array with cookies");
+  if (allocSize != allocSizeWithoutCookie) {
+    assert(e->isArray());
+    allocation = cgm.getCXXABI().initializeArrayCookie(
+        *this, allocation, numElements, e, allocType);
+  }
 
   mlir::Type elementTy;
   if (e->isArray()) {
@@ -746,6 +893,26 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   emitNewDeleteCall(*this, deleteFD, deleteFTy, deleteArgs);
 }
 
+static mlir::Value emitDynamicCastToNull(CIRGenFunction &cgf,
+                                         mlir::Location loc, QualType destTy) {
+  mlir::Type destCIRTy = cgf.convertType(destTy);
+  assert(mlir::isa<cir::PointerType>(destCIRTy) &&
+         "result of dynamic_cast should be a ptr");
+
+  if (!destTy->isPointerType()) {
+    mlir::Region *currentRegion = cgf.getBuilder().getBlock()->getParent();
+    /// C++ [expr.dynamic.cast]p9:
+    ///   A failed cast to reference type throws std::bad_cast
+    cgf.cgm.getCXXABI().emitBadCastCall(cgf, loc);
+
+    // The call to bad_cast will terminate the current block. Create a new block
+    // to hold any follow up code.
+    cgf.getBuilder().createBlock(currentRegion, currentRegion->end());
+  }
+
+  return cgf.getBuilder().getNullPtr(destCIRTy, loc);
+}
+
 mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
                                             const CXXDynamicCastExpr *dce) {
   mlir::Location loc = getLoc(dce->getSourceRange());
@@ -776,10 +943,8 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
   assert(srcRecordTy->isRecordType() && "source type must be a record type!");
   assert(!cir::MissingFeatures::emitTypeCheck());
 
-  if (dce->isAlwaysNull()) {
-    cgm.errorNYI(dce->getSourceRange(), "emitDynamicCastToNull");
-    return {};
-  }
+  if (dce->isAlwaysNull())
+    return emitDynamicCastToNull(*this, loc, destTy);
 
   auto destCirTy = mlir::cast<cir::PointerType>(convertType(destTy));
   return cgm.getCXXABI().emitDynamicCast(*this, loc, srcRecordTy, destRecordTy,

@@ -16,6 +16,7 @@
 #include "flang/Semantics/module-dependences.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <array>
 #include <functional>
@@ -50,32 +51,34 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
-  using OmpAtomicOrderType = common::OmpMemoryOrderType;
-
 public:
-  ENUM_CLASS(RequiresFlag, ReverseOffload, UnifiedAddress, UnifiedSharedMemory,
-      DynamicAllocators);
-  using RequiresFlags = common::EnumSet<RequiresFlag, RequiresFlag_enumSize>;
+  // The set of requirements for any program unit include requirements
+  // from any module used in the program unit.
+  using RequiresClauses =
+      common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
 
   bool has_ompRequires() const { return ompRequires_.has_value(); }
-  const RequiresFlags *ompRequires() const {
+  const RequiresClauses *ompRequires() const {
     return ompRequires_ ? &*ompRequires_ : nullptr;
   }
-  void set_ompRequires(RequiresFlags flags) { ompRequires_ = flags; }
+  void set_ompRequires(RequiresClauses clauses) { ompRequires_ = clauses; }
 
   bool has_ompAtomicDefaultMemOrder() const {
     return ompAtomicDefaultMemOrder_.has_value();
   }
-  const OmpAtomicOrderType *ompAtomicDefaultMemOrder() const {
+  const common::OmpMemoryOrderType *ompAtomicDefaultMemOrder() const {
     return ompAtomicDefaultMemOrder_ ? &*ompAtomicDefaultMemOrder_ : nullptr;
   }
-  void set_ompAtomicDefaultMemOrder(OmpAtomicOrderType flags) {
+  void set_ompAtomicDefaultMemOrder(common::OmpMemoryOrderType flags) {
     ompAtomicDefaultMemOrder_ = flags;
   }
 
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const WithOmpDeclarative &);
+
 private:
-  std::optional<RequiresFlags> ompRequires_;
-  std::optional<OmpAtomicOrderType> ompAtomicDefaultMemOrder_;
+  std::optional<RequiresClauses> ompRequires_;
+  std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
 };
 
 // A module or submodule.
@@ -774,6 +777,24 @@ private:
   DeclVector declList_;
 };
 
+// Used for OpenMP DECLARE MAPPER, it holds the declaration constructs
+// so they can be serialized into module files and later re-parsed when
+// USE-associated.
+class MapperDetails {
+public:
+  using DeclVector = std::vector<const parser::OpenMPDeclarativeConstruct *>;
+
+  MapperDetails() = default;
+
+  void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
+    declList_.emplace_back(decl);
+  }
+  const DeclVector &GetDeclList() const { return declList_; }
+
+private:
+  DeclVector declList_;
+};
+
 class UnknownDetails {};
 
 using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
@@ -781,7 +802,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    TypeParamDetails, MiscDetails, UserReductionDetails>;
+    TypeParamDetails, MiscDetails, UserReductionDetails, MapperDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
@@ -827,6 +848,8 @@ public:
       OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr, OmpHasDeviceAddr,
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
+      // OpenMP special variables
+      OmpInVar, OmpOrigVar, OmpOutVar, OmpPrivVar,
       // OpenMP miscellaneous flags
       OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
       OmpAllocate, OmpDeclarativeAllocateDirective,

@@ -270,25 +270,45 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i64(ptr addrspace(8) %ptr)
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: raw_ptr_atomic_buffer_load_i64:
-; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_wait_xcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s4, 0
-; GFX12-NEXT:  .LBB5_1: ; %bb1
-; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null offset:4 th:TH_LOAD_NT
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[2:3], v[0:1]
-; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; GFX12-NEXT:    s_cbranch_execnz .LBB5_1
-; GFX12-NEXT:  ; %bb.2: ; %bb2
-; GFX12-NEXT:    s_endpgm
+; GFX12-SDAG-TRUE16-LABEL: raw_ptr_atomic_buffer_load_i64:
+; GFX12-SDAG-TRUE16:       ; %bb.0: ; %bb
+; GFX12-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s4, 0
+; GFX12-SDAG-TRUE16-NEXT:  .LBB5_1: ; %bb1
+; GFX12-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null offset:4 th:TH_LOAD_NT
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX12-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB5_1
+; GFX12-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
+; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-GISEL-TRUE16-LABEL: raw_ptr_atomic_buffer_load_i64:
+; GFX12-GISEL-TRUE16:       ; %bb.0: ; %bb
+; GFX12-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s4, 0
+; GFX12-GISEL-TRUE16-NEXT:  .LBB5_1: ; %bb1
+; GFX12-GISEL-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null offset:4 th:TH_LOAD_NT
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX12-GISEL-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX12-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB5_1
+; GFX12-GISEL-TRUE16-NEXT:  ; %bb.2: ; %bb2
+; GFX12-GISEL-TRUE16-NEXT:    s_endpgm
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %id.zext = zext i32 %id to i64
@@ -361,12 +381,10 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    buffer_load_b64 v[1:2], off, s[0:3], 0 offset:4 glc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX11-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
@@ -444,12 +462,10 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null offset:4 th:TH_LOAD_NT
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
-; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2

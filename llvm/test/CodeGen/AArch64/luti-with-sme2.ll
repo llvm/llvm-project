@@ -6,7 +6,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_luti4_lane_i16_x2_tuple(
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -21,7 +21,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_luti4_lane_i16_x2_tuple(
 ; CHECK-NEXT:    luti4 z1.h, { z11.h, z12.h }, z0[0]
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -47,7 +47,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @test_luti4_lane_f16_x2_tupl
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -62,7 +62,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @test_luti4_lane_f16_x2_tupl
 ; CHECK-NEXT:    luti4 z1.h, { z11.h, z12.h }, z0[0]
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -88,7 +88,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_luti4_lane_bf16_x2
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -103,7 +103,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_luti4_lane_bf16_x2
 ; CHECK-NEXT:    luti4 z1.h, { z11.h, z12.h }, z0[0]
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
