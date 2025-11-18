@@ -1,7 +1,4 @@
 // RUN: mkdir -p %t.dir && cd %t.dir
-// RUN: basename %dynamiclib > /tmp/test
-// RUN: echo %dynamiclib >> /tmp/test
-// RUN: echo %t >> /tmp/test
 // RUN: %clang_tsan -O1 %s -DBUILD_LIB=1 -fno-sanitize=thread -shared -fPIC -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clang_tsan -O1 %s -o %t.dir/exe %ld_flags_rpath_exe
 // RUN: %run %t.dir/exe | FileCheck %s
