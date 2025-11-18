@@ -42,13 +42,14 @@ void EmitTypedGetInfoWrappers(const llvm::RecordKeeper &Records,
     for (auto &V : E.getValues()) {
       auto Desc = E.getEnumValNamePrefix() + "_" + V.getName();
       auto TaggedType = V.getTaggedType();
-      auto ResultType = [TaggedType]() -> std::string {
+      auto ElementType = TaggedType.rtrim("[]");
+      auto ResultType = [&]() -> std::string {
         if (!TaggedType.ends_with("[]"))
           return TaggedType.str();
         if (TaggedType == "char[]")
           return "std::string";
 
-        return ("std::vector<" + TaggedType.drop_back(2) + ">").str();
+        return ("std::vector<" + ElementType + ">").str();
       }();
       auto ReturnType =
           "std::variant<" + ResultType + ", " + PrefixLower + "_result_t>";
@@ -61,7 +62,15 @@ void EmitTypedGetInfoWrappers(const llvm::RecordKeeper &Records,
            << formatv("if (auto Err = {}Size({}, {}, &ResultSize))\n",
                       F.getName(), Object.getName(), Desc);
         OS << TAB_2 << formatv("return {}{{Err};\n", ReturnType);
-        OS << TAB_1 << "Result.resize(ResultSize);\n"; // TODO: Or "-1"?
+        if (TaggedType == "char[]") {
+          // Null terminator isn't counted in std::string::size.
+          OS << TAB_1 << "ResultSize -= 1;\n";
+        } else {
+          OS << TAB_1
+             << formatv("assert(ResultSize % sizeof({}) == 0);\n", ElementType);
+          OS << TAB_1 << formatv("ResultSize /= sizeof({});\n", ElementType);
+        }
+        OS << TAB_1 << "Result.resize(ResultSize);\n";
         OS << TAB_1
            << formatv("if (auto Err = {}({}, {}, ResultSize, Result.data()))\n",
                       F.getName(), Object.getName(), Desc);
