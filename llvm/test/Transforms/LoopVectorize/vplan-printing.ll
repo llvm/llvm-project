@@ -1035,7 +1035,7 @@ define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%c>, vp<[[ST]]>
 ; CHECK-NEXT:     vp<[[PTR2:%.+]]> = vector-pointer ir<[[GEP2]]>
 ; CHECK-NEXT:     WIDEN ir<[[LD2:%.+]]> = load vp<[[PTR2]]>
-; CHECK-NEXT:     WIDEN ir<[[FCMP:%.+]]> = fcmp ogt ir<[[LD1]]>, ir<[[LD2]]>
+; CHECK-NEXT:     WIDEN ir<[[FCMP:%.+]]> = fcmp ogt fast ir<[[LD1]]>, ir<[[LD2]]>
 ; CHECK-NEXT:     WIDEN ir<[[FADD:%.+]]> = fadd fast ir<[[LD1]]>, ir<1.000000e+01>
 ; CHECK-NEXT:     WIDEN-SELECT ir<[[SELECT:%.+]]> = select fast ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>
 ; CHECK-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds nuw ir<%a>, vp<[[ST]]>
