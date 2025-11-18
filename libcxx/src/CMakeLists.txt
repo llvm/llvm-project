@@ -254,11 +254,6 @@ if (LIBCXX_ENABLE_SHARED)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
 endif()
 
-if(WIN32)
-  string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}dbghelp")
-  string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}psapi")
-endif()
-
 if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
   # Since we most likely do not have a mt.exe replacement, disable the
   # manifest bundling.  This allows a normal cmake invocation to pass which
