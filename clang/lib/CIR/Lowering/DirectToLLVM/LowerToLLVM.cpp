@@ -1995,7 +1995,6 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   //        attributes are available on cir.global ops. This duplicates code
   //        in CIRToLLVMGlobalOpLowering::matchAndRewrite() but that will go
   //        away when the placeholders are no longer needed.
-  assert(!cir::MissingFeatures::opGlobalConstant());
   const bool isConst = op.getConstant();
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
@@ -2055,8 +2054,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
-  assert(!cir::MissingFeatures::opGlobalConstant());
-  const bool isConst = false;
+  const bool isConst = op.getConstant();
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
   const bool isDsoLocal = op.getDsoLocal();
