@@ -918,3 +918,171 @@ func.func @kill() {
   // CHECK: spirv.Kill
   spirv.Kill
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.Switch
+//===----------------------------------------------------------------------===//
+
+func.func @switch(%selector: i32) -> () {
+  // CHECK: spirv.Switch {{%.*}} : i32, [
+  // CHECK-NEXT: default: ^bb1,
+  // CHECK-NEXT: 0: ^bb2,
+  // CHECK-NEXT: 1: ^bb3,
+  // CHECK-NEXT: 2: ^bb4
+  spirv.Switch %selector : i32, [
+    default: ^default,
+    0: ^case0,
+    1: ^case1,
+    2: ^case2
+  ]
+^default:
+  spirv.Branch ^merge
+
+^case0:
+  spirv.Branch ^merge
+
+^case1:
+  spirv.Branch ^merge
+
+^case2:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+func.func @switch_only_default(%selector: i32) -> () {
+  // CHECK: spirv.Switch {{%.*}} : i32, [
+  // CHECK-NEXT: default: ^bb1
+  spirv.Switch %selector : i32, [
+    default: ^default
+  ]
+^default:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+func.func @switch_operands(%selector : i32, %operand : i32) {
+  // CHECK: spirv.Switch {{%.*}} : i32, [
+  // CHECK-NEXT: default: ^bb1({{%.*}} : i32),
+  // CHECK-NEXT: 0: ^bb2({{%.*}} : i32),
+  // CHECK-NEXT: 1: ^bb3({{%.*}} : i32)
+  spirv.Switch %selector : i32, [
+    default: ^default(%operand : i32),
+    0: ^case0(%operand : i32),
+    1: ^case1(%operand : i32)
+  ]
+^default(%argd : i32):
+  spirv.Branch ^merge
+
+^case0(%arg0 : i32):
+  spirv.Branch ^merge
+
+^case1(%arg1 : i32):
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+// -----
+
+func.func @switch_float_selector(%selector: f32) -> () {
+  // expected-error@+1 {{expected builtin.integer, but found 'f32'}}
+  spirv.Switch %selector : f32, [
+    default: ^default
+  ]
+^default:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+// -----
+
+func.func @switch_float_selector(%selector: i32) -> () {
+  // expected-error@+3 {{expected integer value}}
+  spirv.Switch %selector : i32, [
+    default: ^default,
+    0.0: ^case0
+  ]
+^default:
+  spirv.Branch ^merge
+
+^case 0:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+// -----
+
+func.func @switch_missing_default(%selector: i32) -> () {
+  // expected-error@+2 {{expected 'default'}}
+  spirv.Switch %selector : i32, [
+    0: ^case0
+  ]
+^case 0:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+// -----
+
+func.func @switch_default_no_target(%selector: i32) -> () {
+  // expected-error@+2 {{expected block name}}
+  spirv.Switch %selector : i32, [
+    default:
+  ]
+^default:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+// -----
+
+func.func @switch_case_no_target(%selector: i32) -> () {
+  // expected-error@+3 {{expected block name}}
+  spirv.Switch %selector : i32, [
+    default: ^default,
+    0:
+  ]
+^default:
+  spirv.Branch ^merge
+
+^case 0:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+// -----
+
+func.func @switch_missing_operand_type(%selector: i32) -> () {
+  %0 = spirv.Constant 0 : i32
+  // expected-error@+2 {{expected ':'}}
+  spirv.Switch %selector : i32, [
+    default: ^default (%0),
+    0.0: ^case0
+  ]
+^default(%argd : i32):
+  spirv.Branch ^merge
+
+^case 0:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+

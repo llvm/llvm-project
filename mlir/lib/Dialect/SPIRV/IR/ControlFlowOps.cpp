@@ -220,6 +220,89 @@ MutableOperandRange FunctionCallOp::getArgOperandsMutable() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.Switch
+//===----------------------------------------------------------------------===//
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     DenseIntElementsAttr literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  build(builder, result, selector, defaultOperands, targetOperands, literals,
+        defaultTarget, targets);
+}
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     ArrayRef<APInt> literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  DenseIntElementsAttr literalsAttr;
+  if (!literals.empty()) {
+    ShapedType literalType = VectorType::get(
+        static_cast<int64_t>(literals.size()), selector.getType());
+    literalsAttr = DenseIntElementsAttr::get(literalType, literals);
+  }
+  build(builder, result, selector, defaultTarget, defaultOperands, literalsAttr,
+        targets, targetOperands);
+}
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     ArrayRef<int32_t> literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  DenseIntElementsAttr literalsAttr;
+  if (!literals.empty()) {
+    ShapedType literalType = VectorType::get(
+        static_cast<int64_t>(literals.size()), selector.getType());
+    literalsAttr = DenseIntElementsAttr::get(literalType, literals);
+  }
+  build(builder, result, selector, defaultTarget, defaultOperands, literalsAttr,
+        targets, targetOperands);
+}
+
+LogicalResult SwitchOp::verify() {
+  std::optional<DenseIntElementsAttr> literals = getLiterals();
+  BlockRange targets = getTargets();
+
+  if (!literals && targets.empty())
+    return success();
+
+  Type selectorType = getSelector().getType();
+  Type literalType = literals->getType().getElementType();
+  if (literalType != selectorType)
+    return emitOpError() << "'selector' type (" << selectorType
+                         << ") should match literals type (" << literalType
+                         << ")";
+
+  if (literals && literals->size() != static_cast<int64_t>(targets.size()))
+    return emitOpError() << "number of literals (" << literals->size()
+                         << ") should match number of targets ("
+                         << targets.size() << ")";
+  return success();
+}
+
+SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDefaultOperandsMutable()
+                                      : getTargetOperandsMutable(index - 1));
+}
+
+Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  std::optional<DenseIntElementsAttr> literals = getLiterals();
+
+  if (!literals)
+    return getDefaultTarget();
+
+  SuccessorRange targets = getTargets();
+  if (auto value = llvm::dyn_cast_or_null<IntegerAttr>(operands.front())) {
+    for (const auto &it : llvm::enumerate(literals->getValues<APInt>()))
+      if (it.value() == value.getValue())
+        return targets[it.index()];
+    return getDefaultTarget();
+  }
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.mlir.loop
 //===----------------------------------------------------------------------===//
 

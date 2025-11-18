@@ -81,6 +81,83 @@ static void printImageOperands(OpAsmPrinter &printer, Operation *imageOp,
   }
 }
 
+/// Adapted from the cf.switch implementation.
+/// <cases> ::= `default` `:` bb-id (`(` ssa-use-and-type-list `)`)?
+///             ( `,` integer `:` bb-id (`(` ssa-use-and-type-list `)`)? )*
+static ParseResult parseSwitchOpCases(
+    OpAsmParser &parser, Type &selectorType, Block *&defaultTarget,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &defaultOperands,
+    SmallVectorImpl<Type> &defaultOperandTypes, DenseIntElementsAttr &literals,
+    SmallVectorImpl<Block *> &targets,
+    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>>
+        &targetOperands,
+    SmallVectorImpl<SmallVector<Type>> &targetOperandTypes) {
+  if (parser.parseKeyword("default") || parser.parseColon() ||
+      parser.parseSuccessor(defaultTarget))
+    return failure();
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (parser.parseOperandList(defaultOperands, OpAsmParser::Delimiter::None,
+                                /*allowResultNumber=*/false) ||
+        parser.parseColonTypeList(defaultOperandTypes) || parser.parseRParen())
+      return failure();
+  }
+
+  SmallVector<APInt> values;
+  unsigned bitWidth = selectorType.getIntOrFloatBitWidth();
+  while (succeeded(parser.parseOptionalComma())) {
+    int64_t value = 0;
+    if (failed(parser.parseInteger(value)))
+      return failure();
+    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
+
+    Block *target;
+    SmallVector<OpAsmParser::UnresolvedOperand> operands;
+    SmallVector<Type> operandTypes;
+    if (failed(parser.parseColon()) || failed(parser.parseSuccessor(target)))
+      return failure();
+    if (succeeded(parser.parseOptionalLParen())) {
+      if (failed(parser.parseOperandList(operands,
+                                         OpAsmParser::Delimiter::None)) ||
+          failed(parser.parseColonTypeList(operandTypes)) ||
+          failed(parser.parseRParen()))
+        return failure();
+    }
+    targets.push_back(target);
+    targetOperands.emplace_back(operands);
+    targetOperandTypes.emplace_back(operandTypes);
+  }
+
+  if (!values.empty()) {
+    ShapedType literalType =
+        VectorType::get(static_cast<int64_t>(values.size()), selectorType);
+    literals = DenseIntElementsAttr::get(literalType, values);
+  }
+  return success();
+}
+
+static void
+printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type selectorType,
+                   Block *defaultTarget, OperandRange defaultOperands,
+                   TypeRange defaultOperandTypes, DenseIntElementsAttr literals,
+                   SuccessorRange targets, OperandRangeRange targetOperands,
+                   const TypeRangeRange &targetOperandTypes) {
+  p << "  default: ";
+  p.printSuccessorAndUseList(defaultTarget, defaultOperands);
+
+  if (!literals)
+    return;
+
+  for (const auto &it : llvm::enumerate(literals.getValues<APInt>())) {
+    p << ',';
+    p.printNewline();
+    p << "  ";
+    p << it.value().getLimitedValue();
+    p << ": ";
+    p.printSuccessorAndUseList(targets[it.index()], targetOperands[it.index()]);
+  }
+  p.printNewline();
+}
+
 } // namespace mlir::spirv
 
 // TablenGen'erated operation definitions.

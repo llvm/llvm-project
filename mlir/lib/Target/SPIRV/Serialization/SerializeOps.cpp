@@ -775,6 +775,27 @@ LogicalResult Serializer::processBranchOp(spirv::BranchOp branchOp) {
   return success();
 }
 
+LogicalResult Serializer::processSwitchOp(spirv::SwitchOp switchOp) {
+  uint32_t selectorID = getValueID(switchOp.getSelector());
+  uint32_t defaultLabelID = getOrCreateBlockID(switchOp.getDefaultTarget());
+  SmallVector<uint32_t> arguments{selectorID, defaultLabelID};
+
+  std::optional<mlir::DenseIntElementsAttr> literals = switchOp.getLiterals();
+  BlockRange targets = switchOp.getTargets();
+  if (literals) {
+    for (auto [literal, target] : llvm::zip(*literals, targets)) {
+      arguments.push_back(literal.getLimitedValue());
+      uint32_t targetLabelID = getOrCreateBlockID(target);
+      arguments.push_back(targetLabelID);
+    }
+  }
+
+  if (failed(emitDebugLine(functionBody, switchOp.getLoc())))
+    return failure();
+  encodeInstructionInto(functionBody, spirv::Opcode::OpSwitch, arguments);
+  return success();
+}
+
 LogicalResult Serializer::processAddressOfOp(spirv::AddressOfOp addressOfOp) {
   auto varName = addressOfOp.getVariable();
   auto variableID = getVariableID(varName);
