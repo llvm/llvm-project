@@ -5340,6 +5340,7 @@ private:
           bool IsNonSchedulableWithParentPhiNode =
               TE->doesNotNeedToSchedule() && TE->UserTreeIndex &&
               TE->UserTreeIndex.UserTE->hasState() &&
+              TE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
               TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
           // Count the number of unique phi nodes, which are the parent for
           // parent entry, and exit, if all the unique phis are processed.
@@ -5391,6 +5392,7 @@ private:
         bool IsNonSchedulableWithParentPhiNode =
             P.first->doesNotNeedToSchedule() && P.first->UserTreeIndex &&
             P.first->UserTreeIndex.UserTE->hasState() &&
+            P.first->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
             P.first->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
         auto *It = find(P.first->Scalars, User);
         do {
@@ -5690,6 +5692,8 @@ private:
                   Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
                   Bundle->getTreeEntry()->UserTreeIndex &&
                   Bundle->getTreeEntry()->UserTreeIndex.UserTE->hasState() &&
+                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->State !=
+                      TreeEntry::SplitVectorize &&
                   Bundle->getTreeEntry()->UserTreeIndex.UserTE->getOpcode() ==
                       Instruction::PHI;
               // Count the number of unique phi nodes, which are the parent for
@@ -21475,7 +21479,18 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
            "new ScheduleData already in scheduling region");
     SD->init(SchedulingRegionID, I);
 
+    auto CanIgnoreLoad = [](const Instruction *I) {
+      const auto *LI = dyn_cast<LoadInst>(I);
+      // If there is a simple load marked as invariant, we can ignore it.
+      // But, in the (unlikely) case of non-simple invariant load,
+      // we should not ignore it.
+      return LI && LI->isSimple() &&
+             LI->getMetadata(LLVMContext::MD_invariant_load);
+    };
+
     if (I->mayReadOrWriteMemory() &&
+        // Simple InvariantLoad does not depend on other memory accesses.
+        !CanIgnoreLoad(I) &&
         (!isa<IntrinsicInst>(I) ||
          (cast<IntrinsicInst>(I)->getIntrinsicID() != Intrinsic::sideeffect &&
           cast<IntrinsicInst>(I)->getIntrinsicID() !=
