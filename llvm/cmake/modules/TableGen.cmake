@@ -66,6 +66,16 @@ function(tablegen project ofn)
     list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
   endif()
 
+  set(EXTRA_OUTPUTS)
+  if("-gen-register-info" IN_LIST ARGN)
+    cmake_path(GET ofn STEM OUTPUT_BASENAME)
+    list(APPEND EXTRA_OUTPUTS
+         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}Enums.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}Header.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}MCDesc.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}TargetDesc.inc)
+  endif()
+
   # MSVC can't support long string literals ("long" > 65534 bytes)[1], so if there's
   # a possibility of generated tables being consumed by MSVC, generate arrays of
   # char literals, instead. If we're cross-compiling, then conservatively assume
@@ -126,7 +136,7 @@ function(tablegen project ofn)
     set(LLVM_TABLEGEN_JOB_POOL "")
   endif()
 
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn} ${EXTRA_OUTPUTS}
     COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS}
     ${tblgen_includes}
     ${LLVM_TABLEGEN_FLAGS}
