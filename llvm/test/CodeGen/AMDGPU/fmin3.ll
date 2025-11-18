@@ -1233,7 +1233,6 @@ define amdgpu_kernel void @test_fmin3_olt_0_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    buffer_load_b64 v[2:3], off, s[16:19], null scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_wait_xcnt 0x1
 ; GFX1250-NEXT:    s_mov_b32 s4, s14
 ; GFX1250-NEXT:    s_mov_b32 s5, s15
 ; GFX1250-NEXT:    s_mov_b32 s0, s8
@@ -1443,7 +1442,6 @@ define amdgpu_kernel void @test_fmin3_olt_1_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    buffer_load_b64 v[2:3], off, s[16:19], null scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_wait_xcnt 0x1
 ; GFX1250-NEXT:    s_mov_b32 s4, s14
 ; GFX1250-NEXT:    s_mov_b32 s5, s15
 ; GFX1250-NEXT:    s_mov_b32 s0, s8

@@ -95,7 +95,24 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(Name);
+  switch (Kind) {
+  case BTF::BTF_KIND_PTR:
+  case BTF::BTF_KIND_CONST:
+  case BTF::BTF_KIND_VOLATILE:
+  case BTF::BTF_KIND_RESTRICT:
+    // Debug info might contain names for these types, but given that we want
+    // to keep BTF minimal and naming reference types doesn't bring any value
+    // (what matters is the completeness of the base type), we don't emit them.
+    //
+    // Furthermore, the Linux kernel refuses to load BPF programs that contain
+    // BTF with these types named:
+    // https://elixir.bootlin.com/linux/v6.17.1/source/kernel/bpf/btf.c#L2586
+    BTFType.NameOff = 0;
+    break;
+  default:
+    BTFType.NameOff = BDebug.addString(Name);
+    break;
+  }
 
   if (NeedsFixup || !DTy)
     return;

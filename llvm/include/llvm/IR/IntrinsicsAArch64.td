@@ -499,6 +499,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_neon_ummla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_smmla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_usmmla : AdvSIMD_MatMul_Intrinsic;
+  def int_aarch64_neon_fmmla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_usdot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_bfdot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_bfmmla
@@ -942,20 +943,7 @@ let TargetPrefix = "aarch64" in {
       [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>]>;
 }
 
-// Transactional Memory Extension (TME) Intrinsics
 let TargetPrefix = "aarch64" in {
-def int_aarch64_tstart  : ClangBuiltin<"__builtin_arm_tstart">,
-                         Intrinsic<[llvm_i64_ty], [], [IntrWillReturn]>;
-
-def int_aarch64_tcommit : ClangBuiltin<"__builtin_arm_tcommit">, Intrinsic<[], [], [IntrWillReturn]>;
-
-def int_aarch64_tcancel : ClangBuiltin<"__builtin_arm_tcancel">,
-                          Intrinsic<[], [llvm_i64_ty], [IntrWillReturn, ImmArg<ArgIndex<0>>]>;
-
-def int_aarch64_ttest   : ClangBuiltin<"__builtin_arm_ttest">,
-                          Intrinsic<[llvm_i64_ty], [],
-                                    [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
-
 // Armv8.7-A load/store 64-byte intrinsics
 defvar data512 = !listsplat(llvm_i64_ty, 8);
 def int_aarch64_ld64b: Intrinsic<data512, [llvm_ptr_ty]>;
