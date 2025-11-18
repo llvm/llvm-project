@@ -97,8 +97,8 @@ fir::runtime::genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
   int lhsKind = discoverKind(lhsBuff.getType());
   int rhsKind = discoverKind(rhsBuff.getType());
   if (lhsKind != rhsKind) {
-    fir::emitFatalError(
-        loc, "runtime does not support comparison of different CHARACTER kind values");
+    fir::emitFatalError(loc, "runtime does not support comparison of different "
+                             "CHARACTER kind values");
   }
   mlir::func::FuncOp func;
   switch (lhsKind) {
