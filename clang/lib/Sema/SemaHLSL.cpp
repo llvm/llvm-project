@@ -773,7 +773,7 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 
 bool SemaHLSL::determineActiveSemanticOnScalar(
     FunctionDecl *FD, DeclaratorDecl *OutputDecl, DeclaratorDecl *D,
-    SemanticInfo &ActiveSemantic, llvm::StringSet<> &ActiveInputSemantics) {
+    SemanticInfo &ActiveSemantic, llvm::StringSet<> &UsedSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -805,7 +805,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   for (unsigned I = 0; I < ElementCount; ++I) {
     Twine VariableName = BaseName.concat(Twine(Location + I));
 
-    auto [_, Inserted] = ActiveInputSemantics.insert(VariableName.str());
+    auto [_, Inserted] = UsedSemantics.insert(VariableName.str());
     if (!Inserted) {
       Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
           << VariableName.str();
@@ -818,7 +818,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
 
 bool SemaHLSL::determineActiveSemantic(
     FunctionDecl *FD, DeclaratorDecl *OutputDecl, DeclaratorDecl *D,
-    SemanticInfo &ActiveSemantic, llvm::StringSet<> &ActiveInputSemantics) {
+    SemanticInfo &ActiveSemantic, llvm::StringSet<> &UsedSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -831,13 +831,13 @@ bool SemaHLSL::determineActiveSemantic(
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
     return determineActiveSemanticOnScalar(FD, OutputDecl, D, ActiveSemantic,
-                                           ActiveInputSemantics);
+                                           UsedSemantics);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
     if (!determineActiveSemantic(FD, OutputDecl, Field, Info,
-                                 ActiveInputSemantics)) {
+                                 UsedSemantics)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
