@@ -112,7 +112,7 @@ public:
   void verifyLiveness(MachineFunction &MF) const;
 
   /// Mark operands that kill a register
-  void markKills(MachineFunction &MF);
+  bool markKills(MachineFunction &MF);
 
 private:
   /// Compute local liveness information (Use and Def sets) for each block
@@ -380,7 +380,8 @@ void RISCVLiveVariables::verifyLiveness(MachineFunction &MF) const {
   }
 }
 
-void RISCVLiveVariables::markKills(MachineFunction &MF) {
+bool RISCVLiveVariables::markKills(MachineFunction &MF) {
+  bool Changed = false;
   auto KillSetSize = PreRegAlloc ? RegCounter : TRI->getNumRegs();
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     // Set all the registers that are not live-out of the block.
@@ -427,8 +428,10 @@ void RISCVLiveVariables::markKills(MachineFunction &MF) {
         auto RegIdx = PreRegAlloc ? TrackedRegisters[Reg] : Reg.asMCReg().id();
 
         if (KillSet[RegIdx]) {
-          if (!MO.isKill() && !MI.isPHI())
+          if (!MO.isKill() && !MI.isPHI()) {
             MO.setIsKill(true);
+            Changed = true;
+          }
           LLVM_DEBUG(dbgs() << "Marking kill of " << printReg(Reg, TRI)
                             << " at instruction: " << MI);
           KillSet.reset(RegIdx);
@@ -440,6 +443,7 @@ void RISCVLiveVariables::markKills(MachineFunction &MF) {
       }
     }
   }
+  return Changed;
 }
 
 bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
@@ -472,9 +476,10 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
 
   // TODO: Update live-in/live-out sets of MBBs
 
+  bool Changed = false;
   // Step 3: Mark kill flags on operands
   if (UpdateKills && MaxVRegs >= RegCounter)
-    markKills(MF);
+    Changed = markKills(MF);
 
   LLVM_DEBUG({
     dbgs() << "\n***** Final Liveness Information *****\n";
@@ -483,7 +488,7 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
 
   verifyLiveness(MF);
   // This is an analysis pass, it doesn't modify the function
-  return false;
+  return Changed;
 }
 
 void RISCVLiveVariables::print(raw_ostream &OS, const Module *M) const {
