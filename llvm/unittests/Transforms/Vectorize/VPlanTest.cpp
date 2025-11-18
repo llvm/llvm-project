@@ -1009,7 +1009,7 @@ TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   SmallVector<VPValue *, 2> Args;
   Args.push_back(Op1);
   Args.push_back(Op2);
-  VPWidenRecipe WidenR(*AI, make_range(Args.begin(), Args.end()));
+  VPWidenRecipe WidenR(*AI, Args, VPIRMetadata(), DebugLoc());
 
   checkVPRecipeCastImpl<VPWidenRecipe, VPUser, VPIRMetadata>(&WidenR);
   delete AI;
@@ -1093,7 +1093,7 @@ TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
   IntegerType *Int64 = IntegerType::get(C, 64);
   auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, *Cast);
+  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, *Cast, {});
 
   checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
   delete Cast;
@@ -1264,7 +1264,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     SmallVector<VPValue *, 2> Args;
     Args.push_back(Op1);
     Args.push_back(Op2);
-    VPWidenRecipe Recipe(*AI, make_range(Args.begin(), Args.end()));
+    VPWidenRecipe Recipe(*AI, Args, VPIRMetadata(), DebugLoc());
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1469,7 +1469,7 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
   VPWidenRecipe *WidenR =
-      new VPWidenRecipe(*AI, make_range(Args.begin(), Args.end()));
+      new VPWidenRecipe(*AI, Args, VPIRMetadata(), DebugLoc());
   VPBB1->appendRecipe(WidenR);
 
   {
