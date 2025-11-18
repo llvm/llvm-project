@@ -675,8 +675,7 @@ operator<=>(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {
 #endif
 
 template <class _T1, class _D1>
-inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const unique_ptr<_T1, _D1>& __x, nullptr_t) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const unique_ptr<_T1, _D1>& __x, nullptr_t) _NOEXCEPT {
   return !__x;
 }
 

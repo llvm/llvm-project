@@ -584,7 +584,9 @@ public:
   }
 
 #if _LIBCPP_STD_VER < 20 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE)
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI bool unique() const _NOEXCEPT { return use_count() == 1; }
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI bool unique() const _NOEXCEPT {
+    return use_count() == 1;
+  }
 #endif
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return get() != nullptr; }
@@ -986,14 +988,12 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator>(const shared_ptr<_Tp>& __x, const sh
 }
 
 template <class _Tp, class _Up>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool
-operator<=(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT {
   return !(__y < __x);
 }
 
 template <class _Tp, class _Up>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool
-operator>=(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI bool operator>=(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT {
   return !(__x < __y);
 }
 
