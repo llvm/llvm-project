@@ -3439,6 +3439,18 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+    Observer.changingInstr(MI);
+
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy);
+    else
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_INTTOPTR:
     if (TypeIdx != 1)
       return UnableToLegalize;
