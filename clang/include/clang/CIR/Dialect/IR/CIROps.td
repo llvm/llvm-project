@@ -413,6 +413,18 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
     template <typename T>
     T getValueAttr() { return mlir::dyn_cast<T>(getValue()); }
+
+    llvm::APInt getIntValue() {
+      if (const auto intAttr = getValueAttr<cir::IntAttr>())
+        return intAttr.getValue();
+      llvm_unreachable("Expected an IntAttr in ConstantOp");
+    }
+
+    bool getBoolValue() {
+      if (const auto boolAttr = getValueAttr<cir::BoolAttr>())
+        return boolAttr.getValue();
+      llvm_unreachable("Expected a BoolAttr in ConstantOp");
+    }
   }];
 
   let hasFolder = 1;
@@ -2580,6 +2592,39 @@ def CIR_FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
+// LLVMIntrinsicCallOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
+  let summary = "Call to llvm intrinsic functions that is not defined in CIR";
+  let description = [{
+    `cir.call_llvm_intrinsic` operation represents a call-like expression which has
+    return type and arguments that maps directly to a llvm intrinsic.
+    It only records intrinsic `intrinsic_name`.
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let arguments = (ins
+                   StrAttr:$intrinsic_name, Variadic<CIR_AnyType>:$arg_ops);
+
+  let skipDefaultBuilders = 1;
+
+  let assemblyFormat = [{
+    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::StringAttr":$intrinsic_name, "mlir::Type":$resType,
+              CArg<"mlir::ValueRange", "{}">:$operands), [{
+      $_state.addAttribute("intrinsic_name", intrinsic_name);
+      $_state.addOperands(operands);
+      if (resType)
+        $_state.addTypes(resType);
+    }]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 
@@ -3341,6 +3386,10 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     cannot be known by the operation, and that information affects how the
     operation is lowered.
 
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid base class for the object, the behavior
+    is undefined.
+
     Example:
     ```c++
     struct Base { };
@@ -3354,8 +3403,6 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     ```
   }];
 
-  // The validity of the relationship of derived and base cannot yet be
-  // verified, currently not worth adding a verifier.
   let arguments = (ins
     Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
     IndexAttr:$offset, UnitAttr:$assume_not_null);
@@ -3366,6 +3413,56 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
       $derived_addr `:` qualified(type($derived_addr))
       (`nonnull` $assume_not_null^)?
       ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// DerivedClassAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
+  let summary = "Get the derived class address for a class/struct";
+  let description = [{
+    The `cir.derived_class_addr` operaration gets the address of a particular
+    derived class given a non-virtual base class pointer. The offset in bytes
+    of the base class must be passed in, similar to `cir.base_class_addr`, but
+    going into the other direction. This means lowering to a negative offset.
+
+    The operation contains a flag for whether or not the operand may be nullptr.
+    That depends on the context and cannot be known by the operation, and that
+    information affects how the operation is lowered.
+
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid derived class for the object, the
+    behavior is undefined.
+
+    Example:
+    ```c++
+    class A {};
+    class B : public A {};
+
+    B *getAsB(A *a) {
+      return static_cast<B*>(a);
+    }
+    ```
+
+    leads to
+    ```mlir
+      %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
+      %3 = cir.base_class_addr %2 : !cir.ptr<!rec_B> [0] -> !cir.ptr<!rec_A>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "base class pointer", [MemRead]>:$base_addr,
+    IndexAttr:$offset, UnitAttr:$assume_not_null);
+
+  let results = (outs Res<CIR_PointerType, "">:$derived_addr);
+
+  let assemblyFormat = [{
+      $base_addr `:` qualified(type($base_addr))
+      (`nonnull` $assume_not_null^)?
+      ` ` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
   }];
 }
 
@@ -4090,6 +4187,57 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ObjSizeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
+  let summary = "Implements the llvm.objsize builtin";
+  let description = [{
+    The `cir.objsize` operation is designed to provide information to the
+    optimizer to determine whether a) an operation (like memcpy) will
+    overflow a buffer that corresponds to an object, or b) that a runtime
+    check for overflow isn’t necessary. An object in this context means an
+    allocation of a specific class, structure, array, or other object.
+
+    When the `min` attribute is present, the operation returns the minimum
+    guaranteed accessible size. When absent (max mode), it returns the maximum
+    possible object size. Corresponds to `llvm.objectsize`'s `min` argument.
+    
+    The `dynamic` attribute determines if the value should be evaluated at
+    runtime. Corresponds to `llvm.objectsize`'s `dynamic` argument.
+
+    The `nullunknown` attribute controls how null pointers are handled. When
+    present, null pointers are treated as having unknown size. When absent,
+    null pointers are treated as having 0 size (in min mode) or -1 size
+    (in max mode). Corresponds to `llvm.objectsize`'s `nullunknown` argument.
+
+    Example:
+
+    ```mlir
+    %size = cir.objsize min %ptr : !cir.ptr<i32> -> i64
+    %dsize = cir.objsize max dynamic %ptr : !cir.ptr<i32> -> i64
+    %nsize = cir.objsize min nullunknown %ptr : !cir.ptr<i32> -> i64
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$ptr,
+    UnitAttr:$min,
+    UnitAttr:$nullunknown,
+    UnitAttr:$dynamic
+  );
+
+  let results = (outs CIR_AnyFundamentalIntType:$result);
+
+  let assemblyFormat = [{
+      (`min` $min^) : (`max`)?
+      (`nullunknown` $nullunknown^)?
+      (`dynamic` $dynamic^)?
+      $ptr `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // PtrDiffOp
 //===----------------------------------------------------------------------===//
 
@@ -4171,10 +4319,30 @@ def CIR_ATanOp : CIR_UnaryFPToFPBuiltinOp<"atan", "ATanOp"> {
   }];
 }
 
+def CIR_CeilOp : CIR_UnaryFPToFPBuiltinOp<"ceil", "FCeilOp"> {
+  let summary = "Computes the ceiling of the specified value";
+  let description = [{
+    `cir.ceil` computes the ceiling of a given value and returns a result
+    of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_CosOp : CIR_UnaryFPToFPBuiltinOp<"cos", "CosOp"> {
   let summary = "Computes the floating-point cosine value";
   let description = [{
     `cir.cos` computes the cosine of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_ExpOp : CIR_UnaryFPToFPBuiltinOp<"exp", "ExpOp"> {
+  let summary = "Computes the floating-point base-e exponential value";
+  let description = [{
+    `cir.exp` computes the exponential of a floating-point operand and returns
     a result of the same type.
 
     Floating-point exceptions are ignored, and it does not set `errno`.
@@ -4726,6 +4894,40 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
     $mem_order $ptr
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// BlockAddressOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
+  let summary = "Get the address of a cir.label within a function";
+  let description = [{
+    The `cir.blockaddress` operation takes a function name and a label and
+    produces a pointer value that represents the address of that cir.label
+    within the specified function.
+
+    This operation models GCC's "labels as values" extension (`&&label`), which
+    allows taking the address of a local label and using it as a computed
+    jump target (e.g., with `goto *addr;`).
+
+    Example:
+    ```mlir
+    %1 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
+                                                          {alignment = 8 : i64}
+    %addr = cir.block_address <@c, "label1"> : !cir.ptr<!cir.void>
+    cir.store align(8) %addr, %1 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+    cir.br ^bb1
+   ^bb1:
+    cir.label "label"
+    ```
+  }];
+
+  let arguments = (ins CIR_BlockAddrInfoAttr:$block_addr_info);
+  let results = (outs CIR_VoidPtrType:$addr);
+  let assemblyFormat = [{
+    $block_addr_info `:` qualified(type($addr)) attr-dict
   }];
 }
 

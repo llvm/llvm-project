@@ -160,6 +160,57 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInst;
 }
 
+static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
+                                        const CallExpr *E) {
+  Value *Op0 = CGF.EmitScalarExpr(E->getArg(0));
+  QualType Op0Ty = E->getArg(0)->getType();
+  llvm::Type *ResType = CGF.FloatTy;
+  uint64_t NumElements = 0;
+  if (Op0->getType()->isVectorTy()) {
+    NumElements =
+        E->getArg(0)->getType()->castAs<clang::VectorType>()->getNumElements();
+    ResType =
+        llvm::VectorType::get(ResType, ElementCount::getFixed(NumElements));
+  }
+  if (!Op0Ty->hasUnsignedIntegerRepresentation())
+    llvm_unreachable(
+        "f16tof32 operand must have an unsigned int representation");
+
+  if (CGF.CGM.getTriple().isDXIL())
+    return CGF.Builder.CreateIntrinsic(ResType, Intrinsic::dx_legacyf16tof32,
+                                       ArrayRef<Value *>{Op0}, nullptr,
+                                       "hlsl.f16tof32");
+
+  if (CGF.CGM.getTriple().isSPIRV()) {
+    // We use the SPIRV UnpackHalf2x16 operation to avoid the need for the
+    // Int16 and Float16 capabilities
+    auto UnpackType =
+        llvm::VectorType::get(CGF.FloatTy, ElementCount::getFixed(2));
+    if (NumElements == 0) {
+      // a scalar input - simply extract the first element of the unpacked
+      // vector
+      Value *Unpack = CGF.Builder.CreateIntrinsic(
+          UnpackType, Intrinsic::spv_unpackhalf2x16, ArrayRef<Value *>{Op0});
+      return CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
+    } else {
+      // a vector input - build a congruent output vector by iterating through
+      // the input vector calling unpackhalf2x16 for each element
+      Value *Result = PoisonValue::get(ResType);
+      for (uint64_t i = 0; i < NumElements; i++) {
+        Value *InVal = CGF.Builder.CreateExtractElement(Op0, i);
+        Value *Unpack = CGF.Builder.CreateIntrinsic(
+            UnpackType, Intrinsic::spv_unpackhalf2x16,
+            ArrayRef<Value *>{InVal});
+        Value *Res = CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
+        Result = CGF.Builder.CreateInsertElement(Result, Res, i);
+      }
+      return Result;
+    }
+  }
+
+  llvm_unreachable("Intrinsic F16ToF32 not supported by target architecture");
+}
+
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
                                LValue &Stride) {
   // Figure out the stride of the buffer elements from the handle type.
@@ -578,6 +629,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getDegreesIntrinsic(),
         ArrayRef<Value *>{X}, nullptr, "hlsl.degrees");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
+    return handleElementwiseF16ToF32(*this, E);
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

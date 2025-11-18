@@ -59,6 +59,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVEmitIntrinsicsPass(PR);
   initializeSPIRVEmitNonSemanticDIPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
+  initializeSPIRVPrepareGlobalsPass(PR);
   initializeSPIRVStripConvergentIntrinsicsPass(PR);
 }
 
@@ -172,6 +173,7 @@ void SPIRVPassConfig::addIRPasses() {
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
+  addPass(createSPIRVPrepareGlobalsPass());
 }
 
 void SPIRVPassConfig::addISelPrepare() {
@@ -244,7 +246,8 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
     cl::Optional, cl::init(false));
 
 void SPIRVPassConfig::addPreEmitPass() {
-  if (SPVEnableNonSemanticDI) {
+  if (SPVEnableNonSemanticDI ||
+      getSPIRVTargetMachine().getTargetTriple().getVendor() == Triple::AMD) {
     addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
   }
 }

@@ -23,7 +23,7 @@ namespace {
 
 // Whether we're able to compile
 TEST(PostOrderIteratorTest, Compiles) {
-  typedef SmallPtrSet<void *, 4> ExtSetTy;
+  using ExtSetTy = SmallPtrSet<void *, 4>;
 
   // Tests that template specializations are kept up to date
   void *Null = nullptr;

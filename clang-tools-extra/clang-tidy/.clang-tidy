@@ -1,4 +1,6 @@
 InheritParentConfig: true
+HeaderFilterRegex: 'clang-tools-extra/clang-tidy'
+ExcludeHeaderFilterRegex: 'include-cleaner|clang-query'
 Checks: >
   bugprone-*,
   -bugprone-assignment-in-if-condition,
@@ -15,7 +17,6 @@ Checks: >
   performance-*,
   -performance-enum-size,
   -performance-no-int-to-ptr,
-  -performance-unnecessary-value-param,
   readability-*,
   -readability-avoid-nested-conditional-operator,
   -readability-braces-around-statements,

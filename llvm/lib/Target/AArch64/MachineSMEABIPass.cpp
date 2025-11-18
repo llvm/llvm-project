@@ -381,6 +381,17 @@ static void setPhysLiveRegs(LiveRegUnits &LiveUnits, LiveRegs PhysLiveRegs) {
     LiveUnits.addReg(AArch64::W0_HI);
 }
 
+[[maybe_unused]] bool isCallStartOpcode(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::TLSDESC_CALLSEQ:
+  case AArch64::TLSDESC_AUTH_CALLSEQ:
+  case AArch64::ADJCALLSTACKDOWN:
+    return true;
+  default:
+    return false;
+  }
+}
+
 FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
   assert((SMEFnAttrs.hasAgnosticZAInterface() || SMEFnAttrs.hasZT0State() ||
           SMEFnAttrs.hasZAState()) &&
@@ -424,8 +435,7 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       // Note: We treat Agnostic ZA as inout_za with an alternate save/restore.
       auto [NeededState, InsertPt] = getZAStateBeforeInst(
           *TRI, MI, /*ZAOffAtReturn=*/SMEFnAttrs.hasPrivateZAInterface());
-      assert((InsertPt == MBBI ||
-              InsertPt->getOpcode() == AArch64::ADJCALLSTACKDOWN) &&
+      assert((InsertPt == MBBI || isCallStartOpcode(InsertPt->getOpcode())) &&
              "Unexpected state change insertion point!");
       // TODO: Do something to avoid state changes where NZCV is live.
       if (MBBI == FirstTerminatorInsertPt)
@@ -832,6 +842,7 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
           .addReg(TPIDR2EL0)
           .addImm(ZeroZA ? 1 : 0)
+          .addImm(/*ZeroZT0=*/false)
           .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
           .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
   if (ZeroZA)

@@ -101,7 +101,7 @@ int main(int, char **argv) {
     return s->f() && 0;
 
   case 'n':
-    // CHECK-NEW: misaligned.cpp:[[@LINE+4]]{{(:21)?}}: runtime error: constructor call with pointer from operator new on misaligned address [[PTR:0x[0-9a-f]*]] for type 'S', which requires target minimum assumed 4 byte alignment
+    // CHECK-NEW: misaligned.cpp:[[@LINE+4]]{{(:21)?}}: runtime error: constructor call on misaligned address [[PTR:0x[0-9a-f]*]] for type 'S', which requires 4 byte alignment
     // CHECK-NEW-NEXT: [[PTR]]: note: pointer points here
     // CHECK-NEW-NEXT: {{^ 00 00 00 01 02 03 04  05}}
     // CHECK-NEW-NEXT: {{^             \^}}

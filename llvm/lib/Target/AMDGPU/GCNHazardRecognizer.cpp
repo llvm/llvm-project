@@ -435,7 +435,7 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-using HazardFnResult = enum { HazardFound, HazardExpired, NoHazardFound };
+enum HazardFnResult { HazardFound, HazardExpired, NoHazardFound };
 
 using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
 using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
@@ -643,7 +643,7 @@ int GCNHazardRecognizer::getWaitStatesSinceSetReg(IsHazardFn IsHazard,
 static void addRegUnits(const SIRegisterInfo &TRI, BitVector &BV,
                         MCRegister Reg) {
   for (MCRegUnit Unit : TRI.regunits(Reg))
-    BV.set(Unit);
+    BV.set(static_cast<unsigned>(Unit));
 }
 
 static void addRegsToSet(const SIRegisterInfo &TRI,

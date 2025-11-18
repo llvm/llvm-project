@@ -537,7 +537,8 @@ static bool isSplat(ArrayRef<Value *> VL) {
 /// \param I The instruction to check for commutativity
 /// \param ValWithUses The value whose uses are analyzed for special
 /// patterns
-static bool isCommutative(Instruction *I, Value *ValWithUses) {
+static bool isCommutative(Instruction *I, Value *ValWithUses,
+                          bool IsCopyable = false) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
@@ -546,7 +547,7 @@ static bool isCommutative(Instruction *I, Value *ValWithUses) {
             !ValWithUses->hasNUsesOrMore(UsesLimit) &&
             all_of(
                 ValWithUses->uses(),
-                [](const Use &U) {
+                [&](const Use &U) {
                   // Commutative, if icmp eq/ne sub, 0
                   CmpPredicate Pred;
                   if (match(U.getUser(),
@@ -555,10 +556,11 @@ static bool isCommutative(Instruction *I, Value *ValWithUses) {
                     return true;
                   // Commutative, if abs(sub nsw, true) or abs(sub, false).
                   ConstantInt *Flag;
+                  auto *I = dyn_cast<BinaryOperator>(U.get());
                   return match(U.getUser(),
                                m_Intrinsic<Intrinsic::abs>(
                                    m_Specific(U.get()), m_ConstantInt(Flag))) &&
-                         (!cast<Instruction>(U.get())->hasNoSignedWrap() ||
+                         ((!IsCopyable && I && !I->hasNoSignedWrap()) ||
                           Flag->isOne());
                 })) ||
            (BO->getOpcode() == Instruction::FSub &&
@@ -3172,7 +3174,8 @@ public:
         bool IsInverseOperation = false;
         if (S.isCopyableElement(VL[Lane])) {
           // The value is a copyable element.
-          IsInverseOperation = !isCommutative(MainOp, VL[Lane]);
+          IsInverseOperation =
+              !isCommutative(MainOp, VL[Lane], /*IsCopyable=*/true);
         } else {
           assert(I && "Expected instruction");
           auto [SelectedOp, Ops] = convertTo(I, S);
@@ -4883,6 +4886,8 @@ private:
       assert(hasValidDependencies() &&
              "increment of unscheduled deps would be meaningless");
       UnscheduledDeps += Incr;
+      assert(UnscheduledDeps >= 0 &&
+             "Expected valid number of unscheduled deps");
       return UnscheduledDeps;
     }
 
@@ -5345,6 +5350,29 @@ private:
         // Check all tree entries, if they have operands replaced by copyable
         // data.
         for (TreeEntry *TE : Entries) {
+          unsigned Inc = 0;
+          bool IsNonSchedulableWithParentPhiNode =
+              TE->doesNotNeedToSchedule() && TE->UserTreeIndex &&
+              TE->UserTreeIndex.UserTE->hasState() &&
+              TE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
+              TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
+          // Count the number of unique phi nodes, which are the parent for
+          // parent entry, and exit, if all the unique phis are processed.
+          if (IsNonSchedulableWithParentPhiNode) {
+            SmallPtrSet<Value *, 4> ParentsUniqueUsers;
+            const TreeEntry *ParentTE = TE->UserTreeIndex.UserTE;
+            for (Value *V : ParentTE->Scalars) {
+              auto *PHI = dyn_cast<PHINode>(V);
+              if (!PHI)
+                continue;
+              if (ParentsUniqueUsers.insert(PHI).second &&
+                  is_contained(PHI->incoming_values(), User))
+                ++Inc;
+            }
+          } else {
+            Inc = 1;
+          }
+
           // Check if the user is commutative.
           // The commutatives are handled later, as their operands can be
           // reordered.
@@ -5360,11 +5388,11 @@ private:
             if (!getScheduleCopyableData(EI, Op))
               continue;
             // Found copyable operand - continue.
-            ++OpCnt;
+            OpCnt += Inc;
             continue;
           }
-          ++PotentiallyReorderedEntriesCount.try_emplace(TE, 0)
-                .first->getSecond();
+          PotentiallyReorderedEntriesCount.try_emplace(TE, 0)
+              .first->getSecond() += Inc;
         }
       }
       if (PotentiallyReorderedEntriesCount.empty())
@@ -5374,22 +5402,45 @@ private:
                       });
       // Check the commutative/cmp entries.
       for (auto &P : PotentiallyReorderedEntriesCount) {
+        SmallPtrSet<Value *, 4> ParentsUniqueUsers;
+        bool IsNonSchedulableWithParentPhiNode =
+            P.first->doesNotNeedToSchedule() && P.first->UserTreeIndex &&
+            P.first->UserTreeIndex.UserTE->hasState() &&
+            P.first->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
+            P.first->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
         auto *It = find(P.first->Scalars, User);
-        assert(It != P.first->Scalars.end() && "User is not in the tree entry");
-        int Lane = std::distance(P.first->Scalars.begin(), It);
-        assert(Lane >= 0 && "Lane is not found");
-        if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
-          Lane = P.first->ReorderIndices[Lane];
-        assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
-               "Couldn't find extract lane");
-        SmallVector<unsigned> OpIndices;
-        for (unsigned OpIdx :
-             seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
-                 P.first->getMainOp()))) {
-          if (P.first->getOperand(OpIdx)[Lane] == Op &&
-              getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
-            --P.getSecond();
-        }
+        do {
+          assert(It != P.first->Scalars.end() &&
+                 "User is not in the tree entry");
+          int Lane = std::distance(P.first->Scalars.begin(), It);
+          assert(Lane >= 0 && "Lane is not found");
+          if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
+            Lane = P.first->ReorderIndices[Lane];
+          assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
+                 "Couldn't find extract lane");
+          // Count the number of unique phi nodes, which are the parent for
+          // parent entry, and exit, if all the unique phis are processed.
+          if (IsNonSchedulableWithParentPhiNode) {
+            const TreeEntry *ParentTE = P.first->UserTreeIndex.UserTE;
+            Value *User = ParentTE->Scalars[Lane];
+            if (!ParentsUniqueUsers.insert(User).second) {
+              It =
+                  find(make_range(std::next(It), P.first->Scalars.end()), User);
+              continue;
+            }
+          }
+          for (unsigned OpIdx :
+               seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
+                   P.first->getMainOp()))) {
+            if (P.first->getOperand(OpIdx)[Lane] == Op &&
+                getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
+              --P.getSecond();
+          }
+          // If parent node is schedulable, it will be handled correctly.
+          if (!IsNonSchedulableWithParentPhiNode)
+            break;
+          It = find(make_range(std::next(It), P.first->Scalars.end()), User);
+        } while (It != P.first->Scalars.end());
       }
       return all_of(PotentiallyReorderedEntriesCount,
                     [&](const std::pair<const TreeEntry *, unsigned> &P) {
@@ -5655,6 +5706,8 @@ private:
                   Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
                   Bundle->getTreeEntry()->UserTreeIndex &&
                   Bundle->getTreeEntry()->UserTreeIndex.UserTE->hasState() &&
+                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->State !=
+                      TreeEntry::SplitVectorize &&
                   Bundle->getTreeEntry()->UserTreeIndex.UserTE->getOpcode() ==
                       Instruction::PHI;
               // Count the number of unique phi nodes, which are the parent for
@@ -5663,8 +5716,11 @@ private:
                 const TreeEntry *ParentTE =
                     Bundle->getTreeEntry()->UserTreeIndex.UserTE;
                 Value *User = ParentTE->Scalars[Lane];
-                if (!ParentsUniqueUsers.insert(User).second)
-                  break;
+                if (!ParentsUniqueUsers.insert(User).second) {
+                  It = std::find(std::next(It),
+                                 Bundle->getTreeEntry()->Scalars.end(), In);
+                  continue;
+                }
               }
 
               for (unsigned OpIdx :
@@ -8829,7 +8885,6 @@ void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
-  SmallPtrSet<Value *, 4> ExternalUsers;
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -10770,10 +10825,11 @@ class InstructionsCompatibilityAnalysis {
   /// Checks if the opcode is supported as the main opcode for copyable
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
-    return Opcode == Instruction::Add || Opcode == Instruction::LShr ||
-           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
-           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
-           Opcode == Instruction::Or || Opcode == Instruction::Xor;
+    return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
+           Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
+           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+           Opcode == Instruction::And || Opcode == Instruction::Or ||
+           Opcode == Instruction::Xor;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10833,8 +10889,12 @@ class InstructionsCompatibilityAnalysis {
     for (const auto &P : Candidates) {
       if (P.second.size() < BestOpcodeNum)
         continue;
+      // If have inner dependencies - skip.
+      if (any_of(P.second,
+                 [&](Instruction *I) { return Operands.contains(I); }))
+        continue;
       for (Instruction *I : P.second) {
-        if (IsSupportedInstruction(I, AnyUndef) && !Operands.contains(I)) {
+        if (IsSupportedInstruction(I, AnyUndef)) {
           MainOp = I;
           BestOpcodeNum = P.second.size();
           break;
@@ -11094,6 +11154,7 @@ public:
           getWidenedType(S.getMainOp()->getType(), VL.size());
       switch (MainOpcode) {
       case Instruction::Add:
+      case Instruction::Sub:
       case Instruction::LShr:
       case Instruction::Shl:
       case Instruction::SDiv:
@@ -17076,6 +17137,16 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     }
     return false;
   };
+  auto CheckNonSchedulableOrdering = [&](const TreeEntry *E,
+                                         Instruction *InsertPt) {
+    return TEUseEI && TEUseEI.UserTE && TEUseEI.UserTE->hasCopyableElements() &&
+           !TEUseEI.UserTE->isCopyableElement(
+               const_cast<Instruction *>(TEInsertPt)) &&
+           isUsedOutsideBlock(const_cast<Instruction *>(TEInsertPt)) &&
+           InsertPt->getNextNode() == TEInsertPt &&
+           (!E->hasCopyableElements() || !E->isCopyableElement(InsertPt) ||
+            !isUsedOutsideBlock(InsertPt));
+  };
   for (Value *V : VL) {
     if (isConstant(V) || !VisitedValue.insert(V).second)
       continue;
@@ -17172,6 +17243,11 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       // The node is reused - exit.
       if (CheckAndUseSameNode(TEPtr))
         break;
+      // The parent node is copyable with last inst used outside? And the last
+      // inst is the next inst for the lastinst of TEPtr? Exit, if yes, to
+      // preserve def-use chain.
+      if (CheckNonSchedulableOrdering(UseEI.UserTE, InsertPt))
+        continue;
       VToTEs.insert(TEPtr);
     }
     if (ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V); !VTEs.empty()) {
@@ -17214,7 +17290,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         if (none_of(TE->CombinedEntriesWithIndices,
                     [&](const auto &P) { return P.first == VTE->Idx; })) {
           Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
-          if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
+          if (&LastBundleInst == TEInsertPt ||
+              !CheckOrdering(&LastBundleInst) ||
+              CheckNonSchedulableOrdering(VTE, &LastBundleInst))
             continue;
         }
         // The node is reused - exit.
@@ -19930,8 +20008,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         V = ::propagateMetadata(I, E->Scalars);
         // Drop nuw flags for abs(sub(commutative), true).
         if (!MinBWs.contains(E) && ShuffleOrOp == Instruction::Sub &&
-            any_of(E->Scalars, [](Value *V) {
-              return isa<PoisonValue>(V) || isCommutative(cast<Instruction>(V));
+            any_of(E->Scalars, [E](Value *V) {
+              return isa<PoisonValue>(V) ||
+                     (E->hasCopyableElements() && E->isCopyableElement(V)) ||
+                     isCommutative(cast<Instruction>(V));
             }))
           I->setHasNoUnsignedWrap(/*b=*/false);
       }
@@ -20335,8 +20415,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           // Drop nuw flags for abs(sub(commutative), true).
           if (auto *I = dyn_cast<Instruction>(Vec);
               I && Opcode == Instruction::Sub && !MinBWs.contains(E) &&
-              any_of(E->Scalars, [](Value *V) {
+              any_of(E->Scalars, [E](Value *V) {
                 if (isa<PoisonValue>(V))
+                  return false;
+                if (E->hasCopyableElements() && E->isCopyableElement(V))
                   return false;
                 auto *IV = cast<Instruction>(V);
                 return IV->getOpcode() == Instruction::Sub && isCommutative(IV);
@@ -21260,6 +21342,31 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         return false;
       }))
     return std::nullopt;
+  if (S.areInstructionsWithCopyableElements() && EI && EI.UserTE->hasState() &&
+      EI.UserTE->hasCopyableElements() &&
+      EI.UserTE->getMainOp()->getParent() == S.getMainOp()->getParent() &&
+      all_of(VL, [&](Value *V) {
+        if (S.isCopyableElement(V))
+          return true;
+        return isUsedOutsideBlock(V);
+      }))
+    return std::nullopt;
+  // If any instruction is used outside block only and its operand is placed
+  // immediately before it, do not schedule, it may cause wrong def-use chain.
+  if (S.areInstructionsWithCopyableElements() && any_of(VL, [&](Value *V) {
+        if (isa<PoisonValue>(V) || S.isCopyableElement(V))
+          return false;
+        if (isUsedOutsideBlock(V)) {
+          for (Value *Op : cast<Instruction>(V)->operands()) {
+            auto *I = dyn_cast<Instruction>(Op);
+            if (!I)
+              continue;
+            return SLP->isVectorized(I) && I->getNextNode() == V;
+          }
+        }
+        return false;
+      }))
+    return std::nullopt;
   bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
        all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {
@@ -21479,7 +21586,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     }
     ScheduledBundlesList.pop_back();
     SmallVector<ScheduleData *> ControlDependentMembers;
-    SmallPtrSet<Instruction *, 4> Visited;
     for (Value *V : VL) {
       if (S.isNonSchedulable(V))
         continue;
@@ -21638,7 +21744,18 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
            "new ScheduleData already in scheduling region");
     SD->init(SchedulingRegionID, I);
 
+    auto CanIgnoreLoad = [](const Instruction *I) {
+      const auto *LI = dyn_cast<LoadInst>(I);
+      // If there is a simple load marked as invariant, we can ignore it.
+      // But, in the (unlikely) case of non-simple invariant load,
+      // we should not ignore it.
+      return LI && LI->isSimple() &&
+             LI->getMetadata(LLVMContext::MD_invariant_load);
+    };
+
     if (I->mayReadOrWriteMemory() &&
+        // Simple InvariantLoad does not depend on other memory accesses.
+        !CanIgnoreLoad(I) &&
         (!isa<IntrinsicInst>(I) ||
          (cast<IntrinsicInst>(I)->getIntrinsicID() != Intrinsic::sideeffect &&
           cast<IntrinsicInst>(I)->getIntrinsicID() !=

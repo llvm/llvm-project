@@ -582,7 +582,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
-        return U.onlyFirstLaneUsed(DefR);
+        return U.usesFirstLaneOnly(DefR);
       });
 
       // Update each build vector user that currently has DefR as its only

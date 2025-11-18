@@ -18,9 +18,6 @@
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/Sanitizers.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -1209,6 +1206,16 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/true,
                                CCE->requiresZeroInitialization());
+
+    // For MSVC vector deleting destructors support we record that for the class
+    // new[] was called. We try to optimize the code size and only emit vector
+    // deleting destructors when they are required. Vector deleting destructors
+    // are required for delete[] call but MSVC triggers emission of them
+    // whenever new[] is called for an object of the class and we do the same
+    // for compatibility.
+    if (CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+            CGM.getContext().getLangOpts()))
+      CGM.requireVectorDestructorDefinition(Ctor->getParent());
     return;
   }
 
@@ -1752,17 +1759,6 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       allocator->isReservedGlobalPlacementOperator())
     result = Builder.CreateLaunderInvariantGroup(result);
 
-  // Check the default alignment of the type and why. Users may incorrectly
-  // return misaligned memory from a replaced operator new without knowing
-  // about default alignment.
-  TypeCheckKind checkKind = CodeGenFunction::TCK_ConstructorCall;
-  const TargetInfo &TI = getContext().getTargetInfo();
-  unsigned DefaultTargetAlignment = TI.getNewAlign() / TI.getCharWidth();
-  if (SanOpts.has(SanitizerKind::Alignment) &&
-      (DefaultTargetAlignment >
-       CGM.getContext().getTypeAlignInChars(allocType).getQuantity()))
-    checkKind = CodeGenFunction::TCK_ConstructorCallMinimumAlign;
-
   // Emit sanitizer checks for pointer value now, so that in the case of an
   // array it was checked only once and not at each constructor call. We may
   // have already checked that the pointer is non-null.
@@ -1770,9 +1766,10 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // we'll null check the wrong pointer here.
   SanitizerSet SkippedChecks;
   SkippedChecks.set(SanitizerKind::Null, nullCheck);
-  EmitTypeCheck(
-      checkKind, E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-      result, allocType, result.getAlignment(), SkippedChecks, numElements);
+  EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall,
+                E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+                result, allocType, result.getAlignment(), SkippedChecks,
+                numElements);
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
@@ -1925,10 +1922,8 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
 /// Emit the code for deleting a single object.
 /// \return \c true if we started emitting UnconditionalDeleteBlock, \c false
 /// if not.
-static bool EmitObjectDelete(CodeGenFunction &CGF,
-                             const CXXDeleteExpr *DE,
-                             Address Ptr,
-                             QualType ElementType,
+static bool EmitObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
+                             Address Ptr, QualType ElementType,
                              llvm::BasicBlock *UnconditionalDeleteBlock) {
   // C++11 [expr.delete]p3:
   //   If the static type of the object to be deleted is different from its
@@ -2121,6 +2116,42 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   // We might be deleting a pointer to array.
   DeleteTy = getContext().getBaseElementType(DeleteTy);
   Ptr = Ptr.withElementType(ConvertTypeForMem(DeleteTy));
+
+  if (E->isArrayForm() &&
+      CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+          CGM.getContext().getLangOpts())) {
+    if (auto *RD = DeleteTy->getAsCXXRecordDecl()) {
+      auto *Dtor = RD->getDestructor();
+      if (Dtor && Dtor->isVirtual()) {
+        llvm::Value *NumElements = nullptr;
+        llvm::Value *AllocatedPtr = nullptr;
+        CharUnits CookieSize;
+        llvm::BasicBlock *BodyBB = createBasicBlock("vdtor.call");
+        llvm::BasicBlock *DoneBB = createBasicBlock("vdtor.nocall");
+        // Check array cookie to see if the array has length 0. Don't call
+        // the destructor in that case.
+        CGM.getCXXABI().ReadArrayCookie(*this, Ptr, E, DeleteTy, NumElements,
+                                        AllocatedPtr, CookieSize);
+
+        auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
+        llvm::Value *IsEmpty = Builder.CreateICmpEQ(
+            NumElements, llvm::ConstantInt::get(CondTy, 0));
+        Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
+
+        // Delete cookie for empty array.
+        const FunctionDecl *OperatorDelete = E->getOperatorDelete();
+        EmitBlock(DoneBB);
+        EmitDeleteCall(OperatorDelete, AllocatedPtr, DeleteTy, NumElements,
+                       CookieSize);
+        EmitBranch(DeleteEnd);
+
+        EmitBlock(BodyBB);
+        if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
+          EmitBlock(DeleteEnd);
+        return;
+      }
+    }
+  }
 
   if (E->isArrayForm()) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);

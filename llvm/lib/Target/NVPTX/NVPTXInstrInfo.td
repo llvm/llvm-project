@@ -683,7 +683,7 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rn_relu  : CVT_TO_TF32<"rn.relu">;
   defm CVT_to_tf32_rz_relu  : CVT_TO_TF32<"rz.relu">;
   defm CVT_to_tf32_rna      : CVT_TO_TF32<"rna", [hasPTX<70>, hasSM<80>]>;
-  defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [hasPTX<81>, hasSM<89>]>;
+  defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [hasPTX<81>, hasSM<80>]>;
 
   defm CVT_to_tf32_rn_satf : CVT_TO_TF32<"rn.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
@@ -2267,7 +2267,7 @@ def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, CvtRN)>;
 def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE)>;
 // fpextend bf16 -> f32
-def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
+def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ, hasPTX<78>, hasSM<90>]>;
 def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE)>, Requires<[hasPTX<71>, hasSM<80>]>;
 
 // fpextend f16 -> f64

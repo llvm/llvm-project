@@ -14,15 +14,14 @@ attributes(global) subroutine devsub()
   integer :: smalltime
   integer(4) :: res, offset
   integer(8) :: resl
+  real(2) :: r2a(2)
+  real(2) :: tmp2(2)
 
   integer :: tid
   tid = threadIdx%x
 
   call syncthreads()
   call syncwarp(1)
-  call threadfence()
-  call threadfence_block()
-  call threadfence_system()
   ret = syncthreads_and(1)
   res = syncthreads_and(tid > offset)
   ret = syncthreads_count(1)
@@ -34,6 +33,7 @@ attributes(global) subroutine devsub()
   al = atomicadd(al, 1_8)
   af = atomicadd(af, 1.0_4)
   ad = atomicadd(ad, 1.0_8)
+  ai = atomicadd(r2a, tmp2)
   
   ai = atomicsub(ai, 1_4)
   al = atomicsub(al, 1_8)
@@ -102,32 +102,30 @@ end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 ! CHECK: nvvm.barrier0
-! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
-! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.sys() fastmath<contract> : () -> ()
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%[[CONV]])
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%[[CONV]]) fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%[[CONV]]) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %[[CONV]] -> i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
 ! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
 ! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<2xf16>
 
 ! CHECK: %{{.*}} = llvm.atomicrmw sub  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw sub  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
@@ -215,10 +213,10 @@ end
 ! CHECK-LABEL: func.func @_QPhost1()
 ! CHECK: cuf.kernel
 ! CHECK: nvvm.barrier0
-! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
-! CHECK: fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-! CHECK: fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-! CHECK: fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
+! CHECK: nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
 
 attributes(device) subroutine testMatch()
   integer :: a, ipred, mask, v32
@@ -436,11 +434,11 @@ end subroutine
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
-! CHECK: %{{.*}} = nvvm.mbarrier.arrive.shared %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
+! CHECK: %{{.*}} = nvvm.mbarrier.arrive %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
-! CHECK: nvvm.mbarrier.arrive.expect_tx %[[SHARED_PTR]], %{{.*}} : !llvm.ptr<3>, i32
+! CHECK: %{{.*}} = nvvm.inline_ptx "mbarrier.arrive.expect_tx.release.cta.shared::cta.b64 %{{.*}}, [%{{.*}}], %{{.*}};" ro(%{{.*}}, %{{.*}} : !llvm.ptr<3>, i32) -> i64
 
 
 attributes(global) subroutine test_fence()
@@ -479,7 +477,7 @@ end subroutine
 ! CHECK: %[[DST_7:.*]] = llvm.addrspacecast %[[DST_PTR]] : !llvm.ptr to !llvm.ptr<7>
 ! CHECK: %[[SRC_PTR:.*]] = fir.convert %[[SRC]] : (!fir.ref<f64>) -> !llvm.ptr
 ! CHECK: %[[SRC_3:.*]] = llvm.addrspacecast %[[SRC_PTR]] : !llvm.ptr to !llvm.ptr<1>
-! CHECK: nvvm.cp.async.bulk.shared.cluster.global %[[DST_7]], %[[SRC_3]], %[[BARRIER_3]], %[[COUNT_LOAD]] : <7>, <1>
+! CHECK: nvvm.cp.async.bulk.shared.cluster.global %[[DST_7]], %[[SRC_3]], %[[BARRIER_3]], %[[COUNT_LOAD]] : !llvm.ptr<7>, <1>
 
 attributes(global) subroutine test_bulk_s2g(a)
   real(8), device :: a(*)
@@ -490,7 +488,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_bulk_s2g
 ! CHECL: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(device) subroutine testAtomicCasLoop(aa, n)
@@ -515,7 +513,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_barrier_try_wait()
 ! CHECK: scf.while
-! CHECK: %{{.*}} = nvvm.inline_ptx ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%{{.*}}], %{{.*}}, %{{.*}}; selp.b32 %{{.*}}, 1, 0, p;" ro(%{{.*}}, %{{.*}}, %c1000000{{.*}} : !llvm.ptr, i64, i32) -> i32
+! CHECK: %{{.*}} = nvvm.inline_ptx "{\0A  .reg .pred p;\0A  mbarrier.try_wait.shared.b64 p, [%{{.*}}], %{{.*}}, %{{.*}};\0A  selp.b32 %{{.*}}, 1, 0, p;\0A}" ro(%{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr, i64, i32) -> i32
 
 attributes(global) subroutine test_barrier_try_wait_sleep()
   integer :: istat
@@ -526,7 +524,7 @@ attributes(global) subroutine test_barrier_try_wait_sleep()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_barrier_try_wait_sleep()
-! CHECK: %{{.*}} = nvvm.inline_ptx ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%{{.*}}], %{{.*}}, %{{.*}}; selp.b32 %0, 1, 0, p;" ro(%{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr, i64, i32) -> i32
+! CHECK: %{{.*}} = nvvm.inline_ptx "{\0A  .reg .pred p;\0A  mbarrier.try_wait.shared.b64 p, [%{{.*}}], %{{.*}}, %{{.*}};\0A  selp.b32 %{{.*}}, 1, 0, p;\0A}" ro(%{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr, i64, i32) -> i32
 
 attributes(global) subroutine test_tma_bulk_load_c4(a, n)
   integer(8), shared :: barrier1
@@ -671,7 +669,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_c4
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_c8(c, n)
@@ -684,7 +682,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_c8
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_i4(c, n)
@@ -697,7 +695,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_i4
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_i8(c, n)
@@ -710,7 +708,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_i8
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 
@@ -724,7 +722,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r2
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_r4(c, n)
@@ -737,7 +735,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r4
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_r8(c, n)
@@ -750,5 +748,5 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r8
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0

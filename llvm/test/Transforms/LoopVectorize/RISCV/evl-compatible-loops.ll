@@ -11,8 +11,8 @@ define void @test_wide_integer_induction(ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul <vscale x 2 x i64> [[TMP9]], splat (i64 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP10]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <vscale x 2 x i64> [[TMP9]], splat (i64 1)
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]

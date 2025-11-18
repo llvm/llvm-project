@@ -286,8 +286,8 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   28
 ;
-; Check that at least one is a spilled entry from RBP.
-; Location: Indirect RBP + ...
+; Check that at least one is a spilled entry from SP.
+; Location: Indirect SP + ...
 ; CHECK:        .byte   3
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -307,7 +307,7 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; 1 location
 ; CHECK-NEXT:   .half   1
-; Loc 0: Direct RBP - ofs
+; Loc 0: Direct SP + ofs
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -320,14 +320,14 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; 2 locations
 ; CHECK-NEXT:   .half   2
-; Loc 0: Direct RBP - ofs
+; Loc 0: Direct SP + ofs
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word
-; Loc 1: Direct RBP - ofs
+; Loc 1: Direct SP + ofs
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8

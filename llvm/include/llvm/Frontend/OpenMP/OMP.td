@@ -123,6 +123,8 @@ def OMPC_Collapse : Clause<[Spelling<"collapse">]> {
   let clangClass = "OMPCollapseClause";
   let flangClass = "ScalarIntConstantExpr";
 }
+def OMPC_Collector : Clause<[Spelling<"collector">]> {
+}
 def OMPC_Compare : Clause<[Spelling<"compare">]> {
   let clangClass = "OMPCompareClause";
 }
@@ -185,6 +187,7 @@ def OMPC_DynamicAllocators : Clause<[Spelling<"dynamic_allocators">]> {
   let isValueOptional = true;
 }
 def OMPC_DynGroupprivate : Clause<[Spelling<"dyn_groupprivate">]> {
+  let clangClass = "OMPDynGroupprivateClause";
   let flangClass = "OmpDynGroupprivateClause";
 }
 def OMPC_Enter : Clause<[Spelling<"enter">]> {
@@ -263,6 +266,8 @@ def OMPC_Inclusive : Clause<[Spelling<"inclusive">]> {
 }
 def OMPC_Indirect : Clause<[Spelling<"indirect">]> {
   let flangClass = "OmpIndirectClause";
+}
+def OMPC_Inductor : Clause<[Spelling<"inductor">]> {
 }
 def OMPC_Init : Clause<[Spelling<"init">]> {
   let clangClass = "OMPInitClause";
@@ -748,6 +753,14 @@ def OMP_Critical : Directive<[Spelling<"critical">]> {
   ];
   let association = AS_Block;
   let category = CA_Executable;
+}
+def OMP_DeclareInduction : Directive<[Spelling<"declare_induction">]> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Collector, 60>,
+    VersionedClause<OMPC_Inductor, 60>,
+  ];
+  let association = AS_None;
+  let category = CA_Declarative;
 }
 def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
                                    Spelling<"declare_mapper", 60>]> {

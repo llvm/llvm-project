@@ -919,33 +919,8 @@ bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return true;
 }
 
-static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
-
-  if (F->isVirtual() && !S.getLangOpts().CPlusPlus20) {
-    const SourceLocation &Loc = S.Current->getLocation(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
-    return false;
-  }
-
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
-    return false;
-
-  if (F->isValid() && F->hasBody() && F->isConstexpr())
-    return true;
-
-  const FunctionDecl *DiagDecl = F->getDecl();
-  const FunctionDecl *Definition = nullptr;
-  DiagDecl->getBody(Definition);
-
-  if (!Definition && S.checkingPotentialConstantExpression() &&
-      DiagDecl->isConstexpr()) {
-    return false;
-  }
-
-  // Implicitly constexpr.
-  if (F->isLambdaStaticInvoker())
-    return true;
-
+static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
+                                 const FunctionDecl *DiagDecl) {
   // Bail out if the function declaration itself is invalid.  We will
   // have produced a relevant diagnostic while parsing it, so just
   // note the problematic sub-expression.
@@ -953,11 +928,10 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return Invalid(S, OpPC);
 
   // Diagnose failed assertions specially.
-  if (S.Current->getLocation(OpPC).isMacroID() &&
-      F->getDecl()->getIdentifier()) {
+  if (S.Current->getLocation(OpPC).isMacroID() && DiagDecl->getIdentifier()) {
     // FIXME: Instead of checking for an implementation-defined function,
     // check and evaluate the assert() macro.
-    StringRef Name = F->getDecl()->getName();
+    StringRef Name = DiagDecl->getName();
     bool AssertFailed =
         Name == "__assert_rtn" || Name == "__assert_fail" || Name == "_wassert";
     if (AssertFailed) {
@@ -1004,7 +978,7 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     // for a constant expression. It might be defined at the point we're
     // actually calling it.
     bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
-    bool IsDefined = F->isDefined();
+    bool IsDefined = DiagDecl->isDefined();
     if (!IsDefined && !IsExtern && DiagDecl->isConstexpr() &&
         S.checkingPotentialConstantExpression())
       return false;
@@ -1025,6 +999,35 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   }
 
   return false;
+}
+
+static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
+  if (F->isVirtual() && !S.getLangOpts().CPlusPlus20) {
+    const SourceLocation &Loc = S.Current->getLocation(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
+    return false;
+  }
+
+  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+    return false;
+
+  if (F->isValid() && F->hasBody() && F->isConstexpr())
+    return true;
+
+  const FunctionDecl *DiagDecl = F->getDecl();
+  const FunctionDecl *Definition = nullptr;
+  DiagDecl->getBody(Definition);
+
+  if (!Definition && S.checkingPotentialConstantExpression() &&
+      DiagDecl->isConstexpr()) {
+    return false;
+  }
+
+  // Implicitly constexpr.
+  if (F->isLambdaStaticInvoker())
+    return true;
+
+  return diagnoseCallableDecl(S, OpPC, DiagDecl);
 }
 
 static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
@@ -1445,6 +1448,10 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   }
 
+  // We can't get the field of something that's not a record.
+  if (!Ptr.getFieldDesc()->isRecord())
+    return false;
+
   if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getSize())
     return false;
 
@@ -1498,6 +1505,21 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   }
   return CheckActive(S, OpPC, Ptr, AK_Destroy);
+}
+
+/// Opcode. Check if the function decl can be called at compile time.
+bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
+  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+    return false;
+
+  const FunctionDecl *Definition = nullptr;
+  const Stmt *Body = FD->getBody(Definition);
+
+  if (Definition && Body &&
+      (Definition->isConstexpr() || Definition->hasAttr<MSConstexprAttr>()))
+    return true;
+
+  return diagnoseCallableDecl(S, OpPC, FD);
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {

@@ -291,6 +291,9 @@
       integer(kind=omp_interop_kind)omp_interop_none
       parameter(omp_interop_none=0)
 
+      integer(kind=omp_integer_kind)omp_invalid_device
+      parameter(omp_invalid_device=-2)
+
       interface
 
 !       ***
@@ -485,6 +488,18 @@
           import
           integer (kind=omp_integer_kind) omp_get_device_num
         end function omp_get_device_num
+
+        function omp_get_uid_from_device(device_num) bind(c)
+          import
+          integer (kind=omp_integer_kind), value :: device_num
+          character (len=*) omp_get_uid_from_device
+        end function omp_get_uid_from_device
+
+        function omp_get_device_from_uid(device_uid) bind(c)
+          import
+          character (len=*), value :: device_uid
+          integer (kind=omp_integer_kind) omp_get_device_from_uid
+        end function omp_get_device_from_uid
 
         function omp_pause_resource(kind, device_num) bind(c)
           import
@@ -1159,6 +1174,8 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_initial_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_devices
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_device_num
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_uid_from_device
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_device_from_uid
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_pause_resource
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_pause_resource_all
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_supported_active_levels
@@ -1242,6 +1259,8 @@
 !$omp declare target(omp_get_initial_device )
 !$omp declare target(omp_get_num_devices )
 !$omp declare target(omp_get_device_num )
+!$omp declare target(omp_get_uid_from_device )
+!$omp declare target(omp_get_device_from_uid )
 !$omp declare target(omp_pause_resource )
 !$omp declare target(omp_pause_resource_all )
 !$omp declare target(omp_get_supported_active_levels )

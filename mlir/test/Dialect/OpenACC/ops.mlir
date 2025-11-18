@@ -1,8 +1,8 @@
-// RUN: mlir-opt -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | FileCheck %s --check-prefixes=CHECK,CHECK-3
 // Verify the printed output can be parsed.
-// RUN: mlir-opt -split-input-file %s | mlir-opt  -split-input-file  | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | mlir-opt  -split-input-file  | FileCheck %s --check-prefixes=CHECK,CHECK-3
 // Verify the generic form can be parsed.
-// RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -split-input-file | FileCheck %s
+// RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -split-input-file | FileCheck %s --check-prefixes=CHECK,CHECK-3
 
 func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf32>) -> memref<10x10xf32> {
   %c0 = arith.constant 0 : index
@@ -2140,6 +2140,20 @@ func.func @acc_loop_container() {
 // CHECK:       acc.loop
 // CHECK:       scf.for
 // CHECK:       scf.for
+
+// -----
+
+func.func @acc_unstructured_loop() {
+  acc.loop {
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>], unstructured}
+  return
+}
+
+// CHECK-LABEL: func.func @acc_unstructured_loop
+// CHECK:       acc.loop
+// CHECK:         acc.yield
+// CHECK:       } attributes {independent = [#acc.device_type<none>], unstructured}
 
 // -----
 
