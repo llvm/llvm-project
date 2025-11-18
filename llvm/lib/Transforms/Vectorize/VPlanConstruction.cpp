@@ -190,7 +190,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // recipes.
       if (Br->isConditional()) {
         VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
-        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst,
+        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst, {},
                                  VPIRMetadata(*Inst), Inst->getDebugLoc());
       }
 
@@ -205,7 +205,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       SmallVector<VPValue *> Ops = {getOrCreateVPOperand(SI->getCondition())};
       for (auto Case : SI->cases())
         Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));
-      VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst,
+      VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst, {},
                                VPIRMetadata(*Inst), Inst->getDebugLoc());
       continue;
     }
@@ -255,13 +255,14 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       if (auto *CI = dyn_cast<CastInst>(Inst)) {
         NewR = VPIRBuilder.createScalarCast(CI->getOpcode(), VPOperands[0],
                                             CI->getType(), CI->getDebugLoc(),
-                                            {}, MD);
+                                            VPIRFlags(*CI), MD);
         NewR->setUnderlyingValue(CI);
       } else {
         // Build VPInstruction for any arbitrary Instruction without specific
         // representation in VPlan.
-        NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst, MD,
-                                        Inst->getDebugLoc());
+        NewR =
+            VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
+                                     VPIRFlags(*Inst), MD, Inst->getDebugLoc());
       }
     }
 
