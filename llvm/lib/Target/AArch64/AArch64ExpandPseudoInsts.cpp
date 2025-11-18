@@ -1063,6 +1063,7 @@ AArch64ExpandPseudo::expandCommitZASave(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
+  [[maybe_unused]] auto *RI = MBB.getParent()->getSubtarget().getRegisterInfo();
 
   // Compare TPIDR2_EL0 against 0. Commit ZA if TPIDR2_EL0 is non-zero.
   MachineInstrBuilder Branch =
@@ -1073,20 +1074,24 @@ AArch64ExpandPseudo::expandCommitZASave(MachineBasicBlock &MBB,
   MachineInstrBuilder MIB =
       BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::BL));
   // Copy operands (mainly the regmask) from the pseudo.
-  for (unsigned I = 2; I < MI.getNumOperands(); ++I)
+  for (unsigned I = 3; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
   // Clear TPIDR2_EL0.
   BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::MSR))
       .addImm(AArch64SysReg::TPIDR2_EL0)
       .addReg(AArch64::XZR);
   bool ZeroZA = MI.getOperand(1).getImm() != 0;
+  bool ZeroZT0 = MI.getOperand(2).getImm() != 0;
   if (ZeroZA) {
-    [[maybe_unused]] auto *TRI =
-        MBB.getParent()->getSubtarget().getRegisterInfo();
-    assert(MI.definesRegister(AArch64::ZAB0, TRI) && "should define ZA!");
+    assert(MI.definesRegister(AArch64::ZAB0, RI) && "should define ZA!");
     BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::ZERO_M))
         .addImm(ZERO_ALL_ZA_MASK)
         .addDef(AArch64::ZAB0, RegState::ImplicitDefine);
+  }
+  if (ZeroZT0) {
+    assert(MI.definesRegister(AArch64::ZT0, RI) && "should define ZT0!");
+    BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::ZERO_T))
+        .addDef(AArch64::ZT0);
   }
 
   MI.eraseFromParent();
