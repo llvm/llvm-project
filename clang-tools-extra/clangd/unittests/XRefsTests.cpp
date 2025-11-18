@@ -13,6 +13,7 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "TestWorkspace.h"
 #include "XRefs.h"
 #include "index/MemIndex.h"
 #include "clang/AST/Decl.h"
@@ -2711,6 +2712,36 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
     else
       EXPECT_EQ(Rec.RefIDs, std::nullopt) << T.AnnotatedCode;
   }
+}
+
+TEST(FindReferences, ForwardingInIndex) {
+  Annotations Header(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+    struct Test {
+      [[T^est]](){}
+    };
+  )cpp");
+  Annotations Main(R"cpp(
+    #include "header.hpp"
+    int main() {
+      auto a = std::[[make_unique]]<Test>();
+    }
+  )cpp");
+  TestWorkspace TW;
+  TW.addMainFile("header.hpp", Header.code());
+  TW.addMainFile("main.cpp", Main.code());
+  auto AST = TW.openFile("header.hpp").value();
+  auto Index = TW.index();
+
+  EXPECT_THAT(findReferences(AST, Header.point(), 0, Index.get(),
+                             /*AddContext*/ true)
+                  .References,
+              ElementsAre(rangeIs(Header.range()), rangeIs(Main.range())));
 }
 
 TEST(GetNonLocalDeclRefs, All) {
