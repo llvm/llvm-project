@@ -610,6 +610,32 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   return rv;
 }
 
+RValue CIRGenFunction::emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
+                                                const CallExpr *callExpr,
+                                                bool isDelete) {
+  CallArgList args;
+  emitCallArgs(args, type, callExpr->arguments());
+  // Find the allocation or deallocation function that we're calling.
+  ASTContext &astContext = getContext();
+  DeclarationName name = astContext.DeclarationNames.getCXXOperatorName(
+      isDelete ? OO_Delete : OO_New);
+
+  clang::DeclContextLookupResult lookupResult = astContext.getTranslationUnitDecl()->lookup(name);
+  for (const auto *decl : lookupResult) {
+    if (const auto *funcDecl = dyn_cast<FunctionDecl>(decl)) {
+      if (astContext.hasSameType(funcDecl->getType(), QualType(type, 0))) {
+        // Used for -fsanitize=alloc-token
+        assert(!cir::MissingFeatures::allocToken());
+
+        // Emit the call to operator new/delete.
+        return emitNewDeleteCall(*this, funcDecl, type, args);
+      }
+    }
+  }
+
+  llvm_unreachable("predeclared global operator new/delete is missing");
+}
+
 namespace {
 /// Calls the given 'operator delete' on a single object.
 struct CallObjectDelete final : EHScopeStack::Cleanup {

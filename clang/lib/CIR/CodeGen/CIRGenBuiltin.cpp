@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
@@ -520,6 +521,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::PrefetchOp::create(builder, loc, address, locality, isWrite);
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_operator_new:
+    return emitNewOrDeleteBuiltinCall(
+        e->getCallee()->getType()->castAs<FunctionProtoType>(), e, false);
+  case Builtin::BI__builtin_operator_delete:
+    emitNewOrDeleteBuiltinCall(
+        e->getCallee()->getType()->castAs<FunctionProtoType>(), e, true);
+    return RValue::get(nullptr);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
@@ -559,6 +567,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                std::string("unimplemented builtin call: ") +
                    getContext().BuiltinInfo.getName(builtinID));
   return getUndefRValue(e->getType());
+
 }
 
 static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,

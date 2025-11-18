@@ -2006,6 +2006,7 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   return emitCall(e->getCallee()->getType(), callee, e, returnValue);
 }
 
+
 /// Emit code to compute the specified expression, ignoring the result.
 void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   if (e->isPRValue()) {
