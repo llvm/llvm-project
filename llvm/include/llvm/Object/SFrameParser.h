@@ -90,7 +90,7 @@ public:
                       uint32_t Idx, uint32_t Size, uint64_t Offset)
       : Data(Data), FREType(FREType), Idx(Idx), Size(Size), Offset(Offset) {}
 
-  Error inc();
+  LLVM_ABI Error inc();
   const FrameRowEntry &operator*() const { return FRE; }
 
   friend bool operator==(const FallibleFREIterator &LHS,

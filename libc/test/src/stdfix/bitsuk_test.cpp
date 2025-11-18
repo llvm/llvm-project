@@ -8,7 +8,7 @@
 
 #include "BitsFxTest.h"
 
-#include "llvm-libc-types/stdfix-types.h" // uint_uk_t
+#include "llvm-libc-types/uint_uk_t.h" // uint_uk_t
 #include "src/stdfix/bitsuk.h"
 
 LIST_BITSFX_TESTS(uk, unsigned accum, uint_uk_t, LIBC_NAMESPACE::bitsuk);

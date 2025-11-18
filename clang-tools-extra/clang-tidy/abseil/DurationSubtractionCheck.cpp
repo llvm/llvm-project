@@ -21,7 +21,7 @@ void DurationSubtractionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(
           hasOperatorName("-"),
-          hasLHS(callExpr(callee(functionDecl(DurationConversionFunction())
+          hasLHS(callExpr(callee(functionDecl(durationConversionFunction())
                                      .bind("function_decl")),
                           hasArgument(0, expr().bind("lhs_arg")))))
           .bind("binop"),
@@ -41,7 +41,7 @@ void DurationSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Scale)
     return;
 
-  std::string RhsReplacement =
+  const std::string RhsReplacement =
       rewriteExprFromNumberToDuration(Result, *Scale, Binop->getRHS());
 
   const Expr *LhsArg = Result.Nodes.getNodeAs<Expr>("lhs_arg");

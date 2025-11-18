@@ -252,6 +252,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
 
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
+        if (isa<VPIRPhi>(UI) &&
+            UI->getNumOperands() != UI->getParent()->getNumPredecessors()) {
+          errs() << "Phi-like recipe with different number of operands and "
+                    "predecessors.\n";
+          return false;
+        }
+
         if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
           for (const auto &[IncomingVPV, IncomingVPBB] :
                Phi->incoming_values_and_blocks()) {
@@ -298,11 +305,16 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
     }
-    if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {
-      if (EVL->getOpcode() == VPInstruction::ExplicitVectorLength &&
-          !verifyEVLRecipe(*EVL)) {
-        errs() << "EVL VPValue is not used correctly\n";
-        return false;
+    if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
+      switch (VPI->getOpcode()) {
+      case VPInstruction::ExplicitVectorLength:
+        if (!verifyEVLRecipe(*VPI)) {
+          errs() << "EVL VPValue is not used correctly\n";
+          return false;
+        }
+        break;
+      default:
+        break;
       }
     }
   }

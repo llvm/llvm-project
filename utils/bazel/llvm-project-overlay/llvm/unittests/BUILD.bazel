@@ -423,6 +423,7 @@ cc_test(
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:ObjectYAML",
         "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",

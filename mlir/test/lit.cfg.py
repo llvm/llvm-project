@@ -214,6 +214,11 @@ tools = [
     "not",
 ]
 
+if "Linux" in config.host_os:
+    # TODO: Run only on Linux until we figure out how to build
+    # mlir_apfloat_wrappers in a platform-independent way.
+    tools.extend([add_runtime("mlir_apfloat_wrappers")])
+
 if config.enable_vulkan_runner:
     tools.extend([add_runtime("mlir_vulkan_runtime")])
 

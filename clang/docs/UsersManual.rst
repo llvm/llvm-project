@@ -11,7 +11,7 @@ Introduction
 ============
 
 The Clang Compiler is an open-source compiler for the C family of
-programming languages, aiming to be the best in class implementation of
+programming languages, aiming to be the best-in-class implementation of
 these languages. Clang builds on the LLVM optimizer and code generator,
 allowing it to provide high-quality optimization and code generation
 support for many targets. For more general information, please see the
@@ -56,7 +56,7 @@ migration from GCC to Clang. In most cases, code "just works".
 Clang also provides an alternative driver, :ref:`clang-cl`, that is designed
 to be compatible with the Visual C++ compiler, cl.exe.
 
-In addition to language specific features, Clang has a variety of
+In addition to language-specific features, Clang has a variety of
 features that depend on what CPU architecture or operating system is
 being compiled for. Please see the :ref:`Target-Specific Features and
 Limitations <target_features>` section for more details.
@@ -299,7 +299,7 @@ output format of the diagnostics that it generates.
 
    This option controls the output format of the filename, line number,
    and column printed in diagnostic messages. The options, and their
-   affect on formatting a simple conversion diagnostic, follow:
+   effect on formatting a simple conversion diagnostic, follow:
 
    **clang** (default)
        ::
@@ -360,7 +360,7 @@ output format of the diagnostics that it generates.
          t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat,Format String]
 
    This category can be used by clients that want to group diagnostics
-   by category, so it should be a high level category. We want dozens
+   by category, so it should be a high-level category. We want dozens
    of these, not hundreds or thousands of them.
 
 .. _opt_fsave-optimization-record:
@@ -750,7 +750,7 @@ control the crash diagnostics.
 
   Disable auto-generation of preprocessed source files during a clang crash.
 
-  The -fno-crash-diagnostics flag can be helpful for speeding the process
+  The ``-fno-crash-diagnostics`` flag can be helpful for speeding the process
   of generating a delta reduced test case.
 
 .. option:: -fcrash-diagnostics-dir=<dir>
@@ -779,7 +779,7 @@ Options to Emit Optimization Reports
 ------------------------------------
 
 Optimization reports trace, at a high-level, all the major decisions
-done by compiler transformations. For instance, when the inliner
+made by compiler transformations. For instance, when the inliner
 decides to inline function ``foo()`` into ``bar()``, or the loop unroller
 decides to unroll a loop N times, or the vectorizer decides to
 vectorize a loop body.
@@ -845,11 +845,11 @@ compilations steps.
 
 .. option:: -fproc-stat-report=
 
-  This option requests driver to print used memory and execution time of each
+  This option requests the driver to print used memory and execution time of each
   compilation step. The ``clang`` driver during execution calls different tools,
   like compiler, assembler, linker etc. With this option the driver reports
   total execution time, the execution time spent in user mode and peak memory
-  usage of each the called tool. Value of the option specifies where the report
+  usage of each called tool. Value of the option specifies where the report
   is sent to. If it specifies a regular file, the data are saved to this file in
   CSV format:
 
@@ -869,7 +869,7 @@ compilations steps.
   * peak memory usage in Kb.
 
   It is possible to specify this option without any value. In this case statistics
-  are printed on standard output in human readable format:
+  are printed on standard output in human-readable format:
 
   .. code-block:: console
 
@@ -884,7 +884,7 @@ compilations steps.
 
   You can also use environment variables to control the process statistics reporting.
   Setting ``CC_PRINT_PROC_STAT`` to ``1`` enables the feature, the report goes to
-  stdout in human readable format.
+  stdout in human-readable format.
   Setting ``CC_PRINT_PROC_STAT_FILE`` to a fully qualified file path makes it report
   process statistics to the given file in the CSV format. Specifying a relative
   path will likely lead to multiple files with the same name created in different
@@ -922,7 +922,7 @@ Clang options that don't fit neatly into other categories.
   most filenames can be written to the file without any special formatting.
   Different Make tools will treat different sets of characters as "special"
   and use different conventions for telling the Make tool that the character
-  is actually part of the filename. Normally Clang uses backslash to "escape"
+  is actually part of the filename. Normally, Clang uses backslash to "escape"
   a special character, which is the convention used by GNU Make. The -MV
   option tells Clang to put double-quotes around the entire filename, which
   is the convention used by NMake and Jom.
@@ -957,7 +957,7 @@ Configuration files
 
 Configuration files group command-line options and allow all of them to be
 specified just by referencing the configuration file. They may be used, for
-example, to collect options required to tune compilation for particular
+example, to collect options required to tune compilation for a particular
 target, such as ``-L``, ``-I``, ``-l``, ``--sysroot``, codegen options, etc.
 
 Configuration files can be either specified on the command line or loaded
@@ -986,7 +986,7 @@ either during build or during runtime. At build time, use
 ``CLANG_CONFIG_FILE_USER_DIR`` and ``CLANG_CONFIG_FILE_SYSTEM_DIR``. At run
 time use the ``--config-user-dir=`` and ``--config-system-dir=`` command line
 options. Specifying config directories at runtime overrides the config
-directories set at build time The first file found is used. It is an error if
+directories set at build time. The first file found is used. It is an error if
 the required file cannot be found.
 
 The default configuration files are searched for in the same directories
@@ -996,7 +996,7 @@ the ``--no-default-config`` flag.
 
 First, the algorithm searches for a configuration file named
 ``<triple>-<driver>.cfg`` where `triple` is the triple for the target being
-built for, and `driver` is the name of the currently used driver. The algorithm
+built, and `driver` is the name of the currently used driver. The algorithm
 first attempts to use the canonical name for the driver used, then falls back
 to the one found in the executable name.
 
@@ -1047,7 +1047,7 @@ It is not an error if either of these files is not found.
 The configuration file consists of command-line options specified on one or
 more lines. Lines composed of whitespace characters only are ignored as well as
 lines in which the first non-blank character is ``#``. Long options may be split
-between several lines by a trailing backslash. Here is example of a
+between several lines by a trailing backslash. Here is an example of a
 configuration file:
 
 ::
@@ -1090,7 +1090,7 @@ Usually, config file options are placed before command-line options, regardless
 of the actual operation to be performed. The exception is being made for the
 options prefixed with the ``$`` character. These will be used only when the linker
 is being invoked, and added after all of the command-line specified linker
-inputs. Here is some example of ``$``-prefixed options:
+inputs. Here is an example of ``$``-prefixed options:
 
 ::
 
@@ -1229,7 +1229,7 @@ Clang also allows you to push and pop the current warning state. This is
 particularly useful when writing a header file that will be compiled by
 other people, because you don't know what warning flags they build with.
 
-In the below example :option:`-Wextra-tokens` is ignored for only a single line
+In the example below, :option:`-Wextra-tokens` is ignored for only a single line
 of code, after which the diagnostics return to whatever state had previously
 existed.
 
@@ -1253,7 +1253,7 @@ of warnings, so even when using GCC-compatible #pragmas there is no
 guarantee that they will have identical behaviour on both compilers.
 
 Clang also doesn't yet support GCC behavior for ``#pragma diagnostic pop``
-that doesn't have a corresponding ``#pragma diagnostic push``. In this case
+that doesn't have a corresponding ``#pragma diagnostic push``. In this case,
 GCC pretends that there is a ``#pragma diagnostic push`` at the very beginning
 of the source file, so "unpaired" ``#pragma diagnostic pop`` matches that
 implicit push. This makes a difference for ``#pragma GCC diagnostic ignored``
@@ -1406,7 +1406,7 @@ project even if there are violations in some headers.
   # directory. But it'll still complain for all the other sources, e.g:
   $ cat foo/bar.cc
   #include "dir/include.h" // Clang flags unused declarations here.
-  #include "foo/include.h" // but unused warnings under this source is omitted.
+  #include "foo/include.h" // but unused warnings under this source are omitted.
   #include "next_to_bar_cc.h" // as are unused warnings from this header file.
   // Further, unused warnings in the remainder of bar.cc are also omitted.
 
@@ -1648,7 +1648,7 @@ for more details.
 
 .. option:: -fno-fast-math
 
-   Disable fast-math mode.  This options disables unsafe floating-point
+   Disable fast-math mode.  This option disables unsafe floating-point
    optimizations by preventing the compiler from making any transformations that
    could affect the results.
 
@@ -1766,7 +1766,7 @@ for more details.
 
    * ``fast``: enable fusion across statements disregarding pragmas, breaking
      compliance with the C and C++ standards (default for CUDA).
-   * ``on``: enable C and C++ standard complaint fusion in the same statement
+   * ``on``: enable C and C++ standard compliant fusion in the same statement
      unless dictated by pragmas (default for languages other than CUDA/HIP)
    * ``off``: disable fusion
    * ``fast-honor-pragmas``: fuse across statements unless dictated by pragmas
@@ -1919,7 +1919,7 @@ for more details.
    a single expression of the code.
 
    Valid values are: ``source``, ``double``, and ``extended``.
-   For 64-bit targets, the default value is ``source``. For 32-bit x86 targets
+   For 64-bit targets, the default value is ``source``. For 32-bit x86 targets,
    however, in the case of NETBSD 6.99.26 and under, the default value is
    ``double``; in the case of NETBSD greater than 6.99.26, with NoSSE, the
    default value is ``extended``, with SSE the default value is ``source``.
@@ -2325,7 +2325,7 @@ are listed below.
    devirtualization and virtual constant propagation, for classes with
    :doc:`hidden LTO visibility <LTOVisibility>`. Requires ``-flto``.
 
-.. option:: -f[no]split-lto-unit
+.. option:: -f[no-]split-lto-unit
 
    Controls splitting the :doc:`LTO unit <LTOVisibility>` into regular LTO and
    :doc:`ThinLTO` portions, when compiling with -flto=thin. Defaults to false
@@ -2518,7 +2518,7 @@ are listed below.
 
 .. _funique_internal_linkage_names:
 
-.. option:: -f[no]-unique-internal-linkage-names
+.. option:: -f[no-]unique-internal-linkage-names
 
    Controls whether Clang emits a unique (best-effort) symbol name for internal
    linkage symbols.  When this option is set, compiler hashes the main source
@@ -2539,7 +2539,7 @@ are listed below.
      $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
      $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 
-.. option:: -f[no]-basic-block-address-map:
+.. option:: -f[no-]basic-block-address-map:
   Emits a ``SHT_LLVM_BB_ADDR_MAP`` section which includes address offsets for each
   basic block in the program, relative to the parent function address.
 
@@ -3881,9 +3881,9 @@ See :doc:`LanguageExtensions`.
 Differences between various standard modes
 ------------------------------------------
 
-clang supports the -std option, which changes what language mode clang uses.
+clang supports the ``-std`` option, which changes what language mode clang uses.
 The supported modes for C are c89, gnu89, c94, c99, gnu99, c11, gnu11, c17,
-gnu17, c23, gnu23, c2y, gnu2y, and various aliases for those modes. If no -std
+gnu17, c23, gnu23, c2y, gnu2y, and various aliases for those modes. If no ``-std``
 option is specified, clang defaults to gnu17 mode. Many C99 and C11 features
 are supported in earlier modes as a conforming extension, with a warning. Use
 ``-pedantic-errors`` to request an error if a feature from a later standard
@@ -4609,7 +4609,7 @@ codebases.
 
 On ``x86_64-mingw32``, passing i128(by value) is incompatible with the
 Microsoft x64 calling convention. You might need to tweak
-``WinX86_64ABIInfo::classify()`` in lib/CodeGen/Targets/X86.cpp.
+``WinX86_64ABIInfo::classify()`` in ``lib/CodeGen/Targets/X86.cpp``.
 
 For the X86 target, clang supports the `-m16` command line
 argument which enables 16-bit code output. This is broadly similar to
@@ -4760,8 +4760,8 @@ is imported, the linker will generate fixup code for reading or writing to the
 variable.
 
 When multiple toc-data options are used, the last option used has the affect.
-For example: -mno-tocdata=g5,g1 -mtocdata=g1,g2 -mno-tocdata=g2 -mtocdata=g3,g4
-results in -mtocdata=g1,g3,g4
+For example: ``-mno-tocdata=g5,g1 -mtocdata=g1,g2 -mno-tocdata=g2 -mtocdata=g3,g4``
+results in ``-mtocdata=g1,g3,g4``
 
 Names of variables not having external linkage will be ignored.
 
@@ -5143,16 +5143,16 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Instrument only functions from files where names match any regex separated by a semi-colon
       -fprofile-generate=<dirname>
                               Generate instrumented code to collect execution counts into a raw profile file in the directory specified by the argument. The filename uses default_%m.profraw pattern
-                              (overridden by LLVM_PROFILE_FILE env var)
+                              (overridden by ``LLVM_PROFILE_FILE`` env var)
       -fprofile-generate
                               Generate instrumented code to collect execution counts into default_%m.profraw file
-                              (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
+                              (overridden by '=' form of option or ``LLVM_PROFILE_FILE`` env var)
       -fprofile-instr-generate=<file_name_pattern>
                               Generate instrumented code to collect execution counts into the file whose name pattern is specified as the argument
-                              (overridden by LLVM_PROFILE_FILE env var)
+                              (overridden by ``LLVM_PROFILE_FILE`` env var)
       -fprofile-instr-generate
                               Generate instrumented code to collect execution counts into default.profraw file
-                              (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
+                              (overridden by '=' form of option or ``LLVM_PROFILE_FILE`` env var)
       -fprofile-instr-use=<value>
                               Use instrumentation data for coverage testing or profile-guided optimization
       -fprofile-use=<value>

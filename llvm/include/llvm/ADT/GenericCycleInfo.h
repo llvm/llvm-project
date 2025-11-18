@@ -298,6 +298,7 @@ public:
 
   CycleT *getCycle(const BlockT *Block) const;
   CycleT *getSmallestCommonCycle(CycleT *A, CycleT *B) const;
+  CycleT *getSmallestCommonCycle(BlockT *A, BlockT *B) const;
   unsigned getCycleDepth(const BlockT *Block) const;
   CycleT *getTopLevelParentCycle(BlockT *Block);
 

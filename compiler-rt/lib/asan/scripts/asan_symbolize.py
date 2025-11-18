@@ -59,6 +59,7 @@ def is_valid_arch(s):
         "armv7s",
         "armv7k",
         "arm64",
+        "arm64e",
         "powerpc",
         "powerpc64",
         "powerpc64le",

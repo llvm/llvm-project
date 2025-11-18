@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
+// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefix=SPVCHECK
 
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) half @_Z17test_refract_halfDhDhDh(

@@ -274,13 +274,13 @@ This would be equivalent to the following raw assembly:
 
 The following directives are specified:
 
-  - lib
+  - ``lib``
 
     The parameter identifies a library to be linked against.  The library will
     be looked up in the default and any specified library search paths
     (specified to this point).
 
-  - libpath
+  - ``libpath``
 
     The parameter identifies an additional library search path to be considered
     when looking up libraries after the inclusion of this option.
@@ -327,13 +327,13 @@ The contents of the section shall be a sequence of ``Elf_CGProfile`` entries.
     Elf_Xword cgp_weight;
   } Elf_CGProfile;
 
-cgp_from
+``cgp_from``
   The symbol index of the source of the edge.
 
-cgp_to
+``cgp_to``
   The symbol index of the destination of the edge.
 
-cgp_weight
+``cgp_weight``
   The weight of the edge.
 
 This is represented in assembly as:
@@ -352,7 +352,7 @@ table.
 ``SHT_LLVM_ADDRSIG`` Section (address-significance table)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This section is used to mark symbols as address-significant, i.e. the address
+This section is used to mark symbols as address-significant, i.e., the address
 of the symbol is used in a comparison or leaks outside the translation unit. It
 has the same meaning as the absence of the LLVM attributes ``unnamed_addr``
 and ``local_unnamed_addr``.
@@ -416,7 +416,36 @@ as offsets relative to prior addresses.
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
 
-Version 3 (newest): Capable of encoding callsite offsets. Enabled by the 6th bit
+Version 4 (newest): Capable of encoding basic block hashes. This feature is
+enabled by the 7th bit of the feature byte.
+
+Example:
+
+.. code-block:: gas
+
+  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+  .byte     4                             # version number
+  .byte     96                            # feature byte
+  .quad     .Lfunc_begin0                 # address of the function
+  .byte     2                             # number of basic blocks
+  # BB record for BB_0
+   .byte     0                            # BB_0 ID
+   .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .byte     0                            # number of callsites in this block
+   .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
+   .byte     x                            # BB_0 metadata
+   .quad     9080480745856761856          # BB_0 hash
+  # BB record for BB_1
+   .byte     1                            # BB_1 ID
+   .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
+   .byte     2                            # number of callsites in this block
+   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite end relative to the previous offset (.LBB0_1)
+   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite end relative to the previous offset (.LBB0_1_CS0)
+   .uleb128  .LBB_END0_1-.LBB0_1_CS1      # BB_1 size offset (Offset of the block end relative to the previous offset).
+   .byte     y                            # BB_1 metadata
+   .quad     2363478788702666771          # BB_1 hash
+
+Version 3: Capable of encoding callsite offsets. Enabled by the 6th bit
 of the feature byte.
 
 Example:
@@ -490,11 +519,11 @@ those bits are:
 #. Basic Block Frequencies - Encoded as raw block frequency value taken from
    MBFI analysis. This value is an integer that encodes the relative frequency
    compared to the entry block. More information can be found in
-   'llvm/Support/BlockFrequency.h'.
+   ``llvm/Support/BlockFrequency.h``.
 
 #. Branch Probabilities - Encoded as raw numerator for branch probability
    taken from MBPI analysis. This value is the numerator for a fixed point ratio
-   defined in 'llvm/Support/BranchProbability.h'. It indicates the probability
+   defined in ``llvm/Support/BranchProbability.h``. It indicates the probability
    that the block is followed by a given successor block during execution.
 
 This extra data requires version 2 or above. This is necessary since successors
@@ -601,6 +630,35 @@ sees fit (generally the section that would provide the best locality).
 
 .. _CFI jump table: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html#forward-edge-cfi-for-indirect-function-calls
 
+``SHT_LLVM_CALL_GRAPH`` Section (Call Graph)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used to store the call graph. It has a type of
+``SHT_LLVM_CALL_GRAPH`` (0x6fff4c0f). Details of call graph section layout
+are described in :doc:`CallGraphSection`.
+
+For example:
+
+.. code-block:: gas
+
+  .section  ".llvm.callgraph","",@llvm_call_graph
+  .byte   0
+  .byte   7
+  .quad   .Lball
+  .quad   0
+  .byte   3
+  .quad   foo
+  .quad   bar
+  .quad   baz
+  .byte   3
+  .quad   4524972987496481828
+  .quad   3498816979441845844
+  .quad   8646233951371320954
+
+This indicates that ``ball`` calls ``foo``, ``bar`` and ``baz`` directly;
+``ball`` indirectly calls functions whose types are ``4524972987496481828``,
+``3498816979441845844`` and ``8646233951371320954``.
+
 CodeView-Dependent
 ------------------
 
@@ -668,7 +726,7 @@ Syntax:
 Syntax:
   ``.cv_fpo_data`` *procsym*
 
-Target Specific Behaviour
+Target-Specific Behaviour
 =========================
 
 X86
@@ -734,7 +792,7 @@ emission of Variable Length Arrays (VLAs).
 The Windows ARM Itanium ABI extends the base ABI by adding support for emitting
 a dynamic stack allocation.  When emitting a variable stack allocation, a call
 to ``__chkstk`` is emitted unconditionally to ensure that guard pages are setup
-properly.  The emission of this stack probe emission is handled similar to the
+properly.  The emission of this stack probe emission is handled similarly to the
 standard stack probe emission.
 
 The MSVC environment does not emit code for VLAs currently.
@@ -755,7 +813,7 @@ in the following fashion:
   sub sp, sp, x15, lsl #4
 
 However, this has the limitation of 256 MiB (±128MiB).  In order to accommodate
-larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow a 8GiB
+larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow an 8GiB
 (±4GiB) range via a slight deviation.  It will generate an indirect jump as
 follows:
 

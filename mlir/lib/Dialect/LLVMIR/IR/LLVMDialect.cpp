@@ -640,8 +640,6 @@ SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
 // Code for LLVM::GEPOp.
 //===----------------------------------------------------------------------===//
 
-constexpr int32_t GEPOp::kDynamicIndex;
-
 GEPIndicesAdaptor<ValueRange> GEPOp::getIndices() {
   return GEPIndicesAdaptor<ValueRange>(getRawConstantIndicesAttr(),
                                        getDynamicIndices());
@@ -698,7 +696,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
                        return structType.getBody()[memberIndex];
                      return nullptr;
                    })
-                   .Default(Type(nullptr));
+                   .Default(nullptr);
   }
 }
 
@@ -2826,6 +2824,20 @@ LogicalResult ShuffleVectorOp::verify() {
   return success();
 }
 
+// Folding for shufflevector op when v1 is single element 1D vector
+// and the mask is a single zero. OpFoldResult will be v1 in this case.
+OpFoldResult ShuffleVectorOp::fold(FoldAdaptor adaptor) {
+  // Check if operand 0 is a single element vector.
+  auto vecType = llvm::dyn_cast<VectorType>(getV1().getType());
+  if (!vecType || vecType.getRank() != 1 || vecType.getNumElements() != 1)
+    return {};
+  // Check if the mask is a single zero.
+  // Note: The mask is guaranteed to be non-empty.
+  if (getMask().size() != 1 || getMask()[0] != 0)
+    return {};
+  return getV1();
+}
+
 //===----------------------------------------------------------------------===//
 // Implementations for LLVM::LLVMFuncOp.
 //===----------------------------------------------------------------------===//
@@ -4209,6 +4221,34 @@ LogicalResult InlineAsmOp::verify() {
         "tail call kind 'musttail' is not supported by this operation");
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UDivOp
+//===----------------------------------------------------------------------===//
+Speculation::Speculatability UDivOp::getSpeculatability() {
+  // X / 0 => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// SDivOp
+//===----------------------------------------------------------------------===//
+Speculation::Speculatability SDivOp::getSpeculatability() {
+  // This function conservatively assumes that all signed division by -1 are
+  // not speculatable.
+  // X / 0 => UB
+  // INT_MIN / -1 => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//

@@ -179,7 +179,7 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
         TT && TT->isCanonicalUnqualified())
-      OS << TT->getOriginalDecl()->getKindName() << " ";
+      OS << TT->getDecl()->getKindName() << " ";
   }
   QT.print(OS, PP);
 

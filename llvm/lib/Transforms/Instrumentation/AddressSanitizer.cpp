@@ -248,6 +248,11 @@ static cl::opt<bool>
                          "platforms that support this"),
                 cl::Hidden, cl::init(true));
 
+static cl::opt<int>
+    ClShadowAddrSpace("asan-shadow-addr-space",
+                      cl::desc("Address space for pointers to the shadow map"),
+                      cl::Hidden, cl::init(0));
+
 static cl::opt<bool> ClWithIfuncSuppressRemat(
     "asan-with-ifunc-suppress-remat",
     cl::desc("Suppress rematerialization of dynamic shadow address by passing "
@@ -503,6 +508,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   bool IsAMDGPU = TargetTriple.isAMDGPU();
   bool IsHaiku = TargetTriple.isOSHaiku();
   bool IsWasm = TargetTriple.isWasm();
+  bool IsBPF = TargetTriple.isBPF();
 
   ShadowMapping Mapping;
 
@@ -579,6 +585,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
     else if (IsHaiku && IsX86_64)
       Mapping.Offset = (kSmallX86_64ShadowOffsetBase &
                         (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
+    else if (IsBPF)
+      Mapping.Offset = kDynamicShadowSentinel;
     else
       Mapping.Offset = kDefaultShadowOffset64;
   }
@@ -605,17 +613,16 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   return Mapping;
 }
 
-namespace llvm {
-void getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
-                               bool IsKasan, uint64_t *ShadowBase,
-                               int *MappingScale, bool *OrShadowOffset) {
+void llvm::getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
+                                     bool IsKasan, uint64_t *ShadowBase,
+                                     int *MappingScale, bool *OrShadowOffset) {
   auto Mapping = getShadowMapping(TargetTriple, LongSize, IsKasan);
   *ShadowBase = Mapping.Offset;
   *MappingScale = Mapping.Scale;
   *OrShadowOffset = Mapping.OrShadowOffset;
 }
 
-void removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
+void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
   // Sanitizer checks read from shadow, which invalidates memory(argmem: *).
   //
   // This is not only true for sanitized functions, because AttrInfer can
@@ -668,8 +675,6 @@ ASanAccessInfo::ASanAccessInfo(bool IsWrite, bool CompileKernel,
       AccessSizeIndex(AccessSizeIndex), IsWrite(IsWrite),
       CompileKernel(CompileKernel) {}
 
-} // namespace llvm
-
 static uint64_t getRedzoneSizeForScale(int MappingScale) {
   // Redzone used for stack and globals is at least 32 bytes.
   // For scales 6 and 7, the redzone has to be 64 and 128 bytes respectively.
@@ -677,11 +682,10 @@ static uint64_t getRedzoneSizeForScale(int MappingScale) {
 }
 
 static uint64_t GetCtorAndDtorPriority(Triple &TargetTriple) {
-  if (TargetTriple.isOSEmscripten()) {
+  if (TargetTriple.isOSEmscripten())
     return kAsanEmscriptenCtorAndDtorPriority;
-  } else {
+  else
     return kAsanCtorAndDtorPriority;
-  }
 }
 
 static Twine genName(StringRef suffix) {
@@ -848,6 +852,7 @@ struct AddressSanitizer {
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
+  void markCatchParametersAsUninteresting(Function &F);
 
 private:
   friend struct FunctionStackPoisoner;
@@ -1497,11 +1502,8 @@ void AddressSanitizer::getInterestingMemoryOperands(
       if (ignoreAccess(I, BasePtr))
         return;
       Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
-      MaybeAlign Alignment = Align(1);
-      // Otherwise no alignment guarantees. We probably got Undef.
-      if (auto *Op = dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
-        Alignment = Op->getMaybeAlignValue();
-      Value *Mask = CI->getOperand(2 + OpOffset);
+      MaybeAlign Alignment = CI->getParamAlign(0);
+      Value *Mask = CI->getOperand(1 + OpOffset);
       Interesting.emplace_back(I, OpOffset, IsWrite, Ty, Alignment, Mask);
       break;
     }
@@ -1545,7 +1547,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
           IID == Intrinsic::experimental_vp_strided_load) {
         Stride = VPI->getOperand(PtrOpNo + 1);
         // Use the pointer alignment as the element alignment if the stride is a
-        // mutiple of the pointer alignment. Otherwise, the element alignment
+        // multiple of the pointer alignment. Otherwise, the element alignment
         // should be Align(1).
         unsigned PointerAlign = Alignment.valueOrOne().value();
         if (!isa<ConstantInt>(Stride) ||
@@ -1948,7 +1950,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   Type *ShadowTy =
       IntegerType::get(*C, std::max(8U, TypeStoreSize >> Mapping.Scale));
-  Type *ShadowPtrTy = PointerType::get(*C, 0);
+  Type *ShadowPtrTy = PointerType::get(*C, ClShadowAddrSpace);
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   const uint64_t ShadowAlign =
       std::max<uint64_t>(Alignment.valueOrOne().value() >> Mapping.Scale, 1);
@@ -2405,7 +2407,7 @@ void ModuleAddressSanitizer::instrumentGlobalsELF(
 
   // Putting globals in a comdat changes the semantic and potentially cause
   // false negative odr violations at link time. If odr indicators are used, we
-  // keep the comdat sections, as link time odr violations will be dectected on
+  // keep the comdat sections, as link time odr violations will be detected on
   // the odr indicator symbols.
   bool UseComdatForGlobalsGC = UseOdrIndicator && !UniqueModuleId.empty();
 
@@ -3001,6 +3003,22 @@ void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
     }
   }
 }
+// Mitigation for https://github.com/google/sanitizers/issues/749
+// We don't instrument Windows catch-block parameters to avoid
+// interfering with exception handling assumptions.
+void AddressSanitizer::markCatchParametersAsUninteresting(Function &F) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (auto *CatchPad = dyn_cast<CatchPadInst>(&I)) {
+        // Mark the parameters to a catch-block as uninteresting to avoid
+        // instrumenting them.
+        for (Value *Operand : CatchPad->arg_operands())
+          if (auto *AI = dyn_cast<AllocaInst>(Operand))
+            ProcessedAllocas[AI] = false;
+      }
+    }
+  }
+}
 
 bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
   bool ShouldInstrument =
@@ -3044,6 +3062,9 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   // We can't instrument allocas used with llvm.localescape. Only static allocas
   // can be passed to that intrinsic.
   markEscapedLocalAllocas(F);
+
+  if (TargetTriple.isOSWindows())
+    markCatchParametersAsUninteresting(F);
 
   // We want to instrument every address only once per basic block (unless there
   // are calls between uses).
@@ -3845,7 +3866,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
       I->eraseFromParent();
   }
 
-  // Replace all uses of AddessReturnedByAlloca with NewAddressPtr.
+  // Replace all uses of AddressReturnedByAlloca with NewAddressPtr.
   AI->replaceAllUsesWith(NewAddressPtr);
 
   // We are done. Erase old alloca from parent.

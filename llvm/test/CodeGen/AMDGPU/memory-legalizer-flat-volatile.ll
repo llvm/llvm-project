@@ -173,7 +173,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
 ; GFX7-NEXT:    s_mov_b32 s6, 2
 ; GFX7-NEXT:    v_lshlrev_b32_e64 v1, s6, v0
-; GFX7-NEXT:    s_mov_b32 s6, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX7-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX7-NEXT:    v_mov_b32_e32 v2, v0
@@ -207,7 +206,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x8
 ; GFX10-WGP-NEXT:    s_mov_b32 s6, 2
 ; GFX10-WGP-NEXT:    v_lshlrev_b32_e64 v1, s6, v0
-; GFX10-WGP-NEXT:    s_mov_b32 s6, 0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WGP-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, v0
@@ -240,7 +238,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x8
 ; GFX10-CU-NEXT:    s_mov_b32 s6, 2
 ; GFX10-CU-NEXT:    v_lshlrev_b32_e64 v1, s6, v0
-; GFX10-CU-NEXT:    s_mov_b32 s6, 0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-CU-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, v0
@@ -268,7 +265,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, 2
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, 0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, 0
 ; SKIP-CACHE-INV-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, v0
@@ -299,7 +295,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX11-WGP-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX11-WGP-NEXT:    s_mov_b32 s2, 2
 ; GFX11-WGP-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX11-WGP-NEXT:    s_mov_b32 s2, 0
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-WGP-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v2, v0
@@ -329,7 +324,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX11-CU-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX11-CU-NEXT:    s_mov_b32 s2, 2
 ; GFX11-CU-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX11-CU-NEXT:    s_mov_b32 s2, 0
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-CU-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, v0
@@ -360,7 +354,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX12-WGP-NEXT:    s_mov_b32 s2, 2
 ; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX12-WGP-NEXT:    s_mov_b32 s2, 0
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, v0
@@ -395,7 +388,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX12-CU-NEXT:    s_mov_b32 s2, 2
 ; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX12-CU-NEXT:    s_mov_b32 s2, 0
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-CU-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, v0
@@ -615,7 +607,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX7-NEXT:    flat_load_dword v2, v[1:2]
 ; GFX7-NEXT:    s_mov_b32 s4, 2
 ; GFX7-NEXT:    v_lshlrev_b32_e64 v3, s4, v0
-; GFX7-NEXT:    s_mov_b32 s4, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX7-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v0
@@ -647,7 +638,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX10-WGP-NEXT:    flat_load_dword v2, v[1:2]
 ; GFX10-WGP-NEXT:    s_mov_b32 s4, 2
 ; GFX10-WGP-NEXT:    v_lshlrev_b32_e64 v3, s4, v0
-; GFX10-WGP-NEXT:    s_mov_b32 s4, 0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WGP-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v4, v0
@@ -678,7 +668,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX10-CU-NEXT:    flat_load_dword v2, v[1:2]
 ; GFX10-CU-NEXT:    s_mov_b32 s4, 2
 ; GFX10-CU-NEXT:    v_lshlrev_b32_e64 v3, s4, v0
-; GFX10-CU-NEXT:    s_mov_b32 s4, 0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-CU-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v4, v0
@@ -705,7 +694,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; SKIP-CACHE-INV-NEXT:    flat_load_dword v2, v[1:2]
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s0, 2
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; SKIP-CACHE-INV-NEXT:    s_mov_b32 s0, 0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, 0
 ; SKIP-CACHE-INV-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v4, v0
@@ -735,7 +723,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX11-WGP-NEXT:    v_and_b32_e64 v0, v0, s0
 ; GFX11-WGP-NEXT:    s_mov_b32 s0, 2
 ; GFX11-WGP-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; GFX11-WGP-NEXT:    s_mov_b32 s0, 0
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-WGP-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v4, v0
@@ -764,7 +751,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX11-CU-NEXT:    v_and_b32_e64 v0, v0, s0
 ; GFX11-CU-NEXT:    s_mov_b32 s0, 2
 ; GFX11-CU-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; GFX11-CU-NEXT:    s_mov_b32 s0, 0
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-CU-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v4, v0
@@ -795,7 +781,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX12-WGP-NEXT:    s_mov_b32 s0, 2
 ; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; GFX12-WGP-NEXT:    s_mov_b32 s0, 0
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v4, v0
@@ -832,7 +817,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX12-CU-NEXT:    s_mov_b32 s0, 2
 ; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; GFX12-CU-NEXT:    s_mov_b32 s0, 0
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-CU-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v4, v0
@@ -1072,7 +1056,8 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s4
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -1109,7 +1094,8 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s0
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
 ;
@@ -1136,7 +1122,10 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
 ;

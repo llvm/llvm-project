@@ -1793,9 +1793,13 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
                     "_" + Twine(Btr.BitSize)).toStringRef(Str));
     addUInt(Die, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1, Btr.Encoding);
     // Round up to smallest number of bytes that contains this number of bits.
+    // ExprRefedBaseTypes is populated with types referenced by
+    // DW_OP_LLVM_convert operations in location expressions. These are often
+    // byte-sized, but one common counter-example is 1-bit sized conversions
+    // from `i1` types. TODO: Should these use DW_AT_bit_size? See
+    // DwarfUnit::constructTypeDIE.
     addUInt(Die, dwarf::DW_AT_byte_size, std::nullopt,
             divideCeil(Btr.BitSize, 8));
-
     Btr.Die = &Die;
   }
 }

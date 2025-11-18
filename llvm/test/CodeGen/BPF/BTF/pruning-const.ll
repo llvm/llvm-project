@@ -22,14 +22,14 @@
 %struct.s2 = type { %struct.tt }
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @test1(ptr nocapture readnone %arg) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test1(ptr nocapture readnone %arg) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata ptr %arg, metadata !22, metadata !DIExpression()), !dbg !23
   ret i32 0, !dbg !24
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define dso_local i32 @test2(ptr nocapture readonly %arg) local_unnamed_addr #1 !dbg !25 {
+define dso_local i32 @test2(ptr nocapture readonly %arg) local_unnamed_addr !dbg !25 {
 entry:
   call void @llvm.dbg.value(metadata ptr %arg, metadata !33, metadata !DIExpression()), !dbg !34
   %0 = load i32, ptr %arg, align 4, !dbg !35, !tbaa !36
@@ -64,11 +64,7 @@ entry:
 ; CHECK:        .ascii  "m2"                    # string offset=72
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
-
-attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind readnone speculatable willreturn }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

@@ -9,9 +9,11 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/TimeProfiler.h"
 
 namespace clang::lifetimes::internal {
+using llvm::isa_and_present;
 
 static bool isGslPointerType(QualType QT) {
   if (const auto *RD = QT->getAsCXXRecordDecl()) {
@@ -108,7 +110,7 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   // Specifically for conversion operators,
   // like `std::string_view p = std::string{};`
   if (isGslPointerType(MCE->getType()) &&
-      isa<CXXConversionDecl>(MCE->getCalleeDecl())) {
+      isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl())) {
     // The argument is the implicit object itself.
     handleFunctionCall(MCE, MCE->getMethodDecl(),
                        {MCE->getImplicitObjectArgument()},
@@ -172,6 +174,15 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
+}
+
+void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
+  if (hasOrigin(CO)) {
+    // Merge origins from both branches of the conditional operator.
+    // We kill to clear the initial state and merge both origins into it.
+    killAndFlowOrigin(*CO, *CO->getTrueExpr());
+    flowOrigin(*CO, *CO->getFalseExpr());
+  }
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
@@ -331,7 +342,7 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
 // (e.g. on the left-hand side of an assignment).
 void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
   if (isPointerType(DRE->getType())) {
-    UseFact *UF = FactMgr.createFact<UseFact>(DRE);
+    UseFact *UF = FactMgr.createFact<UseFact>(DRE, FactMgr.getOriginMgr());
     CurrentBlockFacts.push_back(UF);
     assert(!UseFacts.contains(DRE));
     UseFacts[DRE] = UF;

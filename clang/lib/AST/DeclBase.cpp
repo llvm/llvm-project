@@ -77,8 +77,11 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
   *PrefixPtr = ID.getRawValue();
 
   // We leave the upper 16 bits to store the module IDs. 48 bits should be
-  // sufficient to store a declaration ID.
-  assert(*PrefixPtr < llvm::maskTrailingOnes<uint64_t>(48));
+  // sufficient to store a declaration ID. See the comments in setOwningModuleID
+  // for details.
+  assert((*PrefixPtr < llvm::maskTrailingOnes<uint64_t>(48)) &&
+         "Current Implementation limits the number of module files to not "
+         "exceed 2^16. Contact Clang Developers to remove the limitation.");
 
   return Result;
 }
@@ -122,6 +125,25 @@ unsigned Decl::getOwningModuleID() const {
 
 void Decl::setOwningModuleID(unsigned ID) {
   assert(isFromASTFile() && "Only works on a deserialized declaration");
+  // Currently, we use 64 bits to store the GlobalDeclID and the module ID
+  // to save the space. See `Decl::operator new` for details. To make it,
+  // we split the higher 32 bits to 2 16bits for the module file index of
+  // GlobalDeclID and the module ID. This introduces a limitation that the
+  // number of modules can't exceed 2^16. (The number of module files should be
+  // less than the number of modules).
+  //
+  // It is counter-intuitive to store both the module file index and the
+  // module ID as it seems redundant. However, this is not true.
+  // The module ID may be different from the module file where it is serialized
+  // from for implicit template instantiations. See
+  // https://github.com/llvm/llvm-project/issues/101939
+  //
+  // If we reach the limitation, we have to remove the limitation by asking
+  // every deserialized declaration to pay for yet another 32 bits, or we have
+  // to review the above issue to decide what we should do for it.
+  assert((ID < llvm::maskTrailingOnes<unsigned>(16)) &&
+         "Current Implementation limits the number of modules to not exceed "
+         "2^16. Contact Clang Developers to remove the limitation.");
   uint64_t *IDAddress = (uint64_t *)this - 1;
   *IDAddress &= llvm::maskTrailingOnes<uint64_t>(48);
   *IDAddress |= (uint64_t)ID << 48;

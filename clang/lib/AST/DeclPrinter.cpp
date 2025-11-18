@@ -485,7 +485,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
       QualType BaseType = GetBaseType(CurDeclType);
       if (const auto *TT = dyn_cast_or_null<TagType>(BaseType);
           TT && TT->isTagOwned()) {
-        if (TT->getOriginalDecl() == Decls[0]) {
+        if (TT->getDecl() == Decls[0]) {
           Decls.push_back(*D);
           continue;
         }

@@ -16,6 +16,9 @@ namespace clang {
 namespace clangd {
 namespace {
 const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
+    {"include/__float_float.h", "<cfloat>"},
+    {"include/__float_header_macro.h", "<cfloat>"},
+    {"include/__float_infinity_nan.h", "<cfloat>"},
     {"include/__stdarg___gnuc_va_list.h", "<cstdarg>"},
     {"include/__stdarg___va_copy.h", "<cstdarg>"},
     {"include/__stdarg_header_macro.h", "<cstdarg>"},

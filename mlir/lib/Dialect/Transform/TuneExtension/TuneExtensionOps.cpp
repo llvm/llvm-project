@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/Support/Debug.h"
 
 #include "mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.h"
@@ -112,7 +113,7 @@ static void printAlternativesOpSelectedRegion(OpAsmPrinter &printer,
 }
 
 OperandRange transform::tune::AlternativesOp::getEntrySuccessorOperands(
-    RegionBranchPoint point) {
+    RegionSuccessor successor) {
   // No operands will be forwarded to the region(s).
   return getOperands().slice(0, 0);
 }
@@ -128,7 +129,7 @@ void transform::tune::AlternativesOp::getSuccessorRegions(
       for (Region &alternative : getAlternatives())
         regions.emplace_back(&alternative, Block::BlockArgListType());
   else
-    regions.emplace_back(getOperation()->getResults());
+    regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 void transform::tune::AlternativesOp::getRegionInvocationBounds(

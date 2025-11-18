@@ -122,15 +122,21 @@ static cl::opt<unsigned>
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
-} // namespace llvm
-
 static cl::opt<double> MaxClonedRate(
     "dfa-max-cloned-rate",
     cl::desc(
         "Maximum cloned instructions rate accepted for the transformation"),
     cl::Hidden, cl::init(7.5));
+
+static cl::opt<unsigned>
+    MaxOuterUseBlocks("dfa-max-out-use-blocks",
+                      cl::desc("Maximum unduplicated blocks with outer uses "
+                               "accepted for the transformation"),
+                      cl::Hidden, cl::init(40));
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // namespace llvm
 
 namespace {
 class SelectInstToUnfold {
@@ -266,8 +272,7 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     if (!ProfcheckDisableMetadataFixes)
       BI->setMetadata(LLVMContext::MD_prof,
                       SI->getMetadata(LLVMContext::MD_prof));
-    DTU->applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock},
-                       {DominatorTree::Insert, StartBlock, NewBlock}});
+    DTU->applyUpdates({{DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
     BasicBlock *EndBlock = SIUse->getParent();
     BasicBlock *NewBlockT = BasicBlock::Create(
@@ -966,14 +971,36 @@ private:
     // SLPVectorizer.
     // TODO: Thread the switch partially before reaching the threshold.
     uint64_t NumOrigInst = 0;
-    for (auto *BB : DuplicateMap.keys())
+    uint64_t NumOuterUseBlock = 0;
+    for (auto *BB : DuplicateMap.keys()) {
       NumOrigInst += BB->sizeWithoutDebug();
+      // Only unduplicated blocks with single predecessor require new phi
+      // nodes.
+      for (auto *Succ : successors(BB))
+        if (!DuplicateMap.count(Succ) && Succ->getSinglePredecessor())
+          NumOuterUseBlock++;
+    }
+
     if (double(NumClonedInst) / double(NumOrigInst) > MaxClonedRate) {
       LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
                            "instructions wll be cloned\n");
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
                << "Too much instructions will be cloned.";
+      });
+      return false;
+    }
+
+    // Too much unduplicated blocks with outer uses may cause too much
+    // insertions of phi nodes for duplicated definitions. TODO: Drop this
+    // threshold if we come up with another way to reduce the number of inserted
+    // phi nodes.
+    if (NumOuterUseBlock > MaxOuterUseBlocks) {
+      LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
+                           "blocks with outer uses\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
+               << "Too much blocks with outer uses.";
       });
       return false;
     }

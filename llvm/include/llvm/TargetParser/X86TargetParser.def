@@ -108,6 +108,7 @@ X86_CPU_SUBTYPE(INTEL_COREI7_ARROWLAKE_S,    "arrowlake-s")
 X86_CPU_SUBTYPE(INTEL_COREI7_PANTHERLAKE,    "pantherlake")
 X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER5,            "znver5")
 X86_CPU_SUBTYPE(INTEL_COREI7_DIAMONDRAPIDS,  "diamondrapids")
+X86_CPU_SUBTYPE(INTEL_COREI7_NOVALAKE,       "novalake")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")
@@ -115,6 +116,7 @@ X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "meteorlake")
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_SAPPHIRERAPIDS, "emeraldrapids")
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ARROWLAKE_S,"lunarlake")
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "gracemont")
+X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_PANTHERLAKE, "wildcatlake")
 
 #undef X86_CPU_SUBTYPE_ALIAS
 #undef X86_CPU_SUBTYPE
@@ -259,14 +261,13 @@ X86_FEATURE_COMPAT(SM4,             "sm4",                    0)
 X86_FEATURE       (EGPR,            "egpr")
 X86_FEATURE_COMPAT(USERMSR,         "usermsr",                0)
 X86_FEATURE_COMPAT(AVX10_1,         "avx10.1",               36)
-X86_FEATURE_COMPAT(AVX10_1_512,     "avx10.1-512",           37)
-X86_FEATURE_COMPAT(AVX10_2,         "avx10.2",                0)
-X86_FEATURE_COMPAT(AVX10_2_512,     "avx10.2-512",            0)
+X86_FEATURE       (DUMMYFEATURE3,   "__dummyfeature3")
+X86_FEATURE_COMPAT(AVX10_2,         "avx10.2",               37)
+X86_FEATURE       (DUMMYFEATURE4,   "__dummyfeature4")
 //FIXME: make MOVRS _COMPAT defined when gcc landed relate patch.
 X86_FEATURE       (MOVRS,           "movrs")
 X86_FEATURE       (ZU,              "zu")
 X86_FEATURE       (AMX_FP8,         "amx-fp8")
-X86_FEATURE       (AMX_TRANSPOSE,   "amx-transpose")
 X86_FEATURE       (AMX_MOVRS,       "amx-movrs")
 X86_FEATURE       (AMX_AVX512,      "amx-avx512")
 X86_FEATURE       (AMX_TF32,        "amx-tf32")

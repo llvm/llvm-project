@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -gpu-module-to-binary="format=isa" \
 // RUN:             -debug-only=serialize-to-isa 2> %t 
 // RUN: FileCheck --input-file=%t %s
+// REQUIRES: asserts
 //
 // MathToXeVM pass generates OpenCL intrinsics function calls when converting
 // Math ops with `fastmath` attr to native function calls. It is assumed that

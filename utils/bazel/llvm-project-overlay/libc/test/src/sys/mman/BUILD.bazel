@@ -30,6 +30,7 @@ libc_test(
         "//libc:mmap",
         "//libc:munlock",
         "//libc:munmap",
+        "//libc:sysconf",
     ],
 )
 
@@ -48,6 +49,7 @@ libc_test(
         "//libc:munlock",
         "//libc:munlockall",
         "//libc:munmap",
+        "//libc:sysconf",
     ],
 )
 
@@ -89,6 +91,7 @@ libc_test(
         "//libc:msync",
         "//libc:munlock",
         "//libc:munmap",
+        "//libc:sysconf",
     ],
 )
 
@@ -111,6 +114,7 @@ libc_test(
         "//libc:munmap",
         "//libc:open",
         "//libc:remap_file_pages",
+        "//libc:sysconf",
     ],
 )
 

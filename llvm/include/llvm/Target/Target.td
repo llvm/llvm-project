@@ -1554,6 +1554,11 @@ def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
   let Size = 0;
   let isMeta = true;
 }
+def RELOC_NONE : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$symbol);
+  let hasSideEffects = true;
+}
 
 let hasSideEffects = false, isMeta = true, isConvergent = true in {
 def CONVERGENCECTRL_ANCHOR : StandardPseudoInstruction {
