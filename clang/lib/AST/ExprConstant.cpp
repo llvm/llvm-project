@@ -16588,12 +16588,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     unsigned VectorLen = Vec.getVectorLength();
-    APSInt RetMask(llvm::APInt(VectorLen, 0), /*isUnsigned=*/true);
+    unsigned RetWidth = Info.Ctx.getIntWidth(E->getType());
+    llvm::APInt Bits(RetWidth, 0);
+
     for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
       const APSInt &A = Vec.getVectorElt(ElemNum).getInt();
       unsigned MSB = A[A.getBitWidth() - 1];
-      RetMask.setBitVal(ElemNum, MSB);
+      Bits.setBitVal(ElemNum, MSB);
     }
+
+    APSInt RetMask(Bits, /*isUnsigned=*/true);
     return Success(APValue(RetMask), E);
   }
 
