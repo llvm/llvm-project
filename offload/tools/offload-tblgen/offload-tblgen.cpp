@@ -34,6 +34,7 @@ enum ActionType {
   GenExports,
   GenErrcodes,
   GenInfo,
+  GenTypedGetInfoWrappers,
 };
 
 namespace {
@@ -60,7 +61,10 @@ cl::opt<ActionType> Action(
                    "Generate export file for the Offload library"),
         clEnumValN(GenErrcodes, "gen-errcodes",
                    "Generate Offload Error Code enum"),
-        clEnumValN(GenInfo, "gen-info", "Generate Offload Info enum")));
+        clEnumValN(GenInfo, "gen-info", "Generate Offload Info enum"),
+        clEnumValN(GenTypedGetInfoWrappers, "gen-get-info-wrappers",
+                   "Generate typed C++ wrappers around various olGet*Info "
+                   "interfaces")));
 }
 
 static bool OffloadTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
@@ -98,6 +102,8 @@ static bool OffloadTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenInfo:
     EmitOffloadInfo(Records, OS);
     break;
+  case GenTypedGetInfoWrappers:
+    EmitTypedGetInfoWrappers(Records, OS);
   }
 
   return false;

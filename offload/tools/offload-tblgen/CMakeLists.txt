@@ -20,6 +20,7 @@ add_tablegen(offload-tblgen OFFLOAD
   offload-tblgen.cpp
   PrintGen.cpp
   RecordTypes.hpp
+  TypedGetInfoWrappers.cpp
   )
 
 # Make sure that C++ headers are available, if libcxx is built at the same

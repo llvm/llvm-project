@@ -25,3 +25,5 @@ void EmitOffloadExports(const llvm::RecordKeeper &Records,
 void EmitOffloadErrcodes(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
 void EmitOffloadInfo(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitTypedGetInfoWrappers(const llvm::RecordKeeper &Records,
+                              llvm::raw_ostream &OS);

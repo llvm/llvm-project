@@ -19,6 +19,7 @@ offload_tablegen(OffloadEntryPoints.inc -gen-entry-points)
 offload_tablegen(OffloadFuncs.inc -gen-func-names)
 offload_tablegen(OffloadImplFuncDecls.inc -gen-impl-func-decls)
 offload_tablegen(OffloadPrint.hpp -gen-print-header)
+offload_tablegen(OffloadTypedGetInfo.inc -gen-get-info-wrappers)
 
 add_public_tablegen_target(OffloadGenerate)
 
