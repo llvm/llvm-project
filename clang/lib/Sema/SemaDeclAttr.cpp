@@ -1858,11 +1858,8 @@ bool Sema::CheckSpanLikeType(const AttributeCommonInfo &CI,
   if (!RD || RD->isUnion())
     return emitWarning(diag::note_returned_not_struct);
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    for (const auto &Base : CXXRD->bases()) {
-      const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-      if (!BaseDecl || !BaseDecl->isEmpty()) {
-        return emitWarning(diag::note_inherits_not_empty_base);
-      }
+    if (CXXRD->getNumBases() > 0) {
+      return emitWarning(diag::note_type_inherits_from_base);
     }
   }
   auto FieldsBegin = RD->field_begin();

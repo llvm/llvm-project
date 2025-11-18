@@ -109,25 +109,15 @@ __attribute((malloc_span)) auto trailing_return_temmplate_bad(void) -> Pair<int,
   return Pair<int, int>{};
 }
 
-struct EmptyBase {
-};
-
-struct GoodChildSpan : EmptyBase {
-  void *p;
-  int n;
-};
-
-__attribute((malloc_span)) GoodChildSpan return_span_with_good_base(void); // no-warning
-
-struct NonEmptyBase {
+struct Base {
   void *other_p;
 };
 
-struct BadChildSpan : EmptyBase, NonEmptyBase {
+struct ChildSpan : Base {
   void *p;
   int n;
 };
 
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
-// expected-note@+1 {{returned class inherits from a non-empty base}}
-__attribute((malloc_span)) BadChildSpan return_span_with_bad_base(void);
+// expected-note@+1 {{returned type inherits from a base class}}
+__attribute((malloc_span)) ChildSpan return_child_span(void);
