@@ -675,7 +675,7 @@ gpu.func @vector_extract_strided_slice_1d(%laneid: index) {
 }
 
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_inner_distributed
-// CHECK:         %[[W]]:3 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<64x2xf32>, vector<16x1xf32>, vector<64x2xf32>) {
+// CHECK:         %[[W:.*]]:3 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<64x2xf32>, vector<16x1xf32>, vector<64x2xf32>) {
 // CHECK-NEXT:      %[[S:.*]] = "some_def"() : () -> vector<16x16xf32>
 // CHECK-NEXT:      %[[D:.*]] = "some_def"() : () -> vector<64x32xf32>
 // CHECK:           gpu.yield %{{.*}}, %[[S]], %[[D]] : vector<64x32xf32>, vector<16x16xf32>, vector<64x32xf32>
