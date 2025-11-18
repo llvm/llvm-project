@@ -194,10 +194,9 @@ class CreateNdDescToXeVMPattern
       if (!sourceMemrefTy.hasRank()) {
         return rewriter.notifyMatchFailure(op, "Expected ranked Memref.");
       }
-      baseAddr =
-          memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
-      // Cast index to i64.
-      baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
+      // Access adaptor after failure check to avoid rolling back generated code
+      // for materialization cast.
+      baseAddr = adaptor.getSource();
     } else {
       baseAddr = adaptor.getSource();
       if (baseAddr.getType() != i64Ty) {
