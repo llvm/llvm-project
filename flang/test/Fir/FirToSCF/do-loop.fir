@@ -146,6 +146,38 @@ func.func @loop_with_final_value(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !f
   return
 }
 
+// CHECK-LABEL:   func.func @loop_with_unordered_attr(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
+// CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : i32
+// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_1]], %[[CONSTANT_0]] : index
+// CHECK:           %[[ADDI_0:.*]] = arith.addi %[[SUBI_0]], %[[CONSTANT_0]] : index
+// CHECK:           %[[DIVSI_0:.*]] = arith.divsi %[[ADDI_0]], %[[CONSTANT_0]] : index
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
+// CHECK:           scf.parallel (%[[VAL_0:.*]]) = (%[[CONSTANT_3]]) to (%[[DIVSI_0]]) step (%[[CONSTANT_4]]) {
+// CHECK:             %[[MULI_0:.*]] = arith.muli %[[VAL_0]], %[[CONSTANT_0]] : index
+// CHECK:             %[[ADDI_1:.*]] = arith.addi %[[CONSTANT_0]], %[[MULI_0]] : index
+// CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[ARG0]](%[[SHAPE_0]]) %[[ADDI_1]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:             fir.store %[[CONSTANT_2]] to %[[ARRAY_COOR_0]] : !fir.ref<i32>
+// CHECK:             scf.reduce
+// CHECK:           } {unordered}
+// CHECK:           return
+// CHECK:         }
+func.func @loop_with_unordered_attr(%arg0: !fir.ref<!fir.array<100xi32>>) {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %0 = fir.shape %c100 : (index) -> !fir.shape<1>
+  %c1_i32 = arith.constant 1 : i32
+  fir.do_loop %arg1 = %c1 to %c100 step %c1 unordered {
+    %1 = fir.array_coor %arg0(%0) %arg1 : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+    fir.store %c1_i32 to %1 : !fir.ref<i32>
+  }
+  return
+}
+
 // CHECK-LABEL:   func.func @loop_with_attribute(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>,
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i32>) {

@@ -30,6 +30,7 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = doLoopOp.getLoc();
     bool hasFinalValue = doLoopOp.getFinalValue().has_value();
+    bool isUnordered = doLoopOp.getUnordered().has_value();
 
     // Get loop values from the DoLoopOp
     mlir::Value low = doLoopOp.getLowerBound();
@@ -53,37 +54,47 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
         mlir::arith::DivSIOp::create(rewriter, loc, distance, step);
     auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto one = mlir::arith::ConstantIndexOp::create(rewriter, loc, 1);
-    auto scfForOp =
-        mlir::scf::ForOp::create(rewriter, loc, zero, tripCount, one, iterArgs);
 
+    // Create the scf.for or scf.parallel operation
+    mlir::Operation *scfLoopOp = nullptr;
+    if (isUnordered) {
+      scfLoopOp = mlir::scf::ParallelOp::create(rewriter, loc, {zero},
+                                                {tripCount}, {one}, iterArgs);
+    } else {
+      scfLoopOp = mlir::scf::ForOp::create(rewriter, loc, zero, tripCount, one,
+                                           iterArgs);
+    }
+
+    // Move the body of the fir.do_loop to the scf.for or scf.parallel
     auto &loopOps = doLoopOp.getBody()->getOperations();
     auto resultOp =
         mlir::cast<fir::ResultOp>(doLoopOp.getBody()->getTerminator());
     auto results = resultOp.getOperands();
-    mlir::Block *loweredBody = scfForOp.getBody();
+    auto scfLoopLikeOp = mlir::cast<mlir::LoopLikeOpInterface>(scfLoopOp);
+    mlir::Block &scfLoopBody = scfLoopLikeOp.getLoopRegions().front()->front();
 
-    loweredBody->getOperations().splice(loweredBody->begin(), loopOps,
-                                        loopOps.begin(),
-                                        std::prev(loopOps.end()));
+    scfLoopBody.getOperations().splice(scfLoopBody.begin(), loopOps,
+                                       loopOps.begin(),
+                                       std::prev(loopOps.end()));
 
-    rewriter.setInsertionPointToStart(loweredBody);
+    rewriter.setInsertionPointToStart(&scfLoopBody);
     mlir::Value iv = mlir::arith::MulIOp::create(
-        rewriter, loc, scfForOp.getInductionVar(), step);
+        rewriter, loc, scfLoopLikeOp.getSingleInductionVar().value(), step);
     iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv);
 
     if (!results.empty()) {
-      rewriter.setInsertionPointToEnd(loweredBody);
+      rewriter.setInsertionPointToEnd(&scfLoopBody);
       mlir::scf::YieldOp::create(rewriter, resultOp->getLoc(), results);
     }
     doLoopOp.getInductionVar().replaceAllUsesWith(iv);
-    rewriter.replaceAllUsesWith(doLoopOp.getRegionIterArgs(),
-                                hasFinalValue
-                                    ? scfForOp.getRegionIterArgs().drop_front()
-                                    : scfForOp.getRegionIterArgs());
+    rewriter.replaceAllUsesWith(
+        doLoopOp.getRegionIterArgs(),
+        hasFinalValue ? scfLoopLikeOp.getRegionIterArgs().drop_front()
+                      : scfLoopLikeOp.getRegionIterArgs());
 
     // Copy all the attributes from the old to new op.
-    scfForOp->setAttrs(doLoopOp->getAttrs());
-    rewriter.replaceOp(doLoopOp, scfForOp);
+    scfLoopOp->setAttrs(doLoopOp->getAttrs());
+    rewriter.replaceOp(doLoopOp, scfLoopOp);
     return mlir::success();
   }
 };
