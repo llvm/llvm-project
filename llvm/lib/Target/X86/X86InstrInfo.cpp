@@ -4372,17 +4372,14 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            X86::VR128XRegClass.contains(SrcReg)) {
     // Special case for moving xmm to GPR16 registers, get super reg and fall
     // use CopyToFromAsymmetricReg
-    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
     DestReg =
-        TRI->getMatchingSuperReg(DestReg, X86::sub_16bit, &X86::GR32RegClass);
+        RI.getMatchingSuperReg(DestReg, X86::sub_16bit, &X86::GR32RegClass);
   } else if (X86::VR128XRegClass.contains(DestReg) &&
              X86::GR16RegClass.contains(SrcReg)) {
 
-    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
-
     // Zero extend GPR16 register to GPR32
     Register Src32 =
-        TRI->getMatchingSuperReg(SrcReg, X86::sub_16bit, &X86::GR32RegClass);
+        RI.getMatchingSuperReg(SrcReg, X86::sub_16bit, &X86::GR32RegClass);
 
     BuildMI(MBB, MI, DL, get(X86::MOVZX32rr16), Src32)
         .addReg(SrcReg, getKillRegState(KillSrc));
