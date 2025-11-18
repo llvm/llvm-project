@@ -7750,7 +7750,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
                 },
                 Range);
   if (ShouldUseVectorIntrinsic)
-    return new VPWidenIntrinsicRecipe(*CI, ID, Ops, CI->getType(), *VPI,
+    return new VPWidenIntrinsicRecipe(*CI, ID, Ops, CI->getType(), *VPI, *VPI,
                                       VPI->getDebugLoc());
 
   Function *Variant = nullptr;
@@ -7804,7 +7804,8 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
     }
 
     Ops.push_back(VPI->getOperand(VPI->getNumOperands() - 1));
-    return new VPWidenCallRecipe(CI, Variant, Ops, VPI->getDebugLoc());
+    return new VPWidenCallRecipe(CI, Variant, Ops, *VPI, *VPI,
+                                 VPI->getDebugLoc());
   }
 
   return nullptr;
@@ -7842,7 +7843,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
       auto *SafeRHS =
           Builder.createSelect(Mask, Ops[1], One, VPI->getDebugLoc());
       Ops[1] = SafeRHS;
-      return new VPWidenRecipe(*I, Ops, *VPI, VPI->getDebugLoc());
+      return new VPWidenRecipe(*I, Ops, *VPI, *VPI, VPI->getDebugLoc());
     }
     [[fallthrough]];
   }
@@ -7888,7 +7889,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
       // For other binops, the legacy cost model only checks the second operand.
       NewOps[1] = GetConstantViaSCEV(NewOps[1]);
     }
-    return new VPWidenRecipe(*I, NewOps, *VPI, VPI->getDebugLoc());
+    return new VPWidenRecipe(*I, NewOps, *VPI, *VPI, VPI->getDebugLoc());
   }
   case Instruction::ExtractValue: {
     SmallVector<VPValue *> NewOps(VPI->operands());
@@ -7896,7 +7897,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
     assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
     unsigned Idx = EVI->getIndices()[0];
     NewOps.push_back(Plan.getConstantInt(32, Idx));
-    return new VPWidenRecipe(*I, NewOps, *VPI, VPI->getDebugLoc());
+    return new VPWidenRecipe(*I, NewOps, *VPI, *VPI, VPI->getDebugLoc());
   }
   };
 }
@@ -7981,7 +7982,8 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
   auto *Recipe =
-      new VPReplicateRecipe(I, VPI->operands(), IsUniform, BlockInMask, *VPI);
+      new VPReplicateRecipe(I, VPI->operands(), IsUniform, BlockInMask, *VPI,
+                            *VPI, VPI->getDebugLoc());
   return Recipe;
 }
 
@@ -8231,17 +8233,19 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     return nullptr;
 
   if (VPI->getOpcode() == Instruction::GetElementPtr)
-    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr), R->operands());
+    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr), R->operands(),
+                                *VPI, VPI->getDebugLoc());
 
   if (VPI->getOpcode() == Instruction::Select)
-    return new VPWidenSelectRecipe(*cast<SelectInst>(Instr), R->operands(),
-                                   *VPI);
+    return new VPWidenSelectRecipe(cast<SelectInst>(Instr), R->operands(), *VPI,
+                                   *VPI, VPI->getDebugLoc());
 
   if (Instruction::isCast(VPI->getOpcode())) {
-    auto *CastR = cast<VPInstructionWithType>(R);
     auto *CI = cast<CastInst>(Instr);
+    auto *CastR = cast<VPInstructionWithType>(VPI);
     return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
-                                 CastR->getResultType(), *CI, *VPI);
+                                 CastR->getResultType(), CI, *VPI, *VPI,
+                                 VPI->getDebugLoc());
   }
 
   return tryToWiden(VPI);
@@ -8269,8 +8273,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
     Ops.push_back(BinOp);
-    BinOp = new VPWidenRecipe(*ReductionI, Ops, VPIRMetadata(),
-                              ReductionI->getDebugLoc());
+    BinOp = new VPWidenRecipe(*ReductionI, Ops, VPIRFlags(*ReductionI),
+                              VPIRMetadata(), ReductionI->getDebugLoc());
     Builder.insert(BinOp->getDefiningRecipe());
     ReductionOpcode = Instruction::Add;
   }
@@ -8454,9 +8458,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
         // Only create recipe for the final invariant store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
+          auto *VPI = cast<VPInstruction>(SingleDef);
           auto *Recipe = new VPReplicateRecipe(
-              SI, R.operands(), true /* IsUniform */, nullptr /*Mask*/,
-              *cast<VPInstruction>(SingleDef));
+              SI, R.operands(), true /* IsUniform */, nullptr /*Mask*/, *VPI,
+              *VPI, VPI->getDebugLoc());
           Recipe->insertBefore(*MiddleVPBB, MBIP);
         }
         R.eraseFromParent();
