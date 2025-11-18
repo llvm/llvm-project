@@ -1535,16 +1535,21 @@ struct VectorExtractStridedSliceDistribution
           "source dim size.");
     auto sourceLayout =
         xegpu::getDistributeLayoutAttr(extractOp->getOpOperand(0));
+    if (!sourceLayout || sourceLayout.getEffectiveLaneLayoutAsInt().empty())
+      return rewriter.notifyMatchFailure(
+          warpOp, "the source of extract_strided_slice op lacks distribution "
+                  "layout");
     auto sourceLaneLayout = sourceLayout.getEffectiveLaneLayoutAsInt();
     // Because only single dimension distribution is supported, lane layout size
     // at the distributed dim must be the subgroup size.
     int subgroupSize = sourceLaneLayout[distributedDim];
-    // Check if the distributed extracted dim is a multiple of the lane size.
+    // Check if the distributed extracted dim is a multiple of the subgroup
+    // size.
     if (distrDimExtractedSize % subgroupSize != 0)
       return rewriter.notifyMatchFailure(
           warpOp,
           "Extracted size along distributed dimension is not a multiple of "
-          "lane size in source layout.");
+          "subgroup size in source layout.");
     auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
     // We expect lane data to be all ones in this case.
     if (!llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))
@@ -1560,13 +1565,10 @@ struct VectorExtractStridedSliceDistribution
                                          "is not a multiple of subgroup size.");
     // Do the distribution by yielding the source of the extract op from
     // the warp op and creating a new extract op outside the warp op.
-    FailureOr<VectorType> sourceDistTypeOrFailure =
+    VectorType sourceDistType =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
-                                        extractOp.getSourceVectorType());
-    if (failed(sourceDistTypeOrFailure))
-      return rewriter.notifyMatchFailure(
-          warpOp, "failed to get distributed vector type for source");
-    VectorType sourceDistType = sourceDistTypeOrFailure.value();
+                                        extractOp.getSourceVectorType())
+            .value();
     // Create a new warp op that yields the source of the extract op.
     SmallVector<size_t> newRetIndices;
     auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -1581,9 +1583,10 @@ struct VectorExtractStridedSliceDistribution
     // Update the distributed sizes to match the distributed type.
     distributedSizes[distributedDim] =
         rewriter.getI64IntegerAttr(distributedType.getDimSize(distributedDim));
-    // Update the distributed offsets to match round robin distribution.
-    distributedOffsets[distributedDim] = rewriter.getI64IntegerAttr(
-        distrDimOffset / subgroupSize); // because lane data is 1
+    // Update the distributed offsets to match round robin distribution (i.e.
+    // each lane owns data at `subgroupSize` stride given unit lane data).
+    distributedOffsets[distributedDim] =
+        rewriter.getI64IntegerAttr(distrDimOffset / subgroupSize);
     Value source = newWarpOp.getResult(newRetIndices[0]);
     // Create a new extract op outside the warp op.
     Value newExtractOp = vector::ExtractStridedSliceOp::create(
@@ -1592,6 +1595,121 @@ struct VectorExtractStridedSliceDistribution
         ArrayAttr::get(rewriter.getContext(), distributedSizes),
         extractOp.getStrides());
     rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newExtractOp);
+    return success();
+  }
+};
+
+struct VectorInsertStridedSliceDistribution
+    : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::InsertStridedSliceOp>);
+    if (!operand)
+      return failure();
+    unsigned int operandNumber = operand->getOperandNumber();
+    auto insertOp =
+        operand->get().getDefiningOp<vector::InsertStridedSliceOp>();
+    auto distributedType =
+        cast<VectorType>(warpOp.getResult(operandNumber).getType());
+    // Find the distributed dimension of the dest vector. There should be
+    // exactly one.
+    auto yieldedType = cast<VectorType>(operand->get().getType());
+    auto destDistributedDims = getDistributedDims(yieldedType, distributedType);
+    // Only single dimension distribution is supported.
+    if (destDistributedDims.size() != 1)
+      return rewriter.notifyMatchFailure(
+          warpOp, "Expecting source to be distributed in a single dimension.");
+    int64_t destDistributedDim = destDistributedDims[0];
+
+    VectorType srcType = insertOp.getSourceVectorType();
+    VectorType destType = insertOp.getDestVectorType();
+    // Currently we require that both source (kD) and dest (nD) vectors are
+    // distributed. This requires that distributedDim (d) is contained in the
+    // last k dims of the dest vector (d >= n - k).
+    int64_t sourceDistributedDim =
+        destDistributedDim - (destType.getRank() - srcType.getRank());
+    if (sourceDistributedDim < 0)
+      return rewriter.notifyMatchFailure(
+          insertOp, "distributed dimension must be in the last k (i.e. source "
+                    "rank) dims of dest vector");
+    // If the distributed dimension is fully inserted, skip. This case is
+    // already handled by vector distribution patterns.
+    int64_t destDistrDimSize = destType.getDimSize(destDistributedDim);
+    int64_t srcDistrDimSize = srcType.getDimSize(sourceDistributedDim);
+    if (srcDistrDimSize == destDistrDimSize)
+      return rewriter.notifyMatchFailure(
+          insertOp, "distributed dimension is fully inserted. This case "
+                    "is handled by vector distribution.");
+    // Obtain the source and dest layouts.
+    auto destLayout = xegpu::getDistributeLayoutAttr(insertOp->getOpOperand(1));
+    auto sourceLayout =
+        xegpu::getDistributeLayoutAttr(insertOp->getOpOperand(0));
+    if (!destLayout || !sourceLayout ||
+        destLayout.getEffectiveLaneLayoutAsInt().empty() ||
+        sourceLayout.getEffectiveLaneLayoutAsInt().empty())
+      return rewriter.notifyMatchFailure(
+          warpOp, "the source or dest of insert_strided_slice op lacks "
+                  "distribution layout");
+    // Because only single dimension distribution is supported, lane layout
+    // size at the distributed dim must be the subgroup size.
+    int subgroupSize =
+        destLayout.getEffectiveLaneLayoutAsInt()[destDistributedDim];
+    // We require that source and dest lane data are all ones to ensure uniform
+    // round robin distribution.
+    auto destLaneData = destLayout.getEffectiveLaneDataAsInt();
+    auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
+    if (!llvm::all_of(destLaneData, [](int64_t v) { return v == 1; }) ||
+        !llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))
+      return rewriter.notifyMatchFailure(
+          warpOp, "Expecting unit lane data in source and dest layouts");
+    // Distributed dim sizes must be multiples of subgroup size.
+    if (destDistrDimSize % subgroupSize != 0 ||
+        srcDistrDimSize % subgroupSize != 0)
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          "Distributed dimension size in source or dest is not a multiple of "
+          "subgroup size.");
+    // Offsets in the distributed dimension must be multiples of subgroup size.
+    int64_t destDistrDimOffset =
+        cast<IntegerAttr>(insertOp.getOffsets()[destDistributedDim]).getInt();
+    if (destDistrDimOffset % subgroupSize != 0)
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          "Offset along distributed dimension in dest is not a multiple of "
+          "subgroup size.");
+    // Do the distribution by yielding the source and dest of the insert op from
+    // the warp op and creating a new insert op outside the warp op.
+    VectorType sourceDistType =
+        getDistVecTypeBasedOnLaneLayout(sourceLayout,
+                                        insertOp.getSourceVectorType())
+            .value();
+    VectorType destDistType = getDistVecTypeBasedOnLaneLayout(
+                                  destLayout, insertOp.getDestVectorType())
+                                  .value();
+    // Create a new warp op that yields the source and dest of the insert op.
+    SmallVector<size_t> newRetIndices;
+    auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, {insertOp.getValueToStore(), insertOp.getDest()},
+        {sourceDistType, destDistType}, newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    // Distributed offsets must be adjusted.
+    SmallVector<Attribute> distributedOffsets = llvm::map_to_vector(
+        insertOp.getOffsets(), [](Attribute attr) { return attr; });
+    // Update the distributed offsets to match round robin distribution (i.e.
+    // each lane owns data at `subgroupSize` stride given unit lane data).
+    distributedOffsets[destDistributedDim] =
+        rewriter.getI64IntegerAttr(destDistrDimOffset / subgroupSize);
+    Value valueToStore = newWarpOp.getResult(newRetIndices[0]);
+    Value dest = newWarpOp.getResult(newRetIndices[1]);
+    // Create a new insert op outside the warp op.
+    Value newInsertOp = vector::InsertStridedSliceOp::create(
+        rewriter, insertOp.getLoc(), destDistType, valueToStore, dest,
+        ArrayAttr::get(rewriter.getContext(), distributedOffsets),
+        insertOp.getStrides());
+    rewriter.replaceAllUsesWith(newWarpOp.getResult(operandNumber),
+                                newInsertOp);
     return success();
   }
 };
@@ -1754,7 +1872,8 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
       patterns.getContext(),
       /*pattern benefit=*/regularPatternBenefit);
   patterns
-      .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution>(
+      .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution,
+           VectorInsertStridedSliceDistribution>(
           patterns.getContext(),
           /*pattern benefit=*/highPatternBenefit);
 }
