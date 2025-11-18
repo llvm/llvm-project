@@ -579,9 +579,6 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
   }
 };
 
-// Lower xegpu::CreateMemDescOp to memref::ViewOp. Since SLM access instructions
-// on Xe2 and Xe3 operate on 32-bit or 64-bit units, all data types smaller than
-// 32 bits will be converted to 32 bits.
 class CreateMemDescOpPattern final
     : public OpConversionPattern<xegpu::CreateMemDescOp> {
 public:
@@ -590,12 +587,7 @@ public:
   matchAndRewrite(xegpu::CreateMemDescOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    Value baseAddr = memref::ExtractAlignedPointerAsIndexOp::create(
-        rewriter, op.getLoc(), op.getSource());
-    auto baseAddr32 = arith::IndexCastUIOp::create(
-        rewriter, op.getLoc(), rewriter.getI32Type(), baseAddr);
-
-    rewriter.replaceOp(op, baseAddr32);
+    rewriter.replaceOp(op, adaptor.getSource());
     return success();
   }
 };
@@ -1000,7 +992,8 @@ struct ConvertXeGPUToXeVMPass
     });
 
     typeConverter.addConversion([&](MemRefType type) -> Type {
-      // Convert MemRefType to i64 type.
+      if (type.getMemorySpaceAsInt() == 3)
+        return IntegerType::get(&getContext(), 32);
       return IntegerType::get(&getContext(), 64);
     });
 
