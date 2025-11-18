@@ -17,7 +17,7 @@ RUN:   -Wl,--thinlto-cache-dir=cache.dir \
 RUN:   -Wl,--save-temps
 
 # Check that there are two backend compilation jobs occurred.
-RUN: grep -wo args populate1.*.dist-file.json | wc -l | grep -qx 3
+RUN: grep -wo args populate1.*.dist-file.json | wc -l | grep -qx "\s*3"
 RUN: ls cache.dir/llvmcache.timestamp
 RUN: ls cache.dir | count 3
 
@@ -32,7 +32,7 @@ RUN:   -Wl,--thinlto-cache-dir=cache.dir \
 RUN:   -Wl,--save-temps
 
 # Check that there are no backend compilation jobs occurred.
-RUN: grep -wo args populate2.*.dist-file.json | wc -l | grep -qx 1
+RUN: grep -wo args populate2.*.dist-file.json | wc -l | grep -qx "\s*1"
 RUN: ls cache.dir | count 3
 
 RUN: %clang -O0 --target=x86_64-linux-gnu -flto=thin -c foo.c -o foo.O0.o
@@ -52,7 +52,7 @@ RUN:   -Wl,--thinlto-cache-dir=cache.dir \
 RUN:   -Wl,--save-temps
 
 # Check that there are two new backend compilation jobs occurred.
-RUN: grep -wo args populate3.*.dist-file.json | wc -l | grep -qx 3
+RUN: grep -wo args populate3.*.dist-file.json | wc -l | grep -qx "\s*3"
 RUN: ls cache.dir | count 5
 
 RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c main-partial.c 
@@ -69,7 +69,7 @@ RUN:   -Wl,--thinlto-cache-dir=cache.dir \
 RUN:   -Wl,--save-temps
 
 # Check that there is one new backend compilation jobs occurred.
-RUN: grep -wo args main-partial.*.dist-file.json | wc -l | grep -qx 2
+RUN: grep -wo args main-partial.*.dist-file.json | wc -l | grep -qx "\s*2"
 RUN: ls cache.dir | count 6
 
 #--- foo.c
