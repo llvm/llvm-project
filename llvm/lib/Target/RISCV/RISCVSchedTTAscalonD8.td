@@ -414,12 +414,10 @@ def : ReadAdvance<ReadSingleBitImm, 0>;
 def : WriteRes<WriteRdVLENB, [AscalonFXA]>;
 
 // Configuration-Setting Instructions
-let Latency = 1 in {
 def : WriteRes<WriteVSETVLI, [AscalonV]>;
 def : WriteRes<WriteVSETIVLI, [AscalonV]>;
-}
 let Latency = 2 in {
-def : WriteRes<WriteVSETVL, [AscalonV]>;
+  def : WriteRes<WriteVSETVL, [AscalonV]>;
 }
 
 // Vector Loads and Stores
@@ -430,15 +428,12 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVLDE",    [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDFF",   [AscalonLS], mx, IsWorstCase>;
   }
-  let Latency = 1 in
   defm "" : LMULWriteResMX<"WriteVSTE",    [AscalonLS], mx, IsWorstCase>;
 }
 
 foreach mx = SchedMxList in {
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = 1 in
   defm "" : LMULWriteResMX<"WriteVLDM",    [AscalonLS], mx, IsWorstCase>;
-  let Latency = 1 in
   defm "" : LMULWriteResMX<"WriteVSTM",    [AscalonLS], mx, IsWorstCase>;
 }
 
@@ -491,18 +486,16 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
   }
 }
 
-let Latency = 1 in {
-  // VLD*R is LMUL aware
-  def : WriteRes<WriteVLD1R,  [AscalonLS]>;
-  def : WriteRes<WriteVLD2R,  [AscalonLS]>;
-  def : WriteRes<WriteVLD4R,  [AscalonLS]>;
-  def : WriteRes<WriteVLD8R,  [AscalonLS]>;
-  // VST*R is LMUL aware
-  def : WriteRes<WriteVST1R,   [AscalonLS]>;
-  def : WriteRes<WriteVST2R,   [AscalonLS]>;
-  def : WriteRes<WriteVST4R,   [AscalonLS]>;
-  def : WriteRes<WriteVST8R,   [AscalonLS]>;
-}
+// VLD*R is LMUL aware
+def : WriteRes<WriteVLD1R,  [AscalonLS]>;
+def : WriteRes<WriteVLD2R,  [AscalonLS]>;
+def : WriteRes<WriteVLD4R,  [AscalonLS]>;
+def : WriteRes<WriteVLD8R,  [AscalonLS]>;
+// VST*R is LMUL aware
+def : WriteRes<WriteVST1R,   [AscalonLS]>;
+def : WriteRes<WriteVST2R,   [AscalonLS]>;
+def : WriteRes<WriteVST4R,   [AscalonLS]>;
+def : WriteRes<WriteVST8R,   [AscalonLS]>;
 
 // Segmented Loads and Stores
 foreach mx = SchedMxList in {
@@ -832,10 +825,8 @@ foreach mx = SchedMxListFWRed in {
 // Vector Mask Instructions
 foreach mx = SchedMxList in {
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = 1 in {
-    defm "" : LMULWriteResMX<"WriteVMALUV", [AscalonV], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVMSFSV", [AscalonV], mx, IsWorstCase>;
-  }
+  defm "" : LMULWriteResMX<"WriteVMALUV", [AscalonV], mx, IsWorstCase>;
+  defm "" : LMULWriteResMX<"WriteVMSFSV", [AscalonV], mx, IsWorstCase>;
   let Latency = 2, ReleaseAtCycles = [1, 2] in {
     defm "" : LMULWriteResMX<"WriteVMPopV", [AscalonFX, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVMFFSV", [AscalonFX, AscalonV], mx, IsWorstCase>;
