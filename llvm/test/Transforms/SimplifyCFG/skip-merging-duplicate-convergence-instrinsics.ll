@@ -20,9 +20,9 @@ define void @nested(i32 %tidx, i32 %tidy, ptr %array) #0 {
 ; CHECK:       for.body4.i:
 ; CHECK-NEXT:    br i1 [[OR_COND_I]], label [[IF_THEN_I:%.*]], label [[FOR_COND1_I]]
 ; CHECK:       if.then.i:
-; CHECK-NEXT:    [[HLSL_WAVE_ACTIVE_MAX7_I:%.*]] = call spir_func i32 @llvm.spv.wave.reduce.umax.i32(i32 0) [ "convergencectrl"(token [[TMP3]]) ]
+; CHECK-NEXT:    [[TEST_VAL:%.*]] = call spir_func i32 @func_test(i32 0) [ "convergencectrl"(token [[TMP3]]) ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i32 0
-; CHECK-NEXT:    store i32 [[HLSL_WAVE_ACTIVE_MAX7_I]], ptr [[TMP4]], align 4
+; CHECK-NEXT:    store i32 [[TEST_VAL]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -46,9 +46,9 @@ for.body4.i:
   br i1 %or.cond.i, label %if.then.i, label %for.cond1.i
 
 if.then.i:
-  %hlsl.wave.active.max7.i = call spir_func i32 @llvm.spv.wave.reduce.umax.i32(i32 0) [ "convergencectrl"(token %4) ]
+  %test.val = call spir_func i32 @func_test(i32 0) [ "convergencectrl"(token %4) ]
   %5 = getelementptr inbounds i32, ptr %array, i32 0
-  store i32 %hlsl.wave.active.max7.i, ptr %5, align 4
+  store i32 %test.val, ptr %5, align 4
   br label %cleanup.i
 
 cleanup.i.loopexit:
@@ -63,6 +63,6 @@ exit:
 
 declare token @llvm.experimental.convergence.loop() #0
 
-declare i32 @llvm.spv.wave.reduce.umax.i32(i32) #0
+declare i32 @func_test(i32) #0
 
 attributes #0 = { convergent }
