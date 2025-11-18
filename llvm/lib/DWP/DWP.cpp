@@ -416,12 +416,15 @@ static void writeNewOffsetsTo(MCStreamer &Out, DataExtractor &Data,
                               DenseMap<uint64_t, uint64_t> &OffsetRemapping,
                               uint64_t &Offset, const uint64_t Size,
                               uint32_t OldOffsetSize, uint32_t NewOffsetSize) {
-
+  // Create a mask so we don't trigger a emitIntValue() assert below if the
+  // NewOffset is over 4GB.
+  const uint64_t NewOffsetMask = NewOffsetSize == 8 ? UINT64_MAX : UINT32_MAX;
   while (Offset < Size) {
     const uint64_t OldOffset = Data.getUnsigned(&Offset, OldOffsetSize);
     const uint64_t NewOffset = OffsetRemapping[OldOffset];
-    assert(NewOffsetSize == 8 || NewOffset <= UINT32_MAX);
-    Out.emitIntValue(NewOffset, NewOffsetSize);
+    // Truncate the string offset like the old llvm-dwp would have if we aren't
+    // promoting the .debug_str_offsets to DWARF64.
+    Out.emitIntValue(NewOffset & NewOffsetMask, NewOffsetSize);
   }
 }
 
