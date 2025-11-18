@@ -1247,14 +1247,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
           !match(Op, m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
                                    m_Deferred(X)))) {
         NewOps.push_back(Op);
-        continue;
-      }
-      if (UnpairedCmp) {
+      } else if (!UnpairedCmp) {
+        UnpairedCmp = Op->getDefiningRecipe();
+      } else {
         NewOps.push_back(Builder.createFCmp(CmpInst::FCMP_UNO,
                                             UnpairedCmp->getOperand(0), X));
         UnpairedCmp = nullptr;
-      } else {
-        UnpairedCmp = Op->getDefiningRecipe();
       }
     }
 
