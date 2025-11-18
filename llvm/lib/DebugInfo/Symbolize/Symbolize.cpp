@@ -580,7 +580,8 @@ Expected<object::Binary *>
 LLVMSymbolizer::loadOrGetBinary(const std::string &ArchivePathKey,
                                 std::optional<StringRef> FullPathKey) {
   // If no separate cache key is provided, use the archive path itself.
-  std::string FullPathKeyStr = FullPathKey ? FullPathKey->str() : ArchivePathKey;
+  std::string FullPathKeyStr =
+      FullPathKey ? FullPathKey->str() : ArchivePathKey;
   auto Pair = BinaryForPath.emplace(FullPathKeyStr, OwningBinary<Binary>());
   if (!Pair.second) {
     recordAccess(Pair.first->second);
