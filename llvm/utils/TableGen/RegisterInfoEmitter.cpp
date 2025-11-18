@@ -68,19 +68,22 @@ public:
   }
 
   // runEnums - Print out enum values for all of the registers.
-  void runEnums(raw_ostream &OS);
+  void runEnums(raw_ostream &OS, raw_ostream &MainOS, StringRef FilenamePrefix);
 
   // runMCDesc - Print out MC register descriptions.
-  void runMCDesc(raw_ostream &OS);
+  void runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
+                 StringRef FilenamePrefix);
 
   // runTargetHeader - Emit a header fragment for the register info emitter.
-  void runTargetHeader(raw_ostream &OS);
+  void runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
+                       StringRef FilenamePrefix);
 
   // runTargetDesc - Output the target register and register file descriptions.
-  void runTargetDesc(raw_ostream &OS);
+  void runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
+                     StringRef FilenamePrefix);
 
   // run - Output the register file description.
-  void run(raw_ostream &OS);
+  TableGenOutputFiles run(StringRef FilenamePrefix);
 
   void debugDump(raw_ostream &OS);
 
@@ -97,8 +100,19 @@ private:
 
 } // end anonymous namespace
 
+static void emitInclude(StringRef FilenamePrefix, StringRef IncludeFile,
+                        StringRef GuardMacro, raw_ostream &OS) {
+  OS << "#ifdef " << GuardMacro << '\n';
+  OS << "#undef " << GuardMacro << '\n';
+  OS << "#include \"" << FilenamePrefix << IncludeFile << "\"\n";
+  OS << "#endif\n\n";
+}
+
 // runEnums - Print out enum values for all of the registers.
-void RegisterInfoEmitter::runEnums(raw_ostream &OS) {
+void RegisterInfoEmitter::runEnums(raw_ostream &OS, raw_ostream &MainOS,
+                                   StringRef FilenamePrefix) {
+  emitInclude(FilenamePrefix, "Enums.inc", "GET_REGINFO_ENUM", MainOS);
+
   const auto &Registers = RegBank.getRegisters();
 
   // Register enums are stored as uint16_t in the tables. Make sure we'll fit.
@@ -107,9 +121,6 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS) {
   StringRef Namespace = Registers.front().TheDef->getValueAsString("Namespace");
 
   emitSourceFileHeader("Target Register Enum Values", OS);
-
-  OS << "\n#ifdef GET_REGINFO_ENUM\n";
-  OS << "#undef GET_REGINFO_ENUM\n\n";
 
   OS << "namespace llvm {\n\n";
 
@@ -194,7 +205,6 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS) {
   OS << '\n';
 
   OS << "} // end namespace llvm\n\n";
-  OS << "#endif // GET_REGINFO_ENUM\n\n";
 }
 
 static void printInt(raw_ostream &OS, int Val) { OS << Val; }
@@ -902,11 +912,11 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
 //
 // runMCDesc - Print out MC register descriptions.
 //
-void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
-  emitSourceFileHeader("MC Register Information", OS);
+void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
+                                    StringRef FilenamePrefix) {
+  emitInclude(FilenamePrefix, "MCDesc.inc", "GET_REGINFO_MC_DESC", MainOS);
 
-  OS << "\n#ifdef GET_REGINFO_MC_DESC\n";
-  OS << "#undef GET_REGINFO_MC_DESC\n\n";
+  emitSourceFileHeader("MC Register Information", OS);
 
   const auto &Regs = RegBank.getRegisters();
 
@@ -1131,14 +1141,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   OS << "}\n\n";
 
   OS << "} // end namespace llvm\n\n";
-  OS << "#endif // GET_REGINFO_MC_DESC\n\n";
 }
 
-void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
-  emitSourceFileHeader("Register Information Header Fragment", OS);
+void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
+                                          StringRef FilenamePrefix) {
+  emitInclude(FilenamePrefix, "Header.inc", "GET_REGINFO_HEADER", MainOS);
 
-  OS << "\n#ifdef GET_REGINFO_HEADER\n";
-  OS << "#undef GET_REGINFO_HEADER\n\n";
+  emitSourceFileHeader("Register Information Header Fragment", OS);
 
   const std::string &TargetName = Target.getName().str();
   std::string ClassName = TargetName + "GenRegisterInfo";
@@ -1215,17 +1224,17 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
     OS << "} // end namespace " << RegisterClasses.front().Namespace << "\n\n";
   }
   OS << "} // end namespace llvm\n\n";
-  OS << "#endif // GET_REGINFO_HEADER\n\n";
 }
 
 //
 // runTargetDesc - Output the target register and register file descriptions.
 //
-void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
-  emitSourceFileHeader("Target Register and Register Classes Information", OS);
+void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
+                                        StringRef FilenamePrefix) {
+  emitInclude(FilenamePrefix, "TargetDesc.inc", "GET_REGINFO_TARGET_DESC",
+              MainOS);
 
-  OS << "\n#ifdef GET_REGINFO_TARGET_DESC\n";
-  OS << "#undef GET_REGINFO_TARGET_DESC\n\n";
+  emitSourceFileHeader("Target Register and Register Classes Information", OS);
 
   OS << "namespace llvm {\n\n";
 
@@ -1840,25 +1849,42 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
      << "}\n\n";
 
   OS << "} // end namespace llvm\n\n";
-  OS << "#endif // GET_REGINFO_TARGET_DESC\n\n";
 }
 
-void RegisterInfoEmitter::run(raw_ostream &OS) {
+TableGenOutputFiles RegisterInfoEmitter::run(StringRef FilenamePrefix) {
   TGTimer &Timer = Records.getTimer();
   Timer.startTimer("Print enums");
-  runEnums(OS);
+  std::string Main;
+  raw_string_ostream MainOS(Main);
+  std::string Enums;
+  raw_string_ostream EnumsOS(Enums);
+  runEnums(EnumsOS, MainOS, FilenamePrefix);
 
   Timer.startTimer("Print MC registers");
-  runMCDesc(OS);
+  std::string MCDesc;
+  raw_string_ostream MCDescOS(MCDesc);
+  runMCDesc(MCDescOS, MainOS, FilenamePrefix);
 
   Timer.startTimer("Print header fragment");
-  runTargetHeader(OS);
+  std::string Header;
+  raw_string_ostream HeaderOS(Header);
+  runTargetHeader(HeaderOS, MainOS, FilenamePrefix);
 
   Timer.startTimer("Print target registers");
-  runTargetDesc(OS);
+  std::string TargetDesc;
+  raw_string_ostream TargetDescOS(TargetDesc);
+  runTargetDesc(TargetDescOS, MainOS, FilenamePrefix);
 
   if (RegisterInfoDebug)
     debugDump(errs());
+
+  // The suffixes should be in sync with the tablegen function in
+  // llvm/cmake/modules/TableGen.cmake.
+  return {Main,
+          {{"Enums.inc", Enums},
+           {"MCDesc.inc", MCDesc},
+           {"Header.inc", Header},
+           {"TargetDesc.inc", TargetDesc}}};
 }
 
 void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
@@ -1935,5 +1961,5 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
   }
 }
 
-static TableGen::Emitter::OptClass<RegisterInfoEmitter>
+static TableGen::Emitter::MultiFileOptClass<RegisterInfoEmitter>
     X("gen-register-info", "Generate registers and register classes info");

@@ -189,7 +189,7 @@ jobs:
         ref: ${{ needs.prepare.outputs.ref }}
 
     - name: Install Ninja
-      uses: llvm/actions/install-ninja@42d80571b13f4599bbefbc7189728b64723c7f78 # main
+      uses: llvm/actions/install-ninja@5dd955034a6742a2e21d82bf165fcb1050ae7b49 # main
 
     - name: Set Build Prefix
       id: setup-stage

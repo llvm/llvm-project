@@ -1951,7 +1951,7 @@ void SIRegisterInfo::buildSpillLoadStore(
 
 void SIRegisterInfo::addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                                     Register BlockReg) const {
-  const MachineFunction *MF = MIB->getParent()->getParent();
+  const MachineFunction *MF = MIB->getMF();
   const SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
   uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(BlockReg);
   Register BaseVGPR = getSubReg(BlockReg, AMDGPU::sub0);
@@ -2321,7 +2321,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
 bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
-  MachineFunction *MF = MI->getParent()->getParent();
+  MachineFunction *MF = MI->getMF();
   MachineBasicBlock *MBB = MI->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
@@ -4015,28 +4015,6 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
   assert(&RC != &AMDGPU::VS_64RegClass);
 
   return true;
-}
-
-const TargetRegisterClass *
-SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
-  if (!RC || !ST.needsAlignedVGPRs())
-    return RC;
-
-  unsigned Size = getRegSizeInBits(*RC);
-  if (Size <= 32)
-    return RC;
-
-  if (RC == &AMDGPU::VS_64RegClass)
-    return &AMDGPU::VS_64_Align2RegClass;
-
-  if (isVGPRClass(RC))
-    return getAlignedVGPRClassForBitWidth(Size);
-  if (isAGPRClass(RC))
-    return getAlignedAGPRClassForBitWidth(Size);
-  if (isVectorSuperClass(RC))
-    return getAlignedVectorSuperClassForBitWidth(Size);
-
-  return RC;
 }
 
 ArrayRef<MCPhysReg>

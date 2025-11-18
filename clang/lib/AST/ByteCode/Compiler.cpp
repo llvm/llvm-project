@@ -773,6 +773,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_ToVoid:
     return discard(SubExpr);
 
+  case CK_Dynamic:
+    // This initially goes through VisitCXXDynamicCastExpr, where we emit
+    // a diagnostic if appropriate.
+    return this->delegate(SubExpr);
+
   default:
     return this->emitInvalid(CE);
   }
@@ -6052,6 +6057,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
                           DefaultLabel);
   if (!this->visitStmt(S->getBody()))
     return false;
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
 
   return LS.destroyLocals();
@@ -6059,6 +6065,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitCaseStmt(const CaseStmt *S) {
+  this->fallthrough(CaseLabels[S]);
   this->emitLabel(CaseLabels[S]);
   return this->visitStmt(S->getSubStmt());
 }

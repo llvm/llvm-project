@@ -7959,7 +7959,7 @@ static SDValue buildFromShuffleMostly(SDValue Op, const SDLoc &DL,
   for (unsigned i = 0; i != NumElems; ++i) {
     unsigned Opc = Op.getOperand(i).getOpcode();
 
-    if (Opc == ISD::UNDEF)
+    if (Opc == ISD::POISON || Opc == ISD::UNDEF)
       continue;
 
     if (Opc != ISD::EXTRACT_VECTOR_ELT) {
@@ -8002,7 +8002,7 @@ static SDValue buildFromShuffleMostly(SDValue Op, const SDLoc &DL,
   if (!VecIn1.getNode())
     return SDValue();
 
-  VecIn2 = VecIn2.getNode() ? VecIn2 : DAG.getUNDEF(VT);
+  VecIn2 = VecIn2.getNode() ? VecIn2 : DAG.getPOISON(VT);
   SDValue NV = DAG.getVectorShuffle(VT, DL, VecIn1, VecIn2, Mask);
 
   for (unsigned Idx : InsertIndices)
@@ -29629,9 +29629,9 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
       }
       if (!(IsLoLaneAllZeroOrUndef || IsHiLaneAllZeroOrUndef)) {
         SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(0x00FF, dl, ExVT));
-        SDValue BLo = DAG.getNode(ISD::AND, dl, VT, Mask, B);
         SDValue BHi = DAG.getNode(X86ISD::ANDNP, dl, VT, Mask, B);
-        SDValue RLo = DAG.getNode(X86ISD::VPMADDUBSW, dl, ExVT, A, BLo);
+        SDValue RLo = DAG.getNode(ISD::MUL, dl, ExVT, DAG.getBitcast(ExVT, A),
+                                  DAG.getBitcast(ExVT, B));
         SDValue RHi = DAG.getNode(X86ISD::VPMADDUBSW, dl, ExVT, A, BHi);
         RLo = DAG.getNode(ISD::AND, dl, VT, DAG.getBitcast(VT, RLo), Mask);
         RHi = DAG.getNode(X86ISD::VSHLI, dl, ExVT, RHi,
@@ -29647,26 +29647,8 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Undef = DAG.getUNDEF(VT);
     SDValue ALo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, A, Undef));
     SDValue AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, A, Undef));
-
-    SDValue BLo, BHi;
-    if (ISD::isBuildVectorOfConstantSDNodes(B.getNode())) {
-      // If the RHS is a constant, manually unpackl/unpackh.
-      SmallVector<SDValue, 16> LoOps, HiOps;
-      for (unsigned i = 0; i != NumElts; i += 16) {
-        for (unsigned j = 0; j != 8; ++j) {
-          LoOps.push_back(DAG.getAnyExtOrTrunc(B.getOperand(i + j), dl,
-                                               MVT::i16));
-          HiOps.push_back(DAG.getAnyExtOrTrunc(B.getOperand(i + j + 8), dl,
-                                               MVT::i16));
-        }
-      }
-
-      BLo = DAG.getBuildVector(ExVT, dl, LoOps);
-      BHi = DAG.getBuildVector(ExVT, dl, HiOps);
-    } else {
-      BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, B, Undef));
-      BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, B, Undef));
-    }
+    SDValue BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, B, Undef));
+    SDValue BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, B, Undef));
 
     // Multiply, mask the lower 8bits of the lo/hi results and pack.
     SDValue RLo = DAG.getNode(ISD::MUL, dl, ExVT, ALo, BLo);
@@ -54706,11 +54688,14 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
       KnownBits KnownAmt = DAG.computeKnownBits(ShAmt);
       // Check the shift amount is byte aligned.
       // Check the truncation doesn't use any shifted in (zero) top bits.
-      // Check the shift amount doesn't depend on the original load.
+      // Check the shift amount doesn't depend on the original load chain.
       if (KnownAmt.countMinTrailingZeros() >= 3 &&
           KnownAmt.getMaxValue().ule(SrcVT.getSizeInBits() -
                                      VT.getSizeInBits()) &&
-          !Ld->isPredecessorOf(ShAmt.getNode())) {
+          none_of(Ld->uses(), [&ShAmt](SDUse &Use) {
+            return Use.getResNo() == 1 &&
+                   Use.getUser()->isPredecessorOf(ShAmt.getNode());
+          })) {
         EVT PtrVT = Ld->getBasePtr().getValueType();
         SDValue PtrBitOfs = DAG.getZExtOrTrunc(ShAmt, DL, PtrVT);
         SDValue PtrByteOfs =

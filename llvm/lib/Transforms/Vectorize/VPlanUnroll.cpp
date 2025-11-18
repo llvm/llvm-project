@@ -352,7 +352,6 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
-        match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
@@ -365,21 +364,17 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_ExtractLane(m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractLane>(
+                      m_VPValue(Op0), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
     if (match(&R, m_ExtractLastElement(m_VPValue(Op0))) ||
-        match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
+        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                      m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
-      if (isa<VPFirstOrderRecurrencePHIRecipe>(Op0)) {
-        assert(match(&R, m_ExtractLastElement(m_VPValue())) &&
-               "can only extract last element of FOR");
-        continue;
-      }
-
       if (Plan.hasScalarVFOnly()) {
         auto *I = cast<VPInstruction>(&R);
         // Extracting from end with VF = 1 implies retrieving the last or
@@ -523,9 +518,9 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     // TODO: have cloning of replicate recipes also provide the desired result
     // coupled with setting its operands to NewOps (deriving IsSingleScalar and
     // Mask from the operands?)
-    New =
-        new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
-                              /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
+    New = new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
+                                /*IsSingleScalar=*/true, /*Mask=*/nullptr,
+                                *RepR, *RepR, RepR->getDebugLoc());
   } else {
     assert(isa<VPInstruction>(DefR) &&
            "DefR must be a VPReplicateRecipe or VPInstruction");
