@@ -567,7 +567,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                std::string("unimplemented builtin call: ") +
                    getContext().BuiltinInfo.getName(builtinID));
   return getUndefRValue(e->getType());
-
 }
 
 static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,

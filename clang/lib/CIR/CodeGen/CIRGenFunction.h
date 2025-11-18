@@ -1476,8 +1476,8 @@ public:
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
-  RValue emitNewOrDeleteBuiltinCall(const FunctionProtoType* type,
-                        const CallExpr* call, bool isDelete);
+  RValue emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
+                                    const CallExpr *call, bool isDelete);
 
   void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
                         Address ptr);

@@ -611,8 +611,8 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
 }
 
 RValue CIRGenFunction::emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
-                                                const CallExpr *callExpr,
-                                                bool isDelete) {
+                                                  const CallExpr *callExpr,
+                                                  bool isDelete) {
   CallArgList args;
   emitCallArgs(args, type, callExpr->arguments());
   // Find the allocation or deallocation function that we're calling.
@@ -620,7 +620,8 @@ RValue CIRGenFunction::emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
   DeclarationName name = astContext.DeclarationNames.getCXXOperatorName(
       isDelete ? OO_Delete : OO_New);
 
-  clang::DeclContextLookupResult lookupResult = astContext.getTranslationUnitDecl()->lookup(name);
+  clang::DeclContextLookupResult lookupResult =
+      astContext.getTranslationUnitDecl()->lookup(name);
   for (const auto *decl : lookupResult) {
     if (const auto *funcDecl = dyn_cast<FunctionDecl>(decl)) {
       if (astContext.hasSameType(funcDecl->getType(), QualType(type, 0))) {
