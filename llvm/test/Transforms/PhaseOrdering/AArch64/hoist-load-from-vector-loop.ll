@@ -8,19 +8,69 @@ target triple = "arm64-apple-macosx"
 define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %array) {
 ; CHECK-LABEL: define void @hoist_invariant_load(
 ; CHECK-SAME: ptr readonly captures(none) [[INVARIANT_PTR:%.*]], i64 [[NUM_ELEMENTS:%.*]], ptr captures(none) [[ARRAY:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[NUM_ELEMENTS]], 0
-; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[EXIT:.*]], label %[[LOOP_LATCH:.*]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP_LATCH]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[EXIT:.*]], label %[[LOOP_LATCH_PREHEADER:.*]]
+; CHECK:       [[LOOP_LATCH_PREHEADER]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUM_ELEMENTS]], 11
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[LOOP_LATCH_PREHEADER6:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[NUM_ELEMENTS]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -24
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[INVARIANT_PTR]], i64 8
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ARRAY]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[INVARIANT_PTR]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[LOOP_LATCH_PREHEADER6]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[NUM_ELEMENTS]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 4, i64 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[NUM_ELEMENTS]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[INVARIANT_PTR]], align 8, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 32
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i64 96
+; CHECK-NEXT:    [[TMP12:%.*]] = load <5 x double>, ptr [[GEP]], align 8, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <5 x double> [[TMP12]], <5 x double> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP13:%.*]] = load <5 x double>, ptr [[TMP9]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <5 x double> [[TMP13]], <5 x double> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC5]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[TMP17]], i64 1
+; CHECK-NEXT:    store double [[TMP15]], ptr [[GEP]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store double [[TMP16]], ptr [[TMP7]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store double [[TMP18]], ptr [[TMP9]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP11]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[I2]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[LOOP_LATCH_PREHEADER6]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[LOOP_LATCH_PREHEADER6]]:
+; CHECK-NEXT:    [[I2_PH:%.*]] = phi i64 [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[LOOP_LATCH_PREHEADER]] ], [ [[N_VEC]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    br label %[[LOOP_LATCH:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[I3:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP_LATCH]] ], [ [[I2_PH]], %[[LOOP_LATCH_PREHEADER6]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I3]]
 ; CHECK-NEXT:    [[INVARIANT_VAL:%.*]] = load double, ptr [[INVARIANT_PTR]], align 8
-; CHECK-NEXT:    [[ARRAY_VAL:%.*]] = load double, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[ARRAY_VAL:%.*]] = load double, ptr [[GEP1]], align 8
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd double [[INVARIANT_VAL]], [[ARRAY_VAL]]
-; CHECK-NEXT:    store double [[SUM]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I2]], 1
+; CHECK-NEXT:    store double [[SUM]], ptr [[GEP1]], align 8
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I3]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[I_NEXT]], [[NUM_ELEMENTS]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_LATCH]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
