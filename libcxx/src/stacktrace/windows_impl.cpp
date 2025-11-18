@@ -19,15 +19,125 @@
 #  include <cstring>
 #  include <mutex>
 
-#  if defined(_MSC_VER) && !defined(__MINGW32__)
-#    pragma comment(lib, "dbghelp")
-#    pragma comment(lib, "psapi")
-#  endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 namespace {
+
+namespace __dll {
+
+template <typename F>
+bool get_func(HMODULE module, F** func, char const* name) {
+  return ((*func = reinterpret_cast<F*>(reinterpret_cast<void*>(GetProcAddress(module, name)))) != nullptr);
+}
+
+IMAGE_NT_HEADERS* (*ImageNtHeader)(void*);
+bool(WINAPI* SymCleanup)(HANDLE);
+DWORD(WINAPI* SymGetOptions)();
+bool(WINAPI* SymGetSearchPath)(HANDLE, char const*, DWORD);
+bool(WINAPI* SymInitialize)(HANDLE, char const*, bool);
+DWORD(WINAPI* SymSetOptions)(DWORD);
+bool(WINAPI* SymSetSearchPath)(HANDLE, char const*);
+bool(WINAPI* EnumProcessModules)(HANDLE, HMODULE*, DWORD, DWORD*);
+bool(WINAPI* GetModuleInformation)(HANDLE, HMODULE, MODULEINFO*, DWORD);
+DWORD(WINAPI* GetModuleBaseName)(HANDLE, HMODULE, char**, DWORD);
+#  ifdef _WIN64
+void*(WINAPI* SymFunctionTableAccess)(HANDLE, DWORD64);
+bool(WINAPI* SymGetLineFromAddr)(HANDLE, DWORD64, DWORD*, IMAGEHLP_LINE64*);
+DWORD64(WINAPI* SymGetModuleBase)(HANDLE, DWORD64);
+bool(WINAPI* SymGetModuleInfo)(HANDLE, DWORD64, IMAGEHLP_MODULE64*);
+bool(WINAPI* SymGetSymFromAddr)(HANDLE, DWORD64, DWORD64*, IMAGEHLP_SYMBOL64*);
+DWORD64(WINAPI* SymLoadModule)(HANDLE, HANDLE, char const*, char const*, void*, DWORD);
+bool(WINAPI* StackWalk)(
+    DWORD,
+    HANDLE,
+    HANDLE,
+    STACKFRAME64*,
+    void*,
+    void*,
+    decltype(SymFunctionTableAccess),
+    decltype(SymGetModuleBase),
+    void*);
+#  else
+void*(WINAPI* SymFunctionTableAccess)(HANDLE, DWORD);
+bool(WINAPI* SymGetLineFromAddr)(HANDLE, DWORD, DWORD*, IMAGEHLP_LINE*);
+DWORD(WINAPI* SymGetModuleBase)(HANDLE, DWORD);
+bool(WINAPI* SymGetModuleInfo)(HANDLE, DWORD, IMAGEHLP_MODULE*);
+bool(WINAPI* SymGetSymFromAddr)(HANDLE, DWORD, DWORD*, IMAGEHLP_SYMBOL*);
+DWORD(WINAPI* SymLoadModule)(HANDLE, HANDLE, char const*, char const*, void*, DWORD);
+bool(WINAPI* StackWalk)(
+    DWORD,
+    HANDLE,
+    HANDLE,
+    STACKFRAME*,
+    void*,
+    void*,
+    decltype(SymFunctionTableAccess),
+    decltype(SymGetModuleBase),
+    void*);
+#  endif
+
+bool loadFuncs() {
+  static bool attempted{false};
+  static bool succeeded{false};
+  static std::mutex mutex;
+
+  std::lock_guard<std::mutex> g(mutex);
+
+  if (succeeded) {
+    return true;
+  }
+  if (attempted) {
+    return false;
+  }
+
+  attempted = true;
+
+  HMODULE dbghelp = LoadLibrary("dbghelp.dll");
+  HMODULE psapi   = LoadLibrary("psapi.dll");
+
+  // clang-format off
+  succeeded = true
+      && (dbghelp != nullptr)
+      && (psapi != nullptr)
+      && get_func(dbghelp, &ImageNtHeader, "ImageNtHeader")
+      && get_func(dbghelp, &SymCleanup, "SymCleanup")
+      && get_func(dbghelp, &SymGetOptions, "SymGetOptions")
+      && get_func(dbghelp, &SymGetSearchPath, "SymGetSearchPath")
+      && get_func(dbghelp, &SymInitialize, "SymInitialize")
+      && get_func(dbghelp, &SymSetOptions, "SymSetOptions")
+      && get_func(dbghelp, &SymSetSearchPath, "SymSetSearchPath")
+      && get_func(psapi, &EnumProcessModules, "EnumProcessModules")
+      && get_func(psapi, &GetModuleInformation, "GetModuleInformation")
+      && get_func(psapi, &GetModuleBaseName, "GetModuleBaseNameA")
+#ifdef _WIN64
+      && get_func(dbghelp, &StackWalk, "StackWalk64")
+      && get_func(dbghelp, &SymFunctionTableAccess, "SymFunctionTableAccess64")
+      && get_func(dbghelp, &SymGetLineFromAddr, "SymGetLineFromAddr64")
+      && get_func(dbghelp, &SymGetModuleBase, "SymGetModuleBase64")
+      && get_func(dbghelp, &SymGetModuleInfo, "SymGetModuleInfo64")
+      && get_func(dbghelp, &SymGetSymFromAddr, "SymGetSymFromAddr64")
+      && get_func(dbghelp, &SymLoadModule, "SymLoadModule64")
+#else
+      && get_func(dbghelp, &StackWalk, "StackWalk")
+      && get_func(dbghelp, &SymFunctionTableAccess, "SymFunctionTableAccess")
+      && get_func(dbghelp, &SymGetLineFromAddr, "SymGetLineFromAddr")
+      && get_func(dbghelp, &SymGetModuleBase, "SymGetModuleBase")
+      && get_func(dbghelp, &SymGetModuleInfo, "SymGetModuleInfo")
+      && get_func(dbghelp, &SymGetSymFromAddr, "SymGetSymFromAddr")
+      && get_func(dbghelp, &SymLoadModule, "SymLoadModule")
+#endif
+      ;
+  // clang-format on
+
+  FreeLibrary(psapi);
+  FreeLibrary(dbghelp);
+  return succeeded;
+}
+
+} // namespace __dll
+
+using namespace __dll;
 
 struct _Sym_Init_Scope {
   HANDLE proc_;
@@ -39,6 +149,11 @@ struct _Sym_Init_Scope {
 } // namespace
 
 _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_depth) {
+  static bool loadedDLLFuncs = loadFuncs();
+  if (!loadedDLLFuncs) {
+    return;
+  }
+
   if (!max_depth) {
     return;
   }
@@ -171,11 +286,11 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
     sym->SizeOfStruct    = sizeof(IMAGEHLP_SYMBOL);
     sym->MaxNameLength   = __max_sym_len;
 #  if defined(_WIN64)
-    DWORD64 symdisp;
+    DWORD64 symdisp{};
 #  else
-    DWORD32 symdisp;
+    DWORD symdisp{};
 #  endif
-    DWORD linedisp{0};
+    DWORD linedisp{};
     IMAGEHLP_LINE line;
     if (SymGetSymFromAddr(proc, entry.__addr_, &symdisp, sym)) {
       entry.__desc_.assign(sym->Name);
