@@ -52,6 +52,10 @@ static cl::opt<unsigned> MaxVRegs("riscv-liveness-max-vregs",
                                   cl::desc("Maximum VRegs to track"),
                                   cl::init(1024), cl::Hidden);
 
+static cl::opt<unsigned> VerifyLiveness("riscv-liveness-verify",
+                                        cl::desc("Verify liveness information"),
+                                        cl::init(true), cl::Hidden);
+
 namespace {
 
 /// LivenessInfo - Stores liveness information for a basic block
@@ -109,9 +113,12 @@ public:
   /// Print liveness information for debugging
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 
+  /// Verify the computed liveness information against MBB live-ins.
+  /// TODO: Extend verification to live-outs and instruction-level liveness.
   void verifyLiveness(MachineFunction &MF) const;
 
   /// Mark operands that kill a register
+  /// TODO: Add and remove kill flags as necessary.
   bool markKills(MachineFunction &MF);
 
 private:
@@ -486,8 +493,9 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
     print(dbgs());
   });
 
-  verifyLiveness(MF);
-  // This is an analysis pass, it doesn't modify the function
+  if (VerifyLiveness)
+    verifyLiveness(MF);
+
   return Changed;
 }
 
