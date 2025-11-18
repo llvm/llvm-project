@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --fir-to-scf | FileCheck %s
+// RUN: fir-opt %s --fir-to-scf --split-input-file | FileCheck %s
 
 // CHECK-LABEL:   func.func @simple_loop(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
@@ -30,6 +30,8 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @loop_with_negtive_step(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
@@ -63,6 +65,8 @@ func.func @loop_with_negtive_step(%arg0: !fir.ref<!fir.array<100xi32>>) {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @loop_with_results(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>,
@@ -101,6 +105,8 @@ func.func @loop_with_results(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !fir.r
   fir.store %1 to %arg1 : !fir.ref<i32>
   return
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @loop_with_final_value(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>,
@@ -146,6 +152,8 @@ func.func @loop_with_final_value(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !f
   return
 }
 
+// -----
+
 // CHECK-LABEL:   func.func @loop_with_unordered_attr(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
@@ -163,7 +171,7 @@ func.func @loop_with_final_value(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !f
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[ARG0]](%[[SHAPE_0]]) %[[ADDI_1]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:             fir.store %[[CONSTANT_2]] to %[[ARRAY_COOR_0]] : !fir.ref<i32>
 // CHECK:             scf.reduce
-// CHECK:           } {unordered}
+// CHECK:           }
 // CHECK:           return
 // CHECK:         }
 func.func @loop_with_unordered_attr(%arg0: !fir.ref<!fir.array<100xi32>>) {
@@ -178,6 +186,10 @@ func.func @loop_with_unordered_attr(%arg0: !fir.ref<!fir.array<100xi32>>) {
   return
 }
 
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = #llvm.loop_vectorize<disable = false>
+// CHECK: #[[$ATTR_1:.+]] = #llvm.loop_annotation<vectorize = #[[$ATTR_0]]>
 // CHECK-LABEL:   func.func @loop_with_attribute(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>,
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i32>) {
@@ -199,16 +211,19 @@ func.func @loop_with_unordered_attr(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
 // CHECK:             %[[VAL_16:.*]] = arith.addi %[[VAL_15]], %[[VAL_14]] : i32
 // CHECK:             fir.store %[[VAL_16]] to %[[VAL_3]] : !fir.ref<i32>
-// CHECK:           } {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>, reduceAttrs = [#fir.reduce_attr<add>]}
+// CHECK:           } {loop_annotation = #[[$ATTR_1]]}
 // CHECK:           return
 // CHECK:         }
+
+#loop_vectorize = #llvm.loop_vectorize<disable = false>
+#loop_annotation = #llvm.loop_annotation<vectorize = #loop_vectorize>
 func.func @loop_with_attribute(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !fir.ref<i32>) {
   %c1 = arith.constant 1 : index
   %c0_i32 = arith.constant 0 : i32
   %c100 = arith.constant 100 : index
   %0 = fir.alloca i32
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  fir.do_loop %arg2 = %c1 to %c100 step %c1 reduce(#fir.reduce_attr<add> -> %0 : !fir.ref<i32>) {
+  fir.do_loop %arg2 = %c1 to %c100 step %c1 attributes {loopAnnotation = #loop_annotation} {
     %2 = fir.array_coor %arg0(%1) %arg2 : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
     %3 = fir.load %2 : !fir.ref<i32>
     %4 = fir.load %0 : !fir.ref<i32>
@@ -218,6 +233,8 @@ func.func @loop_with_attribute(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !fir
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL:   func.func @nested_loop(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100x100xi32>>) {

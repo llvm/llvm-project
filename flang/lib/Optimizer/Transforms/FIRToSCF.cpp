@@ -92,8 +92,10 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
         hasFinalValue ? scfLoopLikeOp.getRegionIterArgs().drop_front()
                       : scfLoopLikeOp.getRegionIterArgs());
 
-    // Copy all the attributes from the old to new op.
-    scfLoopOp->setAttrs(doLoopOp->getAttrs());
+    // Copy loop annotations from the fir.do_loop to scf loop op.
+    if (auto ann = doLoopOp.getLoopAnnotation())
+      scfLoopOp->setAttr("loop_annotation", *ann);
+
     rewriter.replaceOp(doLoopOp, scfLoopOp);
     return mlir::success();
   }
