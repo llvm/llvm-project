@@ -3590,7 +3590,7 @@ struct WhileMoveIfDown : public OpRewritePattern<WhileOp> {
 
     Value condVal = condOp.getResult(0);
     auto ifOp = dyn_cast<scf::IfOp>(condOp.getNextNode());
-    if (condOp.getNumResults() != 1 || !ifOp || ifOp.getCondition() != condVal)
+    if (!ifOp || ifOp.getCondition() != condVal)
       return failure();
 
     auto term = dyn_cast<scf::ConditionOp>(ifOp->getNextNode());
