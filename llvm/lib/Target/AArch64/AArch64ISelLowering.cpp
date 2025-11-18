@@ -18851,6 +18851,15 @@ bool AArch64TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   return (Index == 0 || Index == ResVT.getVectorMinNumElements());
 }
 
+bool AArch64TargetLowering::shouldOptimizeMulOverflowWithZeroHighBits(
+    LLVMContext &Context, EVT VT) const {
+  if (getTypeAction(Context, VT) != TypeExpandInteger)
+    return false;
+
+  EVT LegalTy = EVT::getIntegerVT(Context, VT.getSizeInBits() / 2);
+  return getTypeAction(Context, LegalTy) == TargetLowering::TypeLegal;
+}
+
 /// Turn vector tests of the signbit in the form of:
 ///   xor (sra X, elt_size(X)-1), -1
 /// into:
