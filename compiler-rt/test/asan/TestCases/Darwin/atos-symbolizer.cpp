@@ -1,7 +1,8 @@
 // Check that the `atos` symbolizer works.
 
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: %env_asan_opts=verbosity=2 ASAN_SYMBOLIZER_PATH=$(which atos) not %run %t 2>&1 | FileCheck %s
+// RUN: which atos | tr -d '\n' > %t.symbolizer_path
+// RUN: %env_asan_opts=verbosity=2 ASAN_SYMBOLIZER_PATH=%{readfile:%t.symbolizer_path} not %run %t 2>&1 | FileCheck %s
 
 // Path returned by `which atos` is invalid on iOS.
 // UNSUPPORTED: ios, i386-darwin
