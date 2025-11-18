@@ -7,9 +7,7 @@
 # Use sparingly for things common to all compilers and platforms.
 ###############################################################################
 
-# Flip off to disable MODULE.bazel until we're ready.
-# https://github.com/llvm/llvm-project/issues/55924
-common --enable_bzlmod=true --enable_workspace=false
+common --enable_bzlmod --noenable_workspace
 
 # TODO: Remove lit test reliance on this
 common --legacy_external_runfiles
