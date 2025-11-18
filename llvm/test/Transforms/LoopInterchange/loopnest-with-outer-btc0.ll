@@ -6,7 +6,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @D = common global [100 x [100 x [100 x i32]]] zeroinitializer
 
-; Test for interchange in
+; The outer loop's backedge isn't taken. Check the loop with BTC=0 is considered
+; unprofitable, but that we still interchange the two inner loops.
 ;
 ;  for(int i=0;i<1;i++)
 ;    for(int j=0;j<100;j++)
@@ -50,7 +51,7 @@ inner1.header:
 
 inner2.body:
   %k = phi i64 [ 0, %inner1.header ], [ %inc, %inner2.body ]
-  %arrayidx8 = getelementptr inbounds [100 x [100 x [100 x i32]]], ptr @D, i64 0, i64 %i, i64 %k, i64 %j
+  %arrayidx8 = getelementptr inbounds [100 x [100 x i32]], ptr @D, i64 %i, i64 %k, i64 %j
   %0 = load i32, ptr %arrayidx8
   %add = add nsw i32 %0, %t
   store i32 %add, ptr %arrayidx8

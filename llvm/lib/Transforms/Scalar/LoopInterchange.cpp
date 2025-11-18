@@ -422,11 +422,9 @@ static bool hasSupportedLoopDepth(ArrayRef<Loop *> LoopList,
 }
 
 static bool isComputableLoopNest(ScalarEvolution *SE,
-                                 ArrayRef<Loop *> LoopList,
-                                 std::map<const Loop *, const SCEV *> &LoopBTC) {
+                                 ArrayRef<Loop *> LoopList) {
   for (Loop *L : LoopList) {
     const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
-    LoopBTC[L] = ExitCountOuter;
     if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
       LLVM_DEBUG(dbgs() << "Couldn't compute backedge count\n");
       return false;
@@ -548,8 +546,7 @@ public:
   /// Check if the loop interchange is profitable.
   bool isProfitable(const Loop *InnerLoop, const Loop *OuterLoop,
                     unsigned InnerLoopId, unsigned OuterLoopId,
-                    CharMatrix &DepMatrix, CacheCostManager &CCM,
-                    std::map<const Loop *, const SCEV *> &LoopBTC);
+                    CharMatrix &DepMatrix, CacheCostManager &CCM);
 
 private:
   int getInstrOrderCost();
@@ -606,17 +603,14 @@ struct LoopInterchange {
   DependenceInfo *DI = nullptr;
   DominatorTree *DT = nullptr;
   LoopStandardAnalysisResults *AR = nullptr;
+
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
-  // A cache to avoid recalculating the backedge-taken count for a loop.
-  std::map<const Loop *, const SCEV *> LoopBTC;
 
   LoopInterchange(ScalarEvolution *SE, LoopInfo *LI, DependenceInfo *DI,
                   DominatorTree *DT, LoopStandardAnalysisResults *AR,
-                  OptimizationRemarkEmitter *ORE,
-                  std::map<const Loop *, const SCEV *> &&LoopBTC)
-      : SE(SE), LI(LI), DI(DI), DT(DT), AR(AR), ORE(ORE),
-        LoopBTC(std::move(LoopBTC)) {}
+                  OptimizationRemarkEmitter *ORE)
+      : SE(SE), LI(LI), DI(DI), DT(DT), AR(AR), ORE(ORE) {}
 
   bool run(Loop *L) {
     if (L->getParentLoop())
@@ -708,7 +702,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, CCM, LoopBTC)) {
+                          DependencyMatrix, CCM)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
       return false;
     }
@@ -1468,13 +1462,7 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
-    unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM,
-    std::map<const Loop *, const SCEV *> &LoopBTC) {
-
-  auto *InnerBTC = LoopBTC[InnerLoop];
-  auto *OuterBTC = LoopBTC[OuterLoop];
-  assert(InnerBTC && OuterBTC &&
-         "Loop BTC should exist in cache but not found");
+    unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
   // A loop with a backedge that isn't taken, e.g. an unconditional branch
   // true, isn't really a loop and we don't want to consider it as a
   // candidate.
@@ -1482,6 +1470,8 @@ bool LoopInterchangeProfitability::isProfitable(
   // interchange for these loops, and thus this logic should be moved just
   // below the cost-model ignore check below. But this check is done first
   // to avoid the issue in #163954.
+  const SCEV *InnerBTC = SE->getBackedgeTakenCount(InnerLoop);
+  const SCEV *OuterBTC = SE->getBackedgeTakenCount(OuterLoop);
   if (InnerBTC && InnerBTC->isZero()) {
     LLVM_DEBUG(dbgs() << "Inner loop back-edge isn't taken, rejecting "
                          "single iteration loop\n");
@@ -2128,7 +2118,6 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LPMUpdater &U) {
   Function &F = *LN.getParent();
   SmallVector<Loop *, 8> LoopList(LN.getLoops());
-  std::map<const Loop *, const SCEV *> LoopBTC;
 
   if (MaxMemInstrCount < 1) {
     LLVM_DEBUG(dbgs() << "MaxMemInstrCount should be at least 1");
@@ -2140,7 +2129,7 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   if (!hasSupportedLoopDepth(LoopList, ORE))
     return PreservedAnalyses::all();
   // Ensure computable loop nest.
-  if (!isComputableLoopNest(&AR.SE, LoopList, LoopBTC)) {
+  if (!isComputableLoopNest(&AR.SE, LoopList)) {
     LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
     return PreservedAnalyses::all();
   }
@@ -2153,9 +2142,7 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   });
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
-  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE,
-                       std::move(LoopBTC))
-           .run(LN))
+  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE).run(LN))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);
   return getLoopPassPreservedAnalyses();
