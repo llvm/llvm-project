@@ -7678,15 +7678,9 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     unsigned Size = Ty.getSizeInBits();
     MachineIRBuilder &B = MIRBuilder;
 
-    // Lift odd-size integer to multiple of 8 bit.
-    if (Size % 8 != 0) {
-      LLT NewTy = LLT::scalar(alignTo(Size, 8));
-      Observer.changingInstr(MI);
-      widenScalarSrc(MI, NewTy, 1, TargetOpcode::G_ZEXT);
-      widenScalarDst(MI, NewTy, 0);
-      Observer.changedInstr(MI);
-      return Legalized;
-    }
+    // Bail out on irregular type lengths.
+    if (Size >= 128 || Size % 8 != 0)
+      return UnableToLegalize;
 
     // Count set bits in blocks of 2 bits. Default approach would be
     // B2Count = { val & 0x55555555 } + { (val >> 1) & 0x55555555 }
