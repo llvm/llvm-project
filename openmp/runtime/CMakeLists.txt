@@ -111,6 +111,8 @@ if("${LIBOMP_ARCH}" STREQUAL "mic")
 endif()
 set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FLANG_MODULES_ENABLED}" CACHE BOOL
   "Create Fortran module files? (requires fortran compiler)")
+message("OpenMP: RUNTIMES_FLANG_MODULES_ENABLED=${RUNTIMES_FLANG_MODULES_ENABLED}")
+message("OpenMP: LIBOMP_FORTRAN_MODULES=${LIBOMP_FORTRAN_MODULES}")
 
 # - Support for universal fat binary builds on Mac
 # - Having this extra variable allows people to build this library as a universal library
