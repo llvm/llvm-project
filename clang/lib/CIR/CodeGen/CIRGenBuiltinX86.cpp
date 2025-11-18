@@ -100,7 +100,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
   assert(error == ASTContext::GE_None && "Error while getting builtin type.");
 
-  for (auto [idx, arg] : llvm::enumerate(expr->arguments())) {
+  for (auto [idx, arg] : llvm::enumerate(expr->arguments()))
     ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
 
   CIRGenBuilderTy &builder = getBuilder();
@@ -131,7 +131,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
-    cgm.errorNYI(e->getSourceRange(),
+    cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return {};
@@ -153,12 +153,12 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     index &= numElts - 1;
 
     cir::ConstantOp indexVal =
-        builder.getUInt64(index, getLoc(e->getExprLoc()));
+        builder.getUInt64(index, getLoc(expr->getExprLoc()));
 
     // These builtins exist so we can ensure the index is an ICE and in range.
     // Otherwise we could just do this in the header file.
-    return cir::VecExtractOp::create(builder, getLoc(e->getExprLoc()), ops[0],
-                                     indexVal);
+    return cir::VecExtractOp::create(builder, getLoc(expr->getExprLoc()),
+                                     ops[0], indexVal);
   }
   case X86::BI__builtin_ia32_vec_set_v4hi:
   case X86::BI__builtin_ia32_vec_set_v16qi:
