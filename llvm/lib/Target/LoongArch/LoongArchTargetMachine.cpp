@@ -37,6 +37,7 @@ LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchLateBranchOptPass(*PR);
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
@@ -205,7 +206,11 @@ LoongArchTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(std::make_unique<LoongArchTTIImpl>(this, F));
 }
 
-void LoongArchPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
+void LoongArchPassConfig::addPreEmitPass() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchLateBranchOptPass());
+  addPass(&BranchRelaxationPassID);
+}
 
 void LoongArchPassConfig::addPreEmitPass2() {
   addPass(createLoongArchExpandPseudoPass());
