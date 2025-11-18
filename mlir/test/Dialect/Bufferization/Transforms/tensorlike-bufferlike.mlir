@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-tensorlike-bufferlike -verify-diagnostics -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-tensorlike-bufferlike -split-input-file | FileCheck %s
 
 // CHECK: func.func @builtin_unranked
 // CHECK-SAME: {found = {operand_0 = "is_tensor_like", result_0 = "is_buffer_like"}}
