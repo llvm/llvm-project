@@ -54,12 +54,12 @@ void test() {
     struct X {};
 
     auto _ = std::bind_front<static_cast<void (*)()>(nullptr)>();
-    // expected-error@*:* {{static assertion failed due to requirement 'nullptr != nullptr': f cannot be equal to nullptr}}
+    // expected-error@*:* {{static assertion failed due to requirement 'nullptr != nullptr': bind_front: f cannot be equal to nullptr}}
 
     auto _ = std::bind_front<static_cast<int X::*>(nullptr)>();
-    // expected-error@*:* {{static assertion failed due to requirement 'nullptr != nullptr': f cannot be equal to nullptr}}
+    // expected-error@*:* {{static assertion failed due to requirement 'nullptr != nullptr': bind_front: f cannot be equal to nullptr}}
 
     auto _ = std::bind_front<static_cast<void (X::*)()>(nullptr)>();
-    // expected-error@*:* {{static assertion failed due to requirement 'nullptr != nullptr': f cannot be equal to nullptr}}
+    // expected-error@*:* {{static assertion failed due to requirement 'nullptr != nullptr': bind_front: f cannot be equal to nullptr}}
   }
 }
