@@ -1,15 +1,6 @@
-RUN: rm -rf %t && split-file %s %t && cd %t
-RUN: clang++ -g -gsplit-dwarf -gdwarf-5 -c %t/a.cpp -o %t/a.o
-RUN: clang++ -g -gsplit-dwarf -gdwarf-4 -c %t/b.cpp -o %t/b.o
-RUN: clang++ %t/a.o %t/b.o -o %t/main.exe
-RUN: not llvm-dwp -e %t/main.exe -o %t/main.exe.dwp 2>&1 | FileCheck %s
+RUN: rm -rf %t && mkdir -p %t && cd %t
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/main_v5.dwo -dwarf-version=5 %p/../Inputs/overflow/main_v5.s -o %t/main_v5.o
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/debug_info_v4.dwo -dwarf-version=4 %p/../Inputs/overflow/debug_info_v4.s -o %t/debug_info_v4.o
+RUN: not llvm-dwp %t/main_v5.dwo %t/debug_info_v4.dwo -o main.dwp 2>&1 | FileCheck %s
 
-# CHECK: error: {{.*}}b.dwo: incompatible DWARF compile unit version, found 4 and expecting 5
-
-;--- a.cpp
-int main() {
-    return 0;
-}
-
-;--- b.cpp
-void b() {}
+# CHECK: error: {{.*}}debug_info_v4.dwo: incompatible DWARF compile unit version, found 4 and expecting 5
