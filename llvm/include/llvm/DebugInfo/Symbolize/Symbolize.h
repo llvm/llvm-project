@@ -251,7 +251,7 @@ private:
   std::map<ContainerCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
 
   Expected<object::Binary *>
-  loadOrGetBinary(const std::string &OpenPath,
+  loadOrGetBinary(const std::string &ArchivePathKey,
                   std::optional<StringRef> FullPathKey = std::nullopt);
 
   Expected<ObjectFile *> findOrCacheObject(

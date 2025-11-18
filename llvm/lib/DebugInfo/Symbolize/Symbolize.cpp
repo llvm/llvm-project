@@ -576,17 +576,17 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
 }
 
 Expected<object::Binary *>
-LLVMSymbolizer::loadOrGetBinary(const std::string &OpenPath,
+LLVMSymbolizer::loadOrGetBinary(const std::string &ArchivePathKey,
                                 std::optional<StringRef> FullPathKey) {
   // If no separate cache key is provided, use the archive path itself.
-  std::string FullPathKeyStr = FullPathKey ? FullPathKey->str() : OpenPath;
+  std::string FullPathKeyStr = FullPathKey ? FullPathKey->str() : ArchivePathKey;
   auto Pair = BinaryForPath.emplace(FullPathKeyStr, OwningBinary<Binary>());
   if (!Pair.second) {
     recordAccess(Pair.first->second);
     return Pair.first->second->getBinary();
   }
 
-  Expected<OwningBinary<Binary>> BinOrErr = createBinary(OpenPath);
+  Expected<OwningBinary<Binary>> BinOrErr = createBinary(ArchivePathKey);
   if (!BinOrErr)
     return BinOrErr.takeError();
 
