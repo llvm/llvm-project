@@ -7245,6 +7245,37 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   return DAG.getMergeValues({Ext, Chain}, DL);
 }
 
+// Convert to ContainerVT with no-op casts where possible.
+static SDValue convertToSVEContainerType(SDLoc DL, SDValue Vec, EVT ContainerVT,
+                                         SelectionDAG &DAG) {
+  EVT VecVT = Vec.getValueType();
+  if (VecVT.isFloatingPoint()) {
+    // Use no-op casts for floating-point types.
+    EVT PackedVT = getPackedSVEVectorVT(VecVT.getScalarType());
+    Vec = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PackedVT, Vec);
+    Vec = DAG.getNode(AArch64ISD::NVCAST, DL, ContainerVT, Vec);
+  } else {
+    // Extend integers (may not be a no-op).
+    Vec = DAG.getNode(ISD::ANY_EXTEND, DL, ContainerVT, Vec);
+  }
+  return Vec;
+}
+
+// Convert to VecVT with no-op casts where possible.
+static SDValue convertFromSVEContainerType(SDLoc DL, SDValue Vec, EVT VecVT,
+                                           SelectionDAG &DAG) {
+  if (VecVT.isFloatingPoint()) {
+    // Use no-op casts for floating-point types.
+    EVT PackedVT = getPackedSVEVectorVT(VecVT.getScalarType());
+    Vec = DAG.getNode(AArch64ISD::NVCAST, DL, PackedVT, Vec);
+    Vec = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VecVT, Vec);
+  } else {
+    // Truncate integers (may not be a no-op).
+    Vec = DAG.getNode(ISD::TRUNCATE, DL, VecVT, Vec);
+  }
+  return Vec;
+}
+
 SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
                                                     SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -7296,14 +7327,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
 
   // Get legal type for compact instruction
   EVT ContainerVT = getSVEContainerType(VecVT);
-  EVT CastVT = VecVT.changeVectorElementTypeToInteger();
 
-  // Convert to i32 or i64 for smaller types, as these are the only supported
+  // Convert to 32 or 64 bits for smaller types, as these are the only supported
   // sizes for compact.
-  if (ContainerVT != VecVT) {
-    Vec = DAG.getBitcast(CastVT, Vec);
-    Vec = DAG.getNode(ISD::ANY_EXTEND, DL, ContainerVT, Vec);
-  }
+  Vec = convertToSVEContainerType(DL, Vec, ContainerVT, DAG);
 
   SDValue Compressed = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, Vec.getValueType(),
@@ -7326,21 +7353,23 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
         DAG.getNode(ISD::VSELECT, DL, VecVT, IndexMask, Compressed, Passthru);
   }
 
+  // If we changed the element type before, we need to convert it back.
+  if (ElmtVT.isFloatingPoint())
+    Compressed = convertFromSVEContainerType(DL, Compressed, VecVT, DAG);
+
   // Extracting from a legal SVE type before truncating produces better code.
   if (IsFixedLength) {
-    Compressed = DAG.getNode(
-        ISD::EXTRACT_SUBVECTOR, DL,
-        FixedVecVT.changeVectorElementType(ContainerVT.getVectorElementType()),
-        Compressed, DAG.getConstant(0, DL, MVT::i64));
-    CastVT = FixedVecVT.changeVectorElementTypeToInteger();
+    EVT FixedSubVector = VecVT.isInteger()
+                             ? FixedVecVT.changeVectorElementType(
+                                   ContainerVT.getVectorElementType())
+                             : FixedVecVT;
+    Compressed = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, FixedSubVector,
+                             Compressed, DAG.getConstant(0, DL, MVT::i64));
     VecVT = FixedVecVT;
   }
 
-  // If we changed the element type before, we need to convert it back.
-  if (ContainerVT != VecVT) {
-    Compressed = DAG.getNode(ISD::TRUNCATE, DL, CastVT, Compressed);
-    Compressed = DAG.getBitcast(VecVT, Compressed);
-  }
+  if (VecVT.isInteger())
+    Compressed = DAG.getNode(ISD::TRUNCATE, DL, VecVT, Compressed);
 
   return Compressed;
 }
