@@ -308,11 +308,11 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// existing subregister number of the def / use being updated is not zero,
   /// make sure to set it to the correct physical subregister.
   ///
-  /// If \p SubregToRegSrcInst is not empty, we are coalescing a
+  /// If \p SubregToRegSrcInsts is not empty, we are coalescing a
   /// `DstReg = SUBREG_TO_REG SrcReg`, which should introduce an
   /// implicit-def of DstReg on instructions that define SrcReg.
   void updateRegDefsUses(Register SrcReg, Register DstReg, unsigned SubIdx,
-                         ArrayRef<MachineInstr *> SubregToRegSrcInst = {});
+                         ArrayRef<MachineInstr *> SubregToRegSrcInsts = {});
 
   /// If the given machine operand reads only undefined lanes add an undef
   /// flag.
@@ -2156,15 +2156,16 @@ static bool findPrecedingDefs(SmallVector<MachineInstr *> &Instrs,
   if (IsPrecedingDef(Idx))
     return true;
 
-  SmallVector<MachineBasicBlock *> Worklist = {MBB};
+  SmallVector<MachineBasicBlock *> Worklist(MBB->pred_begin(), MBB->pred_end());
   SmallPtrSet<MachineBasicBlock *, 8> VisitedBlocks;
-  for (unsigned I = 0; I < Worklist.size(); ++I) {
-    if (VisitedBlocks.count(Worklist[I]))
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+    auto [_, Inserted] = VisitedBlocks.insert(MBB);
+    if (!Inserted)
       continue;
-    VisitedBlocks.insert(Worklist[I]);
-    VNInfo *Idx = SrcInt.getVNInfoBefore(LIS->getMBBEndIdx(Worklist[I]));
+    VNInfo *Idx = SrcInt.getVNInfoBefore(LIS->getMBBEndIdx(MBB));
     if (!IsPrecedingDef(Idx))
-      Worklist.append(Worklist[I]->pred_begin(), Worklist[I]->pred_end());
+      Worklist.append(MBB->pred_begin(), MBB->pred_end());
   }
 
   return !Instrs.empty();
