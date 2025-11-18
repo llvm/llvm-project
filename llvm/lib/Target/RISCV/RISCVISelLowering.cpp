@@ -2535,7 +2535,7 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   // TODO: For sizes which aren't multiples of VLEN sizes, this may not be
   // a cheap extract.  However, this case is important in practice for
   // shuffled extracts of longer vectors.  How resolve?
-  return (ResElts * 2) == SrcElts && (Index == 0 || Index == ResElts);
+  return (ResElts * 2) == SrcElts && Index == ResElts;
 }
 
 MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
