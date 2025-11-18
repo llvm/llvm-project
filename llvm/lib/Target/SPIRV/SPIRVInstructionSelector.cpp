@@ -328,6 +328,8 @@ private:
                            MachineInstr &I) const;
   bool selectFrexp(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
+  bool selectDpdCoarse(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I, const unsigned DPdOpCode) const;
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -371,6 +373,7 @@ private:
   bool loadHandleBeforePosition(Register &HandleReg, const SPIRVType *ResType,
                                 GIntrinsic &HandleDef, MachineInstr &Pos) const;
   void decorateUsesAsNonUniform(Register &NonUniformReg) const;
+  void errorIfInstrOutsideShader(MachineInstr &I) const;
 };
 
 bool sampledTypeIsSignedInteger(const llvm::Type *HandleType) {
@@ -3140,6 +3143,58 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectDpdCoarse(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I,
+                                               const unsigned DPdOpCode) const {
+  // TODO: This should check specifically for Fragment Execution Model, but STI
+  // doesn't provide that information yet. See #167562
+  errorIfInstrOutsideShader(I);
+
+  // If the arg/result types are half then we need to wrap the instr in
+  // conversions to float
+  // This case occurs because a half arg/result is legal in HLSL but not spirv.
+  Register SrcReg = I.getOperand(2).getReg();
+  SPIRVType *SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+  unsigned BitWidth = std::min(GR.getScalarOrVectorBitWidth(SrcType),
+                               GR.getScalarOrVectorBitWidth(ResType));
+  if (BitWidth == 32)
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DPdOpCode))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg());
+
+  MachineIRBuilder MIRBuilder(I);
+  unsigned componentCount = GR.getScalarOrVectorComponentCount(SrcType);
+  SPIRVType *F32ConvertTy = GR.getOrCreateSPIRVFloatType(32, I, TII);
+  if (componentCount != 1)
+    F32ConvertTy = GR.getOrCreateSPIRVVectorType(F32ConvertTy, componentCount,
+                                                 MIRBuilder, false);
+
+  const TargetRegisterClass *RegClass = GR.getRegClass(SrcType);
+  Register ConvertToVReg = MRI->createVirtualRegister(RegClass);
+  Register DpdOpVReg = MRI->createVirtualRegister(RegClass);
+
+  bool Result =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
+          .addDef(ConvertToVReg)
+          .addUse(GR.getSPIRVTypeID(F32ConvertTy))
+          .addUse(SrcReg)
+          .constrainAllUses(TII, TRI, RBI);
+  Result &= BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DPdOpCode))
+                .addDef(DpdOpVReg)
+                .addUse(GR.getSPIRVTypeID(F32ConvertTy))
+                .addUse(ConvertToVReg)
+                .constrainAllUses(TII, TRI, RBI);
+  Result &=
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(DpdOpVReg)
+          .constrainAllUses(TII, TRI, RBI);
+  return Result;
+}
+
 bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                                                const SPIRVType *ResType,
                                                MachineInstr &I) const {
@@ -3528,7 +3583,12 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_unpackhalf2x16: {
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
-
+  case Intrinsic::spv_ddx_coarse: {
+    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
+  }
+  case Intrinsic::spv_ddy_coarse: {
+    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -4692,6 +4752,17 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(VarReg)
       .constrainAllUses(TII, TRI, RBI);
+}
+
+void SPIRVInstructionSelector::errorIfInstrOutsideShader(
+    MachineInstr &I) const {
+  if (!STI.isShader()) {
+    std::string DiagMsg;
+    raw_string_ostream OS(DiagMsg);
+    I.print(OS, true, false, false, false);
+    DiagMsg += " is only supported in shaders.\n";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
 }
 
 namespace llvm {

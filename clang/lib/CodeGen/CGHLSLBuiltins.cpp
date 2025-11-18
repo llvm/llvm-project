@@ -924,6 +924,24 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
   }
+  case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("ddx_coarse operand must have a float representation");
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getDdxCoarseIntrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Op0->getType(), ID,
+                                   ArrayRef<Value *>{Op0}, nullptr,
+                                   "hlsl.ddx.coarse");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_coarse: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("ddy_coarse operand must have a float representation");
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getDdyCoarseIntrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Op0->getType(), ID,
+                                   ArrayRef<Value *>{Op0}, nullptr,
+                                   "hlsl.ddy.coarse");
+  }
   case Builtin::BI__builtin_get_spirv_spec_constant_bool:
   case Builtin::BI__builtin_get_spirv_spec_constant_short:
   case Builtin::BI__builtin_get_spirv_spec_constant_ushort:
