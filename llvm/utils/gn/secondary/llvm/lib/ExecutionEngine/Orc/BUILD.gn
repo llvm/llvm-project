@@ -35,7 +35,6 @@ static_library("Orc") {
     "ExecutionUtils.cpp",
     "ExecutorProcessControl.cpp",
     "ExecutorResolutionGenerator.cpp",
-    "GetDylibInterface.cpp",
     "IRCompileLayer.cpp",
     "IRPartitionLayer.cpp",
     "IRTransformLayer.cpp",
