@@ -3190,8 +3190,10 @@ APInt llvm::APIntOps::fshr(const APInt &Hi, const APInt &Lo,
 
 APInt llvm::APIntOps::clmul(const APInt &LHS, const APInt &RHS) {
   assert(LHS.getBitWidth() == RHS.getBitWidth());
-  APInt Result(LHS.getBitWidth(), 0);
-  for (unsigned I : seq<unsigned>(Result.getBitWidth()))
-    Result ^= LHS.shl(I) * (RHS.lshr(I) & 1);
+  unsigned BW = LHS.getBitWidth();
+  APInt Result(BW, 0);
+  for (unsigned I : seq<unsigned>(BW))
+    if (RHS[I])
+      Result ^= LHS.shl(I);
   return Result;
 }
