@@ -3667,6 +3667,16 @@ full list of supported sanitizer flags.
   }];
 }
 
+def SectionMemtagDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Use the ``section_memtag`` attribute on a global variable declaration that also
+has the attribute section and the memory tag sanitizer is active to force the
+global variable to be MTE tagged. Global variables under sections are not
+tagged by default, so you need to explicitly opt-in using this attribute.
+  }];
+}
+
 def DisableSanitizerInstrumentationDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

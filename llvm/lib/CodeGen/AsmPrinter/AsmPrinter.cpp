@@ -2690,7 +2690,8 @@ static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
   // To mitigate both these cases, and because specifying a section is rare
   // outside of these two cases, disable MTE protection for globals in any
   // section.
-  if (G.hasSection())
+  bool ForceSectionMemtag = G.getMetadata("section_memtag") != nullptr;
+  if (G.hasSection() && !ForceSectionMemtag)
     return false;
 
   return globalSize(G) > 0;
