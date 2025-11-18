@@ -12540,6 +12540,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.AMDGPUTextureTy;
       break;
     }
+    case 'r': {
+      Type = Context.HLSLResourceTy;
+      break;
+    }
     default:
       llvm_unreachable("Unexpected target builtin type");
     }
@@ -12614,9 +12618,6 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     break;
   case 'm':
     Type = Context.MFloat8Ty;
-    break;
-  case 'r':
-    Type = Context.HLSLResourceTy;
     break;
   }
 
