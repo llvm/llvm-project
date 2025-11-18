@@ -248,6 +248,11 @@ static cl::opt<bool>
                          "platforms that support this"),
                 cl::Hidden, cl::init(true));
 
+static cl::opt<int>
+    ClShadowAddrSpace("asan-shadow-addr-space",
+                      cl::desc("Address space for pointers to the shadow map"),
+                      cl::Hidden, cl::init(0));
+
 static cl::opt<bool> ClWithIfuncSuppressRemat(
     "asan-with-ifunc-suppress-remat",
     cl::desc("Suppress rematerialization of dynamic shadow address by passing "
@@ -1942,7 +1947,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   Type *ShadowTy =
       IntegerType::get(*C, std::max(8U, TypeStoreSize >> Mapping.Scale));
-  Type *ShadowPtrTy = PointerType::get(*C, 0);
+  Type *ShadowPtrTy = PointerType::get(*C, ClShadowAddrSpace);
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   const uint64_t ShadowAlign =
       std::max<uint64_t>(Alignment.valueOrOne().value() >> Mapping.Scale, 1);
