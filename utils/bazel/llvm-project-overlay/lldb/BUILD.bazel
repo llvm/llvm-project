@@ -988,6 +988,15 @@ gentbl_cc_library(
     deps = ["//llvm:OptParserTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "lldb_platform_opts_gen",
+    strip_include_prefix = ".",
+    tbl_outs = {"PlatformOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/lldb-server/PlatformOptions.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_binary(
     name = "lldb-server",
     srcs = glob([
@@ -1006,6 +1015,7 @@ cc_binary(
         ":Interpreter",
         ":Utility",
         ":Version",
+        ":lldb_platform_opts_gen",
         ":lldb_server_opts_gen",
         "//lldb:Target",
         "//lldb:TargetHeaders",
