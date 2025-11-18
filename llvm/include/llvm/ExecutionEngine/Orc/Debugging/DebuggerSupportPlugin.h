@@ -24,7 +24,7 @@ namespace orc {
 /// For each object containing debug info, installs JITLink passes to synthesize
 /// a debug object and then register it via the GDB JIT-registration interface.
 ///
-/// Currently MachO only. For ELF use DebugObjectManagerPlugin. These two
+/// Currently MachO only. For ELF use ELFDebugObjectPlugin. These two
 /// plugins will be merged in the near future.
 class LLVM_ABI GDBJITDebugInfoRegistrationPlugin
     : public ObjectLinkingLayer::Plugin {

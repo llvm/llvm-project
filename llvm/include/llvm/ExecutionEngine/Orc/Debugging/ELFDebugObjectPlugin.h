@@ -1,4 +1,4 @@
-//===---- DebugObjectManagerPlugin.h - JITLink debug objects ---*- C++ -*-===//
+//===------ ELFDebugObjectPlugin.h - JITLink debug objects ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGOBJECTMANAGERPLUGIN_H
-#define LLVM_EXECUTIONENGINE_ORC_DEBUGOBJECTMANAGERPLUGIN_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_ELFDEBUGOBJECTPLUGIN_H
+#define LLVM_EXECUTIONENGINE_ORC_ELFDEBUGOBJECTPLUGIN_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -46,7 +46,7 @@ class DebugObject;
 /// DebugObjectRegistrar is notified. Ownership of DebugObjects remains with the
 /// plugin.
 ///
-class LLVM_ABI DebugObjectManagerPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_ABI ELFDebugObjectPlugin : public ObjectLinkingLayer::Plugin {
 public:
   /// Create the plugin to submit DebugObjects for JITLink artifacts. For all
   /// options the recommended setting is true.
@@ -63,9 +63,9 @@ public:
   ///   sequence. When turning this off, the user has to issue the call to
   ///   __jit_debug_register_code() on the executor side manually.
   ///
-  DebugObjectManagerPlugin(ExecutionSession &ES, bool RequireDebugSections,
-                           bool AutoRegisterCode, Error &Err);
-  ~DebugObjectManagerPlugin() override;
+  ELFDebugObjectPlugin(ExecutionSession &ES, bool RequireDebugSections,
+                       bool AutoRegisterCode, Error &Err);
+  ~ELFDebugObjectPlugin() override;
 
   void notifyMaterializing(MaterializationResponsibility &MR,
                            jitlink::LinkGraph &G, jitlink::JITLinkContext &Ctx,
@@ -99,4 +99,4 @@ private:
 } // namespace orc
 } // namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_DEBUGOBJECTMANAGERPLUGIN_H
+#endif // LLVM_EXECUTIONENGINE_ORC_ELFDEBUGOBJECTPLUGIN_H
