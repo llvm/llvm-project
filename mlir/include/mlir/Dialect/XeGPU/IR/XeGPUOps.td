@@ -1282,12 +1282,6 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let hasCanonicalizer = 1;
 }
 
-def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
-class StaticShared1DMemRefOf<list<Type> allowedTypes> :
-  ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
-     "statically shaped " # MemRefOf<allowedTypes>.summary # " for shared memory",
-     "mlir::MemRefType">;
-
 class SizeInBits<string name> :
   StrFunc<"llvm::cast<mlir::ShapedType>($" # name # ".getType()).getNumElements()"
           "*llvm::cast<mlir::ShapedType>($" # name # ".getType()).getElementTypeBitWidth()">;
@@ -1308,7 +1302,7 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     Results:
      - `mem_desc` : the memory descriptor.
   }];
-  let arguments = (ins AnyTypeOf<[StaticShared1DMemRefOf<[I8]>, ConfinedType<MemRefRankOf<[XeGPU_ScalarType], [2]>, [HasStaticShapePred, isSharedPred]>]>:$source);
+  let arguments = (ins AnyTypeOf<[StaticShared1DMemRefOf<[XeGPU_ScalarType]>, StaticShared2DMemRefOf<[XeGPU_ScalarType]>]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
   let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
 }
