@@ -20589,10 +20589,10 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
 static void CheckForComparisonInEnumInitializer(SemaBase &Sema,
                                                 const EnumDecl *Enum) {
   bool HasBitwiseOp = false;
-  SmallVector<const BinaryOperator*, 4> SuspiciousCompares;
+  SmallVector<const BinaryOperator *, 4> SuspiciousCompares;
 
   // Iterate over all the enum values, gather suspisious comparison ops and
-  // whether any enum initialisers contain a binary operator.  
+  // whether any enum initialisers contain a binary operator.
   for (const auto *ECD : Enum->enumerators()) {
     const Expr *InitExpr = ECD->getInitExpr();
     if (!InitExpr)
