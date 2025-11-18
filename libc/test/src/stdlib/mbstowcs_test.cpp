@@ -9,7 +9,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/macros/null_check.h"
-#include "src/wchar/mbstowcs.h"
+#include "src/stdlib/mbstowcs.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 

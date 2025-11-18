@@ -368,6 +368,65 @@ add_entrypoint_object(
     libc.hdr.types.size_t
 )
 
+add_entrypoint_object(
+  mbtowc
+  SRCS
+    mbtowc.cpp
+  HDRS
+    mbtowc.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  mbstowcs
+  SRCS
+    mbstowcs.cpp
+  HDRS
+    mbstowcs.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.mbsnrtowcs
+)
+
+add_entrypoint_object(
+  wctomb
+  SRCS
+    wctomb.cpp
+  HDRS
+    wctomb.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  wcstombs
+  SRCS
+    wcstombs.cpp
+  HDRS
+    wcstombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcsnrtombs
+    libc.src.__support.libc_errno
+)
+
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   if(LLVM_LIBC_INCLUDE_SCUDO)
     set(SCUDO_DEPS "")
