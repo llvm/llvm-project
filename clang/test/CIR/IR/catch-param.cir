@@ -1,0 +1,58 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s  
+ 
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.func dso_local @catch_param_inside_catch() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    } catch all {
+      cir.catch_param : !cir.ptr<!void> 
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func dso_local @catch_param_inside_catch() {
+// CHECK:   cir.scope {
+// CHECK:     cir.try {
+// CHECK:       cir.yield
+// CHECK:     } catch all {
+// CHECK:       cir.catch_param : !cir.ptr<!void> 
+// CHECK:       cir.yield
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func dso_local @catch_begin_and_end() {
+    %exn_addr = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["exn_addr"]
+    %tmp_exn_ptr = cir.load %exn_addr : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+    cir.br ^bb1(%tmp_exn_ptr : !cir.ptr<!void>)
+  ^bb1(%exn_ptr : !cir.ptr<!void>):
+    %begin = cir.catch_param begin %exn_ptr : !cir.ptr<!s32i>
+    cir.catch_param end
+    cir.br ^bb2
+  ^bb2:
+    cir.return
+}
+
+// CHECK: cir.func dso_local @catch_begin_and_end() {
+// CHECK:   %[[EXN_ADDR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["exn_addr"]
+// CHECK:   %[[TMP_EXN_PTR:.*]] = cir.load %[[EXN_ADDR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CHECK:   cir.br ^bb1(%[[TMP_EXN_PTR]] : !cir.ptr<!void>)
+// CHECK: ^bb1(%[[EXN_PTR:.*]]: !cir.ptr<!void>):
+// CHECK:   %[[BEGIN:.*]] = cir.catch_param begin %[[EXN_PTR]] : !cir.ptr<!s32i>
+// CHECK:   cir.catch_param end
+// CHECK:   cir.br ^bb2
+// CHECK: ^bb2:
+// CHECK:   cir.return
+// CHECK: }
+
+}
+
+
