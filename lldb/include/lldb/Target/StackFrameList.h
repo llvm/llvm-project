@@ -57,6 +57,9 @@ public:
   /// it's the first frame.
   bool IsPreviousFrameHidden(lldb_private::StackFrame &frame);
 
+  std::wstring FrameMarker(lldb::StackFrameSP frame_sp,
+                           lldb::StackFrameSP selected_frame_sp);
+
   /// Get the currently selected frame index.
   /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
   /// selected a frame, and (b) if this really is a user facing
@@ -104,7 +107,7 @@ public:
   size_t GetStatus(Stream &strm, uint32_t first_frame, uint32_t num_frames,
                    bool show_frame_info, uint32_t num_frames_with_source,
                    bool show_unique = false, bool show_hidden = false,
-                   const char *frame_marker = nullptr);
+                   bool show_selected_frame = false);
 
   /// Returns whether we have currently fetched all the frames of a stack.
   bool WereAllFramesFetched() const;

@@ -102,7 +102,7 @@ void RenderDiagnosticDetails(Stream &stream,
   // characters.  In the future it might make sense to move this into
   // Host so it can be customized for a specific platform.
   llvm::StringRef cursor, underline, vbar, joint, hbar, spacer;
-  if (stream.AsRawOstream().colors_enabled()) {
+  if (TerminalSupportsUnicode()) {
     cursor = "˄";
     underline = "˜";
     vbar = "│";
@@ -230,6 +230,21 @@ void RenderDiagnosticDetails(Stream &stream,
       PrintSeverity(stream, detail.severity);
       stream << detail.rendered << '\n';
     }
+}
+
+bool TerminalSupportsUnicode() {
+  static std::optional<bool> result;
+  if (result)
+    return result.value();
+#ifndef _WIN32
+  if (const char *lang_var = std::getenv("LANG"))
+    result = std::string(lang_var).find("UTF-8");
+  else
+    result = false;
+#else
+  result = std::getenv("WT_SESSION") != nullptr;
+#endif
+  return result.value();
 }
 
 } // namespace lldb_private
