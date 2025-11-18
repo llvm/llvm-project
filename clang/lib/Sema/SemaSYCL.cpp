@@ -521,31 +521,31 @@ StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
     // Establish a code synthesis context for construction of the arguments
     // for the implicit call to 'sycl_kernel_launch'.
     {
-    Sema::CodeSynthesisContext CSC;
-    CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchLookup;
-    CSC.Entity = FD;
-    Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchLookup;
+      CSC.Entity = FD;
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
 
-    if (BuildSYCLKernelLaunchCallArgs(SemaRef, FD, SKI, Args, Loc))
-      return StmtError();
+      if (BuildSYCLKernelLaunchCallArgs(SemaRef, FD, SKI, Args, Loc))
+        return StmtError();
     }
 
     // Establish a code synthesis context for the implicit call to
     // 'sycl_kernel_launch'.
     {
-    Sema::CodeSynthesisContext CSC;
-    CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchOverloadResolution;
-    CSC.Entity = FD;
-    CSC.CallArgs = Args.data();
-    CSC.NumCallArgs = Args.size();
-    Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchOverloadResolution;
+      CSC.Entity = FD;
+      CSC.CallArgs = Args.data();
+      CSC.NumCallArgs = Args.size();
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
 
-    ExprResult LaunchResult =
-        SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
-    if (LaunchResult.isInvalid())
-      return StmtError();
+      ExprResult LaunchResult =
+          SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
+      if (LaunchResult.isInvalid())
+        return StmtError();
 
-    Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
+      Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
     }
   }
 
