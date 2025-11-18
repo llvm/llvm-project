@@ -1003,58 +1003,60 @@ private:
   vector::UnrollVectorOptions options;
 };
 
-static bool isContiguousExtract(ArrayRef<int64_t> targetShape,
-                                ArrayRef<int64_t> resultShape) {
+/// Checks whether targetShape is contiguous in resultShape.
+/// For targetShape to be contiguous in resultShape:
+/// 1) The inner dimensions of targetShape and resultShape must match exactly.
+/// 2) The total number of elements in resultShape must be evenly divisible by
+///    the total number of elements in targetShape.
+/// Examples:
+///   isContiguous([4, 4], [8, 4]) == true
+///   isContiguous([2, 4], [8, 4]) == true
+///   isContiguous([2, 2], [8, 4]) == false
+/// Removes leading unit dimensions to handle cases like:
+///   isContiguous([1, 16], [1, 32]) == true
+static bool isContiguous(ArrayRef<int64_t> targetShape,
+                         ArrayRef<int64_t> resultShape) {
+
   if (targetShape.size() > resultShape.size())
+    return false;
+
+  while (!targetShape.empty() && targetShape.front() == 1) {
+    targetShape = targetShape.drop_front();
+  }
+
+  while (!resultShape.empty() && resultShape.front() == 1) {
+    resultShape = resultShape.drop_front();
+  }
+
+  size_t rankDiff = resultShape.size() - targetShape.size();
+  if (!llvm::equal(targetShape.drop_front(),
+                   resultShape.drop_front(rankDiff + 1)))
     return false;
 
   int64_t targetElements = ShapedType::getNumElements(targetShape);
   int64_t resultElements = ShapedType::getNumElements(resultShape);
-
-  // Result must be evenly divisible by target.
-  if (resultElements % targetElements != 0)
-    return false;
-
-  // For contiguous extraction, we need to be able to
-  // extract targetElements contiguously from the result shape.
-  // This means we can "consume" dimensions from the innermost outward
-  // until we have exactly targetElements.
-
-  int64_t remainingElements = targetElements;
-  int targetDimIdx = targetShape.size() - 1;
-
-  // Work backwards through result dimensions.
-  for (int resultDimIdx = resultShape.size() - 1;
-       resultDimIdx >= 0 && remainingElements > 1 && targetDimIdx >= 0;
-       --resultDimIdx) {
-
-    int64_t resultDimSize = resultShape[resultDimIdx];
-    int64_t targetDimSize = targetShape[targetDimIdx];
-
-    if (targetDimSize > resultDimSize)
-      return false;
-
-    if (targetDimSize == resultDimSize) {
-      if (remainingElements % targetDimSize != 0)
-        return false;
-      remainingElements /= targetDimSize;
-      --targetDimIdx;
-    } else {
-      if (remainingElements != targetDimSize)
-        return false;
-      remainingElements = 1;
-      --targetDimIdx;
-    }
-  }
-
-  // Check remaining target dimensions are all 1 and we consumed all elements
-  return remainingElements == 1 &&
-         (targetDimIdx < 0 || llvm::all_of(
-                                  targetShape.take_front(targetDimIdx + 1),
-                                  [](int64_t d) { return d == 1; }));
+  return resultElements % targetElements == 0;
 }
 
-// Calculate the shape to extract from source.
+/// This function determines what shape to use with
+/// `vector.extract_strided_slice` to extract a contiguous memory region from a
+/// source vector. The extraction must be contiguous and contain exactly the
+/// specified number of elements. If such an extraction shape cannot be
+/// determined, the function returns std::nullopt.
+/// Examples:
+///   sourceShape = [16], targetElements = 8
+///   Working right-to-left:
+///   - Take min(8, 16) = 8 from only dim → extractShape = [8],
+///     remaining = 8/8 = 1
+///     Result: [8]
+///
+///   sourceShape = [4, 4], targetElements = 8
+///   Working right-to-left:
+///   - Take min(8, 4) = 4 from last dim → extractShape = [4],
+///     remaining = 8/4 = 2
+///   - Take min(2, 4) = 2 from first dim → extractShape = [2, 4],
+///     remaining = 2/2 = 1
+///     Result: [2, 4]
 static std::optional<SmallVector<int64_t>>
 calculateSourceExtractShape(ArrayRef<int64_t> sourceShape,
                             int64_t targetElements) {
@@ -1084,12 +1086,12 @@ calculateSourceExtractShape(ArrayRef<int64_t> sourceShape,
 // Convert result offsets to source offsets via linear position.
 static SmallVector<int64_t>
 calculateSourceOffsets(ArrayRef<int64_t> resultOffsets,
-                       ArrayRef<int64_t> sourceStrides,
-                       ArrayRef<int64_t> resultStrides) {
+                       ArrayRef<int64_t> sourceShape,
+                       ArrayRef<int64_t> resultShape) {
   // Convert result offsets to linear position.
-  int64_t linearIndex = linearize(resultOffsets, resultStrides);
+  int64_t linearIndex = linearize(resultOffsets, computeStrides(resultShape));
   // Convert linear position to source offsets.
-  return delinearize(linearIndex, sourceStrides);
+  return delinearize(linearIndex, computeStrides(sourceShape));
 }
 
 /// This pattern unrolls `vector.shape_cast` operations according to the
@@ -1142,10 +1144,10 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
     ArrayRef<int64_t> sourceShape = sourceType.getShape();
     ArrayRef<int64_t> resultShape = resultType.getShape();
 
-    if (!isContiguousExtract(*targetShape, resultShape))
-      return rewriter.notifyMatchFailure(shapeCastOp,
-                                         "Only supports cases where contiguous "
-                                         "extraction is possible");
+    if (!isContiguous(*targetShape, resultShape))
+      return rewriter.notifyMatchFailure(
+          shapeCastOp, "Only supports cases where target shape is "
+                       "contiguous in result vector shape");
 
     int64_t targetElements = ShapedType::getNumElements(*targetShape);
 
@@ -1168,13 +1170,11 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
 
     SmallVector<int64_t> extractStrides(extractShape->size(), 1);
     SmallVector<int64_t> insertStrides(targetShape->size(), 1);
-    SmallVector<int64_t> sourceStrides = computeStrides(sourceShape);
-    SmallVector<int64_t> resultStrides = computeStrides(resultShape);
 
     for (SmallVector<int64_t> resultOffsets :
          StaticTileOffsetRange(resultShape, *targetShape)) {
       SmallVector<int64_t> sourceOffsets =
-          calculateSourceOffsets(resultOffsets, sourceStrides, resultStrides);
+          calculateSourceOffsets(resultOffsets, sourceShape, resultShape);
       Value sourceChunk = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
           loc, shapeCastOp.getSource(), sourceOffsets, *extractShape,
           extractStrides);
