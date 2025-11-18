@@ -94,6 +94,7 @@ struct MissingFeatures {
   static bool opFuncNoReturn() { return false; }
   static bool setFunctionAttributes() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
+  static bool setFunctionPersonality() { return false; }
 
   // CallOp handling
   static bool opCallAggregateArgs() { return false; }
@@ -226,6 +227,7 @@ struct MissingFeatures {
   static bool cleanupAppendInsts() { return false; }
   static bool cleanupBranchThrough() { return false; }
   static bool cleanupIndexAndBIAdjustment() { return false; }
+  static bool cleanupWithPreservedValues() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool constEmitterAggILE() { return false; }
   static bool constEmitterArrayILE() { return false; }
@@ -257,6 +259,7 @@ struct MissingFeatures {
   static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
+  static bool emitConstrainedFPCall() { return false; }
   static bool emitLifetimeMarkers() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
@@ -274,6 +277,7 @@ struct MissingFeatures {
   static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
+  static bool intrinsicElementTypeSupport() { return false; }
   static bool intrinsics() { return false; }
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
@@ -332,6 +336,9 @@ struct MissingFeatures {
   static bool vtableRelativeLayout() { return false; }
   static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
+  static bool msvcCXXPersonality() { return false; }
+  static bool functionUsesSEHTry() { return false; }
+  static bool nothrowAttr() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -347,7 +354,6 @@ struct MissingFeatures {
   static bool awaitOp() { return false; }
   static bool callOp() { return false; }
   static bool ifOp() { return false; }
-  static bool invokeOp() { return false; }
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }
   static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
@@ -357,6 +363,7 @@ struct MissingFeatures {
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
+  static bool catchParamOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }

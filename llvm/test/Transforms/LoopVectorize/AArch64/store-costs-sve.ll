@@ -132,15 +132,15 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT:       vector.ph:
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[X]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP0:%.*]] = trunc <16 x i16> [[BROADCAST_SPLAT]] to <16 x i8>
-; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
-; DEFAULT:       vector.body:
-; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META6:![0-9]+]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <16 x i64> poison, i64 [[TMP1]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT2]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc <16 x i64> [[BROADCAST_SPLAT3]] to <16 x i8>
+; DEFAULT-NEXT:    [[TMP0:%.*]] = trunc <16 x i16> [[BROADCAST_SPLAT]] to <16 x i8>
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = and <16 x i8> [[TMP2]], [[TMP0]]
+; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
+; DEFAULT:       vector.body:
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 16
 ; DEFAULT-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP4]], align 1, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
@@ -156,15 +156,15 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 992, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <8 x i16> poison, i16 [[X]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT4]], <8 x i16> poison, <8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP7:%.*]] = trunc <8 x i16> [[BROADCAST_SPLAT5]] to <8 x i8>
-; DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
-; DEFAULT:       vec.epilog.vector.body:
-; DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META6]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <8 x i64> poison, i64 [[TMP8]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT7]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = trunc <8 x i64> [[BROADCAST_SPLAT8]] to <8 x i8>
+; DEFAULT-NEXT:    [[TMP7:%.*]] = trunc <8 x i16> [[BROADCAST_SPLAT5]] to <8 x i8>
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = and <8 x i8> [[TMP9]], [[TMP7]]
+; DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; DEFAULT:       vec.epilog.vector.body:
+; DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX6]]
 ; DEFAULT-NEXT:    store <8 x i8> [[TMP10]], ptr [[TMP11]], align 1, !alias.scope [[META9]], !noalias [[META6]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 8

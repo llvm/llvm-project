@@ -241,6 +241,17 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
     Cond.push_back(LastInst->getOperand(1));
     Cond.push_back(LastInst->getOperand(2));
     break;
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
+    Target = LastInst->getOperand(3).getMBB();
+    Cond.push_back(MachineOperand::CreateImm(-1));                    // -1
+    Cond.push_back(MachineOperand::CreateImm(LastInst->getOpcode())); // Opc
+    Cond.push_back(LastInst->getOperand(0));                          // Cond
+    Cond.push_back(LastInst->getOperand(1));                          // Op0
+    Cond.push_back(LastInst->getOperand(2));                          // Op1
+    Cond.push_back(LastInst->getOperand(4));                          // Ext0
+    Cond.push_back(LastInst->getOperand(5));                          // Ext1
+    break;
   }
 }
 
@@ -264,6 +275,8 @@ static unsigned getBranchDisplacementBits(unsigned Opc) {
     return BCCDisplacementBits;
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     return CBDisplacementBits;
@@ -298,6 +311,8 @@ AArch64InstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
     return MI.getOperand(1).getMBB();
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     return MI.getOperand(3).getMBB();
@@ -580,9 +595,11 @@ bool AArch64InstrInfo::reverseBranchCondition(
       Cond[1].setImm(AArch64::TBZX);
       break;
 
-    // Cond is { -1, Opcode, CC, Op0, Op1 }
+    // Cond is { -1, Opcode, CC, Op0, Op1, ... }
     case AArch64::CBWPri:
     case AArch64::CBXPri:
+    case AArch64::CBBAssertExt:
+    case AArch64::CBHAssertExt:
     case AArch64::CBWPrr:
     case AArch64::CBXPrr: {
       // Pseudos using standard 4bit Arm condition codes
@@ -654,6 +671,12 @@ void AArch64InstrInfo::instantiateCondBranch(
       MIB.add(Cond[4]);
 
     MIB.addMBB(TBB);
+
+    // cb[b,h]
+    if (Cond.size() > 5) {
+      MIB.addImm(Cond[5].getImm());
+      MIB.addImm(Cond[6].getImm());
+    }
   }
 }
 
@@ -931,44 +954,122 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
     // We must insert a cmp, that is a subs
     //            0       1   2    3    4
     // Cond is { -1, Opcode, CC, Op0, Op1 }
-    unsigned SUBSOpC, SUBSDestReg;
+
+    unsigned SubsOpc, SubsDestReg;
     bool IsImm = false;
     CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
     switch (Cond[1].getImm()) {
     default:
       llvm_unreachable("Unknown branch opcode in Cond");
     case AArch64::CBWPri:
-      SUBSOpC = AArch64::SUBSWri;
-      SUBSDestReg = AArch64::WZR;
+      SubsOpc = AArch64::SUBSWri;
+      SubsDestReg = AArch64::WZR;
       IsImm = true;
       break;
     case AArch64::CBXPri:
-      SUBSOpC = AArch64::SUBSXri;
-      SUBSDestReg = AArch64::XZR;
+      SubsOpc = AArch64::SUBSXri;
+      SubsDestReg = AArch64::XZR;
       IsImm = true;
       break;
     case AArch64::CBWPrr:
-      SUBSOpC = AArch64::SUBSWrr;
-      SUBSDestReg = AArch64::WZR;
+      SubsOpc = AArch64::SUBSWrr;
+      SubsDestReg = AArch64::WZR;
       IsImm = false;
       break;
     case AArch64::CBXPrr:
-      SUBSOpC = AArch64::SUBSXrr;
-      SUBSDestReg = AArch64::XZR;
+      SubsOpc = AArch64::SUBSXrr;
+      SubsDestReg = AArch64::XZR;
       IsImm = false;
       break;
     }
 
     if (IsImm)
-      BuildMI(MBB, I, DL, get(SUBSOpC), SUBSDestReg)
+      BuildMI(MBB, I, DL, get(SubsOpc), SubsDestReg)
           .addReg(Cond[3].getReg())
           .addImm(Cond[4].getImm())
           .addImm(0);
     else
-      BuildMI(MBB, I, DL, get(SUBSOpC), SUBSDestReg)
+      BuildMI(MBB, I, DL, get(SubsOpc), SubsDestReg)
           .addReg(Cond[3].getReg())
           .addReg(Cond[4].getReg());
-  }
+  } break;
+  case 7: { // cb[b,h]
+    // We must insert a cmp, that is a subs, but also zero- or sign-extensions
+    // that have been folded. For the first operand we codegen an explicit
+    // extension, for the second operand we fold the extension into cmp.
+    //            0       1   2    3    4    5      6
+    // Cond is { -1, Opcode, CC, Op0, Op1, Ext0, Ext1 }
+
+    // We need a new register for the now explicitly extended register
+    Register Reg = Cond[4].getReg();
+    if (Cond[5].getImm() != AArch64_AM::InvalidShiftExtend) {
+      unsigned ExtOpc;
+      unsigned ExtBits;
+      AArch64_AM::ShiftExtendType ExtendType =
+          AArch64_AM::getExtendType(Cond[5].getImm());
+      switch (ExtendType) {
+      default:
+        llvm_unreachable("Unknown shift-extend for CB instruction");
+      case AArch64_AM::SXTB:
+        assert(
+            Cond[1].getImm() == AArch64::CBBAssertExt &&
+            "Unexpected compare-and-branch instruction for SXTB shift-extend");
+        ExtOpc = AArch64::SBFMWri;
+        ExtBits = AArch64_AM::encodeLogicalImmediate(0xff, 32);
+        break;
+      case AArch64_AM::SXTH:
+        assert(
+            Cond[1].getImm() == AArch64::CBHAssertExt &&
+            "Unexpected compare-and-branch instruction for SXTH shift-extend");
+        ExtOpc = AArch64::SBFMWri;
+        ExtBits = AArch64_AM::encodeLogicalImmediate(0xffff, 32);
+        break;
+      case AArch64_AM::UXTB:
+        assert(
+            Cond[1].getImm() == AArch64::CBBAssertExt &&
+            "Unexpected compare-and-branch instruction for UXTB shift-extend");
+        ExtOpc = AArch64::ANDWri;
+        ExtBits = AArch64_AM::encodeLogicalImmediate(0xff, 32);
+        break;
+      case AArch64_AM::UXTH:
+        assert(
+            Cond[1].getImm() == AArch64::CBHAssertExt &&
+            "Unexpected compare-and-branch instruction for UXTH shift-extend");
+        ExtOpc = AArch64::ANDWri;
+        ExtBits = AArch64_AM::encodeLogicalImmediate(0xffff, 32);
+        break;
+      }
+
+      // Build the explicit extension of the first operand
+      Reg = MRI.createVirtualRegister(&AArch64::GPR32spRegClass);
+      MachineInstrBuilder MBBI =
+          BuildMI(MBB, I, DL, get(ExtOpc), Reg).addReg(Cond[4].getReg());
+      if (ExtOpc != AArch64::ANDWri)
+        MBBI.addImm(0);
+      MBBI.addImm(ExtBits);
+    }
+
+    // Now, subs with an extended second operand
+    if (Cond[6].getImm() != AArch64_AM::InvalidShiftExtend) {
+      AArch64_AM::ShiftExtendType ExtendType =
+          AArch64_AM::getExtendType(Cond[6].getImm());
+      MRI.constrainRegClass(Reg, MRI.getRegClass(Cond[3].getReg()));
+      MRI.constrainRegClass(Cond[3].getReg(), &AArch64::GPR32spRegClass);
+      BuildMI(MBB, I, DL, get(AArch64::SUBSWrx), AArch64::WZR)
+          .addReg(Cond[3].getReg())
+          .addReg(Reg)
+          .addImm(AArch64_AM::getArithExtendImm(ExtendType, 0));
+    } // If no extension is needed, just a regular subs
+    else {
+      MRI.constrainRegClass(Reg, MRI.getRegClass(Cond[3].getReg()));
+      MRI.constrainRegClass(Cond[3].getReg(), &AArch64::GPR32spRegClass);
+      BuildMI(MBB, I, DL, get(AArch64::SUBSWrr), AArch64::WZR)
+          .addReg(Cond[3].getReg())
+          .addReg(Reg);
+    }
+
+    CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
+  } break;
   }
 
   unsigned Opc = 0;
@@ -1043,6 +1144,28 @@ static bool isCheapImmediate(const MachineInstr &MI, unsigned BitSize) {
   return Is.size() <= 2;
 }
 
+// Check if a COPY instruction is cheap.
+static bool isCheapCopy(const MachineInstr &MI, const AArch64RegisterInfo &RI) {
+  assert(MI.isCopy() && "Expected COPY instruction");
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
+  // Cross-bank copies (e.g., between GPR and FPR) are expensive on AArch64,
+  // typically requiring an FMOV instruction with a 2-6 cycle latency.
+  auto GetRegClass = [&](Register Reg) -> const TargetRegisterClass * {
+    if (Reg.isVirtual())
+      return MRI.getRegClass(Reg);
+    if (Reg.isPhysical())
+      return RI.getMinimalPhysRegClass(Reg);
+    return nullptr;
+  };
+  const TargetRegisterClass *DstRC = GetRegClass(MI.getOperand(0).getReg());
+  const TargetRegisterClass *SrcRC = GetRegClass(MI.getOperand(1).getReg());
+  if (DstRC && SrcRC && !RI.getCommonSubClass(DstRC, SrcRC))
+    return false;
+
+  return MI.isAsCheapAsAMove();
+}
+
 // FIXME: this implementation should be micro-architecture dependent, so a
 // micro-architecture target hook should be introduced here in future.
 bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
@@ -1055,6 +1178,9 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return MI.isAsCheapAsAMove();
+
+  case TargetOpcode::COPY:
+    return isCheapCopy(MI, RI);
 
   case AArch64::ADDWrs:
   case AArch64::ADDXrs:
@@ -2452,11 +2578,10 @@ bool AArch64InstrInfo::isFPRCopy(const MachineInstr &MI) {
   return false;
 }
 
-Register AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
-                                               int &FrameIndex) const {
-  switch (MI.getOpcode()) {
+static bool isFrameLoadOpcode(int Opcode) {
+  switch (Opcode) {
   default:
-    break;
+    return false;
   case AArch64::LDRWui:
   case AArch64::LDRXui:
   case AArch64::LDRBui:
@@ -2465,22 +2590,27 @@ Register AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case AArch64::LDRDui:
   case AArch64::LDRQui:
   case AArch64::LDR_PXI:
-    if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
-        MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
-      FrameIndex = MI.getOperand(1).getIndex();
-      return MI.getOperand(0).getReg();
-    }
-    break;
+    return true;
   }
-
-  return 0;
 }
 
-Register AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
-                                              int &FrameIndex) const {
-  switch (MI.getOpcode()) {
+Register AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                               int &FrameIndex) const {
+  if (!isFrameLoadOpcode(MI.getOpcode()))
+    return Register();
+
+  if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
+      MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return Register();
+}
+
+static bool isFrameStoreOpcode(int Opcode) {
+  switch (Opcode) {
   default:
-    break;
+    return false;
   case AArch64::STRWui:
   case AArch64::STRXui:
   case AArch64::STRBui:
@@ -2489,14 +2619,63 @@ Register AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case AArch64::STRDui:
   case AArch64::STRQui:
   case AArch64::STR_PXI:
-    if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
-        MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
-      FrameIndex = MI.getOperand(1).getIndex();
-      return MI.getOperand(0).getReg();
-    }
-    break;
+    return true;
   }
-  return 0;
+}
+
+Register AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                              int &FrameIndex) const {
+  if (!isFrameStoreOpcode(MI.getOpcode()))
+    return Register();
+
+  if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
+      MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return Register();
+}
+
+Register AArch64InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                                    int &FrameIndex) const {
+  if (!isFrameStoreOpcode(MI.getOpcode()))
+    return Register();
+
+  if (Register Reg = isStoreToStackSlot(MI, FrameIndex))
+    return Reg;
+
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasStoreToStackSlot(MI, Accesses)) {
+    if (Accesses.size() > 1)
+      return Register();
+
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return Register();
+}
+
+Register AArch64InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                                     int &FrameIndex) const {
+  if (!isFrameLoadOpcode(MI.getOpcode()))
+    return Register();
+
+  if (Register Reg = isLoadFromStackSlot(MI, FrameIndex))
+    return Reg;
+
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasLoadFromStackSlot(MI, Accesses)) {
+    if (Accesses.size() > 1)
+      return Register();
+
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return Register();
 }
 
 /// Check all MachineMemOperands for a hint to suppress pairing.
@@ -9319,6 +9498,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   case AArch64::Bcc:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     return false;
