@@ -259,6 +259,7 @@ struct MissingFeatures {
   static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
+  static bool emitConstrainedFPCall() { return false; }
   static bool emitLifetimeMarkers() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
