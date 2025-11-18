@@ -201,7 +201,7 @@ enum class OMPDynGroupprivateFallbackType : uint64_t {
 };
 
 // Default OpenMP mapper name suffix.
-inline constexpr const char *OmpDefaultMapperName = ".omp.default.mapper";
+inline constexpr const char *OmpDefaultMapperName = "_omp_default_mapper";
 
 /// Values for bit flags used to specify the mapping type for
 /// offloading.
