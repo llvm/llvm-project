@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++26  -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++26 -fexperimental-new-constant-interpreter -x c++ %s -verify
 
 struct F {
   bool V;
@@ -10,7 +10,7 @@ struct [[=1, =F{true}]] f2 {};
 struct [[=1]] [[=2]] f3 {};
 // Declaration
 const [[=1]] F f4{};
-void foo([[=F{false}]]int i) {}
+void foo([[=F{false}]]int i) {} // function parameters
 // Redeclaration
 [[=2, =3, =2]] void f5();
 void f5 [[=4, =2]] ();
@@ -49,3 +49,11 @@ struct U {
 constexpr U u(true);
 struct [[ =u ]] h2{}; // expected-error {{call to deleted constructor of 'U'}}
                       // expected-note@#del-U {{'U' has been explicitly marked deleted here}}
+
+// Non structural
+struct [[="notstructural"]] h3{}; // expected-error {{C++26 annotation attribute requires an expression usable as a template argument}} \
+                                     expected-note {{reference to string literal is not allowed in a template argument}}
+
+// Pointer into string literal
+struct [[=&"foo"[0]]] h4{}; // expected-error {{C++26 annotation attribute requires an expression usable as a template argument}} \
+                               expected-note {{pointer to subobject of string literal is not allowed in a template argument}}
