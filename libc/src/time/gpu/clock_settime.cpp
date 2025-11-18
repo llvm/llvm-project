@@ -1,4 +1,4 @@
-//===-- Implementation of clock_settime for gpu ----------------------------===//
+//===---------- GPU implementation of the clock_settime function ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
