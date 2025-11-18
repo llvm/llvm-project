@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class ScalarEvolution;
@@ -67,10 +68,24 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// generating the values for the comparison. The recipes are stored in
 /// \p Recipes, and recipes forming an address for a load are also added to
 /// \p GEPs.
+LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
 getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &Recipes,
                              SmallVectorImpl<VPRecipeBase *> &GEPs);
+
+/// Extracts and returns NoWrap and FastMath flags from the induction binop in
+/// \p ID.
+inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
+  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return ID.getInductionBinOp()->getFastMathFlags();
+
+  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
+          ID.getInductionBinOp()))
+    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
+                                  OBO->hasNoSignedWrap());
+  return {};
+}
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

@@ -88,9 +88,10 @@ static cl::opt<bool>
                       cl::init(true));
 
 // TODO: Support more ops
-static const unsigned ZvfbfaVPOps[] = {ISD::VP_FNEG, ISD::VP_FABS,
-                                       ISD::VP_FCOPYSIGN};
-static const unsigned ZvfbfaOps[] = {ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN};
+static const unsigned ZvfbfaVPOps[] = {
+    ISD::VP_FNEG, ISD::VP_FABS, ISD::VP_FCOPYSIGN, ISD::EXPERIMENTAL_VP_SPLAT};
+static const unsigned ZvfbfaOps[] = {ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN,
+                                     ISD::SPLAT_VECTOR};
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
@@ -1264,26 +1265,20 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT, Custom);
-      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
-                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
-                          ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
-                          ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE,
-                          ISD::VECTOR_COMPRESS},
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
+                          ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_DEINTERLEAVE,
+                          ISD::VECTOR_INTERLEAVE, ISD::VECTOR_REVERSE,
+                          ISD::VECTOR_SPLICE, ISD::VECTOR_COMPRESS},
                          VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_SPLAT, VT, Custom);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
+      setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setOperationAction(ZvfbfaVPOps, VT, Custom);
 
-      MVT EltVT = VT.getVectorElementType();
-      if (isTypeLegal(EltVT))
-        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT,
-                            ISD::EXTRACT_VECTOR_ELT},
-                           VT, Custom);
-      else
-        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT},
-                           EltVT, Custom);
       setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
                           ISD::MGATHER, ISD::MSCATTER, ISD::VP_LOAD,
                           ISD::VP_STORE, ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
@@ -1619,7 +1614,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           if (!isTypeLegal(F32VecVT))
             continue;
           setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
-          // TODO: Promote VP ops to fp32.
+          setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
           continue;
         }
 
@@ -4871,7 +4866,7 @@ static SDValue lowerScalarSplat(SDValue Passthru, SDValue Scalar, SDValue VL,
 
   if (VT.isFloatingPoint()) {
     if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) ||
-        EltVT == MVT::bf16) {
+        (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
       if ((EltVT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) ||
           (EltVT == MVT::f16 && Subtarget.hasStdExtZfhmin()))
         Scalar = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Scalar);
@@ -10356,7 +10351,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   }
 
   if ((ValVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
-      ValVT == MVT::bf16) {
+      (ValVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     // If we don't have vfmv.s.f for f16/bf16, use fmv.x.h first.
     MVT IntVT = VecVT.changeTypeToInteger();
     SDValue IntInsert = DAG.getNode(
@@ -10593,7 +10588,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   }
 
   if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
-      EltVT == MVT::bf16) {
+      (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     // If we don't have vfmv.f.s for f16/bf16, extract to a gpr then use fmv.h.x
     MVT IntVT = VecVT.changeTypeToInteger();
     SDValue IntVec = DAG.getBitcast(IntVT, Vec);
@@ -16792,22 +16787,33 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
   uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  SDValue X = N->getOperand(0);
   ISD::NodeType Op;
   uint64_t ShiftAmt1;
-  if (isPowerOf2_64(MulAmt + MulAmtLowBit)) {
-    Op = ISD::SUB;
-    ShiftAmt1 = MulAmt + MulAmtLowBit;
-  } else if (isPowerOf2_64(MulAmt - MulAmtLowBit)) {
+  bool CanSub = isPowerOf2_64(MulAmt + MulAmtLowBit);
+  auto PreferSub = [X, MulAmtLowBit]() {
+    // For MulAmt == 3 << M both (X << M + 2) - (X << M)
+    // and (X << M + 1) + (X << M) are valid expansions.
+    // Prefer SUB if we can get (X << M + 2) for free,
+    // because X is exact (Y >> M + 2).
+    uint64_t ShAmt = Log2_64(MulAmtLowBit) + 2;
+    using namespace SDPatternMatch;
+    return sd_match(X, m_ExactSr(m_Value(), m_SpecificInt(ShAmt)));
+  };
+  if (isPowerOf2_64(MulAmt - MulAmtLowBit) && !(CanSub && PreferSub())) {
     Op = ISD::ADD;
     ShiftAmt1 = MulAmt - MulAmtLowBit;
+  } else if (CanSub) {
+    Op = ISD::SUB;
+    ShiftAmt1 = MulAmt + MulAmtLowBit;
   } else {
     return SDValue();
   }
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+  SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, X,
                                DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
-  SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+  SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, X,
                                DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
   return DAG.getNode(Op, DL, VT, Shift1, Shift2);
 }
@@ -16817,10 +16823,13 @@ static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue X = N->getOperand(0);
-  // Put the shift first if we can fold a zext into the shift forming a slli.uw.
+  // Put the shift first if we can fold:
+  // a. a zext into the shift forming a slli.uw
+  // b. an exact shift right forming one shorter shift or no shift at all
   using namespace SDPatternMatch;
   if (Shift != 0 &&
-      sd_match(X, m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))))) {
+      sd_match(X, m_AnyOf(m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))),
+                          m_ExactSr(m_Value(), m_ConstInt())))) {
     X = DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
     Shift = 0;
   }
