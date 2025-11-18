@@ -128,14 +128,14 @@ __CLC_DEFINE_ATOMIC()
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(                         \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr) {                          \
-    return __CLC_FUNCTION_EXPLICIT(Ptr, __ATOMIC_RELAXED,                      \
+    return __CLC_FUNCTION_EXPLICIT(Ptr, __ATOMIC_SEQ_CST,                      \
                                    __OPENCL_MEMORY_SCOPE_DEVICE);              \
   }
 #elif defined(__CLC_RETURN_VOID)
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF void __CLC_FUNCTION(                                  \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value) {     \
-    __CLC_FUNCTION_EXPLICIT(Ptr, Value, __ATOMIC_RELAXED,                      \
+    __CLC_FUNCTION_EXPLICIT(Ptr, Value, __ATOMIC_SEQ_CST,                      \
                             __OPENCL_MEMORY_SCOPE_DEVICE);                     \
   }
 #elif defined(__CLC_COMPARE_EXCHANGE)
@@ -143,15 +143,15 @@ __CLC_DEFINE_ATOMIC()
   _CLC_OVERLOAD _CLC_DEF bool __CLC_FUNCTION(                                  \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr,                            \
       ADDRSPACE __CLC_GENTYPE *Expected, __CLC_GENTYPE Desired) {              \
-    return __CLC_FUNCTION_EXPLICIT(Ptr, Expected, Desired, __ATOMIC_RELAXED,   \
-                                   __ATOMIC_RELAXED,                           \
+    return __CLC_FUNCTION_EXPLICIT(Ptr, Expected, Desired, __ATOMIC_SEQ_CST,   \
+                                   __ATOMIC_SEQ_CST,                           \
                                    __OPENCL_MEMORY_SCOPE_DEVICE);              \
   }
 #else
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(                         \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value) {     \
-    return __CLC_FUNCTION_EXPLICIT(Ptr, Value, __ATOMIC_RELAXED,               \
+    return __CLC_FUNCTION_EXPLICIT(Ptr, Value, __ATOMIC_SEQ_CST,               \
                                    __OPENCL_MEMORY_SCOPE_DEVICE);              \
   }
 #endif
