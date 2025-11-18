@@ -84,13 +84,14 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     break;
   }
 
+  StringRef Name = DIE.getShortName();
   StringRef NameForUniquing;
   StringRef FileRef;
 
   if (const char *LinkageName = DIE.getLinkageName())
     NameForUniquing = StringPool.internString(LinkageName);
-  else if (const char *ShortName = DIE.getShortName())
-    NameForUniquing = StringPool.internString(ShortName);
+  else if (!Name.empty())
+    NameForUniquing = StringPool.internString(Name);
 
   bool IsAnonymousNamespace =
       NameForUniquing.empty() && Tag == dwarf::DW_TAG_namespace;
@@ -163,15 +164,16 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     Hash = hash_combine(Hash, FileRef);
 
   // Now look if this context already exists.
-  DeclContext Key(Hash, Line, ByteSize, Tag, NameForUniquing, FileRef, Context);
+  DeclContext Key(Hash, Line, ByteSize, Tag, Name, NameForUniquing, FileRef,
+                  Context);
   auto ContextIter = Contexts.find(&Key);
 
   if (ContextIter == Contexts.end()) {
     // The context wasn't found.
     bool Inserted;
-    DeclContext *NewContext =
-        new (Allocator) DeclContext(Hash, Line, ByteSize, Tag, NameForUniquing,
-                                    FileRef, Context, DIE, U.getUniqueID());
+    DeclContext *NewContext = new (Allocator)
+        DeclContext(Hash, Line, ByteSize, Tag, Name, NameForUniquing, FileRef,
+                    Context, DIE, U.getUniqueID());
     std::tie(ContextIter, Inserted) = Contexts.insert(NewContext);
     assert(Inserted && "Failed to insert DeclContext");
     (void)Inserted;

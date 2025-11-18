@@ -84,12 +84,13 @@ public:
   DeclContext() : DefinedInClangModule(0), Parent(*this) {}
 
   DeclContext(unsigned Hash, uint32_t Line, uint32_t ByteSize, uint16_t Tag,
-              StringRef NameForUniquing, StringRef File,
+              StringRef Name, StringRef NameForUniquing, StringRef File,
               const DeclContext &Parent, DWARFDie LastSeenDIE = DWARFDie(),
               unsigned CUId = 0)
       : QualifiedNameHash(Hash), Line(Line), ByteSize(ByteSize), Tag(Tag),
-        DefinedInClangModule(0), NameForUniquing(NameForUniquing), File(File),
-        Parent(Parent), LastSeenDIE(LastSeenDIE), LastSeenCompileUnitID(CUId) {}
+        DefinedInClangModule(0), Name(Name), NameForUniquing(NameForUniquing),
+        File(File), Parent(Parent), LastSeenDIE(LastSeenDIE),
+        LastSeenCompileUnitID(CUId) {}
 
   uint32_t getQualifiedNameHash() const { return QualifiedNameHash; }
 
@@ -101,6 +102,7 @@ public:
 
   uint32_t getCanonicalDIEOffset() const { return CanonicalDIEOffset; }
   void setCanonicalDIEOffset(uint32_t Offset) { CanonicalDIEOffset = Offset; }
+  llvm::StringRef getCanonicalName() const { return Name; }
 
   bool isDefinedInClangModule() const { return DefinedInClangModule; }
   void setDefinedInClangModule(bool Val) { DefinedInClangModule = Val; }
@@ -115,6 +117,7 @@ private:
   uint32_t ByteSize = 0;
   uint16_t Tag = dwarf::DW_TAG_compile_unit;
   unsigned DefinedInClangModule : 1;
+  StringRef Name;
   StringRef NameForUniquing;
   StringRef File;
   const DeclContext &Parent;
