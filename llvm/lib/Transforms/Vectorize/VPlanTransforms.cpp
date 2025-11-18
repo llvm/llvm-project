@@ -4053,6 +4053,21 @@ static VPIRMetadata getCommonLoadMetadata(ArrayRef<VPReplicateRecipe *> Loads) {
   return CommonMetadata;
 }
 
+/// Check if \p Addr accesses consecutive memory locations of type \p LoadTy.
+static bool isConsecutiveLoad(VPValue *Addr, Type *LoadTy, ScalarEvolution &SE,
+                              const DataLayout &DL, const Loop *L) {
+  using namespace SCEVPatternMatch;
+  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, SE, L);
+  const SCEV *StepSCEV;
+  if (!match(AddrSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(StepSCEV),
+                                           m_SpecificLoop(L))))
+    return false;
+
+  TypeSize TS = DL.getTypeStoreSize(LoadTy);
+  const SCEV *ElementSizeSCEV = SE.getSizeOfExpr(StepSCEV->getType(), TS);
+  return SE.isKnownPositive(StepSCEV) && StepSCEV == ElementSizeSCEV;
+}
+
 void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
                                            const Loop *L) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
@@ -4144,17 +4159,28 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
       // Collect common metadata from all loads in the group.
       VPIRMetadata CommonMetadata = getCommonLoadMetadata(Group);
 
-      // Create an unpredicated load with minimum alignment using the earliest
-      // dominating address and common metadata.
-      auto *UnpredicatedLoad = new VPReplicateRecipe(
-          LoadWithMinAlign->getUnderlyingInstr(), EarliestLoad->getOperand(0),
-          /*IsSingleScalar=*/false, /*Mask=*/nullptr, /*Flags=*/{},
-          CommonMetadata);
-      UnpredicatedLoad->insertBefore(EarliestLoad);
+      Type *LoadTy = TypeInfo.inferScalarType(EarliestLoad);
+      const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+      auto *LI = cast<LoadInst>(LoadWithMinAlign->getUnderlyingInstr());
+      VPValue *NewLoad;
+      // Check if the load is consecutive to determine whether to widen it.
+      if (isConsecutiveLoad(EarliestLoad->getOperand(0), LoadTy, SE, DL, L)) {
+        auto *WidenedLoad = new VPWidenLoadRecipe(
+            *LI, EarliestLoad->getOperand(0), /*Mask=*/nullptr,
+            /*Consecutive=*/true, /*Reverse=*/false, CommonMetadata,
+            LI->getDebugLoc());
+        NewLoad = WidenedLoad;
+      } else {
+        auto *UnpredicatedLoad = new VPReplicateRecipe(
+            LI, {EarliestLoad->getOperand(0)}, /*IsSingleScalar=*/false,
+            /*Mask=*/nullptr,/*Flags=*/{}, CommonMetadata);
+        NewLoad = UnpredicatedLoad;
+      }
+      NewLoad->getDefiningRecipe()->insertBefore(EarliestLoad);
 
       // Replace all loads in the group with the unpredicated load.
       for (VPReplicateRecipe *Load : Group) {
-        Load->replaceAllUsesWith(UnpredicatedLoad);
+        Load->replaceAllUsesWith(NewLoad);
         Load->eraseFromParent();
       }
     }
