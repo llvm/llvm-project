@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -58,7 +59,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <iterator>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -89,6 +89,11 @@ static cl::opt<unsigned> OptsizeJumpTableDensity(
     "optsize-jump-table-density", cl::init(40), cl::Hidden,
     cl::desc("Minimum density for building a jump table in "
              "an optsize function"));
+
+static cl::opt<unsigned> MinimumBitTestCmpsOverride(
+    "min-bit-test-cmps", cl::init(2), cl::Hidden,
+    cl::desc("Set minimum of largest number of comparisons "
+             "to use bit test for switch."));
 
 // FIXME: This option is only to test if the strict fp operation processed
 // correctly by preventing mutating strict fp operation to normal fp operation
@@ -419,16 +424,75 @@ RTLIB::Libcall RTLIB::getCOS(EVT RetVT) {
 }
 
 RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
+  // TODO: Tablegen should generate this function
+  if (RetVT.isVector()) {
+    if (!RetVT.isSimple())
+      return RTLIB::UNKNOWN_LIBCALL;
+    switch (RetVT.getSimpleVT().SimpleTy) {
+    case MVT::v4f32:
+      return RTLIB::SINCOS_V4F32;
+    case MVT::v2f64:
+      return RTLIB::SINCOS_V2F64;
+    case MVT::nxv4f32:
+      return RTLIB::SINCOS_NXV4F32;
+    case MVT::nxv2f64:
+      return RTLIB::SINCOS_NXV2F64;
+    default:
+      return RTLIB::UNKNOWN_LIBCALL;
+    }
+  }
+
   return getFPLibCall(RetVT, SINCOS_F32, SINCOS_F64, SINCOS_F80, SINCOS_F128,
                       SINCOS_PPCF128);
 }
 
 RTLIB::Libcall RTLIB::getSINCOSPI(EVT RetVT) {
+  // TODO: Tablegen should generate this function
+  if (RetVT.isVector()) {
+    if (!RetVT.isSimple())
+      return RTLIB::UNKNOWN_LIBCALL;
+    switch (RetVT.getSimpleVT().SimpleTy) {
+    case MVT::v4f32:
+      return RTLIB::SINCOSPI_V4F32;
+    case MVT::v2f64:
+      return RTLIB::SINCOSPI_V2F64;
+    case MVT::nxv4f32:
+      return RTLIB::SINCOSPI_NXV4F32;
+    case MVT::nxv2f64:
+      return RTLIB::SINCOSPI_NXV2F64;
+    default:
+      return RTLIB::UNKNOWN_LIBCALL;
+    }
+  }
+
   return getFPLibCall(RetVT, SINCOSPI_F32, SINCOSPI_F64, SINCOSPI_F80,
                       SINCOSPI_F128, SINCOSPI_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getSINCOS_STRET(EVT RetVT) {
+  return getFPLibCall(RetVT, SINCOS_STRET_F32, SINCOS_STRET_F64,
+                      UNKNOWN_LIBCALL, UNKNOWN_LIBCALL, UNKNOWN_LIBCALL);
+}
+
 RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
+  // TODO: Tablegen should generate this function
+  if (RetVT.isVector()) {
+    if (!RetVT.isSimple())
+      return RTLIB::UNKNOWN_LIBCALL;
+    switch (RetVT.getSimpleVT().SimpleTy) {
+    case MVT::v4f32:
+      return RTLIB::MODF_V4F32;
+    case MVT::v2f64:
+      return RTLIB::MODF_V2F64;
+    case MVT::nxv4f32:
+      return RTLIB::MODF_NXV4F32;
+    case MVT::nxv2f64:
+      return RTLIB::MODF_NXV2F64;
+    default:
+      return RTLIB::UNKNOWN_LIBCALL;
+    }
+  }
+
   return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
                       MODF_PPCF128);
 }
@@ -686,9 +750,11 @@ ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
-    : TM(tm), Libcalls(TM.getTargetTriple(), TM.Options.ExceptionModel,
-                       TM.Options.FloatABIType, TM.Options.EABIVersion,
-                       TM.Options.MCOptions.getABIName()) {
+    : TM(tm),
+      RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
+                         TM.Options.FloatABIType, TM.Options.EABIVersion,
+                         TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
+      Libcalls(RuntimeLibcallInfo) {
   initActions();
 
   // Perform these initializations only once.
@@ -719,6 +785,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
+
+  MinimumBitTestCmps = MinimumBitTestCmpsOverride;
 }
 
 // Define the virtual destructor out-of-line to act as a key method to anchor
@@ -2127,6 +2195,14 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
 
 bool TargetLoweringBase::isJumpTableRelative() const {
   return getTargetMachine().isPositionIndependent();
+}
+
+unsigned TargetLoweringBase::getMinimumBitTestCmps() const {
+  return MinimumBitTestCmps;
+}
+
+void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
+  MinimumBitTestCmps = Val;
 }
 
 Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {

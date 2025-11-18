@@ -51,8 +51,6 @@ public:
     } // Block list
   }
 
-  void Post(parser::ExecutionPart &body) { RewriteOmpAllocations(body); }
-
   // Pre-visit all constructs that have both a specification part and
   // an execution part, and store the connection between the two.
   bool Pre(parser::BlockConstruct &x) {
@@ -88,6 +86,7 @@ public:
 
   void Post(parser::SpecificationPart &spec) {
     CanonicalizeUtilityConstructs(spec);
+    CanonicalizeAllocateDirectives(spec);
   }
 
   void Post(parser::OmpMapClause &map) { CanonicalizeMapModifiers(map); }
@@ -144,6 +143,8 @@ private:
           parser::ToUpperCaseLetters(dirName.source.ToString()));
     };
 
+    auto &body{std::get<parser::Block>(x.t)};
+
     nextIt = it;
     while (++nextIt != block.end()) {
       // Ignore compiler directives.
@@ -153,9 +154,7 @@ private:
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
-          std::get<std::optional<std::variant<parser::DoConstruct,
-              common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t) =
-              std::move(*doCons);
+          body.push_back(std::move(*nextIt));
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
           if (nextIt != block.end()) {
@@ -199,10 +198,7 @@ private:
             ++endIt;
           }
           RewriteOpenMPLoopConstruct(*ompLoopCons, block, nextIt);
-          auto &ompLoop = std::get<std::optional<parser::NestedConstruct>>(x.t);
-          ompLoop =
-              std::optional<parser::NestedConstruct>{parser::NestedConstruct{
-                  common::Indirection{std::move(*ompLoopCons)}}};
+          body.push_back(std::move(*nextIt));
           nextIt = block.erase(nextIt);
         } else if (nestedBeginName.v == llvm::omp::Directive::OMPD_unroll &&
             beginName.v == llvm::omp::Directive::OMPD_tile) {
@@ -239,33 +235,138 @@ private:
     }
   }
 
-  void RewriteOmpAllocations(parser::ExecutionPart &body) {
-    // Rewrite leading declarative allocations so they are nested
-    // within their respective executable allocate directive
-    //
-    // Original:
-    //   ExecutionPartConstruct -> OpenMPDeclarativeAllocate
-    //   ExecutionPartConstruct -> OpenMPDeclarativeAllocate
-    //   ExecutionPartConstruct -> OpenMPExecutableAllocate
-    //
-    // After rewriting:
-    //   ExecutionPartConstruct -> OpenMPExecutableAllocate
-    //     ExecutionPartConstruct -> OpenMPDeclarativeAllocate
-    //     ExecutionPartConstruct -> OpenMPDeclarativeAllocate
-    for (auto it = body.v.rbegin(); it != body.v.rend();) {
-      if (auto *exec = GetOmpIf<parser::OpenMPExecutableAllocate>(*(it++))) {
-        parser::OpenMPDeclarativeAllocate *decl;
-        std::list<parser::OpenMPDeclarativeAllocate> subAllocates;
-        while (it != body.v.rend() &&
-            (decl = GetOmpIf<parser::OpenMPDeclarativeAllocate>(*it))) {
-          subAllocates.push_front(std::move(*decl));
-          it = decltype(it)(body.v.erase(std::next(it).base()));
-        }
-        if (!subAllocates.empty()) {
-          std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
-              exec->t) = {std::move(subAllocates)};
+  // Canonicalization of allocate directives
+  //
+  // In OpenMP 5.0 and 5.1 the allocate directive could either be a declarative
+  // one or an executable one. As usual in such cases, this poses a problem
+  // when the directive appears at the boundary between the specification part
+  // and the execution part.
+  // The executable form can actually consist of several adjacent directives,
+  // whereas the declarative form is always standalone. Additionally, the
+  // executable form must be associated with an allocate statement.
+  //
+  // The parser tries to parse declarative statements first, so in the
+  // following case, the two directives will be declarative, even though
+  // they should be treated as a single executable form:
+  //   integer, allocatable :: x, y   ! Specification
+  //   !$omp allocate(x)
+  //   !$omp allocate(y)
+  //   allocate(x, y)                 ! Execution
+  //
+  void CanonicalizeAllocateDirectives(parser::SpecificationPart &spec) {
+    auto found = blockForSpec_.find(&spec);
+    if (found == blockForSpec_.end()) {
+      // There is no corresponding execution part, so there is nothing to do.
+      return;
+    }
+    parser::Block &block = *found->second;
+
+    auto isAllocateStmt = [](const parser::ExecutionPartConstruct &epc) {
+      if (auto *ec = std::get_if<parser::ExecutableConstruct>(&epc.u)) {
+        if (auto *as =
+                std::get_if<parser::Statement<parser::ActionStmt>>(&ec->u)) {
+          return std::holds_alternative<
+              common::Indirection<parser::AllocateStmt>>(as->statement.u);
         }
       }
+      return false;
+    };
+
+    if (!block.empty() && isAllocateStmt(block.front())) {
+      // There are two places where an OpenMP declarative construct can
+      // show up in the tuple in specification part:
+      // (1) in std::list<OpenMPDeclarativeConstruct>, or
+      // (2) in std::list<DeclarationConstruct>.
+      // The case (1) is only possible if the list (2) is empty.
+
+      auto &omps =
+          std::get<std::list<parser::OpenMPDeclarativeConstruct>>(spec.t);
+      auto &decls = std::get<std::list<parser::DeclarationConstruct>>(spec.t);
+
+      if (!decls.empty()) {
+        MakeExecutableAllocateFromDecls(decls, block);
+      } else {
+        MakeExecutableAllocateFromOmps(omps, block);
+      }
+    }
+  }
+
+  parser::ExecutionPartConstruct EmbedInExec(
+      parser::OmpAllocateDirective *alo, parser::ExecutionPartConstruct &&epc) {
+    // Nest current epc inside the allocate directive.
+    std::get<parser::Block>(alo->t).push_front(std::move(epc));
+    // Set the new epc to be the ExecutionPartConstruct made from
+    // the allocate directive.
+    parser::OpenMPConstruct opc(std::move(*alo));
+    common::Indirection<parser::OpenMPConstruct> ind(std::move(opc));
+    parser::ExecutableConstruct ec(std::move(ind));
+    return parser::ExecutionPartConstruct(std::move(ec));
+  }
+
+  void MakeExecutableAllocateFromDecls(
+      std::list<parser::DeclarationConstruct> &decls, parser::Block &body) {
+    using OpenMPDeclarativeConstruct =
+        common::Indirection<parser::OpenMPDeclarativeConstruct>;
+
+    auto getAllocate = [](parser::DeclarationConstruct *dc) {
+      if (auto *sc = std::get_if<parser::SpecificationConstruct>(&dc->u)) {
+        if (auto *odc = std::get_if<OpenMPDeclarativeConstruct>(&sc->u)) {
+          if (auto *alo =
+                  std::get_if<parser::OmpAllocateDirective>(&odc->value().u)) {
+            return alo;
+          }
+        }
+      }
+      return static_cast<parser::OmpAllocateDirective *>(nullptr);
+    };
+
+    std::list<parser::DeclarationConstruct>::reverse_iterator rlast = [&]() {
+      for (auto rit = decls.rbegin(), rend = decls.rend(); rit != rend; ++rit) {
+        if (getAllocate(&*rit) == nullptr) {
+          return rit;
+        }
+      }
+      return decls.rend();
+    }();
+
+    if (rlast != decls.rbegin()) {
+      // We have already checked that the first statement in body is
+      // ALLOCATE.
+      parser::ExecutionPartConstruct epc(std::move(body.front()));
+      for (auto rit = decls.rbegin(); rit != rlast; ++rit) {
+        epc = EmbedInExec(getAllocate(&*rit), std::move(epc));
+      }
+
+      body.pop_front();
+      body.push_front(std::move(epc));
+      decls.erase(rlast.base(), decls.end());
+    }
+  }
+
+  void MakeExecutableAllocateFromOmps(
+      std::list<parser::OpenMPDeclarativeConstruct> &omps,
+      parser::Block &body) {
+    using OpenMPDeclarativeConstruct = parser::OpenMPDeclarativeConstruct;
+
+    std::list<OpenMPDeclarativeConstruct>::reverse_iterator rlast = [&]() {
+      for (auto rit = omps.rbegin(), rend = omps.rend(); rit != rend; ++rit) {
+        if (!std::holds_alternative<parser::OmpAllocateDirective>(rit->u)) {
+          return rit;
+        }
+      }
+      return omps.rend();
+    }();
+
+    if (rlast != omps.rbegin()) {
+      parser::ExecutionPartConstruct epc(std::move(body.front()));
+      for (auto rit = omps.rbegin(); rit != rlast; ++rit) {
+        epc = EmbedInExec(
+            &std::get<parser::OmpAllocateDirective>(rit->u), std::move(epc));
+      }
+
+      body.pop_front();
+      body.push_front(std::move(epc));
+      omps.erase(rlast.base(), omps.end());
     }
   }
 

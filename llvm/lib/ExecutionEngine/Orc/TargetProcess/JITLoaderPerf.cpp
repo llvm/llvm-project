@@ -55,7 +55,7 @@ struct PerfState {
   std::unique_ptr<raw_fd_ostream> Dumpstream;
 
   // perf mmap marker
-  void *MarkerAddr = NULL;
+  void *MarkerAddr = nullptr;
 };
 
 // prevent concurrent dumps from messing up the output file

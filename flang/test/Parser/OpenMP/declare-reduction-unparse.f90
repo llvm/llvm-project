@@ -19,7 +19,8 @@ function func(x, n, init)
      end subroutine initme
   end interface
 !$omp declare reduction(red_add:integer(4):omp_out=omp_out+omp_in) initializer(initme(omp_priv,0))
-!CHECK: !$OMP DECLARE REDUCTION(red_add:INTEGER(KIND=4_4): omp_out = omp_out+omp_in) INITIALIZER(initme(omp_priv, 0_4))
+!CHECK: !$OMP DECLARE REDUCTION(red_add:INTEGER(KIND=4_4): omp_out=omp_out+omp_in) INITIA&
+!CHECKL !$OMP&LIZER(initme(omp_priv,0))
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
@@ -27,9 +28,31 @@ function func(x, n, init)
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'red_add'
 !PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec -> KindSelector -> Scalar -> Integer -> Constant -> Expr = '4_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '4'
-!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out=omp_out+omp_in'
-!PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> OmpInitializerProc
-!PARSE-TREE: | | ProcedureDesignator -> Name = 'initme'
+!PARSE-TREE: | | OmpCombinerExpression -> OmpStylizedInstance
+!PARSE-TREE: | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | Instance -> AssignmentStmt = 'omp_out=omp_out+omp_in'
+!PARSE-TREE: | | | | Variable = 'omp_out'
+!PARSE-TREE: | | | | | Designator -> DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | Expr = 'omp_out+omp_in'
+!PARSE-TREE: | | | | | Add
+!PARSE-TREE: | | | | | | Expr = 'omp_out'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | Expr = 'omp_in'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> Name = 'omp_in'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> OmpInitializerExpression -> OmpStylizedInstance
+!PARSE-TREE: | | OmpStylizedDeclaration
+!PARSE-TREE: | | OmpStylizedDeclaration
+!PARSE-TREE: | | Instance -> CallStmt = 'CALL initme(omp_priv,0_4)'
+!PARSE-TREE: | | | Call
+!PARSE-TREE: | | | | ProcedureDesignator -> Name = 'initme'
+!PARSE-TREE: | | | | ActualArgSpec
+!PARSE-TREE: | | | | | ActualArg -> Expr = 'omp_priv'
+!PARSE-TREE: | | | | | | Designator -> DataRef -> Name = 'omp_priv'
+!PARSE-TREE: | | | | ActualArgSpec
+!PARSE-TREE: | | | | | ActualArg -> Expr = '0_4'
+!PARSE-TREE: | | | | | | LiteralConstant -> IntLiteralConstant = '0'
+!PARSE-TREE: | Flags = None
 
   res=init
 !$omp simd reduction(red_add:res)
@@ -47,7 +70,8 @@ function func(x, n, init)
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'red_add'
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'res'
 !PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i=1,n
      res=res+x(i)
@@ -59,7 +83,8 @@ end function func
 !CHECK-LABEL: program main
 program main
   integer :: my_var
-!CHECK: !$OMP DECLARE REDUCTION(my_add_red:INTEGER: omp_out = omp_out+omp_in) INITIALIZER(omp_priv = 0_4)
+!CHECK: !$OMP DECLARE REDUCTION(my_add_red:INTEGER: omp_out = omp_out + omp_in) INITIA&
+!CHECK: !$OMP&LIZER(omp_priv=0)
 
   !$omp declare reduction (my_add_red : integer : omp_out = omp_out + omp_in) initializer (omp_priv=0)
   my_var = 0
@@ -74,5 +99,24 @@ end program main
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'my_add_red'
 !PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
-!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out=omp_out+omp_in'
-!PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv=0_4'
+!PARSE-TREE: | | OmpCombinerExpression -> OmpStylizedInstance
+!PARSE-TREE: | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | Instance -> AssignmentStmt = 'omp_out=omp_out+omp_in'
+!PARSE-TREE: | | | | Variable = 'omp_out'
+!PARSE-TREE: | | | | | Designator -> DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | Expr = 'omp_out+omp_in'
+!PARSE-TREE: | | | | | Add
+!PARSE-TREE: | | | | | | Expr = 'omp_out'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | Expr = 'omp_in'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> Name = 'omp_in'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> OmpInitializerExpression -> OmpStylizedInstance
+!PARSE-TREE: | | OmpStylizedDeclaration
+!PARSE-TREE: | | OmpStylizedDeclaration
+!PARSE-TREE: | | Instance -> AssignmentStmt = 'omp_priv=0_4'
+!PARSE-TREE: | | | Variable = 'omp_priv'
+!PARSE-TREE: | | | | Designator -> DataRef -> Name = 'omp_priv'
+!PARSE-TREE: | | | Expr = '0_4'
+!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '0'
+!PARSE-TREE: | Flags = None

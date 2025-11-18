@@ -322,6 +322,450 @@ aligned '``@llvm.nvvm.barrier.cta.*``' instruction should only be used if it is
 known that all threads in the CTA evaluate the condition identically, otherwise
 behavior is undefined.
 
+MBarrier family of Intrinsics
+-----------------------------
+
+Overview:
+^^^^^^^^^
+
+An ``mbarrier`` is a barrier created in shared memory that supports:
+
+* Synchronizing any subset of threads within a CTA.
+* One-way synchronization of threads across CTAs of a cluster.
+  Threads can perform only ``arrive`` operations but not ``*_wait`` on an
+  mbarrier located in shared::cluster space.
+* Waiting for completion of asynchronous memory operations initiated by a
+  thread and making them visible to other threads.
+
+Unlike ``bar{.cta}/barrier{.cta}`` instructions which can access a limited
+number of barriers per CTA, ``mbarrier`` objects are user-defined and are
+only limited by the total shared memory size available.
+
+An mbarrier object is an opaque object in shared memory with an
+alignment of 8-bytes. It keeps track of:
+
+* Current phase of the mbarrier object
+* Count of pending arrivals for the current phase of the mbarrier object
+* Count of expected arrivals for the next phase of the mbarrier object
+* Count of pending asynchronous memory operations (or transactions)
+  tracked by the current phase of the mbarrier object. This is also
+  referred to as ``tx-count``. The unit of ``tx-count`` is specified
+  by the asynchronous memory operation (for example,
+  ``llvm.nvvm.cp.async.bulk.tensor.g2s.*``).
+
+The ``phase`` of an mbarrier object is the number of times the mbarrier
+object has been used to synchronize threads/track async operations.
+In each phase, threads perform:
+
+* arrive/expect-tx/complete-tx operations to progress the current phase.
+* test_wait/try_wait operations to check for completion of the current phase.
+
+An mbarrier object completes the current phase when:
+
+* The count of the pending arrivals has reached zero AND
+* The tx-count has reached zero.
+
+When an mbarrier object completes the current phase, below
+actions are performed ``atomically``:
+
+* The mbarrier object transitions to the next phase.
+* The pending arrival count is reinitialized to the expected arrival count.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier>`_.
+
+'``llvm.nvvm.mbarrier.init``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.init(ptr %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.init.*``' intrinsics are used to initialize
+an mbarrier object located at ``addr`` with the value ``count``.
+``count`` is a 32-bit unsigned integer value and must be within
+the range [1...2^20-1]. During initialization:
+
+* The tx-count and the current phase of the mbarrier object are set to 0.
+* The expected and pending arrival counts are set to ``count``.
+
+Semantics:
+""""""""""
+
+The ``.shared`` variant explicitly uses shared memory address space for
+the ``addr`` operand. If the ``addr`` does not fall within the
+shared::cta space, then the behavior of this intrinsic is undefined.
+Performing ``mbarrier.init`` on a valid mbarrier object is undefined;
+use ``mbarrier.inval`` before reusing the memory for another mbarrier
+or any other purpose.
+
+'``llvm.nvvm.mbarrier.inval``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.inval(ptr %addr)
+  declare void @llvm.nvvm.mbarrier.inval.shared(ptr addrspace(3) %addr)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.inval.*``' intrinsics invalidate the mbarrier
+object at the address specified by ``addr``.
+
+Semantics:
+""""""""""
+
+The ``.shared`` variant explicitly uses shared memory address space for
+the ``addr`` operand. If the ``addr`` does not fall within the
+shared::cta space, then the behavior of this intrinsic is undefined.
+It is expected that ``addr`` was previously initialized using
+``mbarrier.init``; otherwise, the behavior is undefined.
+
+'``llvm.nvvm.mbarrier.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.expect.tx.*``' intrinsics increase the transaction
+count of the mbarrier object at ``%addr`` by ``%tx_count``. The ``%tx_count``
+is a 32-bit unsigned integer value.
+
+Semantics:
+""""""""""
+
+The ``.space.{cta/cluster}`` indicates the address space where the mbarrier
+object resides.
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that can directly
+observe the synchronizing effect of the mbarrier operation. When scope is
+"cta", all threads executing in the same CTA (as the current thread) can
+directly observe the effect of the ``expect.tx`` operation. Similarly,
+when scope is "cluster", all threads executing in the same Cluster
+(as the current thread) can directly observe the effect of the operation.
+
+If the ``addr`` does not fall within shared::cta or shared::cluster space,
+then the behavior of this intrinsic is undefined. This intrinsic has
+``relaxed`` semantics and hence does not provide any memory ordering
+or visibility guarantees.
+
+'``llvm.nvvm.mbarrier.complete.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.complete.tx.*``' intrinsics decrease the transaction
+count of the mbarrier object at ``%addr`` by ``%tx_count``. The ``%tx_count``
+is a 32-bit unsigned integer value. As a result of this decrement,
+the mbarrier can potentially complete its current phase and transition
+to the next phase.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.expect.tx.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.*`` intrinsics signal the arrival of the
+executing thread or completion of an asynchronous instruction associated with
+an arrive operation on the mbarrier object at ``%addr``. This operation
+decrements the pending arrival count by ``%count``, a 32-bit unsigned integer,
+potentially completing the current phase and triggering a transition to the
+next phase.
+
+Semantics:
+""""""""""
+
+The ``.space.{cta/cluster}`` indicates the address space where the mbarrier
+object resides. When the mbarrier is in shared::cta space, the intrinsics
+return an opaque 64-bit value capturing the phase of the mbarrier object
+_prior_ to this arrive operation. This value can be used with a try_wait
+or test_wait operation to check for the completion of the mbarrier.
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that can directly
+observe the synchronizing effect of the mbarrier operation. When scope is
+"cta", all threads executing in the same CTA (as the current thread) can
+directly observe the effect of the ``arrive`` operation. Similarly,
+when scope is "cluster", all threads executing in the same Cluster
+(as the current thread) can directly observe the effect of the operation.
+
+If the ``addr`` does not fall within shared::cta or shared::cluster space,
+then the behavior of this intrinsic is undefined.
+
+These intrinsics have ``release`` semantics by default. The release semantics
+ensure ordering of operations that occur in program order _before_ this arrive
+instruction, making their effects visible to subsequent operations in other
+threads of the CTA (or cluster, depending on scope). Threads performing
+corresponding acquire operations (such as mbarrier.test.wait) synchronize
+with this release. The ``relaxed`` variants of these intrinsics do not
+provide any memory ordering or visibility guarantees.
+
+'``llvm.nvvm.mbarrier.arrive.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.expect.tx.*`` intrinsics are similar to
+the ``@llvm.nvvm.mbarrier.arrive`` intrinsics except that they also
+perform an ``expect-tx`` operation _prior_ to the ``arrive`` operation.
+The ``%tx_count`` specifies the transaction count for the ``expect-tx``
+operation and the count for the ``arrive`` operation is assumed to be 1.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive.drop``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.drop.*`` intrinsics decrement the
+expected arrival count of the mbarrier object at ``%addr`` by
+``%count`` and then perform an ``arrive`` operation with ``%count``.
+The ``%count`` is a 32-bit integer.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive.drop.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.drop.expect.tx.*`` intrinsics perform
+the below operations on the mbarrier located at ``%addr``.
+
+* Perform an ``expect-tx`` operation i.e. increase the transaction count
+  of the mbarrier by ``%tx_count``, a 32-bit unsigned integer value.
+* Decrement the expected arrival count of the mbarrier by 1.
+* Perform an ``arrive`` operation on the mbarrier with a value of 1.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.test.wait``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+  declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.test.wait.*`` intrinsics test for the completion
+of the current or the immediately preceding phase of an mbarrier object at
+``%addr``. The test for completion can be done with either the ``state`` or
+the ``phase-parity`` of the mbarrier object.
+
+* When done through the ``i64 %state`` operand, the state must be
+  returned by an ``llvm.nvvm.mbarrier.arrive.*`` on the _same_
+  mbarrier object.
+* The ``.parity`` variant of these intrinsics test for completion
+  of the phase indicated by the operand ``i32 %phase``, which is
+  the integer parity of either the current phase or the immediately
+  preceding phase of the mbarrier object. An even phase has integer
+  parity 0 and an odd phase has integer parity of 1. So the valid
+  values for phase-parity are 0 and 1.
+
+Semantics:
+""""""""""
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that the
+test_wait operation can directly synchronize with.
+
+If the ``addr`` does not fall within shared::cta space, then the
+the behavior of this intrinsic is undefined.
+
+These intrinsics have ``acquire`` semantics by default. This acquire
+pattern establishes memory ordering for operations occurring in program
+order after this ``test_wait`` instruction by making operations from
+other threads in the CTA (or cluster, depending on scope) visible to
+subsequent operations in the current thread. When this wait completes,
+it synchronizes with the corresponding release pattern from the
+``mbarrier.arrive`` operation. The ``relaxed`` variants of these intrinsics
+do not provide any memory ordering or visibility guarantees.
+
+This ``test.wait`` intrinsic is non-blocking and immediately returns
+the completion status without suspending the executing thread.
+
+The boolean return value indicates:
+
+* True: The immediately preceding phase has completed
+* False: The current phase is still incomplete
+
+When this wait returns true, the following ordering guarantees hold:
+
+* All memory accesses (except async operations) requested prior to
+  ``mbarrier.arrive`` having release semantics by participating
+  threads of a CTA (or cluster, depending on scope) are visible to
+  the executing thread.
+* All ``cp.async`` operations requested prior to ``cp.async.mbarrier.arrive``
+  by participating threads of a CTA are visible to the executing thread.
+* All ``cp.async.bulk`` operations using the same mbarrier object requested
+  prior to ``mbarrier.arrive`` having release semantics by participating CTA
+  threads are visible to the executing thread.
+* Memory accesses requested after this wait are not visible to memory
+  accesses performed prior to ``mbarrier.arrive`` by other participating
+  threads.
+* No ordering guarantee exists for memory accesses by the same thread
+  between an ``mbarrier.arrive`` and this wait.
+
+'``llvm.nvvm.mbarrier.try.wait``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.try.wait{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.tl{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.tl{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.try.wait.*`` intrinsics test for the completion of
+the current or immediately preceding phase of an mbarrier object at ``%addr``.
+Unlike the ``test.wait`` intrinsics, which perform a non-blocking test, these
+intrinsics may block the executing thread until the specified phase completes
+or a system-dependent time limit expires. Suspended threads resume execution
+when the phase completes or the time limit elapses. This time limit is
+configurable through the ``.tl`` variants of these intrinsics, where the
+``%timelimit`` operand (an unsigned integer) specifies the limit in
+nanoseconds. Other semantics are identical to those of the ``test.wait``
+intrinsics described above.
+
 Electing a thread
 -----------------
 
@@ -467,7 +911,7 @@ Semantics:
 """"""""""
 
 Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
-values. Instead, a NaN input yeilds an unspecified NaN output.
+values. Instead, a NaN input yields an unspecified NaN output.
 
 
 '``llvm.nvvm.fabs.ftz.*``' Intrinsic
@@ -886,6 +1330,32 @@ copied and it must be a multiple of 16.
 * The [N-1]th argument (denoted by ``i1 %flag_mc``) when set, indicates
   the presence of a multicast mask (``i16 %mc``) and generates the PTX
   instruction with the ``.multicast::cluster`` modifier.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+
+'``llvm.nvvm.cp.async.bulk.global.to.shared.cta``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.global.to.shared.cta``' intrinsic
+corresponds to the ``cp.async.bulk.shared::cta.global.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+copy of bulk data from global memory to shared::cta memory.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+copied and it must be a multiple of 16. The last argument
+(denoted by ``i1 %flag_ch``) is a compile-time constant. When set,
+it indicates a valid cache_hint (``i64 %ch``) and generates the
+``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
@@ -2157,7 +2627,7 @@ the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix and acc
 operation
 
 When `.sp` is specifed, the dimension of A matrix is `M x (K/2)` and requires
-specifiying an additional `%spmetadata` argument
+specifying an additional `%spmetadata` argument
 
 `.ashift` shifts the rows of the A matrix down by one row, except for the last row
 in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
@@ -2169,7 +2639,7 @@ along with `.ashift`
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%kind_flag` flag:
 
@@ -2246,14 +2716,14 @@ Overview:
 
 `nvvm.tcgen05.mma.block_scale` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.block_scale` will result in the initiation of the whole matrix multiply and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires specifying an additional `%spmetadata` argument
 
 The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%cta_group`:
 

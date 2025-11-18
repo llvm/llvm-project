@@ -1334,15 +1334,8 @@ let TargetPrefix = "nvvm" in {
   //
   let IntrProperties = [IntrNoMem] in {
     foreach ftz = ["", "_ftz"] in
-      def int_nvvm_ex2_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-
-    def int_nvvm_ex2_approx_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-    def int_nvvm_ex2_approx_f16 :
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty]>;
-    def int_nvvm_ex2_approx_f16x2 :
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty]>;
+      def int_nvvm_ex2_approx # ftz :
+          DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
 
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_lg2_approx # ftz # _f : NVVMBuiltin,
@@ -1865,6 +1858,73 @@ let IntrProperties = [IntrConvergent, IntrNoCallback] in {
 
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
     Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem, IntrConvergent, IntrNoCallback]>;
+
+// mbarrier.{expect_tx/complete_tx}
+foreach op = ["expect_tx", "complete_tx"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach space = ["space_cta", "space_cluster"] in {
+      defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
+                            llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
+
+      def int_nvvm_mbarrier_ # suffix :
+          Intrinsic<[], [mbar_addr_ty, llvm_i32_ty],
+          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+    } // space
+  } // scope
+} // op
+
+// mbarrier.arrive and mbarrier.arrive.expect_tx
+// mbarrier.arrive_drop and mbarrier.arrive_drop.expect_tx
+foreach op = ["arrive", "arrive_expect_tx",
+              "arrive_drop", "arrive_drop_expect_tx"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach space = ["space_cta", "space_cluster"] in {
+      defvar suffix = StrJoin<"_", [scope, space]>.ret;
+      defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
+                            llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
+      defvar args_ty = [mbar_addr_ty, // mbar_address_ptr
+                        llvm_i32_ty]; // tx-count
+
+      // mbarriers in shared_cluster space cannot return any value.
+      defvar mbar_ret_ty = !if(!eq(space, "space_cta"),
+                              [llvm_i64_ty], []<LLVMType>);
+
+      def int_nvvm_mbarrier_ # op # "_" # suffix:
+          Intrinsic<mbar_ret_ty, args_ty,
+          [IntrConvergent, IntrNoCallback]>;
+      def int_nvvm_mbarrier_ # op # "_relaxed_" # suffix :
+          Intrinsic<mbar_ret_ty, args_ty,
+          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+    } // space
+  } // scope
+} // op
+
+// mbarrier.{test_wait and try_wait}
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach parity = [true, false] in {
+      foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+        defvar base_args = [llvm_shared_ptr_ty]; // mbar_ptr
+        defvar parity_args = !if(parity, [llvm_i32_ty], [llvm_i64_ty]);
+        defvar tl_args = !if(time_limit, [llvm_i32_ty], []<LLVMType>);
+        defvar args = !listconcat(base_args, parity_args, tl_args);
+        defvar tmp_op = StrJoin<"_", [op,
+                           !if(parity, "parity", ""),
+                           !if(time_limit, "tl", "")]>.ret;
+        defvar suffix = StrJoin<"_", [scope, "space_cta"]>.ret;
+
+        def int_nvvm_mbarrier_ # tmp_op # "_" # suffix :
+            Intrinsic<[llvm_i1_ty], args,
+            [IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback]>;
+        def int_nvvm_mbarrier_ # tmp_op # "_relaxed_" # suffix :
+            Intrinsic<[llvm_i1_ty], args,
+            [IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback,
+             IntrArgMemOnly, IntrReadMem]>;
+      } // tl
+    } // parity
+  } // scope
+} // op
 
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
 // pointer's alignment.
@@ -2656,8 +2716,19 @@ def int_nvvm_cp_async_bulk_global_to_shared_cluster
       [llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty],                // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>]>;
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+
+// From Global to Shared CTA
+def int_nvvm_cp_async_bulk_global_to_shared_cta
+  : DefaultAttrsIntrinsicFlags<[],
+      [llvm_shared_ptr_ty, // dst_shared_cta_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i64_ty],       // cache_hint
+      [llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
 
 // From Shared CTA to Shared Cluster
 def int_nvvm_cp_async_bulk_shared_cta_to_cluster
@@ -2667,9 +2738,7 @@ def int_nvvm_cp_async_bulk_shared_cta_to_cluster
        llvm_shared_ptr_ty,         // src_smem_ptr
        llvm_i32_ty],               // copy_size
       [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-       NoCapture<ArgIndex<2>>]>;
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
 
 // From Shared CTA to Global memory
 def int_nvvm_cp_async_bulk_shared_cta_to_global
@@ -2680,8 +2749,7 @@ def int_nvvm_cp_async_bulk_shared_cta_to_global
        llvm_i64_ty],       // cache_hint
       [llvm_i1_ty],        // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
 // From Shared CTA to Global memory with bytemask
 def int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask
@@ -2887,7 +2955,14 @@ foreach sp = [0, 1] in {
         defvar nargs = !size(args);
         defvar scale_d_imm = ArgIndex<!sub(nargs, 1)>;
         defvar scale_d_imm_range = [ImmArg<scale_d_imm>, Range<scale_d_imm, 0, 16>];
-        defvar intrinsic_properties = !listconcat(
+
+        // Check if this is the specific llvm.nvvm.tcgen05.mma.tensor intrinsic.
+        defvar is_target_intrinsic = !and(!eq(sp, 0), 
+                                          !eq(space, "tensor"), 
+                                          !eq(scale_d, 0), 
+                                          !eq(ashift, 0));
+
+        defvar base_properties = !listconcat(
           mma.common_intr_props,
           !if(!eq(scale_d, 1), scale_d_imm_range, []),
           [Range<ArgIndex<nargs>, 0, !if(!eq(scale_d, 1), 2, 4)>, // kind
@@ -2896,6 +2971,13 @@ foreach sp = [0, 1] in {
                           !if(!eq(ashift, 1), 2, 4)>              // collector_usage
           ]
         );
+
+        defvar intrinsic_properties = !if(is_target_intrinsic, 
+          !listconcat(base_properties,
+            [ArgInfo<ArgIndex<nargs>, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
+             ArgInfo<ArgIndex<!add(nargs, 1)>, [ArgName<"cta_group">]>,
+             ArgInfo<ArgIndex<!add(nargs, 2)>, [ArgName<"collector">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]),
+          base_properties);
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,

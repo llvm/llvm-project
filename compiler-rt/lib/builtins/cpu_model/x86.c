@@ -21,7 +21,9 @@
 
 #if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
 
+#if __STDC_HOSTED__
 #include <assert.h>
+#endif // __STDC_HOSTED__
 
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(_MSC_VER)
 #include <cpuid.h>
@@ -227,10 +229,8 @@ enum ProcessorFeatures {
   FEATURE_SM4,
   FEATURE_APXF,
   FEATURE_USERMSR,
-  FEATURE_AVX10_1_256,
-  FEATURE_AVX10_1_512,
-  FEATURE_AVX10_2_256,
-  FEATURE_AVX10_2_512,
+  FEATURE_AVX10_1 = 114,
+  FEATURE_AVX10_2 = 116,
   FEATURE_MOVRS,
   CPU_FEATURE_MAX
 };
@@ -245,8 +245,8 @@ struct __processor_model {
   unsigned int __cpu_features[1];
 } __cpu_model = {0, 0, 0, {0}};
 
-static_assert(sizeof(__cpu_model) == 16,
-              "Wrong size of __cpu_model will result in ABI break");
+_Static_assert(sizeof(__cpu_model) == 16,
+               "Wrong size of __cpu_model will result in ABI break");
 
 // This code is copied from lib/Support/Host.cpp.
 // Changes to either file should be mirrored in the other.
@@ -1091,18 +1091,11 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
-    bool Has512Len = (EBX >> 18) & 1;
     int AVX10Ver = EBX & 0xff;
-    if (AVX10Ver >= 2) {
-      setFeature(FEATURE_AVX10_2_256);
-      if (Has512Len)
-        setFeature(FEATURE_AVX10_2_512);
-    }
-    if (AVX10Ver >= 1) {
-      setFeature(FEATURE_AVX10_1_256);
-      if (Has512Len)
-        setFeature(FEATURE_AVX10_1_512);
-    }
+    if (AVX10Ver >= 1)
+      setFeature(FEATURE_AVX10_1);
+    if (AVX10Ver >= 2)
+      setFeature(FEATURE_AVX10_2);
   }
 
   unsigned MaxExtLevel = 0;
@@ -1200,8 +1193,8 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   unsigned Vendor;
   unsigned Model, Family;
   unsigned Features[(CPU_FEATURE_MAX + 31) / 32] = {0};
-  static_assert(sizeof(Features) / sizeof(Features[0]) == 4, "");
-  static_assert(sizeof(__cpu_features2) / sizeof(__cpu_features2[0]) == 3, "");
+  _Static_assert(sizeof(Features) / sizeof(Features[0]) == 4, "");
+  _Static_assert(sizeof(__cpu_features2) / sizeof(__cpu_features2[0]) == 3, "");
 
   // This function needs to run just once.
   if (__cpu_model.__cpu_vendor)
@@ -1234,9 +1227,11 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   } else
     __cpu_model.__cpu_vendor = VENDOR_OTHER;
 
+#if __STDC_HOSTED__
   assert(__cpu_model.__cpu_vendor < VENDOR_MAX);
   assert(__cpu_model.__cpu_type < CPU_TYPE_MAX);
   assert(__cpu_model.__cpu_subtype < CPU_SUBTYPE_MAX);
+#endif // __STDC_HOSTED__
 
   return 0;
 }

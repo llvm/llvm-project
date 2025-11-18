@@ -10,7 +10,6 @@
 
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-modifiers.h"
@@ -249,8 +248,10 @@ MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(Collector, Collector);
 MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
 MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
+MAKE_INCOMPLETE_CLASS(Inductor, Inductor);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
@@ -394,8 +395,6 @@ makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
   switch (v) {
   case parser::OmpPrescriptiveness::Value::Strict:
     return clause::Prescriptiveness::Strict;
-  case parser::OmpPrescriptiveness::Value::Fallback:
-    return clause::Prescriptiveness::Fallback;
   }
   llvm_unreachable("Unexpected prescriptiveness");
 }
@@ -797,21 +796,31 @@ DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
                      semantics::SemanticsContext &semaCtx) {
   // imp.v -> OmpDyngroupprivateClause
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpAccessGroup::Value, DynGroupprivate::AccessGroup,
+      makeAccessGroup, parser::OmpAccessGroup::Value,
+      DynGroupprivate::AccessGroup,
       // clang-format off
       MS(Cgroup,  Cgroup)
       // clang-format on
   );
 
+  CLAUSET_ENUM_CONVERT( //
+      makeFallback, parser::OmpFallbackModifier::Value,
+      DynGroupprivate::Fallback,
+      // clang-format off
+      MS(Abort,       Abort)
+      MS(Default_Mem, Default_Mem)
+      MS(Null,        Null)
+      // clang-format on
+  );
+
   auto &mods = semantics::OmpGetModifiers(inp.v);
   auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpAccessGroup>(mods);
-  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
+  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpFallbackModifier>(mods);
   auto &size = std::get<parser::ScalarIntExpr>(inp.v.t);
 
-  return DynGroupprivate{
-      {/*AccessGroup=*/maybeApplyToV(convert, m0),
-       /*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m1),
-       /*Size=*/makeExpr(size, semaCtx)}};
+  return DynGroupprivate{{/*AccessGroup=*/maybeApplyToV(makeAccessGroup, m0),
+                          /*Fallback=*/maybeApplyToV(makeFallback, m1),
+                          /*Size=*/makeExpr(size, semaCtx)}};
 }
 
 Enter make(const parser::OmpClause::Enter &inp,
@@ -1480,6 +1489,21 @@ ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::ScalarIntExpr
   return ThreadLimit{/*Threadlim=*/makeExpr(inp.v, semaCtx)};
+}
+
+Threadset make(const parser::OmpClause::Threadset &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpThreadsetClause
+  using wrapped = parser::OmpThreadsetClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, wrapped::ThreadsetPolicy, Threadset::ThreadsetPolicy,
+      // clang-format off
+      MS(Omp_Pool, Omp_Pool)
+      MS(Omp_Team, Omp_Team)
+      // clang-format on
+  );
+  return Threadset{/*ThreadsetPolicy=*/convert(inp.v.v)};
 }
 
 // Threadprivate: empty
