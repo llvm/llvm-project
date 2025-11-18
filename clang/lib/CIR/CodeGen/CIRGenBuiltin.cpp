@@ -93,13 +93,9 @@ EncompassingIntegerType(ArrayRef<struct WidthAndSignedness> Types) {
   // of the specified types.  Additionally, if the encompassing type is signed,
   // its width must be strictly greater than the width of any unsigned types
   // given.
-  unsigned Width = 0;
-  for (const auto &Type : Types) {
-    unsigned MinWidth = Type.Width + (Signed && !Type.Signed);
-    if (Width < MinWidth) {
-      Width = MinWidth;
-    }
-  }
+unsigned Width = 0;
+for (const auto &Type : Types)
+  Width = std::max(Width, Type.Width + (Signed && !Type.Signed));
 
   return {Width, Signed};
 }
