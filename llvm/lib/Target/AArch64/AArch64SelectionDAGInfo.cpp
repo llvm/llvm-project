@@ -252,6 +252,332 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
   if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
                                              RTLIB::MEMMOVE);
+
+  // Handle small memmove cases with overlapping loads/stores for better codegen
+  // For non-power-of-two sizes, use overlapping operations instead of
+  // mixed-size operations (e.g., for 7 bytes: two i32 loads/stores with overlap
+  // instead of i32 + i16 + i8)
+  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Size)) {
+    uint64_t SizeVal = C->getZExtValue();
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+    auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
+      if (Alignment >= AlignCheck)
+        return true;
+      unsigned Fast;
+      return TLI.allowsMisalignedMemoryAccesses(
+                 VT, DstPtrInfo.getAddrSpace(), Align(1),
+                 MachineMemOperand::MONone, &Fast) &&
+             Fast;
+    };
+
+    MachineMemOperand::Flags MMOFlags =
+        isVolatile ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
+
+    // For sizes 5-7 bytes: use two overlapping i32 operations
+    if (SizeVal >= 5 && SizeVal <= 7) {
+      if (AlignmentIsAcceptable(MVT::i32, Align(1))) {
+        uint64_t SecondOffset = SizeVal - 4;
+
+        SDValue Load1 =
+            DAG.getLoad(MVT::i32, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(0)),
+                        SrcPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Load2 = DAG.getLoad(
+            MVT::i32, dl, Chain,
+            DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SecondOffset)),
+            SrcPtrInfo.getWithOffset(SecondOffset), Alignment, MMOFlags);
+
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load1.getValue(1),
+                            Load2.getValue(1));
+
+        SDValue Store1 =
+            DAG.getStore(Chain, dl, Load1,
+                         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(0)),
+                         DstPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Store2 = DAG.getStore(
+            Chain, dl, Load2,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(SecondOffset)),
+            DstPtrInfo.getWithOffset(SecondOffset), Alignment, MMOFlags);
+
+        return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
+      }
+    }
+
+    // For sizes 9-15 bytes: use i64 + overlapping i64
+    if (SizeVal >= 9 && SizeVal <= 15) {
+      if (AlignmentIsAcceptable(MVT::i64, Align(1))) {
+        uint64_t SecondOffset = SizeVal - 8;
+
+        SDValue Load1 =
+            DAG.getLoad(MVT::i64, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(0)),
+                        SrcPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Load2 = DAG.getLoad(
+            MVT::i64, dl, Chain,
+            DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SecondOffset)),
+            SrcPtrInfo.getWithOffset(SecondOffset), Alignment, MMOFlags);
+        
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load1.getValue(1),
+                            Load2.getValue(1));
+
+        SDValue Store1 =
+            DAG.getStore(Chain, dl, Load1,
+                         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(0)),
+                         DstPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Store2 = DAG.getStore(
+            Chain, dl, Load2,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(SecondOffset)),
+            DstPtrInfo.getWithOffset(SecondOffset), Alignment, MMOFlags);
+
+        return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
+      }
+    }
+    
+    // For sizes 17-23 bytes: use i64 + i64 + overlapping i64
+    if (SizeVal >= 17 && SizeVal <= 23) {
+      if (AlignmentIsAcceptable(MVT::i64, Align(1))) {
+        uint64_t ThirdOffset = SizeVal - 8;
+
+        SDValue Load1 =
+            DAG.getLoad(MVT::i64, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(0)),
+                        SrcPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Load2 =
+            DAG.getLoad(MVT::i64, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(8)),
+                        SrcPtrInfo.getWithOffset(8), Alignment, MMOFlags);
+
+        SDValue Load3 = DAG.getLoad(
+            MVT::i64, dl, Chain,
+            DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(ThirdOffset)),
+            SrcPtrInfo.getWithOffset(ThirdOffset), Alignment, MMOFlags);
+
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load1.getValue(1),
+                            Load2.getValue(1), Load3.getValue(1));
+
+        SDValue Store1 =
+            DAG.getStore(Chain, dl, Load1,
+                         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(0)),
+                         DstPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Store2 =
+            DAG.getStore(Chain, dl, Load2,
+                         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(8)),
+                         DstPtrInfo.getWithOffset(8), Alignment, MMOFlags);
+
+        SDValue Store3 = DAG.getStore(
+            Chain, dl, Load3,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(ThirdOffset)),
+            DstPtrInfo.getWithOffset(ThirdOffset), Alignment, MMOFlags);
+
+        return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2,
+                           Store3);
+      }
+    }
+
+    // For sizes 25-31 bytes: use v16i8 (vector) + overlapping i64
+    if (SizeVal >= 25 && SizeVal <= 31) {
+      if (AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+          AlignmentIsAcceptable(MVT::i64, Align(1))) {
+        uint64_t SecondOffset = SizeVal - 8;
+
+        SDValue Load1 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(0)),
+                        SrcPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Load2 = DAG.getLoad(
+            MVT::i64, dl, Chain,
+            DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SecondOffset)),
+            SrcPtrInfo.getWithOffset(SecondOffset), Alignment, MMOFlags);
+
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load1.getValue(1),
+                            Load2.getValue(1));
+
+        SDValue Store1 =
+            DAG.getStore(Chain, dl, Load1,
+                         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(0)),
+                         DstPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Store2 = DAG.getStore(
+            Chain, dl, Load2,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(SecondOffset)),
+            DstPtrInfo.getWithOffset(SecondOffset), Alignment, MMOFlags);
+
+        return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
+      }
+    }
+
+    // For sizes 33-47 bytes: use 2 x v16i8 (vectors) + overlapping i64
+    if (SizeVal >= 33 && SizeVal <= 47) {
+      if (AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+          AlignmentIsAcceptable(MVT::i64, Align(1))) {
+        uint64_t ThirdOffset = SizeVal - 8;
+
+        SDValue Load1 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(0)),
+                        SrcPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Load2 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(16)),
+                        SrcPtrInfo.getWithOffset(16), Alignment, MMOFlags);
+
+        SDValue Load3 = DAG.getLoad(
+            MVT::i64, dl, Chain,
+            DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(ThirdOffset)),
+            SrcPtrInfo.getWithOffset(ThirdOffset), Alignment, MMOFlags);
+
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load1.getValue(1),
+                            Load2.getValue(1), Load3.getValue(1));
+
+        SDValue Store1 =
+            DAG.getStore(Chain, dl, Load1,
+                         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(0)),
+                         DstPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Store2 = DAG.getStore(
+            Chain, dl, Load2,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(16)),
+            DstPtrInfo.getWithOffset(16), Alignment, MMOFlags);
+
+        SDValue Store3 = DAG.getStore(
+            Chain, dl, Load3,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(ThirdOffset)),
+            DstPtrInfo.getWithOffset(ThirdOffset), Alignment, MMOFlags);
+
+        return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2,
+                           Store3);
+      }
+    }
+
+    // For sizes 49-63 bytes: use 3 x v16i8 (vectors) + overlapping i64
+    if (SizeVal >= 49 && SizeVal <= 63) {
+      if (AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+          AlignmentIsAcceptable(MVT::i64, Align(1))) {
+        uint64_t FourthOffset = SizeVal - 8;
+
+        SDValue Load1 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(0)),
+                        SrcPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Load2 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(16)),
+                        SrcPtrInfo.getWithOffset(16), Alignment, MMOFlags);
+
+        SDValue Load3 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(32)),
+                        SrcPtrInfo.getWithOffset(32), Alignment, MMOFlags);
+
+        SDValue Load4 = DAG.getLoad(
+            MVT::i64, dl, Chain,
+            DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(FourthOffset)),
+            SrcPtrInfo.getWithOffset(FourthOffset), Alignment, MMOFlags);
+
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load1.getValue(1),
+                            Load2.getValue(1), Load3.getValue(1),
+                            Load4.getValue(1));
+
+        SDValue Store1 =
+            DAG.getStore(Chain, dl, Load1,
+                         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(0)),
+                         DstPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Store2 = DAG.getStore(
+            Chain, dl, Load2,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(16)),
+            DstPtrInfo.getWithOffset(16), Alignment, MMOFlags);
+
+        SDValue Store3 = DAG.getStore(
+            Chain, dl, Load3,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(32)),
+            DstPtrInfo.getWithOffset(32), Alignment, MMOFlags);
+
+        SDValue Store4 = DAG.getStore(
+            Chain, dl, Load4,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(FourthOffset)),
+            DstPtrInfo.getWithOffset(FourthOffset), Alignment, MMOFlags);
+
+        return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2,
+                           Store3, Store4);
+      }
+    }
+
+    // For size 65 bytes: use 4 x v16i8 (vectors) + overlapping i64
+    if (SizeVal == 65) {
+      if (AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+          AlignmentIsAcceptable(MVT::i64, Align(1))) {
+
+        SDValue Load1 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(0)),
+                        SrcPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Load2 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(16)),
+                        SrcPtrInfo.getWithOffset(16), Alignment, MMOFlags);
+
+        SDValue Load3 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(32)),
+                        SrcPtrInfo.getWithOffset(32), Alignment, MMOFlags);
+
+        SDValue Load4 =
+            DAG.getLoad(MVT::v16i8, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(48)),
+                        SrcPtrInfo.getWithOffset(48), Alignment, MMOFlags);
+
+        SDValue Load5 =
+            DAG.getLoad(MVT::i64, dl, Chain,
+                        DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(57)),
+                        SrcPtrInfo.getWithOffset(57), Alignment, MMOFlags);
+
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load1.getValue(1),
+                            Load2.getValue(1), Load3.getValue(1),
+                            Load4.getValue(1), Load5.getValue(1));
+
+        SDValue Store1 =
+            DAG.getStore(Chain, dl, Load1,
+                         DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(0)),
+                         DstPtrInfo.getWithOffset(0), Alignment, MMOFlags);
+
+        SDValue Store2 = DAG.getStore(
+            Chain, dl, Load2,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(16)),
+            DstPtrInfo.getWithOffset(16), Alignment, MMOFlags);
+
+        SDValue Store3 = DAG.getStore(
+            Chain, dl, Load3,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(32)),
+            DstPtrInfo.getWithOffset(32), Alignment, MMOFlags);
+
+        SDValue Store4 = DAG.getStore(
+            Chain, dl, Load4,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(48)),
+            DstPtrInfo.getWithOffset(48), Alignment, MMOFlags);
+
+        SDValue Store5 = DAG.getStore(
+            Chain, dl, Load5,
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(57)),
+            DstPtrInfo.getWithOffset(57), Alignment, MMOFlags);
+
+        return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2,
+                           Store3, Store4, Store5);
+      }
+    }
+  }
+
   return SDValue();
 }
 
