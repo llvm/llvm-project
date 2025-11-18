@@ -238,7 +238,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .clampScalar(0, sXLen, sXLen)
         .scalarSameSizeAs(1, 0);
   } else {
-    CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+    CTPOPActions.widenScalarToNextPow2(0, /*Min*/ 8)
+        .clampScalar(0, s8, sXLen)
+        .scalarSameSizeAs(1, 0)
+        .lower();
   }
 
   getActionDefinitionsBuilder(G_CONSTANT)
