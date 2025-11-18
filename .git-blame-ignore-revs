@@ -8,6 +8,11 @@
 #
 # $ git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+# [clang-tidy][NFC] Enforce 80 characters limit
+5edf70c41c5d69f3751b4199f642f4585599dade
+c73870dbe89a8219130e21a0b3f13df76d299352
+74c40293c309dbd142bf1f0ebfbfde6be8d30655
+
 # [clang-tidy][NFC] Remove trailing whitespaces in documentation
 8f2b167de4a1268160c06512d08863a9e8f43290
 
