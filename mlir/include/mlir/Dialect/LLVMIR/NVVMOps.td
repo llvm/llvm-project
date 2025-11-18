@@ -37,50 +37,6 @@ def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
 //===----------------------------------------------------------------------===//
 
 def NVVM_Dialect : Dialect {
-  let summary = "The NVVM dialect that models NVIDIA's public ISA";
-
-  let description = [{
-    The NVVM dialect is MLIR's LLVM-IR-based, NVIDIA-specific backend dialect. It
-    models NVVM intrinsics and public ISA functionality and introduces NVIDIA
-    extensions to the MLIR/LLVM type system and address spaces (e.g., global,
-    shared, and cluster memory), enabling faithful lowering of GPU kernels to the
-    NVPTX toolchain. While a NVVM op usually maps to a single LLVM IR intrinsic,
-    the NVVM dialect uses type polymorphism and other attributes so that a single
-    NVVM op can map to different LLVM intrinsics.
-
-    **Scope and capabilities:** The dialect covers core GPU features such as
-    thread/block builtins, barriers and atomics, warp-level collectives (e.g.,
-    shuffle/vote), matrix/tensor core operations (e.g., `mma.sync`, `wgmma`),
-    tensor memory accelerator (TMA) operations, asynchronous copies (`cp.async`,
-    bulk/tensor variants) with memory barriers, cache and prefetch controls, and
-    NVVM-specific attributes and enums (e.g., FP rounding modes, memory scopes,
-    and MMA types/layouts).
-
-    **Non-goals:** NVVM is not a place for convenience or “wrapper” ops. It is
-    not intended to introduce high-level ops that expand into multiple unrelated
-    NVVM intrinsics or that lower to no intrinsic at all. Such abstractions belong
-    in higher-level dialects (e.g., `nvgpu`, `gpu`, or project-specific dialects).
-    The design intent is a thin, predictable, low-level surface with
-    near-mechanical lowering to NVVM/LLVM IR.
-
-    **Placement in the lowering pipeline:** NVVM sits below target-agnostic
-    dialects like `gpu` and NVIDIA's `nvgpu`. Typical pipelines convert
-    `gpu`/`nvgpu` ops into NVVM using `-convert-gpu-to-nvvm` and
-    `-convert-nvgpu-to-nvvm`, then translate into LLVM for final code
-    generation via NVPTX backend.
-
-    **Target configuration and serialization:** NVVM provides a `#nvvm.target`
-    attribute to describe the GPU target (SM, features, and flags). In
-    conjunction with `gpu` serialization (e.g., `gpu-module-to-binary`), this
-    enables producing architecture-specific GPU binaries (such as CUBIN) from
-    nested GPU modules.
-
-    **Inline PTX:** When an intrinsic is unavailable or a performance-critical
-    sequence must be expressed directly, NVVM provides an `nvvm.inline_ptx` op to
-    embed PTX inline as a last-resort escape hatch, with explicit operands and
-    results.
-  }];
-
   let name = "nvvm";
   let cppNamespace = "::mlir::NVVM";
   let dependentDialects = ["LLVM::LLVMDialect"];
@@ -225,6 +181,33 @@ def NVVMMemorySpaceAttr :
     DeclareAttrInterfaceMethods<LLVM_LLVMAddrSpaceAttrInterface>,
     DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
   ]> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Attrs describing the scope of the Memory Operation
+def MemScopeKindCTA      : I32EnumAttrCase<"CTA", 0, "cta">;
+def MemScopeKindCluster  : I32EnumAttrCase<"CLUSTER", 1, "cluster">;
+def MemScopeKindGPU      : I32EnumAttrCase<"GPU", 2, "gpu">;
+def MemScopeKindSYS      : I32EnumAttrCase<"SYS", 3, "sys">;
+
+def MemScopeKind : I32EnumAttr<"MemScopeKind", "NVVM Memory Scope kind",
+  [MemScopeKindCTA, MemScopeKindCluster, MemScopeKindGPU, MemScopeKindSYS]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def MemScopeKindAttr : EnumAttr<NVVM_Dialect, MemScopeKind, "mem_scope"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Attrs to disambiguate the cta or cluster space within shared memory
+def SharedSpaceCTA : I32EnumAttrCase<"shared_cta", 0, "cta">;
+def SharedSpaceCluster   : I32EnumAttrCase<"shared_cluster", 1, "cluster">;
+def SharedSpace : I32EnumAttr<"SharedSpace", "Shared memory space",
+  [SharedSpaceCTA, SharedSpaceCluster]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def SharedSpaceAttr : EnumAttr<NVVM_Dialect, SharedSpace, "shared_space"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
@@ -1107,17 +1090,6 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
   let assemblyFormat = "attr-dict";
 }
 
-def SharedSpaceCTA : I32EnumAttrCase<"shared_cta", 0, "cta">;
-def SharedSpaceCluster   : I32EnumAttrCase<"shared_cluster", 1, "cluster">;
-def SharedSpace : I32EnumAttr<"SharedSpace", "Shared memory space",
-  [SharedSpaceCTA, SharedSpaceCluster]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def SharedSpaceAttr : EnumAttr<NVVM_Dialect, SharedSpace, "shared_space"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 def ProxyAlias : I32EnumAttrCase<"alias", 0, "alias">;
 def ProxyAsync   : I32EnumAttrCase<"async", 1, "async">;
 def ProxyAsyncGlobal   : I32EnumAttrCase<"async_global", 2, "async.global">;
@@ -1156,21 +1128,6 @@ def NVVM_FenceProxyOp : NVVM_PTXBuilder_Op<"fence.proxy">,
     }
   }];
   let hasVerifier = 1;
-}
-
-// Attrs describing the scope of the Memory Operation
-def MemScopeKindCTA      : I32EnumAttrCase<"CTA", 0, "cta">;
-def MemScopeKindCluster  : I32EnumAttrCase<"CLUSTER", 1, "cluster">;
-def MemScopeKindGPU      : I32EnumAttrCase<"GPU", 2, "gpu">;
-def MemScopeKindSYS      : I32EnumAttrCase<"SYS", 3, "sys">;
-
-def MemScopeKind : I32EnumAttr<"MemScopeKind", "NVVM Memory Scope kind",
-  [MemScopeKindCTA, MemScopeKindCluster, MemScopeKindGPU, MemScopeKindSYS]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MemScopeKindAttr : EnumAttr<NVVM_Dialect, MemScopeKind, "mem_scope"> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,

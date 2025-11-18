@@ -675,7 +675,10 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       errorNYI(d->getSourceRange(), "OpenMP target global variable");
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
-    assert(!cir::MissingFeatures::opGlobalConstant());
+    // FIXME: This code is overly simple and should be merged with other global
+    // handling.
+    gv.setConstant(d->getType().isConstantStorage(
+        astContext, /*ExcludeCtor=*/false, /*ExcludeDtor=*/false));
 
     setLinkageForGV(gv, d);
 
@@ -864,7 +867,11 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   if (emitter)
     emitter->finalize(gv);
 
-  assert(!cir::MissingFeatures::opGlobalConstant());
+  // If it is safe to mark the global 'constant', do so now.
+  gv.setConstant((vd->hasAttr<CUDAConstantAttr>() && langOpts.CUDAIsDevice) ||
+                 (!needsGlobalCtor && !needsGlobalDtor &&
+                  vd->getType().isConstantStorage(
+                      astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/true)));
   assert(!cir::MissingFeatures::opGlobalSection());
 
   // Set CIR's linkage type as appropriate.

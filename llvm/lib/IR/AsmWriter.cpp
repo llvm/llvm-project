@@ -53,6 +53,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -4576,12 +4577,38 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << ' ';
     writeOperand(Operand, false);
     Out << '(';
-    ListSeparator LS;
-    for (unsigned op = 0, Eop = CI->arg_size(); op < Eop; ++op) {
-      Out << LS;
-      writeParamOperand(CI->getArgOperand(op), PAL.getParamAttrs(op));
-    }
+    bool HasPrettyPrintedArgs =
+        isa<IntrinsicInst>(CI) &&
+        Intrinsic::hasPrettyPrintedArgs(CI->getIntrinsicID());
 
+    ListSeparator LS;
+    Function *CalledFunc = CI->getCalledFunction();
+    auto PrintArgComment = [&](unsigned ArgNo) {
+      const auto *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
+      if (!ConstArg)
+        return;
+      std::string ArgComment;
+      raw_string_ostream ArgCommentStream(ArgComment);
+      Intrinsic::ID IID = CalledFunc->getIntrinsicID();
+      Intrinsic::printImmArg(IID, ArgNo, ArgCommentStream, ConstArg);
+      if (ArgComment.empty())
+        return;
+      Out << "/* " << ArgComment << " */ ";
+    };
+    if (HasPrettyPrintedArgs) {
+      for (unsigned ArgNo = 0, NumArgs = CI->arg_size(); ArgNo < NumArgs;
+           ++ArgNo) {
+        Out << LS;
+        PrintArgComment(ArgNo);
+        writeParamOperand(CI->getArgOperand(ArgNo), PAL.getParamAttrs(ArgNo));
+      }
+    } else {
+      for (unsigned ArgNo = 0, NumArgs = CI->arg_size(); ArgNo < NumArgs;
+           ++ArgNo) {
+        Out << LS;
+        writeParamOperand(CI->getArgOperand(ArgNo), PAL.getParamAttrs(ArgNo));
+      }
+    }
     // Emit an ellipsis if this is a musttail call in a vararg function.  This
     // is only to aid readability, musttail calls forward varargs by default.
     if (CI->isMustTailCall() && CI->getParent() &&
@@ -5005,12 +5032,10 @@ void AssemblyWriter::printUseLists(const Function *F) {
 //===----------------------------------------------------------------------===//
 
 void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
-                     bool ShouldPreserveUseListOrder,
-                     bool IsForDebug) const {
+                     bool ShouldPreserveUseListOrder, bool IsForDebug) const {
   SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW,
-                   IsForDebug,
+  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printFunction(this);
 }

@@ -51,6 +51,54 @@ define <8 x i32> @fold_vector_interleave2() {
   ret <8 x i32> %1
 }
 
+define <12 x i32> @fold_vector_interleave3() {
+; CHECK-LABEL: define <12 x i32> @fold_vector_interleave3() {
+; CHECK-NEXT:    ret <12 x i32> <i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11, i32 4, i32 8, i32 12>
+;
+  %1 = call <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>)
+  ret <12 x i32> %1
+}
+
+define <16 x i32> @fold_vector_interleave4() {
+; CHECK-LABEL: define <16 x i32> @fold_vector_interleave4() {
+; CHECK-NEXT:    ret <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15, i32 4, i32 8, i32 12, i32 16>
+;
+  %1 = call <16 x i32> @llvm.vector.interleave4.v16i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>)
+  ret <16 x i32> %1
+}
+
+define <20 x i32> @fold_vector_interleave5() {
+; CHECK-LABEL: define <20 x i32> @fold_vector_interleave5() {
+; CHECK-NEXT:    ret <20 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 2, i32 6, i32 10, i32 14, i32 18, i32 3, i32 7, i32 11, i32 15, i32 19, i32 4, i32 8, i32 12, i32 16, i32 20>
+;
+  %1 = call <20 x i32> @llvm.vector.interleave5.v20i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>, <4 x i32> <i32 17, i32 18, i32 19, i32 20>)
+  ret <20 x i32> %1
+}
+
+define <24 x i32> @fold_vector_interleave6() {
+; CHECK-LABEL: define <24 x i32> @fold_vector_interleave6() {
+; CHECK-NEXT:    ret <24 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24>
+;
+  %1 = call <24 x i32> @llvm.vector.interleave6.v24i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>, <4 x i32> <i32 17, i32 18, i32 19, i32 20>, <4 x i32> <i32 21, i32 22, i32 23, i32 24>)
+  ret <24 x i32> %1
+}
+
+define <28 x i32> @fold_vector_interleave7() {
+; CHECK-LABEL: define <28 x i32> @fold_vector_interleave7() {
+; CHECK-NEXT:    ret <28 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+;
+  %1 = call <28 x i32> @llvm.vector.interleave7.v28i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>, <4 x i32> <i32 17, i32 18, i32 19, i32 20>, <4 x i32> <i32 21, i32 22, i32 23, i32 24>, <4 x i32> <i32 25, i32 26, i32 27, i32 28>)
+  ret <28 x i32> %1
+}
+
+define <32 x i32> @fold_vector_interleave8() {
+; CHECK-LABEL: define <32 x i32> @fold_vector_interleave8() {
+; CHECK-NEXT:    ret <32 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32>
+;
+  %1 = call <32 x i32> @llvm.vector.interleave8.v32i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>, <4 x i32> <i32 17, i32 18, i32 19, i32 20>, <4 x i32> <i32 21, i32 22, i32 23, i32 24>, <4 x i32> <i32 25, i32 26, i32 27, i32 28>, <4 x i32> <i32 29, i32 30, i32 31, i32 32>)
+  ret <32 x i32> %1
+}
+
 define {<4 x i32>, <4 x i32>} @fold_vector_deinterleave2() {
 ; CHECK-LABEL: define { <4 x i32>, <4 x i32> } @fold_vector_deinterleave2() {
 ; CHECK-NEXT:    ret { <4 x i32>, <4 x i32> } { <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8> }

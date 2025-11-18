@@ -2715,6 +2715,35 @@ static bool interp_builtin_horizontal_fp_binop(
   return true;
 }
 
+static bool interp__builtin_ia32_addsub(InterpState &S, CodePtr OpPC,
+                                        const CallExpr *Call) {
+  // Addsub: alternates between subtraction and addition
+  // Result[i] = (i % 2 == 0) ? (a[i] - b[i]) : (a[i] + b[i])
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
+  llvm::RoundingMode RM = getRoundingMode(FPO);
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  unsigned NumElems = VT->getNumElements();
+
+  using T = PrimConv<PT_Float>::T;
+  for (unsigned I = 0; I != NumElems; ++I) {
+    APFloat LElem = LHS.elem<T>(I).getAPFloat();
+    APFloat RElem = RHS.elem<T>(I).getAPFloat();
+    if (I % 2 == 0) {
+      // Even indices: subtract
+      LElem.subtract(RElem, RM);
+    } else {
+      // Odd indices: add
+      LElem.add(RElem, RM);
+    }
+    Dst.elem<T>(I) = static_cast<T>(LElem);
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop_fp(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APFloat(const APFloat &, const APFloat &,
@@ -2806,6 +2835,30 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
   }
   Dst.initializeAllElements();
 
+  return true;
+}
+
+/// Scalar variant of AVX512 predicated select:
+/// Result[i] = (Mask bit 0) ? LHS[i] : RHS[i], but only element 0 may change.
+/// All other elements are taken from RHS.
+static bool interp__builtin_select_scalar(InterpState &S,
+                                          const CallExpr *Call) {
+  unsigned N =
+      Call->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+
+  const Pointer &W = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  APSInt U = popToAPSInt(S, Call->getArg(0));
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  bool TakeA0 = U.getZExtValue() & 1ULL;
+
+  for (unsigned I = TakeA0; I != N; ++I)
+    Dst.elem<Floating>(I) = W.elem<Floating>(I);
+  if (TakeA0)
+    Dst.elem<Floating>(0) = A.elem<Floating>(0);
+
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -4122,6 +4175,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
       return APInt::getAllOnes(DstBits);
     });
 
+  case clang::X86::BI__builtin_ia32_selectss_128:
+  case clang::X86::BI__builtin_ia32_selectsd_128:
+  case clang::X86::BI__builtin_ia32_selectsh_128:
+  case clang::X86::BI__builtin_ia32_selectsbf_128:
+    return interp__builtin_select_scalar(S, Call);
   case clang::X86::BI__builtin_ia32_vprotbi:
   case clang::X86::BI__builtin_ia32_vprotdi:
   case clang::X86::BI__builtin_ia32_vprotqi:
@@ -4196,6 +4254,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           F.subtract(RHS, RM);
           return F;
         });
+  case clang::X86::BI__builtin_ia32_addsubpd:
+  case clang::X86::BI__builtin_ia32_addsubps:
+  case clang::X86::BI__builtin_ia32_addsubpd256:
+  case clang::X86::BI__builtin_ia32_addsubps256:
+    return interp__builtin_ia32_addsub(S, OpPC, Call);
 
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
