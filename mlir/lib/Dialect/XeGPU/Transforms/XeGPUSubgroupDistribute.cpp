@@ -1485,6 +1485,10 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
   }
 };
 
+// Distribute a `vector.extract_strided_slice` op feeding into yield op of an
+// enclosing `gpu.warp_execute_on_lane_0` region. This pattern only handles
+// advanced cases where the distributed is partially extracted and currently not
+// supported by the generic vector distribution patterns.
 struct VectorExtractStridedSliceDistribution
     : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
@@ -1592,6 +1596,10 @@ struct VectorExtractStridedSliceDistribution
   }
 };
 
+/// Distribute a `vector.insert_strided_slice` op feeding into yield op of an
+/// enclosing `gpu.warp_execute_on_lane_0` region. This pattern only handles
+/// advanced cases where the distributed dimension is partially inserted and
+/// currently not supported by the generic vector distribution patterns.
 struct VectorInsertStridedSliceDistribution
     : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
