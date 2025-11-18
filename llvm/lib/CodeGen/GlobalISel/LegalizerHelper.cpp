@@ -7679,7 +7679,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     MachineIRBuilder &B = MIRBuilder;
 
     // Bail out on irregular type lengths.
-    if (Size >= 128 || Size % 8 != 0)
+    if (Size > 128 || Size % 8 != 0)
       return UnableToLegalize;
 
     // Count set bits in blocks of 2 bits. Default approach would be
