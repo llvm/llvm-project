@@ -569,11 +569,17 @@ TestTensorType::getBufferType(
 ::mlir::LogicalResult TestTensorType::verifyCompatibleBufferType(
     ::mlir::bufferization::BufferLikeType bufferType,
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {
-  auto testMemref = dyn_cast<TestMemrefType>(bufferType);
-  if (!testMemref)
-    return emitError() << "expected TestMemrefType";
+  if (auto testMemref = dyn_cast<TestMemrefType>(bufferType)) {
+    const bool valid = getShape() == testMemref.getShape() &&
+                       getElementType() == testMemref.getElementType();
+    return mlir::success(valid);
+  }
 
-  const bool valid = getShape() == testMemref.getShape() &&
-                     getElementType() == testMemref.getElementType();
-  return mlir::success(valid);
+  if (auto builtinMemref = dyn_cast<MemRefType>(bufferType)) {
+    const bool valid = getShape() == builtinMemref.getShape() &&
+                       getElementType() == builtinMemref.getElementType();
+    return mlir::success(valid);
+  }
+
+  return emitError() << "expected MemRefType or TestMemrefType";
 }
