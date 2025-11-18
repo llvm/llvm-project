@@ -67,7 +67,7 @@ struct WidthAndSignedness {
 
 static WidthAndSignedness
 getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
-                             const clang::QualType Type) {
+                             const clang::QualType type) {
   assert(Type->isIntegerType() && "Given type is not an integer.");
   unsigned Width = Type->isBooleanType()  ? 1
                    : Type->isBitIntType() ? astContext.getIntWidth(Type)
