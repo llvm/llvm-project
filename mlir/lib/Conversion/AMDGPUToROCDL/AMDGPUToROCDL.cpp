@@ -1738,15 +1738,17 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   auto sourceType = cast<VectorType>(op.getSource().getType());
   auto srcElemType = cast<FloatType>(sourceType.getElementType());
   unsigned bitWidth = srcElemType.getWidth();
-  int32_t scaleSel =
-      getScaleSel(blockSize, bitWidth, firstScaleLane, firstScaleByte);
 
   auto targetType = cast<VectorType>(op.getResult().getType());
   auto destElemType = cast<FloatType>(targetType.getElementType());
-  IntegerType i32 = rewriter.getI32Type();
-  Value castedScale =
-      LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getScale());
 
+  std::optional<StringRef> maybeIntrinsic =
+      scaledExtPacked816ToIntrinsic(srcElemType, destElemType);
+  if (!maybeIntrinsic.has_value())
+    return op.emitOpError(
+        "no intrinsic matching packed scaled conversion on the given chipset");
+
+  IntegerType i32 = rewriter.getI32Type();
   Value source = adaptor.getSource();
   Type llvmResultType = typeConverter->convertType(op.getResult().getType());
   Type packedType = nullptr;
@@ -1767,14 +1769,14 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     return rewriter.notifyMatchFailure(op, "type conversion failed");
   }
 
+  int32_t scaleSel =
+      getScaleSel(blockSize, bitWidth, firstScaleLane, firstScaleByte);
+
+  Value castedScale =
+      LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getScale());
+
   Value castedSource =
       LLVM::BitcastOp::create(rewriter, loc, packedType, source);
-
-  std::optional<StringRef> maybeIntrinsic =
-      scaledExtPacked816ToIntrinsic(srcElemType, destElemType);
-  if (!maybeIntrinsic.has_value())
-    return op.emitOpError(
-        "no intrinsic matching packed scaled conversion on the given chipset");
 
   OperationState loweredOp(loc, *maybeIntrinsic);
   loweredOp.addTypes({llvmResultType});
