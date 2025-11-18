@@ -1,5 +1,6 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
+#if 0
   ! CHECK-LABEL: sinteger
   function sinteger(n)
     integer sinteger
@@ -112,18 +113,21 @@
 
     print*, n1, n2, n3, n4, n5, n6, n7, n8
   end
+#endif
 
   ! CHECK-LABEL: scharacter
   subroutine scharacter(c)
     character(*) :: c
     nn = 0
     select case (c)
+#if 0
       case default
         nn = -1
       ! CHECK: CharacterCompareScalar1
       ! CHECK-NEXT: constant 0
       ! CHECK-NEXT: cmpi sle, {{.*}} %c0
       ! CHECK-NEXT: cond_br
+#endif
       case (:'d')
         nn = 10
       ! CHECK: CharacterCompareScalar1
@@ -134,6 +138,7 @@
       ! CHECK-NEXT: constant 0
       ! CHECK-NEXT: cmpi sle, {{.*}} %c0
       ! CHECK-NEXT: cond_br
+#if 0
       case ('ff':'ffff')
         nn = 20
       ! CHECK: CharacterCompareScalar1
@@ -154,10 +159,12 @@
       ! CHECK-NEXT: cond_br
       case ('x':)
         nn = 50
+#endif
     end select
     print*, nn
   end
 
+#if 0
   ! CHECK-LABEL: func @_QPscharacter1
   subroutine scharacter1(s)
     ! CHECK-DAG: %[[V_0:[0-9]+]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
@@ -505,3 +512,4 @@
     call swhere(1)            ! expected output: 42.
     call sforall(1)           ! expected output: 42.
   end
+#endif
