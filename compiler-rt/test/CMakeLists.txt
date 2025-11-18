@@ -16,6 +16,13 @@ pythonize_bool(COMPILER_RT_HAS_AARCH64_SME)
 
 pythonize_bool(COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
 
+if(LLVM_TREE_AVAILABLE OR NOT COMPILER_RT_STANDALONE_BUILD)
+  set(COMPILER_RT_BUILT_WITH_LLVM TRUE)
+else()
+  set(COMPILER_RT_BUILT_WITH_LLVM FALSE)
+endif()
+pythonize_bool(COMPILER_RT_BUILT_WITH_LLVM)
+
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)
