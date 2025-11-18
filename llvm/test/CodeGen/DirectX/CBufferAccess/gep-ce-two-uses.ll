@@ -1,4 +1,7 @@
 ; RUN: opt -S -dxil-cbuffer-access -mtriple=dxil--shadermodel6.3-library %s | FileCheck %s
+;
+; Check that two uses of an identical GEP constant expression generates two
+; separate getpointer/gep pairs in the output.
 
 ; cbuffer CB : register(b0) {
 ;   float a1[3];

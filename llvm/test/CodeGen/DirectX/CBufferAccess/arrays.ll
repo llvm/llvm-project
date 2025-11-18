@@ -24,17 +24,23 @@ entry:
   %CB.cb_h.i.i = tail call target("dx.CBuffer", %__cblayout_CB) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   store target("dx.CBuffer", %__cblayout_CB) %CB.cb_h.i.i, ptr @CB.cb, align 4
 
+  ; a1[1]
+  ;
   ; CHECK: [[PTR:%.*]] = call ptr addrspace(2) @llvm.dx.resource.getpointer.{{.*}}(target("dx.CBuffer", %__cblayout_CB) {{%.*}}, i32 0)
   ; CHECK: getelementptr inbounds nuw i8, ptr addrspace(2) [[PTR]], i32 16
   %a1 = load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @a1, i32 16), align 4
   store float %a1, ptr %dst, align 32
 
+  ; a2[1]
+  ;
   ; CHECK: [[PTR:%.*]] = call ptr addrspace(2) @llvm.dx.resource.getpointer.{{.*}}(target("dx.CBuffer", %__cblayout_CB) {{%.*}}, i32 48)
   ; CHECK: getelementptr inbounds nuw i8, ptr addrspace(2) [[PTR]], i32 32
   %a2 = load <3 x double>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @a2, i32 32), align 8
   %a2.i = getelementptr inbounds nuw i8, ptr %dst, i32 8
   store <3 x double> %a2, ptr %a2.i, align 32
 
+  ; a3[0][1]
+  ;
   ; CHECK: [[PTR:%.*]] = call ptr addrspace(2) @llvm.dx.resource.getpointer.{{.*}}(target("dx.CBuffer", %__cblayout_CB) {{%.*}}, i32 112)
   ; CHECK: getelementptr inbounds nuw i8, ptr addrspace(2) [[PTR]], i32 16
   %a3 = load half, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @a3, i32 16), align 2
