@@ -309,7 +309,7 @@ defm SPV_KHR_shader_clock : ExtensionOperand<54, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_unstructured_loop_controls : ExtensionOperand<55, [EnvOpenCL]>;
 defm SPV_EXT_demote_to_helper_invocation : ExtensionOperand<56, [EnvVulkan]>;
 defm SPV_INTEL_fpga_reg : ExtensionOperand<57, [EnvOpenCL]>;
-defm SPV_INTEL_blocking_pipes : ExtensionOperand<58, [EnvOpenCL]>;
+defm SPV_ALTERA_blocking_pipes : ExtensionOperand<58, [EnvOpenCL]>;
 defm SPV_GOOGLE_user_type : ExtensionOperand<59, [EnvVulkan]>;
 defm SPV_KHR_physical_storage_buffer : ExtensionOperand<60, [EnvVulkan]>;
 defm SPV_INTEL_kernel_attributes : ExtensionOperand<61, [EnvOpenCL]>;
@@ -385,6 +385,11 @@ defm SPV_INTEL_int4 : ExtensionOperand<123, [EnvOpenCL]>;
 defm SPV_KHR_float_controls2 : ExtensionOperand<124, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_tensor_float32_conversion : ExtensionOperand<125, [EnvOpenCL]>;
 defm SPV_KHR_bfloat16 : ExtensionOperand<126, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_predicated_io : ExtensionOperand<127, [EnvOpenCL]>;
+defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
+defm SPV_INTEL_bfloat16_arithmetic
+    : ExtensionOperand<129, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_16bit_atomics : ExtensionOperand<130, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -562,12 +567,15 @@ defm FloatControls2
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;
+defm AtomicBFloat16AddINTEL : CapabilityOperand<6255, 0, 0, [SPV_INTEL_16bit_atomics], []>;
 defm AtomicFloat16MinMaxEXT : CapabilityOperand<5616, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicFloat32MinMaxEXT : CapabilityOperand<5612, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicFloat64MinMaxEXT : CapabilityOperand<5613, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
+defm AtomicBFloat16MinMaxINTEL : CapabilityOperand<6256, 0, 0, [SPV_INTEL_16bit_atomics], []>;
 defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
+defm BFloat16ArithmeticINTEL : CapabilityOperand<6226, 0, 0, [SPV_INTEL_bfloat16_arithmetic], []>;
 defm BFloat16ConversionINTEL : CapabilityOperand<6115, 0, 0, [SPV_INTEL_bfloat16_conversion], []>;
 defm GlobalVariableHostAccessINTEL : CapabilityOperand<6187, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
 defm HostAccessINTEL : CapabilityOperand<6188, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
@@ -585,6 +593,11 @@ defm CooperativeMatrixBFloat16ComponentTypeINTEL : CapabilityOperand<6437, 0, 0,
 defm RoundToInfinityINTEL : CapabilityOperand<5582, 0, 0, [SPV_INTEL_float_controls2], []>;
 defm FloatingPointModeINTEL : CapabilityOperand<5583, 0, 0, [SPV_INTEL_float_controls2], []>;
 defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_controls2], []>;
+defm KernelAttributesINTEL : CapabilityOperand<5892, 0, 0, [SPV_INTEL_kernel_attributes], [Kernel]>;
+// TODO-SPIRV: add these once they are used / tested.
+// defm FPGAKernelAttributesINTEL : CapabilityOperand<5897, 0, 0, [SPV_INTEL_kernel_attributes], [Kernel]>;
+// defm FPGAKernelAttributesv2INTEL : CapabilityOperand<6161, 0, 0, [SPV_INTEL_kernel_attributes], [Kernel]>;
+// END TODO-SPIRV
 defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composites], []>;
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
@@ -594,12 +607,14 @@ defm SubgroupMatrixMultiplyAccumulateINTEL : CapabilityOperand<6236, 0, 0, [SPV_
 defm Subgroup2DBlockIOINTEL : CapabilityOperand<6228, 0, 0, [SPV_INTEL_2d_block_io], []>;
 defm Subgroup2DBlockTransformINTEL : CapabilityOperand<6229, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
 defm Subgroup2DBlockTransposeINTEL : CapabilityOperand<6230, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
+defm PredicatedIOINTEL : CapabilityOperand<6257, 0, 0, [SPV_INTEL_predicated_io], []>;
 defm Int4TypeINTEL : CapabilityOperand<5112, 0, 0, [SPV_INTEL_int4], []>;
 defm Int4CooperativeMatrixINTEL : CapabilityOperand<5114, 0, 0, [SPV_INTEL_int4], [Int4TypeINTEL, CooperativeMatrixKHR]>;
 defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tensor_float32_conversion], []>;
 defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
+defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -696,7 +711,7 @@ defm IntersectionNV: ExecutionModelOperand<5314, [RayTracingNV]>;
 defm AnyHitNV: ExecutionModelOperand<5315, [RayTracingNV]>;
 defm ClosestHitNV: ExecutionModelOperand<5316, [RayTracingNV]>;
 defm MissNV: ExecutionModelOperand<5317, [RayTracingNV]>;
-defm CallableNV: ExecutionModelOperand<5318, [RayTracingNV]>;
+defm CallableNV : ExecutionModelOperand<5318, [RayTracingNV]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemoryModel enum values and at the same time
@@ -802,6 +817,17 @@ defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
 defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
+defm MaxWorkgroupSizeINTEL : ExecutionModeOperand<5893, [KernelAttributesINTEL]>;
+// TODO-SPIRV: Add the following once they are used / tested.
+// defm MaxWorkDimINTEL : ExecutionModeOperand<5894, [KernelAttributesINTEL]>;
+// defm NoGlobalOffsetINTEL : ExecutionModeOperand<5895, [KernelAttributesINTEL]>;
+// defm NumSIMDWorkitemsINTEL : ExecutionModeOperand<5896, [FPGAKernelAttributesINTEL]>;
+// defm SchedulerTargetFmaxMhzINTEL : ExecutionModeOperand<5903, [FPGAKernelAttributesINTEL]>;
+// defm StreamingInterfaceINTEL : ExecutionModeOperand<6154, [FPGAKernelAttributesv2INTEL]>;
+// defm RegisterMapInterfaceINTEL : ExecutionModeOperand<6160, [FPGAKernelAttributesv2INTEL]>;
+// END TODO-SPIRV
+defm FPFastMathDefault : ExecutionModeOperand<6028, [FloatControls2]>;
+defm MaximallyReconvergesKHR : ExecutionModeOperand<6023, [Shader]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define StorageClass enum values and at the same time
@@ -1153,6 +1179,9 @@ defm NotInf : FPFastMathModeOperand<0x2, [Kernel]>;
 defm NSZ : FPFastMathModeOperand<0x4, [Kernel]>;
 defm AllowRecip : FPFastMathModeOperand<0x8, [Kernel]>;
 defm Fast : FPFastMathModeOperand<0x10, [Kernel]>;
+defm AllowContract : FPFastMathModeOperand<0x10000, [FloatControls2]>;
+defm AllowReassoc : FPFastMathModeOperand<0x20000, [FloatControls2]>;
+defm AllowTransform : FPFastMathModeOperand<0x40000, [FloatControls2]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define FPRoundingMode enum values and at the same time
@@ -1911,7 +1940,7 @@ defm GenericCastToPtr :  SpecConstantOpOperandsOperand<122, [], [Kernel]>;
 defm PtrCastToGeneric :  SpecConstantOpOperandsOperand<121, [], [Kernel]>;
 defm Bitcast :  SpecConstantOpOperandsOperand<124, [], []>;
 defm QuantizeToF16 :  SpecConstantOpOperandsOperand<116, [], [Shader]>;
-// Arithmetic 
+// Arithmetic
 defm SNegate :  SpecConstantOpOperandsOperand<126, [], []>;
 defm Not :  SpecConstantOpOperandsOperand<200, [], []>;
 defm IAdd :  SpecConstantOpOperandsOperand<128, [], []>;

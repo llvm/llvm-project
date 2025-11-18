@@ -17,8 +17,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-namespace {
-
 // Matcher names. Given the code:
 //
 // \code
@@ -60,11 +58,13 @@ static const char LoopInitVarName[] = "loop_init_var";
 static const char LoopEndExprName[] = "loop_end_expr";
 static const char RangeLoopName[] = "for_range_loop";
 
-ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
+static ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
   return hasType(cxxRecordDecl(hasAnyName(
       "::std::vector", "::std::set", "::std::unordered_set", "::std::map",
       "::std::unordered_map", "::std::array", "::std::deque")));
 }
+
+namespace {
 
 AST_MATCHER(Expr, hasSideEffects) {
   return Node.HasSideEffects(Finder->getASTContext());
@@ -208,7 +208,7 @@ void InefficientVectorOperationCheck::check(
   if (!TargetVarDecl)
     TargetVarDecl = ProtoVarDecl;
 
-  llvm::SmallPtrSet<const DeclRefExpr *, 16> AllVarRefs =
+  const llvm::SmallPtrSet<const DeclRefExpr *, 16> AllVarRefs =
       utils::decl_ref_expr::allDeclRefExprs(*TargetVarDecl, *LoopParent,
                                             *Context);
   for (const auto *Ref : AllVarRefs) {
@@ -231,12 +231,12 @@ void InefficientVectorOperationCheck::check(
   } else {
     llvm::StringRef FieldName = ProtoAddFieldCall->getMethodDecl()->getName();
     FieldName.consume_front("add_");
-    std::string MutableFieldName = ("mutable_" + FieldName).str();
+    const std::string MutableFieldName = ("mutable_" + FieldName).str();
     PartialReserveStmt = "." + MutableFieldName +
                          "()->Reserve"; // e.g., ".mutable_xxx()->Reserve"
   }
 
-  llvm::StringRef VarName = Lexer::getSourceText(
+  const llvm::StringRef VarName = Lexer::getSourceText(
       CharSourceRange::getTokenRange(
           AppendCall->getImplicitObjectArgument()->getSourceRange()),
       SM, Context->getLangOpts());
@@ -246,14 +246,14 @@ void InefficientVectorOperationCheck::check(
   if (RangeLoop) {
     // Get the range-expression in a for-range statement represented as
     // `for (range-declarator: range-expression)`.
-    StringRef RangeInitExpName =
+    const StringRef RangeInitExpName =
         Lexer::getSourceText(CharSourceRange::getTokenRange(
                                  RangeLoop->getRangeInit()->getSourceRange()),
                              SM, Context->getLangOpts());
     ReserveSize = (RangeInitExpName + ".size()").str();
   } else if (ForLoop) {
     // Handle counter-based loop cases.
-    StringRef LoopEndSource = Lexer::getSourceText(
+    const StringRef LoopEndSource = Lexer::getSourceText(
         CharSourceRange::getTokenRange(LoopEndExpr->getSourceRange()), SM,
         Context->getLangOpts());
     ReserveSize = std::string(LoopEndSource);
@@ -264,7 +264,7 @@ void InefficientVectorOperationCheck::check(
                    "container capacity before the loop")
               << AppendCall->getMethodDecl()->getDeclName();
   if (!ReserveSize.empty()) {
-    std::string ReserveStmt =
+    const std::string ReserveStmt =
         (VarName + PartialReserveStmt + "(" + ReserveSize + ");\n").str();
     Diag << FixItHint::CreateInsertion(LoopStmt->getBeginLoc(), ReserveStmt);
   }

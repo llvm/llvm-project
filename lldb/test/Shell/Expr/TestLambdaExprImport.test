@@ -3,7 +3,7 @@
 # uses always).
 
 # RUN: split-file %s %t
-# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
 # RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
 # RUN:       -x -b -s %t/commands.input %t.out 2>&1 \
 # RUN:       | FileCheck %s

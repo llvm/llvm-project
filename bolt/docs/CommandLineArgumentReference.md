@@ -375,16 +375,11 @@
 
 - `--use-old-text`
 
-  Re-use space in old .text if possible (relocation mode)
+  Reuse space in old .text if possible (relocation mode)
 
 - `-v <uint>`
 
   Set verbosity level for diagnostic output
-
-- `--write-dwp`
-
-  Output a single dwarf package file (dwp) instead of multiple non-relocatable
-  dwarf object files (dwo).
 
 ### BOLT optimization options:
 

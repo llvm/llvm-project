@@ -20,21 +20,6 @@ define void @neg_cond(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P_GEP]], align 4
-; CHECK-NEXT:    [[Q_GEP:%.*]] = getelementptr i32, ptr [[Q]], i32 [[IV]]
-; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[Q_GEP]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 42
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT]], i32 42, i32 43
-; CHECK-NEXT:    store i32 [[SEL]], ptr [[P_GEP]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

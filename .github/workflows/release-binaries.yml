@@ -21,7 +21,6 @@ on:
         options:
           - ubuntu-22.04
           - ubuntu-22.04-arm
-          - macos-13
           - macos-14
 
   workflow_call:
@@ -58,7 +57,6 @@ jobs:
       ref: ${{ steps.vars.outputs.ref }}
       upload: ${{ steps.vars.outputs.upload }}
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
-      ccache: ${{ steps.vars.outputs.ccache }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
@@ -70,7 +68,7 @@ jobs:
     # due to https://github.com/actions/runner-images/issues/10385
     - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
       with:
-        python-version: '3.13'
+        python-version: '3.14'
 
     - name: Checkout LLVM
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -123,13 +121,6 @@ jobs:
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
 
         target="$RUNNER_OS-$RUNNER_ARCH"
-        # The hendrikmuhs/ccache-action action does not support installing sccache
-        # on arm64 Linux.
-        if [ "$target" = "Linux-ARM64" ]; then
-          echo ccache=ccache >> $GITHUB_OUTPUT
-        else
-          echo ccache=sccache >> $GITHUB_OUTPUT
-        fi
 
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
@@ -138,38 +129,19 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
           if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
-          else
-            arches=x86_64
-            # Disable Flang builds on macOS x86_64.  The FortranLower library takes
-            # 2-3 hours to build on macOS, much slower than on Linux.
-            # The long build time causes the release build to time out on x86_64,
-            # so we need to disable flang there.
-            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
-
-        build_flang="true"
 
         if [ "$RUNNER_OS" = "Windows" ]; then
           # The build times out on Windows, so we need to disable LTO.
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
-        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
-        echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
-            ;;
-          macos-13)
-            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
-            else
-              build_runs_on="macos-13-large"
-            fi
-            test_runs_on="${{ inputs.runs-on }}"
             ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
@@ -184,6 +156,23 @@ jobs:
             build_runs_on=$test_runs_on
             ;;
         esac
+
+        case "$build_runs_on" in
+          # These runners cannot build the full release package faster than
+          # the 6 hours timeout limit, so we need to use a configuration
+          # that builds more quickly.
+          macos-14)
+            bootstrap_prefix="BOOTSTRAP"
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF"
+            ;;
+          *)
+            bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
+            ;;
+        esac
+
+        target_cmake_flags="$target_cmake_flags -D${bootstrap_prefix}_CPACK_PACKAGE_FILE_NAME=$release_binary_basename"
+
+        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
 
@@ -194,54 +183,34 @@ jobs:
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
 
-    - name: Checkout Actions
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      with:
-        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
-        sparse-checkout: |
-          .github/workflows/
-        sparse-checkout-cone-mode: false
-        # Check out outside of working directory so the source checkout doesn't
-        # remove it.
-        path: workflows
-
-    # actions/checkout does not support paths outside of the GITHUB_WORKSPACE.
-    # Also, anything that we put inside of GITHUB_WORKSPACE will be overwritten
-    # by future actions/checkout steps.  Therefore, in order to checkout the
-    # latest actions from main, we need to first checkout out the actions inside of
-    # GITHUB_WORKSPACE (see previous step), then use actions/checkout to checkout
-    # the code being built and the move the actions from main back into GITHUB_WORKSPACE,
-    # becasue the uses on composite actions only reads workflows from inside GITHUB_WORKSPACE.
-    - shell: bash
-      run: mv workflows  ../workflows-main
-
     - name: Checkout LLVM
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         ref: ${{ needs.prepare.outputs.ref }}
 
-    - name: Copy main workflows
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@5dd955034a6742a2e21d82bf165fcb1050ae7b49 # main
+
+    - name: Set Build Prefix
+      id: setup-stage
       shell: bash
       run: |
-        mv ../workflows-main .
-
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
+        build_prefix=`pwd`
+        if [ "${{ runner.os }}" = "Linux" ]; then
+          sudo chown $USER:$USER /mnt/
+          build_prefix=/mnt/
+        fi
+        echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
     - name: Configure
       id: build
       shell: bash
-      env:
-        CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -C clang/cmake/caches/Release.cmake \
-            -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
-            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+            -C clang/cmake/caches/Release.cmake
 
     - name: Build
       shell: bash
@@ -250,7 +219,7 @@ jobs:
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
     
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
         # Due to path differences on Windows when running in bash vs running on node,
@@ -258,17 +227,11 @@ jobs:
         path: |
           ${{ needs.prepare.outputs.release-binary-filename }}
 
-    # Clean up some build files to reduce size of artifact.
-    - name: Clean Up Build Directory
-      shell: bash
+    - name: Run Tests
+      # These almost always fail so don't let them fail the build and prevent the uploads.
+      continue-on-error: true
       run: |
-        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
-        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname _CPack_Packages -prune -exec rm -r {} +
-    
-    - name: Save Stage
-      uses: ./workflows-main/.github/workflows/release-binaries-save-stage
-      with:
-        build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
+        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
 
   upload-release-binaries:
     name: "Upload Release Binaries"
@@ -294,14 +257,14 @@ jobs:
         sparse-checkout-cone-mode: false
 
     - name: 'Download artifact'
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
       with:
         pattern: '*-release-binary'
         merge-multiple: true
 
     - name: Attest Build Provenance
       id: provenance
-      uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
         subject-path: ${{ needs.prepare.outputs.release-binary-filename }}
 
@@ -310,7 +273,7 @@ jobs:
         mv ${{ steps.provenance.outputs.bundle-path }} ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
 
     - name: Upload Build Provenance
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
         path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
@@ -327,31 +290,3 @@ jobs:
         --release ${{ needs.prepare.outputs.release-version }} \
         upload \
         --files ${{ needs.prepare.outputs.release-binary-filename }}*
-
-  test-release:
-    name: "Test Release"
-    needs:
-      - prepare
-      - build-release-package
-    if: >-
-      github.repository_owner == 'llvm'
-    runs-on: ${{ needs.prepare.outputs.test-runs-on }}
-    steps:
-    - name: Checkout Actions
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      with:
-        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
-        sparse-checkout: |
-          .github/workflows/
-        sparse-checkout-cone-mode: false
-        path: workflows
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./workflows/.github/workflows/release-binaries-setup-stage
-      with:
-        previous-artifact: build-release-package
-
-    - name: Run Tests
-      shell: bash
-      run: |
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all

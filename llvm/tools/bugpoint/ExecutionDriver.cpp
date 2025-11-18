@@ -36,15 +36,16 @@ enum OutputType {
   CompileCustom,
   Custom
 };
+} // namespace
 
-cl::opt<double> AbsTolerance("abs-tolerance",
-                             cl::desc("Absolute error tolerated"),
-                             cl::init(0.0));
-cl::opt<double> RelTolerance("rel-tolerance",
-                             cl::desc("Relative error tolerated"),
-                             cl::init(0.0));
+static cl::opt<double> AbsTolerance("abs-tolerance",
+                                    cl::desc("Absolute error tolerated"),
+                                    cl::init(0.0));
+static cl::opt<double> RelTolerance("rel-tolerance",
+                                    cl::desc("Relative error tolerated"),
+                                    cl::init(0.0));
 
-cl::opt<OutputType> InterpreterSel(
+static cl::opt<OutputType> InterpreterSel(
     cl::desc("Specify the \"test\" i.e. suspect back-end:"),
     cl::values(clEnumValN(AutoPick, "auto", "Use best guess"),
                clEnumValN(RunLLI, "run-int", "Execute with the interpreter"),
@@ -60,7 +61,7 @@ cl::opt<OutputType> InterpreterSel(
                           "the bitcode. Useful for cross-compilation.")),
     cl::init(AutoPick));
 
-cl::opt<OutputType> SafeInterpreterSel(
+static cl::opt<OutputType> SafeInterpreterSel(
     cl::desc("Specify \"safe\" i.e. known-good backend:"),
     cl::values(clEnumValN(AutoPick, "safe-auto", "Use best guess"),
                clEnumValN(RunLLC, "safe-run-llc", "Compile with LLC"),
@@ -69,16 +70,16 @@ cl::opt<OutputType> SafeInterpreterSel(
                           "the bitcode. Useful for cross-compilation.")),
     cl::init(AutoPick));
 
-cl::opt<std::string> SafeInterpreterPath(
+static cl::opt<std::string> SafeInterpreterPath(
     "safe-path", cl::desc("Specify the path to the \"safe\" backend program"),
     cl::init(""));
 
-cl::opt<bool> AppendProgramExitCode(
+static cl::opt<bool> AppendProgramExitCode(
     "append-exit-code",
     cl::desc("Append the exit code to the output so it gets diff'd too"),
     cl::init(false));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     InputFile("input", cl::init("/dev/null"),
               cl::desc("Filename to pipe in as stdin (default: /dev/null)"));
 
@@ -89,20 +90,19 @@ static cl::list<std::string>
 static cl::list<std::string> AdditionalLinkerArgs(
     "Xlinker", cl::desc("Additional arguments to pass to the linker"));
 
-cl::opt<std::string> CustomCompileCommand(
+static cl::opt<std::string> CustomCompileCommand(
     "compile-command", cl::init("llc"),
     cl::desc("Command to compile the bitcode (use with -compile-custom) "
              "(default: llc)"));
 
-cl::opt<std::string> CustomExecCommand(
+static cl::opt<std::string> CustomExecCommand(
     "exec-command", cl::init("simulate"),
     cl::desc("Command to execute the bitcode (use with -run-custom) "
              "(default: simulate)"));
-}
 
-namespace llvm {
 // Anything specified after the --args option are taken as arguments to the
 // program being debugged.
+namespace llvm {
 cl::list<std::string> InputArgv("args", cl::Positional,
                                 cl::desc("<program arguments>..."),
                                 cl::PositionalEatsArgs);
@@ -110,25 +110,22 @@ cl::list<std::string> InputArgv("args", cl::Positional,
 cl::opt<std::string>
     OutputPrefix("output-prefix", cl::init("bugpoint"),
                  cl::desc("Prefix to use for outputs (default: 'bugpoint')"));
-}
+} // namespace llvm
 
-namespace {
-cl::list<std::string> ToolArgv("tool-args", cl::Positional,
-                               cl::desc("<tool arguments>..."),
-                               cl::PositionalEatsArgs);
+static cl::list<std::string> ToolArgv("tool-args", cl::Positional,
+                                      cl::desc("<tool arguments>..."),
+                                      cl::PositionalEatsArgs);
 
-cl::list<std::string> SafeToolArgv("safe-tool-args", cl::Positional,
-                                   cl::desc("<safe-tool arguments>..."),
-                                   cl::PositionalEatsArgs);
+static cl::list<std::string> SafeToolArgv("safe-tool-args", cl::Positional,
+                                          cl::desc("<safe-tool arguments>..."),
+                                          cl::PositionalEatsArgs);
 
-cl::opt<std::string> CCBinary("gcc", cl::init(""),
-                              cl::desc("The gcc binary to use."));
+static cl::opt<std::string> CCBinary("gcc", cl::init(""),
+                                     cl::desc("The gcc binary to use."));
 
-cl::list<std::string> CCToolArgv("gcc-tool-args", cl::Positional,
-                                 cl::desc("<gcc-tool arguments>..."),
-                                 cl::PositionalEatsArgs);
-}
-
+static cl::list<std::string> CCToolArgv("gcc-tool-args", cl::Positional,
+                                        cl::desc("<gcc-tool arguments>..."),
+                                        cl::PositionalEatsArgs);
 //===----------------------------------------------------------------------===//
 // BugDriver method implementation
 //

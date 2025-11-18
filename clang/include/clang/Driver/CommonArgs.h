@@ -76,6 +76,9 @@ void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
                     const JobAction &JA, const llvm::opt::ArgList &Args,
                     const InputInfo &Output, const char *OutFile);
 
+void addDTLTOOptions(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
+                     llvm::opt::ArgStringList &CmdArgs);
+
 void addLTOOptions(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs, const InputInfo &Output,
                    const InputInfoList &Inputs, bool IsThinLTO);
@@ -303,6 +306,11 @@ std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
 
 // Render a frontend option corresponding to ComplexRangeKind.
 std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
+
+// Set the complex range and output a warning as needed.
+void setComplexRange(const Driver &D, StringRef NewOpt,
+                     LangOptions::ComplexRangeKind NewRange, StringRef &LastOpt,
+                     LangOptions::ComplexRangeKind &Range);
 
 } // end namespace tools
 } // end namespace driver

@@ -590,7 +590,8 @@ bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
                                           MCRegister FromReg) const {
   auto HasRegUnitInterference = [&](MCRegUnit Unit) {
     // Instantiate a "subquery", not to be confused with the Queries array.
-    LiveIntervalUnion::Query SubQ(VirtReg, Matrix->getLiveUnions()[Unit]);
+    LiveIntervalUnion::Query SubQ(
+        VirtReg, Matrix->getLiveUnions()[static_cast<unsigned>(Unit)]);
     return SubQ.checkInterference();
   };
 
@@ -1225,12 +1226,11 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   return doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
 }
 
-unsigned
-RAGreedy::calculateRegionSplitCostAroundReg(MCPhysReg PhysReg,
-                                            AllocationOrder &Order,
-                                            BlockFrequency &BestCost,
-                                            unsigned &NumCands,
-                                            unsigned &BestCand) {
+unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
+                                                     AllocationOrder &Order,
+                                                     BlockFrequency &BestCost,
+                                                     unsigned &NumCands,
+                                                     unsigned &BestCand) {
   // Discard bad candidates before we run out of interference cache cursors.
   // This will only affect register classes with a lot of registers (>32).
   if (NumCands == IntfCache.getMaxCursors()) {
@@ -1309,7 +1309,7 @@ unsigned RAGreedy::calculateRegionSplitCost(const LiveInterval &VirtReg,
                                             unsigned &NumCands,
                                             bool IgnoreCSR) {
   unsigned BestCand = NoCand;
-  for (MCPhysReg PhysReg : Order) {
+  for (MCRegister PhysReg : Order) {
     assert(PhysReg);
     if (IgnoreCSR && EvictAdvisor->isUnusedCalleeSavedReg(PhysReg))
       continue;
@@ -1363,7 +1363,7 @@ MCRegister RAGreedy::doRegionSplit(const LiveInterval &VirtReg,
 
 // VirtReg has a physical Hint, this function tries to split VirtReg around
 // Hint if we can place new COPY instructions in cold blocks.
-bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
+bool RAGreedy::trySplitAroundHintReg(MCRegister Hint,
                                      const LiveInterval &VirtReg,
                                      SmallVectorImpl<Register> &NewVRegs,
                                      AllocationOrder &Order) {
@@ -1406,13 +1406,28 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
       continue;
 
     // Check if VirtReg interferes with OtherReg after this COPY instruction.
-    if (!IsDef && VirtReg.liveAt(LIS->getInstructionIndex(Instr).getRegSlot()))
-      continue;
+    if (Opnd.readsReg()) {
+      SlotIndex Index = LIS->getInstructionIndex(Instr).getRegSlot();
+
+      if (SubReg) {
+        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubReg);
+        if (IsDef)
+          Mask = ~Mask;
+
+        if (any_of(VirtReg.subranges(), [=](const LiveInterval::SubRange &S) {
+              return (S.LaneMask & Mask).any() && S.liveAt(Index);
+            })) {
+          continue;
+        }
+      } else {
+        if (VirtReg.liveAt(Index))
+          continue;
+      }
+    }
 
     MCRegister OtherPhysReg =
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    MCRegister ThisHint =
-        SubReg ? TRI->getSubReg(Hint, SubReg) : MCRegister(Hint);
+    MCRegister ThisHint = SubReg ? TRI->getSubReg(Hint, SubReg) : Hint;
     if (OtherPhysReg == ThisHint)
       Cost += MBFI->getBlockFreq(Instr.getParent());
   }
@@ -1667,7 +1682,7 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
     // StartIdx and after StopIdx.
     //
     LiveIntervalUnion::SegmentIter IntI =
-        Matrix->getLiveUnions()[Unit].find(StartIdx);
+        Matrix->getLiveUnions()[static_cast<unsigned>(Unit)].find(StartIdx);
     for (unsigned Gap = 0; IntI.valid() && IntI.start() < StopIdx; ++IntI) {
       // Skip the gaps before IntI.
       while (Uses[Gap+1].getBoundaryIndex() < IntI.start())
@@ -1806,7 +1821,7 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
       (1.0f / MBFI->getEntryFreq().getFrequency());
   SmallVector<float, 8> GapWeight;
 
-  for (MCPhysReg PhysReg : Order) {
+  for (MCRegister PhysReg : Order) {
     assert(PhysReg);
     // Keep track of the largest spill weight that would need to be evicted in
     // order to make use of PhysReg between UseSlots[I] and UseSlots[I + 1].
@@ -2419,25 +2434,28 @@ void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
     unsigned SubReg = Opnd.getSubReg();
 
     // Get the current assignment.
-    MCRegister OtherPhysReg =
-        OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    if (OtherSubReg) {
-      if (OtherReg.isPhysical()) {
-        MCRegister Tuple =
-            TRI->getMatchingSuperReg(OtherPhysReg, OtherSubReg, RC);
-        if (!Tuple)
-          continue;
-        OtherPhysReg = Tuple;
-      } else {
-        // TODO: There should be a hinting mechanism for subregisters
-        if (SubReg != OtherSubReg)
-          continue;
-      }
+    MCRegister OtherPhysReg;
+    if (OtherReg.isPhysical()) {
+      if (OtherSubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, OtherSubReg, RC);
+      else if (SubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, SubReg, RC);
+      else
+        OtherPhysReg = OtherReg;
+    } else {
+      OtherPhysReg = VRM->getPhys(OtherReg);
+      // TODO: Should find matching superregister, but applying this in the
+      // non-hint case currently causes regressions
+
+      if (SubReg && OtherSubReg && SubReg != OtherSubReg)
+        continue;
     }
 
     // Push the collected information.
-    Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
-                           OtherPhysReg));
+    if (OtherPhysReg) {
+      Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
+                             OtherPhysReg));
+    }
   }
 }
 
@@ -2466,15 +2484,13 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   // We have a broken hint, check if it is possible to fix it by
   // reusing PhysReg for the copy-related live-ranges. Indeed, we evicted
   // some register and PhysReg may be available for the other live-ranges.
-  SmallSet<Register, 4> Visited;
-  SmallVector<Register, 2> RecoloringCandidates;
   HintsInfo Info;
   Register Reg = VirtReg.reg();
   MCRegister PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
-  Visited.insert(Reg);
-  RecoloringCandidates.push_back(Reg);
+  SmallSet<Register, 4> Visited = {Reg};
+  SmallVector<Register, 2> RecoloringCandidates = {Reg};
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
@@ -2482,12 +2498,10 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   do {
     Reg = RecoloringCandidates.pop_back_val();
 
-    // We cannot recolor physical register.
-    if (Reg.isPhysical())
-      continue;
+    MCRegister CurrPhys = VRM->getPhys(Reg);
 
     // This may be a skipped register.
-    if (!VRM->hasPhys(Reg)) {
+    if (!CurrPhys) {
       assert(!shouldAllocateRegister(Reg) &&
              "We have an unallocated variable which should have been handled");
       continue;
@@ -2496,7 +2510,6 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Get the live interval mapped with this virtual register to be able
     // to check for the interference with the new color.
     LiveInterval &LI = LIS->getInterval(Reg);
-    MCRegister CurrPhys = VRM->getPhys(Reg);
     // Check that the new color matches the register class constraints and
     // that it is free for this live range.
     if (CurrPhys != PhysReg && (!MRI->getRegClass(Reg)->contains(PhysReg) ||
@@ -2533,7 +2546,8 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Push all copy-related live-ranges to keep reconciling the broken
     // hints.
     for (const HintInfo &HI : Info) {
-      if (Visited.insert(HI.Reg).second)
+      // We cannot recolor physical register.
+      if (HI.Reg.isVirtual() && Visited.insert(HI.Reg).second)
         RecoloringCandidates.push_back(HI.Reg);
     }
   } while (!RecoloringCandidates.empty());

@@ -634,6 +634,10 @@ MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);
 /// Gets the location of the operation.
 MLIR_CAPI_EXPORTED MlirLocation mlirOperationGetLocation(MlirOperation op);
 
+/// Sets the location of the operation.
+MLIR_CAPI_EXPORTED void mlirOperationSetLocation(MlirOperation op,
+                                                 MlirLocation loc);
+
 /// Gets the type id of the operation.
 /// Returns null if the operation does not have a registered operation
 /// description.

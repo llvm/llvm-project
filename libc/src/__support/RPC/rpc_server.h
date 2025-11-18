@@ -298,7 +298,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
 
     results[lane] = static_cast<int>(
         fwrite(buffer, 1, writer.get_chars_written(), files[lane]));
-    if (results[lane] != writer.get_chars_written() || ret == -1)
+    if (size_t(results[lane]) != writer.get_chars_written() || ret == -1)
       results[lane] = -1;
   }
 
@@ -395,7 +395,9 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
     port.recv([](rpc::Buffer *buffer, uint32_t) {
       int status = 0;
       __builtin_memcpy(&status, buffer->data, sizeof(int));
-      exit(status);
+      // We want a quick exit to avoid conflicts with offloading library
+      // teardowns when called from the GPU.
+      quick_exit(status);
     });
     break;
   }

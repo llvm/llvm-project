@@ -56,15 +56,20 @@
 // | async context if needed           |
 // | (a.k.a. "frame record")           |
 // |-----------------------------------| <- fp(=x29)
-// |   <hazard padding>                |
-// |-----------------------------------|
-// |                                   |
-// | callee-saved fp/simd/SVE regs     |
-// |                                   |
-// |-----------------------------------|
-// |                                   |
-// |        SVE stack objects          |
-// |                                   |
+//        Default SVE stack layout                 Split SVE objects
+//   (aarch64-split-sve-objects=false)      (aarch64-split-sve-objects=true)
+// |-----------------------------------|  |-----------------------------------|
+// |         <hazard padding>          |  | callee-saved PPR registers        |
+// |-----------------------------------|  |-----------------------------------|
+// |                                   |  |         PPR stack objects         |
+// | callee-saved fp/simd/SVE regs     |  |-----------------------------------|
+// |                                   |  |         <hazard padding>          |
+// |-----------------------------------|  |-----------------------------------|
+// |                                   |  | callee-saved ZPR/FPR registers    |
+// |        SVE stack objects          |  |-----------------------------------|
+// |                                   |  |         ZPR stack objects         |
+// |-----------------------------------|  |-----------------------------------|
+//                                         ^ NB: FPR CSRs are promoted to ZPRs
 // |-----------------------------------|
 // |.empty.space.to.make.part.below....|
 // |.aligned.in.case.it.needs.more.than| (size of this area is unknown at
@@ -213,10 +218,10 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PrologueEpilogue.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -274,6 +279,11 @@ static cl::opt<bool> OrderFrameObjects("aarch64-order-frame-objects",
                                        cl::desc("sort stack allocations"),
                                        cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    SplitSVEObjects("aarch64-split-sve-objects",
+                    cl::desc("Split allocation of ZPR & PPR objects"),
+                    cl::init(true), cl::Hidden);
+
 cl::opt<bool> EnableHomogeneousPrologEpilog(
     "homogeneous-prolog-epilog", cl::Hidden,
     cl::desc("Emit homogeneous prologue and epilogue for the size "
@@ -324,7 +334,35 @@ AArch64FrameLowering::getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(const AArch64FrameLowering &,
                                       MachineFunction &MF);
 
-// Conservatively, returns true if the function is likely to have an SVE vectors
+enum class AssignObjectOffsets { No, Yes };
+/// Process all the SVE stack objects and the SVE stack size and offsets for
+/// each object. If AssignOffsets is "Yes", the offsets get assigned (and SVE
+/// stack sizes set). Returns the size of the SVE stack.
+static SVEStackSizes determineSVEStackSizes(MachineFunction &MF,
+                                            AssignObjectOffsets AssignOffsets);
+
+static unsigned getStackHazardSize(const MachineFunction &MF) {
+  return MF.getSubtarget<AArch64Subtarget>().getStreamingHazardSize();
+}
+
+StackOffset
+AArch64FrameLowering::getZPRStackSize(const MachineFunction &MF) const {
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  return StackOffset::getScalable(AFI->getStackSizeZPR());
+}
+
+StackOffset
+AArch64FrameLowering::getPPRStackSize(const MachineFunction &MF) const {
+  // With split SVE objects, the hazard padding is added to the PPR region,
+  // which places it between the [GPR, PPR] area and the [ZPR, FPR] area. This
+  // avoids hazards between both GPRs and FPRs and ZPRs and PPRs.
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  return StackOffset::get(AFI->hasSplitSVEObjects() ? getStackHazardSize(MF)
+                                                    : 0,
+                          AFI->getStackSizePPR());
+}
+
+// Conservatively, returns true if the function is likely to have SVE vectors
 // on the stack. This function is safe to be called before callee-saves or
 // object offsets have been determined.
 static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
@@ -338,7 +376,7 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   for (int FI = MFI.getObjectIndexBegin(); FI < MFI.getObjectIndexEnd(); FI++) {
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector)
+    if (MFI.hasScalableStackID(FI))
       return true;
   }
 
@@ -482,13 +520,6 @@ AArch64FrameLowering::getFixedObjectSize(const MachineFunction &MF,
   }
 }
 
-/// Returns the size of the entire SVE stackframe (calleesaves + spills).
-StackOffset
-AArch64FrameLowering::getSVEStackSize(const MachineFunction &MF) const {
-  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  return StackOffset::getScalable((int64_t)AFI->getStackSizeSVE());
-}
-
 bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
   if (!EnableRedZone)
     return false;
@@ -514,7 +545,7 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
                                  !Subtarget.hasSVE();
 
   return !(MFI.hasCalls() || hasFP(MF) || NumBytes > RedZoneSize ||
-           getSVEStackSize(MF) || LowerQRegCopyThroughMem);
+           AFI->hasSVEStackSize() || LowerQRegCopyThroughMem);
 }
 
 /// hasFPImpl - Return true if the specified function should have a dedicated
@@ -557,7 +588,7 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // CFA in either of these cases.
   if (AFI.needsDwarfUnwindInfo(MF) &&
       ((requiresSaveVG(MF) || AFI.getSMEFnAttrs().hasStreamingBody()) &&
-       (!AFI.hasCalculatedStackSizeSVE() || AFI.getStackSizeSVE() > 0)))
+       (!AFI.hasCalculatedStackSizeSVE() || AFI.hasSVEStackSize())))
     return true;
   // With large callframes around we may need to use FP to access the scavenging
   // emergency spillslot.
@@ -613,10 +644,10 @@ bool AArch64FrameLowering::hasReservedCallFrame(
 MachineBasicBlock::iterator AArch64FrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
-  const AArch64InstrInfo *TII =
-      static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
-  const AArch64TargetLowering *TLI =
-      MF.getSubtarget<AArch64Subtarget>().getTargetLowering();
+
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64InstrInfo *TII = Subtarget.getInstrInfo();
+  const AArch64TargetLowering *TLI = Subtarget.getTargetLowering();
   [[maybe_unused]] MachineFrameInfo &MFI = MF.getFrameInfo();
   DebugLoc DL = I->getDebugLoc();
   unsigned Opc = I->getOpcode();
@@ -1051,14 +1082,24 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
   case AArch64::LDPXi: {
     Register Reg0 = MBBI->getOperand(0).getReg();
     Register Reg1 = MBBI->getOperand(1).getReg();
+
+    int SEHReg0 = RegInfo->getSEHRegNum(Reg0);
+    int SEHReg1 = RegInfo->getSEHRegNum(Reg1);
+
     if (Reg0 == AArch64::FP && Reg1 == AArch64::LR)
       MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveFPLR))
                 .addImm(Imm * 8)
                 .setMIFlag(Flag);
-    else
+    else if (SEHReg0 >= 19 && SEHReg1 >= 19)
       MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveRegP))
-                .addImm(RegInfo->getSEHRegNum(Reg0))
-                .addImm(RegInfo->getSEHRegNum(Reg1))
+                .addImm(SEHReg0)
+                .addImm(SEHReg1)
+                .addImm(Imm * 8)
+                .setMIFlag(Flag);
+    else
+      MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegIP))
+                .addImm(SEHReg0)
+                .addImm(SEHReg1)
                 .addImm(Imm * 8)
                 .setMIFlag(Flag);
     break;
@@ -1066,10 +1107,16 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
   case AArch64::STRXui:
   case AArch64::LDRXui: {
     int Reg = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
-    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveReg))
-              .addImm(Reg)
-              .addImm(Imm * 8)
-              .setMIFlag(Flag);
+    if (Reg >= 19)
+      MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveReg))
+                .addImm(Reg)
+                .addImm(Imm * 8)
+                .setMIFlag(Flag);
+    else
+      MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegI))
+                .addImm(Reg)
+                .addImm(Imm * 8)
+                .setMIFlag(Flag);
     break;
   }
   case AArch64::STRDui:
@@ -1124,10 +1171,6 @@ bool AArch64FrameLowering::requiresSaveVG(const MachineFunction &MF) const {
 
 static bool isTargetWindows(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
-}
-
-static unsigned getStackHazardSize(const MachineFunction &MF) {
-  return MF.getSubtarget<AArch64Subtarget>().getStreamingHazardSize();
 }
 
 void AArch64FrameLowering::emitPacRetPlusLeafHardening(
@@ -1212,7 +1255,9 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   const auto &MFI = MF.getFrameInfo();
 
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
-  StackOffset SVEStackSize = getSVEStackSize(MF);
+  StackOffset ZPRStackSize = getZPRStackSize(MF);
+  StackOffset PPRStackSize = getPPRStackSize(MF);
+  StackOffset SVEStackSize = ZPRStackSize + PPRStackSize;
 
   // For VLA-area objects, just emit an offset at the end of the stack frame.
   // Whilst not quite correct, these objects do live at the end of the frame and
@@ -1228,11 +1273,21 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool FPAfterSVECalleeSaves =
       isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
-  if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+  if (MFI.hasScalableStackID(FI)) {
     if (FPAfterSVECalleeSaves &&
-        -ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize())
+        -ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize()) {
+      assert(!AFI->hasSplitSVEObjects() &&
+             "split-sve-objects not supported with FPAfterSVECalleeSaves");
       return StackOffset::getScalable(ObjectOffset);
-    return StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
+    }
+    StackOffset AccessOffset{};
+    // The scalable vectors are below (lower address) the scalable predicates
+    // with split SVE objects, so we must subtract the size of the predicates.
+    if (AFI->hasSplitSVEObjects() &&
+        MFI.getStackID(FI) == TargetStackID::ScalableVector)
+      AccessOffset = -PPRStackSize;
+    return AccessOffset +
+           StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
                             ObjectOffset);
   }
 
@@ -1280,8 +1335,8 @@ StackOffset AArch64FrameLowering::getStackOffset(const MachineFunction &MF,
 // TODO: This function currently does not work for scalable vectors.
 int AArch64FrameLowering::getSEHFrameIndexOffset(const MachineFunction &MF,
                                                  int FI) const {
-  const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
+  const AArch64RegisterInfo *RegInfo =
+      MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
   int ObjectOffset = MF.getFrameInfo().getObjectOffset(FI);
   return RegInfo->getLocalAddressRegister(MF) == AArch64::FP
              ? getFPOffset(MF, ObjectOffset).getFixed()
@@ -1294,26 +1349,29 @@ StackOffset AArch64FrameLowering::resolveFrameIndexReference(
   const auto &MFI = MF.getFrameInfo();
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
   bool isFixed = MFI.isFixedObjectIndex(FI);
-  bool isSVE = MFI.getStackID(FI) == TargetStackID::ScalableVector;
-  return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, isSVE, FrameReg,
-                                     PreferFP, ForSimm);
+  auto StackID = static_cast<TargetStackID::Value>(MFI.getStackID(FI));
+  return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, StackID,
+                                     FrameReg, PreferFP, ForSimm);
 }
 
 StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
-    const MachineFunction &MF, int64_t ObjectOffset, bool isFixed, bool isSVE,
-    Register &FrameReg, bool PreferFP, bool ForSimm) const {
+    const MachineFunction &MF, int64_t ObjectOffset, bool isFixed,
+    TargetStackID::Value StackID, Register &FrameReg, bool PreferFP,
+    bool ForSimm) const {
   const auto &MFI = MF.getFrameInfo();
-  const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
-  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
 
   int64_t FPOffset = getFPOffset(MF, ObjectOffset).getFixed();
   int64_t Offset = getStackOffset(MF, ObjectOffset).getFixed();
   bool isCSR =
       !isFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
+  bool isSVE = MFI.isScalableStackID(StackID);
 
-  const StackOffset &SVEStackSize = getSVEStackSize(MF);
+  StackOffset ZPRStackSize = getZPRStackSize(MF);
+  StackOffset PPRStackSize = getPPRStackSize(MF);
+  StackOffset SVEStackSize = ZPRStackSize + PPRStackSize;
 
   // Use frame pointer to reference fixed objects. Use it for locals if
   // there are VLAs or a dynamically realigned SP (and thus the SP isn't
@@ -1388,12 +1446,25 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
 
   if (isSVE) {
-    StackOffset FPOffset =
-        StackOffset::get(-AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
+    StackOffset FPOffset = StackOffset::get(
+        -AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
     StackOffset SPOffset =
         SVEStackSize +
         StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
                          ObjectOffset);
+
+    // With split SVE objects the ObjectOffset is relative to the split area
+    // (i.e. the PPR area or ZPR area respectively).
+    if (AFI->hasSplitSVEObjects() && StackID == TargetStackID::ScalableVector) {
+      // If we're accessing an SVE vector with split SVE objects...
+      // - From the FP we need to move down past the PPR area:
+      FPOffset -= PPRStackSize;
+      // - From the SP we only need to move up to the ZPR area:
+      SPOffset -= PPRStackSize;
+      // Note: `SPOffset = SVEStackSize + ...`, so `-= PPRStackSize` results in
+      // `SPOffset = ZPRStackSize + ...`.
+    }
+
     if (FPAfterSVECalleeSaves) {
       FPOffset += StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
       if (-ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize()) {
@@ -1401,6 +1472,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         SPOffset += StackOffset::getFixed(AFI->getCalleeSavedStackSize());
       }
     }
+
     // Always use the FP for SVE spills if available and beneficial.
     if (hasFP(MF) && (SPOffset.getFixed() ||
                       FPOffset.getScalable() < SPOffset.getScalable() ||
@@ -1408,13 +1480,13 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       FrameReg = RegInfo->getFrameRegister(MF);
       return FPOffset;
     }
-
     FrameReg = RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister()
-                                           : (unsigned)AArch64::SP;
+                                           : MCRegister(AArch64::SP);
+
     return SPOffset;
   }
 
-  StackOffset ScalableOffset = {};
+  StackOffset SVEAreaOffset = {};
   if (FPAfterSVECalleeSaves) {
     // In this stack layout, the FP is in between the callee saves and other
     // SVE allocations.
@@ -1422,25 +1494,25 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
     if (UseFP) {
       if (isFixed)
-        ScalableOffset = SVECalleeSavedStack;
+        SVEAreaOffset = SVECalleeSavedStack;
       else if (!isCSR)
-        ScalableOffset = SVECalleeSavedStack - SVEStackSize;
+        SVEAreaOffset = SVECalleeSavedStack - SVEStackSize;
     } else {
       if (isFixed)
-        ScalableOffset = SVEStackSize;
+        SVEAreaOffset = SVEStackSize;
       else if (isCSR)
-        ScalableOffset = SVEStackSize - SVECalleeSavedStack;
+        SVEAreaOffset = SVEStackSize - SVECalleeSavedStack;
     }
   } else {
     if (UseFP && !(isFixed || isCSR))
-      ScalableOffset = -SVEStackSize;
+      SVEAreaOffset = -SVEStackSize;
     if (!UseFP && (isFixed || isCSR))
-      ScalableOffset = SVEStackSize;
+      SVEAreaOffset = SVEStackSize;
   }
 
   if (UseFP) {
     FrameReg = RegInfo->getFrameRegister(MF);
-    return StackOffset::getFixed(FPOffset) + ScalableOffset;
+    return StackOffset::getFixed(FPOffset) + SVEAreaOffset;
   }
 
   // Use the base pointer if we have one.
@@ -1457,7 +1529,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       Offset -= AFI->getLocalStackSize();
   }
 
-  return StackOffset::getFixed(Offset) + ScalableOffset;
+  return StackOffset::getFixed(Offset) + SVEAreaOffset;
 }
 
 static unsigned getPrologueDeath(MachineFunction &MF, unsigned Reg) {
@@ -1482,8 +1554,10 @@ static bool produceCompactUnwindFrame(const AArch64FrameLowering &AFL,
          !AFL.requiresSaveVG(MF) && !AFI->isSVECC();
 }
 
-static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                             bool NeedsWinCFI, bool IsFirst,
+static bool invalidateWindowsRegisterPairing(bool SpillExtendedVolatile,
+                                             unsigned SpillCount, unsigned Reg1,
+                                             unsigned Reg2, bool NeedsWinCFI,
+                                             bool IsFirst,
                                              const TargetRegisterInfo *TRI) {
   // If we are generating register pairs for a Windows function that requires
   // EH support, then pair consecutive registers only.  There are no unwind
@@ -1496,8 +1570,18 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
     return true;
   if (!NeedsWinCFI)
     return false;
+
+  // ARM64EC introduced `save_any_regp`, which expects 16-byte alignment.
+  // This is handled by only allowing paired spills for registers spilled at
+  // even positions (which should be 16-byte aligned, as other GPRs/FPRs are
+  // 8-bytes). We carve out an exception for {FP,LR}, which does not require
+  // 16-byte alignment in the uop representation.
   if (TRI->getEncodingValue(Reg2) == TRI->getEncodingValue(Reg1) + 1)
-    return false;
+    return SpillExtendedVolatile
+               ? !((Reg1 == AArch64::FP && Reg2 == AArch64::LR) ||
+                   (SpillCount % 2) == 0)
+               : false;
+
   // If pairing a GPR with LR, the pair can be described by the save_lrpair
   // opcode. If this is the first register pair, it would end up with a
   // predecrement, but there's no save_lrpair_x opcode, so we can only do this
@@ -1513,12 +1597,15 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 /// WindowsCFI requires that only consecutive registers can be paired.
 /// LR and FP need to be allocated together when the frame needs to save
 /// the frame-record. This means any other register pairing with LR is invalid.
-static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                      bool UsesWinAAPCS, bool NeedsWinCFI,
-                                      bool NeedsFrameRecord, bool IsFirst,
+static bool invalidateRegisterPairing(bool SpillExtendedVolatile,
+                                      unsigned SpillCount, unsigned Reg1,
+                                      unsigned Reg2, bool UsesWinAAPCS,
+                                      bool NeedsWinCFI, bool NeedsFrameRecord,
+                                      bool IsFirst,
                                       const TargetRegisterInfo *TRI) {
   if (UsesWinAAPCS)
-    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI, IsFirst,
+    return invalidateWindowsRegisterPairing(SpillExtendedVolatile, SpillCount,
+                                            Reg1, Reg2, NeedsWinCFI, IsFirst,
                                             TRI);
 
   // If we need to store the frame record, don't pair any register
@@ -1532,8 +1619,8 @@ static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
 namespace {
 
 struct RegPairInfo {
-  unsigned Reg1 = AArch64::NoRegister;
-  unsigned Reg2 = AArch64::NoRegister;
+  Register Reg1;
+  Register Reg2;
   int FrameIdx;
   int Offset;
   enum RegType { GPR, FPR64, FPR128, PPR, ZPR, VG } Type;
@@ -1541,21 +1628,21 @@ struct RegPairInfo {
 
   RegPairInfo() = default;
 
-  bool isPaired() const { return Reg2 != AArch64::NoRegister; }
+  bool isPaired() const { return Reg2.isValid(); }
 
   bool isScalable() const { return Type == PPR || Type == ZPR; }
 };
 
 } // end anonymous namespace
 
-unsigned findFreePredicateReg(BitVector &SavedRegs) {
+MCRegister findFreePredicateReg(BitVector &SavedRegs) {
   for (unsigned PReg = AArch64::P8; PReg <= AArch64::P15; ++PReg) {
     if (SavedRegs.test(PReg)) {
       unsigned PNReg = PReg - AArch64::P0 + AArch64::PN0;
-      return PNReg;
+      return MCRegister(PNReg);
     }
   }
-  return AArch64::NoRegister;
+  return MCRegister();
 }
 
 // The multivector LD/ST are available only for SME or SVE2p1 targets
@@ -1614,11 +1701,38 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     RegInc = -1;
     FirstReg = Count - 1;
   }
+
   bool FPAfterSVECalleeSaves = IsWindows && AFI->getSVECalleeSavedStackSize();
-  int ScalableByteOffset =
-      FPAfterSVECalleeSaves ? 0 : AFI->getSVECalleeSavedStackSize();
+  // Windows AAPCS has x9-x15 as volatile registers, x16-x17 as intra-procedural
+  // scratch, x18 as platform reserved. However, clang has extended calling
+  // convensions such as preserve_most and preserve_all which treat these as
+  // CSR. As such, the ARM64 unwind uOPs bias registers by 19. We use ARM64EC
+  // uOPs which have separate restrictions. We need to check for that.
+  //
+  // NOTE: we currently do not account for the D registers as LLVM does not
+  // support non-ABI compliant D register spills.
+  bool SpillExtendedVolatile =
+      IsWindows && llvm::any_of(CSI, [](const CalleeSavedInfo &CSI) {
+        const auto &Reg = CSI.getReg();
+        return Reg >= AArch64::X0 && Reg <= AArch64::X18;
+      });
+
+  int ZPRByteOffset = 0;
+  int PPRByteOffset = 0;
+  bool SplitPPRs = AFI->hasSplitSVEObjects();
+  if (SplitPPRs) {
+    ZPRByteOffset = AFI->getZPRCalleeSavedStackSize();
+    PPRByteOffset = AFI->getPPRCalleeSavedStackSize();
+  } else if (!FPAfterSVECalleeSaves) {
+    ZPRByteOffset =
+        AFI->getZPRCalleeSavedStackSize() + AFI->getPPRCalleeSavedStackSize();
+    // Unused: Everything goes in ZPR space.
+    PPRByteOffset = 0;
+  }
+
   bool NeedGapToAlignStack = AFI->hasCalleeSaveStackFreeSpace();
   Register LastReg = 0;
+  bool HasCSHazardPadding = AFI->hasStackHazardSlotIndex() && !SplitPPRs;
 
   // When iterating backwards, the loop condition relies on unsigned wraparound.
   for (unsigned i = FirstReg; i < Count; i += RegInc) {
@@ -1647,8 +1761,12 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       llvm_unreachable("Unsupported register class.");
     }
 
+    int &ScalableByteOffset = RPI.Type == RegPairInfo::PPR && SplitPPRs
+                                  ? PPRByteOffset
+                                  : ZPRByteOffset;
+
     // Add the stack hazard size as we transition from GPR->FPR CSRs.
-    if (AFI->hasStackHazardSlotIndex() &&
+    if (HasCSHazardPadding &&
         (!LastReg || !AArch64InstrInfo::isFpOrNEON(LastReg)) &&
         AArch64InstrInfo::isFpOrNEON(RPI.Reg1))
       ByteOffset += StackFillDir * StackHazardSize;
@@ -1656,20 +1774,22 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
 
     int Scale = TRI->getSpillSize(*RPI.RC);
     // Add the next reg to the pair if it is in the same register class.
-    if (unsigned(i + RegInc) < Count && !AFI->hasStackHazardSlotIndex()) {
+    if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
       bool IsFirst = i == FirstReg;
+      unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) &&
-            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows,
-                                       NeedsWinCFI, NeedsFrameRecord, IsFirst,
-                                       TRI))
+            !invalidateRegisterPairing(
+                SpillExtendedVolatile, SpillCount, RPI.Reg1, NextReg, IsWindows,
+                NeedsWinCFI, NeedsFrameRecord, IsFirst, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
         if (AArch64::FPR64RegClass.contains(NextReg) &&
-            !invalidateWindowsRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI,
+            !invalidateWindowsRegisterPairing(SpillExtendedVolatile, SpillCount,
+                                              RPI.Reg1, NextReg, NeedsWinCFI,
                                               IsFirst, TRI))
           RPI.Reg2 = NextReg;
         break;
@@ -1855,8 +1975,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   }
   bool PTrueCreated = false;
   for (const RegPairInfo &RPI : llvm::reverse(RegPairs)) {
-    unsigned Reg1 = RPI.Reg1;
-    unsigned Reg2 = RPI.Reg2;
+    Register Reg1 = RPI.Reg1;
+    Register Reg2 = RPI.Reg2;
     unsigned StrOpc;
 
     // Issue sequence of spills for cs regs.  The first spill may be converted
@@ -1885,15 +2005,14 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       StrOpc = RPI.isPaired() ? AArch64::ST1B_2Z_IMM : AArch64::STR_ZXI;
       break;
     case RegPairInfo::PPR:
-      StrOpc =
-          Size == 16 ? AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO : AArch64::STR_PXI;
+      StrOpc = AArch64::STR_PXI;
       break;
     case RegPairInfo::VG:
       StrOpc = AArch64::STRXui;
       break;
     }
 
-    unsigned X0Scratch = AArch64::NoRegister;
+    Register X0Scratch;
     auto RestoreX0 = make_scope_exit([&] {
       if (X0Scratch != AArch64::NoRegister)
         BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X0)
@@ -1935,11 +2054,15 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       }
     }
 
-    LLVM_DEBUG(dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
-               if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
-               dbgs() << ") -> fi#(" << RPI.FrameIdx;
-               if (RPI.isPaired()) dbgs() << ", " << RPI.FrameIdx + 1;
-               dbgs() << ")\n");
+    LLVM_DEBUG({
+      dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
+      if (RPI.isPaired())
+        dbgs() << ", " << printReg(Reg2, TRI);
+      dbgs() << ") -> fi#(" << RPI.FrameIdx;
+      if (RPI.isPaired())
+        dbgs() << ", " << RPI.FrameIdx + 1;
+      dbgs() << ")\n";
+    });
 
     assert((!NeedsWinCFI || !(Reg1 == AArch64::LR && Reg2 == AArch64::FP)) &&
            "Windows unwdinding requires a consecutive (FP,LR) pair");
@@ -2021,10 +2144,14 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
     // Update the StackIDs of the SVE stack slots.
     MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (RPI.Type == RegPairInfo::ZPR || RPI.Type == RegPairInfo::PPR) {
+    if (RPI.Type == RegPairInfo::ZPR) {
       MFI.setStackID(FrameIdxReg1, TargetStackID::ScalableVector);
       if (RPI.isPaired())
         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
+    } else if (RPI.Type == RegPairInfo::PPR) {
+      MFI.setStackID(FrameIdxReg1, TargetStackID::ScalablePredicateVector);
+      if (RPI.isPaired())
+        MFI.setStackID(FrameIdxReg2, TargetStackID::ScalablePredicateVector);
     }
   }
   return true;
@@ -2065,8 +2192,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
   bool PTrueCreated = false;
   for (const RegPairInfo &RPI : RegPairs) {
-    unsigned Reg1 = RPI.Reg1;
-    unsigned Reg2 = RPI.Reg2;
+    Register Reg1 = RPI.Reg1;
+    Register Reg2 = RPI.Reg2;
 
     // Issue sequence of restores for cs regs. The last restore may be converted
     // to a post-increment load later by emitEpilogue if the callee-save stack
@@ -2093,17 +2220,20 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       LdrOpc = RPI.isPaired() ? AArch64::LD1B_2Z_IMM : AArch64::LDR_ZXI;
       break;
     case RegPairInfo::PPR:
-      LdrOpc = Size == 16 ? AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO
-                          : AArch64::LDR_PXI;
+      LdrOpc = AArch64::LDR_PXI;
       break;
     case RegPairInfo::VG:
       continue;
     }
-    LLVM_DEBUG(dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
-               if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
-               dbgs() << ") -> fi#(" << RPI.FrameIdx;
-               if (RPI.isPaired()) dbgs() << ", " << RPI.FrameIdx + 1;
-               dbgs() << ")\n");
+    LLVM_DEBUG({
+      dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
+      if (RPI.isPaired())
+        dbgs() << ", " << printReg(Reg2, TRI);
+      dbgs() << ") -> fi#(" << RPI.FrameIdx;
+      if (RPI.isPaired())
+        dbgs() << ", " << RPI.FrameIdx + 1;
+      dbgs() << ")\n";
+    });
 
     // Windows unwind codes require consecutive registers if registers are
     // paired.  Make the switch here, so that the code below will save (x,x+1)
@@ -2199,6 +2329,11 @@ static std::optional<int> getLdStFrameID(const MachineInstr &MI,
   return getMMOFrameID(*MI.memoperands_begin(), MFI);
 }
 
+// Returns true if the LDST MachineInstr \p MI is a PPR access.
+static bool isPPRAccess(const MachineInstr &MI) {
+  return AArch64::PPRRegClass.contains(MI.getOperand(0).getReg());
+}
+
 // Check if a Hazard slot is needed for the current function, and if so create
 // one for it. The index is stored in AArch64FunctionInfo->StackHazardSlotIndex,
 // which can be used to determine if any hazard padding is needed.
@@ -2222,26 +2357,50 @@ void AArch64FrameLowering::determineStackHazardSlot(
   bool HasFPRCSRs = any_of(SavedRegs.set_bits(), [](unsigned Reg) {
     return AArch64::FPR64RegClass.contains(Reg) ||
            AArch64::FPR128RegClass.contains(Reg) ||
-           AArch64::ZPRRegClass.contains(Reg) ||
-           AArch64::PPRRegClass.contains(Reg);
+           AArch64::ZPRRegClass.contains(Reg);
+  });
+  bool HasPPRCSRs = any_of(SavedRegs.set_bits(), [](unsigned Reg) {
+    return AArch64::PPRRegClass.contains(Reg);
   });
   bool HasFPRStackObjects = false;
-  if (!HasFPRCSRs) {
-    std::vector<unsigned> FrameObjects(MFI.getObjectIndexEnd());
+  bool HasPPRStackObjects = false;
+  if (!HasFPRCSRs || SplitSVEObjects) {
+    enum SlotType : uint8_t {
+      Unknown = 0,
+      ZPRorFPR = 1 << 0,
+      PPR = 1 << 1,
+      GPR = 1 << 2,
+      LLVM_MARK_AS_BITMASK_ENUM(GPR)
+    };
+
+    // Find stack slots solely used for one kind of register (ZPR, PPR, etc.),
+    // based on the kinds of accesses used in the function.
+    SmallVector<SlotType> SlotTypes(MFI.getObjectIndexEnd(), SlotType::Unknown);
     for (auto &MBB : MF) {
       for (auto &MI : MBB) {
         std::optional<int> FI = getLdStFrameID(MI, MFI);
-        if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
-              AArch64InstrInfo::isFpOrNEON(MI))
-            FrameObjects[*FI] |= 2;
-          else
-            FrameObjects[*FI] |= 1;
+        if (!FI || FI < 0 || FI > int(SlotTypes.size()))
+          continue;
+        if (MFI.hasScalableStackID(*FI)) {
+          SlotTypes[*FI] |=
+              isPPRAccess(MI) ? SlotType::PPR : SlotType::ZPRorFPR;
+        } else {
+          SlotTypes[*FI] |= AArch64InstrInfo::isFpOrNEON(MI)
+                                ? SlotType::ZPRorFPR
+                                : SlotType::GPR;
         }
       }
     }
-    HasFPRStackObjects =
-        any_of(FrameObjects, [](unsigned B) { return (B & 3) == 2; });
+
+    for (int FI = 0; FI < int(SlotTypes.size()); ++FI) {
+      HasFPRStackObjects |= SlotTypes[FI] == SlotType::ZPRorFPR;
+      // For SplitSVEObjects remember that this stack slot is a predicate, this
+      // will be needed later when determining the frame layout.
+      if (SlotTypes[FI] == SlotType::PPR) {
+        MFI.setStackID(FI, TargetStackID::ScalablePredicateVector);
+        HasPPRStackObjects = true;
+      }
+    }
   }
 
   if (HasFPRCSRs || HasFPRStackObjects) {
@@ -2249,6 +2408,78 @@ void AArch64FrameLowering::determineStackHazardSlot(
     LLVM_DEBUG(dbgs() << "Created Hazard slot at " << ID << " size "
                       << StackHazardSize << "\n");
     AFI->setStackHazardSlotIndex(ID);
+  }
+
+  if (!AFI->hasStackHazardSlotIndex())
+    return;
+
+  if (SplitSVEObjects) {
+    CallingConv::ID CC = MF.getFunction().getCallingConv();
+    if (AFI->isSVECC() || CC == CallingConv::AArch64_SVE_VectorCall) {
+      AFI->setSplitSVEObjects(true);
+      LLVM_DEBUG(dbgs() << "Using SplitSVEObjects for SVE CC function\n");
+      return;
+    }
+
+    // We only use SplitSVEObjects in non-SVE CC functions if there's a
+    // possibility of a stack hazard between PPRs and ZPRs/FPRs.
+    LLVM_DEBUG(dbgs() << "Determining if SplitSVEObjects should be used in "
+                         "non-SVE CC function...\n");
+
+    // If another calling convention is explicitly set FPRs can't be promoted to
+    // ZPR callee-saves.
+    if (!is_contained({CallingConv::C, CallingConv::Fast}, CC)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Calling convention is not supported with SplitSVEObjects\n");
+      return;
+    }
+
+    if (!HasPPRCSRs && !HasPPRStackObjects) {
+      LLVM_DEBUG(
+          dbgs() << "Not using SplitSVEObjects as no PPRs are on the stack\n");
+      return;
+    }
+
+    if (!HasFPRCSRs && !HasFPRStackObjects) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Not using SplitSVEObjects as no FPRs or ZPRs are on the stack\n");
+      return;
+    }
+
+    [[maybe_unused]] const AArch64Subtarget &Subtarget =
+        MF.getSubtarget<AArch64Subtarget>();
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Expected SVE to be available for PPRs");
+
+    const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+    // With SplitSVEObjects the CS hazard padding is placed between the
+    // PPRs and ZPRs. If there are any FPR CS there would be a hazard between
+    // them and the CS GRPs. Avoid this by promoting all FPR CS to ZPRs.
+    BitVector FPRZRegs(SavedRegs.size());
+    for (size_t Reg = 0, E = SavedRegs.size(); HasFPRCSRs && Reg < E; ++Reg) {
+      BitVector::reference RegBit = SavedRegs[Reg];
+      if (!RegBit)
+        continue;
+      unsigned SubRegIdx = 0;
+      if (AArch64::FPR64RegClass.contains(Reg))
+        SubRegIdx = AArch64::dsub;
+      else if (AArch64::FPR128RegClass.contains(Reg))
+        SubRegIdx = AArch64::zsub;
+      else
+        continue;
+      // Clear the bit for the FPR save.
+      RegBit = false;
+      // Mark that we should save the corresponding ZPR.
+      Register ZReg =
+          TRI->getMatchingSuperReg(Reg, SubRegIdx, &AArch64::ZPRRegClass);
+      FPRZRegs.set(ZReg);
+    }
+    SavedRegs |= FPRZRegs;
+
+    AFI->setSplitSVEObjects(true);
+    LLVM_DEBUG(dbgs() << "SplitSVEObjects enabled!\n");
   }
 }
 
@@ -2260,10 +2491,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  const AArch64RegisterInfo *RegInfo = static_cast<const AArch64RegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   unsigned UnspilledCSGPR = AArch64::NoRegister;
   unsigned UnspilledCSGPRPaired = AArch64::NoRegister;
@@ -2271,9 +2502,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
 
-  unsigned BasePointerReg = RegInfo->hasBasePointer(MF)
-                                ? RegInfo->getBaseRegister()
-                                : (unsigned)AArch64::NoRegister;
+  MCRegister BasePointerReg =
+      RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister() : MCRegister();
 
   unsigned ExtraCSSpill = 0;
   bool HasUnpairedGPR64 = false;
@@ -2283,7 +2513,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
-    const unsigned Reg = CSRegs[i];
+    const MCRegister Reg = CSRegs[i];
 
     // Add the base pointer register to SavedRegs if it is callee-save.
     if (Reg == BasePointerReg)
@@ -2297,7 +2527,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     }
 
     bool RegUsed = SavedRegs.test(Reg);
-    unsigned PairedReg = AArch64::NoRegister;
+    MCRegister PairedReg;
     const bool RegIsGPR64 = AArch64::GPR64RegClass.contains(Reg);
     if (RegIsGPR64 || AArch64::FPR64RegClass.contains(Reg) ||
         AArch64::FPR128RegClass.contains(Reg)) {
@@ -2330,14 +2560,6 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       continue;
     }
 
-    // Always save P4 when PPR spills are ZPR-sized and a predicate above p8 is
-    // spilled. If all of p0-p3 are used as return values p4 is must be free
-    // to reload p8-p15.
-    if (RegInfo->getSpillSize(AArch64::PPRRegClass) == 16 &&
-        AArch64::PPR_p8to15RegClass.contains(Reg)) {
-      SavedRegs.set(AArch64::P4);
-    }
-
     // MachO's compact unwind format relies on all registers being stored in
     // pairs.
     // FIXME: the usual format is actually better if unwinding isn't needed.
@@ -2357,8 +2579,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     // Find a suitable predicate register for the multi-vector spill/fill
     // instructions.
-    unsigned PnReg = findFreePredicateReg(SavedRegs);
-    if (PnReg != AArch64::NoRegister)
+    MCRegister PnReg = findFreePredicateReg(SavedRegs);
+    if (PnReg.isValid())
       AFI->setPredicateRegForFillSpill(PnReg);
     // If no free callee-save has been found assign one.
     if (!AFI->getPredicateRegForFillSpill() &&
@@ -2382,17 +2604,26 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(AArch64::X18);
   }
 
+  // Determine if a Hazard slot should be used and where it should go.
+  // If SplitSVEObjects is used, the hazard padding is placed between the PPRs
+  // and ZPRs. Otherwise, it goes in the callee save area.
+  determineStackHazardSlot(MF, SavedRegs);
+
   // Calculates the callee saved stack size.
   unsigned CSStackSize = 0;
-  unsigned SVECSStackSize = 0;
+  unsigned ZPRCSStackSize = 0;
+  unsigned PPRCSStackSize = 0;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (unsigned Reg : SavedRegs.set_bits()) {
-    auto *RC = TRI->getMinimalPhysRegClass(Reg);
+    auto *RC = TRI->getMinimalPhysRegClass(MCRegister(Reg));
     assert(RC && "expected register class!");
     auto SpillSize = TRI->getSpillSize(*RC);
-    if (AArch64::PPRRegClass.contains(Reg) ||
-        AArch64::ZPRRegClass.contains(Reg))
-      SVECSStackSize += SpillSize;
+    bool IsZPR = AArch64::ZPRRegClass.contains(Reg);
+    bool IsPPR = !IsZPR && AArch64::PPRRegClass.contains(Reg);
+    if (IsZPR)
+      ZPRCSStackSize += SpillSize;
+    else if (IsPPR)
+      PPRCSStackSize += SpillSize;
     else
       CSStackSize += SpillSize;
   }
@@ -2402,16 +2633,14 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // only 64-bit GPRs can be added to SavedRegs.
   unsigned NumSavedRegs = SavedRegs.count();
 
+  // If we have hazard padding in the CS area add that to the size.
+  if (AFI->isStackHazardIncludedInCalleeSaveArea())
+    CSStackSize += getStackHazardSize(MF);
+
   // Increase the callee-saved stack size if the function has streaming mode
   // changes, as we will need to spill the value of the VG register.
   if (requiresSaveVG(MF))
     CSStackSize += 8;
-
-  // Determine if a Hazard slot should be used, and increase the CSStackSize by
-  // StackHazardSize if so.
-  determineStackHazardSlot(MF, SavedRegs);
-  if (AFI->hasStackHazardSlotIndex())
-    CSStackSize += getStackHazardSize(MF);
 
   // If we must call __arm_get_current_vg in the prologue preserve the LR.
   if (requiresSaveVG(MF) && !Subtarget.hasSVE())
@@ -2428,13 +2657,16 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   LLVM_DEBUG({
     dbgs() << "*** determineCalleeSaves\nSaved CSRs:";
     for (unsigned Reg : SavedRegs.set_bits())
-      dbgs() << ' ' << printReg(Reg, RegInfo);
+      dbgs() << ' ' << printReg(MCRegister(Reg), RegInfo);
     dbgs() << "\n";
   });
 
   // If any callee-saved registers are used, the frame cannot be eliminated.
-  int64_t SVEStackSize =
-      alignTo(SVECSStackSize + estimateSVEStackObjectOffsets(MFI), 16);
+  auto [ZPRLocalStackSize, PPRLocalStackSize] =
+      determineSVEStackSizes(MF, AssignObjectOffsets::No);
+  uint64_t SVELocals = ZPRLocalStackSize + PPRLocalStackSize;
+  uint64_t SVEStackSize =
+      alignTo(ZPRCSStackSize + PPRCSStackSize + SVELocals, 16);
   bool CanEliminateFrame = (SavedRegs.count() == 0) && !SVEStackSize;
 
   // The CSR spill slots have not been allocated yet, so estimateStackSize
@@ -2519,7 +2751,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // instructions.
   AFI->setCalleeSavedStackSize(AlignedCSStackSize);
   AFI->setCalleeSaveStackHasFreeSpace(AlignedCSStackSize != CSStackSize);
-  AFI->setSVECalleeSavedStackSize(alignTo(SVECSStackSize, 16));
+  AFI->setSVECalleeSavedStackSize(ZPRCSStackSize, alignTo(PPRCSStackSize, 16));
 }
 
 bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
@@ -2572,7 +2804,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
     // Create a hazard slot as we switch between GPR and FPR CSRs.
-    if (AFI->hasStackHazardSlotIndex() &&
+    if (AFI->isStackHazardIncludedInCalleeSaveArea() &&
         (!LastReg || !AArch64InstrInfo::isFpOrNEON(LastReg)) &&
         AArch64InstrInfo::isFpOrNEON(Reg)) {
       assert(HazardSlotIndex == std::numeric_limits<int>::max() &&
@@ -2611,7 +2843,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Add hazard slot in the case where no FPR CSRs are present.
-  if (AFI->hasStackHazardSlotIndex() &&
+  if (AFI->isStackHazardIncludedInCalleeSaveArea() &&
       HazardSlotIndex == std::numeric_limits<int>::max()) {
     HazardSlotIndex = MFI.CreateStackObject(StackHazardSize, Align(8), true);
     LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << HazardSlotIndex
@@ -2658,7 +2890,6 @@ static bool getSVECalleeSaveSlotRange(const MachineFrameInfo &MFI,
       assert((Max == std::numeric_limits<int>::min() ||
               Max + 1 == CS.getFrameIdx()) &&
              "SVE CalleeSaves are not consecutive");
-
       Min = std::min(Min, CS.getFrameIdx());
       Max = std::max(Max, CS.getFrameIdx());
     }
@@ -2666,43 +2897,64 @@ static bool getSVECalleeSaveSlotRange(const MachineFrameInfo &MFI,
   return Min != std::numeric_limits<int>::max();
 }
 
-// Process all the SVE stack objects and determine offsets for each
-// object. If AssignOffsets is true, the offsets get assigned.
-// Fills in the first and last callee-saved frame indices into
-// Min/MaxCSFrameIndex, respectively.
-// Returns the size of the stack.
-static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
-                                              int &MinCSFrameIndex,
-                                              int &MaxCSFrameIndex,
-                                              bool AssignOffsets) {
+static SVEStackSizes determineSVEStackSizes(MachineFunction &MF,
+                                            AssignObjectOffsets AssignOffsets) {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+
+  SVEStackSizes SVEStack{};
+
+  // With SplitSVEObjects we maintain separate stack offsets for predicates
+  // (PPRs) and SVE vectors (ZPRs). When SplitSVEObjects is disabled predicates
+  // are included in the SVE vector area.
+  uint64_t &ZPRStackTop = SVEStack.ZPRStackSize;
+  uint64_t &PPRStackTop =
+      AFI->hasSplitSVEObjects() ? SVEStack.PPRStackSize : SVEStack.ZPRStackSize;
+
 #ifndef NDEBUG
   // First process all fixed stack objects.
   for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
-    assert(MFI.getStackID(I) != TargetStackID::ScalableVector &&
+    assert(!MFI.hasScalableStackID(I) &&
            "SVE vectors should never be passed on the stack by value, only by "
            "reference.");
 #endif
 
-  auto Assign = [&MFI](int FI, int64_t Offset) {
+  auto AllocateObject = [&](int FI) {
+    uint64_t &StackTop = MFI.getStackID(FI) == TargetStackID::ScalableVector
+                             ? ZPRStackTop
+                             : PPRStackTop;
+
+    // FIXME: Given that the length of SVE vectors is not necessarily a power of
+    // two, we'd need to align every object dynamically at runtime if the
+    // alignment is larger than 16. This is not yet supported.
+    Align Alignment = MFI.getObjectAlign(FI);
+    if (Alignment > Align(16))
+      report_fatal_error(
+          "Alignment of scalable vectors > 16 bytes is not yet supported");
+
+    StackTop += MFI.getObjectSize(FI);
+    StackTop = alignTo(StackTop, Alignment);
+
+    assert(StackTop < (uint64_t)std::numeric_limits<int64_t>::max() &&
+           "SVE StackTop far too large?!");
+
+    int64_t Offset = -int64_t(StackTop);
+    if (AssignOffsets == AssignObjectOffsets::Yes)
+      MFI.setObjectOffset(FI, Offset);
+
     LLVM_DEBUG(dbgs() << "alloc FI(" << FI << ") at SP[" << Offset << "]\n");
-    MFI.setObjectOffset(FI, Offset);
   };
 
-  int64_t Offset = 0;
-
   // Then process all callee saved slots.
+  int MinCSFrameIndex, MaxCSFrameIndex;
   if (getSVECalleeSaveSlotRange(MFI, MinCSFrameIndex, MaxCSFrameIndex)) {
-    // Assign offsets to the callee save slots.
-    for (int I = MinCSFrameIndex; I <= MaxCSFrameIndex; ++I) {
-      Offset += MFI.getObjectSize(I);
-      Offset = alignTo(Offset, MFI.getObjectAlign(I));
-      if (AssignOffsets)
-        Assign(I, -Offset);
-    }
+    for (int FI = MinCSFrameIndex; FI <= MaxCSFrameIndex; ++FI)
+      AllocateObject(FI);
   }
 
-  // Ensure that the Callee-save area is aligned to 16bytes.
-  Offset = alignTo(Offset, Align(16U));
+  // Ensure the CS area is 16-byte aligned.
+  PPRStackTop = alignTo(PPRStackTop, Align(16U));
+  ZPRStackTop = alignTo(ZPRStackTop, Align(16U));
 
   // Create a buffer of SVE objects to allocate and sort it.
   SmallVector<int, 8> ObjectsToAllocate;
@@ -2715,372 +2967,47 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
     if (MFI.getStackID(StackProtectorFI) == TargetStackID::ScalableVector)
       ObjectsToAllocate.push_back(StackProtectorFI);
   }
-  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
-    unsigned StackID = MFI.getStackID(I);
-    if (StackID != TargetStackID::ScalableVector)
+
+  for (int FI = 0, E = MFI.getObjectIndexEnd(); FI != E; ++FI) {
+    if (FI == StackProtectorFI || MFI.isDeadObjectIndex(FI))
       continue;
-    if (I == StackProtectorFI)
-      continue;
-    if (MaxCSFrameIndex >= I && I >= MinCSFrameIndex)
-      continue;
-    if (MFI.isDeadObjectIndex(I))
+    if (MaxCSFrameIndex >= FI && FI >= MinCSFrameIndex)
       continue;
 
-    ObjectsToAllocate.push_back(I);
+    if (MFI.getStackID(FI) != TargetStackID::ScalableVector &&
+        MFI.getStackID(FI) != TargetStackID::ScalablePredicateVector)
+      continue;
+
+    ObjectsToAllocate.push_back(FI);
   }
 
   // Allocate all SVE locals and spills
-  for (unsigned FI : ObjectsToAllocate) {
-    Align Alignment = MFI.getObjectAlign(FI);
-    // FIXME: Given that the length of SVE vectors is not necessarily a power of
-    // two, we'd need to align every object dynamically at runtime if the
-    // alignment is larger than 16. This is not yet supported.
-    if (Alignment > Align(16))
-      report_fatal_error(
-          "Alignment of scalable vectors > 16 bytes is not yet supported");
+  for (unsigned FI : ObjectsToAllocate)
+    AllocateObject(FI);
 
-    Offset = alignTo(Offset + MFI.getObjectSize(FI), Alignment);
-    if (AssignOffsets)
-      Assign(FI, -Offset);
-  }
+  PPRStackTop = alignTo(PPRStackTop, Align(16U));
+  ZPRStackTop = alignTo(ZPRStackTop, Align(16U));
 
-  return Offset;
-}
+  if (AssignOffsets == AssignObjectOffsets::Yes)
+    AFI->setStackSizeSVE(SVEStack.ZPRStackSize, SVEStack.PPRStackSize);
 
-int64_t AArch64FrameLowering::estimateSVEStackObjectOffsets(
-    MachineFrameInfo &MFI) const {
-  int MinCSFrameIndex, MaxCSFrameIndex;
-  return determineSVEStackObjectOffsets(MFI, MinCSFrameIndex, MaxCSFrameIndex, false);
-}
-
-int64_t AArch64FrameLowering::assignSVEStackObjectOffsets(
-    MachineFrameInfo &MFI, int &MinCSFrameIndex, int &MaxCSFrameIndex) const {
-  return determineSVEStackObjectOffsets(MFI, MinCSFrameIndex, MaxCSFrameIndex,
-                                        true);
-}
-
-/// Attempts to scavenge a register from \p ScavengeableRegs given the used
-/// registers in \p UsedRegs.
-static Register tryScavengeRegister(LiveRegUnits const &UsedRegs,
-                                    BitVector const &ScavengeableRegs,
-                                    Register PreferredReg) {
-  if (PreferredReg != AArch64::NoRegister && UsedRegs.available(PreferredReg))
-    return PreferredReg;
-  for (auto Reg : ScavengeableRegs.set_bits()) {
-    if (UsedRegs.available(Reg))
-      return Reg;
-  }
-  return AArch64::NoRegister;
-}
-
-/// Propagates frame-setup/destroy flags from \p SourceMI to all instructions in
-/// \p MachineInstrs.
-static void propagateFrameFlags(MachineInstr &SourceMI,
-                                ArrayRef<MachineInstr *> MachineInstrs) {
-  for (MachineInstr *MI : MachineInstrs) {
-    if (SourceMI.getFlag(MachineInstr::FrameSetup))
-      MI->setFlag(MachineInstr::FrameSetup);
-    if (SourceMI.getFlag(MachineInstr::FrameDestroy))
-      MI->setFlag(MachineInstr::FrameDestroy);
-  }
-}
-
-/// RAII helper class for scavenging or spilling a register. On construction
-/// attempts to find a free register of class \p RC (given \p UsedRegs and \p
-/// AllocatableRegs), if no register can be found spills \p SpillCandidate to \p
-/// MaybeSpillFI to free a register. The free'd register is returned via the \p
-/// FreeReg output parameter. On destruction, if there is a spill, its previous
-/// value is reloaded. The spilling and scavenging is only valid at the
-/// insertion point \p MBBI, this class should _not_ be used in places that
-/// create or manipulate basic blocks, moving the expected insertion point.
-struct ScopedScavengeOrSpill {
-  ScopedScavengeOrSpill(const ScopedScavengeOrSpill &) = delete;
-  ScopedScavengeOrSpill(ScopedScavengeOrSpill &&) = delete;
-
-  ScopedScavengeOrSpill(MachineFunction &MF, MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator MBBI,
-                        Register SpillCandidate, const TargetRegisterClass &RC,
-                        LiveRegUnits const &UsedRegs,
-                        BitVector const &AllocatableRegs,
-                        std::optional<int> *MaybeSpillFI,
-                        Register PreferredReg = AArch64::NoRegister)
-      : MBB(MBB), MBBI(MBBI), RC(RC), TII(static_cast<const AArch64InstrInfo &>(
-                                          *MF.getSubtarget().getInstrInfo())),
-        TRI(*MF.getSubtarget().getRegisterInfo()) {
-    FreeReg = tryScavengeRegister(UsedRegs, AllocatableRegs, PreferredReg);
-    if (FreeReg != AArch64::NoRegister)
-      return;
-    assert(MaybeSpillFI && "Expected emergency spill slot FI information "
-                           "(attempted to spill in prologue/epilogue?)");
-    if (!MaybeSpillFI->has_value()) {
-      MachineFrameInfo &MFI = MF.getFrameInfo();
-      *MaybeSpillFI = MFI.CreateSpillStackObject(TRI.getSpillSize(RC),
-                                                 TRI.getSpillAlign(RC));
-    }
-    FreeReg = SpillCandidate;
-    SpillFI = MaybeSpillFI->value();
-    TII.storeRegToStackSlot(MBB, MBBI, FreeReg, false, *SpillFI, &RC, &TRI,
-                            Register());
-  }
-
-  bool hasSpilled() const { return SpillFI.has_value(); }
-
-  /// Returns the free register (found from scavenging or spilling a register).
-  Register freeRegister() const { return FreeReg; }
-
-  Register operator*() const { return freeRegister(); }
-
-  ~ScopedScavengeOrSpill() {
-    if (hasSpilled())
-      TII.loadRegFromStackSlot(MBB, MBBI, FreeReg, *SpillFI, &RC, &TRI,
-                               Register());
-  }
-
-private:
-  MachineBasicBlock &MBB;
-  MachineBasicBlock::iterator MBBI;
-  const TargetRegisterClass &RC;
-  const AArch64InstrInfo &TII;
-  const TargetRegisterInfo &TRI;
-  Register FreeReg = AArch64::NoRegister;
-  std::optional<int> SpillFI;
-};
-
-/// Emergency stack slots for expanding SPILL_PPR_TO_ZPR_SLOT_PSEUDO and
-/// FILL_PPR_FROM_ZPR_SLOT_PSEUDO.
-struct EmergencyStackSlots {
-  std::optional<int> ZPRSpillFI;
-  std::optional<int> PPRSpillFI;
-  std::optional<int> GPRSpillFI;
-};
-
-/// Registers available for scavenging (ZPR, PPR3b, GPR).
-struct ScavengeableRegs {
-  BitVector ZPRRegs;
-  BitVector PPR3bRegs;
-  BitVector GPRRegs;
-};
-
-static bool isInPrologueOrEpilogue(const MachineInstr &MI) {
-  return MI.getFlag(MachineInstr::FrameSetup) ||
-         MI.getFlag(MachineInstr::FrameDestroy);
-}
-
-/// Expands:
-/// ```
-/// SPILL_PPR_TO_ZPR_SLOT_PSEUDO $p0, %stack.0, 0
-/// ```
-/// To:
-/// ```
-/// $z0 = CPY_ZPzI_B $p0, 1, 0
-/// STR_ZXI $z0, $stack.0, 0
-/// ```
-/// While ensuring a ZPR ($z0 in this example) is free for the predicate (
-/// spilling if necessary).
-static void expandSpillPPRToZPRSlotPseudo(MachineBasicBlock &MBB,
-                                          MachineInstr &MI,
-                                          const TargetRegisterInfo &TRI,
-                                          LiveRegUnits const &UsedRegs,
-                                          ScavengeableRegs const &SR,
-                                          EmergencyStackSlots &SpillSlots) {
-  MachineFunction &MF = *MBB.getParent();
-  auto *TII =
-      static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
-
-  ScopedScavengeOrSpill ZPredReg(
-      MF, MBB, MI, AArch64::Z0, AArch64::ZPRRegClass, UsedRegs, SR.ZPRRegs,
-      isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.ZPRSpillFI);
-
-  SmallVector<MachineInstr *, 2> MachineInstrs;
-  const DebugLoc &DL = MI.getDebugLoc();
-  MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::CPY_ZPzI_B))
-                              .addReg(*ZPredReg, RegState::Define)
-                              .add(MI.getOperand(0))
-                              .addImm(1)
-                              .addImm(0)
-                              .getInstr());
-  MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::STR_ZXI))
-                              .addReg(*ZPredReg)
-                              .add(MI.getOperand(1))
-                              .addImm(MI.getOperand(2).getImm())
-                              .setMemRefs(MI.memoperands())
-                              .getInstr());
-  propagateFrameFlags(MI, MachineInstrs);
-}
-
-/// Expands:
-/// ```
-/// $p0 = FILL_PPR_FROM_ZPR_SLOT_PSEUDO %stack.0, 0
-/// ```
-/// To:
-/// ```
-/// $z0 = LDR_ZXI %stack.0, 0
-/// $p0 = PTRUE_B 31, implicit $vg
-/// $p0 = CMPNE_PPzZI_B $p0, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
-/// ```
-/// While ensuring a ZPR ($z0 in this example) is free for the predicate (
-/// spilling if necessary). If the status flags are in use at the point of
-/// expansion they are preserved (by moving them to/from a GPR). This may cause
-/// an additional spill if no GPR is free at the expansion point.
-static bool expandFillPPRFromZPRSlotPseudo(
-    MachineBasicBlock &MBB, MachineInstr &MI, const TargetRegisterInfo &TRI,
-    LiveRegUnits const &UsedRegs, ScavengeableRegs const &SR,
-    MachineInstr *&LastPTrue, EmergencyStackSlots &SpillSlots) {
-  MachineFunction &MF = *MBB.getParent();
-  auto *TII =
-      static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
-
-  ScopedScavengeOrSpill ZPredReg(
-      MF, MBB, MI, AArch64::Z0, AArch64::ZPRRegClass, UsedRegs, SR.ZPRRegs,
-      isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.ZPRSpillFI);
-
-  ScopedScavengeOrSpill PredReg(
-      MF, MBB, MI, AArch64::P0, AArch64::PPR_3bRegClass, UsedRegs, SR.PPR3bRegs,
-      isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.PPRSpillFI,
-      /*PreferredReg=*/
-      LastPTrue ? LastPTrue->getOperand(0).getReg() : AArch64::NoRegister);
-
-  // Elide NZCV spills if we know it is not used.
-  bool IsNZCVUsed = !UsedRegs.available(AArch64::NZCV);
-  std::optional<ScopedScavengeOrSpill> NZCVSaveReg;
-  if (IsNZCVUsed)
-    NZCVSaveReg.emplace(
-        MF, MBB, MI, AArch64::X0, AArch64::GPR64RegClass, UsedRegs, SR.GPRRegs,
-        isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.GPRSpillFI);
-  SmallVector<MachineInstr *, 4> MachineInstrs;
-  const DebugLoc &DL = MI.getDebugLoc();
-  MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::LDR_ZXI))
-                              .addReg(*ZPredReg, RegState::Define)
-                              .add(MI.getOperand(1))
-                              .addImm(MI.getOperand(2).getImm())
-                              .setMemRefs(MI.memoperands())
-                              .getInstr());
-  if (IsNZCVUsed)
-    MachineInstrs.push_back(
-        BuildMI(MBB, MI, DL, TII->get(AArch64::MRS))
-            .addReg(NZCVSaveReg->freeRegister(), RegState::Define)
-            .addImm(AArch64SysReg::NZCV)
-            .addReg(AArch64::NZCV, RegState::Implicit)
-            .getInstr());
-
-  // Reuse previous ptrue if we know it has not been clobbered.
-  if (LastPTrue) {
-    assert(*PredReg == LastPTrue->getOperand(0).getReg());
-    LastPTrue->moveBefore(&MI);
-  } else {
-    LastPTrue = BuildMI(MBB, MI, DL, TII->get(AArch64::PTRUE_B))
-                    .addReg(*PredReg, RegState::Define)
-                    .addImm(31);
-  }
-  MachineInstrs.push_back(LastPTrue);
-  MachineInstrs.push_back(
-      BuildMI(MBB, MI, DL, TII->get(AArch64::CMPNE_PPzZI_B))
-          .addReg(MI.getOperand(0).getReg(), RegState::Define)
-          .addReg(*PredReg)
-          .addReg(*ZPredReg)
-          .addImm(0)
-          .addReg(AArch64::NZCV, RegState::ImplicitDefine)
-          .getInstr());
-  if (IsNZCVUsed)
-    MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::MSR))
-                                .addImm(AArch64SysReg::NZCV)
-                                .addReg(NZCVSaveReg->freeRegister())
-                                .addReg(AArch64::NZCV, RegState::ImplicitDefine)
-                                .getInstr());
-
-  propagateFrameFlags(MI, MachineInstrs);
-  return PredReg.hasSpilled();
-}
-
-/// Expands all FILL_PPR_FROM_ZPR_SLOT_PSEUDO and SPILL_PPR_TO_ZPR_SLOT_PSEUDO
-/// operations within the MachineBasicBlock \p MBB.
-static bool expandSMEPPRToZPRSpillPseudos(MachineBasicBlock &MBB,
-                                          const TargetRegisterInfo &TRI,
-                                          ScavengeableRegs const &SR,
-                                          EmergencyStackSlots &SpillSlots) {
-  LiveRegUnits UsedRegs(TRI);
-  UsedRegs.addLiveOuts(MBB);
-  bool HasPPRSpills = false;
-  MachineInstr *LastPTrue = nullptr;
-  for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
-    UsedRegs.stepBackward(MI);
-    switch (MI.getOpcode()) {
-    case AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO:
-      if (LastPTrue &&
-          MI.definesRegister(LastPTrue->getOperand(0).getReg(), &TRI))
-        LastPTrue = nullptr;
-      HasPPRSpills |= expandFillPPRFromZPRSlotPseudo(MBB, MI, TRI, UsedRegs, SR,
-                                                     LastPTrue, SpillSlots);
-      MI.eraseFromParent();
-      break;
-    case AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO:
-      expandSpillPPRToZPRSlotPseudo(MBB, MI, TRI, UsedRegs, SR, SpillSlots);
-      MI.eraseFromParent();
-      [[fallthrough]];
-    default:
-      LastPTrue = nullptr;
-      break;
-    }
-  }
-
-  return HasPPRSpills;
+  return SVEStack;
 }
 
 void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
-
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  const TargetSubtargetInfo &TSI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *TSI.getRegisterInfo();
-
-  // If predicates spills are 16-bytes we may need to expand
-  // SPILL_PPR_TO_ZPR_SLOT_PSEUDO/FILL_PPR_FROM_ZPR_SLOT_PSEUDO.
-  if (AFI->hasStackFrame() && TRI.getSpillSize(AArch64::PPRRegClass) == 16) {
-    auto ComputeScavengeableRegisters = [&](unsigned RegClassID) {
-      BitVector Regs = TRI.getAllocatableSet(MF, TRI.getRegClass(RegClassID));
-      assert(Regs.count() > 0 && "Expected scavengeable registers");
-      return Regs;
-    };
-
-    ScavengeableRegs SR{};
-    SR.ZPRRegs = ComputeScavengeableRegisters(AArch64::ZPRRegClassID);
-    // Only p0-7 are possible as the second operand of cmpne (needed for fills).
-    SR.PPR3bRegs = ComputeScavengeableRegisters(AArch64::PPR_3bRegClassID);
-    SR.GPRRegs = ComputeScavengeableRegisters(AArch64::GPR64RegClassID);
-
-    EmergencyStackSlots SpillSlots;
-    for (MachineBasicBlock &MBB : MF) {
-      // In the case we had to spill a predicate (in the range p0-p7) to reload
-      // a predicate (>= p8), additional spill/fill pseudos will be created.
-      // These need an additional expansion pass. Note: There will only be at
-      // most two expansion passes, as spilling/filling a predicate in the range
-      // p0-p7 never requires spilling another predicate.
-      for (int Pass = 0; Pass < 2; Pass++) {
-        bool HasPPRSpills =
-            expandSMEPPRToZPRSpillPseudos(MBB, TRI, SR, SpillSlots);
-        assert((Pass == 0 || !HasPPRSpills) && "Did not expect PPR spills");
-        if (!HasPPRSpills)
-          break;
-      }
-    }
-  }
-
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-
   assert(getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown &&
          "Upwards growing stack unsupported");
 
-  int MinCSFrameIndex, MaxCSFrameIndex;
-  int64_t SVEStackSize =
-      assignSVEStackObjectOffsets(MFI, MinCSFrameIndex, MaxCSFrameIndex);
-
-  AFI->setStackSizeSVE(alignTo(SVEStackSize, 16U));
-  AFI->setMinMaxSVECSFrameIndex(MinCSFrameIndex, MaxCSFrameIndex);
+  (void)determineSVEStackSizes(MF, AssignObjectOffsets::Yes);
 
   // If this function isn't doing Win64-style C++ EH, we don't need to do
   // anything.
   if (!MF.hasEHFunclets())
     return;
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
 
   // Win64 C++ EH needs to allocate space for the catch objects in the fixed
   // object area right next to the UnwindHelp object.
@@ -3359,7 +3286,8 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
 
   Register Reg;
   FrameRegOffset = TFI->resolveFrameOffsetReference(
-      *MF, FirstTagStore.Offset, false /*isFixed*/, false /*isSVE*/, Reg,
+      *MF, FirstTagStore.Offset, false /*isFixed*/,
+      TargetStackID::Default /*StackID*/, Reg,
       /*PreferFP=*/false, /*ForSimm=*/true);
   FrameReg = Reg;
   FrameRegUpdate = std::nullopt;
@@ -3597,7 +3525,7 @@ StackOffset AArch64FrameLowering::getFrameIndexReferencePreferSP(
 
   // Go to common code if we cannot provide sp + offset.
   if (MFI.hasVarSizedObjects() ||
-      MF.getInfo<AArch64FunctionInfo>()->getStackSizeSVE() ||
+      MF.getInfo<AArch64FunctionInfo>()->hasSVEStackSize() ||
       MF.getSubtarget().getRegisterInfo()->hasStackRealignment(MF))
     return getFrameIndexReference(MF, FI, FrameReg);
 
@@ -3699,10 +3627,12 @@ bool FrameObjectCompare(const FrameObject &A, const FrameObject &B) {
 
 void AArch64FrameLowering::orderFrameObjects(
     const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
-  if (!OrderFrameObjects || ObjectsToAllocate.empty())
+  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
+
+  if ((!OrderFrameObjects && !AFI.hasSplitSVEObjects()) ||
+      ObjectsToAllocate.empty())
     return;
 
-  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   std::vector<FrameObject> FrameObjects(MFI.getObjectIndexEnd());
   for (auto &Obj : ObjectsToAllocate) {
@@ -4080,18 +4010,10 @@ void AArch64FrameLowering::emitRemarks(
           }
 
           unsigned RegTy = StackAccess::AccessType::GPR;
-          if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector) {
-            // SPILL_PPR_TO_ZPR_SLOT_PSEUDO and FILL_PPR_FROM_ZPR_SLOT_PSEUDO
-            // spill/fill the predicate as a data vector (so are an FPR access).
-            if (MI.getOpcode() != AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO &&
-                MI.getOpcode() != AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO &&
-                AArch64::PPRRegClass.contains(MI.getOperand(0).getReg())) {
-              RegTy = StackAccess::PPR;
-            } else
-              RegTy = StackAccess::FPR;
-          } else if (AArch64InstrInfo::isFpOrNEON(MI)) {
+          if (MFI.hasScalableStackID(FrameIdx))
+            RegTy = isPPRAccess(MI) ? StackAccess::PPR : StackAccess::FPR;
+          else if (AArch64InstrInfo::isFpOrNEON(MI))
             RegTy = StackAccess::FPR;
-          }
 
           StackAccesses[ArrIdx].AccessTypes |= RegTy;
 

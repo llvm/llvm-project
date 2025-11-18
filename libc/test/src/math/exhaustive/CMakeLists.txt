@@ -27,6 +27,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.rsqrtf
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   sinf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -40,6 +55,21 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
+)
+
+add_fp_unittest(
+  sinf_float_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    sinf_float_test.cpp
+  LINK_LIBRARIES
+    -lpthread
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.math.sincosf_utils
 )
 
 add_fp_unittest(
@@ -72,6 +102,21 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
+)
+
+add_fp_unittest(
+  cosf_float_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    cosf_float_test.cpp
+  LINK_LIBRARIES
+    -lpthread
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.math.sincosf_utils
 )
 
 add_fp_unittest(

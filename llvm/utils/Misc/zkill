@@ -14,7 +14,7 @@ def _write_message(kind, message):
     file,line,_,_,_ = inspect.getframeinfo(f)
     location = '%s:%d' % (os.path.basename(file), line)
 
-    print >>sys.stderr, '%s: %s: %s' % (location, kind, message)
+    print('%s: %s: %s' % (location, kind, message), file=sys.stderr)
 
 note = lambda message: _write_message('note', message)
 warning = lambda message: _write_message('warning', message)
@@ -53,7 +53,7 @@ def extractExecutable(command):
 
 class Struct:
     def __init__(self, **kwargs):
-        self.fields = kwargs.keys()
+        self.fields = list(kwargs.keys())
         self.__dict__.update(kwargs)
 
     def __repr__(self):
@@ -144,7 +144,7 @@ def main():
     parser.add_option("-s", "", dest="signalName",
                       help="Name of the signal to use (default=%default)",
                       action="store", default='INT',
-                      choices=kSignals.keys())
+                      choices=list(kSignals.keys()))
     parser.add_option("-l", "", dest="listSignals",
                       help="List known signal names",
                       action="store_true", default=False)
@@ -202,18 +202,18 @@ def main():
     (opts, args) = parser.parse_args()
 
     if opts.listSignals:
-        items = [(v,k) for k,v in kSignals.items()]
+        items = [(v,k) for k,v in list(kSignals.items())]
         items.sort()
         for i in range(0, len(items), 4):
-            print '\t'.join(['%2d) SIG%s' % (k,v)
-                             for k,v in items[i:i+4]])
+            print('\t'.join(['%2d) SIG%s' % (k,v)
+                             for k,v in items[i:i+4]]))
         sys.exit(0)
 
     # Figure out the signal to use.
     signal = kSignals[opts.signalName]
     signalValueName = str(signal)
     if opts.verbose:
-        name = dict((v,k) for k,v in kSignals.items()).get(signal,None)
+        name = dict((v,k) for k,v in list(kSignals.items())).get(signal,None)
         if name:
             signalValueName = name
             note('using signal %d (SIG%s)' % (signal, name))

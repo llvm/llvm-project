@@ -715,6 +715,10 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
       PinnedAllocs(*this), RPCServer(nullptr) {
+  // Conservative fall-back to the plugin's device uid for the case that no real
+  // vendor (u)uid will become available later.
+  setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
+
 #ifdef OMPT_SUPPORT
   OmptInitialized.store(false);
   // Bind the callbacks to this device's member functions
@@ -758,13 +762,15 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     return StackSizeEnvarOrErr.takeError();
   OMPX_TargetStackSize = std::move(*StackSizeEnvarOrErr);
 
-  auto HeapSizeEnvarOrErr = UInt64Envar::create(
-      "LIBOMPTARGET_HEAP_SIZE",
-      [this](uint64_t &V) -> Error { return getDeviceHeapSize(V); },
-      [this](uint64_t V) -> Error { return setDeviceHeapSize(V); });
-  if (!HeapSizeEnvarOrErr)
-    return HeapSizeEnvarOrErr.takeError();
-  OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
+  if (hasDeviceHeapSize()) {
+    auto HeapSizeEnvarOrErr = UInt64Envar::create(
+        "LIBOMPTARGET_HEAP_SIZE",
+        [this](uint64_t &V) -> Error { return getDeviceHeapSize(V); },
+        [this](uint64_t V) -> Error { return setDeviceHeapSize(V); });
+    if (!HeapSizeEnvarOrErr)
+      return HeapSizeEnvarOrErr.takeError();
+    OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
+  }
 
   // Update the maximum number of teams and threads after the device
   // initialization sets the corresponding hardware limit.
@@ -791,19 +797,6 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
   if (auto Err = callGlobalDestructors(Plugin, *Image))
     return Err;
 
-  if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
-    GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
-    DeviceMemoryPoolTrackingTy ImageDeviceMemoryPoolTracking = {0, 0, ~0U, 0};
-    GlobalTy TrackerGlobal("__omp_rtl_device_memory_pool_tracker",
-                           sizeof(DeviceMemoryPoolTrackingTy),
-                           &ImageDeviceMemoryPoolTracking);
-    if (auto Err =
-            GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal)) {
-      consumeError(std::move(Err));
-    }
-    DeviceMemoryPoolTracking.combine(ImageDeviceMemoryPoolTracking);
-  }
-
   GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
   auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
   if (!ProfOrErr)
@@ -828,22 +821,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (auto Err = unloadBinary(I))
       return Err;
   LoadedImages.clear();
-
-  if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
-    // TODO: Write this by default into a file.
-    printf("\n\n|-----------------------\n"
-           "| Device memory tracker:\n"
-           "|-----------------------\n"
-           "| #Allocations: %lu\n"
-           "| Byes allocated: %lu\n"
-           "| Minimal allocation: %lu\n"
-           "| Maximal allocation: %lu\n"
-           "|-----------------------\n\n\n",
-           DeviceMemoryPoolTracking.NumAllocations,
-           DeviceMemoryPoolTracking.AllocationTotal,
-           DeviceMemoryPoolTracking.AllocationMin,
-           DeviceMemoryPoolTracking.AllocationMax);
-  }
 
   // Delete the memory manager before deinitializing the device. Otherwise,
   // we may delete device allocations after the device is deinitialized.
@@ -897,18 +874,6 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   // Add the image to list.
   LoadedImages.push_back(Image);
 
-  // Setup the global device memory pool if needed.
-  if (!Plugin.getRecordReplay().isReplaying() &&
-      shouldSetupDeviceMemoryPool()) {
-    uint64_t HeapSize;
-    auto SizeOrErr = getDeviceHeapSize(HeapSize);
-    if (SizeOrErr) {
-      REPORT("No global device memory pool due to error: %s\n",
-             toString(std::move(SizeOrErr)).data());
-    } else if (auto Err = setupDeviceMemoryPool(Plugin, *Image, HeapSize))
-      return std::move(Err);
-  }
-
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
 
@@ -930,51 +895,6 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
   // Return the pointer to the table of entries.
   return Image;
-}
-
-Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
-                                             DeviceImageTy &Image,
-                                             uint64_t PoolSize) {
-  // Free the old pool, if any.
-  if (DeviceMemoryPool.Ptr) {
-    if (auto Err = dataDelete(DeviceMemoryPool.Ptr,
-                              TargetAllocTy::TARGET_ALLOC_DEVICE))
-      return Err;
-  }
-
-  DeviceMemoryPool.Size = PoolSize;
-  auto AllocOrErr = dataAlloc(PoolSize, /*HostPtr=*/nullptr,
-                              TargetAllocTy::TARGET_ALLOC_DEVICE);
-  if (AllocOrErr) {
-    DeviceMemoryPool.Ptr = *AllocOrErr;
-  } else {
-    auto Err = AllocOrErr.takeError();
-    REPORT("Failure to allocate device memory for global memory pool: %s\n",
-           toString(std::move(Err)).data());
-    DeviceMemoryPool.Ptr = nullptr;
-    DeviceMemoryPool.Size = 0;
-  }
-
-  // Create the metainfo of the device environment global.
-  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
-  if (!GHandler.isSymbolInImage(*this, Image,
-                                "__omp_rtl_device_memory_pool_tracker")) {
-    DP("Skip the memory pool as there is no tracker symbol in the image.");
-    return Error::success();
-  }
-
-  GlobalTy TrackerGlobal("__omp_rtl_device_memory_pool_tracker",
-                         sizeof(DeviceMemoryPoolTrackingTy),
-                         &DeviceMemoryPoolTracking);
-  if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrackerGlobal))
-    return Err;
-
-  // Create the metainfo of the device environment global.
-  GlobalTy DevEnvGlobal("__omp_rtl_device_memory_pool",
-                        sizeof(DeviceMemoryPoolTy), &DeviceMemoryPool);
-
-  // Write device environment values to the device.
-  return GHandler.writeGlobalToDevice(*this, Image, DevEnvGlobal);
 }
 
 Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
@@ -1524,21 +1444,22 @@ Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
   return Err;
 }
 
-Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
-  assert(DeviceInfo && "Invalid device info");
-
-  return initDeviceInfoImpl(DeviceInfo);
+Expected<InfoTreeNode> GenericDeviceTy::obtainInfo() {
+  auto InfoOrErr = obtainInfoImpl();
+  if (InfoOrErr)
+    InfoOrErr->add("UID", getDeviceUid(), "", DeviceInfo::UID);
+  return InfoOrErr;
 }
 
 Error GenericDeviceTy::printInfo() {
-  auto Info = obtainInfoImpl();
+  auto InfoOrErr = obtainInfo();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = Info.takeError())
+  if (auto Err = InfoOrErr.takeError())
     return Err;
 
   // Print all info entries.
-  Info->print();
+  InfoOrErr->print();
 
   return Plugin::success();
 }
@@ -1604,6 +1525,14 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 }
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
+
+Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return isAccessiblePtrImpl(Ptr, Size);
+}
+
+void GenericDeviceTy::setDeviceUidFromVendorUid(StringRef VendorUid) {
+  DeviceUid = std::string(Plugin.getName()) + "-" + std::string(VendorUid);
+}
 
 Error GenericPluginTy::init() {
   if (Initialized)
@@ -2128,21 +2057,6 @@ int32_t GenericPluginTy::init_async_info(int32_t DeviceId,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::init_device_info(int32_t DeviceId,
-                                          __tgt_device_info *DeviceInfo,
-                                          const char **ErrStr) {
-  *ErrStr = "";
-
-  auto Err = getDevice(DeviceId).initDeviceInfo(DeviceInfo);
-  if (Err) {
-    REPORT("Failure to initialize device info at " DPxMOD " on device %d: %s\n",
-           DPxPTR(DeviceInfo), DeviceId, toString(std::move(Err)).data());
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::set_device_identifier(int32_t UserId,
                                                int32_t DeviceId) {
   UserDeviceIds[DeviceId] = UserId;
@@ -2152,6 +2066,22 @@ int32_t GenericPluginTy::set_device_identifier(int32_t UserId,
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
+}
+
+int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
+                                           size_t Size) {
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure while checking accessibility of pointer %p for device %d: %s",
+       Ptr, DeviceId, ErrStr.c_str());
+    return false;
+  };
+
+  auto AccessibleOrErr = getDevice(DeviceId).isAccessiblePtr(Ptr, Size);
+  if (Error Err = AccessibleOrErr.takeError())
+    return HandleError(std::move(Err));
+
+  return *AccessibleOrErr;
 }
 
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,

@@ -18,7 +18,7 @@ define void @samebd0(ptr %A) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %i.013, ptr %arrayidx12, align 8
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
-; CHECK-NEXT:    da analyze - output [-4 -3]! / assuming 2 loop level(s) fused: [-4 -3 -3 -1]!
+; CHECK-NEXT:    da analyze - output [-4 -3] / assuming 2 loop level(s) fused: [-4 -3 -3 -1]!
 ; CHECK-NEXT:  Src: store i64 %l17.04, ptr %arrayidx24, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -96,7 +96,7 @@ define void @samebd1(ptr %A) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i64 %i.03, ptr %arrayidx, align 4 --> Dst: store i64 %i.03, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i64 %i.03, ptr %arrayidx, align 4 --> Dst: %0 = load i64, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - flow [|<]! / assuming 1 loop level(s) fused: [<=|<]!
+; CHECK-NEXT:    da analyze - flow [|<] / assuming 1 loop level(s) fused: [<=|<]!
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx7, align 4 --> Dst: %0 = load i64, ptr %arrayidx7, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -148,7 +148,7 @@ define void @non_samebd0(ptr %A) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %i.013, ptr %arrayidx12, align 8
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
-; CHECK-NEXT:    da analyze - output [-4 -3]!{{$}}
+; CHECK-NEXT:    da analyze - output [-4 -3]!
 ; CHECK-NEXT:  Src: store i64 %l17.04, ptr %arrayidx24, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -227,7 +227,7 @@ define void @non_samebd1(ptr %A) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i64 %i.03, ptr %arrayidx, align 4 --> Dst: store i64 %i.03, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i64 %i.03, ptr %arrayidx, align 4 --> Dst: %0 = load i64, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - flow [|<]!{{$}}
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx7, align 4 --> Dst: %0 = load i64, ptr %arrayidx7, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

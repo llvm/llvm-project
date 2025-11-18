@@ -9,11 +9,18 @@
 #include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/tanf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 #include "hdr/stdint_proxy.h"
 
@@ -114,9 +121,9 @@ TEST_F(LlvmLibcTanfTest, SpecificBitPatterns) {
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
-                                   LIBC_NAMESPACE::tanf(x), 0.5);
+                                   LIBC_NAMESPACE::tanf(x), TOLERANCE + 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, -x,
-                                   LIBC_NAMESPACE::tanf(-x), 0.5);
+                                   LIBC_NAMESPACE::tanf(-x), TOLERANCE + 0.5);
   }
 }
 

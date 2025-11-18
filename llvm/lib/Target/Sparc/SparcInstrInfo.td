@@ -369,7 +369,7 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_SPCallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_SPCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
+def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def call          : SDNode<"SPISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;
@@ -577,6 +577,9 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
   let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
+
+// Full memory barrier for V8.
+def V8BAR : Pseudo<(outs), (ins), "!V8BAR", []>, Requires<[HasNoV9]>;
 
 // GETPCX for PIC
 let Defs = [O7] in {
@@ -905,7 +908,7 @@ defm SUB    : F3_12  <"sub"  , 0b000100, sub, IntRegs, i32, simm13Op>;
 let Uses = [ICC], Defs = [ICC] in
   defm SUBE   : F3_12  <"subxcc" , 0b011100, sube, IntRegs, i32, simm13Op>;
 
-let Defs = [ICC], hasPostISelHook = true in
+let Defs = [ICC], hasPostISelHook = true, isCompare = 1 in
   defm SUBCC  : F3_12  <"subcc", 0b010100, subc, IntRegs, i32, simm13Op>;
 
 let Uses = [ICC] in
@@ -1974,12 +1977,30 @@ def : Pat<(i32 (zextloadi1 ADDRri:$src)), (LDUBri ADDRri:$src)>;
 def : Pat<(store (i32 0), ADDRrr:$dst), (STrr ADDRrr:$dst, (i32 G0))>;
 def : Pat<(store (i32 0), ADDRri:$dst), (STri ADDRri:$dst, (i32 G0))>;
 
-// store bar for all atomic_fence in V8.
-let Predicates = [HasNoV9] in
-  def : Pat<(atomic_fence timm, timm), (STBAR)>;
+// All load-type operations in V8 comes with implicit acquire semantics.
+let Predicates = [HasNoV9] in {
+  // Acquire -> nop
+  def : Pat<(atomic_fence (i32 4), timm), (NOP)>;
+  // Release / AcqRel -> stbar
+  def : Pat<(atomic_fence (i32 5), timm), (STBAR)>;
+  // AcqRel and stronger -> stbar; ldstub [%sp-1], %g0
+  def : Pat<(atomic_fence timm, timm), (V8BAR)>;
+}
 
-let Predicates = [HasV9] in
+// We have to handle both 32 and 64-bit cases.
+let Predicates = [HasV9] in {
+  // Acquire -> membar #LoadLoad | #LoadStore
+  def : Pat<(atomic_fence (i32 4), timm), (MEMBARi 0x5)>;
+  def : Pat<(atomic_fence (i64 4), timm), (MEMBARi 0x5)>;
+  // Release -> membar #LoadStore | #StoreStore
+  def : Pat<(atomic_fence (i32 5), timm), (MEMBARi 0xc)>;
+  def : Pat<(atomic_fence (i64 5), timm), (MEMBARi 0xc)>;
+  // AcqRel -> membar #LoadLoad | #LoadStore | #StoreStore
+  def : Pat<(atomic_fence (i32 6), timm), (MEMBARi 0xd)>;
+  def : Pat<(atomic_fence (i64 6), timm), (MEMBARi 0xd)>;
+  // SeqCst -> membar #StoreLoad | #LoadLoad | #LoadStore | #StoreStore
   def : Pat<(atomic_fence timm, timm), (MEMBARi 0xf)>;
+}
 
 // atomic_load addr -> load addr
 def : Pat<(i32 (atomic_load_azext_8 ADDRrr:$src)), (LDUBrr ADDRrr:$src)>;
