@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMPasses
   InstCombine
   IRPrinter
   ObjCARC
+  Ripple
   Scalar
   Support
   Target
