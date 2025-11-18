@@ -13239,6 +13239,14 @@ public:
 
       /// We are performing partial ordering for template template parameters.
       PartialOrderingTTP,
+
+      /// We are performing name lookup for a function template or variable
+      /// template named 'sycl_kernel_launch'.
+      SYCLKernelLaunchLookup,
+
+      /// We are performing overload resolution for a call to a function
+      /// template or variable template named 'sycl_kernel_launch'.
+      SYCLKernelLaunchOverloadResolution,
     } Kind;
 
     /// Whether we're substituting into constraints.
@@ -13592,6 +13600,22 @@ public:
     SynthesizedFunctionScope(const SynthesizedFunctionScope &) = delete;
     SynthesizedFunctionScope &
     operator=(const SynthesizedFunctionScope &) = delete;
+  };
+
+  /// RAII object to ensure that a code synthesis context is popped on scope
+  /// exit.
+  class ScopedCodeSynthesisContext {
+    Sema &S;
+
+  public:
+    ScopedCodeSynthesisContext(Sema &S, const CodeSynthesisContext &Ctx)
+        : S(S) {
+      S.pushCodeSynthesisContext(Ctx);
+    }
+
+    ~ScopedCodeSynthesisContext() {
+      S.popCodeSynthesisContext();
+    }
   };
 
   /// List of active code synthesis contexts.

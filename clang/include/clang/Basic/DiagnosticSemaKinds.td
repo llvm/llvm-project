@@ -13284,15 +13284,12 @@ def err_sycl_entry_point_return_type : Error<
 def err_sycl_entry_point_deduced_return_type : Error<
   "the %0 attribute only applies to functions with a non-deduced 'void' return"
   " type">;
-def err_sycl_host_no_launch_function : Error<
-  "unable to find suitable 'sycl_kernel_launch' function for host code "
-  "synthesis">;
-def warn_sycl_device_no_host_launch_function : Warning<
-  "unable to find suitable 'sycl_kernel_launch' function for host code "
-  "synthesis">,
-  InGroup<DiagGroup<"sycl-host-launcher">>;
-def note_sycl_host_launch_function : Note<
-  "define 'sycl_kernel_launch' function template to fix this problem">;
+def note_sycl_kernel_launch_lookup_here : Note<
+  "in implicit call to 'sycl_kernel_launch' with template argument %0 required"
+  " here">;
+def note_sycl_kernel_launch_overload_resolution_here : Note<
+  "in implicit call to 'sycl_kernel_launch' with template argument %0 and"
+ " function arguments %1 required here">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "

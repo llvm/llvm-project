@@ -414,30 +414,34 @@ ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
   IdentifierInfo &SYCLKernelLaunchID =
       Ctx.Idents.get("sycl_kernel_launch", tok::TokenKind::identifier);
 
+  // Establish a code synthesis context for the implicit name lookup of
+  // a template named 'sycl_kernel_launch'. In the event of an error, this
+  // ensures an appropriate diagnostic note is issued to explain why the
+  // lookup was performed.
+  Sema::CodeSynthesisContext CSC;
+  CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchLookup;
+  CSC.Entity = FD;
+  Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
   // Perform ordinary name lookup for a function or variable template that
   // accepts a single type template argument.
   LookupResult Result(SemaRef, &SYCLKernelLaunchID, Loc,
                       Sema::LookupOrdinaryName);
   CXXScopeSpec EmptySS;
-  SemaRef.LookupTemplateName(Result, SemaRef.getCurScope(), EmptySS,
-                             /*ObjectType*/ QualType(),
-                             /*EnteringContext*/ false,
-                             Sema::TemplateNameIsRequired);
-
-  if (Result.empty() || Result.isAmbiguous()) {
-    SemaRef.Diag(Loc, SemaRef.getLangOpts().SYCLIsHost
-                          ? diag::err_sycl_host_no_launch_function
-                          : diag::warn_sycl_device_no_host_launch_function);
-    SemaRef.Diag(Loc, diag::note_sycl_host_launch_function);
-
+  if (SemaRef.LookupTemplateName(Result, SemaRef.getCurScope(), EmptySS,
+                                 /*ObjectType*/ QualType(),
+                                 /*EnteringContext*/ false,
+                                 Sema::TemplateNameIsRequired))
     return ExprError();
-  }
+  if (Result.isAmbiguous())
+    return ExprError();
 
   TemplateArgumentListInfo TALI{Loc, Loc};
   TemplateArgument KNTA = TemplateArgument(KNT);
   TemplateArgumentLoc TAL =
       SemaRef.getTrivialTemplateArgumentLoc(KNTA, QualType(), Loc);
   TALI.addArgument(TAL);
+
   ExprResult IdExpr;
   if (SemaRef.isPotentialImplicitMemberAccess(EmptySS, Result,
                                               /*IsAddressOfOperand*/ false))
@@ -510,18 +514,39 @@ StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
                                          const SYCLKernelInfo *SKI,
                                          Expr *IdExpr, SourceLocation Loc) {
   SmallVector<Stmt *> Stmts;
-
   // IdExpr may be null if name lookup failed.
   if (IdExpr) {
     llvm::SmallVector<Expr *, 12> Args;
+
+    // Establish a code synthesis context for construction of the arguments
+    // for the implicit call to 'sycl_kernel_launch'.
+    {
+    Sema::CodeSynthesisContext CSC;
+    CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchLookup;
+    CSC.Entity = FD;
+    Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
     if (BuildSYCLKernelLaunchCallArgs(SemaRef, FD, SKI, Args, Loc))
       return StmtError();
+    }
+
+    // Establish a code synthesis context for the implicit call to
+    // 'sycl_kernel_launch'.
+    {
+    Sema::CodeSynthesisContext CSC;
+    CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchOverloadResolution;
+    CSC.Entity = FD;
+    CSC.CallArgs = Args.data();
+    CSC.NumCallArgs = Args.size();
+    Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
     ExprResult LaunchResult =
         SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
     if (LaunchResult.isInvalid())
       return StmtError();
 
     Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
+    }
   }
 
   return CompoundStmt::Create(SemaRef.getASTContext(), Stmts,
@@ -645,6 +670,8 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
   SourceLocation Loc = Body->getLBracLoc();
   StmtResult LaunchResult =
       BuildSYCLKernelLaunchCallStmt(SemaRef, FD, &SKI, LaunchIdExpr, Loc);
+  if (LaunchResult.isInvalid())
+    return StmtError();
 
   Stmt *NewBody =
       new (getASTContext()) SYCLKernelCallStmt(Body, LaunchResult.get(), OFD);

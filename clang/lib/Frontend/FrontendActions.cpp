@@ -476,6 +476,10 @@ private:
       return "TypeAliasTemplateInstantiation";
     case CodeSynthesisContext::PartialOrderingTTP:
       return "PartialOrderingTTP";
+    case CodeSynthesisContext::SYCLKernelLaunchLookup:
+      return "SYCLKernelLaunchLookup";
+    case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution:
+      return "SYCLKernelLaunchOverloadResolution";
     }
     return "";
   }

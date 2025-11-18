@@ -15931,6 +15931,7 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   if (!Bases.empty())
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
                                                                         Bases);
+
   return Dcl;
 }
 
@@ -16366,6 +16367,13 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     if (!SKEPAttr->isInvalidAttr()) {
       ExprResult LaunchIdExpr =
           SYCL().BuildSYCLKernelLaunchIdExpr(FD, SKEPAttr->getKernelName());
+      if (LaunchIdExpr.isInvalid()) {
+        // Do not mark 'FD' as invalid. Name lookup failure for
+        // 'sycl_kernel_launch' is treated as an error in the definition of
+        // 'FD'; treating it as an error of the declaration would affect
+        // overload resolution.
+      }
+
       getCurFunction()->SYCLKernelLaunchIdExpr = LaunchIdExpr.get();
     }
   }
@@ -16578,20 +16586,31 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
     // function or an explicit specialization.
     if (Body && !SKEPAttr->isInvalidAttr()) {
       StmtResult SR;
-      if (FD->isTemplated()) {
+      if (FD->isTemplateInstantiation()) {
+        // The function body should already be a SYCLKernelCallStmt in this
+        // case, but might not be if errors previous occurred.
+        SR = Body;
+      } else if (!getCurFunction()->SYCLKernelLaunchIdExpr) {
+        // If name lookup for a template named sycl_kernel_launch failed
+        // earlier, don't try to build a SYCL kernel call statement as that
+        // would cause additional errors to be issued; just proceed with the
+        // original function body.
+        SR = Body;
+      } else if (FD->isTemplated()) {
         SR = SYCL().BuildUnresolvedSYCLKernelCallStmt(
             cast<CompoundStmt>(Body), getCurFunction()->SYCLKernelLaunchIdExpr);
-      } else if (FD->isTemplateInstantiation()) {
-        assert(isa<SYCLKernelCallStmt>(Body));
-        SR = Body;
       } else {
         SR = SYCL().BuildSYCLKernelCallStmt(
             FD, cast<CompoundStmt>(Body),
             getCurFunction()->SYCLKernelLaunchIdExpr);
       }
-      if (SR.isInvalid())
-        return nullptr;
-      Body = SR.get();
+      // If construction of the replacement body fails, just continue with the
+      // original function body. An early error return here is not valid; the
+      // current declaration context and function scopes must be popped before
+      // returning.
+      if (SR.isUsable()) {
+        Body = SR.get();
+      }
     }
   }
 
