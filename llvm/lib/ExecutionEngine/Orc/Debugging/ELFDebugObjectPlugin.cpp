@@ -243,9 +243,9 @@ ELFDebugObjectPlugin::getPendingDebugObj(MaterializationResponsibility &MR) {
   return It == PendingObjs.end() ? nullptr : It->second.get();
 }
 
-void ELFDebugObjectPlugin::modifyPassConfig(
-    MaterializationResponsibility &MR, LinkGraph &G,
-    PassConfiguration &PassConfig) {
+void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
+                                            LinkGraph &G,
+                                            PassConfiguration &PassConfig) {
   if (!getPendingDebugObj(MR))
     return;
 
