@@ -808,5 +808,95 @@ define i1 @icmp_lt_slt(i1 %c, i32 %arg) {
   ret i1 %select
 }
 
+define i16 @icmp_fold_to_llvm_ucmp_when_eq(i16 %x, i16 %y) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_when_eq(
+; CHECK-NEXT:    [[Y_FRZ:%.*]] = freeze i16 [[Y:%.*]]
+; CHECK-NEXT:    [[X_FRZ:%.*]] = freeze i16 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X_FRZ]], [[Y_FRZ]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.ucmp.i16.i16(i16 [[X_FRZ]], i16 [[Y_FRZ]])
+; CHECK-NEXT:    [[SELECT_UCMP:%.*]] = select i1 [[TMP1]], i16 42, i16 [[TMP2]]
+; CHECK-NEXT:    ret i16 [[SELECT_UCMP]]
+;
+  %3 = icmp eq i16 %x, %y
+  %4 = icmp ult i16 %x, %y
+  %5 = select i1 %4, i16 -1, i16 1
+  %6 = select i1 %3, i16 42, i16 %5
+  ret i16 %6
+}
+
+define i16 @icmp_fold_to_llvm_ucmp_when_cmp_slt(i16 %x, i16 %y) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_when_cmp_slt(
+; CHECK-NEXT:    [[Y_FRZ:%.*]] = freeze i16 [[Y:%.*]]
+; CHECK-NEXT:    [[X_FRZ:%.*]] = freeze i16 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X_FRZ]], [[Y_FRZ]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.scmp.i16.i16(i16 [[X_FRZ]], i16 [[Y_FRZ]])
+; CHECK-NEXT:    [[SELECT_UCMP:%.*]] = select i1 [[TMP1]], i16 42, i16 [[TMP2]]
+; CHECK-NEXT:    ret i16 [[SELECT_UCMP]]
+;
+  %3 = icmp eq i16 %x, %y
+  %4 = icmp slt i16 %x, %y ; here "ult" changed to "slt"
+  %5 = select i1 %4, i16 -1, i16 1
+  %6 = select i1 %3, i16 42, i16 %5
+  ret i16 %6
+}
+
+define i16 @icmp_fold_to_llvm_ucmp_when_value(i16 %x, i16 %y, i16 %Z) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_when_value(
+; CHECK-NEXT:    [[Y_FRZ:%.*]] = freeze i16 [[Y:%.*]]
+; CHECK-NEXT:    [[X_FRZ:%.*]] = freeze i16 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X_FRZ]], [[Y_FRZ]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.ucmp.i16.i16(i16 [[X_FRZ]], i16 [[Y_FRZ]])
+; CHECK-NEXT:    [[SELECT_UCMP:%.*]] = select i1 [[TMP1]], i16 [[Z:%.*]], i16 [[TMP2]]
+; CHECK-NEXT:    ret i16 [[SELECT_UCMP]]
+;
+  %3 = icmp eq i16 %x, %y
+  %4 = icmp ult i16 %x, %y
+  %5 = select i1 %4, i16 -1, i16 1
+  %6 = select i1 %3, i16 %Z, i16 %5
+  ret i16 %6
+}
+
+define i16 @icmp_fold_to_llvm_ucmp_when_ne(i16 %x, i16 %y) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_when_ne(
+; CHECK-NEXT:    [[Y_FRZ:%.*]] = freeze i16 [[Y:%.*]]
+; CHECK-NEXT:    [[X_FRZ:%.*]] = freeze i16 [[X:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[X_FRZ]], [[Y_FRZ]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ucmp.i16.i16(i16 [[X_FRZ]], i16 [[Y_FRZ]])
+; CHECK-NEXT:    [[SELECT_UCMP:%.*]] = select i1 [[DOTNOT]], i16 42, i16 [[TMP1]]
+; CHECK-NEXT:    ret i16 [[SELECT_UCMP]]
+;
+  %3 = icmp ne i16 %x, %y
+  %4 = icmp ult i16 %x, %y
+  %5 = select i1 %4, i16 -1, i16 1
+  %6 = select i1 %3, i16 %5, i16 42
+  ret i16 %6
+}
+
+define i16 @icmp_fold_to_llvm_ucmp_negative_test_invalid_constant_1(i16 %x, i16 %y, i16 %Z) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_negative_test_invalid_constant_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i16 [[Z:%.*]], i16 1
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %3 = icmp eq i16 %x, %y
+  %4 = icmp ult i16 %x, %y
+  %5 = select i1 %4, i16 1, i16 1 ; invalid constant
+  %6 = select i1 %3, i16 %Z, i16 %5
+  ret i16 %6
+}
+
+define i16 @icmp_fold_to_llvm_ucmp_negative_test_invalid_constant_2(i16 %x, i16 %y, i16 %Z) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_negative_test_invalid_constant_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i16 [[Z:%.*]], i16 -1
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %3 = icmp eq i16 %x, %y
+  %4 = icmp ult i16 %x, %y
+  %5 = select i1 %4, i16 -1, i16 -1 ; invalid constant
+  %6 = select i1 %3, i16 %Z, i16 %5
+  ret i16 %6
+}
+
 declare void @use(i1)
 declare void @use.i8(i8)

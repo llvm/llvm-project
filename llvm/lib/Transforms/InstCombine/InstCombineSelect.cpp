@@ -1955,6 +1955,43 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
+/// Transform
+///
+/// select(icmp(eq, X, Y), Z, select(icmp(ult, X, Y), -1, 1))
+/// into select(icmp(eq, X, Y), Z, llvm.ucmp(freeze(X), freeze(Y)))
+///
+/// or
+///
+/// select(icmp(eq, X, Y), Z, select(icmp(slt, X, Y), -1, 1))
+/// into select(icmp(eq, X, Y), Z, llvm.scmp(freeze(X), freeze(Y)))
+static Value *foldSelectToInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
+                                      Value *TrueVal, Value *FalseVal,
+                                      InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred = ICI->getPredicate();
+
+  if (Pred != ICmpInst::ICMP_EQ)
+    return nullptr;
+
+  CmpPredicate IPred;
+  if (match(FalseVal, m_Select(m_ICmp(IPred, m_Specific(ICI->getOperand(0)),
+                                      m_Specific(ICI->getOperand(1))),
+                               m_AllOnes(), m_One())) &&
+      (IPred == ICmpInst::ICMP_ULT || IPred == ICmpInst::ICMP_SLT)) {
+    Value *X = ICI->getOperand(0);
+    Value *Y = ICI->getOperand(1);
+    Builder.SetInsertPoint(&SI);
+    Value *FrozenX = Builder.CreateFreeze(X, X->getName() + ".frz");
+    Value *FrozenY = Builder.CreateFreeze(Y, Y->getName() + ".frz");
+    Value *Cmp = Builder.CreateIntrinsic(
+        FrozenX->getType(),
+        IPred == ICmpInst::ICMP_ULT ? Intrinsic::ucmp : Intrinsic::scmp,
+        {FrozenX, FrozenY});
+    return Builder.CreateSelect(SI.getCondition(), TrueVal, Cmp, "select.ucmp");
+  }
+
+  return nullptr;
+}
+
 /// Fold `X Pred C1 ? X BOp C2 : C1 BOp C2` to `min/max(X, C1) BOp C2`.
 /// This allows for better canonicalization.
 Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
@@ -2184,6 +2221,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectToInstrincCmp(SI, ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
