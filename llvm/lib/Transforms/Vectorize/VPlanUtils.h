@@ -80,6 +80,18 @@ getRecipesForUncountableExit(VPlan &Plan,
 /// the location is conservatively set to nullptr.
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 
+/// Extracts and returns NoWrap and FastMath flags from the induction binop in
+/// \p ID.
+inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
+  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return ID.getInductionBinOp()->getFastMathFlags();
+
+  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
+          ID.getInductionBinOp()))
+    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
+                                  OBO->hasNoSignedWrap());
+  return {};
+}
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

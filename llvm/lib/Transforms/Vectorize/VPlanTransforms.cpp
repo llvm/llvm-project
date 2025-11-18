@@ -81,24 +81,28 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           VPValue *Start = Plan.getOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
+          // It is always safe to copy over the NoWrap and FastMath flags. In
+          // particular, when folding tail by masking, the masked-off lanes are
+          // never used, so it is safe.
+          VPIRFlags Flags = vputils::getFlagsFromIndDesc(*II);
           NewRecipe = new VPWidenIntOrFpInductionRecipe(
-              Phi, Start, Step, &Plan.getVF(), *II, Ingredient.getDebugLoc());
+              Phi, Start, Step, &Plan.getVF(), *II, Flags,
+              Ingredient.getDebugLoc());
         }
       } else {
-        assert(isa<VPInstruction>(&Ingredient) &&
-               "only VPInstructions expected here");
+        auto *VPI = cast<VPInstruction>(&Ingredient);
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, VPIRMetadata(*Load),
+              false /*Consecutive*/, false /*Reverse*/, *VPI,
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              VPIRMetadata(*Store), Ingredient.getDebugLoc());
+              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/, *VPI,
+              Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -107,15 +111,17 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
             return false;
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
-              drop_end(Ingredient.operands()), CI->getType(),
+              drop_end(Ingredient.operands()), CI->getType(), *VPI,
               CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
-          NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
+          NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands(), *VPI);
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
-          NewRecipe = new VPWidenCastRecipe(
-              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), *CI);
+          NewRecipe =
+              new VPWidenCastRecipe(CI->getOpcode(), Ingredient.getOperand(0),
+                                    CI->getType(), *CI, *VPI);
         } else {
-          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands());
+          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands(), *VPI,
+                                        Ingredient.getDebugLoc());
         }
       }
 
@@ -547,6 +553,11 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     // only.
     if (!vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
+      // We are replacing a wide canonical iv with a suitable wide induction.
+      // This is used to compute header mask, hence all lanes will be used and
+      // we need to drop wrap flags only applying to lanes guranteed to execute
+      // in the original scalar loop.
+      WidenOriginalIV->dropPoisonGeneratingFlags();
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
       return;
@@ -1700,8 +1711,9 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
       Ops.append({ALM, Plan.getOrAddLiveIn(
                            ConstantInt::get(IntegerType::getInt64Ty(Ctx),
                                             VF.getKnownMinValue() * Part))});
-      auto *Ext = new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
-                                             IntegerType::getInt1Ty(Ctx), DL);
+      auto *Ext =
+          new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
+                                     IntegerType::getInt1Ty(Ctx), {}, {}, DL);
       Extracts[Part] = Ext;
       Ext->insertAfter(ALM);
     }
@@ -1840,7 +1852,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
     auto *BOC = new VPInstruction(VPInstruction::BranchOnCond, {Plan.getTrue()},
-                                  Term->getDebugLoc());
+                                  {}, {}, Term->getDebugLoc());
     ExitingVPBB->appendRecipe(BOC);
   }
 
@@ -2675,13 +2687,13 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
-        TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
+        TypeInfo.inferScalarType(LHS), {}, {}, CurRecipe.getDebugLoc());
 
   if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
                                  m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
-        TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
+        TypeInfo.inferScalarType(LHS), {}, {}, CurRecipe.getDebugLoc());
 
   return nullptr;
 }
@@ -2749,7 +2761,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
             Intrinsic::experimental_vp_splice,
             {V1, V2, Imm, Plan.getTrue(), PrevEVL, &EVL},
-            TypeInfo.inferScalarType(R.getVPSingleValue()), R.getDebugLoc());
+            TypeInfo.inferScalarType(R.getVPSingleValue()), {}, {},
+            R.getDebugLoc());
         VPSplice->insertBefore(&R);
         R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
         ToErase.push_back(&R);
@@ -3291,16 +3304,13 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
-  // FIXME: The newly created binary instructions should contain nsw/nuw
-  // flags, which can be found from the original scalar operations.
-  VPIRFlags Flags;
+  VPIRFlags Flags = *WidenIVR;
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
   } else {
     AddOp = ID.getInductionOpcode();
     MulOp = Instruction::FMul;
-    Flags = ID.getInductionBinOp()->getFastMathFlags();
   }
 
   // If the phi is truncated, truncate the start and step values.
@@ -3412,7 +3422,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
   Type *StepTy = TypeInfo.inferScalarType(Step);
   VPValue *Offset = Builder.createNaryOp(VPInstruction::StepVector, {}, StepTy);
-  Offset = Builder.createNaryOp(Instruction::Mul, {Offset, Step});
+  Offset = Builder.createOverflowingOp(Instruction::Mul, {Offset, Step});
   VPValue *PtrAdd = Builder.createNaryOp(
       VPInstruction::WidePtrAdd, {ScalarPtrPhi, Offset}, DL, "vector.gep");
   R->replaceAllUsesWith(PtrAdd);
@@ -3422,7 +3432,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
   VF = Builder.createScalarZExtOrTrunc(VF, StepTy, TypeInfo.inferScalarType(VF),
                                        DL);
-  VPValue *Inc = Builder.createNaryOp(Instruction::Mul, {Step, VF});
+  VPValue *Inc = Builder.createOverflowingOp(Instruction::Mul, {Step, VF});
 
   VPValue *InductionGEP =
       Builder.createPtrAdd(ScalarPtrPhi, Inc, DL, "ptr.ind");
@@ -4505,7 +4515,7 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   MDBuilder MDB(Plan.getContext());
   MDNode *BranchWeights =
       MDB.createBranchWeights({1, VectorStep - 1}, /*IsExpected=*/false);
-  MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  MiddleTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
 /// Create and return a ResumePhi for \p WideIV, unless it is truncated. If the

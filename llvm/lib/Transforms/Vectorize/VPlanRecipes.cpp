@@ -36,7 +36,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include <cassert>
 
 using namespace llvm;
@@ -1674,17 +1673,6 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPIRMetadata::VPIRMetadata(Instruction &I, LoopVersioning *LVer)
-    : VPIRMetadata(I) {
-  if (!LVer || !isa<LoadInst, StoreInst>(&I))
-    return;
-  const auto &[AliasScopeMD, NoAliasMD] = LVer->getNoAliasMetadataFor(&I);
-  if (AliasScopeMD)
-    Metadata.emplace_back(LLVMContext::MD_alias_scope, AliasScopeMD);
-  if (NoAliasMD)
-    Metadata.emplace_back(LLVMContext::MD_noalias, NoAliasMD);
-}
-
 void VPIRMetadata::applyMetadata(Instruction &I) const {
   for (const auto &[Kind, Node] : Metadata)
     I.setMetadata(Kind, Node);
@@ -2387,7 +2375,9 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
     raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = WIDEN-INDUCTION  ";
+  O << " = WIDEN-INDUCTION";
+  printFlags(O);
+  O << " ";
   printOperands(O, SlotTracker);
 
   if (auto *TI = getTruncInst())

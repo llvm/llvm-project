@@ -1464,9 +1464,8 @@ public:
   /// directives.  This provides a view on the data that a user should see
   /// in diagnostics, for example.
   ///
-  /// If \p Loc is a macro expansion location, the presumed location
-  /// computation uses the spelling location for macro arguments and the
-  /// expansion location for other macro expansions.
+  /// Note that a presumed location is always given as the expansion point of
+  /// an expansion location, not at the spelling location.
   ///
   /// \returns The presumed location of the specified SourceLocation. If the
   /// presumed location cannot be calculated (e.g., because \p Loc is invalid
