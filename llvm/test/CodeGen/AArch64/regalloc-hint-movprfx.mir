@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64 -mattr=+sve -start-before=greedy -stop-after=virtregrewriter -debug-only=regalloc %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=DBG
+# REQUIRES: asserts
 
 # Check that the register allocator gets hints to reuse registers of one of it's operands.
 ---

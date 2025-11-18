@@ -212,6 +212,14 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
   return success();
 }
 
+LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
+  bool isSharedCTA = isPtrInSharedCTASpace(getDstMem());
+  if (isSharedCTA && getMulticastMask())
+    return emitError("Multicast is not supported with shared::cta mode.");
+
+  return success();
+}
+
 LogicalResult ConvertFloatToTF32Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   switch (getRnd()) {
@@ -1517,6 +1525,15 @@ LogicalResult NVVM::BarrierOp::verify() {
   if (getNumberOfThreads() && !getBarrierId())
     return emitOpError(
         "barrier id is missing, it should be set between 0 to 15");
+
+  if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
+    return emitOpError("reduction are only available when id is 0");
+
+  if ((getReductionOp() && !getReductionPredicate()) ||
+      (!getReductionOp() && getReductionPredicate()))
+    return emitOpError("reduction predicate and reduction operation must be "
+                       "specified together");
+
   return success();
 }
 
@@ -1785,6 +1802,39 @@ std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
 
+mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Intrinsic::ID id;
+  llvm::SmallVector<llvm::Value *> args;
+  if (thisOp.getNumberOfThreads()) {
+    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
+    args.push_back(barrierId);
+    args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
+  } else if (thisOp.getReductionOp()) {
+    switch (*thisOp.getReductionOp()) {
+    case NVVM::BarrierReduction::AND:
+      id = llvm::Intrinsic::nvvm_barrier0_and;
+      break;
+    case NVVM::BarrierReduction::OR:
+      id = llvm::Intrinsic::nvvm_barrier0_or;
+      break;
+    case NVVM::BarrierReduction::POPC:
+      id = llvm::Intrinsic::nvvm_barrier0_popc;
+      break;
+    }
+    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
+  } else {
+    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
+    args.push_back(barrierId);
+  }
+
+  return {id, std::move(args)};
+}
+
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierInitOp>(op);
@@ -1938,11 +1988,15 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   args.push_back(mt.lookupValue(thisOp.getSrcMem()));
   args.push_back(mt.lookupValue(thisOp.getSize()));
 
-  // Multicast mask, if available.
+  // Multicast mask for shared::cluster only, if available.
   mlir::Value multicastMask = thisOp.getMulticastMask();
   const bool hasMulticastMask = static_cast<bool>(multicastMask);
-  llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
-  args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask) : i16Unused);
+  const bool isSharedCTA = isPtrInSharedCTASpace(thisOp.getDstMem());
+  if (!isSharedCTA) {
+    llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
+    args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask)
+                                    : i16Unused);
+  }
 
   // Cache hint, if available.
   mlir::Value cacheHint = thisOp.getL2CacheHint();
@@ -1951,11 +2005,14 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
 
   // Flag arguments for multicast and cachehint.
-  args.push_back(builder.getInt1(hasMulticastMask));
+  if (!isSharedCTA)
+    args.push_back(builder.getInt1(hasMulticastMask));
   args.push_back(builder.getInt1(hasCacheHint));
 
   llvm::Intrinsic::ID id =
-      llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster;
+      isSharedCTA
+          ? llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta
+          : llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster;
 
   return {id, std::move(args)};
 }
