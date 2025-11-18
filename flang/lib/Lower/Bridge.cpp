@@ -3931,8 +3931,8 @@ private:
             charHelper.createUnboxChar(selector);
         std::pair<mlir::Value, mlir::Value> rhsVal =
             charHelper.createUnboxChar(rhs);
-        auto cmp = hlfir::CmpCharOp::create(
-          *builder, loc, pred, lhsVal.first, rhsVal.first);
+        auto cmp = hlfir::CmpCharOp::create(*builder, loc, pred, lhsVal.first,
+                                            rhsVal.first);
         return hlfir::EntityWithAttributes{cmp};
       };
       mlir::Block *newBlock = insertBlock(*caseBlock);
