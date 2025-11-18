@@ -1,4 +1,5 @@
 // RUN: mlir-opt --convert-gpu-to-nvvm --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-gpu-to-nvvm="allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 // RUN: mlir-opt --convert-gpu-to-nvvm="index-bitwidth=32" --split-input-file %s | FileCheck --check-prefix=CHECK32 %s
 
 gpu.module @test_module {
