@@ -130,7 +130,7 @@ String gitPathEnv = (
 String llvmProj = 'llvm-project', llvmProjRepo = llvmProj + '.git'
 String theUrl
 Boolean hasSourceChanges = true, isSkippableMerge = false
-Integer successStat = 0
+Integer zero = 0, successStat = zero
 
 // llvmVer is processed by automation:
 String llvmVer = '22.0.0'
@@ -158,6 +158,8 @@ if (postsub && targetIsRelBranch) {
 def gitVars // groovylint-disable-line NoDef,VariableTypeRequired
 
 Integer fullTimeoutH = 15
+
+String compilerTar
 
 try {
     timeout(time: fullTimeoutH, unit: 'HOURS') {
@@ -343,6 +345,12 @@ try {
                     }
                     currentBuild.result = successResultStr
                 } finally {
+                    def compilerZips = findFiles( // groovylint-disable-line NoDef,VariableTypeRequired
+                        glob: "*-${env.BUILD_NUMBER}*.tar.xz"
+                    )
+                    if (compilerZips) {
+                        compilerTar = compilerZips[zero].path
+                    }
                     archiveArtifacts(
                         allowEmptyArchive: true,
                         artifacts: '*_logs/**,*.tar.xz,*.txt'
@@ -357,7 +365,7 @@ try {
         if (isSkippableMerge || !hasSourceChanges) {
             return // From timeout
         }
-        if (runDownstream) {
+        if (runDownstream && compilerTar) {
             stage ('downstream-tasks') {
                 Map allTasks = [
                     failFast: false,
@@ -375,13 +383,9 @@ try {
                                 wait: true,
                                 job: 'AOCC-Workloads/TestSuites/' + suiteName,
                                 parameters: [
-                                    // Use the name of build tar as defined in the run script:
                                     string(
                                         name: 'CUT',
-                                        value: (
-                                            env.BUILD_URL + 'artifact/' +
-                                                jobName + dash + env.BUILD_NUMBER + '.tar.xz'
-                                        )
+                                        value: env.BUILD_URL + 'artifact/' + compilerTar
                                     ),
                                     string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
                                     string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
