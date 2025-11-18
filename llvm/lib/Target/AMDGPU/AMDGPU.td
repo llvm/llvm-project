@@ -901,43 +901,43 @@ def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "Has v_pk_fmac_f16 instruction"
 >;
 
-def FeatureCubeInsts : SubtargetFeature<"V_CUBE-Insts",
+def FeatureCubeInsts : SubtargetFeature<"cube-insts",
   "HasCubeInsts",
   "true",
   "Has V_CUBE* instructions"
 >; 
 
-def FeatureLerpInst : SubtargetFeature<"V_LERP-insts",
+def FeatureLerpInst : SubtargetFeature<"lerp-inst",
   "HasLerpInst",
   "true",
   "Has v_lerp_u8 instruction"
 >; 
 
-def FeatureSadInsts : SubtargetFeature<"V_SAD-insts",
+def FeatureSadInsts : SubtargetFeature<"sad-insts",
   "HasSadInsts",
   "true",
   "Has V_SAD* instructions"
 >; 
 
-def FeatureQsadInsts : SubtargetFeature<"V_QSAD-insts",
+def FeatureQsadInsts : SubtargetFeature<"qsad-insts",
   "HasQsadInsts",
   "true",
   "Has V_QSAD* instructions"
 >; 
 
-def FeatureCvtNormInsts : SubtargetFeature<"V_CVT_NORM-insts",
+def FeatureCvtNormInsts : SubtargetFeature<"cvt-norm-insts",
   "HasCvtNormInsts",
   "true",
   "Has V_CVT_NORM* instructions"
 >;
 
-def FeatureCvtPkNormVOP2Insts : SubtargetFeature<"V_CVT_PKNORM-VOP2-insts",
+def FeatureCvtPkNormVOP2Insts : SubtargetFeature<"cvt-pknorm-vop2-insts",
   "HasCvtPkNormVOP2Insts",
   "true",
   "Has V_CVT_PK_NORM_* instructions/Has V_CVT_PK_NORM_*_F16 instructions"
 >;
 
-def FeatureCvtPkNormVOP3Insts : SubtargetFeature<"V_CVT_PKNORM-VOP3-insts",
+def FeatureCvtPkNormVOP3Insts : SubtargetFeature<"cvt-pknorm-vop3-insts",
   "HasCvtPkNormVOP3Insts",
   "true",
   "Has V_CVT_PK_NORM_* instructions/Has V_CVT_PK_NORM_*_F16 instructions"
