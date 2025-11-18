@@ -71,12 +71,27 @@ void LifetimeSafetyAnalysis::run() {
 }
 } // namespace internal
 
-std::unique_ptr<internal::LifetimeSafetyAnalysis>
-runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                          LifetimeSafetyReporter *Reporter) {
+void PrintStats(const LifetimeSafetyStats &Stats) {
+  llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats "
+                  "(expression_type : count) :\n\n";
+  unsigned totalMissingOrigins = 0;
+  for (const auto &[expr, count] : Stats.MissingOriginCount) {
+    llvm::errs() << expr << " : " << count << '\n';
+    totalMissingOrigins += count;
+  }
+  llvm::errs() << "Total missing origins: " << totalMissingOrigins << "\n";
+  llvm::errs() << "\n****************************************\n";
+}
+
+void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetyStats &Stats, bool CollectStats) {
   std::unique_ptr<internal::LifetimeSafetyAnalysis> Analysis =
       std::make_unique<internal::LifetimeSafetyAnalysis>(AC, Reporter);
   Analysis->run();
-  return Analysis;
+  for (const auto &[expr, count] :
+       Analysis->getFactManager().getOriginMgr().getMissingOrigins()) {
+    Stats.MissingOriginCount[expr] += count;
+  }
 }
 } // namespace clang::lifetimes

@@ -38,6 +38,12 @@ enum class Confidence : uint8_t {
   Definite // Reported as a definite error (-Wlifetime-safety-permissive)
 };
 
+/// A structure to hold the statistics related to LifetimeAnalysis.
+/// Curently it holds only the missing origin details.
+struct LifetimeSafetyStats {
+  llvm::StringMap<unsigned> MissingOriginCount;
+};
+
 class LifetimeSafetyReporter {
 public:
   LifetimeSafetyReporter() = default;
@@ -84,10 +90,13 @@ private:
 };
 } // namespace internal
 
+// utility function to print missing origin stats.
+void PrintStats(const LifetimeSafetyStats &Stats);
+
 /// The main entry point for the analysis.
-std::unique_ptr<internal::LifetimeSafetyAnalysis>
-runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                          LifetimeSafetyReporter *Reporter);
+void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetyStats &Stats, bool CollectStats);
 
 } // namespace clang::lifetimes
 

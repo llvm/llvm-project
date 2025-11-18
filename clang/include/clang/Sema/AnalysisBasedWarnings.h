@@ -15,8 +15,10 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 
@@ -99,7 +101,7 @@ private:
   unsigned MaxUninitAnalysisBlockVisitsPerFunction;
 
   /// Map from expressions missing origin in OriginManager to their counts.
-  llvm::StringMap<unsigned> MissingOriginCount;
+  clang::lifetimes::LifetimeSafetyStats LSStats;
 
   /// @}
 
@@ -122,9 +124,6 @@ public:
   Policy &getPolicyOverrides() { return PolicyOverrides; }
 
   void PrintStats() const;
-
-  void FindMissingOrigins(AnalysisDeclContext &AC,
-                          clang::lifetimes::internal::FactManager &FactMgr);
 };
 
 } // namespace sema

@@ -3069,11 +3069,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
-      std::unique_ptr<clang::lifetimes::internal::LifetimeSafetyAnalysis>
-          Analysis =
-              lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter);
-      if (S.CollectStats)
-        FindMissingOrigins(AC, Analysis->getFactManager());
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter, LSStats,
+                                           S.CollectStats);
     }
   }
   // Check for violations of "called once" parameter properties.
@@ -3139,26 +3136,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 }
 
-void clang::sema::AnalysisBasedWarnings::FindMissingOrigins(
-    AnalysisDeclContext &AC, lifetimes::internal::FactManager &FactMgr) {
-  if (AC.getCFG()) {
-    for (const auto &[expr, count] :
-         FactMgr.getOriginMgr().getMissingOrigins()) {
-      MissingOriginCount[expr] += count;
-    }
-  }
-}
-
 void clang::sema::AnalysisBasedWarnings::PrintStats() const {
-  llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats "
-                  "(expression_type : count) :\n\n";
-  unsigned totalMissingOrigins = 0;
-  for (const auto &[expr, count] : MissingOriginCount) {
-    llvm::errs() << expr << " : " << count << '\n';
-    totalMissingOrigins += count;
-  }
-  llvm::errs() << "Total missing origins: " << totalMissingOrigins << "\n";
-  llvm::errs() << "\n****************************************\n";
+
+  clang::lifetimes::PrintStats(LSStats);
   llvm::errs() << "\n*** Analysis Based Warnings Stats:\n";
   unsigned NumCFGsBuilt = NumFunctionsAnalyzed - NumFunctionsWithBadCFGs;
   unsigned AvgCFGBlocksPerFunction =
