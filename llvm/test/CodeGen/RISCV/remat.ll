@@ -295,7 +295,8 @@ define void @remat_load(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, 
 ; CHECK-NEXT:    ret
 entry:
   ; Add a use of the stack arguments here so that we will have to load them from
-  ; the stack before the inline asm
+  ; the stack before the inline asm. Otherwise we would be exercising the
+  ; machine scheduler, not rematerialization.
   store volatile i8 %stackarg0, ptr %p
   store volatile i16 %stackarg1, ptr %p
   store volatile i32 %stackarg2, ptr %p
