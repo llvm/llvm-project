@@ -430,9 +430,6 @@ do {
   if (needs_object_ptr || static_method) {
     const char *func_decorator = "";
     if (static_method) {
-      if (is_class)
-        func_decorator = "final class";
-      else
         func_decorator = "static";
     } else if (is_class && !weak_self) {
       func_decorator = "final";
