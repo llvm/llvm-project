@@ -106,8 +106,6 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
   return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).PrefetchHints;
 }
 
-
-
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
 //   m <module_name>
