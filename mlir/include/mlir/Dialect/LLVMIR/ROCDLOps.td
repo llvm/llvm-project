@@ -701,6 +701,56 @@ class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp
   }];
 }
 
+// Overloaded operands: [1, 3] refers to LLVM intrinsic parameter positions where
+// A is at position 1 and B is at position 3 (after format parameters).
+class ROCDL_WMMA_Scale_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy> : ROCDL_IntrOp<mnemonic,
+    [0], [1, 3], [], 1, 0, 0, 0, [0, 2, 4, 6, 7, 9, 10, 12, 13], 
+    ["matrix_a_fmt", "matrix_b_fmt", "modC", "matrix_a_scale", "matrix_a_scale_fmt", 
+     "matrix_b_scale", "matrix_b_scale_fmt", "reuseA", "reuseB"]>,
+  Arguments<(ins 
+             DefaultValuedAttr<I32Attr, "0">:$matrix_a_fmt,
+             LLVM_ScalarOrVectorOf<AB>:$A, 
+             DefaultValuedAttr<I32Attr, "0">:$matrix_b_fmt,
+             LLVM_ScalarOrVectorOf<AB>:$B,
+             DefaultValuedAttr<I16Attr, "0">:$modC, 
+             LLVM_ScalarOrVectorOf<CD>:$C,
+             DefaultValuedAttr<I32Attr, "0">:$matrix_a_scale,
+             DefaultValuedAttr<I32Attr, "0">:$matrix_a_scale_fmt,
+             ScaleExpTy:$matrix_a_scale_exp,
+             DefaultValuedAttr<I32Attr, "0">:$matrix_b_scale,
+             DefaultValuedAttr<I32Attr, "0">:$matrix_b_scale_fmt,
+             ScaleExpTy:$matrix_b_scale_exp,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
+             DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
+  let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $A `,` $B `,` $C `,` $matrix_a_scale_exp `,` $matrix_b_scale_exp attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
+class ROCDL_WMMA_Scale_F4_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy> : ROCDL_IntrOp<mnemonic,
+    [0], [0, 1], [], 1, 0, 0, 0, [2, 4, 5, 7, 8, 10, 11], 
+    ["modC", "matrix_a_scale", "matrix_a_scale_fmt", 
+     "matrix_b_scale", "matrix_b_scale_fmt", "reuseA", "reuseB"]>,
+  Arguments<(ins 
+             LLVM_ScalarOrVectorOf<AB>:$A, 
+             LLVM_ScalarOrVectorOf<AB>:$B,
+             DefaultValuedAttr<I16Attr, "0">:$modC, 
+             LLVM_ScalarOrVectorOf<CD>:$C,
+             DefaultValuedAttr<I32Attr, "0">:$matrix_a_scale,
+             DefaultValuedAttr<I32Attr, "0">:$matrix_a_scale_fmt,
+             ScaleExpTy:$matrix_a_scale_exp,
+             DefaultValuedAttr<I32Attr, "0">:$matrix_b_scale,
+             DefaultValuedAttr<I32Attr, "0">:$matrix_b_scale_fmt,
+             ScaleExpTy:$matrix_b_scale_exp,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
+             DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
+  let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $A `,` $B `,` $C `,` $matrix_a_scale_exp `,` $matrix_b_scale_exp attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
 // Available from gfx11
 def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_WMMA_IntrOp<"wmma.f32.16x16x16.f16", /*Type AB=*/F16, /*Type CD=*/F32>;
 def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_WMMA_IntrOp<"wmma.f32.16x16x16.bf16", AnyInteger, F32>;
@@ -738,6 +788,12 @@ def ROCDL_wmma_f16_16x16x128_fp8_bf8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x1
 def ROCDL_wmma_f16_16x16x128_bf8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x128.bf8_fp8", AnyInteger, F16>;
 def ROCDL_wmma_f16_16x16x128_bf8_bf8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x128.bf8_bf8", AnyInteger, F16>;
 def ROCDL_wmma_i32_16x16x64_iu8 : ROCDL_WMMA_ModsAB_IntrOp<"wmma.i32.16x16x64.iu8", AnyInteger, AnyInteger>;
+
+// Scaled wmma intrinsics (available from gfx1250)
+def ROCDL_wmma_scale_f32_16x16x128_f8f6f4   : ROCDL_WMMA_Scale_IntrOp<"wmma.scale.f32.16x16x128.f8f6f4", AnyInteger, F32, I32>;
+def ROCDL_wmma_scale16_f32_16x16x128_f8f6f4 : ROCDL_WMMA_Scale_IntrOp<"wmma.scale16.f32.16x16x128.f8f6f4", AnyInteger, F32, I64>;
+def ROCDL_wmma_scale_f32_32x16x128_f4       : ROCDL_WMMA_Scale_F4_IntrOp<"wmma.scale.f32.32x16x128.f4", AnyInteger, F32, I32>;
+def ROCDL_wmma_scale16_f32_32x16x128_f4     : ROCDL_WMMA_Scale_F4_IntrOp<"wmma.scale16.f32.32x16x128.f4", AnyInteger, F32, I64>;
 
 //===---------------------------------------------------------------------===//
 // LDS transpose intrinsics (available in GFX950)
