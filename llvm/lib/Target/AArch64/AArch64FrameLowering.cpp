@@ -218,10 +218,10 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PrologueEpilogue.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1712,12 +1712,10 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   // NOTE: we currently do not account for the D registers as LLVM does not
   // support non-ABI compliant D register spills.
   bool SpillExtendedVolatile =
-      IsWindows && std::any_of(std::begin(CSI), std::end(CSI),
-                               [](const CalleeSavedInfo &CSI) {
-                                 const auto &Reg = CSI.getReg();
-                                 return Reg >= AArch64::X0 &&
-                                        Reg <= AArch64::X18;
-                               });
+      IsWindows && llvm::any_of(CSI, [](const CalleeSavedInfo &CSI) {
+        const auto &Reg = CSI.getReg();
+        return Reg >= AArch64::X0 && Reg <= AArch64::X18;
+      });
 
   int ZPRByteOffset = 0;
   int PPRByteOffset = 0;

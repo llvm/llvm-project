@@ -54,25 +54,26 @@ LogicalResult handleMultidimensionalVectors(
     std::function<Value(Type, ValueRange)> createOperand,
     ConversionPatternRewriter &rewriter);
 
-LogicalResult vectorOneToOneRewrite(
-    Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
+LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
+                                    ValueRange operands,
+                                    ArrayRef<NamedAttribute> targetAttrs,
+                                    Attribute propertiesAttr,
+                                    const LLVMTypeConverter &typeConverter,
+                                    ConversionPatternRewriter &rewriter);
 } // namespace detail
 } // namespace LLVM
 
 // Default attribute conversion class, which passes all source attributes
-// through to the target op, unmodified.
+// through to the target op, unmodified. The attribute to set properties of the
+// target operation will be nullptr (i.e. any properties that exist in will have
+// default values).
 template <typename SourceOp, typename TargetOp>
 class AttrConvertPassThrough {
 public:
   AttrConvertPassThrough(SourceOp srcOp) : srcAttrs(srcOp->getAttrs()) {}
 
   ArrayRef<NamedAttribute> getAttrs() const { return srcAttrs; }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const {
-    return LLVM::IntegerOverflowFlags::none;
-  }
+  Attribute getPropAttr() const { return {}; }
 
 private:
   ArrayRef<NamedAttribute> srcAttrs;
@@ -80,10 +81,13 @@ private:
 
 /// Basic lowering implementation to rewrite Ops with just one result to the
 /// LLVM Dialect. This supports higher-dimensional vector types.
-/// The AttrConvert template template parameter should be a template class
-/// with SourceOp and TargetOp type parameters, a constructor that takes
-/// a SourceOp instance, and a getAttrs() method that returns
-/// ArrayRef<NamedAttribute>.
+/// The AttrConvert template template parameter should:
+//  - be a template class with SourceOp and TargetOp type parameters
+//  - have a constructor that takes a SourceOp instance
+//  - a getAttrs() method that returns ArrayRef<NamedAttribute> containing
+//    attributes that the target operation will have
+//  - a getPropAttr() method that returns either a NULL attribute or a
+//    DictionaryAttribute with properties that exist for the target operation
 template <typename SourceOp, typename TargetOp,
           template <typename, typename> typename AttrConvert =
               AttrConvertPassThrough,
@@ -137,8 +141,8 @@ public:
 
     return LLVM::detail::vectorOneToOneRewrite(
         op, TargetOp::getOperationName(), adaptor.getOperands(),
-        attrConvert.getAttrs(), *this->getTypeConverter(), rewriter,
-        attrConvert.getOverflowFlags());
+        attrConvert.getAttrs(), attrConvert.getPropAttr(),
+        *this->getTypeConverter(), rewriter);
   }
 };
 } // namespace mlir

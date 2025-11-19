@@ -94,7 +94,7 @@ def: Flag<["-"], "s">,
   Group<grp_general>;
 
 def flat: F<"flat">,
-  HelpText<"Produce a flat dSYM file (not a bundle).">,
+  HelpText<"Produce a flat dSYM file (not a bundle). Intended for testing and generally unsupported by tools that consume dSYMs.">,
   Group<grp_general>;
 def: Flag<["-"], "f">,
   Alias<flat>,

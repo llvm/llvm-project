@@ -707,6 +707,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(write);
   KEYWORD(readwrite);
   KEYWORD(argmem);
+  KEYWORD(target_mem0);
+  KEYWORD(target_mem1);
   KEYWORD(inaccessiblemem);
   KEYWORD(errnomem);
   KEYWORD(argmemonly);

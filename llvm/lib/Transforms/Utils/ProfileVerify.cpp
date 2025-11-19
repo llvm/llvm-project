@@ -102,11 +102,14 @@ bool ProfileInjector::inject() {
   for (auto &BB : F) {
     if (AnnotateSelect) {
       for (auto &I : BB) {
-        if (auto *SI = dyn_cast<SelectInst>(&I))
-          if (!SI->getCondition()->getType()->isVectorTy() &&
-              !I.getMetadata(LLVMContext::MD_prof))
-            setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
-                             /*IsExpected=*/false);
+        if (auto *SI = dyn_cast<SelectInst>(&I)) {
+          if (SI->getCondition()->getType()->isVectorTy())
+            continue;
+          if (I.getMetadata(LLVMContext::MD_prof))
+            continue;
+          setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
+                           /*IsExpected=*/false);
+        }
       }
     }
     auto *Term = getTerminatorBenefitingFromMDProf(BB);
@@ -187,11 +190,14 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
   for (const auto &BB : F) {
     if (AnnotateSelect) {
       for (const auto &I : BB)
-        if (auto *SI = dyn_cast<SelectInst>(&I))
-          if (!SI->getCondition()->getType()->isVectorTy() &&
-              !I.getMetadata(LLVMContext::MD_prof))
-            F.getContext().emitError(
-                "Profile verification failed: select annotation missing");
+        if (auto *SI = dyn_cast<SelectInst>(&I)) {
+          if (SI->getCondition()->getType()->isVectorTy())
+            continue;
+          if (I.getMetadata(LLVMContext::MD_prof))
+            continue;
+          F.getContext().emitError(
+              "Profile verification failed: select annotation missing");
+        }
     }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))

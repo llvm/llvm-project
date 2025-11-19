@@ -17,15 +17,17 @@ declare float @llvm.fmuladd.f32(float, float, float) #0
 define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg, ptr addrspace(1) noalias nocapture readonly %arg1, ptr addrspace(1) noalias nocapture %arg2, float %arg3, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) local_unnamed_addr !reqd_work_group_size !0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x10
 ; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10
+; CHECK-NEXT:    s_load_dword s10, s[4:5], 0x11
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; CHECK-NEXT:    s_movk_i32 s0, 0x54
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mad_u32_u24 v1, v1, s0, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_bitcmp1_b32 s2, 8
+; CHECK-NEXT:    s_bitcmp1_b32 s6, 8
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s2, 16
+; CHECK-NEXT:    s_bitcmp1_b32 s6, 16
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
 ; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v2
@@ -35,7 +37,7 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg,
 ; CHECK-NEXT:    s_xor_b64 s[6:7], s[6:7], -1
 ; CHECK-NEXT:    s_bitcmp1_b32 s3, 0
 ; CHECK-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s3, 8
+; CHECK-NEXT:    s_bitcmp1_b32 s10, 8
 ; CHECK-NEXT:    s_cselect_b64 s[10:11], -1, 0
 ; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[6:7]
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
