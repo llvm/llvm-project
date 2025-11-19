@@ -449,10 +449,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s128, s32}});
 
-  // TODO: Libcall support for s128.
-  // TODO: s16 should be legal with full FP16 support.
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
-      .legalFor({{s64, s32}, {s64, s64}});
+      .legalFor({{s64, s32}, {s64, s64}})
+      .legalFor(HasFP16, {{s64, s16}})
+      .minScalar(0, s64)
+      .minScalar(1, s32)
+      .libcallFor({{s64, s128}});
 
   // TODO: Custom legalization for mismatched types.
   getActionDefinitionsBuilder(G_FCOPYSIGN)
@@ -825,6 +827,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(
           {{s32, s16}, {s64, s16}, {s64, s32}, {v4s32, v4s16}, {v2s64, v2s32}})
       .libcallFor({{s128, s64}, {s128, s32}, {s128, s16}})
+      .moreElementsToNextPow2(0)
+      .widenScalarIf(
+          [](const LegalityQuery &Q) {
+            LLT DstTy = Q.Types[0];
+            LLT SrcTy = Q.Types[1];
+            return SrcTy.isVector() && DstTy.isVector() &&
+                   SrcTy.getScalarSizeInBits() == 16 &&
+                   DstTy.getScalarSizeInBits() == 64;
+          },
+          changeElementTo(1, s32))
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .scalarize(0);
@@ -1230,7 +1242,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{v16s8, v8s8}, {v8s16, v4s16}, {v4s32, v2s32}})
       .bitcastIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getSizeInBits() <= 128 &&
+            return Query.Types[0].isFixedVector() &&
+                   Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getSizeInBits() <= 128 &&
                    Query.Types[1].getSizeInBits() <= 64;
           },
           [=](const LegalityQuery &Query) {

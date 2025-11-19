@@ -68,9 +68,16 @@ private:
   void emitEnums(raw_ostream &OS,
                  ArrayRef<const CodeGenInstruction *> NumberedInstructions);
 
-  typedef std::vector<std::string> OperandInfoTy;
-  typedef std::vector<OperandInfoTy> OperandInfoListTy;
-  typedef std::map<OperandInfoTy, unsigned> OperandInfoMapTy;
+  using OperandInfoTy = std::vector<std::string>;
+  using OperandInfoListTy = std::vector<OperandInfoTy>;
+  using OperandInfoMapTy = std::map<OperandInfoTy, unsigned>;
+
+  DenseMap<const CodeGenInstruction *, const CodeGenInstruction *>
+      TargetSpecializedPseudoInsts;
+
+  /// Compute mapping of opcodes which should have their definitions overridden
+  /// by a target version.
+  void buildTargetSpecializedPseudoInstsMap();
 
   /// Generate member functions in the target-specific GenInstrInfo class.
   ///
@@ -216,6 +223,10 @@ InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
   const CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned Offset = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructions()) {
+    auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+    if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+      Inst = OverrideEntry->second;
+
     OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
     if (OperandInfoMap.try_emplace(OperandInfo, Offset).second) {
       OperandInfoList.push_back(OperandInfo);
@@ -859,6 +870,25 @@ void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
   }
 }
 
+void InstrInfoEmitter::buildTargetSpecializedPseudoInstsMap() {
+  ArrayRef<const Record *> SpecializedInsts = Records.getAllDerivedDefinitions(
+      "TargetSpecializedStandardPseudoInstruction");
+  const CodeGenTarget &Target = CDP.getTargetInfo();
+
+  for (const Record *SpecializedRec : SpecializedInsts) {
+    const CodeGenInstruction &SpecializedInst =
+        Target.getInstruction(SpecializedRec);
+    const Record *BaseInstRec = SpecializedRec->getValueAsDef("Instruction");
+
+    const CodeGenInstruction &BaseInst = Target.getInstruction(BaseInstRec);
+
+    if (!TargetSpecializedPseudoInsts.insert({&BaseInst, &SpecializedInst})
+             .second)
+      PrintFatalError(SpecializedRec, "multiple overrides of '" +
+                                          BaseInst.getName() + "' defined");
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Main Output.
 //===----------------------------------------------------------------------===//
@@ -881,6 +911,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   // Collect all of the operand info records.
   Timer.startTimer("Collect operand info");
+  buildTargetSpecializedPseudoInstsMap();
+
   OperandInfoListTy OperandInfoList;
   OperandInfoMapTy OperandInfoMap;
   unsigned OperandInfoSize =
@@ -963,6 +995,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
       // Keep a list of the instruction names.
       InstrNames.add(Inst->getName());
+
+      auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+      if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+        Inst = OverrideEntry->second;
+
       // Emit the record into the table.
       emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoMap, OS);
     }
@@ -1103,7 +1140,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
       Twine ClassName = TargetName + "GenInstrInfo";
       OS << "struct " << ClassName << " : public TargetInstrInfo {\n"
          << "  explicit " << ClassName
-         << "(const TargetSubtargetInfo &STI, unsigned CFSetupOpcode = ~0u, "
+         << "(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, "
+            "unsigned CFSetupOpcode = ~0u, "
             "unsigned CFDestroyOpcode = ~0u, "
             "unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);\n"
          << "  ~" << ClassName << "() override = default;\n"
@@ -1157,9 +1195,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
          << TargetName << "InstrComplexDeprecationInfos[];\n";
     Twine ClassName = TargetName + "GenInstrInfo";
     OS << ClassName << "::" << ClassName
-       << "(const TargetSubtargetInfo &STI, unsigned CFSetupOpcode, unsigned "
+       << "(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, "
+          "unsigned CFSetupOpcode, unsigned "
           "CFDestroyOpcode, unsigned CatchRetOpcode, unsigned ReturnOpcode)\n"
-       << "  : TargetInstrInfo(CFSetupOpcode, CFDestroyOpcode, CatchRetOpcode, "
+       << "  : TargetInstrInfo(TRI, CFSetupOpcode, CFDestroyOpcode, "
+          "CatchRetOpcode, "
           "ReturnOpcode";
     if (NumClassesByHwMode != 0)
       OS << ", " << TargetName

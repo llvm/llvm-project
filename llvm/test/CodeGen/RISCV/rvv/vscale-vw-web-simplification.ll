@@ -595,12 +595,11 @@ define <vscale x 4 x i32> @mismatched_extend_sub_add_commuted(<vscale x 4 x i16>
 ; FOLDING:       # %bb.0:
 ; FOLDING-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; FOLDING-NEXT:    vzext.vf2 v10, v8
-; FOLDING-NEXT:    vsext.vf2 v12, v9
 ; FOLDING-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; FOLDING-NEXT:    vwsub.wv v10, v10, v9
-; FOLDING-NEXT:    vwaddu.wv v12, v12, v8
+; FOLDING-NEXT:    vwsub.wv v12, v10, v9
+; FOLDING-NEXT:    vwadd.wv v10, v10, v9
 ; FOLDING-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; FOLDING-NEXT:    vmul.vv v8, v10, v12
+; FOLDING-NEXT:    vmul.vv v8, v12, v10
 ; FOLDING-NEXT:    ret
   %a = zext <vscale x 4 x i16> %x to <vscale x 4 x i32>
   %b = sext <vscale x 4 x i16> %y to <vscale x 4 x i32>

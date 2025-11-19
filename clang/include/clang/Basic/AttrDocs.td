@@ -4295,17 +4295,17 @@ used by other languages. (This prefix is also added to the standard Itanium
 C++ ABI prefix on "mangled" symbol names, so that e.g. on such targets the true
 symbol name for a C++ variable declared as ``int cppvar;`` would be
 ``__Z6cppvar``; note the two underscores.)  This prefix is *not* added to the
-symbol names specified by the ``asm`` attribute; programmers wishing to match a
-C symbol name must compensate for this.
+symbol names specified by the ``__asm`` attribute; programmers wishing to match
+a C symbol name must compensate for this.
 
 For example, consider the following C code:
 
 .. code-block:: c
 
-  int var1 asm("altvar") = 1;  // "altvar" in symbol table.
+  int var1 __asm("altvar") = 1;  // "altvar" in symbol table.
   int var2 = 1; // "_var2" in symbol table.
 
-  void func1(void) asm("altfunc");
+  void func1(void) __asm("altfunc");
   void func1(void) {} // "altfunc" in symbol table.
   void func2(void) {} // "_func2" in symbol table.
 
@@ -8672,38 +8672,6 @@ randomized.
   }];
 }
 
-def HLSLSV_GroupThreadIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
-individual thread within a thread group is executing in. This attribute is
-only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
-  }];
-}
-
-def HLSLSV_GroupIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
-thread group a shader is executing in. This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
-  }];
-}
-
-def HLSLSV_GroupIndexDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupIndex`` semantic, when applied to an input parameter, specifies a
-data binding to map the group index to the specified parameter. This attribute
-is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
-  }];
-}
-
 def HLSLResourceBindingDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8747,35 +8715,6 @@ Examples:
   }
 
 The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
-  }];
-}
-
-def HLSLSV_DispatchThreadIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_DispatchThreadID`` semantic, when applied to an input parameter,
-specifies a data binding to map the global thread offset within the Dispatch
-call (per dimension of the group) to the specified parameter.
-When applied to a field of a struct, the data binding is specified to the field
-when the struct is used as a parameter type.
-The semantic on the field is ignored when not used as a parameter.
-This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-dispatchthreadid
-  }];
-}
-
-def HLSLSV_PositionDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_Position`` semantic, when applied to an input parameter in a pixel
-shader, contains the location of the pixel center (x, y) in screen space.
-This semantic can be applied to the parameter, or a field in a struct used
-as an input parameter.
-This attribute is supported as an input in pixel, hull, domain and mesh shaders.
-This attribute is supported as an output in vertex, geometry and domain shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
   }];
 }
 

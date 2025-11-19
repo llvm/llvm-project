@@ -508,6 +508,10 @@ def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
   let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
 }
 
+def TargetMustTailAvaiable:  TargetSpec {
+  let CustomCode = [{ Target.hasMustTail() }];
+}
+
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
@@ -737,6 +741,17 @@ class Attr {
   // our existing general parsing we need to have a separate flag that
   // opts an attribute into strict parsing of attribute parameters
   bit StrictEnumParameters = 0;
+  // Set to true for attributes which have Sema checks which requires the type
+  // to be deduced.
+  // When `IsTypeDependent` is set to true, you should add an `ActOn*Attr`
+  // function to `Sema.h`. The signature of the function must be:
+  // `void ActOn*Attr(Decl *, const Attr *);` where the `Decl *` is the
+  // declaration the attribute will be attached to; its type will have already
+  // been deduced, and the `Attr *` is the attribute being applied to that
+  // declaration. This function should handle all type-sensitive semantics for
+  // the attribute. This function will be automatically called by
+  // `Sema::CheckAttributesOnDeducedType()`.
+  bit IsTypeDependent = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
@@ -778,18 +793,6 @@ class DeclOrStmtAttr : InheritableAttr;
 
 /// An attribute class for HLSL Annotations.
 class HLSLAnnotationAttr : InheritableAttr;
-
-class HLSLSemanticAttr<bit Indexable> : HLSLAnnotationAttr {
-  bit SemanticIndexable = Indexable;
-  int SemanticIndex = 0;
-  bit SemanticExplicitIndex = 0;
-
-  let Spellings = [];
-  let Subjects = SubjectList<[ParmVar, Field, Function]>;
-  let LangOpts = [HLSL];
-  let Args = [DeclArgument<Named, "Target">, IntArgument<"SemanticIndex">,
-              BoolArgument<"SemanticExplicitIndex">];
-}
 
 /// A target-specific attribute.  This class is meant to be used as a mixin
 /// with InheritableAttr or Attr depending on the attribute's needs.
@@ -1069,7 +1072,7 @@ def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
 }
 
 def AsmLabel : InheritableAttr {
-  let Spellings = [CustomKeyword<"asm">, CustomKeyword<"__asm__">];
+  let Spellings = [CustomKeyword<"asm">, CustomKeyword<"__asm">, CustomKeyword<"__asm__">];
   let Args = [
       // Label specifies the mangled name for the decl.
       StringArgument<"Label">, ];
@@ -1408,6 +1411,7 @@ def Cleanup : InheritableAttr {
   let Args = [DeclArgument<Function, "FunctionDecl">];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
+  let IsTypeDependent = 1;
   // FIXME: DeclArgument should be reworked to also store the
   // Expr instead of adding attr specific hacks like the following.
   // See the discussion in https://github.com/llvm/llvm-project/pull/14023.
@@ -1913,7 +1917,7 @@ def NoMerge : DeclOrStmtAttr {
                              "functions, statements and variables">;
 }
 
-def MustTail : StmtAttr {
+def MustTail : StmtAttr, TargetSpecificAttr<TargetMustTailAvaiable> {
   let Spellings = [Clang<"musttail">];
   let Documentation = [MustTailDocs];
   let Subjects = SubjectList<[ReturnStmt], ErrorDiag, "return statements">;
@@ -5017,28 +5021,28 @@ def HLSLUnparsedSemantic : HLSLAnnotationAttr {
   let Documentation = [InternalOnly];
 }
 
-def HLSLUserSemantic : HLSLSemanticAttr</* Indexable= */ 1> {
+class HLSLSemanticBaseAttr : HLSLAnnotationAttr {
+  int SemanticIndex = 0;
+
+  let Spellings = [];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
+  let LangOpts = [HLSL];
+
+  let Args = [StringArgument<"SemanticName">, IntArgument<"SemanticIndex">];
+}
+
+def HLSLParsedSemantic : HLSLSemanticBaseAttr {
+  let Spellings = [];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
+  let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 
-def HLSLSV_Position : HLSLSemanticAttr</* Indexable= */ 1> {
-  let Documentation = [HLSLSV_PositionDocs];
-}
-
-def HLSLSV_GroupThreadID : HLSLSemanticAttr</* Indexable= */ 0> {
-  let Documentation = [HLSLSV_GroupThreadIDDocs];
-}
-
-def HLSLSV_GroupID : HLSLSemanticAttr</* Indexable= */ 0> {
-  let Documentation = [HLSLSV_GroupIDDocs];
-}
-
-def HLSLSV_GroupIndex : HLSLSemanticAttr</* Indexable= */ 0> {
-  let Documentation = [HLSLSV_GroupIndexDocs];
-}
-
-def HLSLSV_DispatchThreadID : HLSLSemanticAttr</* Indexable= */ 0> {
-  let Documentation = [HLSLSV_DispatchThreadIDDocs];
+def HLSLAppliedSemantic : HLSLSemanticBaseAttr {
+  let Spellings = [];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {

@@ -69,6 +69,13 @@ Potentially Breaking Changes
   - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
+  
+- Modified the custom message format of :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` by assigning a special meaning
+  to the character ``>`` at the start of the value of the option
+  ``CustomFunctions``. If the option value starts with ``>``, then the
+  replacement suggestion part of the message (which would be included by
+  default) is omitted. (This does not change the warning locations.)
 
 - :program:`clang-tidy` now displays warnings from all non-system headers by
   default. Previously, users had to explicitly opt-in to header warnings using
@@ -269,6 +276,10 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-err60-cpp <clang-tidy/checks/cert/err60-cpp>` to
+  :doc:`bugprone-exception-copy-constructor-throws
+  <clang-tidy/checks/bugprone/exception-copy-constructor-throws>`
+
 - Renamed :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` to
   :doc:`bugprone-float-loop-counter
   <clang-tidy/checks/bugprone/float-loop-counter>`
@@ -279,9 +290,34 @@ New check aliases
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-msc30-c <clang-tidy/checks/cert/msc30-c>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc32-c <clang-tidy/checks/cert/msc32-c>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc50-cpp <clang-tidy/checks/cert/msc50-cpp>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc51-cpp <clang-tidy/checks/cert/msc51-cpp>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
   :doc:`bugprone-raw-memory-call-on-non-trivial-type
   <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-oop58-cpp <clang-tidy/checks/cert/oop58-cpp>` to
+  :doc:`bugprone-copy-constructor-mutates-argument
+  <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
   keeping initial check as an alias to the new one.
 
 Changes in existing checks
@@ -295,7 +331,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
   exceptions from captures are now diagnosed, exceptions in the bodies of
-  lambdas that aren't actually invoked are not.
+  lambdas that aren't actually invoked are not. Additionally, fixed an issue
+  where the check wouldn't diagnose throws in arguments to functions or
+  constructors. Added fine-grained configuration via options
+  `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
+  `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
@@ -344,12 +384,21 @@ Changes in existing checks
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
   ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
-  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type, and by
+  adding the `IgnoreValueCalls` option to suppress diagnostics for
+  ``optional::value()`` and the `IgnoreSmartPointerDereference` option to
+  ignore optionals reached via smart-pointer-like dereference, while still
+  diagnosing UB-prone dereferences via ``operator*`` and ``operator->``.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
+  
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by hiding the default
+  suffix when the reason starts with the character `>` in the `CustomFunctions`
+  option.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -375,6 +424,14 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check by adding fix-it
+  notes for downcasts and casts to void pointer.
+
+- Improved :doc:`google-readability-todo
+  <clang-tidy/checks/google/readability-todo>` check to accept the new TODO
+  format from the Google Style Guide.
+
 - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
   <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
@@ -391,6 +448,11 @@ Changes in existing checks
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer and fix false positives on
   pointer-to-member operator.
+
+- Improved :doc:`misc-coroutine-hostile-raii
+  <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
+  `AllowedCallees`, that allows exempting safely awaitable callees from the
+  check.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
@@ -455,6 +517,10 @@ Changes in existing checks
   comparisons to ``npos``. Internal changes may cause new rare false positives
   in non-standard containers.
 
+- Improved :doc:`readability-container-data-pointer
+  <clang-tidy/checks/readability/container-data-pointer>` check by correctly
+  adding parentheses when the container expression is a dereference.
+
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly
   generating fix-it hints when size method is called from implicit ``this``,
@@ -479,6 +545,10 @@ Changes in existing checks
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
+
+- Improved :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
+  generate correct fix-its for forms without a space after the directive.
 
 Removed checks
 ^^^^^^^^^^^^^^

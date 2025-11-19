@@ -58,7 +58,6 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
-#include <iterator>
 #include <map>
 #include <string>
 #include <utility>
@@ -1679,7 +1678,7 @@ public:
   LegalizeAction getPartialReduceMLAAction(unsigned Opc, EVT AccVT,
                                            EVT InputVT) const {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
-           Opc == ISD::PARTIAL_REDUCE_SUMLA);
+           Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
     PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
                                     InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(Key);
@@ -2793,7 +2792,7 @@ protected:
   void setPartialReduceMLAAction(unsigned Opc, MVT AccVT, MVT InputVT,
                                  LegalizeAction Action) {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
-           Opc == ISD::PARTIAL_REDUCE_SUMLA);
+           Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
     assert(AccVT.isValid() && InputVT.isValid() &&
            "setPartialReduceMLAAction types aren't valid");
     PartialReduceActionTypes Key = {Opc, AccVT.SimpleTy, InputVT.SimpleTy};
@@ -3491,6 +3490,13 @@ public:
     if (VT.isVector())
       return false;
     return MathUsed && (VT.isSimple() || !isOperationExpand(Opcode, VT));
+  }
+
+  // Return true if the target wants to optimize the mul overflow intrinsic
+  // for the given \p VT.
+  virtual bool shouldOptimizeMulOverflowWithZeroHighBits(LLVMContext &Context,
+                                                         EVT VT) const {
+    return false;
   }
 
   // Return true if it is profitable to use a scalar input to a BUILD_VECTOR
@@ -5757,6 +5763,16 @@ public:
   /// Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
   /// consisting of zext/sext, extract_subvector, mul and add operations.
   SDValue expandPartialReduceMLA(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expands a node with multiple results to an FP or vector libcall. The
+  /// libcall is expected to take all the operands of the \p Node followed by
+  /// output pointers for each of the results. \p CallRetResNo can be optionally
+  /// set to indicate that one of the results comes from the libcall's return
+  /// value.
+  bool expandMultipleResultFPLibCall(
+      SelectionDAG &DAG, RTLIB::Libcall LC, SDNode *Node,
+      SmallVectorImpl<SDValue> &Results,
+      std::optional<unsigned> CallRetResNo = {}) const;
 
   /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
   /// on the current target. A VP_SETCC will additionally be given a Mask

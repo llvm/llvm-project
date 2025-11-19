@@ -1007,6 +1007,15 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (auto *A = dyn_cast<CleanupAttr>(TmplAttr)) {
+      if (!New->hasAttr<CleanupAttr>()) {
+        auto *NewAttr = A->clone(Context);
+        NewAttr->setArgLoc(A->getArgLoc());
+        New->addAttr(NewAttr);
+      }
+      continue;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -5316,6 +5325,7 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
     return;
   }
 
+  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Decl,
                              InstantiatingTemplate::ExceptionSpecification());
   if (Inst.isInvalid()) {
@@ -5383,6 +5393,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   if (ActiveInst.Kind == ActiveInstType::ExplicitTemplateArgumentSubstitution ||
       ActiveInst.Kind == ActiveInstType::DeducedTemplateArgumentSubstitution) {
     if (isa<FunctionTemplateDecl>(ActiveInst.Entity)) {
+      SemaRef.CurrentSFINAEContext = nullptr;
       atTemplateEnd(SemaRef.TemplateInstCallbacks, SemaRef, ActiveInst);
       ActiveInst.Kind = ActiveInstType::TemplateInstantiation;
       ActiveInst.Entity = New;
@@ -5463,7 +5474,7 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
 bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
                                                       FunctionDecl *Tmpl) {
   // Transfer across any unqualified lookups.
-  if (auto *DFI = Tmpl->getDefalutedOrDeletedInfo()) {
+  if (auto *DFI = Tmpl->getDefaultedOrDeletedInfo()) {
     SmallVector<DeclAccessPair, 32> Lookups;
     Lookups.reserve(DFI->getUnqualifiedLookups().size());
     bool AnyChanged = false;
@@ -5493,8 +5504,7 @@ FunctionDecl *Sema::InstantiateFunctionDeclaration(
     SourceLocation Loc, CodeSynthesisContext::SynthesisKind CSC) {
   FunctionDecl *FD = FTD->getTemplatedDecl();
 
-  sema::TemplateDeductionInfo Info(Loc);
-  InstantiatingTemplate Inst(*this, Loc, FTD, Args->asArray(), CSC, Info);
+  InstantiatingTemplate Inst(*this, Loc, FTD, Args->asArray(), CSC);
   if (Inst.isInvalid())
     return nullptr;
 
@@ -5684,6 +5694,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     }
   }
 
+  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Function);
   if (Inst.isInvalid())
     return;
@@ -5974,6 +5985,7 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   if (FromVar->isInvalidDecl())
     return nullptr;
 
+  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, FromVar);
   if (Inst.isInvalid())
     return nullptr;
@@ -6195,6 +6207,10 @@ void Sema::InstantiateVariableInitializer(
   currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
       parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
 
+  // Set DeclForInitializer for this variable so DiagIfReachable can properly
+  // suppress runtime diagnostics for constexpr/static member variables
+  currentEvaluationContext().DeclForInitializer = Var;
+
   if (OldVar->getInit()) {
     // Instantiate the initializer.
     ExprResult Init =
@@ -6281,6 +6297,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
         !Var->hasInit()) {
       // FIXME: Factor out the duplicated instantiation context setup/tear down
       // code here.
+      NonSFINAEContext _(*this);
       InstantiatingTemplate Inst(*this, PointOfInstantiation, Var);
       if (Inst.isInvalid())
         return;
@@ -6385,6 +6402,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
     return;
   }
 
+  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Var);
   if (Inst.isInvalid())
     return;
@@ -6462,6 +6480,8 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
     PassToConsumerRAII.Var = Var;
     Var->setTemplateSpecializationKind(OldVar->getTemplateSpecializationKind(),
                                        OldVar->getPointOfInstantiation());
+    // Emit any deferred warnings for the variable's initializer
+    AnalysisWarnings.issueWarningsForRegisteredVarDecl(Var);
   }
 
   // This variable may have local implicit instantiations that need to be

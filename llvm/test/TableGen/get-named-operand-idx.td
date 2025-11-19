@@ -95,7 +95,8 @@ def InstD : InstBase {
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-// CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 0,
+// CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2,
+// CHECK-NEXT:      0,
 // CHECK-NEXT:    };
 // CHECK-NEXT:    return InstructionIndex[Opcode];
 // CHECK-NEXT:  }

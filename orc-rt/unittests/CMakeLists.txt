@@ -15,6 +15,7 @@ add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
   CallableTraitsHelperTest.cpp
+  EndianTest.cpp
   ErrorTest.cpp
   ExecutorAddressTest.cpp
   IntervalMapTest.cpp
@@ -30,6 +31,7 @@ add_orc_rt_unittest(CoreTests
   SPSMemoryFlagsTest.cpp
   SPSWrapperFunctionTest.cpp
   SPSWrapperFunctionBufferTest.cpp
+  ThreadPoolTaskDispatcherTest.cpp
   WrapperFunctionBufferTest.cpp
   bind-test.cpp
   bit-test.cpp

@@ -29,6 +29,10 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   return R && match(R, P);
 }
 
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
+}
+
 template <typename Val, typename Pattern> struct VPMatchFunctor {
   const Pattern &P;
   VPMatchFunctor(const Pattern &P) : P(P) {}
@@ -472,6 +476,12 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>
 m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Add, Op0_t, Op1_t> m_Add(const Op0_t &Op0,
+                                                             const Op1_t &Op1) {
+  return m_Binary<Instruction::Add, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
