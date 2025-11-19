@@ -69,7 +69,7 @@ static WidthAndSignedness
 getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
                              const clang::QualType type) {
   assert(Type->isIntegerType() && "Given type is not an integer.");
-  unsigned Width = Type->isBooleanType()  ? 1
+  unsigned width = type->isBooleanType()  ? 1
                    : Type->isBitIntType() ? astContext.getIntWidth(Type)
                                           : astContext.getTypeInfo(Type).Width;
   bool signed = Type->isSignedIntegerType();
