@@ -75,21 +75,22 @@ public:
   }
 
 private:
-  void shutdownNext(Error Err,
-                    std::vector<std::unique_ptr<ResourceManager>> RemainingRMs);
+  struct ShutdownInfo {
+    bool Complete = false;
+    std::condition_variable CompleteCV;
+    std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
+    std::vector<OnShutdownCompleteFn> OnCompletes;
+  };
 
+  void shutdownNext(Error Err);
   void shutdownComplete();
 
   std::unique_ptr<TaskDispatcher> Dispatcher;
   ErrorReporterFn ReportError;
 
-  enum class SessionState { Running, ShuttingDown, Shutdown };
-
   std::mutex M;
-  SessionState State = SessionState::Running;
-  std::condition_variable StateCV;
   std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
-  std::vector<OnShutdownCompleteFn> ShutdownCallbacks;
+  std::unique_ptr<ShutdownInfo> SI;
 };
 
 inline orc_rt_SessionRef wrap(Session *S) noexcept {
