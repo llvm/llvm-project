@@ -96,21 +96,22 @@ to be checked. The format is the following, without newlines:
 The functions are matched using POSIX extended regular expressions.
 *(Note: The regular expressions do not support negative* ``(?!)`` *matches.)*
 
-The ``reason`` is optional and is used to provide additional information about the
-reasoning behind the replacement. The default reason is ``is marked as unsafe``.
+The ``reason`` is optional and is used to provide additional information about
+the reasoning behind the replacement. The default reason is
+``is marked as unsafe``.
 
 If ``replacement`` is empty, the default text ``it should not be used`` will be
 shown instead of the suggestion for a replacement.
 
-If the ``reason`` starts with the character ``>``, the reason becomes fully custom.
-The default suffix is disabled even if a ``replacement`` is present, and only the
-reason message is shown after the matched function, to allow better control over
-the suggestions. (The starting ``>`` and whitespace directly after it are
-trimmed from the message.)
+If the ``reason`` starts with the character ``>``, the reason becomes fully
+custom. The default suffix is disabled even if a ``replacement`` is present,
+and only the reason message is shown after the matched function, to allow
+better control over the suggestions. (The starting ``>`` and whitespace
+directly after it are trimmed from the message.)
 
-As an example, the following configuration matches only the function ``original``
-in the default namespace. A similar diagnostic can also be printed using a fully
-custom reason.
+As an example, the following configuration matches only the function
+``original`` in the default namespace. A similar diagnostic can also be printed
+using a fully custom reason.
 
 .. code:: c
 
@@ -123,10 +124,10 @@ custom reason.
    ::std::original(); // no-warning
    original_function(); // no-warning
 
-If the regular expression contains the character ``:``, it is matched against the
-qualified name (i.e. ``std::original``), otherwise the regex is matched against
-the unqualified name (``original``). If the regular expression starts with ``::``
-(or ``^::``), it is matched against the fully qualified name
+If the regular expression contains the character ``:``, it is matched against
+the qualified name (i.e. ``std::original``), otherwise the regex is matched
+against the unqualified name (``original``). If the regular expression starts
+with ``::`` (or ``^::``), it is matched against the fully qualified name
 (``::std::original``).
 
 One of the use cases for fully custom messages is suggesting compiler options
