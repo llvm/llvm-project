@@ -4979,7 +4979,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        mov	z0.d, p0/m, d0
 # CHECK-NEXT:  2      5     1.00                        mov	z0.d, p0/m, x0
 # CHECK-NEXT:  1      3     1.00                        mov	z0.d, x0
-# CHECK-NEXT:  1      2     0.50                        mov	z0.d, z0.d
+# CHECK-NEXT:  1      0     0.20                        mov	z0.d, z0.d
 # CHECK-NEXT:  1      2     0.50                        mov	z0.h, #-256
 # CHECK-NEXT:  1      2     0.50                        mov	z0.h, #-32768
 # CHECK-NEXT:  1      2     0.50                        mov	z0.h, #0
@@ -5039,7 +5039,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        movprfx	z31.d, p7/z, z6.d
 # CHECK-NEXT:  2      5     1.00                        mov	z31.d, p7/m, sp
 # CHECK-NEXT:  1      3     1.00                        mov	z31.d, sp
-# CHECK-NEXT:  1      2     0.50                        mov	z31.d, z0.d
+# CHECK-NEXT:  1      0     0.20                        mov	z31.d, z0.d
 # CHECK-NEXT:  1      2     0.50                        mov	z31.d, z31.d[7]
 # CHECK-NEXT:  1      2     0.50                        mov	z31.h, p15/m, z31.h
 # CHECK-NEXT:  1      2     0.50                        mov	z31.h, p7/m, h31
@@ -5150,7 +5150,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      5     1.00                        orv	d0, p7, z31.d
 # CHECK-NEXT:  2      5     1.00                        orv	h0, p7, z31.h
 # CHECK-NEXT:  2      5     1.00                        orv	s0, p7, z31.s
-# CHECK-NEXT:  1      2     0.50                        pfalse	p15.b
+# CHECK-NEXT:  1      0     0.20                        pfalse	p15.b
 # CHECK-NEXT:  1      2     0.50                        pfirst	p0.b, p15, p0.b
 # CHECK-NEXT:  1      2     0.50                        pfirst	p15.b, p15, p15.b
 # CHECK-NEXT:  1      2     1.00                        pmul	z0.b, z1.b, z2.b
@@ -5280,11 +5280,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        ptrue	p0.d, pow2
 # CHECK-NEXT:  1      2     0.50                        ptrue	p0.h, pow2
 # CHECK-NEXT:  1      2     0.50                        ptrue	p0.s, pow2
-# CHECK-NEXT:  1      2     0.50                        ptrue	p15.b
-# CHECK-NEXT:  1      2     0.50                        ptrue	p15.d
-# CHECK-NEXT:  1      2     0.50                        ptrue	p15.h
-# CHECK-NEXT:  1      2     0.50                        ptrue	p15.s
-# CHECK-NEXT:  1      2     0.50                        ptrue	p7.s
+# CHECK-NEXT:  1      0     0.20                        ptrue	p15.b
+# CHECK-NEXT:  1      0     0.20                        ptrue	p15.d
+# CHECK-NEXT:  1      0     0.20                        ptrue	p15.h
+# CHECK-NEXT:  1      0     0.20                        ptrue	p15.s
+# CHECK-NEXT:  1      0     0.20                        ptrue	p7.s
 # CHECK-NEXT:  1      2     0.50                        ptrue	p7.s, #14
 # CHECK-NEXT:  1      2     0.50                        ptrue	p7.s, #15
 # CHECK-NEXT:  1      2     0.50                        ptrue	p7.s, #16
@@ -5319,11 +5319,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        ptrues	p0.d, pow2
 # CHECK-NEXT:  1      2     0.50                        ptrues	p0.h, pow2
 # CHECK-NEXT:  1      2     0.50                        ptrues	p0.s, pow2
-# CHECK-NEXT:  1      2     0.50                        ptrues	p15.b
-# CHECK-NEXT:  1      2     0.50                        ptrues	p15.d
-# CHECK-NEXT:  1      2     0.50                        ptrues	p15.h
-# CHECK-NEXT:  1      2     0.50                        ptrues	p15.s
-# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s
+# CHECK-NEXT:  1      0     0.20                        ptrues	p15.b
+# CHECK-NEXT:  1      0     0.20                        ptrues	p15.d
+# CHECK-NEXT:  1      0     0.20                        ptrues	p15.h
+# CHECK-NEXT:  1      0     0.20                        ptrues	p15.s
+# CHECK-NEXT:  1      0     0.20                        ptrues	p7.s
 # CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #14
 # CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #15
 # CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #16
@@ -5471,7 +5471,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        sel	z23.d, p11, z13.d, z8.d
 # CHECK-NEXT:  1      2     0.50                        sel	z23.h, p11, z13.h, z8.h
 # CHECK-NEXT:  1      2     0.50                        sel	z23.s, p11, z13.s, z8.s
-# CHECK-NEXT:  0      0     0.00           *      U     setffr
+# CHECK-NEXT:  1      0     0.20           *      U     setffr
 # CHECK-NEXT:  1      2     0.50                        shadd	z0.b, p0/m, z0.b, z1.b
 # CHECK-NEXT:  1      2     0.50                        shadd	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  1      2     0.50                        shadd	z29.s, p7/m, z29.s, z30.s
@@ -6847,7 +6847,7 @@ zip2	z31.s, z31.s, z31.s
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT:  -      -      -      -     332.67 481.67 481.67 298.00 230.00 88.50  88.50  1558.00 1401.00
+# CHECK-NEXT:  -      -      -      -     332.67 481.67 481.67 292.50 224.50 88.50  88.50  1557.00 1400.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -8410,7 +8410,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z0.d, p0/m, d0
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	z0.d, p0/m, x0
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     mov	z0.d, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z0.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	z0.d, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z0.h, #-256
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z0.h, #-32768
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z0.h, #0
@@ -8470,7 +8470,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   movprfx	z31.d, p7/z, z6.d
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	z31.d, p7/m, sp
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     mov	z31.d, sp
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z31.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	z31.d, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z31.d, z31.d[7]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z31.h, p15/m, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	z31.h, p7/m, h31
@@ -8581,7 +8581,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   orv	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   orv	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   1.50   orv	s0, p7, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     pfalse	p15.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     pfalse	p15.b
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     pfirst	p0.b, p15, p0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     pfirst	p15.b, p15, p15.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmul	z0.b, z1.b, z2.b
@@ -8711,11 +8711,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p0.d, pow2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p0.h, pow2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p0.s, pow2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p15.b
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p15.d
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p15.h
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p15.s
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p7.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrue	p15.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrue	p15.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrue	p15.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrue	p15.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrue	p7.s
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p7.s, #14
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p7.s, #15
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrue	p7.s, #16
@@ -8750,11 +8750,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p0.d, pow2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p0.h, pow2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p0.s, pow2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p15.b
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p15.d
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p15.h
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p15.s
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p7.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrues	p15.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrues	p15.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrues	p15.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrues	p15.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     ptrues	p7.s
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p7.s, #14
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p7.s, #15
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ptrues	p7.s, #16
