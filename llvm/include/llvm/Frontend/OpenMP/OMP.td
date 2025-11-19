@@ -555,6 +555,7 @@ def OMPC_To : Clause<[Spelling<"to">]> {
 def OMPC_Transparent : Clause<[Spelling<"transparent">]> {
   let clangClass = "OMPTransparentClause";
   let flangClass = "OmpTransparentClause";
+  let isValueOptional = true;
 }
 def OMPC_UnifiedAddress : Clause<[Spelling<"unified_address">]> {
   let clangClass = "OMPUnifiedAddressClause";

@@ -1198,12 +1198,10 @@ struct ToT {
   std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
 };
 
-// V6.0: [17.9.6] `transparent` clause
+// [6.0:510:25] `transparent` clause
 template <typename T, typename I, typename E> //
 struct TransparentT {
-  ENUM(TransparentPolicy, Omp_Not_Impex, Omp_Import, Omp_Export, Omp_Impex);
-  using WrapperTrait = std::true_type;
-  TransparentPolicy v;
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [8.2.1] `requirement` clauses
@@ -1339,7 +1337,7 @@ using IncompleteClausesT =
     std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>,
                  CollectorT<T, I, E>, GraphIdT<T, I, E>, GraphResetT<T, I, E>,
                  InductorT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
-                 ReplayableT<T, I, E>, WhenT<T, I, E>>;
+                 ReplayableT<T, I, E>, TransparentT<T, I, E>, WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using TupleClausesT =
@@ -1373,7 +1371,7 @@ using WrapperClausesT = std::variant<
     ProcBindT<T, I, E>, ReverseOffloadT<T, I, E>, SafelenT<T, I, E>,
     SelfMapsT<T, I, E>, SeverityT<T, I, E>, SharedT<T, I, E>, SimdlenT<T, I, E>,
     SizesT<T, I, E>, PermutationT<T, I, E>, ThreadLimitT<T, I, E>,
-    ThreadsetT<T, I, E>, TransparentT<T, I, E>, UnifiedAddressT<T, I, E>,
+    ThreadsetT<T, I, E>, UnifiedAddressT<T, I, E>,
     UnifiedSharedMemoryT<T, I, E>, UniformT<T, I, E>, UpdateT<T, I, E>,
     UseDeviceAddrT<T, I, E>, UseDevicePtrT<T, I, E>, UsesAllocatorsT<T, I, E>>;
 

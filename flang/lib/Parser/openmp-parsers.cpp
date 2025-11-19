@@ -1161,6 +1161,17 @@ TYPE_PARSER(construct<OmpTaskReductionClause>(
     maybe(nonemptyList(Parser<OmpTaskReductionClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
+TYPE_PARSER(construct<OmpTransparentClause>(scalarIntExpr))
+
+// OMP 5.0 2.11.4 allocate-clause -> ALLOCATE ([allocator:] variable-name-list)
+// OMP 5.2 2.13.4 allocate-clause -> ALLOCATE ([allocate-modifier
+//                                   [, allocate-modifier] :]
+//                                   variable-name-list)
+//                allocate-modifier -> allocator | align
+TYPE_PARSER(construct<OmpAllocateClause>(
+    maybe(nonemptyList(Parser<OmpAllocateClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
+
 // iteration-offset -> +/- non-negative-constant-expr
 TYPE_PARSER(construct<OmpIterationOffset>(
     Parser<DefinedOperator>{}, scalarIntConstantExpr))
@@ -1508,6 +1519,9 @@ TYPE_PARSER( //
                           parenthesized(scalarIntExpr))) ||
     "TO" >> construct<OmpClause>(construct<OmpClause::To>(
                 parenthesized(Parser<OmpToClause>{}))) ||
+    "TRANSPARENT" >>
+        construct<OmpClause>(construct<OmpClause::Transparent>(
+            maybe(parenthesized(Parser<OmpTransparentClause>{})))) ||
     "USE" >> construct<OmpClause>(construct<OmpClause::Use>(
                  parenthesized(Parser<OmpObject>{}))) ||
     "USE_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::UseDevicePtr>(

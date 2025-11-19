@@ -2467,6 +2467,11 @@ struct TaskgraphVisitor {
 
     for (const parser::OmpClause &clause : dirSpec.Clauses().v) {
       switch (clause.Id()) {
+      case llvm::omp::Clause::OMPC_transparent:
+        if (isReplayable) {
+          CheckTransparent(clause);
+        }
+        break;
       case llvm::omp::Clause::OMPC_detach:
         if (isReplayable) {
           context_.Say(clause.source,
@@ -2554,6 +2559,26 @@ private:
       break;
     }
     return true;
+  }
+
+  void CheckTransparent(const parser::OmpClause &clause) const {
+    bool isTransparent{true};
+    if (auto &transp{std::get<parser::OmpClause::Transparent>(clause.u).v}) {
+      // Scalar<Integer<indirection<Expr>>>
+      const auto &parserExpr{parser::UnwrapRef<parser::Expr>(transp)};
+      if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
+        // If the argument is omp_not_impex (defined as 0), then
+        // the task is not transparent, otherwise it is.
+        const int64_t omp_not_impex{0};
+        if (auto &&val{evaluate::ToInt64(*expr)}) {
+          isTransparent = *val != omp_not_impex;
+        }
+      }
+    }
+    if (isTransparent) {
+      context_.Say(clause.source,
+          "Transparent replayable tasks are not allowed in a TASKGRAPH region"_err_en_US);
+    }
   }
 
   void CheckIf(const parser::OmpClause &clause,

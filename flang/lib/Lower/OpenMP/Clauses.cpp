@@ -254,6 +254,7 @@ MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
 MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
 MAKE_INCOMPLETE_CLASS(Inductor, Inductor);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
+MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
 List<IteratorSpecifier>
 makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
@@ -1496,23 +1497,6 @@ Threadset make(const parser::OmpClause::Threadset &inp,
       // clang-format on
   );
   return Threadset{/*ThreadsetPolicy=*/convert(inp.v.v)};
-}
-
-Transparent make(const parser::OmpClause::Transparent &inp,
-                 semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpTransparentClause
-  using wrapped = parser::OmpTransparentClause;
-
-  CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::TransparentPolicy, Transparent::TransparentPolicy,
-      // clang-format off
-      MS(Omp_Not_Impex, Omp_Not_Impex)
-      MS(Omp_Import, Omp_Import)
-      MS(Omp_Export, Omp_Export)
-      MS(Omp_Impex, Omp_Impex)
-      // clang-format on
-  );
-  return Transparent{/*TransparentPolicy=*/convert(inp.v.v)};
 }
 
 // Threadprivate: empty
