@@ -589,10 +589,13 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
                                    cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
         HandledUncountableEarlyExit = true;
-      } else {
+      }
+
+      if (!HasUncountableEarlyExit ||
+          Plan.shouldEarlyExitContinueInScalarLoop())
         for (VPRecipeBase &R : EB->phis())
           cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      }
+
       cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }

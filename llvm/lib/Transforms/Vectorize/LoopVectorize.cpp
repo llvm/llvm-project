@@ -402,6 +402,10 @@ static cl::opt<bool> ConsiderRegPressure(
     "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
     cl::desc("Discard VFs if their register pressure is too high."));
 
+static cl::opt<bool> HandleEarlyExitsInScalarTail(
+    "handle-early-exits-in-scalar-tail", cl::init(false), cl::Hidden,
+    cl::desc("Use the scalar tail to deal with early exit logic"));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -507,8 +511,7 @@ public:
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TTI(TTI), AC(AC),
         VF(VecWidth), UF(UnrollFactor), Builder(PSE.getSE()->getContext()),
         Cost(CM), BFI(BFI), PSI(PSI), RTChecks(RTChecks), Plan(Plan),
-        VectorPHVPBB(cast<VPBasicBlock>(
-            Plan.getVectorLoopRegion()->getSinglePredecessor())) {}
+        VectorPHVPBB(cast<VPBasicBlock>(Plan.getVectorPreheader())) {}
 
   virtual ~InnerLoopVectorizer() = default;
 
@@ -8321,6 +8324,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   auto VPlan0 = VPlanTransforms::buildVPlan0(
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
+  VPlan0->setEarlyExitContinuesInScalarLoop(Legal->hasUncountableEarlyExit() &&
+                                            HandleEarlyExitsInScalarTail);
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -8335,6 +8340,15 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       if (CM.foldTailWithEVL())
         VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
                                  *Plan, CM.getMaxSafeElements());
+
+      // See if we can convert an early exit vplan to bail out to a scalar
+      // loop if state-changing operations (like stores) are present and
+      // an exit will be taken in the next vector iteration.
+      // If not, discard the plan.
+      if (!Plan->hasScalarVFOnly() && HandleEarlyExitsInScalarTail &&
+          !VPlanTransforms::runPass(
+              VPlanTransforms::handleUncountableExitsInScalarLoop, *Plan))
+        break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }

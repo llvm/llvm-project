@@ -355,16 +355,44 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
       if (Load->isMasked())
         return std::nullopt;
 
+      Recipes.push_back(Load);
+
+      // Look through vector-pointer recipes.
       VPValue *GEP = Load->getAddr();
+      if (auto *VecPtrR = dyn_cast<VPVectorPointerRecipe>(GEP)) {
+        Recipes.push_back(VecPtrR);
+        GEP = VecPtrR->getOperand(0);
+      }
+
+      // We only support two-operand GEPS with match
+      if (auto *R = GEP->getDefiningRecipe(); !R || R->getNumOperands() != 2)
+        return std::nullopt;
+
       if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue())))
         return std::nullopt;
 
-      Recipes.push_back(Load);
       Recipes.push_back(GEP->getDefiningRecipe());
       GEPs.push_back(GEP->getDefiningRecipe());
     } else
       return std::nullopt;
   }
+
+  // If we couldn't match anything, don't return the condition. It may be
+  // defined outside the loop.
+  if (Recipes.empty())
+    return std::nullopt;
+
+#ifndef NDEBUG
+  // Check dominance ordering
+  VPRecipeBase *RA = Recipes.front();
+  VPDominatorTree VPDT(Plan);
+  bool Ordered = all_of(drop_begin(Recipes), [&VPDT, &RA](VPRecipeBase *RB) {
+    bool Dominates = VPDT.properlyDominates(RB, RA);
+    RA = RB;
+    return Dominates;
+  });
+  assert(Ordered && "Uncountable exit recipes unordered");
+#endif
 
   return UncountableCondition;
 }
