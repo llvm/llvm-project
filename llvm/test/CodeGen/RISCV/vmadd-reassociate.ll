@@ -41,7 +41,6 @@ define <vscale x 1 x i32> @vmadd_vscale_no_chain(<vscale x 1 x i32> %m00, <vscal
 ; CHECK-NEXT:    vmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
-  %vset = tail call i32 @llvm.experimental.get.vector.length.i64(i64 8, i32 1, i1 true)
   %mul = mul nsw <vscale x 1 x i32> %m00, %m01
   %add = add <vscale x 1 x i32> %mul, splat (i32 32)
   ret <vscale x 1 x i32> %add
@@ -71,7 +70,6 @@ define <vscale x 1 x i32> @vmadd_vscale(<vscale x 1 x i32> %m00, <vscale x 1 x i
 ; CHECK-NEXT:    vmacc.vv v8, v11, v10
 ; CHECK-NEXT:    ret
 entry:
-  %vset = tail call i32 @llvm.experimental.get.vector.length.i64(i64 8, i32 1, i1 true)
   %mul0 = mul nsw <vscale x 1 x i32> %m00, %m01
   %mul1 = mul nsw <vscale x 1 x i32> %m10, %m11
   %add0 = add <vscale x 1 x i32> %mul0, splat (i32 32)
@@ -109,7 +107,6 @@ define <vscale x 1 x i32> @vmadd_vscale_long(<vscale x 1 x i32> %m00, <vscale x 
 ; CHECK-NEXT:    ret
                                              <vscale x 1 x i32> %m20, <vscale x 1 x i32> %m21, <vscale x 1 x i32> %m30, <vscale x 1 x i32> %m31) {
 entry:
-  %vset = tail call i32 @llvm.experimental.get.vector.length.i64(i64 8, i32 1, i1 true)
   %mul0 = mul nsw <vscale x 1 x i32> %m00, %m01
   %mul1 = mul nsw <vscale x 1 x i32> %m10, %m11
   %mul2 = mul nsw <vscale x 1 x i32> %m20, %m21
