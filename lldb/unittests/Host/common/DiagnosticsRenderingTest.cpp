@@ -1,4 +1,4 @@
-#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
 
