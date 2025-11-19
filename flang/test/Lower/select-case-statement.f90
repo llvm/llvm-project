@@ -1,4 +1,7 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! Note: character comparison is different: at -O0, flang-rt function is called,
+! at -O1, inline character comparison is used.
+! RUN: %flang_fc1 -emit-fir -O0 -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-O0
+! RUN: %flang_fc1 -emit-fir -O1 -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-O1
 
   !CHECK-LABEL: sinteger
   function sinteger(n)
@@ -153,10 +156,16 @@
     character(len=3) :: s
     n = 0
 
-    ! lge() is lowered to various loops and "if" statements that work with "00".
-    ! It's not our goal to completely lge() lowering here.
-    ! CHECK: fir.declare {{.*}} uniq_name = "_QQclX3030"}
-    ! CHECK: fir.do_loop
+    ! CHECK: %[[STR00:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3030"}
+    ! CHECK: %[[STR00_CONV:[0-9]+]] = fir.convert %[[STR00]]
+
+    ! At -O1, lge() is lowered to various loops and "if" statements that work
+    ! with "00". It's not our goal to completely lge() lowering here.
+    ! CHECK-O1: fir.do_loop
+    ! At -O0, we call runtime function for character comparison.
+    ! CHECK-O0: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR00_CONV]]
+    ! CHECK-O0-NEXT: arith.cmpi sge, {{.*}}, %c0_i32 : i32
+    ! CHECK-O0-NEXT: cf.cond_br
     if (lge(s,'00')) then
 
       ! CHECK: fir.call @_FortranATrim
@@ -175,7 +184,7 @@
       ! CHECK: %[[STR11_CONV:[0-9]+]] = fir.convert %[[STR11]]
       ! CHECK: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR11_CONV]]
       ! CHECK-NEXT: arith.cmpi eq
-      ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb3, ^bb2
+      ! CHECK-NEXT: cf.cond_br
       select case(trim(s))
       case('11')
         n = 1
@@ -184,46 +193,46 @@
         continue
 
       ! == '22'
-      ! CHECK-DAG: %[[STR22_CONV:[0-9]+]] = fir.convert %[[STR22]]
-      ! CHECK-NEXT: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR22_CONV]]
+      ! CHECK: %[[STR22_CONV:[0-9]+]] = fir.convert %[[STR22]]
+      ! CHECK: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR22_CONV]]
       ! CHECK-NEXT: arith.cmpi eq,{{.*}}, %c0_i32 : i32
-      ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb5, ^bb4
+      ! CHECK-NEXT: cf.cond_br
       case('22')
         n = 2
 
       ! == '33'
-      ! CHECK-DAG: %[[STR33_CONV:[0-9]+]] = fir.convert %[[STR33]]
-      ! CHECK-NEXT: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR33_CONV]]
+      ! CHECK: %[[STR33_CONV:[0-9]+]] = fir.convert %[[STR33]]
+      ! CHECK: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR33_CONV]]
       ! CHECK-NEXT: arith.cmpi eq,{{.*}}, %c0_i32 : i32
-      ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb7, ^bb6
+      ! CHECK-NEXT: cf.cond_br
       case('33')
         n = 3
 
       ! >= '44'
-      ! CHECK-DAG: %[[STR44_CONV:[0-9]+]] = fir.convert %[[STR44]]
-      ! CHECK-NEXT: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR44_CONV]]
+      ! CHECK: %[[STR44_CONV:[0-9]+]] = fir.convert %[[STR44]]
+      ! CHECK: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR44_CONV]]
       ! CHECK-NEXT: arith.cmpi sge,{{.*}}, %c0_i32 : i32
-      ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb8, ^bb9
+      ! CHECK-NEXT: cf.cond_br
       ! <= '55'
-      ! CHECK-DAG: %[[STR55_CONV:[0-9]+]] = fir.convert %[[STR55]]
-      ! CHECK-NEXT: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR55_CONV]]
+      ! CHECK: %[[STR55_CONV:[0-9]+]] = fir.convert %[[STR55]]
+      ! CHECK: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR55_CONV]]
       ! CHECK-NEXT: arith.cmpi sle,{{.*}}, %c0_i32 : i32
-      ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb12, ^bb9
+      ! CHECK-NEXT: cf.cond_br
       ! >= '66'
-      ! CHECK-DAG: %[[STR66_CONV:[0-9]+]] = fir.convert %[[STR66]]
-      ! CHECK-NEXT: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR66_CONV]]
+      ! CHECK: %[[STR66_CONV:[0-9]+]] = fir.convert %[[STR66]]
+      ! CHECK: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR66_CONV]]
       ! CHECK-NEXT: arith.cmpi sge,{{.*}}, %c0_i32 : i32
-      ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb10, ^bb11
+      ! CHECK-NEXT: cf.cond_br
       ! <= '77'
-      ! CHECK-DAG: %[[STR77_CONV:[0-9]+]] = fir.convert %[[STR77]]
-      ! CHECK-NEXT: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR77_CONV]]
+      ! CHECK: %[[STR77_CONV:[0-9]+]] = fir.convert %[[STR77]]
+      ! CHECK: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR77_CONV]]
       ! CHECK-NEXT: arith.cmpi sle,{{.*}}, %c0_i32 : i32
-      ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb12, ^bb11
+      ! CHECK-NEXT: cf.cond_br
       ! >= '88'
-      ! CHECK-DAG: %[[STR88_CONV:[0-9]+]] = fir.convert %[[STR88]]
-      ! CHECK-NEXT: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR88_CONV]]
+      ! CHECK: %[[STR88_CONV:[0-9]+]] = fir.convert %[[STR88]]
+      ! CHECK: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR88_CONV]]
       ! CHECK-NEXT: arith.cmpi sge,{{.*}}, %c0_i32 : i32
-      ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb12, ^bb13
+      ! CHECK-NEXT: cf.cond_br
       case('44':'55','66':'77','88':)
         n = 4
       end select
@@ -283,23 +292,21 @@
       case ('2')
     ! CHECK: fir.call @_FortranACharacterCompareScalar1(
     ! CHECK-NEXT: arith.cmpi eq, {{.*}}, %c0_i32 : i32
-    ! CHECK-NEXT: cf.cond_br {{.*}}, ^bb8
+    ! CHECK-NEXT: cf.cond_br
       ! (empty) print*, n, 'c:case 2'
       case default
         print*, n, 'c:case default'
     end select
-    ! CHECK: ^bb8:
-    ! CHECK-NEXT: return
+    ! CHECK: return
   end subroutine
 
   ! CHECK-LABEL: func @_QPsgoto
   ! select case with goto exit
   subroutine sgoto
     n = 0
-    ! CHECK: cf.cond_br {{.*}}, ^bb2, ^bb8
+    ! CHECK: cf.cond_br
     do i=1,8
-      ! CHECK: ^bb2: 
-      ! CHECK: fir.select_case %8 : i32 [#fir.upper, %c2_i32, ^bb3, #fir.lower, %c5_i32, ^bb4, unit, ^bb6]
+      ! CHECK: fir.select_case %8 : i32 [#fir.upper, %c2_i32, ^bb{{.*}}, #fir.lower, %c5_i32, ^bb{{.*}}, unit, ^bb{{.*}}]
       select case(i)
       case (:2)
         ! CHECK-DAG: arith.muli {{.*}}, %c10_i32 : i32
@@ -318,8 +325,7 @@
   9   end select
       print*, n
     enddo
-    ! CHECK: ^bb8:
-    ! CHECK-NEXT: return
+    ! CHECK: return
   end
 
   ! CHECK-LABEL: func @_QPswhere
