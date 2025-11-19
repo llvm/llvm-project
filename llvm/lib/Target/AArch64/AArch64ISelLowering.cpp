@@ -18486,23 +18486,61 @@ bool AArch64TargetLowering::findOptimalMemOpLowering(
   EVT VT = getOptimalMemOpType(Context, Op, FuncAttributes);
   if (VT == MVT::v16i8 && Op.isMemset() && !Op.isZeroMemset() &&
       Op.size() < 16) {
-    // Check if we can extract the needed size
-    unsigned Index;
     Type *VectorTy = VT.getTypeForEVT(Context);
-    if (shallExtractConstSplatVectorElementToStore(VectorTy, Op.size() * 8,
-                                                   Index)) {
+    unsigned Size = Op.size();
+    unsigned RemainingSize = Size;
+
+    // Break down the size into stores that we can extract from v16i8.
+    // We support: i64 (8 bytes), i32 (4 bytes), i16 (2 bytes), i8 (1 byte)
+    // Use the largest possible stores first to minimize the number of
+    // operations.
+    while (RemainingSize > 0) {
+      unsigned Index;
+      EVT TargetVT;
+
+      // Try largest stores first
+      if (RemainingSize >= 8 &&
+          shallExtractConstSplatVectorElementToStore(VectorTy, 64, Index)) {
+        TargetVT = MVT::i64;
+        RemainingSize -= 8;
+      } else if (RemainingSize >= 4 &&
+                 shallExtractConstSplatVectorElementToStore(VectorTy, 32,
+                                                            Index)) {
+        TargetVT = MVT::i32;
+        RemainingSize -= 4;
+      } else if (RemainingSize >= 2 &&
+                 shallExtractConstSplatVectorElementToStore(VectorTy, 16,
+                                                            Index)) {
+        TargetVT = MVT::i16;
+        RemainingSize -= 2;
+      } else if (RemainingSize >= 1 &&
+                 shallExtractConstSplatVectorElementToStore(VectorTy, 8,
+                                                            Index)) {
+        TargetVT = MVT::i8;
+        RemainingSize -= 1;
+      } else {
+        // Can't extract this size, fall back to default implementation
+        break;
+      }
+
+      MemOps.push_back(TargetVT);
+    }
+
+    // If we successfully decomposed the entire size, add v16i8 as LargestVT
+    // and return. Otherwise, fall back to default implementation.
+    if (RemainingSize == 0 && !MemOps.empty()) {
       // To generate the vector splat (DUP), we need v16i8 to be the LargestVT.
       // getMemsetStores requires oversized stores to be last with at least 2
-      // operations. We add the target size first (extracts from v16i8), then
-      // v16i8 last (satisfies assertion, and is LargestVT for splat
-      // generation). After the first store, Size becomes 0, so the oversized
-      // store is skipped by the early continue in getMemsetStores, avoiding
-      // redundant stores.
-      EVT TargetVT = (Op.size() >= 8) ? MVT::i64 : MVT::i32;
-      MemOps.push_back(TargetVT); // First: extract from v16i8
-      MemOps.push_back(VT);       // Last: v16i8 (LargestVT, oversized)
+      // operations. We add v16i8 last (satisfies assertion, and is LargestVT
+      // for splat generation). After all actual stores, Size becomes 0, so the
+      // oversized store is skipped by the early continue in getMemsetStores,
+      // avoiding redundant stores.
+      MemOps.push_back(VT); // Last: v16i8 (LargestVT, oversized)
       return true;
     }
+
+    // Clear MemOps if we didn't successfully handle everything
+    MemOps.clear();
   }
   // Otherwise, use the default implementation
   return TargetLowering::findOptimalMemOpLowering(Context, MemOps, Limit, Op,
@@ -29918,17 +29956,19 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
 bool AArch64TargetLowering::shallExtractConstSplatVectorElementToStore(
     Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const {
   // On AArch64, we can efficiently extract a scalar from a splat vector using
-  // str s/d/q0 which extracts 32/64/128 bits from the vector register.
+  // str b/h/s/d/q0 which extracts 8/16/32/64/128 bits from the vector register.
   // This is useful for memset where we generate a v16i8 splat and need to store
-  // a smaller scalar (e.g., i32 for a 4-byte memset).
+  // a smaller scalar (e.g., i32 for a 4-byte memset, i16 for 2 bytes, i8 for 1
+  // byte).
   if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(VectorTy)) {
     // Handle v16i8 splat (128 bits total, 16 elements of 8 bits each) and
     // v8i8 splat (64 bits total, 8 elements of 8 bits each)
     if ((VTy->getNumElements() == 16 || VTy->getNumElements() == 8) &&
         VTy->getElementType()->isIntegerTy(8)) {
-      // Check if we're extracting a 32-bit or 64-bit element
-      if (ElemSizeInBits == 32 || ElemSizeInBits == 64) {
-        // Extract element 0 from the vector as a scalar
+      // Check if we're extracting 8, 16, 32, or 64-bit element
+      // All extract from element 0 since it's a splat
+      if (ElemSizeInBits == 8 || ElemSizeInBits == 16 || ElemSizeInBits == 32 ||
+          ElemSizeInBits == 64) {
         Index = 0;
         return true;
       }

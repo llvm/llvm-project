@@ -429,22 +429,16 @@ define void @memset_10(ptr %dst, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
-; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; SDAG-WITHOUT-MOPS-O2-NEXT:    and x9, x1, #0xff
-; SDAG-WITHOUT-MOPS-O2-NEXT:    mul x8, x9, x8
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str x8, [x0]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w8, [x0, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    dup	v0.16b, w1
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str	h0, [x0, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str	d0, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memset_10:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
-; SDAG-MOPS-O2-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; SDAG-MOPS-O2-NEXT:    and x9, x1, #0xff
-; SDAG-MOPS-O2-NEXT:    mul x8, x9, x8
-; SDAG-MOPS-O2-NEXT:    str x8, [x0]
-; SDAG-MOPS-O2-NEXT:    strh w8, [x0, #8]
+; SDAG-MOPS-O2-NEXT:    dup	v0.16b, w1
+; SDAG-MOPS-O2-NEXT:    str	h0, [x0, #8]
+; SDAG-MOPS-O2-NEXT:    str	d0, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
@@ -495,22 +489,16 @@ define void @memset_10_volatile(ptr %dst, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10_volatile:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
-; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; SDAG-WITHOUT-MOPS-O2-NEXT:    and x9, x1, #0xff
-; SDAG-WITHOUT-MOPS-O2-NEXT:    mul x8, x9, x8
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str x8, [x0]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w8, [x0, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    dup	v0.16b, w1
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str	h0, [x0, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str	d0, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memset_10_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
-; SDAG-MOPS-O2-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; SDAG-MOPS-O2-NEXT:    and x9, x1, #0xff
-; SDAG-MOPS-O2-NEXT:    mul x8, x9, x8
-; SDAG-MOPS-O2-NEXT:    str x8, [x0]
-; SDAG-MOPS-O2-NEXT:    strh w8, [x0, #8]
+; SDAG-MOPS-O2-NEXT:    dup	v0.16b, w1
+; SDAG-MOPS-O2-NEXT:    str	h0, [x0, #8]
+; SDAG-MOPS-O2-NEXT:    str	d0, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8

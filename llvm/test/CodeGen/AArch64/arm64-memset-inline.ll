@@ -346,15 +346,15 @@ define void @memset_12_stack() {
 ; CHECK-LABEL: memset_12_stack:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte{{.*}}Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x8, #-6148914691236517206
+; CHECK-NEXT:    movi v0.16b, #170
 ; CHECK-NEXT:    mov x0, sp
-; CHECK-NEXT:    str x8, [sp]
-; CHECK-NEXT:    str w8, [sp, #8]
+; CHECK-NEXT:    str s0, [sp, #8]
+; CHECK-NEXT:    str d0, [sp]
 ; CHECK-NEXT:    bl something
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte{{.*}}Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %buf = alloca [12 x i8], align 1
