@@ -682,8 +682,11 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
     setLinkageForGV(gv, d);
 
-    if (d->getTLSKind())
-      errorNYI(d->getSourceRange(), "thread local global variable");
+    if (d->getTLSKind()) {
+      if (d->getTLSKind() == VarDecl::TLS_Dynamic)
+        errorNYI(d->getSourceRange(), "TLS dynamic");
+      setTLSMode(gv, *d);
+    }
 
     setGVProperties(gv, d);
 
@@ -738,12 +741,13 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   if (!ty)
     ty = getTypes().convertTypeForMem(astTy);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
-
+  bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
-  return cir::GetGlobalOp::create(builder, getLoc(d->getSourceRange()), ptrTy,
-                                  g.getSymName());
+  auto getGlobalOp = cir::GetGlobalOp::create(
+      builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
+      tlsAccess);
+  return getGlobalOp.getAddr();
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
@@ -1951,6 +1955,35 @@ void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
   setGlobalVisibility(op, d);
   setDSOLocal(op);
   assert(!cir::MissingFeatures::opGlobalPartition());
+}
+
+cir::TLS_Model CIRGenModule::GetDefaultCIRTLSModel() const {
+  switch (getCodeGenOpts().getDefaultTLSModel()) {
+  case CodeGenOptions::GeneralDynamicTLSModel:
+    return cir::TLS_Model::GeneralDynamic;
+  case CodeGenOptions::LocalDynamicTLSModel:
+    return cir::TLS_Model::LocalDynamic;
+  case CodeGenOptions::InitialExecTLSModel:
+    return cir::TLS_Model::InitialExec;
+  case CodeGenOptions::LocalExecTLSModel:
+    return cir::TLS_Model::LocalExec;
+  }
+  llvm_unreachable("Invalid TLS model!");
+}
+
+void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) const {
+  assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
+
+  auto tlm = GetDefaultCIRTLSModel();
+
+  // Override the TLS model if it is explicitly specified.
+  if (d.getAttr<TLSModelAttr>()) {
+    llvm_unreachable("NYI");
+  }
+
+  auto global = dyn_cast<cir::GlobalOp>(op);
+  assert(global && "NYI for other operations");
+  global.setTlsModel(tlm);
 }
 
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
