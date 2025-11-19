@@ -2685,13 +2685,15 @@ def int_amdgcn_call_whole_wave:
             [IntrConvergent]>;
 
 // <result>
-//   llvm.amdgcn.subgroup.shuffle <value> <id>
-// value and result can be any scalar of floating-point, integer,
-// or Boolean types, but must be the same type
-def int_amdgcn_subgroup_shuffle :
-  Intrinsic<[llvm_any_ty],                                                            // return types
-            [LLVMMatchType<0>, llvm_i32_ty],                                          // arg types
-            [IntrConvergent, IntrNoMem, IntrNoFree, IntrWillReturn, IntrNoCallback]>; // flags
+//   llvm.amdgcn.wave.shuffle <value> <id>
+// value and result can be 32bit floating-point, integer,
+// or Boolean types, and must be the same type. Any index
+// value that's outside the valid range will wrap around,
+// and reading from an inactive lane will return 0.
+def int_amdgcn_wave_shuffle :
+  DefaultAttrsIntrinsic<[llvm_any_ty],                                                            // return types
+                        [LLVMMatchType<0>, llvm_i32_ty],                                          // arg types
+                        [IntrConvergent, IntrNoMem, IntrNoFree, IntrWillReturn, IntrNoCallback]>; // flags
 
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics

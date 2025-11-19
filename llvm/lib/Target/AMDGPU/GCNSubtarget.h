@@ -1885,7 +1885,7 @@ public:
   }
 
   bool supportsWaveWideBPermute() const {
-    return ((getGeneration() == AMDGPUSubtarget::GFX12) || isWave32());
+    return getGeneration() == AMDGPUSubtarget::GFX12 || isWave32();
   }
 };
 
