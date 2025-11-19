@@ -401,7 +401,10 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/LLVM::ModRefInfo::NoModRef,
         /*argMem=*/LLVM::ModRefInfo::NoModRef,
-        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef);
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
     auto funcAttrs = convergentNoUnwindWillReturnAttrs;
     funcAttrs.memEffectsAttr = memAttr;
     Value result =
@@ -450,7 +453,10 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/LLVM::ModRefInfo::NoModRef,
         /*argMem=*/LLVM::ModRefInfo::Ref,
-        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef);
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
     funcAttr.memEffectsAttr = memAttr;
 
     LLVM::CallOp call = createDeviceFunctionCall(
@@ -556,7 +562,10 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
       auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
           /*other=*/LLVM::ModRefInfo::NoModRef,
           /*argMem=*/LLVM::ModRefInfo::Ref,
-          /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef);
+          /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+          /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+          /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+          /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
       funcAttr = noUnwindAttrs;
       funcAttr.memEffectsAttr = memAttr;
     } else {
@@ -798,7 +807,10 @@ class LaunchConfigOpToOCLPattern : public OpConversionPattern<OpType> {
     constexpr auto noModRef = LLVM::ModRefInfo::NoModRef;
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/noModRef,
-        /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef);
+        /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef,
+        /*errnoMem=*/noModRef,
+        /*targetMem0=*/noModRef,
+        /*targetMem1=*/noModRef);
     call.setMemoryEffectsAttr(memAttr);
     rewriter.replaceOp(op, call);
     return success();
@@ -836,7 +848,10 @@ class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
     constexpr auto noModRef = LLVM::ModRefInfo::NoModRef;
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/noModRef,
-        /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef);
+        /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef,
+        /*errnoMem=*/noModRef,
+        /*targetMem0=*/noModRef,
+        /*targetMem1=*/noModRef);
     call.setMemoryEffectsAttr(memAttr);
     rewriter.replaceOp(op, call);
     return success();
