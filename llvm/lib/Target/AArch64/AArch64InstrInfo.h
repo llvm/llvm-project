@@ -172,6 +172,10 @@ enum AArch64MachineCombinerPattern : unsigned {
   FMULv8i16_indexed_OP2,
 
   FNMADD,
+
+  GATHER_LANE_i32,
+  GATHER_LANE_i16,
+  GATHER_LANE_i8
 };
 class AArch64InstrInfo final : public AArch64GenInstrInfo {
   const AArch64RegisterInfo RI;
@@ -200,6 +204,15 @@ public:
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                    int &FrameIndex) const override;
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                     int &FrameIndex) const override;
 
   /// Does this instruction set its full destination register to zero?
   static bool isGPRZero(const MachineInstr &MI);
@@ -349,14 +362,13 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // This tells target independent code that it is okay to pass instructions
@@ -519,7 +531,7 @@ public:
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   static bool isFalkorShiftExtFast(const MachineInstr &MI);
-  /// Return true if the instructions is a SEH instruciton used for unwinding
+  /// Return true if the instructions is a SEH instruction used for unwinding
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
 
@@ -642,8 +654,10 @@ bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
 MCCFIInstruction createDefCFA(const TargetRegisterInfo &TRI, unsigned FrameReg,
                               unsigned Reg, const StackOffset &Offset,
                               bool LastAdjustmentWasScalable = true);
-MCCFIInstruction createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
-                                 const StackOffset &OffsetFromDefCFA);
+MCCFIInstruction
+createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
+                const StackOffset &OffsetFromDefCFA,
+                std::optional<int64_t> IncomingVGOffsetFromDefCFA);
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg
 /// plus Offset.  This is intended to be used from within the prolog/epilog
@@ -706,6 +720,8 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBNZX:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     return true;
@@ -820,7 +836,8 @@ enum DestructiveInstType {
   DestructiveBinaryComm         = TSFLAG_DESTRUCTIVE_INST_TYPE(0x6),
   DestructiveBinaryCommWithRev  = TSFLAG_DESTRUCTIVE_INST_TYPE(0x7),
   DestructiveTernaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x8),
-  DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
+  Destructive2xRegImmUnpred     = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
+  DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
 };
 
 enum FalseLaneType {

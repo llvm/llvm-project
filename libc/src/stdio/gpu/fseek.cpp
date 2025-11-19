@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fseek.h"
-#include "file.h"
-#include "src/__support/macros/config.h"
 
+#include "file.h"
 #include "hdr/types/FILE.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

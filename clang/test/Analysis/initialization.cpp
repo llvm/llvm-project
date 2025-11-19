@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -triple i386-apple-darwin10 -analyze -analyzer-config eagerly-assume=false -analyzer-checker=core.uninitialized.Assign,core.builtin,debug.ExprInspection,core.uninitialized.UndefReturn -verify %s
+// RUN: %clang_analyze_cc1 -std=c++14 -triple i386-apple-darwin10 -analyzer-config eagerly-assume=false -analyzer-checker=core.uninitialized.Assign,core.builtin,debug.ExprInspection,core.uninitialized.UndefReturn -verify %s
 
 template <typename T>
 void clang_analyzer_dump(T x);

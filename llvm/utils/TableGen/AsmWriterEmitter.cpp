@@ -129,11 +129,10 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
     }
   }
 
-  O << "  case " << FirstInst.CGI->Namespace
-    << "::" << FirstInst.CGI->TheDef->getName() << ":\n";
+  O << "  case " << FirstInst.CGI->Namespace << "::" << FirstInst.CGI->getName()
+    << ":\n";
   for (const AsmWriterInst &AWI : SimilarInsts)
-    O << "  case " << AWI.CGI->Namespace << "::" << AWI.CGI->TheDef->getName()
-      << ":\n";
+    O << "  case " << AWI.CGI->Namespace << "::" << AWI.CGI->getName() << ":\n";
   for (unsigned i = 0, e = FirstInst.Operands.size(); i != e; ++i) {
     if (i != DifferingOperand) {
       // If the operand is the same for all instructions, just print it.
@@ -145,12 +144,12 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
       O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
       OpsToPrint.emplace_back(FirstInst.CGI->Namespace.str() +
-                                  "::" + FirstInst.CGI->TheDef->getName().str(),
+                                  "::" + FirstInst.CGI->getName().str(),
                               FirstInst.Operands[i]);
 
       for (const AsmWriterInst &AWI : SimilarInsts) {
         OpsToPrint.emplace_back(AWI.CGI->Namespace.str() +
-                                    "::" + AWI.CGI->TheDef->getName().str(),
+                                    "::" + AWI.CGI->getName().str(),
                                 AWI.Operands[i]);
       }
       std::reverse(OpsToPrint.begin(), OpsToPrint.end());
@@ -188,11 +187,11 @@ void AsmWriterEmitter::FindUniqueOperandCommands(
     if (I != UniqueOperandCommands.end()) {
       size_t idx = I - UniqueOperandCommands.begin();
       InstrsForCase[idx] += ", ";
-      InstrsForCase[idx] += Inst.CGI->TheDef->getName();
+      InstrsForCase[idx] += Inst.CGI->getName();
       InstIdxs[idx].push_back(i);
     } else {
       UniqueOperandCommands.push_back(std::move(Command));
-      InstrsForCase.push_back(std::string(Inst.CGI->TheDef->getName()));
+      InstrsForCase.push_back(Inst.CGI->getName().str());
       InstIdxs.emplace_back();
       InstIdxs.back().push_back(i);
 
@@ -451,7 +450,7 @@ void AsmWriterEmitter::EmitGetMnemonic(
       << "[] = {\n";
     for (unsigned i = 0, e = NumberedInstructions.size(); i != e; ++i) {
       O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << "U,\t// "
-        << NumberedInstructions[i]->TheDef->getName() << "\n";
+        << NumberedInstructions[i]->getName() << '\n';
     }
     O << "  };\n\n";
     // Emit string to combine the individual table lookups.
@@ -592,9 +591,9 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
     // "NoRegAltName" is special. We don't need to do a lookup for that,
     // as it's just a reference to the default register name.
     if (AltName == "" || AltName == "NoRegAltName") {
-      AsmName = std::string(Reg.TheDef->getValueAsString("AsmName"));
+      AsmName = Reg.TheDef->getValueAsString("AsmName").str();
       if (AsmName.empty())
-        AsmName = std::string(Reg.getName());
+        AsmName = Reg.getName().str();
     } else {
       // Make sure the register has an alternate name for this index.
       std::vector<const Record *> AltNameList =
@@ -612,7 +611,7 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
           PrintFatalError(Reg.TheDef->getLoc(),
                           "Register definition missing alt name for '" +
                               AltName + "'.");
-        AsmName = std::string(AltNames[Idx]);
+        AsmName = AltNames[Idx].str();
       }
     }
     StringTable.add(AsmName);
@@ -660,8 +659,9 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   if (hasAltNames) {
     for (const Record *R : AltNameIndices)
       emitRegisterNameString(O, R->getName(), Registers);
-  } else
+  } else {
     emitRegisterNameString(O, "", Registers);
+  }
 
   if (hasAltNames) {
     O << "  switch(AltIdx) {\n"
@@ -814,7 +814,7 @@ static unsigned CountNumOperands(StringRef AsmString, unsigned Variant) {
 namespace {
 
 struct AliasPriorityComparator {
-  typedef std::pair<CodeGenInstAlias, int> ValueType;
+  using ValueType = std::pair<CodeGenInstAlias, int>;
   bool operator()(const ValueType &LHS, const ValueType &RHS) const {
     if (LHS.second == RHS.second) {
       // We don't actually care about the order, but for consistency it
@@ -845,8 +845,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
   // Create a map from the qualified name to a list of potential matches.
-  typedef std::set<std::pair<CodeGenInstAlias, int>, AliasPriorityComparator>
-      AliasWithPriority;
+  using AliasWithPriority =
+      std::set<std::pair<CodeGenInstAlias, int>, AliasPriorityComparator>;
   std::map<std::string, AliasWithPriority> AliasMap;
   for (const Record *R : Records.getAllDerivedDefinitions("InstAlias")) {
     int Priority = R->getValueAsInt("EmitPriority");
@@ -869,9 +869,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   DenseMap<const Record *, unsigned> MCOpPredicateMap;
 
   for (auto &Aliases : AliasMap) {
-    // Collection of instruction alias rules. May contain ambiguous rules.
-    std::vector<IAPrinter> IAPs;
-
     for (auto &Alias : Aliases.second) {
       const CodeGenInstAlias &CGA = Alias.first;
       unsigned LastOpNo = CGA.ResultInstOperandIndex.size();
@@ -942,13 +939,13 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
                                              }) -
                                PrintMethods.begin();
               if (static_cast<unsigned>(PrintMethodIdx) == PrintMethods.size())
-                PrintMethods.emplace_back(std::string(PrintMethod), IsPCRel);
+                PrintMethods.emplace_back(PrintMethod.str(), IsPCRel);
             }
           }
 
           if (Rec->isSubClassOf("RegisterOperand"))
             Rec = Rec->getValueAsDef("RegClass");
-          if (Rec->isSubClassOf("RegisterClass")) {
+          if (Rec->isSubClassOf("RegisterClassLike")) {
             if (!IAP.isOpMapped(ROName)) {
               IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
               const Record *R = CGA.ResultOperands[i].getRecord();
@@ -972,8 +969,9 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               if (!Rec->isValueUnset("MCOperandPredicate")) {
                 MCOpPredicates.push_back(Rec);
                 Entry = MCOpPredicates.size();
-              } else
+              } else {
                 break; // No conditions on this operand at all
+              }
             }
             IAP.addCond(
                 std::string(formatv("AliasPatternCond::K_Custom, {}", Entry)));
@@ -1032,13 +1030,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         // Change (any_of FeatureAll, (any_of ...)) to (any_of FeatureAll, ...).
         if (IsOr && D->getNumArgs() == 2 && isa<DagInit>(D->getArg(1))) {
           const DagInit *RHS = cast<DagInit>(D->getArg(1));
-          SmallVector<const Init *> Args{D->getArg(0)};
-          SmallVector<const StringInit *> ArgNames{D->getArgName(0)};
-          for (unsigned i = 0, e = RHS->getNumArgs(); i != e; ++i) {
-            Args.push_back(RHS->getArg(i));
-            ArgNames.push_back(RHS->getArgName(i));
-          }
-          D = DagInit::get(D->getOperator(), nullptr, Args, ArgNames);
+          SmallVector<std::pair<const Init *, const StringInit *>> Args{
+              *D->getArgAndNames().begin()};
+          llvm::append_range(Args, RHS->getArgAndNames());
+          D = DagInit::get(D->getOperator(), Args);
         }
 
         for (auto *Arg : D->getArgs()) {
@@ -1142,10 +1137,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       uint32_t UnescapedSize = 0;
       std::string EncodedAsmString = IAP->formatAliasString(UnescapedSize);
       auto Insertion =
-          AsmStringOffsets.insert({EncodedAsmString, AsmStringsSize});
+          AsmStringOffsets.try_emplace(EncodedAsmString, AsmStringsSize);
       if (Insertion.second) {
         // If the string is new, add it to the vector.
-        AsmStrings.push_back({AsmStringsSize, EncodedAsmString});
+        AsmStrings.emplace_back(AsmStringsSize, EncodedAsmString);
         AsmStringsSize += UnescapedSize + 1;
       }
       unsigned AsmStrOffset = Insertion.first->second;
@@ -1318,10 +1313,10 @@ AsmWriterEmitter::AsmWriterEmitter(const RecordKeeper &R)
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
 
   // Get the instruction numbering.
-  NumberedInstructions = Target.getInstructionsByEnumValue();
+  NumberedInstructions = Target.getInstructions();
 
   for (const auto &[Idx, I] : enumerate(NumberedInstructions)) {
-    if (!I->AsmString.empty() && I->TheDef->getName() != "PHI")
+    if (!I->AsmString.empty() && I->getName() != "PHI")
       Instructions.emplace_back(*I, Idx, Variant);
   }
 }

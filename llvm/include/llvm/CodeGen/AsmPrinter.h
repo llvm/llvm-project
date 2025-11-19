@@ -16,7 +16,9 @@
 #define LLVM_CODEGEN_ASMPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
@@ -26,6 +28,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <memory>
@@ -85,8 +88,12 @@ namespace remarks {
 class RemarkStreamer;
 }
 
+namespace vfs {
+class FileSystem;
+}
+
 /// This class is intended to be used as a driving class for all asm writers.
-class AsmPrinter : public MachineFunctionPass {
+class LLVM_ABI AsmPrinter : public MachineFunctionPass {
 public:
   /// Target machine description.
   TargetMachine &TM;
@@ -102,6 +109,9 @@ public:
   /// contains the transient state for the current translation unit that we are
   /// generating (such as the current section etc).
   std::unique_ptr<MCStreamer> OutStreamer;
+
+  /// The VFS to resolve asm include directives.
+  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
 
   /// The current machine function.
   MachineFunction *MF = nullptr;
@@ -133,6 +143,13 @@ public:
   /// purpose of calculating its size (e.g. using the .size directive). By
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
+
+  /// Vector of symbols marking the end of the callsites in the current
+  /// function, keyed by their containing basic block.
+  /// The callsite symbols of each block are stored in the order they appear
+  /// in that block.
+  DenseMap<const MachineBasicBlock *, SmallVector<MCSymbol *, 1>>
+      CurrentFnCallsiteEndSymbols;
 
   /// Provides the profile information for constants.
   const StaticDataProfileInfo *SDPI = nullptr;
@@ -181,6 +198,23 @@ private:
 
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
+
+  /// Store symbols and type identifiers used to create callgraph section
+  /// entries related to a function.
+  struct FunctionCallGraphInfo {
+    /// Numeric type identifier used in callgraph section for indirect calls
+    /// and targets.
+    using CGTypeId = uint64_t;
+
+    /// Unique target type IDs.
+    SmallSetVector<CGTypeId, 4> IndirectCalleeTypeIDs;
+    /// Unique direct callees.
+    SmallSetVector<MCSymbol *, 4> DirectCallees;
+  };
+
+  enum CallGraphSectionFormatVersion : uint8_t {
+    V_0 = 0,
+  };
 
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
@@ -240,7 +274,8 @@ private:
   bool DbgInfoAvailable = false;
 
 protected:
-  explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
+  AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
+             char &ID = AsmPrinter::ID);
 
 public:
   ~AsmPrinter() override;
@@ -293,6 +328,10 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
+  /// Creates a new symbol to be used for the end of a callsite at the specified
+  /// basic block.
+  MCSymbol *createCallsiteEndSymbol(const MachineBasicBlock &MBB);
+
   /// If the specified function has had any references to address-taken blocks
   /// generated, but the block got deleted, return the symbol now so we can
   /// emit it.  This prevents emitting a reference to a symbol that has no
@@ -342,6 +381,14 @@ public:
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
 
+  /// If MI is an indirect call, add expected type IDs to indirect type ids
+  /// list. If MI is a direct call add the callee symbol to direct callsites
+  /// list of FuncCGInfo.
+  void handleCallsiteForCallgraph(
+      FunctionCallGraphInfo &FuncCGInfo,
+      const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+      const MachineInstr &MI);
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//
@@ -368,7 +415,7 @@ public:
     const class Function *Fn;
     uint8_t Version;
 
-    void emit(int, MCStreamer *) const;
+    LLVM_ABI void emit(int, MCStreamer *) const;
   };
 
   // All the sleds to be emitted.
@@ -428,6 +475,9 @@ public:
 
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
+
+  void emitCallGraphSection(const MachineFunction &MF,
+                            FunctionCallGraphInfo &FuncCGInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 
@@ -810,6 +860,17 @@ public:
                      codeview::JumpTableEntrySize>
   getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
                            const MCSymbol *BranchLabel) const;
+
+  //===------------------------------------------------------------------===//
+  // COFF Helper Routines
+  //===------------------------------------------------------------------===//
+
+  /// Emits symbols and data to allow functions marked with the
+  /// loader-replaceable attribute to be replaceable.
+  void emitCOFFReplaceableFunctionData(Module &M);
+
+  /// Emits the @feat.00 symbol indicating the features enabled in this module.
+  void emitCOFFFeatureSymbol(Module &M);
 
   //===------------------------------------------------------------------===//
   // Inline Asm Support

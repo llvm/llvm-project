@@ -11,13 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Host.h"
+#include "llvm/ADT/Bitfields.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <string.h>
@@ -66,8 +70,8 @@
 
 using namespace llvm;
 
-static std::unique_ptr<llvm::MemoryBuffer>
-    LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+[[maybe_unused]] static std::unique_ptr<llvm::MemoryBuffer>
+getProcCpuinfoContent() {
   const char *CPUInfoFile = "/proc/cpuinfo";
   if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
     CPUInfoFile = CpuinfoIntercept;
@@ -166,27 +170,17 @@ StringRef sys::detail::getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent) {
       .Default(generic);
 }
 
-StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
-  // The cpuid register on arm is not accessible from user space. On Linux,
-  // it is exposed through the /proc/cpuinfo file.
+StringRef
+getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
+                                   StringRef Part, ArrayRef<StringRef> Parts,
+                                   function_ref<unsigned()> GetVariant) {
 
-  // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
-  // in all cases.
-  SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, '\n');
-
-  // Look for the CPU implementer line.
-  StringRef Implementer;
-  StringRef Hardware;
-  StringRef Part;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].starts_with("CPU implementer"))
-      Implementer = Lines[I].substr(15).ltrim("\t :");
-    if (Lines[I].starts_with("Hardware"))
-      Hardware = Lines[I].substr(8).ltrim("\t :");
-    if (Lines[I].starts_with("CPU part"))
-      Part = Lines[I].substr(8).ltrim("\t :");
-  }
+  auto MatchBigLittle = [](auto const &Parts, StringRef Big, StringRef Little) {
+    if (Parts.size() == 2)
+      return (Parts[0] == Big && Parts[1] == Little) ||
+             (Parts[1] == Big && Parts[0] == Little);
+    return false;
+  };
 
   if (Implementer == "0x41") { // ARM Ltd.
     // MSM8992/8994 may give cpu part for the core that the kernel is running on,
@@ -194,6 +188,9 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     if (Hardware.ends_with("MSM8994") || Hardware.ends_with("MSM8996"))
       return "cortex-a53";
 
+    // Detect big.LITTLE systems.
+    if (MatchBigLittle(Parts, "0xd85", "0xd87"))
+      return "cortex-x925";
 
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
     // values correspond to the "Part number" in the CP15/c0 register. The
@@ -228,6 +225,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd14", "cortex-r82ae")
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
+        .Case("0xd8f", "cortex-a320")
         .Case("0xd03", "cortex-a53")
         .Case("0xd05", "cortex-a55")
         .Case("0xd46", "cortex-a510")
@@ -323,21 +321,17 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   if (Implementer == "0x53") { // Samsung Electronics Co., Ltd.
     // The Exynos chips have a convoluted ID scheme that doesn't seem to follow
     // any predictive pattern across variants and parts.
-    unsigned Variant = 0, Part = 0;
 
     // Look for the CPU variant line, whose value is a 1 digit hexadecimal
     // number, corresponding to the Variant bits in the CP15/C0 register.
-    for (auto I : Lines)
-      if (I.consume_front("CPU variant"))
-        I.ltrim("\t :").getAsInteger(0, Variant);
+    unsigned Variant = GetVariant();
 
-    // Look for the CPU part line, whose value is a 3 digit hexadecimal
-    // number, corresponding to the PartNum bits in the CP15/C0 register.
-    for (auto I : Lines)
-      if (I.consume_front("CPU part"))
-        I.ltrim("\t :").getAsInteger(0, Part);
+    // Convert the CPU part line, whose value is a 3 digit hexadecimal number,
+    // corresponding to the PartNum bits in the CP15/C0 register.
+    unsigned PartAsInt;
+    Part.getAsInteger(0, PartAsInt);
 
-    unsigned Exynos = (Variant << 12) | Part;
+    unsigned Exynos = (Variant << 12) | PartAsInt;
     switch (Exynos) {
     default:
       // Default by falling through to Exynos M3.
@@ -375,6 +369,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   if (Implementer == "0x63") { // Arm China.
     return StringSwitch<const char *>(Part)
         .Case("0x132", "star-mc1")
+        .Case("0xd25", "star-mc3")
         .Default("generic");
   }
 
@@ -394,6 +389,78 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   }
 
   return "generic";
+}
+
+StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
+  // The cpuid register on arm is not accessible from user space. On Linux,
+  // it is exposed through the /proc/cpuinfo file.
+
+  // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
+  // in all cases.
+  SmallVector<StringRef, 32> Lines;
+  ProcCpuinfoContent.split(Lines, '\n');
+
+  // Look for the CPU implementer and hardware lines, and store the CPU part
+  // numbers found.
+  StringRef Implementer;
+  StringRef Hardware;
+  SmallVector<StringRef, 32> Parts;
+  for (StringRef Line : Lines) {
+    if (Line.consume_front("CPU implementer"))
+      Implementer = Line.ltrim("\t :");
+    else if (Line.consume_front("Hardware"))
+      Hardware = Line.ltrim("\t :");
+    else if (Line.consume_front("CPU part"))
+      Parts.emplace_back(Line.ltrim("\t :"));
+  }
+
+  // Last `Part' seen, in case we don't analyse all `Parts' parsed.
+  StringRef Part = Parts.empty() ? StringRef() : Parts.back();
+
+  // Remove duplicate `Parts'.
+  llvm::sort(Parts);
+  Parts.erase(llvm::unique(Parts), Parts.end());
+
+  auto GetVariant = [&]() {
+    unsigned Variant = 0;
+    for (auto I : Lines)
+      if (I.consume_front("CPU variant"))
+        I.ltrim("\t :").getAsInteger(0, Variant);
+    return Variant;
+  };
+
+  return getHostCPUNameForARMFromComponents(Implementer, Hardware, Part, Parts,
+                                            GetVariant);
+}
+
+StringRef sys::detail::getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
+                                            ArrayRef<uint64_t> UniqueCpuInfos) {
+  // On Windows, the registry provides cached copied of the MIDR_EL1 register.
+  using PartNum = Bitfield::Element<uint16_t, 4, 12>;
+  using Implementer = Bitfield::Element<uint16_t, 24, 8>;
+  using Variant = Bitfield::Element<uint16_t, 20, 4>;
+
+  SmallVector<std::string> PartsHolder;
+  PartsHolder.reserve(UniqueCpuInfos.size());
+  for (auto Info : UniqueCpuInfos)
+    PartsHolder.push_back("0x" + utohexstr(Bitfield::get<PartNum>(Info),
+                                           /*LowerCase*/ true,
+                                           /*Width*/ 3));
+
+  SmallVector<StringRef> Parts;
+  Parts.reserve(PartsHolder.size());
+  for (const auto &Part : PartsHolder)
+    Parts.push_back(Part);
+
+  return getHostCPUNameForARMFromComponents(
+      "0x" + utohexstr(Bitfield::get<Implementer>(PrimaryCpuInfo),
+                       /*LowerCase*/ true,
+                       /*Width*/ 2),
+      /*Hardware*/ "",
+      "0x" + utohexstr(Bitfield::get<PartNum>(PrimaryCpuInfo),
+                       /*LowerCase*/ true,
+                       /*Width*/ 3),
+      Parts, [=]() { return Bitfield::get<Variant>(PrimaryCpuInfo); });
 }
 
 namespace {
@@ -445,11 +512,11 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-    if (Lines[I].starts_with("features")) {
-      size_t Pos = Lines[I].find(':');
+  for (StringRef Line : Lines)
+    if (Line.starts_with("features")) {
+      size_t Pos = Line.find(':');
       if (Pos != StringRef::npos) {
-        Lines[I].drop_front(Pos + 1).split(CPUFeatures, ' ');
+        Line.drop_front(Pos + 1).split(CPUFeatures, ' ');
         break;
       }
     }
@@ -457,20 +524,16 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // We need to check for the presence of vector support independently of
   // the machine type, since we may only use the vector register set when
   // supported by the kernel (and hypervisor).
-  bool HaveVectorSupport = false;
-  for (unsigned I = 0, E = CPUFeatures.size(); I != E; ++I) {
-    if (CPUFeatures[I] == "vx")
-      HaveVectorSupport = true;
-  }
+  bool HaveVectorSupport = llvm::is_contained(CPUFeatures, "vx");
 
   // Now check the processor machine type.
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].starts_with("processor ")) {
-      size_t Pos = Lines[I].find("machine = ");
+  for (StringRef Line : Lines) {
+    if (Line.starts_with("processor ")) {
+      size_t Pos = Line.find("machine = ");
       if (Pos != StringRef::npos) {
         Pos += sizeof("machine = ") - 1;
         unsigned int Id;
-        if (!Lines[I].drop_front(Pos).getAsInteger(10, Id))
+        if (!Line.drop_front(Pos).getAsInteger(10, Id))
           return getCPUNameFromS390Model(Id, HaveVectorSupport);
       }
       break;
@@ -487,9 +550,9 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
 
   // Look for uarch line to determine cpu name
   StringRef UArch;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].starts_with("uarch")) {
-      UArch = Lines[I].substr(5).ltrim("\t :");
+  for (StringRef Line : Lines) {
+    if (Line.starts_with("uarch")) {
+      UArch = Line.substr(5).ltrim("\t :");
       break;
     }
   }
@@ -567,8 +630,9 @@ StringRef sys::detail::getHostCPUNameForBPF() {
 #endif
 }
 
-#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
-    defined(_M_X64)
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
+     defined(_M_X64)) &&                                                       \
+    !defined(_M_ARM64EC)
 
 /// getX86CpuIDAndInfo - Execute the specified cpuid and return the 4 values in
 /// the specified arguments.  If we can't run cpuid on the host, return true.
@@ -692,20 +756,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
   StringRef CPU;
 
   switch (Family) {
-  case 3:
+  case 0x3:
     CPU = "i386";
     break;
-  case 4:
+  case 0x4:
     CPU = "i486";
     break;
-  case 5:
+  case 0x5:
     if (testFeature(X86::FEATURE_MMX)) {
       CPU = "pentium-mmx";
       break;
     }
     CPU = "pentium";
     break;
-  case 6:
+  case 0x6:
     switch (Model) {
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -897,6 +961,13 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
       break;
 
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Graniterapids:
     case 0xad:
       CPU = "graniterapids";
@@ -1053,7 +1124,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
-  case 15: {
+  case 0xf: {
     if (testFeature(X86::FEATURE_64BIT)) {
       CPU = "nocona";
       break;
@@ -1065,7 +1136,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     CPU = "pentium4";
     break;
   }
-  case 19:
+  case 0x13:
     switch (Model) {
     // Diamond Rapids:
     case 0x01:
@@ -1078,6 +1149,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    // Novalake:
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
@@ -1090,7 +1175,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  const char *CPU = 0;
+  const char *CPU = nullptr;
 
   switch (Family) {
   case 4:
@@ -1235,16 +1320,17 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 26:
     CPU = "znver5";
     *Type = X86::AMDFAM1AH;
-    if (Model <= 0x77) {
+    if (Model <= 0x4f || (Model >= 0x60 && Model <= 0x77) ||
+        (Model >= 0xd0 && Model <= 0xd7)) {
       // Models 00h-0Fh (Breithorn).
       // Models 10h-1Fh (Breithorn-Dense).
       // Models 20h-2Fh (Strix 1).
       // Models 30h-37h (Strix 2).
       // Models 38h-3Fh (Strix 3).
       // Models 40h-4Fh (Granite Ridge).
-      // Models 50h-5Fh (Weisshorn).
       // Models 60h-6Fh (Krackan1).
       // Models 70h-77h (Sarlak).
+      // Models D0h-D7h (Annapurna).
       CPU = "znver5";
       *Subtype = X86::AMDFAM1AH_ZNVER5;
       break; //  "znver5"
@@ -1329,7 +1415,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_BMI2);
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(X86::FEATURE_AVX512F);
-    setFeature(X86::FEATURE_EVEX512);
   }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512DQ);
@@ -1427,6 +1512,75 @@ StringRef sys::getHostCPUName() {
     return CPU;
 
   return "generic";
+}
+
+#elif defined(_M_ARM64) || defined(_M_ARM64EC)
+
+StringRef sys::getHostCPUName() {
+  constexpr char CentralProcessorKeyName[] =
+      "HARDWARE\\DESCRIPTION\\System\\CentralProcessor";
+  // Sub keys names are simple numbers ("0", "1", etc.) so 10 chars should be
+  // enough for the slash and name.
+  constexpr size_t SubKeyNameMaxSize = ARRAYSIZE(CentralProcessorKeyName) + 10;
+
+  SmallVector<uint64_t> Values;
+  uint64_t PrimaryCpuInfo;
+  char PrimaryPartKeyName[SubKeyNameMaxSize];
+  DWORD PrimaryPartKeyNameSize = 0;
+  HKEY CentralProcessorKey;
+  if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, CentralProcessorKeyName, 0, KEY_READ,
+                    &CentralProcessorKey) == ERROR_SUCCESS) {
+    for (unsigned Index = 0; Index < UINT32_MAX; ++Index) {
+      char SubKeyName[SubKeyNameMaxSize];
+      DWORD SubKeySize = SubKeyNameMaxSize;
+      HKEY SubKey;
+      if ((RegEnumKeyExA(CentralProcessorKey, Index, SubKeyName, &SubKeySize,
+                         nullptr, nullptr, nullptr,
+                         nullptr) == ERROR_SUCCESS) &&
+          (RegOpenKeyExA(CentralProcessorKey, SubKeyName, 0, KEY_READ,
+                         &SubKey) == ERROR_SUCCESS)) {
+        // The "CP 4000" registry key contains a cached copy of the MIDR_EL1
+        // register.
+        uint64_t RegValue;
+        DWORD ActualType;
+        DWORD RegValueSize = sizeof(RegValue);
+        if ((RegQueryValueExA(SubKey, "CP 4000", nullptr, &ActualType,
+                              (PBYTE)&RegValue,
+                              &RegValueSize) == ERROR_SUCCESS) &&
+            (ActualType == REG_QWORD) && RegValueSize == sizeof(RegValue)) {
+          // Assume that the part with the "highest" reg key name is the primary
+          // part (to match the way that Linux's cpuinfo is written). Win32
+          // makes no guarantees about the order of sub keys, so we have to
+          // compare the names.
+          if (PrimaryPartKeyNameSize < SubKeySize ||
+              (PrimaryPartKeyNameSize == SubKeySize &&
+               ::memcmp(SubKeyName, PrimaryPartKeyName, SubKeySize) > 0)) {
+            PrimaryCpuInfo = RegValue;
+            ::memcpy(PrimaryPartKeyName, SubKeyName, SubKeySize + 1);
+            PrimaryPartKeyNameSize = SubKeySize;
+          }
+          if (!llvm::is_contained(Values, RegValue)) {
+            Values.push_back(RegValue);
+          }
+        }
+        RegCloseKey(SubKey);
+      } else {
+        // No more sub keys.
+        break;
+      }
+    }
+    RegCloseKey(CentralProcessorKey);
+  }
+
+  if (Values.empty()) {
+    return "generic";
+  }
+
+  // Win32 makes no guarantees about the order of sub keys, so sort to ensure
+  // reproducibility.
+  llvm::sort(Values);
+
+  return detail::getHostCPUNameForARM(PrimaryCpuInfo, Values);
 }
 
 #elif defined(__APPLE__) && defined(__powerpc__)
@@ -1671,8 +1825,32 @@ StringRef sys::getHostCPUName() {
   return "generic";
 }
 #elif defined(__riscv)
+#if defined(__linux__)
+// struct riscv_hwprobe
+struct RISCVHwProbe {
+  int64_t Key;
+  uint64_t Value;
+};
+#endif
+
 StringRef sys::getHostCPUName() {
 #if defined(__linux__)
+  // Try the hwprobe way first.
+  RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_MVENDORID=*/0, 0},
+                       {/*RISCV_HWPROBE_KEY_MARCHID=*/1, 0},
+                       {/*RISCV_HWPROBE_KEY_MIMPID=*/2, 0}};
+  int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
+                    /*pair_count=*/std::size(Query), /*cpu_count=*/0,
+                    /*cpus=*/0, /*flags=*/0);
+  if (Ret == 0) {
+    RISCV::CPUModel Model{static_cast<uint32_t>(Query[0].Value), Query[1].Value,
+                          Query[2].Value};
+    StringRef Name = RISCV::getCPUNameFromCPUModel(Model);
+    if (!Name.empty())
+      return Name;
+  }
+
+  // Then try the cpuinfo way.
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";
   StringRef Name = detail::getHostCPUNameForRISCV(Content);
@@ -1809,9 +1987,10 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
 } // namespace llvm
 #endif
 
-#if defined(__i386__) || defined(_M_IX86) || \
-    defined(__x86_64__) || defined(_M_X64)
-const StringMap<bool> sys::getHostCPUFeatures() {
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
+     defined(_M_X64)) &&                                                       \
+    !defined(_M_ARM64EC)
+StringMap<bool> sys::getHostCPUFeatures() {
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLevel;
   StringMap<bool> Features;
@@ -1889,6 +2068,11 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["rdpru"]    = HasExtLeaf8 && ((EBX >> 4) & 1);
   Features["wbnoinvd"] = HasExtLeaf8 && ((EBX >> 9) & 1);
 
+  bool HasExtLeaf21 = MaxExtLevel >= 0x80000021 &&
+                      !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
+  // AMD cpuid bit for prefetchi is different from Intel
+  Features["prefetchi"] = HasExtLeaf21 && ((EAX >> 20) & 1);
+
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
@@ -1902,8 +2086,6 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  if (Features["avx512f"])
-    Features["evex512"]  = true;
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
   Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);
@@ -1973,7 +2155,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
-  Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
+  Features["prefetchi"] |= HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
@@ -2006,7 +2188,6 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf1E = MaxLevel >= 0x1e &&
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
-  Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
   Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
@@ -2015,16 +2196,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
 
   int AVX10Ver = HasLeaf24 && (EBX & 0xff);
-  int Has512Len = HasLeaf24 && ((EBX >> 18) & 1);
-  Features["avx10.1-256"] = HasAVX10 && AVX10Ver >= 1;
-  Features["avx10.1-512"] = HasAVX10 && AVX10Ver >= 1 && Has512Len;
-  Features["avx10.2-256"] = HasAVX10 && AVX10Ver >= 2;
-  Features["avx10.2-512"] = HasAVX10 && AVX10Ver >= 2 && Has512Len;
+  Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
+  Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 
   return Features;
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
-const StringMap<bool> sys::getHostCPUFeatures() {
+StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   if (!P)
@@ -2056,8 +2234,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
                                    .Case("fp", "fp-armv8")
                                    .Case("crc32", "crc")
                                    .Case("atomics", "lse")
+                                   .Case("sha3", "sha3")
+                                   .Case("sm4", "sm4")
                                    .Case("sve", "sve")
                                    .Case("sve2", "sve2")
+                                   .Case("sveaes", "sve-aes")
+                                   .Case("svesha3", "sve-sha3")
+                                   .Case("svesm4", "sve-sm4")
 #else
                                    .Case("half", "fp16")
                                    .Case("neon", "neon")
@@ -2098,8 +2281,9 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 
   return Features;
 }
-#elif defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64))
-const StringMap<bool> sys::getHostCPUFeatures() {
+#elif defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64) ||         \
+                          defined(__arm64ec__) || defined(_M_ARM64EC))
+StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
 
   // If we're asking the OS at runtime, believe what the OS says
@@ -2118,7 +2302,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 }
 #elif defined(__linux__) && defined(__loongarch__)
 #include <sys/auxv.h>
-const StringMap<bool> sys::getHostCPUFeatures() {
+StringMap<bool> sys::getHostCPUFeatures() {
   unsigned long hwcap = getauxval(AT_HWCAP);
   bool HasFPU = hwcap & (1UL << 3); // HWCAP_LOONGARCH_FPU
   uint32_t cpucfg2 = 0x2, cpucfg3 = 0x3;
@@ -2147,12 +2331,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   return Features;
 }
 #elif defined(__linux__) && defined(__riscv)
-// struct riscv_hwprobe
-struct RISCVHwProbe {
-  int64_t Key;
-  uint64_t Value;
-};
-const StringMap<bool> sys::getHostCPUFeatures() {
+StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
                        {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},
                        {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0}};
@@ -2235,7 +2414,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   return Features;
 }
 #else
-const StringMap<bool> sys::getHostCPUFeatures() { return {}; }
+StringMap<bool> sys::getHostCPUFeatures() { return {}; }
 #endif
 
 #if __APPLE__

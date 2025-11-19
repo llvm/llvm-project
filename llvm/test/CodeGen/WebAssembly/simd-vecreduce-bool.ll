@@ -1086,9 +1086,9 @@ define i1 @test_cmp_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: test_cmp_v16i8:
 ; CHECK:         .functype test_cmp_v16i8 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i8x16.eq $push1=, $0, $pop0
-; CHECK-NEXT:    v128.any_true $push2=, $pop1
+; CHECK-NEXT:    i8x16.all_true $push0=, $0
+; CHECK-NEXT:    i32.const $push1=, 1
+; CHECK-NEXT:    i32.xor $push2=, $pop0, $pop1
 ; CHECK-NEXT:    return $pop2
   %zero = icmp eq <16 x i8> %x, zeroinitializer
   %ret = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> %zero)

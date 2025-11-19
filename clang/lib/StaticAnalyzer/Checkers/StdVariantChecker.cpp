@@ -17,9 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <optional>
-#include <string_view>
 
 #include "TaggedUnionModeling.h"
 
@@ -92,6 +90,9 @@ bool isStdVariant(const Type *Type) {
 static std::optional<ArrayRef<TemplateArgument>>
 getTemplateArgsFromVariant(const Type *VariantType) {
   const auto *TempSpecType = VariantType->getAs<TemplateSpecializationType>();
+  while (TempSpecType && TempSpecType->isTypeAlias())
+    TempSpecType =
+        TempSpecType->getAliasedType()->getAs<TemplateSpecializationType>();
   if (!TempSpecType)
     return {};
 
@@ -213,18 +214,20 @@ private:
     if (!DefaultType)
       return;
 
-    ProgramStateRef State = ConstructorCall->getState();
+    ProgramStateRef State = C.getState();
     State = State->set<VariantHeldTypeMap>(ThisMemRegion, *DefaultType);
     C.addTransition(State);
   }
 
   bool handleStdGetCall(const CallEvent &Call, CheckerContext &C) const {
-    ProgramStateRef State = Call.getState();
+    ProgramStateRef State = C.getState();
 
-    const auto &ArgType = Call.getArgSVal(0)
-                              .getType(C.getASTContext())
-                              ->getPointeeType()
-                              .getTypePtr();
+    SVal ArgSVal = Call.getArgSVal(0);
+    if (ArgSVal.isUnknown())
+      return false;
+
+    const auto &ArgType =
+        ArgSVal.getType(C.getASTContext())->getPointeeType().getTypePtr();
     // We have to make sure that the argument is an std::variant.
     // There is another std::get with std::pair argument
     if (!isStdVariant(ArgType))

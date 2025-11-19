@@ -14,11 +14,11 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
@@ -31,11 +31,15 @@ std::unique_ptr<CompilerInvocation>
 clang::createInvocation(ArrayRef<const char *> ArgList,
                         CreateInvocationOptions Opts) {
   assert(!ArgList.empty());
-  auto Diags = Opts.Diags
-                   ? std::move(Opts.Diags)
-                   : CompilerInstance::createDiagnostics(
-                         Opts.VFS ? *Opts.VFS : *llvm::vfs::getRealFileSystem(),
-                         new DiagnosticOptions);
+  std::optional<DiagnosticOptions> LocalDiagOpts;
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
+  if (Opts.Diags) {
+    Diags = std::move(Opts.Diags);
+  } else {
+    LocalDiagOpts.emplace();
+    Diags = CompilerInstance::createDiagnostics(
+        Opts.VFS ? *Opts.VFS : *llvm::vfs::getRealFileSystem(), *LocalDiagOpts);
+  }
 
   SmallVector<const char *, 16> Args(ArgList);
 
@@ -57,11 +61,11 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
   if (!C)
     return nullptr;
 
-  if (C->getArgs().hasArg(driver::options::OPT_fdriver_only))
+  if (C->getArgs().hasArg(options::OPT_fdriver_only))
     return nullptr;
 
   // Just print the cc1 options if -### was present.
-  if (C->getArgs().hasArg(driver::options::OPT__HASH_HASH_HASH)) {
+  if (C->getArgs().hasArg(options::OPT__HASH_HASH_HASH)) {
     C->getJobs().Print(llvm::errs(), "\n", true);
     return nullptr;
   }

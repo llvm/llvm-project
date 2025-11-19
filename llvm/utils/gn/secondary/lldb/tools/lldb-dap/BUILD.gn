@@ -1,47 +1,28 @@
 import("//llvm/utils/TableGen/tablegen.gni")
-import("//llvm/utils/gn/build/write_cmake_config.gni")
-import("//llvm/version.gni")
 
-tablegen("Options") {
-  visibility = [ ":lldb-dap" ]
-  args = [ "-gen-opt-parser-defs" ]
-}
-
-if (host_os == "mac") {
-  write_cmake_config("write_info_plist") {
-    input = "lldb-dap-Info.plist.in"
-    output = "$target_gen_dir/lldb-dap-Info.plist"
-    values = [ "LLDB_VERSION=$llvm_version" ]
-  }
-}
-
-executable("lldb-dap") {
+static_library("lib") {
+  output_name = "lldbDAP"
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
-    ":Options",
     "//lldb/source/API:liblldb",
+    "//lldb/source/Host",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
-  if (host_os == "mac") {
-    deps += [ ":write_info_plist" ]
-    plist = get_target_outputs(":write_info_plist")
-    ldflags = [ "-Wl,-sectcreate,__TEXT,__info_plist," +
-                rebase_path(plist[0], root_out_dir) ]
-  }
   if (current_os == "win") {
     libs = [ "ws2_32.lib" ]
   }
 
   include_dirs = [ "." ]
 
-  # FIXME: link in //lldb/source/Host on Win (and netbsd)
   # FIXME: link in pthread
   # FIXME: rpath/install_name stuff on macOS for framework on macOS
 
   sources = [
     "Breakpoint.cpp",
     "BreakpointBase.cpp",
+    "ClientLauncher.cpp",
+    "CommandPlugins.cpp",
     "DAP.cpp",
     "DAPError.cpp",
     "DAPLog.cpp",
@@ -64,6 +45,7 @@ executable("lldb-dap") {
     "Handler/InitializeRequestHandler.cpp",
     "Handler/LaunchRequestHandler.cpp",
     "Handler/LocationsRequestHandler.cpp",
+    "Handler/ModuleSymbolsRequestHandler.cpp",
     "Handler/ModulesRequestHandler.cpp",
     "Handler/NextRequestHandler.cpp",
     "Handler/PauseRequestHandler.cpp",
@@ -86,18 +68,22 @@ executable("lldb-dap") {
     "Handler/TestGetTargetBreakpointsRequestHandler.cpp",
     "Handler/ThreadsRequestHandler.cpp",
     "Handler/VariablesRequestHandler.cpp",
+    "Handler/WriteMemoryRequestHandler.cpp",
     "InstructionBreakpoint.cpp",
     "JSONUtils.cpp",
     "LLDBUtils.cpp",
     "OutputRedirector.cpp",
     "ProgressEvent.cpp",
+    "Protocol/DAPTypes.cpp",
     "Protocol/ProtocolBase.cpp",
+    "Protocol/ProtocolEvents.cpp",
     "Protocol/ProtocolRequests.cpp",
     "Protocol/ProtocolTypes.cpp",
+    "ProtocolUtils.cpp",
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
     "Transport.cpp",
+    "Variables.cpp",
     "Watchpoint.cpp",
-    "lldb-dap.cpp",
   ]
 }

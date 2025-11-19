@@ -10,7 +10,7 @@
 # RUN: ld.lld -Ttext=0x10000 --no-relax 32.o -o 32.norelax
 # RUN: llvm-objdump -td --no-show-raw-insn -M no-aliases 32.norelax | FileCheck %s
 
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax %s -o 64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax %s -riscv-align-rvc=0 -o 64.o
 # RUN: ld.lld -Ttext=0x10000 64.o -o 64
 # RUN: llvm-objdump -td --no-show-raw-insn -M no-aliases 64 | FileCheck %s
 # RUN: ld.lld -Ttext=0x10000 --no-relax 64.o -o 64.norelax
@@ -29,7 +29,7 @@
 # CHECK-DAG: 00010000 g       .text  {{0*}}38 _start
 
 # CHECK:       <_start>:
-# CHECK-NEXT:            addi    a0, a0, 0x1
+# CHECK-NEXT:            lui     a0, 0x10
 # CHECK-EMPTY:
 # CHECK-NEXT:  <a>:
 # CHECK-NEXT:            addi    a0, a0, 0x2
@@ -82,7 +82,9 @@
 # GC-NOT:       <d>:
 
 # CHECKR:       <_start>:
-# CHECKR-NEXT:          addi    a0, a0, 0x1
+# CHECKR-NEXT:          lui     a0, 0x0
+# CHECKR-NEXT:          0000000000000000:  R_RISCV_HI20         _start
+# CHECKR-NEXT:          0000000000000000:  R_RISCV_RELAX        *ABS*
 # CHECKR-EMPTY:
 # CHECKR-NEXT:  <a>:
 # CHECKR-NEXT:          addi    a0, a0, 0x2
@@ -116,7 +118,7 @@
 
 .global _start
 _start:
-  addi a0, a0, 0x1
+  lui a0, %hi(_start)
 a:
   addi a0, a0, 0x2
 b:

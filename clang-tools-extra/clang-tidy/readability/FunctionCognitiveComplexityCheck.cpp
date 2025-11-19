@@ -1,4 +1,4 @@
-//===--- FunctionCognitiveComplexityCheck.cpp - clang-tidy ------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,15 +21,12 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <array>
 #include <cassert>
 #include <optional>
 #include <stack>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 
 using namespace clang::ast_matchers;
@@ -42,7 +39,7 @@ struct CognitiveComplexity final {
   // For details you can look at the Specification at
   // https://www.sonarsource.com/docs/CognitiveComplexity.pdf
   // or user-facing docs at
-  // http://clang.llvm.org/extra/clang-tidy/checks/readability/function-cognitive-complexity.html
+  // https://clang.llvm.org/extra/clang-tidy/checks/readability/function-cognitive-complexity.html
   // Here are all the possible reasons:
   enum Criteria : uint8_t {
     None = 0U,
@@ -147,6 +144,8 @@ struct CognitiveComplexity final {
   void account(SourceLocation Loc, unsigned short Nesting, Criteria C);
 };
 
+} // namespace
+
 // All the possible messages that can be output. The choice of the message
 // to use is based of the combination of the CognitiveComplexity::Criteria.
 // It would be nice to have it in CognitiveComplexity struct, but then it is
@@ -166,23 +165,27 @@ static const std::array<const StringRef, 4> Msgs = {{
 }};
 
 // Criteria is a bitset, thus a few helpers are needed.
-CognitiveComplexity::Criteria operator|(CognitiveComplexity::Criteria LHS,
-                                        CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria
+operator|(CognitiveComplexity::Criteria LHS,
+          CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) |
                                                     llvm::to_underlying(RHS));
 }
-CognitiveComplexity::Criteria operator&(CognitiveComplexity::Criteria LHS,
-                                        CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria
+operator&(CognitiveComplexity::Criteria LHS,
+          CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) &
                                                     llvm::to_underlying(RHS));
 }
-CognitiveComplexity::Criteria &operator|=(CognitiveComplexity::Criteria &LHS,
-                                          CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria &
+operator|=(CognitiveComplexity::Criteria &LHS,
+           CognitiveComplexity::Criteria RHS) {
   LHS = operator|(LHS, RHS);
   return LHS;
 }
-CognitiveComplexity::Criteria &operator&=(CognitiveComplexity::Criteria &LHS,
-                                          CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria &
+operator&=(CognitiveComplexity::Criteria &LHS,
+           CognitiveComplexity::Criteria RHS) {
   LHS = operator&(LHS, RHS);
   return LHS;
 }
@@ -201,6 +204,8 @@ void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
 
   Total += Increase;
 }
+
+namespace {
 
 class FunctionASTVisitor final
     : public RecursiveASTVisitor<FunctionASTVisitor> {
@@ -224,14 +229,14 @@ public:
 
   bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
     ++CurrentNestingLevel;
-    bool ShouldContinue = Base::TraverseStmt(Node);
+    const bool ShouldContinue = Base::TraverseStmt(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
 
   bool traverseDeclWithIncreasedNestingLevel(Decl *Node) {
     ++CurrentNestingLevel;
-    bool ShouldContinue = Base::TraverseDecl(Node);
+    const bool ShouldContinue = Base::TraverseDecl(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
@@ -331,7 +336,7 @@ public:
 
     // Record the operator that we are currently processing and traverse it.
     CurrentBinaryOperator = Op->getOpcode();
-    bool ShouldContinue = Base::TraverseBinaryOperator(Op);
+    const bool ShouldContinue = Base::TraverseBinaryOperator(Op);
 
     // And restore the previous binary operator, which might be nonexistent.
     CurrentBinaryOperator = BinOpCopy;
@@ -349,7 +354,7 @@ public:
 
     // Else, do add [uninitialized] frame to the stack, and traverse call.
     BinaryOperatorsStack.emplace();
-    bool ShouldContinue = Base::TraverseCallExpr(Node);
+    const bool ShouldContinue = Base::TraverseCallExpr(Node);
     // And remove the top frame.
     BinaryOperatorsStack.pop();
 

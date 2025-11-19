@@ -10,8 +10,11 @@ source_set("Basic") {
     "DirectiveEmitter.cpp",
     "IntrinsicEmitter.cpp",
     "RISCVTargetDefEmitter.cpp",
+    "RuntimeLibcalls.cpp",
+    "RuntimeLibcallsEmitter.cpp",
     "SDNodeProperties.cpp",
     "TableGen.cpp",
+    "TargetFeaturesEmitter.cpp",
     "VTEmitter.cpp",
   ]
 }

@@ -7,19 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::emitc;
@@ -50,13 +49,13 @@ void EmitCDialect::initialize() {
 Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  return builder.create<emitc::ConstantOp>(loc, type, value);
+  return emitc::ConstantOp::create(builder, loc, type, value);
 }
 
 /// Default callback for builders of ops carrying a region. Inserts a yield
 /// without arguments.
 void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
-  builder.create<emitc::YieldOp>(loc);
+  emitc::YieldOp::create(builder, loc);
 }
 
 bool mlir::emitc::isSupportedEmitCType(Type type) {
@@ -117,11 +116,8 @@ bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
 bool mlir::emitc::isSupportedFloatType(Type type) {
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     switch (floatType.getWidth()) {
-    case 16: {
-      if (llvm::isa<Float16Type, BFloat16Type>(type))
-        return true;
-      return false;
-    }
+    case 16:
+      return llvm::isa<Float16Type, BFloat16Type>(type);
     case 32:
     case 64:
       return true;
@@ -135,6 +131,12 @@ bool mlir::emitc::isSupportedFloatType(Type type) {
 bool mlir::emitc::isPointerWideType(Type type) {
   return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
       type);
+}
+
+bool mlir::emitc::isFundamentalType(Type type) {
+  return llvm::isa<IndexType>(type) || isPointerWideType(type) ||
+         isSupportedIntegerType(type) || isSupportedFloatType(type) ||
+         isa<emitc::PointerType>(type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -174,10 +176,9 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
 /// In the format string, all `{}` are replaced by Placeholders, except if the
 /// `{` is escaped by `{{` - then it doesn't start a placeholder.
 template <class ArgType>
-FailureOr<SmallVector<ReplacementItem>>
-parseFormatString(StringRef toParse, ArgType fmtArgs,
-                  std::optional<llvm::function_ref<mlir::InFlightDiagnostic()>>
-                      emitError = {}) {
+FailureOr<SmallVector<ReplacementItem>> parseFormatString(
+    StringRef toParse, ArgType fmtArgs,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError = {}) {
   SmallVector<ReplacementItem> items;
 
   // If there are not operands, the format string is not interpreted.
@@ -200,8 +201,7 @@ parseFormatString(StringRef toParse, ArgType fmtArgs,
       continue;
     }
     if (toParse.size() < 2) {
-      return (*emitError)()
-             << "expected '}' after unescaped '{' at end of string";
+      return emitError() << "expected '}' after unescaped '{' at end of string";
     }
     // toParse contains at least two characters and starts with `{`.
     char nextChar = toParse[1];
@@ -217,8 +217,8 @@ parseFormatString(StringRef toParse, ArgType fmtArgs,
       continue;
     }
 
-    if (emitError.has_value()) {
-      return (*emitError)() << "expected '}' after unescaped '{'";
+    if (emitError) {
+      return emitError() << "expected '}' after unescaped '{'";
     }
     return failure();
   }
@@ -383,12 +383,56 @@ OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 // ExpressionOp
 //===----------------------------------------------------------------------===//
 
+ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  if (parser.parseOperandList(operands))
+    return parser.emitError(parser.getCurrentLocation()) << "expected operands";
+  if (succeeded(parser.parseOptionalKeyword("noinline")))
+    result.addAttribute(ExpressionOp::getDoNotInlineAttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+  Type type;
+  if (parser.parseColonType(type))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  auto fnType = llvm::dyn_cast<FunctionType>(type);
+  if (!fnType)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  if (parser.resolveOperands(operands, fnType.getInputs(),
+                             parser.getCurrentLocation(), result.operands))
+    return failure();
+  if (fnType.getNumResults() != 1)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected single return type");
+  result.addTypes(fnType.getResults());
+  Region *body = result.addRegion();
+  SmallVector<OpAsmParser::Argument> argsInfo;
+  for (auto [unresolvedOperand, operandType] :
+       llvm::zip(operands, fnType.getInputs())) {
+    OpAsmParser::Argument argInfo;
+    argInfo.ssaName = unresolvedOperand;
+    argInfo.type = operandType;
+    argsInfo.push_back(argInfo);
+  }
+  if (parser.parseRegion(*body, argsInfo, /*enableNameShadowing=*/true))
+    return failure();
+  return success();
+}
+
+void emitc::ExpressionOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printOperands(getDefs());
+  p << " : ";
+  p.printFunctionalType(getOperation());
+  p.shadowRegionArgs(getRegion(), getDefs());
+  p << ' ';
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+}
+
 Operation *ExpressionOp::getRootOp() {
   auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
   Value yieldedValue = yieldOp.getResult();
-  Operation *rootOp = yieldedValue.getDefiningOp();
-  assert(rootOp && "Yielded value not defined within expression");
-  return rootOp;
+  return yieldedValue.getDefiningOp();
 }
 
 LogicalResult ExpressionOp::verify() {
@@ -406,18 +450,48 @@ LogicalResult ExpressionOp::verify() {
   if (!yieldResult)
     return emitOpError("must yield a value at termination");
 
+  Operation *rootOp = yieldResult.getDefiningOp();
+
+  if (!rootOp)
+    return emitOpError("yielded value has no defining op");
+
+  if (rootOp->getParentOp() != getOperation())
+    return emitOpError("yielded value not defined within expression");
+
   Type yieldType = yieldResult.getType();
 
   if (resultType != yieldType)
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!op.hasTrait<OpTrait::emitc::CExpression>())
+    auto expressionInterface = dyn_cast<emitc::CExpressionInterface>(op);
+    if (!expressionInterface)
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
-    if (!op.getResult(0).hasOneUse())
-      return emitOpError("requires exactly one use for each operation");
+    Value result = op.getResult(0);
+    if (result.use_empty())
+      return emitOpError("contains an unused operation");
+  }
+
+  // Make sure any operation with side effect is only reachable once from
+  // the root op, otherwise emission will be replicating side effects.
+  SmallPtrSet<Operation *, 16> visited;
+  SmallVector<Operation *> worklist;
+  worklist.push_back(rootOp);
+  while (!worklist.empty()) {
+    Operation *op = worklist.back();
+    worklist.pop_back();
+    if (visited.contains(op)) {
+      if (cast<CExpressionInterface>(op).hasSideEffects())
+        return emitOpError(
+            "requires exactly one use for operations with side effects");
+    }
+    visited.insert(op);
+    for (Value operand : op->getOperands())
+      if (Operation *def = operand.getDefiningOp()) {
+        worklist.push_back(def);
+      }
   }
 
   return success();
@@ -465,7 +539,6 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the optional initial iteration arguments.
   SmallVector<OpAsmParser::Argument, 4> regionArgs;
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
   regionArgs.push_back(inductionVariable);
 
   // Parse optional type, else assume Index.
@@ -511,6 +584,10 @@ void ForOp::print(OpAsmPrinter &p) {
 LogicalResult ForOp::verifyRegions() {
   // Check that the body defines as single block argument for the induction
   // variable.
+  if (getBody()->getNumArguments() != 1)
+    return emitOpError("expected body to have a single block argument for the "
+                       "induction variable");
+
   if (getInductionVar().getType() != getLowerBound().getType())
     return emitOpError(
         "expected induction variable to be same type as bounds and step");
@@ -596,7 +673,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
     return;
   assert(type.getNumInputs() == argAttrs.size());
   call_interface_impl::addArgAndResultAttrs(
-      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+      builder, state, argAttrs, /*resultAttrs=*/{},
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
 
@@ -772,7 +849,8 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor());
+    regions.push_back(
+        RegionSuccessor(getOperation(), getOperation()->getResults()));
     return;
   }
 
@@ -781,7 +859,8 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // Don't consider the else region if it is empty.
   Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(RegionSuccessor());
+    regions.push_back(
+        RegionSuccessor(getOperation(), getOperation()->getResults()));
   else
     regions.push_back(RegionSuccessor(elseRegion));
 }
@@ -798,7 +877,7 @@ void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back();
+      regions.emplace_back(getOperation(), getOperation()->getResults());
   }
 }
 
@@ -901,10 +980,10 @@ LogicalResult emitc::YieldOp::verify() {
   Value result = getResult();
   Operation *containingOp = getOperation()->getParentOp();
 
-  if (result && containingOp->getNumResults() != 1)
+  if (!isa<DoOp>(containingOp) && result && containingOp->getNumResults() != 1)
     return emitOpError() << "yields a value not returned by parent";
 
-  if (!result && containingOp->getNumResults() != 0)
+  if (!isa<DoOp>(containingOp) && !result && containingOp->getNumResults() != 0)
     return emitOpError() << "does not yield a value to be returned by parent";
 
   return success();
@@ -1044,7 +1123,9 @@ Type emitc::ArrayType::parse(AsmParser &parser) {
 
   // Check that array is formed from allowed types.
   if (!isValidElementType(elementType))
-    return parser.emitError(typeLoc, "invalid array element type"), Type();
+    return parser.emitError(typeLoc, "invalid array element type '")
+               << elementType << "'",
+           Type();
   if (parser.parseGreater())
     return Type();
   return parser.getChecked<ArrayType>(dimensions, elementType);
@@ -1245,7 +1326,11 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   // global has non-array type
   auto lvalueType = dyn_cast<LValueType>(resultType);
-  if (!lvalueType || lvalueType.getValueType() != globalType)
+  if (!lvalueType)
+    return emitOpError("on non-array type expects result type to be an "
+                       "lvalue type for the global @")
+           << getName();
+  if (lvalueType.getValueType() != globalType)
     return emitOpError("on non-array type expects result inner type ")
            << lvalueType.getValueType() << " to match type " << globalType
            << " of the global @" << getName();
@@ -1394,8 +1479,169 @@ void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
 }
 
 //===----------------------------------------------------------------------===//
+// FieldOp
+//===----------------------------------------------------------------------===//
+
+static void printEmitCFieldOpTypeAndInitialValue(OpAsmPrinter &p, FieldOp op,
+                                                 TypeAttr type,
+                                                 Attribute initialValue) {
+  p << type;
+  if (initialValue) {
+    p << " = ";
+    p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static Type getInitializerTypeForField(Type type) {
+  if (auto array = llvm::dyn_cast<ArrayType>(type))
+    return RankedTensorType::get(array.getShape(), array.getElementType());
+  return type;
+}
+
+static ParseResult
+parseEmitCFieldOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                     Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (parser.parseAttribute(initialValue, getInitializerTypeForField(type)))
+    return failure();
+
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a integer, float, elements or opaque "
+              "attribute";
+  return success();
+}
+
+LogicalResult FieldOp::verify() {
+  if (!isSupportedEmitCType(getType()))
+    return emitOpError("expected valid emitc type");
+
+  Operation *parentOp = getOperation()->getParentOp();
+  if (!parentOp || !isa<emitc::ClassOp>(parentOp))
+    return emitOpError("field must be nested within an emitc.class operation");
+
+  StringAttr symName = getSymNameAttr();
+  if (!symName || symName.getValue().empty())
+    return emitOpError("field must have a non-empty symbol name");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetFieldOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GetFieldOp::verify() {
+  auto parentClassOp = getOperation()->getParentOfType<emitc::ClassOp>();
+  if (!parentClassOp.getOperation())
+    return emitOpError(" must be nested within an emitc.class operation");
+
+  return success();
+}
+
+LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();
+  FieldOp fieldOp =
+      symbolTable.lookupNearestSymbolFrom<FieldOp>(*this, fieldNameAttr);
+  if (!fieldOp)
+    return emitOpError("field '")
+           << fieldNameAttr << "' not found in the class";
+
+  Type getFieldResultType = getResult().getType();
+  Type fieldType = fieldOp.getType();
+
+  if (fieldType != getFieldResultType)
+    return emitOpError("result type ")
+           << getFieldResultType << " does not match field '" << fieldNameAttr
+           << "' type " << fieldType;
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DoOp
+//===----------------------------------------------------------------------===//
+
+void DoOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printRegion(getBodyRegion(), /*printEntryBlockArgs=*/false);
+  p << " while ";
+  p.printRegion(getConditionRegion());
+  p.printOptionalAttrDictWithKeyword(getOperation()->getAttrs());
+}
+
+LogicalResult emitc::DoOp::verify() {
+  Block &condBlock = getConditionRegion().front();
+
+  if (condBlock.getOperations().size() != 2)
+    return emitOpError(
+               "condition region must contain exactly two operations: "
+               "'emitc.expression' followed by 'emitc.yield', but found ")
+           << condBlock.getOperations().size() << " operations";
+
+  Operation &first = condBlock.front();
+  auto exprOp = dyn_cast<emitc::ExpressionOp>(first);
+  if (!exprOp)
+    return emitOpError("expected first op in condition region to be "
+                       "'emitc.expression', but got ")
+           << first.getName();
+
+  if (!exprOp.getResult().getType().isInteger(1))
+    return emitOpError("emitc.expression in condition region must return "
+                       "'i1', but returns ")
+           << exprOp.getResult().getType();
+
+  Operation &last = condBlock.back();
+  auto condYield = dyn_cast<emitc::YieldOp>(last);
+  if (!condYield)
+    return emitOpError("expected last op in condition region to be "
+                       "'emitc.yield', but got ")
+           << last.getName();
+
+  if (condYield.getNumOperands() != 1)
+    return emitOpError("expected condition region to return 1 value, but "
+                       "it returns ")
+           << condYield.getNumOperands() << " values";
+
+  if (condYield.getOperand(0) != exprOp.getResult())
+    return emitError("'emitc.yield' must return result of "
+                     "'emitc.expression' from this condition region");
+
+  Block &bodyBlock = getBodyRegion().front();
+  if (bodyBlock.mightHaveTerminator())
+    return emitOpError("body region must not contain terminator");
+
+  return success();
+}
+
+ParseResult DoOp::parse(OpAsmParser &parser, OperationState &result) {
+  Region *bodyRegion = result.addRegion();
+  Region *condRegion = result.addRegion();
+
+  if (parser.parseRegion(*bodyRegion) || parser.parseKeyword("while") ||
+      parser.parseRegion(*condRegion))
+    return failure();
+
+  if (bodyRegion->empty())
+    bodyRegion->emplaceBlock();
+
+  return parser.parseOptionalAttrDictWithKeyword(result.attributes);
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"

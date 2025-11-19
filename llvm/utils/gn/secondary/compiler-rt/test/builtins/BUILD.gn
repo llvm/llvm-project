@@ -46,6 +46,7 @@ if (current_toolchain != host_toolchain) {
       "//compiler-rt/include($host_toolchain)",
       "//compiler-rt/lib/builtins",
       "//compiler-rt/test:lit_common_configured",
+      "//llvm/utils/not($host_toolchain)",
     ]
   }
 }

@@ -30,6 +30,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Target/RegisterTargetPassConfigCallback.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
@@ -44,7 +45,7 @@ static cl::opt<bool> EnableNoTrapAfterNoreturn(
              "after noreturn calls, even if --trap-unreachable is set."));
 
 void CodeGenTargetMachineImpl::initAsmInfo() {
-  MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
+  MRI.reset(TheTarget.createMCRegInfo(getTargetTriple()));
   assert(MRI && "Unable to create reg info");
   MII.reset(TheTarget.createMCInstrInfo());
   assert(MII && "Unable to create instruction info");
@@ -52,12 +53,12 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
   // to some backends having subtarget feature dependent module level
   // code generation. This is similar to the hack in the AsmPrinter for
   // module level assembly etc.
-  STI.reset(TheTarget.createMCSubtargetInfo(
-      getTargetTriple().str(), getTargetCPU(), getTargetFeatureString()));
+  STI.reset(TheTarget.createMCSubtargetInfo(getTargetTriple(), getTargetCPU(),
+                                            getTargetFeatureString()));
   assert(STI && "Unable to create subtarget info");
 
-  MCAsmInfo *TmpAsmInfo = TheTarget.createMCAsmInfo(
-      *MRI, getTargetTriple().str(), Options.MCOptions);
+  MCAsmInfo *TmpAsmInfo =
+      TheTarget.createMCAsmInfo(*MRI, getTargetTriple(), Options.MCOptions);
   // TargetSelect.h moved to a different directory between LLVM 2.9 and 3.0,
   // and if the old one gets included then MCAsmInfo will be NULL and
   // we'll crash later.
@@ -79,6 +80,10 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
   TmpAsmInfo->setPreserveAsmComments(Options.MCOptions.PreserveAsmComments);
 
   TmpAsmInfo->setFullRegisterNames(Options.MCOptions.PPCUseFullRegisterNames);
+
+  assert(TmpAsmInfo->getExceptionHandlingType() ==
+             getTargetTriple().getDefaultExceptionHandling() &&
+         "MCAsmInfo and Triple disagree on default exception handling type");
 
   if (Options.ExceptionModel != ExceptionHandling::None)
     TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
@@ -103,7 +108,7 @@ CodeGenTargetMachineImpl::CodeGenTargetMachineImpl(
 
 TargetTransformInfo
 CodeGenTargetMachineImpl::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(BasicTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<BasicTTIImpl>(this, F));
 }
 
 /// addPassesToX helper drives creation and initialization of TargetPassConfig.
@@ -118,6 +123,7 @@ addPassesToGenerateCode(CodeGenTargetMachineImpl &TM, PassManagerBase &PM,
   PassConfig->setDisableVerify(DisableVerify);
   PM.add(PassConfig);
   PM.add(&MMIWP);
+  invokeGlobalTargetPassConfigCallbacks(TM, PM, PassConfig);
 
   if (PassConfig->addISelPasses())
     return nullptr;
@@ -197,7 +203,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
       return make_error<StringError>("createMCAsmBackend failed",
                                      inconvertibleErrorCode());
 
-    Triple T(getTargetTriple().str());
+    Triple T(getTargetTriple());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
         T, Context, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)

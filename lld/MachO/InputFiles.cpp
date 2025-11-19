@@ -48,7 +48,6 @@
 #include "EhFrame.h"
 #include "ExportTrie.h"
 #include "InputSection.h"
-#include "MachOStructs.h"
 #include "ObjC.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -65,7 +64,6 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
@@ -518,12 +516,8 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
   if (isThreadLocalVariables(sec.flags) &&
       !relocAttrs.hasAttr(RelocAttrBits::UNSIGNED))
     error(message("not allowed in thread-local section, must be UNSIGNED"));
-  if (rel.r_length < 2 || rel.r_length > 3 ||
-      !relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
-    static SmallVector<StringRef, 4> widths{"0", "4", "8", "4 or 8"};
-    error(message("has width " + std::to_string(1 << rel.r_length) +
-                  " bytes, but must be " +
-                  widths[(static_cast<int>(relocAttrs.bits) >> 2) & 3] +
+  if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
+    error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
                   " bytes"));
   }
   return valid;
@@ -814,6 +808,17 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       continue;
 
     if ((sym.n_type & N_TYPE) == N_SECT) {
+      if (sym.n_sect == 0) {
+        fatal("section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+              toString(this) + " has an invalid section index [0]");
+      }
+      if (sym.n_sect > sections.size()) {
+        fatal("section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+              toString(this) + " has an invalid section index [" +
+              Twine(static_cast<unsigned>(sym.n_sect)) +
+              "] greater than the total number of sections [" +
+              Twine(sections.size()) + "]");
+      }
       Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
       if (subsections.empty())
@@ -1580,14 +1585,19 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
   // Search order:
   // 1. Install name basename in -F / -L directories.
   {
+    // Framework names can be in multiple formats:
+    // - Foo.framework/Foo
+    // - Foo.framework/Versions/A/Foo
     StringRef stem = path::stem(path);
-    SmallString<128> frameworkName;
-    path::append(frameworkName, path::Style::posix, stem + ".framework", stem);
-    bool isFramework = path.ends_with(frameworkName);
-    if (isFramework) {
+    SmallString<128> frameworkName("/");
+    frameworkName += stem;
+    frameworkName += ".framework/";
+    size_t i = path.rfind(frameworkName);
+    if (i != StringRef::npos) {
+      StringRef frameworkPath = path.substr(i + 1);
       for (StringRef dir : config->frameworkSearchPaths) {
         SmallString<128> candidate = dir;
-        path::append(candidate, frameworkName);
+        path::append(candidate, frameworkPath);
         if (std::optional<StringRef> dylibPath =
                 resolveDylibPath(candidate.str()))
           return loadDylib(*dylibPath, umbrella);
@@ -1624,6 +1634,17 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
     path = newPath;
   } else if (path.starts_with("@rpath/")) {
     for (StringRef rpath : umbrella->rpaths) {
+      newPath.clear();
+      if (rpath.consume_front("@loader_path/")) {
+        fs::real_path(umbrella->getName(), newPath);
+        path::remove_filename(newPath);
+      }
+      path::append(newPath, rpath, path.drop_front(strlen("@rpath/")));
+      if (std::optional<StringRef> dylibPath = resolveDylibPath(newPath.str()))
+        return loadDylib(*dylibPath, umbrella);
+    }
+    // If not found in umbrella, try the rpaths specified via -rpath too.
+    for (StringRef rpath : config->runtimePaths) {
       newPath.clear();
       if (rpath.consume_front("@loader_path/")) {
         fs::real_path(umbrella->getName(), newPath);
@@ -1678,9 +1699,16 @@ static bool isImplicitlyLinked(StringRef path) {
 void DylibFile::loadReexport(StringRef path, DylibFile *umbrella,
                          const InterfaceFile *currentTopLevelTapi) {
   DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
-  if (!reexport)
-    error(toString(this) + ": unable to locate re-export with install name " +
-          path);
+  if (!reexport) {
+    // If not found in umbrella, retry since some rpaths might have been
+    // defined in "this" dylib (which contains the LC_REEXPORT_DYLIB cmd) and
+    // not in the umbrella.
+    DylibFile *reexport2 = findDylib(path, this, currentTopLevelTapi);
+    if (!reexport2) {
+      error(toString(this) + ": unable to locate re-export with install name " +
+            path);
+    }
+  }
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
@@ -1768,12 +1796,13 @@ void DylibFile::parseExportedSymbols(uint32_t offset, uint32_t size) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   std::vector<TrieEntry> entries;
   // Find all the $ld$* symbols to process first.
-  parseTrie(buf + offset, size, [&](const Twine &name, uint64_t flags) {
-    StringRef savedName = saver().save(name);
-    if (handleLDSymbol(savedName))
-      return;
-    entries.push_back({savedName, flags});
-  });
+  parseTrie(toString(this), buf + offset, size,
+            [&](const Twine &name, uint64_t flags) {
+              StringRef savedName = saver().save(name);
+              if (handleLDSymbol(savedName))
+                return;
+              entries.push_back({savedName, flags});
+            });
 
   // Process the "normal" symbols.
   for (TrieEntry &entry : entries) {

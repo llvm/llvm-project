@@ -11,13 +11,13 @@
 
 #include <__compare/common_comparison_category.h>
 #include <__compare/synth_three_way.h>
+#include <__concepts/boolean_testable.h>
 #include <__concepts/different_from.h>
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
-#include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_like_no_subrange.h>
 #include <__tuple/tuple_size.h>
 #include <__type_traits/common_reference.h>
@@ -37,6 +37,7 @@
 #include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
 
@@ -205,21 +206,12 @@ struct pair
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
-  // TODO: Remove this workaround in LLVM 20. The bug got fixed in Clang 18.
-  // This is a workaround for http://llvm.org/PR60710. We should be able to remove it once Clang is fixed.
-  template <class _PairLike>
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __pair_like_explicit_wknd() {
-    if constexpr (__pair_like_no_subrange<_PairLike>) {
-      return !is_convertible_v<decltype(std::get<0>(std::declval<_PairLike&&>())), first_type> ||
-             !is_convertible_v<decltype(std::get<1>(std::declval<_PairLike&&>())), second_type>;
-    }
-    return false;
-  }
-
   template <__pair_like_no_subrange _PairLike>
     requires(is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike &&>()))> &&
              is_constructible_v<second_type, decltype(std::get<1>(std::declval<_PairLike &&>()))>)
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit(__pair_like_explicit_wknd<_PairLike>()) pair(_PairLike&& __p)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(
+      !is_convertible_v<decltype(std::get<0>(std::declval<_PairLike&&>())), first_type> ||
+      !is_convertible_v<decltype(std::get<1>(std::declval<_PairLike&&>())), second_type>) pair(_PairLike&& __p)
       : first(std::get<0>(std::forward<_PairLike>(__p))), second(std::get<1>(std::forward<_PairLike>(__p))) {}
 #  endif
 
@@ -230,8 +222,8 @@ struct pair
       : pair(__pc,
              __first_args,
              __second_args,
-             typename __make_tuple_indices<sizeof...(_Args1)>::type(),
-             typename __make_tuple_indices<sizeof...(_Args2) >::type()) {}
+             __make_index_sequence<sizeof...(_Args1)>(),
+             __make_index_sequence<sizeof...(_Args2)>()) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
   operator=(__conditional_t<is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,
@@ -445,8 +437,8 @@ private:
   pair(piecewise_construct_t,
        tuple<_Args1...>& __first_args,
        tuple<_Args2...>& __second_args,
-       __tuple_indices<_I1...>,
-       __tuple_indices<_I2...>)
+       __index_sequence<_I1...>,
+       __index_sequence<_I2...>)
       : first(std::forward<_Args1>(std::get<_I1>(__first_args))...),
         second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
 #endif
@@ -461,7 +453,14 @@ pair(_T1, _T2) -> pair<_T1, _T2>;
 
 template <class _T1, class _T2, class _U1, class _U2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator==(const pair<_T1, _T2>& __x, const pair<_U1, _U2>& __y) {
+operator==(const pair<_T1, _T2>& __x, const pair<_U1, _U2>& __y)
+#if _LIBCPP_STD_VER >= 26
+  requires requires {
+    { __x.first == __y.first } -> __boolean_testable;
+    { __x.second == __y.second } -> __boolean_testable;
+  }
+#endif
+{
   return __x.first == __y.first && __x.second == __y.second;
 }
 
@@ -643,42 +642,42 @@ get(const pair<_T1, _T2>&& __p) _NOEXCEPT {
 #if _LIBCPP_STD_VER >= 14
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(pair<_T1, _T2>& __p) _NOEXCEPT {
-  return __get_pair<0>::get(__p);
+  return __p.first;
 }
 
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const& get(pair<_T1, _T2> const& __p) _NOEXCEPT {
-  return __get_pair<0>::get(__p);
+  return __p.first;
 }
 
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1&& get(pair<_T1, _T2>&& __p) _NOEXCEPT {
-  return __get_pair<0>::get(std::move(__p));
+  return std::forward<_T1&&>(__p.first);
 }
 
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(pair<_T1, _T2> const&& __p) _NOEXCEPT {
-  return __get_pair<0>::get(std::move(__p));
+  return std::forward<_T1 const&&>(__p.first);
 }
 
-template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(pair<_T2, _T1>& __p) _NOEXCEPT {
-  return __get_pair<1>::get(__p);
+template <class _T2, class _T1>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _T2& get(pair<_T1, _T2>& __p) _NOEXCEPT {
+  return __p.second;
 }
 
-template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const& get(pair<_T2, _T1> const& __p) _NOEXCEPT {
-  return __get_pair<1>::get(__p);
+template <class _T2, class _T1>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _T2 const& get(pair<_T1, _T2> const& __p) _NOEXCEPT {
+  return __p.second;
 }
 
-template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1&& get(pair<_T2, _T1>&& __p) _NOEXCEPT {
-  return __get_pair<1>::get(std::move(__p));
+template <class _T2, class _T1>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _T2&& get(pair<_T1, _T2>&& __p) _NOEXCEPT {
+  return std::forward<_T2&&>(__p.second);
 }
 
-template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(pair<_T2, _T1> const&& __p) _NOEXCEPT {
-  return __get_pair<1>::get(std::move(__p));
+template <class _T2, class _T1>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _T2 const&& get(pair<_T1, _T2> const&& __p) _NOEXCEPT {
+  return std::forward<_T2 const&&>(__p.second);
 }
 
 #endif // _LIBCPP_STD_VER >= 14

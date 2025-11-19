@@ -73,11 +73,22 @@ public:
   // specifies an attribute constraint.
   bool isAttrMatcher() const;
 
+  // Returns true if this DAG leaf is matching a property. That is, it
+  // specifies a property constraint.
+  bool isPropMatcher() const;
+
+  // Returns true if this DAG leaf is describing a property. That is, it
+  // is a subclass of `Property` in tablegen.
+  bool isPropDefinition() const;
+
   // Returns true if this DAG leaf is wrapping native code call.
   bool isNativeCodeCall() const;
 
   // Returns true if this DAG leaf is specifying a constant attribute.
   bool isConstantAttr() const;
+
+  // Returns true if this DAG leaf is specifying a constant property.
+  bool isConstantProp() const;
 
   // Returns true if this DAG leaf is specifying an enum case.
   bool isEnumCase() const;
@@ -88,8 +99,18 @@ public:
   // Returns this DAG leaf as a constraint. Asserts if fails.
   Constraint getAsConstraint() const;
 
+  // Returns this DAG leaf as a property constraint. Asserts if fails. This
+  // allows access to the interface type.
+  PropConstraint getAsPropConstraint() const;
+
+  // Returns this DAG leaf as a property definition. Asserts if fails.
+  Property getAsProperty() const;
+
   // Returns this DAG leaf as an constant attribute. Asserts if fails.
   ConstantAttr getAsConstantAttr() const;
+
+  // Returns this DAG leaf as an constant property. Asserts if fails.
+  ConstantProp getAsConstantProp() const;
 
   // Returns this DAG leaf as an enum case.
   // Precondition: isEnumCase()
@@ -279,6 +300,10 @@ public:
     //   the DAG of the operation, `operandIndexOrNumValues` specifies the
     //   operand index, and `variadicSubIndex` must be set to `std::nullopt`.
     //
+    // * Properties not associated with an operation (e.g. as arguments to
+    //   native code) have their corresponding PropConstraint stored in the
+    //   `dag` field. This constraint is only used when
+    //
     // * If a symbol is defined in a `variadic` DAG, `dag` specifies the DAG
     //   of the parent operation, `operandIndexOrNumValues` specifies the
     //   declared operand index of the variadic operand in the parent
@@ -364,12 +389,20 @@ public:
 
     // What kind of entity this symbol represents:
     // * Attr: op attribute
+    // * Prop: op property
     // * Operand: op operand
     // * Result: op result
     // * Value: a value not attached to an op (e.g., from NativeCodeCall)
     // * MultipleValues: a pack of values not attached to an op (e.g., from
     //   NativeCodeCall). This kind supports indexing.
-    enum class Kind : uint8_t { Attr, Operand, Result, Value, MultipleValues };
+    enum class Kind : uint8_t {
+      Attr,
+      Prop,
+      Operand,
+      Result,
+      Value,
+      MultipleValues
+    };
 
     // Creates a SymbolInfo instance. `dagAndConstant` is only used for `Attr`
     // and `Operand` so should be std::nullopt for `Result` and `Value` kind.
@@ -383,6 +416,15 @@ public:
     }
     static SymbolInfo getAttr() {
       return SymbolInfo(nullptr, Kind::Attr, std::nullopt);
+    }
+    static SymbolInfo getProp(const Operator *op, int index) {
+      return SymbolInfo(op, Kind::Prop,
+                        DagAndConstant(nullptr, index, std::nullopt));
+    }
+    static SymbolInfo getProp(const PropConstraint *constraint) {
+      // -1 for anthe `operandIndexOrNumValues` is a sentinel value.
+      return SymbolInfo(nullptr, Kind::Prop,
+                        DagAndConstant(constraint, -1, std::nullopt));
     }
     static SymbolInfo
     getOperand(DagNode node, const Operator *op, int operandIndex,
@@ -487,6 +529,10 @@ public:
   // Registers the given `symbol` as bound to an attr. Returns false if `symbol`
   // is already bound.
   bool bindAttr(StringRef symbol);
+
+  // Registers the given `symbol` as bound to a property that satisfies the
+  // given `constraint`. `constraint` must name a concrete interface type.
+  bool bindProp(StringRef symbol, const PropConstraint &constraint);
 
   // Returns true if the given `symbol` is bound.
   bool contains(StringRef symbol) const;

@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -15,6 +16,32 @@
 
 using namespace mlir;
 using namespace test;
+
+//===----------------------------------------------------------------------===//
+// OverridenSymbolVisibilityOp
+//===----------------------------------------------------------------------===//
+
+SymbolTable::Visibility OverriddenSymbolVisibilityOp::getVisibility() {
+  return SymbolTable::Visibility::Private;
+}
+
+static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
+  switch (visibility) {
+  case SymbolTable::Visibility::Private:
+    return "private";
+  case SymbolTable::Visibility::Nested:
+    return "nested";
+  case SymbolTable::Visibility::Public:
+    return "public";
+  }
+}
+
+void OverriddenSymbolVisibilityOp::setVisibility(
+    SymbolTable::Visibility visibility) {
+
+  emitOpError("cannot change visibility of symbol to ")
+      << getVisibilityString(visibility);
+}
 
 //===----------------------------------------------------------------------===//
 // TestBranchOp
@@ -285,18 +312,18 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
         llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
-    shapes.push_back(builder.create<tensor::FromElementsOp>(
-        getLoc(), RankedTensorType::get({rank}, builder.getIndexType()),
-        currShape));
+    shapes.push_back(tensor::FromElementsOp::create(
+        builder, getLoc(),
+        RankedTensorType::get({rank}, builder.getIndexType()), currShape));
   }
   return success();
 }
 
 //===----------------------------------------------------------------------===//
-// OpWithResultShapePerDimInterfaceOp
+// ReifyShapedTypeUsingReifyResultShapesOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
+LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
   Location loc = getLoc();
   shapes.reserve(getNumOperands());
@@ -315,6 +342,103 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
     shapes.emplace_back(std::move(currShape));
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReifyShapedTypeUsingReifyShapeOfResultOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReifyShapedTypeUsingReifyShapeOfResultOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ReifyShapedTypeUsingReifyShapeOfResultOp::reifyShapeOfResult(OpBuilder &builder,
+                                                             int resultIndex) {
+  Location loc = getLoc();
+  Value sourceOperand = getOperand(getNumOperands() - 1 - resultIndex);
+  SmallVector<OpFoldResult> shape =
+      tensor::getMixedSizes(builder, loc, sourceOperand);
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// ReifyShapedTypeUsingReifyDimOfResultOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReifyShapedTypeUsingReifyDimOfResultOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ReifyShapedTypeUsingReifyDimOfResultOp::reifyShapeOfResult(OpBuilder &builder,
+                                                           int resultIndex) {
+  return failure();
+}
+
+FailureOr<OpFoldResult>
+ReifyShapedTypeUsingReifyDimOfResultOp::reifyDimOfResult(OpBuilder &builder,
+                                                         int resultIndex,
+                                                         int dim) {
+  Location loc = getLoc();
+  Value sourceOperand = getOperand(getNumOperands() - 1 - resultIndex);
+  OpFoldResult shape = tensor::getMixedSize(builder, loc, sourceOperand, dim);
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapesOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableResultShapesOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  Location loc = getLoc();
+  shapes.resize(1);
+  shapes[0] = {tensor::getMixedSize(builder, loc, getOperand(), 0),
+               OpFoldResult()};
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableResultShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+UnreifiableResultShapeOp::reifyShapeOfResult(OpBuilder &builder,
+                                             int resultIndex) {
+  SmallVector<OpFoldResult> shape = {
+      tensor::getMixedSize(builder, getLoc(), getOperand(), 0), OpFoldResult()};
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableDimOfResultShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+UnreifiableDimOfResultShapeOp::reifyShapeOfResult(OpBuilder &builder,
+                                                  int resultIndex) {
+  return failure();
+}
+
+FailureOr<OpFoldResult>
+UnreifiableDimOfResultShapeOp::reifyDimOfResult(OpBuilder &builder,
+                                                int resultIndex, int dim) {
+  if (dim == 0)
+    return tensor::getMixedSize(builder, getLoc(), getOperand(), 0);
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -606,8 +730,9 @@ ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-OperandRange RegionIfOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()}, point) &&
+OperandRange RegionIfOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()},
+                            successor.getSuccessor()) &&
          "invalid region index");
   return getOperands();
 }
@@ -616,10 +741,11 @@ void RegionIfOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
   if (!point.isParent()) {
-    if (point != getJoinRegion())
+    if (point.getTerminatorPredecessorOrNull()->getParentRegion() !=
+        &getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
-      regions.push_back(RegionSuccessor(getResults()));
+      regions.push_back(RegionSuccessor(getOperation(), getResults()));
     return;
   }
 
@@ -646,7 +772,7 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.emplace_back(getResults());
+    regions.emplace_back(getOperation(), getResults());
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -801,8 +927,9 @@ void TestReflectBoundsOp::inferResultRanges(
     unsigned bitwidth = intTy.getWidth();
     sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
     uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
-  } else
+  } else {
     sIntTy = uIntTy = type;
+  }
 
   setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
   setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
@@ -832,6 +959,16 @@ void ConversionFuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionOp(
       p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
       getArgAttrsAttrName(), getResAttrsAttrName());
+}
+
+//===----------------------------------------------------------------------===//
+// TestValueWithBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestValueWithBoundsOp::populateBoundsForIndexValue(
+    Value v, ValueBoundsConstraintSet &cstr) {
+  cstr.bound(v) >= getMin().getSExtValue();
+  cstr.bound(v) <= getMax().getSExtValue();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1012,6 +1149,32 @@ LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
+// TilingNoDpsOp
+//===----------------------------------------------------------------------===//
+
+SmallVector<Range> TilingNoDpsOp::getIterationDomain(OpBuilder &builder) {
+  return {};
+}
+
+SmallVector<utils::IteratorType> TilingNoDpsOp::getLoopIteratorTypes() {
+  return {};
+}
+
+FailureOr<TilingResult>
+TilingNoDpsOp::getTiledImplementation(OpBuilder &builder,
+                                      ArrayRef<OpFoldResult> offsets,
+                                      ArrayRef<OpFoldResult> sizes) {
+  return failure();
+}
+
+LogicalResult TilingNoDpsOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // OpWithShapedTypeInferTypeAdaptorInterfaceOp
 //===----------------------------------------------------------------------===//
 
@@ -1069,11 +1232,11 @@ void LoopBlockOp::getSuccessorRegions(
   if (point.isParent())
     return;
 
-  regions.emplace_back((*this)->getResults());
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
-OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBody());
+OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getBody());
   return MutableOperandRange(getInitMutable());
 }
 
@@ -1082,8 +1245,8 @@ OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 //===----------------------------------------------------------------------===//
 
 MutableOperandRange
-LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionBranchPoint point) {
-  if (point.isParent())
+LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (successor.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
 }
@@ -1175,7 +1338,7 @@ void TestStoreWithARegion::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody(), getBody().front().getArguments());
   else
-    regions.emplace_back();
+    regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1189,7 +1352,7 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // enter the body.
   regions.emplace_back(
       RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.emplace_back();
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1290,8 +1453,8 @@ llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
 
 Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
                                            OpBuilder &builder) {
-  return builder.create<TestOpConstant>(getLoc(), slot.elemType,
-                                        builder.getI32IntegerAttr(42));
+  return TestOpConstant::create(builder, getLoc(), slot.elemType,
+                                builder.getI32IntegerAttr(42));
 }
 
 void TestMultiSlotAlloca::handleBlockArgument(const MemorySlot &slot,
@@ -1323,7 +1486,7 @@ createNewMultiAllocaWithoutSlot(const MemorySlot &slot, OpBuilder &builder,
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(oldOp);
   auto replacement =
-      builder.create<TestMultiSlotAlloca>(oldOp->getLoc(), newTypes);
+      TestMultiSlotAlloca::create(builder, oldOp->getLoc(), newTypes);
   for (auto [oldResult, newResult] :
        llvm::zip_equal(remainingValues, replacement.getResults()))
     oldResult.replaceAllUsesWith(newResult);
@@ -1372,7 +1535,7 @@ DenseMap<Attribute, MemorySlot> TestMultiSlotAlloca::destructure(
   for (Attribute usedIndex : usedIndices) {
     Type elemType = slot.subelementTypes.lookup(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
-    auto subAlloca = builder.create<TestMultiSlotAlloca>(getLoc(), elemPtr);
+    auto subAlloca = TestMultiSlotAlloca::create(builder, getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);
     slotMap.try_emplace<MemorySlot>(usedIndex,
                                     {subAlloca.getResult(0), elemType});
@@ -1385,4 +1548,92 @@ std::optional<DestructurableAllocationOpInterface>
 TestMultiSlotAlloca::handleDestructuringComplete(
     const DestructurableMemorySlot &slot, OpBuilder &builder) {
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
+}
+
+namespace {
+/// Returns test dialect's memref layout for test dialect's tensor encoding when
+/// applicable.
+MemRefLayoutAttrInterface
+getMemRefLayoutForTensorEncoding(RankedTensorType tensorType) {
+  if (auto encoding =
+          dyn_cast<test::TestTensorEncodingAttr>(tensorType.getEncoding())) {
+    return cast<MemRefLayoutAttrInterface>(test::TestMemRefLayoutAttr::get(
+        tensorType.getContext(), encoding.getDummy()));
+  }
+  return {};
+}
+
+/// Auxiliary bufferization function for test and builtin tensors.
+bufferization::BufferLikeType
+convertTensorToBuffer(mlir::Operation *op,
+                      const bufferization::BufferizationOptions &options,
+                      bufferization::TensorLikeType tensorLike) {
+  auto buffer =
+      *tensorLike.getBufferType(options, [&]() { return op->emitError(); });
+  if (auto memref = dyn_cast<MemRefType>(buffer)) {
+    // Note: For the sake of testing, we want to ensure that encoding -> layout
+    // bufferization happens. This is currently achieved manually.
+    auto layout =
+        getMemRefLayoutForTensorEncoding(cast<RankedTensorType>(tensorLike));
+    return cast<bufferization::BufferLikeType>(
+        MemRefType::get(memref.getShape(), memref.getElementType(), layout,
+                        memref.getMemorySpace()));
+  }
+  return buffer;
+}
+} // namespace
+
+::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  auto buffer =
+      mlir::bufferization::getBuffer(rewriter, getInput(), options, state);
+  if (mlir::failed(buffer))
+    return failure();
+
+  const auto outType = getOutput().getType();
+  const auto bufferizedOutType =
+      convertTensorToBuffer(getOperation(), options, outType);
+  // replace op with memref analogy
+  auto dummyMemrefOp = test::TestDummyMemrefOp::create(
+      rewriter, getLoc(), bufferizedOutType, *buffer);
+
+  mlir::bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                                     dummyMemrefOp.getResult());
+
+  return mlir::success();
+}
+
+::mlir::LogicalResult test::TestCreateTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  // Note: mlir::bufferization::getBufferType() would internally call
+  // TestCreateTensorOp::getBufferType()
+  const auto bufferizedOutType =
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
+    return failure();
+
+  // replace op with memref analogy
+  auto createMemrefOp =
+      test::TestCreateMemrefOp::create(rewriter, getLoc(), *bufferizedOutType);
+
+  mlir::bufferization::replaceOpWithBufferizedValues(
+      rewriter, getOperation(), createMemrefOp.getResult());
+
+  return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestCreateTensorOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &options,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  const auto type = dyn_cast<bufferization::TensorLikeType>(value.getType());
+  if (type == nullptr)
+    return failure();
+
+  return convertTensorToBuffer(getOperation(), options, type);
 }

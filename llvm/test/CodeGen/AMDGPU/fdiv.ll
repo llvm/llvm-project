@@ -333,18 +333,17 @@ define amdgpu_kernel void @s_fdiv_25ulp_f32(ptr addrspace(1) %out, float %a, flo
 ; GFX67-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX67-NEXT:    v_mov_b32_e32 v0, 0x6f800000
 ; GFX67-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GFX67-NEXT:    s_mov_b32 s7, 0xf000
-; GFX67-NEXT:    s_mov_b32 s6, -1
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX67-NEXT:    v_cmp_gt_f32_e64 vcc, |s3|, v0
+; GFX67-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX67-NEXT:    v_cmp_gt_f32_e64 vcc, |s5|, v0
 ; GFX67-NEXT:    v_cndmask_b32_e32 v0, 1.0, v1, vcc
-; GFX67-NEXT:    v_mul_f32_e32 v1, s3, v0
+; GFX67-NEXT:    v_mul_f32_e32 v1, s5, v0
 ; GFX67-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX67-NEXT:    s_mov_b32 s4, s0
-; GFX67-NEXT:    s_mov_b32 s5, s1
-; GFX67-NEXT:    v_mul_f32_e32 v1, s2, v1
+; GFX67-NEXT:    s_mov_b32 s3, 0xf000
+; GFX67-NEXT:    s_mov_b32 s2, -1
+; GFX67-NEXT:    v_mul_f32_e32 v1, s4, v1
 ; GFX67-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX67-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX67-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX67-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_fdiv_25ulp_f32:
@@ -441,20 +440,19 @@ define amdgpu_kernel void @s_fdiv_25ulp_ieee_f32(ptr addrspace(1) %out, float %a
 ; GFX7-LABEL: s_fdiv_25ulp_ieee_f32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX7-NEXT:    s_mov_b32 s7, 0xf000
-; GFX7-NEXT:    s_mov_b32 s6, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_frexp_mant_f32_e32 v0, s3
+; GFX7-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX7-NEXT:    v_frexp_mant_f32_e32 v0, s5
 ; GFX7-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX7-NEXT:    v_frexp_exp_i32_f32_e32 v1, s3
-; GFX7-NEXT:    v_frexp_exp_i32_f32_e32 v2, s2
-; GFX7-NEXT:    v_frexp_mant_f32_e32 v3, s2
+; GFX7-NEXT:    v_frexp_exp_i32_f32_e32 v1, s5
+; GFX7-NEXT:    v_frexp_exp_i32_f32_e32 v2, s4
+; GFX7-NEXT:    v_frexp_mant_f32_e32 v3, s4
 ; GFX7-NEXT:    v_mul_f32_e32 v0, v3, v0
 ; GFX7-NEXT:    v_sub_i32_e32 v1, vcc, v2, v1
-; GFX7-NEXT:    s_mov_b32 s4, s0
-; GFX7-NEXT:    s_mov_b32 s5, s1
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; GFX7-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_fdiv_25ulp_ieee_f32:
@@ -528,14 +526,13 @@ define amdgpu_kernel void @s_fdiv_fast_ieee_f32(ptr addrspace(1) %out, float %a,
 ; GFX67-LABEL: s_fdiv_fast_ieee_f32:
 ; GFX67:       ; %bb.0: ; %entry
 ; GFX67-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX67-NEXT:    s_mov_b32 s7, 0xf000
-; GFX67-NEXT:    s_mov_b32 s6, -1
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX67-NEXT:    v_rcp_f32_e32 v0, s3
-; GFX67-NEXT:    s_mov_b32 s4, s0
-; GFX67-NEXT:    s_mov_b32 s5, s1
-; GFX67-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX67-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX67-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX67-NEXT:    v_rcp_f32_e32 v0, s5
+; GFX67-NEXT:    s_mov_b32 s3, 0xf000
+; GFX67-NEXT:    s_mov_b32 s2, -1
+; GFX67-NEXT:    v_mul_f32_e32 v0, s4, v0
+; GFX67-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX67-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_fdiv_fast_ieee_f32:
@@ -590,14 +587,13 @@ define amdgpu_kernel void @s_fdiv_f32_fast_math(ptr addrspace(1) %out, float %a,
 ; GFX67-LABEL: s_fdiv_f32_fast_math:
 ; GFX67:       ; %bb.0: ; %entry
 ; GFX67-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX67-NEXT:    s_mov_b32 s7, 0xf000
-; GFX67-NEXT:    s_mov_b32 s6, -1
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX67-NEXT:    v_rcp_f32_e32 v0, s3
-; GFX67-NEXT:    s_mov_b32 s4, s0
-; GFX67-NEXT:    s_mov_b32 s5, s1
-; GFX67-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX67-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX67-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX67-NEXT:    v_rcp_f32_e32 v0, s5
+; GFX67-NEXT:    s_mov_b32 s3, 0xf000
+; GFX67-NEXT:    s_mov_b32 s2, -1
+; GFX67-NEXT:    v_mul_f32_e32 v0, s4, v0
+; GFX67-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX67-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_fdiv_f32_fast_math:
@@ -652,14 +648,13 @@ define amdgpu_kernel void @s_fdiv_ulp25_f32_fast_math(ptr addrspace(1) %out, flo
 ; GFX67-LABEL: s_fdiv_ulp25_f32_fast_math:
 ; GFX67:       ; %bb.0: ; %entry
 ; GFX67-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX67-NEXT:    s_mov_b32 s7, 0xf000
-; GFX67-NEXT:    s_mov_b32 s6, -1
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX67-NEXT:    v_rcp_f32_e32 v0, s3
-; GFX67-NEXT:    s_mov_b32 s4, s0
-; GFX67-NEXT:    s_mov_b32 s5, s1
-; GFX67-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX67-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX67-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX67-NEXT:    v_rcp_f32_e32 v0, s5
+; GFX67-NEXT:    s_mov_b32 s3, 0xf000
+; GFX67-NEXT:    s_mov_b32 s2, -1
+; GFX67-NEXT:    v_mul_f32_e32 v0, s4, v0
+; GFX67-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX67-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_fdiv_ulp25_f32_fast_math:
@@ -877,14 +872,13 @@ define amdgpu_kernel void @s_fdiv_f32_arcp_ninf(ptr addrspace(1) %out, float %a,
 ; GFX67-LABEL: s_fdiv_f32_arcp_ninf:
 ; GFX67:       ; %bb.0: ; %entry
 ; GFX67-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX67-NEXT:    s_mov_b32 s7, 0xf000
-; GFX67-NEXT:    s_mov_b32 s6, -1
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX67-NEXT:    v_rcp_f32_e32 v0, s3
-; GFX67-NEXT:    s_mov_b32 s4, s0
-; GFX67-NEXT:    s_mov_b32 s5, s1
-; GFX67-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX67-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX67-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX67-NEXT:    v_rcp_f32_e32 v0, s5
+; GFX67-NEXT:    s_mov_b32 s3, 0xf000
+; GFX67-NEXT:    s_mov_b32 s2, -1
+; GFX67-NEXT:    v_mul_f32_e32 v0, s4, v0
+; GFX67-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX67-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_fdiv_f32_arcp_ninf:
@@ -1164,8 +1158,8 @@ define amdgpu_kernel void @s_fdiv_v2f32(ptr addrspace(1) %out, <2 x float> %a, <
 ; GFX11-NEXT:    v_fma_f32 v5, -v2, v4, v0
 ; GFX11-NEXT:    v_fmac_f32_e32 v4, v5, v3
 ; GFX11-NEXT:    v_fma_f32 v0, -v2, v4, v0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_denorm_mode 12
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    v_div_fmas_f32 v0, v0, v3, v4
 ; GFX11-NEXT:    v_div_fixup_f32 v0, v0, s2, s0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]

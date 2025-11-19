@@ -66,13 +66,14 @@ private:
   typedef std::pair<clang::DiagnosticsEngine::Level, std::string>
       IDAndDiagnostic;
   std::vector<IDAndDiagnostic> m_diagnostics;
+  std::unique_ptr<clang::DiagnosticOptions> m_diag_opts;
+  /// Output string filled by m_os. Will be reused for different diagnostics.
+  std::string m_output;
+  /// Output stream of m_diag_printer.
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
   /// The DiagnosticPrinter used for creating the full diagnostic messages
   /// that are stored in m_diagnostics.
   std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
-  /// Output stream of m_diag_printer.
-  std::unique_ptr<llvm::raw_string_ostream> m_os;
-  /// Output string filled by m_os. Will be reused for different diagnostics.
-  std::string m_output;
   /// A Progress with explicitly managed lifetime.
   std::unique_ptr<Progress> m_current_progress_up;
   std::vector<std::string> m_module_build_stack;
@@ -83,6 +84,7 @@ private:
 class ClangModulesDeclVendorImpl : public ClangModulesDeclVendor {
 public:
   ClangModulesDeclVendorImpl(
+      std::unique_ptr<clang::DiagnosticOptions> diagnostic_options,
       llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine,
       std::shared_ptr<clang::CompilerInvocation> compiler_invocation,
       std::unique_ptr<clang::CompilerInstance> compiler_instance,
@@ -90,11 +92,11 @@ public:
 
   ~ClangModulesDeclVendorImpl() override = default;
 
-  bool AddModule(const SourceModule &module, ModuleVector *exported_modules,
-                 Stream &error_stream) override;
+  llvm::Error AddModule(const SourceModule &module,
+                        ModuleVector *exported_modules) override;
 
-  bool AddModulesForCompileUnit(CompileUnit &cu, ModuleVector &exported_modules,
-                                Stream &error_stream) override;
+  llvm::Error AddModulesForCompileUnit(CompileUnit &cu,
+                                       ModuleVector &exported_modules) override;
 
   uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
                      std::vector<CompilerDecl> &decls) override;
@@ -115,6 +117,7 @@ private:
 
   bool m_enabled = false;
 
+  std::unique_ptr<clang::DiagnosticOptions> m_diagnostic_options;
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> m_diagnostics_engine;
   std::shared_ptr<clang::CompilerInvocation> m_compiler_invocation;
   std::unique_ptr<clang::CompilerInstance> m_compiler_instance;
@@ -134,10 +137,10 @@ private:
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  auto *options = new clang::DiagnosticOptions();
+  m_diag_opts = std::make_unique<clang::DiagnosticOptions>();
   m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
   m_diag_printer =
-      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, options);
+      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, *m_diag_opts);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
@@ -223,16 +226,18 @@ void StoringDiagnosticConsumer::SetCurrentModuleProgress(
 }
 
 ClangModulesDeclVendor::ClangModulesDeclVendor()
-    : ClangDeclVendor(eClangModuleDeclVendor) {}
+    : DeclVendor(eClangModuleDeclVendor) {}
 
 ClangModulesDeclVendor::~ClangModulesDeclVendor() = default;
 
 ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
+    std::unique_ptr<clang::DiagnosticOptions> diagnostic_options,
     llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine,
     std::shared_ptr<clang::CompilerInvocation> compiler_invocation,
     std::unique_ptr<clang::CompilerInstance> compiler_instance,
     std::unique_ptr<clang::Parser> parser)
-    : m_diagnostics_engine(std::move(diagnostics_engine)),
+    : m_diagnostic_options(std::move(diagnostic_options)),
+      m_diagnostics_engine(std::move(diagnostics_engine)),
       m_compiler_invocation(std::move(compiler_invocation)),
       m_compiler_instance(std::move(compiler_instance)),
       m_parser(std::move(parser)) {
@@ -268,16 +273,14 @@ void ClangModulesDeclVendorImpl::ReportModuleExports(
     exports.push_back(module);
 }
 
-bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
-                                           ModuleVector *exported_modules,
-                                           Stream &error_stream) {
+llvm::Error
+ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
+                                      ModuleVector *exported_modules) {
   // Fail early.
 
-  if (m_compiler_instance->hadModuleLoaderFatalFailure()) {
-    error_stream.PutCString("error: Couldn't load a module because the module "
-                            "loader is in a fatal state.\n");
-    return false;
-  }
+  if (m_compiler_instance->hadModuleLoaderFatalFailure())
+    return llvm::createStringError(
+        "couldn't load a module because the module loader is in a fatal state");
 
   // Check if we've already imported this module.
 
@@ -292,7 +295,7 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     if (mi != m_imported_modules.end()) {
       if (exported_modules)
         ReportModuleExports(*exported_modules, mi->second);
-      return true;
+      return llvm::Error::success();
     }
   }
 
@@ -310,30 +313,30 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
                             std::equal(sysroot_begin, sysroot_end, path_begin);
     // No need to inject search paths to modules in the sysroot.
     if (!is_system_module) {
-      auto error = [&]() {
-        error_stream.Printf("error: No module map file in %s\n",
-                            module.search_path.AsCString());
-        return false;
-      };
-
       bool is_system = true;
       bool is_framework = false;
       auto dir = HS.getFileMgr().getOptionalDirectoryRef(
           module.search_path.GetStringRef());
       if (!dir)
-        return error();
+        return llvm::createStringError(
+            "couldn't find module search path directory %s",
+            module.search_path.GetCString());
+
       auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
-        return error();
-      if (!HS.loadModuleMapFile(*file, is_system))
-        return error();
+        return llvm::createStringError("couldn't find modulemap file in %s",
+                                       module.search_path.GetCString());
+
+      if (HS.parseAndLoadModuleMapFile(*file, is_system))
+        return llvm::createStringError(
+            "failed to parse and load modulemap file in %s",
+            module.search_path.GetCString());
     }
   }
-  if (!HS.lookupModule(module.path.front().GetStringRef())) {
-    error_stream.Printf("error: Header search couldn't locate module '%s'\n",
-                        module.path.front().AsCString());
-    return false;
-  }
+
+  if (!HS.lookupModule(module.path.front().GetStringRef()))
+    return llvm::createStringError("header search couldn't locate module '%s'",
+                                   module.path.front().AsCString());
 
   llvm::SmallVector<clang::IdentifierLoc, 4> clang_path;
 
@@ -359,23 +362,37 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
   clang::Module *top_level_module = DoGetModule(clang_path.front(), false);
 
   if (!top_level_module) {
+    lldb_private::StreamString error_stream;
     diagnostic_consumer->DumpDiagnostics(error_stream);
-    error_stream.Printf("error: Couldn't load top-level module %s\n",
-                        module.path.front().AsCString());
-    return false;
+
+    return llvm::createStringError(llvm::formatv(
+        "couldn't load top-level module {0}:\n{1}",
+        module.path.front().GetStringRef(), error_stream.GetString()));
   }
 
   clang::Module *submodule = top_level_module;
 
   for (auto &component : llvm::ArrayRef<ConstString>(module.path).drop_front()) {
-    submodule = submodule->findSubmodule(component.GetStringRef());
-    if (!submodule) {
+    clang::Module *found = submodule->findSubmodule(component.GetStringRef());
+    if (!found) {
+      lldb_private::StreamString error_stream;
       diagnostic_consumer->DumpDiagnostics(error_stream);
-      error_stream.Printf("error: Couldn't load submodule %s\n",
-                          component.GetCString());
-      return false;
+
+      return llvm::createStringError(llvm::formatv(
+          "couldn't load submodule '{0}' of module '{1}':\n{2}",
+          component.GetStringRef(), submodule->getFullModuleName(),
+          error_stream.GetString()));
     }
+
+    submodule = found;
   }
+
+  // If we didn't make the submodule visible here, Clang wouldn't allow LLDB to
+  // pick any of the decls in the submodules during C++ name lookup.
+  if (submodule)
+    m_compiler_instance->makeModuleVisible(
+        submodule, clang::Module::NameVisibilityKind::AllVisible,
+        /*ImportLoc=*/{});
 
   clang::Module *requested_module = DoGetModule(clang_path, true);
 
@@ -387,10 +404,12 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
 
     m_enabled = true;
 
-    return true;
+    return llvm::Error::success();
   }
 
-  return false;
+  return llvm::createStringError(
+      llvm::formatv("unknown error while loading module {0}\n",
+                    module.path.front().GetStringRef()));
 }
 
 bool ClangModulesDeclVendor::LanguageSupportsClangModules(
@@ -412,15 +431,18 @@ bool ClangModulesDeclVendor::LanguageSupportsClangModules(
   }
 }
 
-bool ClangModulesDeclVendorImpl::AddModulesForCompileUnit(
-    CompileUnit &cu, ClangModulesDeclVendor::ModuleVector &exported_modules,
-    Stream &error_stream) {
-  if (LanguageSupportsClangModules(cu.GetLanguage())) {
-    for (auto &imported_module : cu.GetImportedModules())
-      if (!AddModule(imported_module, &exported_modules, error_stream))
-        return false;
-  }
-  return true;
+llvm::Error ClangModulesDeclVendorImpl::AddModulesForCompileUnit(
+    CompileUnit &cu, ClangModulesDeclVendor::ModuleVector &exported_modules) {
+  if (!LanguageSupportsClangModules(cu.GetLanguage()))
+    return llvm::Error::success();
+
+  llvm::Error errors = llvm::Error::success();
+
+  for (auto &imported_module : cu.GetImportedModules())
+    if (auto err = AddModule(imported_module, &exported_modules))
+      errors = llvm::joinErrors(std::move(errors), std::move(err));
+
+  return errors;
 }
 
 // ClangImporter::lookupValue
@@ -706,8 +728,8 @@ ClangModulesDeclVendor::Create(Target &target) {
       clang::CreateAndPopulateDiagOpts(compiler_invocation_argument_cstrs);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine =
       clang::CompilerInstance::createDiagnostics(
-          *FileSystem::Instance().GetVirtualFileSystem(),
-          diag_options_up.release(), new StoringDiagnosticConsumer);
+          *FileSystem::Instance().GetVirtualFileSystem(), *diag_options_up,
+          new StoringDiagnosticConsumer);
 
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",
@@ -731,23 +753,23 @@ ClangModulesDeclVendor::Create(Target &target) {
   invocation->getPreprocessorOpts().addRemappedFile(ModuleImportBufferName,
                                                     source_buffer.release());
 
-  std::unique_ptr<clang::CompilerInstance> instance(
-      new clang::CompilerInstance);
+  auto instance = std::make_unique<clang::CompilerInstance>(invocation);
 
   // Make sure clang uses the same VFS as LLDB.
-  instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
-  instance->setDiagnostics(diagnostics_engine.get());
-  instance->setInvocation(invocation);
+  instance->setVirtualFileSystem(FileSystem::Instance().GetVirtualFileSystem());
+  instance->createFileManager();
+  instance->setDiagnostics(diagnostics_engine);
 
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 
   instance->setTarget(clang::TargetInfo::CreateTargetInfo(
-      *diagnostics_engine, instance->getInvocation().TargetOpts));
+      *diagnostics_engine, instance->getInvocation().getTargetOpts()));
 
   if (!instance->hasTarget())
     return nullptr;
 
-  instance->getTarget().adjust(*diagnostics_engine, instance->getLangOpts());
+  instance->getTarget().adjust(*diagnostics_engine, instance->getLangOpts(),
+                               /*AuxTarget=*/nullptr);
 
   if (!action->BeginSourceFile(*instance,
                                instance->getFrontendOpts().Inputs[0]))
@@ -769,7 +791,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   while (!parser->ParseTopLevelDecl(parsed, ImportState))
     ;
 
-  return new ClangModulesDeclVendorImpl(std::move(diagnostics_engine),
-                                        std::move(invocation),
-                                        std::move(instance), std::move(parser));
+  return new ClangModulesDeclVendorImpl(
+      std::move(diag_options_up), std::move(diagnostics_engine),
+      std::move(invocation), std::move(instance), std::move(parser));
 }

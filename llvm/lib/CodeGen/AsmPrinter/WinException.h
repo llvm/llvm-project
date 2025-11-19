@@ -80,7 +80,6 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   const MCExpr *create32bitRef(const MCSymbol *Value);
   const MCExpr *create32bitRef(const GlobalValue *GV);
   const MCExpr *getLabel(const MCSymbol *Label);
-  const MCExpr *getLabelPlusOne(const MCSymbol *Label);
   const MCExpr *getOffset(const MCSymbol *OffsetOf, const MCSymbol *OffsetFrom);
   const MCExpr *getOffsetPlusOne(const MCSymbol *OffsetOf,
                                  const MCSymbol *OffsetFrom);

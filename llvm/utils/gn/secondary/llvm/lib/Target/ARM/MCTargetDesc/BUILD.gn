@@ -67,7 +67,6 @@ static_library("MCTargetDesc") {
     "ARMInstPrinter.cpp",
     "ARMMCAsmInfo.cpp",
     "ARMMCCodeEmitter.cpp",
-    "ARMMCExpr.cpp",
     "ARMMCTargetDesc.cpp",
     "ARMMachORelocationInfo.cpp",
     "ARMMachObjectWriter.cpp",

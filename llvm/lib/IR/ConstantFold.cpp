@@ -55,15 +55,8 @@ foldConstantCastPair(
   Type *MidTy = Op->getType();
   Instruction::CastOps firstOp = Instruction::CastOps(Op->getOpcode());
   Instruction::CastOps secondOp = Instruction::CastOps(opc);
-
-  // Assume that pointers are never more than 64 bits wide, and only use this
-  // for the middle type. Otherwise we could end up folding away illegal
-  // bitcasts between address spaces with different sizes.
-  IntegerType *FakeIntPtrTy = Type::getInt64Ty(DstTy->getContext());
-
-  // Let CastInst::isEliminableCastPair do the heavy lifting.
   return CastInst::isEliminableCastPair(firstOp, secondOp, SrcTy, MidTy, DstTy,
-                                        nullptr, FakeIntPtrTy, nullptr);
+                                        /*DL=*/nullptr);
 }
 
 static Constant *FoldBitCast(Constant *V, Type *DestTy) {
@@ -254,6 +247,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     return FoldBitCast(V, DestTy);
   case Instruction::AddrSpaceCast:
   case Instruction::IntToPtr:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
     return nullptr;
   }
@@ -463,10 +457,9 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
 
-    if (Elt->isNullValue()) {
-      auto *VTy = VectorType::get(EltTy, MaskEltCount);
-      return ConstantAggregateZero::get(VTy);
-    } else if (!MaskEltCount.isScalable())
+    // For scalable vectors, make sure this doesn't fold back into a
+    // shufflevector.
+    if (!MaskEltCount.isScalable() || Elt->isNullValue() || isa<UndefValue>(Elt))
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
 
@@ -748,7 +741,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       assert(!CI2->isZero() && "And zero handled above");
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
         // If and'ing the address of a global with a constant, fold it.
-        if (CE1->getOpcode() == Instruction::PtrToInt &&
+        if ((CE1->getOpcode() == Instruction::PtrToInt ||
+             CE1->getOpcode() == Instruction::PtrToAddr) &&
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 
@@ -1149,10 +1143,10 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   }
 
   // If the comparison is a comparison between two i1's, simplify it.
-  if (C1->getType()->isIntegerTy(1)) {
+  if (C1->getType()->isIntOrIntVectorTy(1)) {
     switch (Predicate) {
     case ICmpInst::ICMP_EQ:
-      if (isa<ConstantInt>(C2))
+      if (isa<ConstantExpr>(C1))
         return ConstantExpr::getXor(C1, ConstantExpr::getNot(C2));
       return ConstantExpr::getXor(ConstantExpr::getNot(C1), C2);
     case ICmpInst::ICMP_NE:

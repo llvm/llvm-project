@@ -563,7 +563,7 @@ def MyInterface : OpInterface<"MyInterface"> {
         template <typename ConcreteOp>
         struct Model : public Concept {
           Operation *create(OpBuilder &builder, Location loc) const override {
-            return builder.create<ConcreteOp>(loc);
+            return ConcreteOp::create(builder, loc);
           }
         }
       };
@@ -574,7 +574,7 @@ def MyInterface : OpInterface<"MyInterface"> {
     }],
       "Operation *", "create", (ins "OpBuilder &":$builder, "Location":$loc),
       /*methodBody=*/[{
-        return builder.create<ConcreteOp>(loc);
+        return ConcreteOp::create(builder, loc);
     }]>,
 
     InterfaceMethod<[{
@@ -765,7 +765,7 @@ interface section goes as follows:
 *   `CallableOpInterface` - Used to represent the target callee of call.
     -   `Region * getCallableRegion()`
     -   `ArrayRef<Type> getArgumentTypes()`
-    -   `ArrayRef<Type> getResultsTypes()`
+    -   `ArrayRef<Type> getResultTypes()`
     -   `ArrayAttr getArgAttrsAttr()`
     -   `ArrayAttr getResAttrsAttr()`
     -   `void setArgAttrsAttr(ArrayAttr)`

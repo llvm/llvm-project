@@ -109,6 +109,8 @@ public:
   private:
     void CommonInitializer(lldb::SupportFileSP support_file_sp,
                            lldb::TargetSP target_sp);
+    void CommonInitializerImpl(lldb::SupportFileSP support_file_sp,
+                               lldb::TargetSP target_sp);
   };
 
   typedef std::shared_ptr<File> FileSP;
@@ -155,6 +157,9 @@ public:
   ~SourceManager();
 
   FileSP GetLastFile() { return GetFile(m_last_support_file_sp); }
+  bool AtLastLine(bool reverse) {
+    return m_last_line == UINT32_MAX || (reverse && m_last_line == 1);
+  }
 
   size_t DisplaySourceLinesWithLineNumbers(
       lldb::SupportFileSP support_file_sp, uint32_t line, uint32_t column,

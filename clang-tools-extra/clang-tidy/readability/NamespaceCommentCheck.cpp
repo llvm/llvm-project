@@ -1,4 +1,4 @@
-//===--- NamespaceCommentCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/StringExtras.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -28,11 +27,15 @@ NamespaceCommentCheck::NamespaceCommentCheck(StringRef Name,
           "namespace( +(((inline )|([a-zA-Z0-9_:]))+))?\\.? *(\\*/)?$",
           llvm::Regex::IgnoreCase),
       ShortNamespaceLines(Options.get("ShortNamespaceLines", 1U)),
-      SpacesBeforeComments(Options.get("SpacesBeforeComments", 1U)) {}
+      SpacesBeforeComments(Options.get("SpacesBeforeComments", 1U)),
+      AllowOmittingNamespaceComments(
+          Options.get("AllowOmittingNamespaceComments", false)) {}
 
 void NamespaceCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ShortNamespaceLines", ShortNamespaceLines);
   Options.store(Opts, "SpacesBeforeComments", SpacesBeforeComments);
+  Options.store(Opts, "AllowOmittingNamespaceComments",
+                AllowOmittingNamespaceComments);
 }
 
 void NamespaceCommentCheck::registerMatchers(MatchFinder *Finder) {
@@ -67,7 +70,7 @@ getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
       --Nesting;
     } else if (Nesting == 0) {
       if (T->is(tok::raw_identifier)) {
-        StringRef ID = T->getRawIdentifier();
+        const StringRef ID = T->getRawIdentifier();
         if (ID != "namespace")
           Result.append(std::string(ID));
         if (ID == "inline")
@@ -93,13 +96,13 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Don't require closing comments for namespaces spanning less than certain
   // number of lines.
-  unsigned StartLine = Sources.getSpellingLineNumber(ND->getBeginLoc());
-  unsigned EndLine = Sources.getSpellingLineNumber(ND->getRBraceLoc());
+  const unsigned StartLine = Sources.getSpellingLineNumber(ND->getBeginLoc());
+  const unsigned EndLine = Sources.getSpellingLineNumber(ND->getRBraceLoc());
   if (EndLine - StartLine + 1 <= ShortNamespaceLines)
     return;
 
   // Find next token after the namespace closing brace.
-  SourceLocation AfterRBrace = Lexer::getLocForEndOfToken(
+  const SourceLocation AfterRBrace = Lexer::getLocForEndOfToken(
       ND->getRBraceLoc(), /*Offset=*/0, Sources, getLangOpts());
   SourceLocation Loc = AfterRBrace;
   SourceLocation LBraceLoc = ND->getBeginLoc();
@@ -107,7 +110,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   // Currently for nested namespace (n1::n2::...) the AST matcher will match foo
   // then bar instead of a single match. So if we got a nested namespace we have
   // to skip the next ones.
-  for (const auto &EndOfNameLocation : Ends) {
+  for (const SourceLocation &EndOfNameLocation : Ends) {
     if (Sources.isBeforeInTranslationUnit(ND->getLocation(), EndOfNameLocation))
       return;
   }
@@ -134,21 +137,24 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   if (!locationsInSameFile(Sources, ND->getRBraceLoc(), Loc))
     return;
 
-  bool NextTokenIsOnSameLine = Sources.getSpellingLineNumber(Loc) == EndLine;
+  const bool NextTokenIsOnSameLine =
+      Sources.getSpellingLineNumber(Loc) == EndLine;
   // If we insert a line comment before the token in the same line, we need
   // to insert a line break.
   bool NeedLineBreak = NextTokenIsOnSameLine && Tok.isNot(tok::eof);
 
   SourceRange OldCommentRange(AfterRBrace, AfterRBrace);
   std::string Message = "%0 not terminated with a closing comment";
+  bool HasComment = false;
 
   // Try to find existing namespace closing comment on the same line.
   if (Tok.is(tok::comment) && NextTokenIsOnSameLine) {
-    StringRef Comment(Sources.getCharacterData(Loc), Tok.getLength());
+    const StringRef Comment(Sources.getCharacterData(Loc), Tok.getLength());
     SmallVector<StringRef, 7> Groups;
     if (NamespaceCommentPattern.match(Comment, &Groups)) {
-      StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5] : "";
-      StringRef Anonymous = Groups.size() > 3 ? Groups[3] : "";
+      const StringRef NamespaceNameInComment =
+          Groups.size() > 5 ? Groups[5] : "";
+      const StringRef Anonymous = Groups.size() > 3 ? Groups[3] : "";
 
       if ((ND->isAnonymousNamespace() && NamespaceNameInComment.empty()) ||
           (*NamespaceNameAsWritten == NamespaceNameInComment &&
@@ -158,6 +164,8 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
         // comments with different format.
         return;
       }
+
+      HasComment = true;
 
       // Otherwise we need to fix the comment.
       NeedLineBreak = Comment.starts_with("/*");
@@ -180,9 +188,14 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
     // multi-line or there may be other tokens behind it.
   }
 
-  std::string NamespaceNameForDiag =
-      ND->isAnonymousNamespace() ? "anonymous namespace"
-                                 : ("namespace '" + *NamespaceNameAsWritten + "'");
+  const std::string NamespaceNameForDiag =
+      ND->isAnonymousNamespace()
+          ? "anonymous namespace"
+          : ("namespace '" + *NamespaceNameAsWritten + "'");
+
+  // If no namespace comment is allowed
+  if (!HasComment && AllowOmittingNamespaceComments)
+    return;
 
   std::string Fix(SpacesBeforeComments, ' ');
   Fix.append("// namespace");
@@ -192,7 +205,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
     Fix.append("\n");
 
   // Place diagnostic at an old comment, or closing brace if we did not have it.
-  SourceLocation DiagLoc =
+  const SourceLocation DiagLoc =
       OldCommentRange.getBegin() != OldCommentRange.getEnd()
           ? OldCommentRange.getBegin()
           : ND->getRBraceLoc();

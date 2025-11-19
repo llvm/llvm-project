@@ -24,7 +24,7 @@ SmallVector<ExprType> computeSuffixProductImpl(ArrayRef<ExprType> sizes,
   if (sizes.empty())
     return {};
   SmallVector<ExprType> strides(sizes.size(), unit);
-  for (int64_t r = strides.size() - 2; r >= 0; --r)
+  for (int64_t r = static_cast<int64_t>(strides.size()) - 2; r >= 0; --r)
     strides[r] = strides[r + 1] * sizes[r + 1];
   return strides;
 }
@@ -69,7 +69,8 @@ SmallVector<ExprType> delinearizeImpl(ExprType linearIndex,
 //===----------------------------------------------------------------------===//
 
 SmallVector<int64_t> mlir::computeSuffixProduct(ArrayRef<int64_t> sizes) {
-  assert(llvm::all_of(sizes, [](int64_t s) { return s >= 0; }) &&
+  assert((sizes.empty() ||
+          llvm::all_of(sizes.drop_front(), [](int64_t s) { return s >= 0; })) &&
          "sizes must be nonnegative");
   int64_t unit = 1;
   return ::computeSuffixProductImpl(sizes, unit);
@@ -80,21 +81,10 @@ SmallVector<int64_t> mlir::computeElementwiseMul(ArrayRef<int64_t> v1,
   return computeElementwiseMulImpl(v1, v2);
 }
 
-int64_t mlir::computeSum(ArrayRef<int64_t> basis) {
-  assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
-         "basis must be nonnegative");
-  if (basis.empty())
-    return 0;
-  return std::accumulate(basis.begin(), basis.end(), 1, std::plus<int64_t>());
-}
-
 int64_t mlir::computeProduct(ArrayRef<int64_t> basis) {
   assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
          "basis must be nonnegative");
-  if (basis.empty())
-    return 1;
-  return std::accumulate(basis.begin(), basis.end(), 1,
-                         std::multiplies<int64_t>());
+  return llvm::product_of(basis);
 }
 
 int64_t mlir::linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis) {
@@ -157,19 +147,11 @@ SmallVector<AffineExpr> mlir::computeElementwiseMul(ArrayRef<AffineExpr> v1,
 }
 
 AffineExpr mlir::computeSum(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
-  if (basis.empty())
-    return getAffineConstantExpr(0, ctx);
-  return std::accumulate(basis.begin(), basis.end(),
-                         getAffineConstantExpr(0, ctx),
-                         std::plus<AffineExpr>());
+  return llvm::sum_of(basis, getAffineConstantExpr(0, ctx));
 }
 
 AffineExpr mlir::computeProduct(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
-  if (basis.empty())
-    return getAffineConstantExpr(1, ctx);
-  return std::accumulate(basis.begin(), basis.end(),
-                         getAffineConstantExpr(1, ctx),
-                         std::multiplies<AffineExpr>());
+  return llvm::product_of(basis, getAffineConstantExpr(1, ctx));
 }
 
 AffineExpr mlir::linearize(MLIRContext *ctx, ArrayRef<AffineExpr> offsets,

@@ -30,6 +30,7 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerPlatform.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/MainLoop.h"
@@ -192,14 +193,15 @@ static Status ListenGdbConnectionsIfNeeded(
 }
 
 static llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
-AcceptGdbConnectionsIfNeeded(const Socket::SocketProtocol protocol,
+AcceptGdbConnectionsIfNeeded(const FileSpec &debugserver_path,
+                             const Socket::SocketProtocol protocol,
                              std::unique_ptr<TCPSocket> &gdb_sock,
                              MainLoop &main_loop, const uint16_t gdbserver_port,
                              const lldb_private::Args &args) {
   if (protocol != Socket::ProtocolTcp)
     return std::vector<MainLoopBase::ReadHandleUP>();
 
-  return gdb_sock->Accept(main_loop, [gdbserver_port,
+  return gdb_sock->Accept(main_loop, [debugserver_path, gdbserver_port,
                                       &args](std::unique_ptr<Socket> sock_up) {
     Log *log = GetLog(LLDBLog::Platform);
     Status error;
@@ -210,8 +212,8 @@ AcceptGdbConnectionsIfNeeded(const Socket::SocketProtocol protocol,
     }
     lldb::pid_t child_pid = LLDB_INVALID_PROCESS_ID;
     std::string socket_name;
-    GDBRemoteCommunicationServerPlatform platform(Socket::ProtocolTcp,
-                                                  gdbserver_port);
+    GDBRemoteCommunicationServerPlatform platform(
+        debugserver_path, Socket::ProtocolTcp, gdbserver_port);
     error = platform.LaunchGDBServer(args, child_pid, socket_name,
                                      shared_socket.GetSendableFD());
     if (error.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
@@ -274,10 +276,8 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
   self_args.AppendArgument(llvm::StringRef("platform"));
   self_args.AppendArgument(llvm::StringRef("--child-platform-fd"));
   self_args.AppendArgument(llvm::to_string(shared_socket.GetSendableFD()));
-#ifndef _WIN32
-  launch_info.AppendDuplicateFileAction((int)shared_socket.GetSendableFD(),
-                                        (int)shared_socket.GetSendableFD());
-#endif
+  launch_info.AppendDuplicateFileAction((int64_t)shared_socket.GetSendableFD(),
+                                        (int64_t)shared_socket.GetSendableFD());
   if (gdb_port) {
     self_args.AppendArgument(llvm::StringRef("--gdbserver-port"));
     self_args.AppendArgument(llvm::to_string(gdb_port));
@@ -341,6 +341,24 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
   }
 
   return Status();
+}
+
+static FileSpec GetDebugserverPath() {
+  if (const char *p = getenv("LLDB_DEBUGSERVER_PATH")) {
+    FileSpec candidate(p);
+    if (FileSystem::Instance().Exists(candidate))
+      return candidate;
+  }
+#if defined(__APPLE__)
+  FileSpec candidate = HostInfo::GetSupportExeDir();
+  candidate.AppendPathComponent("debugserver");
+  if (FileSystem::Instance().Exists(candidate))
+    return candidate;
+  return FileSpec();
+#else
+  // On non-apple platforms, *we* are the debug server.
+  return HostInfo::GetProgramFileSpec();
+#endif
 }
 
 // main
@@ -455,15 +473,15 @@ int main_platform(int argc, char *argv[]) {
   lldb_private::Args inferior_arguments;
   inferior_arguments.SetArguments(argc, const_cast<const char **>(argv));
 
-  Socket::SocketProtocol protocol = Socket::ProtocolUnixDomain;
+  FileSpec debugserver_path = GetDebugserverPath();
+  if (!debugserver_path) {
+    WithColor::error(errs()) << "Could not find debug server executable.";
+    return EXIT_FAILURE;
+  }
 
+  Log *log = GetLog(LLDBLog::Platform);
   if (fd != SharedSocket::kInvalidFD) {
     // Child process will handle the connection and exit.
-    if (gdbserver_port)
-      protocol = Socket::ProtocolTcp;
-
-    Log *log = GetLog(LLDBLog::Platform);
-
     NativeSocket sockfd;
     error = SharedSocket::GetNativeSocket(fd, sockfd);
     if (error.Fail()) {
@@ -471,21 +489,30 @@ int main_platform(int argc, char *argv[]) {
       return socket_error;
     }
 
-    GDBRemoteCommunicationServerPlatform platform(protocol, gdbserver_port);
-    Socket *socket;
-    if (protocol == Socket::ProtocolTcp)
-      socket = new TCPSocket(sockfd, /*should_close=*/true);
-    else {
+    std::unique_ptr<Socket> socket;
+    if (gdbserver_port) {
+      socket = std::make_unique<TCPSocket>(sockfd, /*should_close=*/true);
+    } else {
 #if LLDB_ENABLE_POSIX
-      socket = new DomainSocket(sockfd, /*should_close=*/true);
+      llvm::Expected<std::unique_ptr<DomainSocket>> domain_socket =
+          DomainSocket::FromBoundNativeSocket(sockfd, /*should_close=*/true);
+      if (!domain_socket) {
+        LLDB_LOG_ERROR(log, domain_socket.takeError(),
+                       "Failed to create socket: {0}");
+        return socket_error;
+      }
+      socket = std::move(domain_socket.get());
 #else
       WithColor::error() << "lldb-platform child: Unix domain sockets are not "
                             "supported on this platform.";
       return socket_error;
 #endif
     }
+
+    GDBRemoteCommunicationServerPlatform platform(
+        debugserver_path, socket->GetSocketProtocol(), gdbserver_port);
     platform.SetConnection(
-        std::unique_ptr<Connection>(new ConnectionFileDescriptor(socket)));
+        std::make_unique<ConnectionFileDescriptor>(std::move(socket)));
     client_handle(platform, inferior_arguments);
     return 0;
   }
@@ -498,6 +525,7 @@ int main_platform(int argc, char *argv[]) {
     return 1;
   }
 
+  Socket::SocketProtocol protocol = Socket::ProtocolUnixDomain;
   std::string address;
   std::string gdb_address;
   uint16_t platform_port = 0;
@@ -574,8 +602,9 @@ int main_platform(int argc, char *argv[]) {
     }
 
     llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> gdb_handles =
-        AcceptGdbConnectionsIfNeeded(protocol, gdb_sock, main_loop,
-                                     gdbserver_port, inferior_arguments);
+        AcceptGdbConnectionsIfNeeded(debugserver_path, protocol, gdb_sock,
+                                     main_loop, gdbserver_port,
+                                     inferior_arguments);
     if (!gdb_handles) {
       printf("Failed to accept gdb: %s\n",
              llvm::toString(gdb_handles.takeError()).c_str());

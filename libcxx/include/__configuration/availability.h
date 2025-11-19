@@ -69,7 +69,13 @@
 
 // Availability markup is disabled when building the library, or when a non-Clang
 // compiler is used because only Clang supports the necessary attributes.
-#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) || !defined(_LIBCPP_COMPILER_CLANG_BASED)
+//
+// We also allow users to force-disable availability markup via the `_LIBCPP_DISABLE_AVAILABILITY`
+// macro because that is the only way to work around a Clang bug related to availability
+// attributes: https://llvm.org/PR134151.
+// Once that bug has been fixed, we should remove the macro.
+#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) ||                                       \
+    !defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_DISABLE_AVAILABILITY)
 #  undef _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 #  define _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS 0
 #endif
@@ -102,17 +108,6 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_12 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_12_ATTRIBUTE /* nothing */
 
-#  define _LIBCPP_INTRODUCED_IN_LLVM_11 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE /* nothing */
-
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE      /* nothing */
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH /* nothing */
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP  /* nothing */
-
-#  define _LIBCPP_INTRODUCED_IN_LLVM_4 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE /* nothing */
-
 #elif defined(__APPLE__)
 
 // clang-format off
@@ -123,14 +118,40 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 20
-// TODO: Fill this in
-#  define _LIBCPP_INTRODUCED_IN_LLVM_20 0
-#  define _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE __attribute__((unavailable))
+//
+// Note that versions for most Apple OSes were bumped forward and aligned in that release.
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 260000) ||       \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 260000) ||     \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 260000) ||             \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 260000) ||       \
+      (defined(__ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__ < 100000)
+#    define _LIBCPP_INTRODUCED_IN_LLVM_20 0
+#  else
+#    define _LIBCPP_INTRODUCED_IN_LLVM_20 1
+#  endif
+#  define _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE                                                                 \
+    __attribute__((availability(macos, strict, introduced = 26.0)))                                               \
+    __attribute__((availability(ios, strict, introduced = 26.0)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 26.0)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 26.0)))                                             \
+    __attribute__((availability(bridgeos, strict, introduced = 10.0)))
 
 // LLVM 19
-// TODO: Fill this in
-#  define _LIBCPP_INTRODUCED_IN_LLVM_19 0
-#  define _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE __attribute__((unavailable))
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 150400) ||       \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 180400) ||     \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 180400) ||             \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 110400) ||       \
+      (defined(__ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__ < 90400)
+#    define _LIBCPP_INTRODUCED_IN_LLVM_19 0
+#  else
+#    define _LIBCPP_INTRODUCED_IN_LLVM_19 1
+#  endif
+#  define _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE                                                                 \
+    __attribute__((availability(macos, strict, introduced = 15.4)))                                               \
+    __attribute__((availability(ios, strict, introduced = 18.4)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 18.4)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 11.4)))                                             \
+    __attribute__((availability(bridgeos, strict, introduced = 9.4)))
 
 // LLVM 18
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 150000) ||       \
@@ -212,56 +233,6 @@
     __attribute__((availability(bridgeos, strict, introduced = 6.0)))                                             \
     __attribute__((availability(driverkit, strict, introduced = 21.3)))
 
-// LLVM 11
-#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 110000) ||   \
-      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 140000) || \
-      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 140000) ||         \
-      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 70000)
-#    define _LIBCPP_INTRODUCED_IN_LLVM_11 0
-#  else
-#    define _LIBCPP_INTRODUCED_IN_LLVM_11 1
-#  endif
-#  define _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE                                                                 \
-    __attribute__((availability(macos, strict, introduced = 11.0)))                                               \
-    __attribute__((availability(ios, strict, introduced = 14.0)))                                                 \
-    __attribute__((availability(tvos, strict, introduced = 14.0)))                                                \
-    __attribute__((availability(watchos, strict, introduced = 7.0)))
-
-// LLVM 9
-#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500) ||   \
-      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000) || \
-      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 130000) ||         \
-      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 60000)
-#    define _LIBCPP_INTRODUCED_IN_LLVM_9 0
-#  else
-#    define _LIBCPP_INTRODUCED_IN_LLVM_9 1
-#  endif
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE                                                                  \
-    __attribute__((availability(macos, strict, introduced = 10.15)))                                              \
-    __attribute__((availability(ios, strict, introduced = 13.0)))                                                 \
-    __attribute__((availability(tvos, strict, introduced = 13.0)))                                                \
-    __attribute__((availability(watchos, strict, introduced = 6.0)))
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH                                                                            \
-    _Pragma("clang attribute push(__attribute__((availability(macos,strict,introduced=10.15))), apply_to=any(function,record))") \
-    _Pragma("clang attribute push(__attribute__((availability(ios,strict,introduced=13.0))), apply_to=any(function,record))")    \
-    _Pragma("clang attribute push(__attribute__((availability(tvos,strict,introduced=13.0))), apply_to=any(function,record))")   \
-    _Pragma("clang attribute push(__attribute__((availability(watchos,strict,introduced=6.0))), apply_to=any(function,record))")
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP                                                                    \
-    _Pragma("clang attribute pop") \
-    _Pragma("clang attribute pop") \
-    _Pragma("clang attribute pop") \
-    _Pragma("clang attribute pop")
-
-// LLVM 4
-#  if defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 50000
-#    define _LIBCPP_INTRODUCED_IN_LLVM_4 0
-#  else
-#    define _LIBCPP_INTRODUCED_IN_LLVM_4 1
-#  endif
-#  define _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE __attribute__((availability(watchos, strict, introduced = 5.0)))
-
-// clang-format on
-
 #else
 
 // ...New vendors can add availability markup here...
@@ -270,37 +241,6 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
-
-// These macros control the availability of std::bad_optional_access and
-// other exception types. These were put in the shared library to prevent
-// code bloat from every user program defining the vtable for these exception
-// types.
-//
-// Note that when exceptions are disabled, the methods that normally throw
-// these exceptions can be used even on older deployment targets, but those
-// methods will abort instead of throwing.
-#define _LIBCPP_AVAILABILITY_HAS_BAD_OPTIONAL_ACCESS _LIBCPP_INTRODUCED_IN_LLVM_4
-#define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE
-
-#define _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS _LIBCPP_INTRODUCED_IN_LLVM_4
-#define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE
-
-#define _LIBCPP_AVAILABILITY_HAS_BAD_ANY_CAST _LIBCPP_INTRODUCED_IN_LLVM_4
-#define _LIBCPP_AVAILABILITY_BAD_ANY_CAST _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE
-
-// These macros control the availability of all parts of <filesystem> that
-// depend on something in the dylib.
-#define _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY _LIBCPP_INTRODUCED_IN_LLVM_9
-#define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE
-#define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH
-#define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP
-
-// This controls the availability of the C++20 synchronization library,
-// which requires shared library support for various operations
-// (see libcxx/src/atomic.cpp). This includes <barier>, <latch>,
-// <semaphore>, and notification functions on std::atomic.
-#define _LIBCPP_AVAILABILITY_HAS_SYNC _LIBCPP_INTRODUCED_IN_LLVM_11
-#define _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE
 
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
@@ -329,7 +269,7 @@
 // This controls the availability of the C++17 std::pmr library,
 // which is implemented in large part in the built library.
 //
-// TODO: Enable std::pmr markup once https://github.com/llvm/llvm-project/issues/40340 has been fixed
+// TODO: Enable std::pmr markup once https://llvm.org/PR40340 has been fixed
 //       Until then, it is possible for folks to try to use `std::pmr` when back-deploying to targets that don't support
 //       it and it'll be a load-time error, but we don't have a good alternative because the library won't compile if we
 //       use availability annotations until that bug has been fixed.
@@ -372,18 +312,10 @@
 #define _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had hash in the headers before
 
-// Define availability attributes that depend on _LIBCPP_HAS_EXCEPTIONS.
-// Those are defined in terms of the availability attributes above, and
-// should not be vendor-specific.
-#if !_LIBCPP_HAS_EXCEPTIONS
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
-#else
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST _LIBCPP_AVAILABILITY_BAD_ANY_CAST
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
-#endif
+// This controls whether we provide a message for `bad_function_call::what()` that specific to `std::bad_function_call`.
+// See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
+#define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
+// No attribute, since we've had bad_function_call::what() in the headers before
 
 // Define availability attributes that depend on both
 // _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.

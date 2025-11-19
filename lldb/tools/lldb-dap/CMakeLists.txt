@@ -1,22 +1,12 @@
-if(APPLE)
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lldb-dap-Info.plist.in
-    ${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist
-    )
-  # Inline info plist in binary (use target_link_options for this as soon as CMake 3.13 is available)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist")
-endif()
-
 # We need to include the llvm components we depend on manually, as liblldb does
 # not re-export those.
 set(LLVM_LINK_COMPONENTS Support)
-set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
-add_public_tablegen_target(LLDBDAPOptionsTableGen)
-add_lldb_tool(lldb-dap
-  lldb-dap.cpp
+
+add_lldb_library(lldbDAP
   Breakpoint.cpp
   BreakpointBase.cpp
+  ClientLauncher.cpp
+  CommandPlugins.cpp
   DAP.cpp
   DAPError.cpp
   DAPLog.cpp
@@ -29,9 +19,11 @@ add_lldb_tool(lldb-dap
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
+  ProtocolUtils.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
+  Variables.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp
@@ -51,6 +43,7 @@ add_lldb_tool(lldb-dap
   Handler/LaunchRequestHandler.cpp
   Handler/LocationsRequestHandler.cpp
   Handler/ModulesRequestHandler.cpp
+  Handler/ModuleSymbolsRequestHandler.cpp
   Handler/NextRequestHandler.cpp
   Handler/PauseRequestHandler.cpp
   Handler/ReadMemoryRequestHandler.cpp
@@ -71,37 +64,29 @@ add_lldb_tool(lldb-dap
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
+  Handler/WriteMemoryRequestHandler.cpp
 
+  Protocol/DAPTypes.cpp
   Protocol/ProtocolBase.cpp
+  Protocol/ProtocolEvents.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
-
-  LINK_LIBS
-    liblldb
-    lldbHost
 
   LINK_COMPONENTS
     Option
     Support
+  LINK_LIBS
+    liblldb
+    lldbHost
   )
 
-target_include_directories(lldb-dap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(lldbDAP
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 if(LLDB_DAP_WELCOME_MESSAGE)
-  target_compile_definitions(lldb-dap
+  target_compile_definitions(lldbDAP
     PRIVATE
     -DLLDB_DAP_WELCOME_MESSAGE=\"${LLDB_DAP_WELCOME_MESSAGE}\")
 endif()
 
-if(LLDB_BUILD_FRAMEWORK)
-  # In the build-tree, we know the exact path to the framework directory.
-  # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb-dap
-    BUILD_RPATH
-      "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
-    INSTALL_RPATH
-      "@loader_path/../../../SharedFrameworks"
-      "@loader_path/../../System/Library/PrivateFrameworks"
-      "@loader_path/../../Library/PrivateFrameworks"
-  )
-endif()
+add_subdirectory(tool)

@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify=ref,both %s
 
+typedef __INT64_TYPE__ int64_t;
 namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
@@ -15,14 +16,18 @@ namespace std {
   constexpr void construct_at(void *p, Args &&...args) {
     new (p) T((Args&&)args...); // both-note {{in call to}} \
                                 // both-note {{placement new would change type of storage from 'int' to 'float'}} \
-                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}}
-
+                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}} \
+                                // both-note {{construction of temporary is not allowed}} \
+                                // both-note {{construction of heap allocated object that has been deleted}} \
+                                // both-note {{construction of subobject of object outside its lifetime is not allowed in a constant expression}}
   }
 }
 
 void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
 
+constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // both-error {{constant expression}} \
+                                                                            // both-note {{assignment to object outside its lifetime}}
 
 consteval auto ok1() {
   bool b;
@@ -391,3 +396,130 @@ namespace MemMove {
 
   static_assert(foo() == 123);
 }
+
+namespace Temp {
+  constexpr int &&temporary = 0; // both-note {{created here}}
+  static_assert((std::construct_at<int>(&temporary, 1), true)); // both-error{{not an integral constant expression}} \
+                                                                // both-note {{in call}}
+}
+
+namespace PlacementNewAfterDelete {
+  constexpr bool construct_after_lifetime() {
+    int *p = new int;
+    delete p;
+    std::construct_at<int>(p); // both-note {{in call}}
+    return true;
+  }
+  static_assert(construct_after_lifetime()); // both-error {{}} \
+                                             // both-note {{in call}}
+}
+
+namespace SubObj {
+  constexpr bool construct_after_lifetime_2() {
+    struct A { struct B {} b; };
+    A a;
+    a.~A();
+    std::construct_at<A::B>(&a.b); // both-note {{in call}}
+    return true;
+  }
+  static_assert(construct_after_lifetime_2()); // both-error {{}} both-note {{in call}}
+}
+
+namespace RecursiveLifetimeStart {
+  struct B {
+    int b;
+  };
+
+  struct A {
+    B b;
+    int a;
+  };
+
+  constexpr int foo() {
+    A a;
+    a.~A();
+
+    new (&a) A();
+    a.a = 10;
+    a.b.b = 12;
+    return a.a;
+  }
+  static_assert(foo() == 10);
+}
+
+namespace ArrayRoot {
+  struct S {
+    int a;
+  };
+  constexpr int foo() {
+    S* ss = std::allocator<S>().allocate(2);
+    new (ss) S{};
+    new (ss + 1) S{};
+
+    S* ps = &ss[2];
+    ps = ss;
+    ps->~S();
+
+    std::allocator<S>().deallocate(ss);
+    return 0;
+  }
+
+  static_assert(foo() == 0);
+}
+
+namespace bitcast {
+  template <typename F, typename T>
+  constexpr T bit_cast(const F &f) {
+    return __builtin_bit_cast(T, f);
+  }
+  constexpr int foo() {
+    double *d = std::allocator<double>{}.allocate(2);
+    std::construct_at<double>(d, 0);
+
+    double &dd = *d;
+
+    int64_t i = bit_cast<double, int64_t>(*d);
+
+
+    std::allocator<double>{}.deallocate(d);
+    return i;
+  }
+  static_assert(foo() == 0);
+}
+
+constexpr int modify_const_variable() {
+  const int a = 10;
+  new ((int *)&a) int(12); // both-note {{modification of object of const-qualified type 'const int' is not allowed in a constant expression}}
+  return a;
+}
+static_assert(modify_const_variable()); // both-error {{not an integral constant expression}} \
+                                        // both-note {{in call to}}
+
+constexpr int nullDest() {
+  new (nullptr) int{12}; // both-note {{construction of dereferenced null pointer}}
+  return 0;
+}
+static_assert(nullDest() == 0); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to}}
+
+constexpr int nullArrayDest() {
+  new (nullptr) int{12}; // both-note {{construction of dereferenced null pointer}}
+  return 0;
+}
+static_assert(nullArrayDest() == 0); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
+
+constexpr int intDest() {
+  new ((void*)2) int{3}; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  return 0;
+}
+static_assert(intDest() == 0); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to}}
+
+constexpr int intDestArray() {
+  new ((void*)2) int[4]; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  return 0;
+}
+static_assert(intDestArray() == 0); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+

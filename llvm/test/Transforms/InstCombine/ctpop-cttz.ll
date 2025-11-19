@@ -127,3 +127,24 @@ define <2 x i32> @ctpop3v_poison(<2 x i32> %0) {
   %5 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %4)
   ret <2 x i32> %5
 }
+
+define i32 @ctpop_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @ctpop_xor(
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[XOR]])
+; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i32 0
+;
+  %cmp = icmp ne i32 %x, %y
+  br i1 %cmp, label %true, label %false
+true:
+  %xor = xor i32 %x, %y
+  %ret = call i32 @llvm.ctpop.i32(i32 %xor)
+  ret i32 %ret
+false:
+  ret i32 0
+}

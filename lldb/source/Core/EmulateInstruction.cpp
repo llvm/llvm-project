@@ -588,7 +588,99 @@ EmulateInstruction::GetInternalRegisterNumber(RegisterContext *reg_ctx,
   return LLDB_INVALID_REGNUM;
 }
 
+std::unique_ptr<SingleStepBreakpointLocationsPredictor>
+EmulateInstruction::CreateBreakpointLocationPredictor(
+    std::unique_ptr<EmulateInstruction> emulator_up) {
+  auto creator =
+      emulator_up->GetSingleStepBreakpointLocationsPredictorCreator();
+  return creator(std::move(emulator_up));
+}
+
+std::optional<lldb::addr_t> EmulateInstruction::ReadPC() {
+  bool success = false;
+  auto addr = ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
+                                   LLDB_INVALID_ADDRESS, &success);
+  return success ? std::optional<addr_t>(addr) : std::nullopt;
+}
+
+bool EmulateInstruction::WritePC(lldb::addr_t addr) {
+  EmulateInstruction::Context ctx;
+  ctx.type = eContextAdvancePC;
+  ctx.SetNoArgs();
+  return WriteRegisterUnsigned(ctx, eRegisterKindGeneric,
+                               LLDB_REGNUM_GENERIC_PC, addr);
+}
+
 bool EmulateInstruction::CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
   return false;
+}
+
+BreakpointLocations
+SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(Status &status) {
+  if (!m_emulator_up->ReadInstruction()) {
+    // try to get at least the size of next instruction to set breakpoint.
+    lldb::addr_t next_pc = GetNextInstructionAddress(status);
+    return BreakpointLocations{next_pc};
+  }
+
+  auto entry_pc = m_emulator_up->ReadPC();
+  if (!entry_pc) {
+    status = Status("Can't read PC");
+    return {};
+  }
+
+  m_emulation_result = m_emulator_up->EvaluateInstruction(
+      eEmulateInstructionOptionAutoAdvancePC);
+
+  lldb::addr_t next_pc = GetBreakpointLocationAddress(*entry_pc, status);
+  return BreakpointLocations{next_pc};
+}
+
+lldb::addr_t SingleStepBreakpointLocationsPredictor::GetNextInstructionAddress(
+    Status &error) {
+  auto instr_size = m_emulator_up->GetLastInstrSize();
+  if (!instr_size) {
+    error = Status("Read instruction failed!");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  auto pc = m_emulator_up->ReadPC();
+  if (!pc) {
+    error = Status("Can't read PC");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  lldb::addr_t next_pc = *pc + *instr_size;
+  return next_pc;
+}
+
+lldb::addr_t
+SingleStepBreakpointLocationsPredictor::GetBreakpointLocationAddress(
+    lldb::addr_t entry_pc, Status &error) {
+  auto addr = m_emulator_up->ReadPC();
+  if (!addr) {
+    error = Status("Can't read PC");
+    return LLDB_INVALID_ADDRESS;
+  }
+  lldb::addr_t pc = *addr;
+
+  if (m_emulation_result) {
+    assert(entry_pc != pc && "Emulation was successfull but PC wasn't updated");
+    return pc;
+  }
+
+  if (entry_pc == pc) {
+    // Emulate instruction failed and it hasn't changed PC. Advance PC with
+    // the size of the current opcode because the emulation of all
+    // PC modifying instruction should be successful. The failure most
+    // likely caused by an unsupported instruction which does not modify PC.
+    return pc + m_emulator_up->GetOpcode().GetByteSize();
+  }
+
+  // The instruction emulation failed after it modified the PC. It is an
+  // unknown error where we can't continue because the next instruction is
+  // modifying the PC but we don't  know how.
+  error = Status("Instruction emulation failed unexpectedly.");
+  return LLDB_INVALID_ADDRESS;
 }

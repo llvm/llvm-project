@@ -249,7 +249,7 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
       runImpl(F, &AM, &TLI, &TTI, &LVI, &AA,
               std::make_unique<DomTreeUpdater>(
                   &DT, nullptr, DomTreeUpdater::UpdateStrategy::Lazy),
-              std::nullopt, std::nullopt);
+              nullptr, nullptr);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -283,8 +283,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
                                 TargetTransformInfo *TTI_, LazyValueInfo *LVI_,
                                 AliasAnalysis *AA_,
                                 std::unique_ptr<DomTreeUpdater> DTU_,
-                                std::optional<BlockFrequencyInfo *> BFI_,
-                                std::optional<BranchProbabilityInfo *> BPI_) {
+                                BlockFrequencyInfo *BFI_,
+                                BranchProbabilityInfo *BPI_) {
   LLVM_DEBUG(dbgs() << "Jump threading on function '" << F_.getName() << "'\n");
   F = &F_;
   FAM = FAM_;
@@ -1437,9 +1437,18 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // AvailablePreds vector as we go so that all of the PHI entries for this
     // predecessor use the same bitcast.
     Value *&PredV = I->second;
-    if (PredV->getType() != LoadI->getType())
+    if (PredV->getType() != LoadI->getType()) {
       PredV = CastInst::CreateBitOrPointerCast(
           PredV, LoadI->getType(), "", P->getTerminator()->getIterator());
+      // The new cast is producing the value used to replace the load
+      // instruction, so uses the load's debug location. If P does not always
+      // branch to the load BB however then the debug location must be dropped,
+      // as it is hoisted past a conditional branch.
+      DebugLoc DL = P->getTerminator()->getNumSuccessors() == 1
+                        ? LoadI->getDebugLoc()
+                        : DebugLoc::getDropped();
+      cast<CastInst>(PredV)->setDebugLoc(DL);
+    }
 
     PN->addIncoming(PredV, I->first);
   }
@@ -1960,7 +1969,6 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   // PHI insertion, of which we are prepared to do, clean these up now.
   SSAUpdater SSAUpdate;
   SmallVector<Use *, 16> UsesToRename;
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
 
   for (Instruction &I : *BB) {
@@ -1978,16 +1986,13 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     }
 
     // Find debug values outside of the block
-    findDbgValues(DbgValues, &I, &DbgVariableRecords);
-    llvm::erase_if(DbgValues, [&](const DbgValueInst *DbgVal) {
-      return DbgVal->getParent() == BB;
-    });
+    findDbgValues(&I, DbgVariableRecords);
     llvm::erase_if(DbgVariableRecords, [&](const DbgVariableRecord *DbgVarRec) {
       return DbgVarRec->getParent() == BB;
     });
 
     // If there are no uses outside the block, we're done with this instruction.
-    if (UsesToRename.empty() && DbgValues.empty() && DbgVariableRecords.empty())
+    if (UsesToRename.empty() && DbgVariableRecords.empty())
       continue;
     LLVM_DEBUG(dbgs() << "JT: Renaming non-local uses of: " << I << "\n");
 
@@ -2000,15 +2005,21 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
 
     while (!UsesToRename.empty())
       SSAUpdate.RewriteUse(*UsesToRename.pop_back_val());
-    if (!DbgValues.empty() || !DbgVariableRecords.empty()) {
-      SSAUpdate.UpdateDebugValues(&I, DbgValues);
+    if (!DbgVariableRecords.empty()) {
       SSAUpdate.UpdateDebugValues(&I, DbgVariableRecords);
-      DbgValues.clear();
       DbgVariableRecords.clear();
     }
 
     LLVM_DEBUG(dbgs() << "\n");
   }
+}
+
+static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
+                             BasicBlock::iterator End) {
+  if (VM.AtomMap.empty())
+    return;
+  for (auto It = Begin; It != End; ++It)
+    RemapSourceAtom(&*It, VM);
 }
 
 /// Clone instructions in range [BI, BE) to NewBB.  For PHI nodes, we only clone
@@ -2024,32 +2035,7 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
   // copy of the block 'NewBB'.  If there are PHI nodes in the source basic
   // block, evaluate them to account for entry from PredBB.
 
-  // Retargets llvm.dbg.value to any renamed variables.
-  auto RetargetDbgValueIfPossible = [&](Instruction *NewInst) -> bool {
-    auto DbgInstruction = dyn_cast<DbgValueInst>(NewInst);
-    if (!DbgInstruction)
-      return false;
-
-    SmallSet<std::pair<Value *, Value *>, 16> OperandsToRemap;
-    for (auto DbgOperand : DbgInstruction->location_ops()) {
-      auto DbgOperandInstruction = dyn_cast<Instruction>(DbgOperand);
-      if (!DbgOperandInstruction)
-        continue;
-
-      auto I = ValueMapping.find(DbgOperandInstruction);
-      if (I != ValueMapping.end()) {
-        OperandsToRemap.insert(
-            std::pair<Value *, Value *>(DbgOperand, I->second));
-      }
-    }
-
-    for (auto &[OldOp, MappedOp] : OperandsToRemap)
-      DbgInstruction->replaceVariableLocationOp(OldOp, MappedOp);
-    return true;
-  };
-
-  // Duplicate implementation of the above dbg.value code, using
-  // DbgVariableRecords instead.
+  // Retargets dbg.value to any renamed variables.
   auto RetargetDbgVariableRecordIfPossible = [&](DbgVariableRecord *DVR) {
     SmallSet<std::pair<Value *, Value *>, 16> OperandsToRemap;
     for (auto *Op : DVR->location_ops()) {
@@ -2075,6 +2061,8 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     PHINode *NewPN = PHINode::Create(PN->getType(), 1, PN->getName(), NewBB);
     NewPN->addIncoming(PN->getIncomingValueForBlock(PredBB), PredBB);
     ValueMapping[PN] = NewPN;
+    if (const DebugLoc &DL = PN->getDebugLoc())
+      mapAtomInstance(DL, ValueMapping);
   }
 
   // Clone noalias scope declarations in the threaded block. When threading a
@@ -2103,9 +2091,8 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     adaptNoAliasScopes(New, ClonedScopes, Context);
 
     CloneAndRemapDbgInfo(New, &*BI);
-
-    if (RetargetDbgValueIfPossible(New))
-      continue;
+    if (const DebugLoc &DL = New->getDebugLoc())
+      mapAtomInstance(DL, ValueMapping);
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
@@ -2330,6 +2317,9 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
        {DominatorTree::Insert, PredPredBB, NewBB},
        {DominatorTree::Delete, PredPredBB, PredBB}});
 
+  // Remap source location atoms beacuse we're duplicating control flow.
+  remapSourceAtoms(ValueMapping, NewBB->begin(), NewBB->end());
+
   updateSSA(PredBB, NewBB, ValueMapping);
 
   // Clean up things like PHI nodes with single operands, dead instructions,
@@ -2454,6 +2444,7 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
                                {DominatorTree::Insert, PredBB, NewBB},
                                {DominatorTree::Delete, PredBB, BB}});
 
+  remapSourceAtoms(ValueMapping, NewBB->begin(), NewBB->end());
   updateSSA(BB, NewBB, ValueMapping);
 
   // At this point, the IR is fully up to date and consistent.  Do a quick scan
@@ -2684,6 +2675,9 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   // PredBB block.  Evaluate PHI nodes in BB.
   ValueToValueMapTy ValueMapping;
 
+  // Remember the position before the inserted instructions.
+  auto RItBeforeInsertPt = std::next(OldPredBranch->getReverseIterator());
+
   BasicBlock::iterator BI = BB->begin();
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
     ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
@@ -2703,6 +2697,8 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 
     // Remap debug variable operands.
     remapDebugVariable(ValueMapping, New);
+    if (const DebugLoc &DL = New->getDebugLoc())
+      mapAtomInstance(DL, ValueMapping);
 
     // If this instruction can be simplified after the operands are updated,
     // just use the simplified value instead.  This frequently happens due to
@@ -2740,6 +2736,10 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
                                   ValueMapping);
   addPHINodeEntriesForMappedBlock(BBBranch->getSuccessor(1), BB, PredBB,
                                   ValueMapping);
+
+  // KeyInstructions: Remap the cloned instructions' atoms only.
+  remapSourceAtoms(ValueMapping, std::prev(RItBeforeInsertPt)->getIterator(),
+                   OldPredBranch->getIterator());
 
   updateSSA(BB, PredBB, ValueMapping);
 
@@ -2976,8 +2976,10 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
       continue;
     // Expand the select.
     Value *Cond = SI->getCondition();
-    if (!isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI))
+    if (!isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI)) {
       Cond = new FreezeInst(Cond, "cond.fr", SI->getIterator());
+      cast<FreezeInst>(Cond)->setDebugLoc(DebugLoc::getTemporary());
+    }
     MDNode *BranchWeights = getBranchWeightMDNode(*SI);
     Instruction *Term =
         SplitBlockAndInsertIfThen(Cond, SI, false, BranchWeights);
@@ -3188,7 +3190,7 @@ BranchProbabilityInfo *JumpThreadingPass::getBPI() {
     assert(FAM && "Can't create BPI without FunctionAnalysisManager");
     BPI = FAM->getCachedResult<BranchProbabilityAnalysis>(*F);
   }
-  return *BPI;
+  return BPI;
 }
 
 BlockFrequencyInfo *JumpThreadingPass::getBFI() {
@@ -3196,7 +3198,7 @@ BlockFrequencyInfo *JumpThreadingPass::getBFI() {
     assert(FAM && "Can't create BFI without FunctionAnalysisManager");
     BFI = FAM->getCachedResult<BlockFrequencyAnalysis>(*F);
   }
-  return *BFI;
+  return BFI;
 }
 
 // Important note on validity of BPI/BFI. JumpThreading tries to preserve
@@ -3210,7 +3212,7 @@ BranchProbabilityInfo *JumpThreadingPass::getOrCreateBPI(bool Force) {
   if (Force)
     BPI = runExternalAnalysis<BranchProbabilityAnalysis>();
 
-  return *BPI;
+  return BPI;
 }
 
 BlockFrequencyInfo *JumpThreadingPass::getOrCreateBFI(bool Force) {
@@ -3221,5 +3223,5 @@ BlockFrequencyInfo *JumpThreadingPass::getOrCreateBFI(bool Force) {
   if (Force)
     BFI = runExternalAnalysis<BlockFrequencyAnalysis>();
 
-  return *BFI;
+  return BFI;
 }

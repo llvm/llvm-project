@@ -14,19 +14,20 @@
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -35,6 +36,15 @@
 
 using namespace llvm;
 using namespace bolt;
+
+namespace opts {
+extern cl::OptionCategory BoltInstrCategory;
+static cl::opt<bool> NoLSEAtomics(
+    "no-lse-atomics",
+    cl::desc("generate instrumentation code sequence without using LSE atomic "
+             "instruction"),
+    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+} // namespace opts
 
 namespace {
 
@@ -107,7 +117,7 @@ static void storeReg(MCInst &Inst, MCPhysReg From, MCPhysReg To) {
 }
 
 static void atomicAdd(MCInst &Inst, MCPhysReg RegTo, MCPhysReg RegCnt) {
-  // NOTE: Supports only ARM with LSE extension
+  assert(!opts::NoLSEAtomics && "Supports only ARM with LSE extension");
   Inst.setOpcode(AArch64::LDADDX);
   Inst.clear();
   Inst.addOperand(MCOperand::createReg(AArch64::XZR));
@@ -132,9 +142,12 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
   atomicAdd(Insts.back(), RegTo, RegTmp);
   return Insts;
 }
+
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  BinaryFunction *InstrCounterIncrFunc{nullptr};
 
   std::unique_ptr<MCSymbolizer>
   createTargetSymbolizer(BinaryFunction &Function,
@@ -145,13 +158,59 @@ public:
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
 
+  bool isBreakpoint(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::BRK;
+  }
+
   bool isPush(const MCInst &Inst) const override {
     return isStoreToStack(Inst);
-  };
+  }
 
   bool isPop(const MCInst &Inst) const override {
     return isLoadFromStack(Inst);
-  };
+  }
+
+  // We look for instructions that load from stack or make stack pointer
+  // adjustment, and assume the basic block is an epilogue if and only if
+  // such instructions are present and also immediately precede the branch
+  // instruction that ends the basic block.
+  bool isEpilogue(const BinaryBasicBlock &BB) const override {
+    if (BB.succ_size())
+      return false;
+
+    bool SeenLoadFromStack = false;
+    bool SeenStackPointerAdjustment = false;
+    for (const MCInst &Instr : BB) {
+      // Skip CFI pseudo instruction.
+      if (isCFI(Instr))
+        continue;
+
+      bool IsPop = isPop(Instr);
+      // A load from stack instruction could do SP adjustment in pre-index or
+      // post-index form, which we can skip to check for epilogue recognition
+      // purpose.
+      bool IsSPAdj = (isADD(Instr) || isMOVW(Instr)) &&
+                     Instr.getOperand(0).isReg() &&
+                     Instr.getOperand(0).getReg() == AArch64::SP;
+      SeenLoadFromStack |= IsPop;
+      SeenStackPointerAdjustment |= IsSPAdj;
+
+      if (!SeenLoadFromStack && !SeenStackPointerAdjustment)
+        continue;
+      if (IsPop || IsSPAdj || isPAuthOnLR(Instr))
+        continue;
+      if (isReturn(Instr))
+        return true;
+      if (isBranch(Instr))
+        break;
+
+      // Any previously seen load from stack or stack adjustment instruction
+      // is definitely not part of epilogue code sequence, so reset these two.
+      SeenLoadFromStack = false;
+      SeenStackPointerAdjustment = false;
+    }
+    return SeenLoadFromStack || SeenStackPointerAdjustment;
+  }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
@@ -177,15 +236,12 @@ public:
     return true;
   }
 
-  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+  bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
-    const auto &AArch64ExprA = cast<AArch64MCExpr>(A);
-    const auto &AArch64ExprB = cast<AArch64MCExpr>(B);
-    if (AArch64ExprA.getKind() != AArch64ExprB.getKind())
+    if (A.getSpecifier() != B.getSpecifier())
       return false;
 
-    return MCPlusBuilder::equals(*AArch64ExprA.getSubExpr(),
-                                 *AArch64ExprB.getSubExpr(), Comp);
+    return MCPlusBuilder::equals(*A.getSubExpr(), *B.getSubExpr(), Comp);
   }
 
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
@@ -196,7 +252,10 @@ public:
     return {AArch64::LR};
   }
 
-  ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
+  std::optional<MCPhysReg>
+  getWrittenAuthenticatedReg(const MCInst &Inst,
+                             bool &IsChecked) const override {
+    IsChecked = false;
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:
     case AArch64::AUTIBZ:
@@ -206,33 +265,12 @@ public:
     case AArch64::AUTIBSPPCi:
     case AArch64::AUTIASPPCr:
     case AArch64::AUTIBSPPCr:
-    case AArch64::RETAA:
-    case AArch64::RETAB:
-    case AArch64::RETAASPPCi:
-    case AArch64::RETABSPPCi:
-    case AArch64::RETAASPPCr:
-    case AArch64::RETABSPPCr:
       return AArch64::LR;
-
     case AArch64::AUTIA1716:
     case AArch64::AUTIB1716:
     case AArch64::AUTIA171615:
     case AArch64::AUTIB171615:
       return AArch64::X17;
-
-    case AArch64::ERETAA:
-    case AArch64::ERETAB:
-      // The ERETA{A,B} instructions use either register ELR_EL1, ELR_EL2 or
-      // ELR_EL3, depending on the current Exception Level at run-time.
-      //
-      // Furthermore, these registers are not modelled by LLVM as a regular
-      // MCPhysReg.... So there is no way to indicate that through the current
-      // API.
-      //
-      // Therefore, return an error to indicate that LLVM/BOLT cannot model
-      // this.
-      return make_error_code(std::errc::result_out_of_range);
-
     case AArch64::AUTIA:
     case AArch64::AUTIB:
     case AArch64::AUTDA:
@@ -242,37 +280,95 @@ public:
     case AArch64::AUTDZA:
     case AArch64::AUTDZB:
       return Inst.getOperand(0).getReg();
-
-      // FIXME: BL?RA(A|B)Z? and LDRA(A|B) should probably be handled here too.
-
+    case AArch64::LDRAAwriteback:
+    case AArch64::LDRABwriteback:
+      // Note that LDRA(A|B)indexed are not listed here, as they do not write
+      // an authenticated pointer back to the register.
+      IsChecked = true;
+      return Inst.getOperand(2).getReg();
     default:
-      return getNoRegister();
+      return std::nullopt;
     }
   }
 
-  bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
-    if (Reg == getNoRegister())
-      return false;
-    ErrorOr<MCPhysReg> AuthenticatedReg = getAuthenticatedReg(Inst);
-    return AuthenticatedReg.getError() ? false : *AuthenticatedReg == Reg;
+  bool isPSignOnLR(const MCInst &Inst) const override {
+    std::optional<MCPhysReg> SignReg = getSignedReg(Inst);
+    return SignReg && *SignReg == AArch64::LR;
   }
 
-  ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const override {
+  bool isPAuthOnLR(const MCInst &Inst) const override {
+    // LDR(A|B) should not be covered.
+    bool IsChecked;
+    std::optional<MCPhysReg> AuthReg =
+        getWrittenAuthenticatedReg(Inst, IsChecked);
+    return !IsChecked && AuthReg && *AuthReg == AArch64::LR;
+  }
+
+  bool isPAuthAndRet(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::RETAA ||
+           Inst.getOpcode() == AArch64::RETAB ||
+           Inst.getOpcode() == AArch64::RETAASPPCi ||
+           Inst.getOpcode() == AArch64::RETABSPPCi ||
+           Inst.getOpcode() == AArch64::RETAASPPCr ||
+           Inst.getOpcode() == AArch64::RETABSPPCr;
+  }
+
+  std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::PACIA:
+    case AArch64::PACIB:
+    case AArch64::PACDA:
+    case AArch64::PACDB:
+    case AArch64::PACIZA:
+    case AArch64::PACIZB:
+    case AArch64::PACDZA:
+    case AArch64::PACDZB:
+      return Inst.getOperand(0).getReg();
+    case AArch64::PACIAZ:
+    case AArch64::PACIBZ:
+    case AArch64::PACIASP:
+    case AArch64::PACIBSP:
+    case AArch64::PACIASPPC:
+    case AArch64::PACIBSPPC:
+    case AArch64::PACNBIASPPC:
+    case AArch64::PACNBIBSPPC:
+      return AArch64::LR;
+    case AArch64::PACIA1716:
+    case AArch64::PACIB1716:
+    case AArch64::PACIA171615:
+    case AArch64::PACIB171615:
+      return AArch64::X17;
+    default:
+      return std::nullopt;
+    }
+  }
+
+  std::optional<MCPhysReg>
+  getRegUsedAsRetDest(const MCInst &Inst,
+                      bool &IsAuthenticatedInternally) const override {
     assert(isReturn(Inst));
     switch (Inst.getOpcode()) {
     case AArch64::RET:
+      IsAuthenticatedInternally = false;
       return Inst.getOperand(0).getReg();
+
     case AArch64::RETAA:
     case AArch64::RETAB:
     case AArch64::RETAASPPCi:
     case AArch64::RETABSPPCi:
     case AArch64::RETAASPPCr:
     case AArch64::RETABSPPCr:
+      IsAuthenticatedInternally = true;
       return AArch64::LR;
     case AArch64::ERET:
     case AArch64::ERETAA:
     case AArch64::ERETAB:
-      return make_error_code(std::errc::result_out_of_range);
+      // The ERET* instructions use either register ELR_EL1, ELR_EL2 or
+      // ELR_EL3, depending on the current Exception Level at run-time.
+      //
+      // Furthermore, these registers are not modelled by LLVM as a regular
+      // MCPhysReg, so there is no way to indicate that through the current API.
+      return std::nullopt;
     default:
       llvm_unreachable("Unhandled return instruction");
     }
@@ -302,7 +398,7 @@ public:
     }
   }
 
-  MCPhysReg
+  std::optional<MCPhysReg>
   getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::ADR:
@@ -313,7 +409,7 @@ public:
       // this instruction), so the produced value is not attacker-controlled.
       return Inst.getOperand(0).getReg();
     default:
-      return getNoRegister();
+      return std::nullopt;
     }
   }
 
@@ -339,6 +435,185 @@ public:
     }
   }
 
+  std::optional<std::pair<MCPhysReg, MCInst *>>
+  getAuthCheckedReg(BinaryBasicBlock &BB) const override {
+    // Match several possible hard-coded sequences of instructions which can be
+    // emitted by LLVM backend to check that the authenticated pointer is
+    // correct (see AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue).
+    //
+    // This function only matches sequences involving branch instructions.
+    // All these sequences have the form:
+    //
+    // (0) ... regular code that authenticates a pointer in Xn ...
+    // (1) analyze Xn
+    // (2) branch to .Lon_success if the pointer is correct
+    // (3) BRK #imm (fall-through basic block)
+    //
+    // In the above pseudocode, (1) + (2) is one of the following sequences:
+    //
+    // - eor Xtmp, Xn, Xn, lsl #1
+    //   tbz Xtmp, #62, .Lon_success
+    //
+    // - mov Xtmp, Xn
+    //   xpac(i|d) Xn (or xpaclri if Xn is LR)
+    //   cmp Xtmp, Xn
+    //   b.eq .Lon_success
+    //
+    // Note that any branch destination operand is accepted as .Lon_success -
+    // it is the responsibility of the caller of getAuthCheckedReg to inspect
+    // the list of successors of this basic block as appropriate.
+
+    // Any of the above code sequences assume the fall-through basic block
+    // is a dead-end trap instruction.
+    const BinaryBasicBlock *BreakBB = BB.getFallthrough();
+    if (!BreakBB || BreakBB->empty() || !isTrap(BreakBB->front()))
+      return std::nullopt;
+
+    // Iterate over the instructions of BB in reverse order, matching opcodes
+    // and operands.
+
+    auto It = BB.end();
+    auto StepBack = [&]() {
+      while (It != BB.begin()) {
+        --It;
+        // Skip any CFI instructions, but no other pseudos are expected here.
+        if (!isCFI(*It))
+          return true;
+      }
+      return false;
+    };
+    // Step to the last non-CFI instruction.
+    if (!StepBack())
+      return std::nullopt;
+
+    using namespace llvm::bolt::LowLevelInstMatcherDSL;
+    Reg TestedReg;
+    Reg ScratchReg;
+
+    if (matchInst(*It, AArch64::Bcc, Imm(AArch64CC::EQ) /*, .Lon_success*/)) {
+      if (!StepBack() || !matchInst(*It, AArch64::SUBSXrs, Reg(AArch64::XZR),
+                                    TestedReg, ScratchReg, Imm(0)))
+        return std::nullopt;
+
+      // Either XPAC(I|D) ScratchReg, ScratchReg
+      // or     XPACLRI
+      if (!StepBack())
+        return std::nullopt;
+      if (matchInst(*It, AArch64::XPACLRI)) {
+        // No operands to check, but using XPACLRI forces TestedReg to be X30.
+        if (TestedReg.get() != AArch64::LR)
+          return std::nullopt;
+      } else if (!matchInst(*It, AArch64::XPACI, ScratchReg, ScratchReg) &&
+                 !matchInst(*It, AArch64::XPACD, ScratchReg, ScratchReg)) {
+        return std::nullopt;
+      }
+
+      if (!StepBack() || !matchInst(*It, AArch64::ORRXrs, ScratchReg,
+                                    Reg(AArch64::XZR), TestedReg, Imm(0)))
+        return std::nullopt;
+
+      return std::make_pair(TestedReg.get(), &*It);
+    }
+
+    if (matchInst(*It, AArch64::TBZX, ScratchReg, Imm(62) /*, .Lon_success*/)) {
+      if (!StepBack() || !matchInst(*It, AArch64::EORXrs, ScratchReg, TestedReg,
+                                    TestedReg, Imm(1)))
+        return std::nullopt;
+
+      return std::make_pair(TestedReg.get(), &*It);
+    }
+
+    return std::nullopt;
+  }
+
+  std::optional<MCPhysReg> getAuthCheckedReg(const MCInst &Inst,
+                                             bool MayOverwrite) const override {
+    // Cannot trivially reuse AArch64InstrInfo::getMemOperandWithOffsetWidth()
+    // method as it accepts an instance of MachineInstr, not MCInst.
+    const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
+
+    // If signing oracles are considered, the particular value left in the base
+    // register after this instruction is important. This function checks that
+    // if the base register was overwritten, it is due to address write-back:
+    //
+    //     ; good:
+    //     autdza  x1           ; x1 is authenticated (may fail)
+    //     ldr     x0, [x1, #8] ; x1 is checked and not changed
+    //     pacdzb  x1
+    //
+    //     ; also good:
+    //     autdza  x1
+    //     ldr     x0, [x1, #8]! ; x1 is checked and incremented by 8
+    //     pacdzb  x1
+    //
+    //     ; bad (the value being signed is not the authenticated one):
+    //     autdza  x1
+    //     ldr     x1, [x1, #8]  ; x1 is overwritten with an unrelated value
+    //     pacdzb  x1
+    //
+    //     ; also bad:
+    //     autdza  x1
+    //     pacdzb  x1  ; possibly signing the result of failed authentication
+    //
+    // Note that this function is not needed for authentication oracles, as the
+    // particular value left in the register after a successful memory access
+    // is not important.
+    auto ClobbersBaseRegExceptWriteback = [&](unsigned BaseRegUseIndex) {
+      // FIXME: Compute the indices of address operands (base reg and written-
+      //        back result) in AArch64InstrInfo instead of this ad-hoc code.
+      MCPhysReg BaseReg = Inst.getOperand(BaseRegUseIndex).getReg();
+      unsigned WrittenBackDefIndex = Desc.getOperandConstraint(
+          BaseRegUseIndex, MCOI::OperandConstraint::TIED_TO);
+
+      for (unsigned DefIndex = 0; DefIndex < Desc.getNumDefs(); ++DefIndex) {
+        // Address write-back is permitted:
+        //
+        //    autda x0, x2
+        //    ; x0 is authenticated
+        //    ldr   x1, [x0, #8]!
+        //    ; x0 is trusted (as authenticated and checked)
+        if (DefIndex == WrittenBackDefIndex)
+          continue;
+
+        // Any other overwriting is not permitted:
+        //
+        //    autda x0, x2
+        //    ; x0 is authenticated
+        //    ldr   w0, [x0]
+        //    ; x0 is not authenticated anymore
+        if (RegInfo->regsOverlap(Inst.getOperand(DefIndex).getReg(), BaseReg))
+          return true;
+      }
+
+      return false;
+    };
+
+    // FIXME: Not all load instructions are handled by this->mayLoad(Inst).
+    //        On the other hand, MCInstrDesc::mayLoad() is permitted to return
+    //        true for non-load instructions (such as AArch64::HINT) which
+    //        would result in false negatives.
+    if (mayLoad(Inst)) {
+      // The first Use operand is the base address register.
+      unsigned BaseRegIndex = Desc.getNumDefs();
+
+      // Reject non-immediate offsets, as adding a 64-bit register can change
+      // the resulting address arbitrarily.
+      for (unsigned I = BaseRegIndex + 1, E = Desc.getNumOperands(); I < E; ++I)
+        if (Inst.getOperand(I).isReg())
+          return std::nullopt;
+
+      if (!MayOverwrite && ClobbersBaseRegExceptWriteback(BaseRegIndex))
+        return std::nullopt;
+
+      return Inst.getOperand(BaseRegIndex).getReg();
+    }
+
+    // Store instructions are not handled yet, as they are not important for
+    // pauthtest ABI. Though, they could be handled similar to loads, if needed.
+
+    return std::nullopt;
+  }
+
   bool isADRP(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADRP;
   }
@@ -349,6 +624,14 @@ public:
 
   bool isAddXri(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADDXri;
+  }
+
+  bool isLDRWl(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::LDRWl;
+  }
+
+  bool isLDRXl(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::LDRXl;
   }
 
   MCPhysReg getADRReg(const MCInst &Inst) const {
@@ -368,6 +651,40 @@ public:
     const MCSymbol *Target = getTargetSymbol(ADRInst);
     const uint64_t Addend = getTargetAddend(ADRInst);
     return materializeAddress(Target, Ctx, Reg, Addend);
+  }
+
+  InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                    MCContext *Ctx) const override {
+    assert((isLDRXl(LDRInst) || isLDRWl(LDRInst)) &&
+           "LDR (literal, 32 or 64-bit integer load) instruction expected");
+    assert(LDRInst.getOperand(0).isReg() &&
+           "unexpected operand in LDR instruction");
+    const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();
+    const MCPhysReg AddrReg =
+        isLDRXl(LDRInst) ? DataReg
+                         : (MCPhysReg)RegInfo->getMatchingSuperReg(
+                               DataReg, AArch64::sub_32,
+                               &RegInfo->getRegClass(AArch64::GPR64RegClassID));
+    const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
+    assert(Target && "missing target symbol in LDR instruction");
+
+    InstructionListType Insts(2);
+    Insts[0].setOpcode(AArch64::ADRP);
+    Insts[0].clear();
+    Insts[0].addOperand(MCOperand::createReg(AddrReg));
+    Insts[0].addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
+                          ELF::R_AARCH64_NONE);
+    Insts[1].setOpcode(isLDRXl(LDRInst) ? AArch64::LDRXui : AArch64::LDRWui);
+    Insts[1].clear();
+    Insts[1].addOperand(MCOperand::createReg(DataReg));
+    Insts[1].addOperand(MCOperand::createReg(AddrReg));
+    Insts[1].addOperand(MCOperand::createImm(0));
+    Insts[1].addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx,
+                          isLDRXl(LDRInst) ? ELF::R_AARCH64_LDST64_ABS_LO12_NC
+                                           : ELF::R_AARCH64_LDST32_ABS_LO12_NC);
+    return Insts;
   }
 
   bool isTB(const MCInst &Inst) const {
@@ -626,6 +943,8 @@ public:
   }
 
   bool mayLoad(const MCInst &Inst) const override {
+    // FIXME: Probably this could be tablegen-erated not to miss any existing
+    //        or future opcodes.
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst) ||
            isLDRQ(Inst) || isLDRD(Inst) || isLDRS(Inst);
   }
@@ -862,7 +1181,7 @@ public:
 
     if (isADR(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_LO21 ||
         RelType == ELF::R_AARCH64_TLSDESC_ADR_PREL21) {
-      return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64::S_ABS, Ctx);
     } else if (isADRP(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21 ||
                RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21_NC ||
                RelType == ELF::R_AARCH64_TLSDESC_ADR_PAGE21 ||
@@ -870,7 +1189,7 @@ public:
                RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
       // Never emit a GOT reloc, we handled this in
       // RewriteInstance::readRelocations().
-      return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE, Ctx);
     } else {
       switch (RelType) {
       case ELF::R_AARCH64_ADD_ABS_LO12_NC:
@@ -884,18 +1203,18 @@ public:
       case ELF::R_AARCH64_TLSDESC_LD64_LO12:
       case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
       case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_LO12, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_LO12, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G3:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G3, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G3, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G2:
       case ELF::R_AARCH64_MOVW_UABS_G2_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G2_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G2_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G1:
       case ELF::R_AARCH64_MOVW_UABS_G1_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G1_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G1_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G0:
       case ELF::R_AARCH64_MOVW_UABS_G0_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G0_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G0_NC, Ctx);
       default:
         break;
       }
@@ -920,7 +1239,7 @@ public:
   }
 
   const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
-    auto *AArchExpr = dyn_cast<AArch64MCExpr>(Expr);
+    auto *AArchExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetSymbol(AArchExpr->getSubExpr());
 
@@ -940,7 +1259,7 @@ public:
   }
 
   int64_t getTargetAddend(const MCExpr *Expr) const override {
-    auto *AArchExpr = dyn_cast<AArch64MCExpr>(Expr);
+    auto *AArchExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetAddend(AArchExpr->getSubExpr());
 
@@ -987,8 +1306,7 @@ public:
       OI = Inst.begin() + 2;
     }
 
-    *OI = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    *OI = MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
   /// Matches indirect branch patterns in AArch64 related to a jump table (JT),
@@ -1067,7 +1385,7 @@ public:
     AArch64_AM::ShiftExtendType ExtendType =
         AArch64_AM::getArithExtendType(OperandExtension);
     if (ShiftVal != 2) {
-      // TODO: Handle the patten where ShiftVal != 2.
+      // TODO: Handle the pattern where ShiftVal != 2.
       // The following code sequence below has no shift amount,
       // the range could be 0 to 4.
       // The pattern comes from libc, it occurs when the binary is static.
@@ -1397,7 +1715,7 @@ public:
   int getUncondBranchEncodingSize() const override { return 28; }
 
   // This helper function creates the snippet of code that compares a register
-  // RegNo with an immedaite Imm, and jumps to Target if they are equal.
+  // RegNo with an immediate Imm, and jumps to Target if they are equal.
   // cmp RegNo, #Imm
   // b.eq Target
   // where cmp is an alias for subs, which results in the code below:
@@ -1414,13 +1732,12 @@ public:
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::EQ)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Code;
   }
 
   // This helper function creates the snippet of code that compares a register
-  // RegNo with an immedaite Imm, and jumps to Target if they are not equal.
+  // RegNo with an immediate Imm, and jumps to Target if they are not equal.
   // cmp RegNo, #Imm
   // b.ne Target
   // where cmp is an alias for subs, which results in the code below:
@@ -1437,8 +1754,7 @@ public:
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::NE)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Code;
   }
 
@@ -1527,6 +1843,34 @@ public:
     Inst.setOpcode(AArch64::HINT);
     Inst.clear();
     Inst.addOperand(MCOperand::createImm(0));
+  }
+
+  bool isTrap(const MCInst &Inst) const override {
+    if (Inst.getOpcode() != AArch64::BRK)
+      return false;
+    // Only match the immediate values that are likely to indicate this BRK
+    // instruction is emitted to terminate the program immediately and not to
+    // be handled by a SIGTRAP handler, for example.
+    switch (Inst.getOperand(0).getImm()) {
+    case 0xc470:
+    case 0xc471:
+    case 0xc472:
+    case 0xc473:
+      // Explicit Pointer Authentication check failed, see
+      // AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue().
+      return true;
+    case 0x1:
+      // __builtin_trap(), as emitted by Clang.
+      return true;
+    case 0x3e8: // decimal 1000
+      // __builtin_trap(), as emitted by GCC.
+      return true;
+    default:
+      // Some constants may indicate intentionally recoverable break-points.
+      // This is the case at least for 0xf000, which is used by
+      // __builtin_debugtrap() supported by Clang.
+      return false;
+    }
   }
 
   bool isStorePair(const MCInst &Inst) const {
@@ -1738,8 +2082,7 @@ public:
     Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
+        Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
     if (IsTailCall)
       convertJmpToTailCall(Inst);
   }
@@ -1808,9 +2151,8 @@ public:
     MCInst Inst;
     Inst.setOpcode(AArch64::MOVZXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G3, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G3, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x30));
     Seq.emplace_back(Inst);
 
@@ -1818,9 +2160,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G2_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G2_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x20));
     Seq.emplace_back(Inst);
 
@@ -1828,9 +2169,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G1_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G1_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x10));
     Seq.emplace_back(Inst);
 
@@ -1838,9 +2178,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G0_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G0_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0));
     Seq.emplace_back(Inst);
 
@@ -1903,7 +2242,7 @@ public:
 
     --I;
     Address -= 4;
-    if (I->getOpcode() != AArch64::ADRP ||
+    if (I != Begin || I->getOpcode() != AArch64::ADRP ||
         MCPlus::getNumPrimeOperands(*I) < 2 || !I->getOperand(0).isReg() ||
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
       return 0;
@@ -2013,9 +2352,8 @@ public:
                           MCContext *Ctx) const override {
     Inst.setOpcode(AArch64::B);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
+    Inst.addOperand(MCOperand::createExpr(
+        getTargetExprFor(Inst, MCSymbolRefExpr::create(TBB, *Ctx), *Ctx, 0)));
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
@@ -2277,30 +2615,129 @@ public:
     return Insts;
   }
 
-  InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const override {
-    unsigned int I = 0;
-    InstructionListType Instrs(IsLeaf ? 12 : 10);
+  // Instrumentation code sequence using LSE atomic instruction has a total of
+  // 6 instructions:
+  //
+  //     stp    x0, x1, [sp, #-0x10]!
+  //     adrp   x0, page_address(counter)
+  //     add    x0, x0, page_offset(counter)
+  //     mov    x1, #0x1
+  //     stadd  x1, [x0]
+  //     ldp    x0, x1, [sp], #0x10
+  //
+  // Instrumentation code sequence without using LSE atomic instruction has
+  // 8 instructions at instrumentation place, with 6 instructions in the helper:
+  //
+  //     stp    x0, x30, [sp, #-0x10]!
+  //     stp    x1, x2, [sp, #-0x10]!
+  //     adrp   x0, page_address(counter)
+  //     add    x0, x0, page_offset(counter)
+  //     adrp   x1, page_address(helper)
+  //     add    x1, x1, page_offset(helper)
+  //     blr    x1
+  //     ldp    x0, x30, [sp], #0x10
+  //
+  //   <helper>:
+  //     ldaxr  x1, [x0]
+  //     add    x1, x1, #0x1
+  //     stlxr  w2, x1, [x0]
+  //     cbnz   w2, <helper>
+  //     ldp    x1, x2, [sp], #0x10
+  //     ret
 
-    if (IsLeaf)
-      createStackPointerIncrement(Instrs[I++], 128);
-    createPushRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
-    getSystemFlag(Instrs[I++], AArch64::X1);
+  void createInstrCounterIncrFunc(BinaryContext &BC) override {
+    assert(InstrCounterIncrFunc == nullptr &&
+           "helper function of counter increment for instrumentation "
+           "has already been created");
+
+    if (!opts::NoLSEAtomics)
+      return;
+
+    MCContext *Ctx = BC.Ctx.get();
+    InstrCounterIncrFunc = BC.createInjectedBinaryFunction(
+        "__bolt_instr_counter_incr", /*IsSimple*/ false);
+    std::vector<std::unique_ptr<BinaryBasicBlock>> BBs;
+
+    BBs.emplace_back(InstrCounterIncrFunc->createBasicBlock());
+    InstructionListType Instrs(4);
+    Instrs[0].setOpcode(AArch64::LDAXRX);
+    Instrs[0].clear();
+    Instrs[0].addOperand(MCOperand::createReg(AArch64::X1));
+    Instrs[0].addOperand(MCOperand::createReg(AArch64::X0));
+    Instrs[1].setOpcode(AArch64::ADDXri);
+    Instrs[1].clear();
+    Instrs[1].addOperand(MCOperand::createReg(AArch64::X1));
+    Instrs[1].addOperand(MCOperand::createReg(AArch64::X1));
+    Instrs[1].addOperand(MCOperand::createImm(1));
+    Instrs[1].addOperand(MCOperand::createImm(0));
+    Instrs[2].setOpcode(AArch64::STLXRX);
+    Instrs[2].clear();
+    Instrs[2].addOperand(MCOperand::createReg(AArch64::W2));
+    Instrs[2].addOperand(MCOperand::createReg(AArch64::X1));
+    Instrs[2].addOperand(MCOperand::createReg(AArch64::X0));
+    Instrs[3].setOpcode(AArch64::CBNZW);
+    Instrs[3].clear();
+    Instrs[3].addOperand(MCOperand::createReg(AArch64::W2));
+    Instrs[3].addOperand(MCOperand::createExpr(
+        MCSymbolRefExpr::create(BBs.back()->getLabel(), *Ctx)));
+    BBs.back()->addInstructions(Instrs.begin(), Instrs.end());
+    BBs.back()->setCFIState(0);
+
+    BBs.emplace_back(InstrCounterIncrFunc->createBasicBlock());
+    InstructionListType InstrsEpilog(2);
+    createPopRegisters(InstrsEpilog[0], AArch64::X1, AArch64::X2);
+    createReturn(InstrsEpilog[1]);
+    BBs.back()->addInstructions(InstrsEpilog.begin(), InstrsEpilog.end());
+    BBs.back()->setCFIState(0);
+
+    BBs[0]->addSuccessor(BBs[0].get());
+    BBs[0]->addSuccessor(BBs[1].get());
+
+    InstrCounterIncrFunc->insertBasicBlocks(nullptr, std::move(BBs),
+                                            /*UpdateLayout*/ true,
+                                            /*UpdateCFIState*/ false);
+    InstrCounterIncrFunc->updateState(BinaryFunction::State::CFG_Finalized);
+
+    LLVM_DEBUG({
+      dbgs() << "BOLT-DEBUG: instrumentation counter increment helper:\n";
+      InstrCounterIncrFunc->dump();
+    });
+  }
+
+  InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                           MCContext *Ctx, bool IsLeaf,
+                                           unsigned CodePointerSize) override {
+    unsigned int I = 0;
+    InstructionListType Instrs(opts::NoLSEAtomics ? 8 : 6);
+
+    if (opts::NoLSEAtomics) {
+      createPushRegisters(Instrs[I++], AArch64::X0, AArch64::LR);
+      createPushRegisters(Instrs[I++], AArch64::X1, AArch64::X2);
+    } else {
+      createPushRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
+    }
+
     InstructionListType Addr = materializeAddress(Target, Ctx, AArch64::X0);
     assert(Addr.size() == 2 && "Invalid Addr size");
     std::copy(Addr.begin(), Addr.end(), Instrs.begin() + I);
     I += Addr.size();
-    storeReg(Instrs[I++], AArch64::X2, AArch64::SP);
-    InstructionListType Insts = createIncMemory(AArch64::X0, AArch64::X2);
-    assert(Insts.size() == 2 && "Invalid Insts size");
-    std::copy(Insts.begin(), Insts.end(), Instrs.begin() + I);
-    I += Insts.size();
-    loadReg(Instrs[I++], AArch64::X2, AArch64::SP);
-    setSystemFlag(Instrs[I++], AArch64::X1);
-    createPopRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
-    if (IsLeaf)
-      createStackPointerDecrement(Instrs[I++], 128);
+
+    if (opts::NoLSEAtomics) {
+      const MCSymbol *Helper = InstrCounterIncrFunc->getSymbol();
+      InstructionListType HelperAddr =
+          materializeAddress(Helper, Ctx, AArch64::X1);
+      assert(HelperAddr.size() == 2 && "Invalid HelperAddr size");
+      std::copy(HelperAddr.begin(), HelperAddr.end(), Instrs.begin() + I);
+      I += HelperAddr.size();
+      createIndirectCallInst(Instrs[I++], /*IsTailCall*/ false, AArch64::X1);
+    } else {
+      InstructionListType Insts = createIncMemory(AArch64::X0, AArch64::X1);
+      assert(Insts.size() == 2 && "Invalid Insts size");
+      std::copy(Insts.begin(), Insts.end(), Instrs.begin() + I);
+      I += Insts.size();
+    }
+    createPopRegisters(Instrs[I++], AArch64::X0,
+                       opts::NoLSEAtomics ? AArch64::LR : AArch64::X1);
     return Instrs;
   }
 
@@ -2347,7 +2784,7 @@ public:
     else if (Fixup.getKind() ==
              MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
       RelType = ELF::R_AARCH64_JUMP26;
-    else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+    else if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
         return std::nullopt;
@@ -2387,6 +2824,122 @@ public:
   std::optional<uint32_t>
   getInstructionSize(const MCInst &Inst) const override {
     return 4;
+  }
+
+  std::optional<uint64_t>
+  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const override {
+    // Match MOVZ instructions (both X and W register variants) with no shift.
+    if ((Inst.getOpcode() == AArch64::MOVZXi ||
+         Inst.getOpcode() == AArch64::MOVZWi) &&
+        Inst.getOperand(2).getImm() == 0 &&
+        getAliases(TargetReg)[Inst.getOperand(0).getReg()])
+      return Inst.getOperand(1).getImm();
+    return std::nullopt;
+  }
+
+  std::optional<uint64_t>
+  findMemcpySizeInBytes(const BinaryBasicBlock &BB,
+                        BinaryBasicBlock::iterator CallInst) const override {
+    MCPhysReg SizeReg = getIntArgRegister(2);
+    if (SizeReg == getNoRegister())
+      return std::nullopt;
+
+    BitVector WrittenRegs(RegInfo->getNumRegs());
+    const BitVector &SizeRegAliases = getAliases(SizeReg);
+
+    for (auto InstIt = CallInst; InstIt != BB.begin(); --InstIt) {
+      const MCInst &Inst = *InstIt;
+      WrittenRegs.reset();
+      getWrittenRegs(Inst, WrittenRegs);
+
+      if (WrittenRegs.anyCommon(SizeRegAliases))
+        return extractMoveImmediate(Inst, SizeReg);
+    }
+    return std::nullopt;
+  }
+
+  InstructionListType
+  createInlineMemcpy(bool ReturnEnd,
+                     std::optional<uint64_t> KnownSize) const override {
+    assert(KnownSize.has_value() &&
+           "AArch64 memcpy inlining requires known size");
+    InstructionListType Code;
+    uint64_t Size = *KnownSize;
+
+    generateSizeSpecificMemcpy(Code, Size);
+
+    // If _memcpy8, adjust X0 to return dest+size instead of dest.
+    if (ReturnEnd)
+      Code.emplace_back(MCInstBuilder(AArch64::ADDXri)
+                            .addReg(AArch64::X0)
+                            .addReg(AArch64::X0)
+                            .addImm(Size)
+                            .addImm(0));
+    return Code;
+  }
+
+  InstructionListType generateSizeSpecificMemcpy(InstructionListType &Code,
+                                                 uint64_t Size) const {
+    auto AddLoadStorePair = [&](unsigned LoadOpc, unsigned StoreOpc,
+                                unsigned Reg, unsigned Offset = 0) {
+      Code.emplace_back(MCInstBuilder(LoadOpc)
+                            .addReg(Reg)
+                            .addReg(AArch64::X1)
+                            .addImm(Offset));
+      Code.emplace_back(MCInstBuilder(StoreOpc)
+                            .addReg(Reg)
+                            .addReg(AArch64::X0)
+                            .addImm(Offset));
+    };
+
+    // Generate optimal instruction sequences based on exact size.
+    switch (Size) {
+    case 1:
+      AddLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W9);
+      break;
+    case 2:
+      AddLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W9);
+      break;
+    case 4:
+      AddLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W9);
+      break;
+    case 8:
+      AddLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X9);
+      break;
+    case 16:
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q16);
+      break;
+    case 32:
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q16, 0);
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q17, 1);
+      break;
+
+    default:
+      // For sizes up to 64 bytes, greedily use the largest possible loads.
+      // Caller should have already filtered out sizes > 64 bytes.
+      assert(Size <= 64 &&
+             "Size should be <= 64 bytes for AArch64 memcpy inlining");
+
+      uint64_t Remaining = Size;
+      uint64_t Offset = 0;
+
+      const std::array<std::tuple<uint64_t, unsigned, unsigned, unsigned>, 5>
+          LoadStoreOps = {
+              {{16, AArch64::LDRQui, AArch64::STRQui, AArch64::Q16},
+               {8, AArch64::LDRXui, AArch64::STRXui, AArch64::X9},
+               {4, AArch64::LDRWui, AArch64::STRWui, AArch64::W9},
+               {2, AArch64::LDRHHui, AArch64::STRHHui, AArch64::W9},
+               {1, AArch64::LDRBBui, AArch64::STRBBui, AArch64::W9}}};
+
+      for (const auto &[OpSize, LoadOp, StoreOp, TempReg] : LoadStoreOps)
+        while (Remaining >= OpSize) {
+          AddLoadStorePair(LoadOp, StoreOp, TempReg, Offset / OpSize);
+          Remaining -= OpSize;
+          Offset += OpSize;
+        }
+      break;
+    }
+    return Code;
   }
 };
 

@@ -6,20 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
 #include "src/math/asinf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcAsinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAsinfTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::asinf(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 

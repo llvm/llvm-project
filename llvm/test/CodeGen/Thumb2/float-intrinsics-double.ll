@@ -204,6 +204,16 @@ define double @round_d(double %a) {
   ret double %1
 }
 
+declare double     @llvm.roundeven.f64(double %Val)
+define double @roundeven_d(double %a) {
+; CHECK-LABEL: roundeven_d:
+; SOFT: {{(bl|b)}} roundeven
+; VFP4: b roundeven
+; FP-ARMv8: vrintn.f64
+  %1 = call double @llvm.roundeven.f64(double %a)
+  ret double %1
+}
+
 declare double     @llvm.fmuladd.f64(double %a, double %b, double %c)
 define double @fmuladd_d(double %a, double %b, double %c) {
 ; CHECK-LABEL: fmuladd_d:

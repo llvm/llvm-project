@@ -51,17 +51,23 @@ macro(add_optional_dependency variable description package found)
   message(STATUS "${description}: ${${variable}}")
 endmacro()
 
+set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING
+  "Specify the version of libxml 2 to use with LLDB. This is only meant to be overridden for local
+  static builds of libxml 2. Use at your own risk.")
+mark_as_advanced(LLDB_LIBXML2_VERSION)
+
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
-add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
+add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION ${LLDB_LIBXML2_VERSION})
 add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in LLDB" FBSDVMCore FBSDVMCore_FOUND QUIET)
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
+option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
@@ -167,10 +173,44 @@ if (LLDB_ENABLE_PYTHON)
     ${default_embed_python_home})
 
   include_directories(${Python3_INCLUDE_DIRS})
+
   if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
+  endif()
+
+  # Enable targeting the Python Limited C API.
+  set(PYTHON_LIMITED_API_MIN_SWIG_VERSION "4.2")
+  if (SWIG_VERSION VERSION_GREATER_EQUAL PYTHON_LIMITED_API_MIN_SWIG_VERSION
+      AND NOT LLDB_EMBED_PYTHON_HOME)
+    set(default_enable_python_limited_api ON)
+  else()
+    set(default_enable_python_limited_api OFF)
+  endif()
+  option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
+    ${default_enable_python_limited_api})
+
+  # Diagnose unsupported configurations.
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND LLDB_EMBED_PYTHON_HOME)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with LLDB_EMBED_PYTHON_HOME")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND SWIG_VERSION VERSION_LESS PYTHON_LIMITED_API_MIN_SWIG_VERSION)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG ${SWIG_VERSION} (requires SWIG ${PYTHON_LIMITED_API_MIN_SWIG_VERSION})")
+  endif()
+
+else()
+  # Even if Python scripting is disabled, we still need a Python interpreter to
+  # build, for example to generate SBLanguages.h.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+  # Remove lldb-python-scripts from distribution components.
+  # LLVM_DISTRIBUTION_COMPONENTS is set in a cache where LLDB_ENABLE_PYTHON does
+  # not yet have a value. We have to touch up LLVM_DISTRIBUTION_COMPONENTS after
+  # the fact.
+  if(LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS lldb-python-scripts)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
   endif()
 endif()
 
@@ -180,6 +220,17 @@ else ()
   include_directories(${CMAKE_SOURCE_DIR}/tools/clang/include)
 endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
+
+if(LLDB_BUILT_STANDALONE)
+  if (TARGET clang-resource-headers)
+    get_target_property(CLANG_RESOURCE_DIR clang-resource-headers INTERFACE_INCLUDE_DIRECTORIES)
+    set(CLANG_RESOURCE_DIR "${CLANG_RESOURCE_DIR}/..")
+  else()
+    set(CLANG_RESOURCE_DIR "${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}")
+  endif()
+else()
+  get_clang_resource_dir(CLANG_RESOURCE_DIR PREFIX "${CMAKE_BINARY_DIR}")
+endif()
 
 # GCC silently accepts any -Wno-<foo> option, but warns about those options
 # being unrecognized only if the compilation triggers other warnings to be
@@ -304,6 +355,32 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(LLDB_CAN_USE_DEBUGSERVER ON)
 else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
+endif()
+
+# In a cross-compile build, we need to skip building the generated
+# lldb-rpc sources in the first phase of host build so that they can
+# get built using the just-built Clang toolchain in the second phase.
+if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
+  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+else()
+  if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
+      CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
+    set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
+  else()
+    set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+  endif()
+endif()
+
+
+if (NOT DEFINED LLDB_BUILD_LLDBRPC)
+  set(LLDB_BUILD_LLDBRPC OFF)
+else()
+  if (CMAKE_CROSSCOMPILING)
+    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
+    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
+  else()
+    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
+  endif()
 endif()
 
 include(LLDBGenerateConfig)

@@ -89,6 +89,7 @@
 // CHECK-NEXT: graph-trim-interval = 1000
 // CHECK-NEXT: ignore-bison-generated-files = true
 // CHECK-NEXT: ignore-flex-generated-files = true
+// CHECK-NEXT: inline-functions-with-ambiguous-loops = false
 // CHECK-NEXT: inline-lambdas = true
 // CHECK-NEXT: ipa = dynamic-bifurcate
 // CHECK-NEXT: ipa-always-inline-size = 3

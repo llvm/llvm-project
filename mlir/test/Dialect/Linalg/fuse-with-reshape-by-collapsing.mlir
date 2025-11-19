@@ -830,3 +830,31 @@ func.func @fuse_by_collapsing_correct_insertion(%arg0 : tensor<?x?xf32>,
 // CHECK:     %[[EXPANDED:.+]] = tensor.expand_shape %[[OUT]]
 // CHECK:     %[[DIM:.+]] = tensor.dim %[[EXPANDED]], %[[C0]]
 // CHECK:      return %[[OUT]], %[[DIM]]
+
+// -----
+
+#map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3, d4)>
+#map1 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d4, d1, d2)>
+func.func @partial_fuse_by_collapsing(%arg0: tensor<4x?x32x128x192xf16>, %arg1: tensor<4x128x192x?x32xf32>) -> tensor<512x192x?xf32> {
+  %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]} ins(%arg0 : tensor<4x?x32x128x192xf16>) outs(%arg1 : tensor<4x128x192x?x32xf32>) {
+  ^bb0(%in: f16, %out: f32):
+    linalg.yield %out : f32
+  } -> tensor<4x128x192x?x32xf32>
+  %collapsed = tensor.collapse_shape %0 [[0, 1], [2], [3, 4]] : tensor<4x128x192x?x32xf32> into tensor<512x192x?xf32>
+  return %collapsed : tensor<512x192x?xf32>
+}
+// CHECK-LABEL: func @partial_fuse_by_collapsing
+//  CHECK-SAME:  %[[ARG0:.+]]: tensor<4x?x32x128x192xf16>
+//  CHECK-SAME:  %[[ARG1:.+]]: tensor<4x128x192x?x32xf32>
+//   CHECK-DAG:   %[[COLLAPSED0:.+]] = tensor.collapse_shape %[[ARG0]]
+//  CHECK-SAME:     tensor<4x?x32x128x192xf16> into tensor<4x?x128x192xf16>
+//   CHECK-DAG:   %[[COLLAPSED1:.+]] = tensor.collapse_shape %[[ARG1]]
+//  CHECK-SAME:     tensor<4x128x192x?x32xf32> into tensor<4x128x192x?xf32>
+//       CHECK:   %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:     ins(%[[COLLAPSED0]]
+//  CHECK-SAME:     outs(%[[COLLAPSED1]]
+//       CHECK:   %[[EXPANDED:.+]] = tensor.expand_shape %[[GENERIC]]
+//  CHECK-SAME:     tensor<4x128x192x?xf32> into tensor<4x128x192x?x32xf32>
+//       CHECK:   %[[COLLAPSED:.+]] = tensor.collapse_shape %[[EXPANDED]]
+//  CHECK-SAME:     tensor<4x128x192x?x32xf32> into tensor<512x192x?xf32>
+//       CHECK:   return %[[COLLAPSED]] : tensor<512x192x?xf32>

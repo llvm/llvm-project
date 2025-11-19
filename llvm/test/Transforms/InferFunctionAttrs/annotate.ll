@@ -762,6 +762,24 @@ declare float @nearbyintf(float)
 ; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
+; CHECK: declare double @nextafter(double, double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare double @nextafter(double, double)
+
+; CHECK: declare float @nextafterf(float, float) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare float @nextafterf(float, float)
+
+; CHECK: declare x86_fp80 @nextafterl(x86_fp80, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare x86_fp80 @nextafterl(x86_fp80, x86_fp80)
+
+; CHECK: declare double @nexttoward(double, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare double @nexttoward(double, x86_fp80)
+
+; CHECK: declare float @nexttowardf(float, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare float @nexttowardf(float, x86_fp80)
+
+; CHECK: declare x86_fp80 @nexttowardl(x86_fp80, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare x86_fp80 @nexttowardl(x86_fp80, x86_fp80)
+
 ; CHECK-LINUX: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE]]
 ; CHECK-OPEN: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE:#[0-9]+]]
 declare i32 @open(ptr, i32, ...)
@@ -811,6 +829,9 @@ declare i32 @putchar_unlocked(i32)
 
 ; CHECK: declare noundef i32 @puts(ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @puts(ptr)
+
+; CHECK: declare noalias noundef ptr @pvalloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_FAMILY_MALLOC:#[0-9]+]]
+declare ptr @pvalloc(i64)
 
 ; CHECK: declare noundef i64 @pwrite(i32 noundef, ptr noundef readonly captures(none), i64 noundef, i64 noundef) [[NOFREE]]
 declare i64 @pwrite(i32, ptr, i64, i64)
@@ -1195,6 +1216,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(argmem: read) }
 ; CHECK-DAG: attributes [[NOFREE]] = { nofree }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { nocallback nofree nounwind memory(argmem: readwrite) }

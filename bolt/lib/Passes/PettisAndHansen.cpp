@@ -143,11 +143,10 @@ std::vector<Cluster> pettisAndHansen(const CallGraph &Cg) {
   // Find an arc with max weight and merge its nodes
 
   while (!Carcs.empty()) {
-    auto Maxpos =
-        std::max_element(Carcs.begin(), Carcs.end(),
-                         [&](const ClusterArc &Carc1, const ClusterArc &Carc2) {
-                           return Carc1.Weight < Carc2.Weight;
-                         });
+    auto Maxpos = llvm::max_element(
+        Carcs, [&](const ClusterArc &Carc1, const ClusterArc &Carc2) {
+          return Carc1.Weight < Carc2.Weight;
+        });
 
     ClusterArc Max = *Maxpos;
     Carcs.erase(Maxpos);

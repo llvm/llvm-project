@@ -19,9 +19,9 @@
 
 #ifndef TEST_HAS_NO_CHAR8_T
 constexpr bool test_constexpr() {
-  char8_t c = u'1';
+  char8_t c = u8'1';
   std::char_traits<char8_t>::assign(c, u'a');
-  return c == u'a';
+  return c == u8'a';
 }
 
 int main(int, char**) {

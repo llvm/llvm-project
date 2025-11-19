@@ -1,8 +1,18 @@
 // UNSUPPORTED:  target={{.*}}-zos{{.*}}
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=ref,ref20,all,all20 %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=ref,ref23,all,all23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=expected23,all,all23 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=ref,ref20,all,all20 %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=ref,ref23,all,all23 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected23,all,all23 %s -fexperimental-new-constant-interpreter
+
+
+#define assert_active(F)   if (!__builtin_is_within_lifetime(&F)) (1/0);
+#define assert_inactive(F) if ( __builtin_is_within_lifetime(&F)) (1/0);
+
+inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p; }
+namespace std {
+template<typename T, typename... Args>
+constexpr T* construct_at(T* p, Args&&... args) { return ::new((void*)p) T(static_cast<Args&&>(args)...); }
+}
 
 constexpr int f(int n) {  // all20-error {{constexpr function never produces a constant expression}}
   static const int m = n; // all-note {{control flows through the definition of a static variable}} \
@@ -72,6 +82,17 @@ constexpr int k(int n) {
   return m;
 }
 constexpr int k0 = k(0);
+
+namespace ThreadLocalStore {
+  thread_local int &&a = 0;
+  void store() { a = 42; }
+}
+
+#if __cplusplus >= 202302L
+constexpr int &b = b; // all-error {{must be initialized by a constant expression}} \
+                      // all-note {{initializer of 'b' is not a constant expression}} \
+                      // all-note {{declared here}}
+#endif
 
 namespace StaticLambdas {
   constexpr auto static_capture_constexpr() {
@@ -293,15 +314,14 @@ namespace NonLiteralDtorInParam {
     ~NonLiteral() {} // all23-note {{declared here}}
   };
   constexpr int F2(NonLiteral N) { // all20-error {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}} \
-                                   // ref23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+                                   // all23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
     return 8;
   }
 
 
   void test() {
     NonLiteral L;
-    constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}} \
-                              // expected23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+    constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}}
   }
 }
 
@@ -321,4 +341,135 @@ namespace VoidCast {
   constexpr const int *b = &a;
   constexpr int *f = (int*)(void*)b; // all-error {{must be initialized by a constant expression}} \
                                      // all-note {{cast from 'void *' is not allowed in a constant expression}}
+}
+
+#if __cplusplus >= 202302L
+namespace NestedUnions {
+  consteval bool test_nested() {
+    union {
+      union { int i; char c; } u;
+      long l;
+    };
+    std::construct_at(&l);
+    assert_active(l);
+    assert_inactive(u);
+
+    std::construct_at(&u);
+    assert_active(u);
+    assert_inactive(l);
+    assert_active(u.i);
+    assert_inactive(u.c);
+
+    std::construct_at(&u.i);
+    assert_active(u);
+    assert_inactive(u.c);
+
+
+    std::construct_at(&u.c);
+    assert_active(u);
+    assert_inactive(u.i);
+    assert_active(u.c);
+    assert_inactive(l);
+    return true;
+  }
+  static_assert(test_nested());
+}
+
+namespace UnionMemberCallDiags {
+  struct A { int n; };
+  struct B { A a; };
+  constexpr A a = (A() = B().a);
+
+  union C {
+    int n;
+    A a;
+  };
+
+  constexpr bool g() {
+    C c = {.n = 1};
+    c.a.operator=(B{2}.a); // all-note {{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
+    return c.a.n == 2;
+  }
+  static_assert(g()); // all-error {{not an integral constant expression}} \
+                      // all-note {{in call to}}
+}
+#endif
+
+namespace VolatileWrites {
+  constexpr void test1() {// all20-error {{never produces a constant expression}}
+    int k;
+    volatile int &m = k;
+    m = 10; // all20-note {{assignment to volatile-qualified type 'volatile int'}}
+  }
+
+  constexpr void test2() { // all20-error {{never produces a constant expression}}
+    volatile int k = 12;
+
+    k = 13; // all20-note {{assignment to volatile-qualified type 'volatile int'}}
+  }
+
+  constexpr void test3() { // all20-error {{never produces a constant expression}}
+    volatile int k = 12; // all20-note {{volatile object declared here}}
+
+    *((int *)&k) = 13; // all20-note {{assignment to volatile object 'k' is not allowed in a constant expression}}
+  }
+
+  constexpr void test4() { // all20-error {{never produces a constant expression}}
+    int k = 12;
+
+    *((volatile int *)&k) = 13; // all20-note {{assignment to volatile-qualified type 'volatile int' is not allowed in a constant expression}}
+  }
+
+#if __cplusplus >= 202302L
+  struct S {
+    volatile int k;
+  };
+  constexpr int test5() {
+    S s;
+    s.k = 12; // all-note {{assignment to volatile-qualified type 'volatile int' is not}}
+
+    return 0;
+  }
+  static_assert(test5() == 0); // all-error{{not an integral constant expression}} \
+                               // all-note {{in call to}}
+#endif
+
+  constexpr bool test6(volatile int k) { // ref20-error {{never produces a constant expression}}
+    k = 14; // ref20-note {{assignment to volatile-qualified type 'volatile int' is not}} \
+            // all-note {{assignment to volatile-qualified type 'volatile int' is not}}
+    return true;
+  }
+  static_assert(test6(5)); // all-error {{not an integral constant expression}} \
+                           // all-note {{in call to}}
+
+  constexpr bool test7(volatile int k) { // all-note {{declared here}}
+    *((int *)&k) = 13; // all-note {{assignment to volatile object 'k' is not allowed in a constant expression}}
+    return true;
+  }
+  static_assert(test7(12)); // all-error {{not an integral constant expression}} \
+                            // all-note {{in call to}}
+}
+
+namespace AIEWithIndex0Narrows {
+  template <class _Tp> struct greater {
+    constexpr void operator()(_Tp, _Tp) {}
+  };
+  struct S {
+    constexpr S() : i_() {}
+    int i_;
+  };
+
+  constexpr void sort(S *__first) {
+    for (int __start = 0; __start >= 0; --__start) {
+      greater<S>{}(__first[0], __first[0]);
+    }
+  }
+  constexpr bool test() {
+    S *ia = new S[2];
+
+    sort(ia + 1);
+    delete[] ia;
+    return true;
+  }
+  static_assert(test());
 }

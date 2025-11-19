@@ -17,8 +17,8 @@ define i1 @and_ord(float %a, float %b) {
 ; X64-LABEL: and_ord:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm2, %xmm2
-; X64-NEXT:    cmpordps %xmm2, %xmm1
-; X64-NEXT:    cmpordps %xmm2, %xmm0
+; X64-NEXT:    cmpordss %xmm2, %xmm1
+; X64-NEXT:    cmpordss %xmm2, %xmm0
 ; X64-NEXT:    andps %xmm1, %xmm0
 ; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -44,8 +44,8 @@ define i1 @or_uno(float %a, float %b) {
 ; X64-LABEL: or_uno:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm2, %xmm2
-; X64-NEXT:    cmpunordps %xmm2, %xmm1
-; X64-NEXT:    cmpunordps %xmm2, %xmm0
+; X64-NEXT:    cmpunordss %xmm2, %xmm1
+; X64-NEXT:    cmpunordss %xmm2, %xmm0
 ; X64-NEXT:    orps %xmm1, %xmm0
 ; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax

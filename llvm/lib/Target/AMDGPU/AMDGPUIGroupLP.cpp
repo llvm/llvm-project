@@ -957,8 +957,6 @@ private:
       auto *DAG = SyncPipe[0].DAG;
 
       if (Cache->empty()) {
-        SmallVector<SUnit *, 8> Worklist;
-
         auto I = DAG->SUnits.begin();
         auto E = DAG->SUnits.end();
         for (; I != E; I++) {
@@ -1046,17 +1044,16 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = std::count_if(
-          SU->Succs.begin(), SU->Succs.end(),
-          [](const SDep &Succ) { return Succ.getKind() == SDep::Data; });
+      auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data;
+      });
       if (SuccSize >= Size)
         return false;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize = std::count_if(
-              Succ.getSUnit()->Succs.begin(), Succ.getSUnit()->Succs.end(),
-              [](const SDep &SuccSucc) {
+          auto SuccSize =
+              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
           if (SuccSize >= Size)
@@ -1087,17 +1084,16 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = std::count_if(
-          SU->Succs.begin(), SU->Succs.end(),
-          [](const SDep &Succ) { return Succ.getKind() == SDep::Data; });
+      auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data;
+      });
       if (SuccSize >= Size)
         return true;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize = std::count_if(
-              Succ.getSUnit()->Succs.begin(), Succ.getSUnit()->Succs.end(),
-              [](const SDep &SuccSucc) {
+          auto SuccSize =
+              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
           if (SuccSize >= Size)
@@ -1292,7 +1288,6 @@ private:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
 
-      SmallVector<SUnit *, 12> Worklist;
       auto *DAG = SyncPipe[0].DAG;
       if (Cache->empty()) {
         for (auto &SU : DAG->SUnits)
@@ -1474,18 +1469,17 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   MFMAChainLength = MFMAPipeCount / MFMAChains;
 
   // The number of bit pack operations that depend on a single V_EXP
-  unsigned PackSuccCount = std::count_if(
-      PackSUs.begin(), PackSUs.end(), [this, &TempExp](SUnit *VPack) {
+  unsigned PackSuccCount =
+      llvm::count_if(PackSUs, [this, &TempExp](SUnit *VPack) {
         return DAG->IsReachable(VPack, *TempExp);
       });
 
   // The number of bit pack operations an MFMA depends on
   unsigned PackPredCount =
-      std::count_if((*TempMFMA)->Preds.begin(), (*TempMFMA)->Preds.end(),
-                    [&isBitPack](SDep &Pred) {
-                      auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
-                      return isBitPack(Opc);
-                    });
+      llvm::count_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
+        auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
+        return isBitPack(Opc);
+      });
 
   auto *PackPred = llvm::find_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
     auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
@@ -1499,20 +1493,18 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   ExpRequirement = 0;
   // How many MFMAs depend on a single bit pack operation
   MFMAEnablement =
-      std::count_if(PackPred->getSUnit()->Succs.begin(),
-                    PackPred->getSUnit()->Succs.end(), [&TII](SDep &Succ) {
-                      return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-                    });
+      llvm::count_if(PackPred->getSUnit()->Succs, [&TII](SDep &Succ) {
+        return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
+      });
 
   // The number of MFMAs that depend on a single V_EXP
   MFMAEnablement *= PackSuccCount;
 
   // The number of V_EXPs required to resolve all dependencies for an MFMA
   ExpRequirement =
-      std::count_if(ExpPipeCands.begin(), ExpPipeCands.end(),
-                    [this, &PackPred](SUnit *ExpBase) {
-                      return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
-                    });
+      llvm::count_if(ExpPipeCands, [this, &PackPred](SUnit *ExpBase) {
+        return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
+      });
 
   ExpRequirement *= PackPredCount;
   return true;
@@ -1976,7 +1968,7 @@ private:
       int NumBits = 0;
 
       auto TRI = TII->getRegisterInfo();
-      auto &MRI = MI->getParent()->getParent()->getRegInfo();
+      auto &MRI = MI->getMF()->getRegInfo();
       for (auto &Elt : Collection) {
         auto Op = Elt->getInstr()->getOperand(0);
         auto Size =
@@ -2402,32 +2394,34 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
            (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
             TII->isTRANS(MI)))
-    Result = true;
+    Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI))
-    Result = true;
+           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI)) {
+    // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
+    // For our purposes, these shall not be classified as VALU as this results
+    // in unexpected behavior.
+    Result = !MI.mayLoadOrStore();
+  }
 
   else if (((SGMask & SchedGroupMask::SALU) != SchedGroupMask::NONE) &&
            TII->isSALU(MI))
-    Result = true;
+    Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::MFMA) != SchedGroupMask::NONE) &&
            TII->isMFMAorWMMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           MI.mayLoad() && TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           MI.mayStore() && TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&

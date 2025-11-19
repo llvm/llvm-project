@@ -57,16 +57,23 @@ bool hasFastVectorUnalignedAccess(StringRef CPU) {
   return Info && Info->FastVectorUnalignedAccess;
 }
 
-bool hasValidCPUModel(StringRef CPU) {
-  const CPUModel Model = getCPUModel(CPU);
-  return Model.MVendorID != 0 && Model.MArchID != 0 && Model.MImpID != 0;
-}
+bool hasValidCPUModel(StringRef CPU) { return getCPUModel(CPU).isValid(); }
 
 CPUModel getCPUModel(StringRef CPU) {
   const CPUInfo *Info = getCPUInfoByName(CPU);
   if (!Info)
     return {0, 0, 0};
   return Info->Model;
+}
+
+StringRef getCPUNameFromCPUModel(const CPUModel &Model) {
+  if (!Model.isValid())
+    return "";
+
+  for (auto &C : RISCVCPUInfo)
+    if (C.Model == Model)
+      return C.Name;
+  return "";
 }
 
 bool parseCPU(StringRef CPU, bool IsRV64) {
@@ -146,12 +153,13 @@ namespace RISCVVType {
 //
 // Bits | Name       | Description
 // -----+------------+------------------------------------------------
+// 8    | altfmt     | Alternative format for bf16/ofp8
 // 7    | vma        | Vector mask agnostic
 // 6    | vta        | Vector tail agnostic
 // 5:3  | vsew[2:0]  | Standard element width (SEW) setting
 // 2:0  | vlmul[2:0] | Vector register group multiplier (LMUL) setting
 unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
-                     bool MaskAgnostic) {
+                     bool MaskAgnostic, bool AltFmt) {
   assert(isValidSEW(SEW) && "Invalid SEW");
   unsigned VLMulBits = static_cast<unsigned>(VLMul);
   unsigned VSEWBits = encodeSEW(SEW);
@@ -160,7 +168,18 @@ unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
     VTypeI |= 0x40;
   if (MaskAgnostic)
     VTypeI |= 0x80;
+  if (AltFmt)
+    VTypeI |= 0x100;
 
+  return VTypeI;
+}
+
+unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt) {
+  assert(isValidSEW(SEW) && "Invalid SEW");
+  assert((Widen == 1 || Widen == 2 || Widen == 4) && "Invalid Widen");
+  unsigned VSEWBits = encodeSEW(SEW);
+  unsigned TWiden = Log2_32(Widen) + 1;
+  unsigned VTypeI = (VSEWBits << 3) | AltFmt << 8 | TWiden << 9;
   return VTypeI;
 }
 
@@ -184,6 +203,10 @@ void printVType(unsigned VType, raw_ostream &OS) {
   unsigned Sew = getSEW(VType);
   OS << "e" << Sew;
 
+  bool AltFmt = RISCVVType::isAltFmt(VType);
+  if (AltFmt)
+    OS << "alt";
+
   unsigned LMul;
   bool Fractional;
   std::tie(LMul, Fractional) = decodeVLMUL(getVLMUL(VType));
@@ -203,6 +226,10 @@ void printVType(unsigned VType, raw_ostream &OS) {
     OS << ", ma";
   else
     OS << ", mu";
+}
+
+void printXSfmmVType(unsigned VType, raw_ostream &OS) {
+  OS << "e" << getSEW(VType) << ", w" << getXSfmmWiden(VType);
 }
 
 unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul) {

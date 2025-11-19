@@ -17,7 +17,7 @@
 HIP Support
 =============
 
-HIP (Heterogeneous-Compute Interface for Portability) `<https://github.com/ROCm-Developer-Tools/HIP>`_ is
+HIP (Heterogeneous-Compute Interface for Portability) `<https://github.com/ROCm/HIP>`_ is
 a C++ Runtime API and Kernel Language. It enables developers to create portable applications for
 offloading computation to different hardware platforms from a single source code.
 
@@ -41,9 +41,9 @@ backend or the out-of-tree LLVM-SPIRV translator. The SPIR-V is then bundled and
 .. note::
    While Clang does not directly provide HIP support for NVIDIA GPUs and CPUs, these platforms are supported via other means:
 
-   - NVIDIA GPUs: HIP support is offered through the HIP project `<https://github.com/ROCm-Developer-Tools/HIP>`_, which provides a header-only library for translating HIP runtime APIs into CUDA runtime APIs. The code is subsequently compiled using NVIDIA's `nvcc`.
+   - NVIDIA GPUs: HIP support is offered through the HIP project `<https://github.com/ROCm/HIP>`_, which provides a header-only library for translating HIP runtime APIs into CUDA runtime APIs. The code is subsequently compiled using NVIDIA's `nvcc`.
 
-   - CPUs: HIP support is available through the HIP-CPU runtime library `<https://github.com/ROCm-Developer-Tools/HIP-CPU>`_. This header-only library enables CPUs to execute unmodified HIP code.
+   - CPUs: HIP support is available through the HIP-CPU runtime library `<https://github.com/ROCm/HIP-CPU>`_. This header-only library enables CPUs to execute unmodified HIP code.
 
 
 Example Usage
@@ -164,6 +164,8 @@ Predefined Macros
      - Represents wavefront memory scope in HIP (value is 2).
    * - ``__HIP_MEMORY_SCOPE_WORKGROUP``
      - Represents workgroup memory scope in HIP (value is 3).
+   * - ``__HIP_MEMORY_SCOPE_CLUSTER``
+     - Represents cluster memory scope in HIP (value is 6).
    * - ``__HIP_MEMORY_SCOPE_AGENT``
      - Represents agent memory scope in HIP (value is 4).
    * - ``__HIP_MEMORY_SCOPE_SYSTEM``
@@ -178,8 +180,7 @@ Predefined Macros
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
 Note that some architecture specific AMDGPU macros will have default values when
-used from the HIP host compilation. Other :doc:`AMDGPU macros <AMDGPUSupport>`
-like ``__AMDGCN_WAVEFRONT_SIZE__`` (deprecated) will default to 64 for example.
+used from the HIP host compilation.
 
 Compilation Modes
 =================
@@ -259,7 +260,7 @@ In other scenarios, calling virtual functions is not allowed.
 Explanation
 -----------
 
-An object constructed on the device side contains a pointer to the virtual function table on the device side, which is not accessible in host code, and vice versa. Thus, trying to invoke virtual functions from a context different from where the object was constructed will be disallowed because the appropriate virtual table cannot be accessed. The virtual function tables for offloading devices with different architecures are different, therefore trying to invoke virtual functions from an offloading device with a different architecture than where the object is constructed is also disallowed.
+An object constructed on the device side contains a pointer to the virtual function table on the device side, which is not accessible in host code, and vice versa. Thus, trying to invoke virtual functions from a context different from where the object was constructed will be disallowed because the appropriate virtual table cannot be accessed. The virtual function tables for offloading devices with different architectures are different, therefore trying to invoke virtual functions from an offloading device with a different architecture than where the object is constructed is also disallowed.
 
 Example Usage
 -------------
@@ -328,7 +329,7 @@ The `parallel_unsequenced_policy <https://en.cppreference.com/w/cpp/algorithm/ex
 maps relatively well to the execution model of AMD GPUs. This, coupled with the
 the availability and maturity of GPU accelerated algorithm libraries that
 implement most / all corresponding algorithms in the standard library
-(e.g. `rocThrust <https://github.com/ROCmSoftwarePlatform/rocThrust>`__), makes
+(e.g. `rocThrust <https://github.com/ROCm/rocm-libraries/tree/develop/projects/rocthrust>`__), makes
 it feasible to provide seamless accelerator offload for supported algorithms,
 when an accelerated version exists. Thus, it becomes possible to easily access
 the computational resources of an AMD accelerator, via a well specified,
@@ -483,7 +484,7 @@ such as GPUs, work.
      allocation / deallocation functions with accelerator-aware equivalents,
      based on a pre-established table; the list of functions that can be
      interposed is available
-     `here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#allocation--deallocation-interposition-status>`__;
+     `here <https://github.com/ROCm/roc-stdpar#allocation--deallocation-interposition-status>`__;
    - This is only run when compiling for the host.
 
 The second pass is optional.
@@ -518,7 +519,7 @@ Predefined Macros
    * - ``__HIPSTDPAR__``
      - Defined when Clang is compiling code in algorithm offload mode, enabled
        with the ``--hipstdpar`` compiler option.
-   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__``
+   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__`` / ``__HIPSTDPAR_INTERPOSE_ALLOC_V1__``
      - Defined only when compiling in algorithm offload mode, when the user
        enables interposition mode with the ``--hipstdpar-interpose-alloc``
        compiler option, indicating that all dynamic memory allocation /
@@ -545,37 +546,22 @@ The following restrictions imposed on user code apply to both modes:
 1. Pointers to function, and all associated features, such as e.g. dynamic
    polymorphism, cannot be used (directly or transitively) by the user provided
    callable passed to an algorithm invocation;
-2. Global / namespace scope / ``static`` / ``thread`` storage duration variables
-   cannot be used (directly or transitively) in name by the user provided
-   callable;
-
-   - When executing in **HMM Mode** they can be used in address e.g.:
-
-     .. code-block:: C++
-
-        namespace { int foo = 42; }
-
-        bool never(const std::vector<int>& v) {
-          return std::any_of(std::execution::par_unseq, std::cbegin(v), std::cend(v), [](auto&& x) {
-            return x == foo;
-          });
-        }
-
-        bool only_in_hmm_mode(const std::vector<int>& v) {
-          return std::any_of(std::execution::par_unseq, std::cbegin(v), std::cend(v),
-                             [p = &foo](auto&& x) { return x == *p; });
-        }
-
-3. Only algorithms that are invoked with the ``parallel_unsequenced_policy`` are
+2. ``static`` (except for program-wide unique ones) / ``thread`` storage
+   duration variables cannot be used (directly or transitively) in name by the
+   user provided callable;
+3. User code must be compiled in ``-fgpu-rdc`` mode in order for global /
+   namespace scope variables / program-wide unique ``static`` storage duration
+   variables to be usable in name by the user provided callable;
+4. Only algorithms that are invoked with the ``parallel_unsequenced_policy`` are
    candidates for offload;
-4. Only algorithms that are invoked with iterator arguments that model
+5. Only algorithms that are invoked with iterator arguments that model
    `random_access_iterator <https://en.cppreference.com/w/cpp/iterator/random_access_iterator>`_
    are candidates for offload;
-5. `Exceptions <https://en.cppreference.com/w/cpp/language/exceptions>`_ cannot
+6. `Exceptions <https://en.cppreference.com/w/cpp/language/exceptions>`_ cannot
    be used by the user provided callable;
-6. Dynamic memory allocation (e.g. ``operator new``) cannot be used by the user
+7. Dynamic memory allocation (e.g. ``operator new``) cannot be used by the user
    provided callable;
-7. Selective offload is not possible i.e. it is not possible to indicate that
+8. Selective offload is not possible i.e. it is not possible to indicate that
    only some algorithms invoked with the ``parallel_unsequenced_policy`` are to
    be executed on the accelerator.
 
@@ -585,15 +571,6 @@ additional restrictions:
 1. All code that is expected to interoperate has to be recompiled with the
    ``--hipstdpar-interpose-alloc`` flag i.e. it is not safe to compose libraries
    that have been independently compiled;
-2. automatic storage duration (i.e. stack allocated) variables cannot be used
-   (directly or transitively) by the user provided callable e.g.
-
-   .. code-block:: c++
-
-      bool never(const std::vector<int>& v, int n) {
-        return std::any_of(std::execution::par_unseq, std::cbegin(v), std::cend(v),
-                           [p = &n](auto&& x) { return x == *p; });
-      }
 
 Current Support
 ===============
@@ -626,17 +603,12 @@ Linux operating system. Support is synthesised in the following table:
 
 The minimum Linux kernel version for running in HMM mode is 6.4.
 
-The forwarding header can be obtained from
-`its GitHub repository <https://github.com/ROCmSoftwarePlatform/roc-stdpar>`_.
-It will be packaged with a future `ROCm <https://rocm.docs.amd.com/en/latest/>`_
-release. Because accelerated algorithms are provided via
-`rocThrust <https://rocm.docs.amd.com/projects/rocThrust/en/latest/>`_, a
-transitive dependency on
-`rocPrim <https://rocm.docs.amd.com/projects/rocPRIM/en/latest/>`_ exists. Both
-can be obtained either by installing their associated components of the
-`ROCm <https://rocm.docs.amd.com/en/latest/>`_ stack, or from their respective
-repositories. The list algorithms that can be offloaded is available
-`here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#algorithm-support-status>`_.
+The forwarding header is packaged by
+`ROCm <https://rocm.docs.amd.com/en/latest/>`_, and is obtainable by installing
+the `hipstdpar` packege. The list algorithms that can be offloaded is available
+`here <https://github.com/ROCm/roc-stdpar#algorithm-support-status>`_. More
+details are available via the dedicated blog
+`<https://rocm.blogs.amd.com/software-tools-optimization/hipstdpar/README.html>`_.
 
 HIP Specific Elements
 ---------------------
@@ -690,9 +662,8 @@ HIP Specific Elements
 Open Questions / Future Developments
 ====================================
 
-1. The restriction on the use of global / namespace scope / ``static`` /
-   ``thread`` storage duration variables in offloaded algorithms will be lifted
-   in the future, when running in **HMM Mode**;
+1. The restriction on the use of ``static`` / ``thread`` storage duration
+   variables in offloaded algorithms might be lifted;
 2. The restriction on the use of dynamic memory allocation in offloaded
    algorithms will be lifted in the future.
 3. The restriction on the use of pointers to function, and associated features

@@ -53,7 +53,6 @@ end program
 ! CHECK:             %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:             %[[VAL_11:.*]] = fir.shape %[[VAL_10]]#1 : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_12:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_10]]#1 {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:             %[[VAL_13:.*]] = arith.constant true
 ! CHECK:             %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_11]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_15]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -115,7 +114,6 @@ end program
 ! CHECK:             %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:             %[[VAL_11:.*]] = fir.shape %[[VAL_10]]#1 : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_12:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_10]]#1 {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:             %[[VAL_13:.*]] = arith.constant true
 ! CHECK:             %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_11]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_15]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -156,7 +154,7 @@ end program
 ! CHECK:           omp.yield
 ! CHECK:         }
 
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "reduce15"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "REDUCE15"} {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFEarr) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEarr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
@@ -204,7 +202,7 @@ end program
 ! CHECK:           %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (i32) -> index
 ! CHECK:           %[[VAL_40:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_41:.*]] = fir.convert %[[VAL_37]] : (index) -> i32
-! CHECK:           %[[VAL_42:.*]]:2 = fir.do_loop %[[VAL_43:.*]] = %[[VAL_37]] to %[[VAL_39]] step %[[VAL_40]] iter_args(%[[VAL_44:.*]] = %[[VAL_41]]) -> (index, i32) {
+! CHECK:           %[[VAL_42:.*]] = fir.do_loop %[[VAL_43:.*]] = %[[VAL_37]] to %[[VAL_39]] step %[[VAL_40]] iter_args(%[[VAL_44:.*]] = %[[VAL_41]]) -> (i32) {
 ! CHECK:             fir.store %[[VAL_44]] to %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_45:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_46:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -212,13 +210,12 @@ end program
 ! CHECK:             %[[VAL_48:.*]] = fir.convert %[[VAL_47]] : (i32) -> i64
 ! CHECK:             %[[VAL_49:.*]] = hlfir.designate %[[VAL_46]] (%[[VAL_48]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, i64) -> !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_45]] to %[[VAL_49]] : i32, !fir.ref<i32>
-! CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_43]], %[[VAL_40]] overflow<nsw> : index
 ! CHECK:             %[[VAL_51:.*]] = fir.convert %[[VAL_40]] : (index) -> i32
 ! CHECK:             %[[VAL_52:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_53:.*]] = arith.addi %[[VAL_52]], %[[VAL_51]] overflow<nsw> : i32
-! CHECK:             fir.result %[[VAL_50]], %[[VAL_53]] : index, i32
+! CHECK:             fir.result %[[VAL_53]] : i32
 ! CHECK:           }
-! CHECK:           fir.store %[[VAL_54:.*]]#1 to %[[VAL_3]]#0 : !fir.ref<i32>
+! CHECK:           fir.store %[[VAL_54:.*]] to %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_57:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_58:.*]] = arith.constant 10 : i32
@@ -228,11 +225,11 @@ end program
 ! CHECK:                 %[[VAL_56:.*]]:2 = hlfir.declare %[[VAL_55]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_62:.*]]:2 = hlfir.declare %[[VAL_60]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEmaxes"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:                 hlfir.assign %[[VAL_61]] to %[[VAL_56]]#0 : i32, !fir.ref<i32>
-! CHECK:                 %[[VAL_63:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:                 %[[VAL_64:.*]] = arith.constant 0 : index
-! CHECK:                 %[[VAL_65:.*]]:3 = fir.box_dims %[[VAL_63]], %[[VAL_64]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK:                 %[[VAL_66:.*]] = fir.shape %[[VAL_65]]#1 : (index) -> !fir.shape<1>
-! CHECK:                 %[[VAL_67:.*]] = fir.load %[[VAL_62]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-DAG:             %[[VAL_63:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-DAG:             %[[VAL_64:.*]] = arith.constant 0 : index
+! CHECK-DAG:             %[[VAL_65:.*]]:3 = fir.box_dims %[[VAL_63]], %[[VAL_64]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK-DAG:             %[[VAL_66:.*]] = fir.shape %[[VAL_65]]#1 : (index) -> !fir.shape<1>
+! CHECK-DAG:             %[[VAL_67:.*]] = fir.load %[[VAL_62]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:                 %[[VAL_68:.*]] = hlfir.elemental %[[VAL_66]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 ! CHECK:                 ^bb0(%[[VAL_69:.*]]: index):
 ! CHECK:                   %[[VAL_70:.*]] = arith.constant 0 : index
@@ -240,15 +237,15 @@ end program
 ! CHECK:                   %[[VAL_72:.*]] = arith.constant 1 : index
 ! CHECK:                   %[[VAL_73:.*]] = arith.subi %[[VAL_71]]#0, %[[VAL_72]] : index
 ! CHECK:                   %[[VAL_74:.*]] = arith.addi %[[VAL_69]], %[[VAL_73]] : index
-! CHECK:                   %[[VAL_75:.*]] = hlfir.designate %[[VAL_63]] (%[[VAL_74]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
-! CHECK:                   %[[VAL_76:.*]] = fir.load %[[VAL_75]] : !fir.ref<i32>
-! CHECK:                   %[[VAL_77:.*]] = arith.constant 0 : index
-! CHECK:                   %[[VAL_78:.*]]:3 = fir.box_dims %[[VAL_67]], %[[VAL_77]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK:                   %[[VAL_79:.*]] = arith.constant 1 : index
-! CHECK:                   %[[VAL_80:.*]] = arith.subi %[[VAL_78]]#0, %[[VAL_79]] : index
-! CHECK:                   %[[VAL_81:.*]] = arith.addi %[[VAL_69]], %[[VAL_80]] : index
-! CHECK:                   %[[VAL_82:.*]] = hlfir.designate %[[VAL_67]] (%[[VAL_81]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
-! CHECK:                   %[[VAL_83:.*]] = fir.load %[[VAL_82]] : !fir.ref<i32>
+! CHECK-DAG:                   %[[VAL_75:.*]] = hlfir.designate %[[VAL_63]] (%[[VAL_74]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+! CHECK-DAG:                   %[[VAL_76:.*]] = fir.load %[[VAL_75]] : !fir.ref<i32>
+! CHECK-DAG:                   %[[VAL_77:.*]] = arith.constant 0 : index
+! CHECK-DAG:                   %[[VAL_78:.*]]:3 = fir.box_dims %[[VAL_67]], %[[VAL_77]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK-DAG:                   %[[VAL_79:.*]] = arith.constant 1 : index
+! CHECK-DAG:                   %[[VAL_80:.*]] = arith.subi %[[VAL_78]]#0, %[[VAL_79]] : index
+! CHECK-DAG:                   %[[VAL_81:.*]] = arith.addi %[[VAL_69]], %[[VAL_80]] : index
+! CHECK-DAG:                   %[[VAL_82:.*]] = hlfir.designate %[[VAL_67]] (%[[VAL_81]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+! CHECK-DAG:                   %[[VAL_83:.*]] = fir.load %[[VAL_82]] : !fir.ref<i32>
 ! CHECK:                   %[[VAL_84:.*]] = arith.cmpi sgt, %[[VAL_76]], %[[VAL_83]] : i32
 ! CHECK:                   %[[VAL_85:.*]] = arith.select %[[VAL_84]], %[[VAL_76]], %[[VAL_83]] : i32
 ! CHECK:                   hlfir.yield_element %[[VAL_85]] : i32
@@ -269,27 +266,27 @@ end program
 ! CHECK:                 %[[VAL_88:.*]]:2 = hlfir.declare %[[VAL_87]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_94:.*]]:2 = hlfir.declare %[[VAL_92]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEmins"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:                 hlfir.assign %[[VAL_93]] to %[[VAL_88]]#0 : i32, !fir.ref<i32>
-! CHECK:                 %[[VAL_95:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:                 %[[VAL_96:.*]] = arith.constant 0 : index
-! CHECK:                 %[[VAL_97:.*]]:3 = fir.box_dims %[[VAL_95]], %[[VAL_96]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK:                 %[[VAL_98:.*]] = fir.shape %[[VAL_97]]#1 : (index) -> !fir.shape<1>
-! CHECK:                 %[[VAL_99:.*]] = fir.load %[[VAL_94]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:                 %[[VAL_100:.*]] = hlfir.elemental %[[VAL_98]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+! CHECK-DAG:                 %[[VAL_95:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-DAG:                 %[[VAL_96:.*]] = arith.constant 0 : index
+! CHECK-DAG:                 %[[VAL_97:.*]]:3 = fir.box_dims %[[VAL_95]], %[[VAL_96]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK-DAG:                 %[[VAL_98:.*]] = fir.shape %[[VAL_97]]#1 : (index) -> !fir.shape<1>
+! CHECK-DAG:                 %[[VAL_99:.*]] = fir.load %[[VAL_94]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-DAG:                 %[[VAL_100:.*]] = hlfir.elemental %[[VAL_98]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 ! CHECK:                 ^bb0(%[[VAL_101:.*]]: index):
 ! CHECK:                   %[[VAL_102:.*]] = arith.constant 0 : index
 ! CHECK:                   %[[VAL_103:.*]]:3 = fir.box_dims %[[VAL_95]], %[[VAL_102]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:                   %[[VAL_104:.*]] = arith.constant 1 : index
 ! CHECK:                   %[[VAL_105:.*]] = arith.subi %[[VAL_103]]#0, %[[VAL_104]] : index
 ! CHECK:                   %[[VAL_106:.*]] = arith.addi %[[VAL_101]], %[[VAL_105]] : index
-! CHECK:                   %[[VAL_107:.*]] = hlfir.designate %[[VAL_95]] (%[[VAL_106]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
-! CHECK:                   %[[VAL_108:.*]] = fir.load %[[VAL_107]] : !fir.ref<i32>
-! CHECK:                   %[[VAL_109:.*]] = arith.constant 0 : index
-! CHECK:                   %[[VAL_110:.*]]:3 = fir.box_dims %[[VAL_99]], %[[VAL_109]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK:                   %[[VAL_111:.*]] = arith.constant 1 : index
-! CHECK:                   %[[VAL_112:.*]] = arith.subi %[[VAL_110]]#0, %[[VAL_111]] : index
-! CHECK:                   %[[VAL_113:.*]] = arith.addi %[[VAL_101]], %[[VAL_112]] : index
-! CHECK:                   %[[VAL_114:.*]] = hlfir.designate %[[VAL_99]] (%[[VAL_113]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
-! CHECK:                   %[[VAL_115:.*]] = fir.load %[[VAL_114]] : !fir.ref<i32>
+! CHECK-DAG:               %[[VAL_107:.*]] = hlfir.designate %[[VAL_95]] (%[[VAL_106]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+! CHECK-DAG:               %[[VAL_108:.*]] = fir.load %[[VAL_107]] : !fir.ref<i32>
+! CHECK-DAG:               %[[VAL_109:.*]] = arith.constant 0 : index
+! CHECK-DAG:               %[[VAL_110:.*]]:3 = fir.box_dims %[[VAL_99]], %[[VAL_109]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK-DAG:               %[[VAL_111:.*]] = arith.constant 1 : index
+! CHECK-DAG:               %[[VAL_112:.*]] = arith.subi %[[VAL_110]]#0, %[[VAL_111]] : index
+! CHECK-DAG:               %[[VAL_113:.*]] = arith.addi %[[VAL_101]], %[[VAL_112]] : index
+! CHECK-DAG:               %[[VAL_114:.*]] = hlfir.designate %[[VAL_99]] (%[[VAL_113]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+! CHECK-DAG:               %[[VAL_115:.*]] = fir.load %[[VAL_114]] : !fir.ref<i32>
 ! CHECK:                   %[[VAL_116:.*]] = arith.cmpi slt, %[[VAL_108]], %[[VAL_115]] : i32
 ! CHECK:                   %[[VAL_117:.*]] = arith.select %[[VAL_116]], %[[VAL_108]], %[[VAL_115]] : i32
 ! CHECK:                   hlfir.yield_element %[[VAL_117]] : i32

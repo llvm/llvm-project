@@ -25,6 +25,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -72,18 +73,19 @@ using dice_iterator = content_iterator<DiceRef>;
 ///      if (Err) { report error ...
 class ExportEntry {
 public:
-  ExportEntry(Error *Err, const MachOObjectFile *O, ArrayRef<uint8_t> Trie);
+  LLVM_ABI ExportEntry(Error *Err, const MachOObjectFile *O,
+                       ArrayRef<uint8_t> Trie);
 
-  StringRef name() const;
-  uint64_t flags() const;
-  uint64_t address() const;
-  uint64_t other() const;
-  StringRef otherName() const;
-  uint32_t nodeOffset() const;
+  LLVM_ABI StringRef name() const;
+  LLVM_ABI uint64_t flags() const;
+  LLVM_ABI uint64_t address() const;
+  LLVM_ABI uint64_t other() const;
+  LLVM_ABI StringRef otherName() const;
+  LLVM_ABI uint32_t nodeOffset() const;
 
-  bool operator==(const ExportEntry &) const;
+  LLVM_ABI bool operator==(const ExportEntry &) const;
 
-  void moveNext();
+  LLVM_ABI void moveNext();
 
 private:
   friend class MachOObjectFile;
@@ -96,7 +98,7 @@ private:
 
   // Represents a node in the mach-o exports trie.
   struct NodeState {
-    NodeState(const uint8_t *Ptr);
+    LLVM_ABI NodeState(const uint8_t *Ptr);
 
     const uint8_t *Start;
     const uint8_t *Current;
@@ -119,9 +121,7 @@ private:
   NodeList Stack;
   bool Done = false;
 
-  iterator_range<node_iterator> nodes() const {
-    return make_range(Stack.begin(), Stack.end());
-  }
+  iterator_range<node_iterator> nodes() const { return Stack; }
 };
 using export_iterator = content_iterator<ExportEntry>;
 
@@ -131,16 +131,17 @@ using export_iterator = content_iterator<ExportEntry>;
 // address() methods below.
 class BindRebaseSegInfo {
 public:
-  BindRebaseSegInfo(const MachOObjectFile *Obj);
+  LLVM_ABI BindRebaseSegInfo(const MachOObjectFile *Obj);
 
   // Used to check a Mach-O Bind or Rebase entry for errors when iterating.
-  const char *checkSegAndOffsets(int32_t SegIndex, uint64_t SegOffset,
-                                 uint8_t PointerSize, uint64_t Count = 1,
-                                 uint64_t Skip = 0);
+  LLVM_ABI const char *checkSegAndOffsets(int32_t SegIndex, uint64_t SegOffset,
+                                          uint8_t PointerSize,
+                                          uint64_t Count = 1,
+                                          uint64_t Skip = 0);
   // Used with valid SegIndex/SegOffset values from checked entries.
-  StringRef segmentName(int32_t SegIndex);
-  StringRef sectionName(int32_t SegIndex, uint64_t SegOffset);
-  uint64_t address(uint32_t SegIndex, uint64_t SegOffset);
+  LLVM_ABI StringRef segmentName(int32_t SegIndex);
+  LLVM_ABI StringRef sectionName(int32_t SegIndex, uint64_t SegOffset);
+  LLVM_ABI uint64_t address(uint32_t SegIndex, uint64_t SegOffset);
 
 private:
   struct SectionInfo {
@@ -167,19 +168,19 @@ private:
 ///    if (Err) { report error ...
 class MachORebaseEntry {
 public:
-  MachORebaseEntry(Error *Err, const MachOObjectFile *O,
-                   ArrayRef<uint8_t> opcodes, bool is64Bit);
+  LLVM_ABI MachORebaseEntry(Error *Err, const MachOObjectFile *O,
+                            ArrayRef<uint8_t> opcodes, bool is64Bit);
 
-  int32_t segmentIndex() const;
-  uint64_t segmentOffset() const;
-  StringRef typeName() const;
-  StringRef segmentName() const;
-  StringRef sectionName() const;
-  uint64_t address() const;
+  LLVM_ABI int32_t segmentIndex() const;
+  LLVM_ABI uint64_t segmentOffset() const;
+  LLVM_ABI StringRef typeName() const;
+  LLVM_ABI StringRef segmentName() const;
+  LLVM_ABI StringRef sectionName() const;
+  LLVM_ABI uint64_t address() const;
 
-  bool operator==(const MachORebaseEntry &) const;
+  LLVM_ABI bool operator==(const MachORebaseEntry &) const;
 
-  void moveNext();
+  LLVM_ABI void moveNext();
 
 private:
   friend class MachOObjectFile;
@@ -213,24 +214,25 @@ class MachOBindEntry {
 public:
   enum class Kind { Regular, Lazy, Weak };
 
-  MachOBindEntry(Error *Err, const MachOObjectFile *O,
-                 ArrayRef<uint8_t> Opcodes, bool is64Bit, MachOBindEntry::Kind);
+  LLVM_ABI MachOBindEntry(Error *Err, const MachOObjectFile *O,
+                          ArrayRef<uint8_t> Opcodes, bool is64Bit,
+                          MachOBindEntry::Kind);
 
-  int32_t segmentIndex() const;
-  uint64_t segmentOffset() const;
-  StringRef typeName() const;
-  StringRef symbolName() const;
-  uint32_t flags() const;
-  int64_t addend() const;
-  int ordinal() const;
+  LLVM_ABI int32_t segmentIndex() const;
+  LLVM_ABI uint64_t segmentOffset() const;
+  LLVM_ABI StringRef typeName() const;
+  LLVM_ABI StringRef symbolName() const;
+  LLVM_ABI uint32_t flags() const;
+  LLVM_ABI int64_t addend() const;
+  LLVM_ABI int ordinal() const;
 
-  StringRef segmentName() const;
-  StringRef sectionName() const;
-  uint64_t address() const;
+  LLVM_ABI StringRef segmentName() const;
+  LLVM_ABI StringRef sectionName() const;
+  LLVM_ABI uint64_t address() const;
 
-  bool operator==(const MachOBindEntry &) const;
+  LLVM_ABI bool operator==(const MachOBindEntry &) const;
 
-  void moveNext();
+  LLVM_ABI void moveNext();
 
 private:
   friend class MachOObjectFile;
@@ -321,22 +323,22 @@ struct ChainedFixupsSegment {
 ///   MachOChainedFixupEntry - for pointer chains embedded in data pages.
 class MachOAbstractFixupEntry {
 public:
-  MachOAbstractFixupEntry(Error *Err, const MachOObjectFile *O);
+  LLVM_ABI MachOAbstractFixupEntry(Error *Err, const MachOObjectFile *O);
 
-  int32_t segmentIndex() const;
-  uint64_t segmentOffset() const;
-  uint64_t segmentAddress() const;
-  StringRef segmentName() const;
-  StringRef sectionName() const;
-  StringRef typeName() const;
-  StringRef symbolName() const;
-  uint32_t flags() const;
-  int64_t addend() const;
-  int ordinal() const;
+  LLVM_ABI int32_t segmentIndex() const;
+  LLVM_ABI uint64_t segmentOffset() const;
+  LLVM_ABI uint64_t segmentAddress() const;
+  LLVM_ABI StringRef segmentName() const;
+  LLVM_ABI StringRef sectionName() const;
+  LLVM_ABI StringRef typeName() const;
+  LLVM_ABI StringRef symbolName() const;
+  LLVM_ABI uint32_t flags() const;
+  LLVM_ABI int64_t addend() const;
+  LLVM_ABI int ordinal() const;
 
   /// \return the location of this fixup as a VM Address. For the VM
   /// Address this fixup is pointing to, use pointerValue().
-  uint64_t address() const;
+  LLVM_ABI uint64_t address() const;
 
   /// \return the VM Address pointed to by this fixup. Use
   /// pointerValue() to compare against other VM Addresses, such as
@@ -350,7 +352,7 @@ public:
   /// raw bits.
   uint64_t rawValue() const { return RawValue; }
 
-  void moveNext();
+  LLVM_ABI void moveNext();
 
 protected:
   Error *E;
@@ -365,8 +367,8 @@ protected:
   uint64_t RawValue = 0;
   bool Done = false;
 
-  void moveToFirst();
-  void moveToEnd();
+  LLVM_ABI void moveToFirst();
+  LLVM_ABI void moveToEnd();
 
   /// \return the vm address of the start of __TEXT segment.
   uint64_t textAddress() const { return TextAddress; }
@@ -379,16 +381,17 @@ class MachOChainedFixupEntry : public MachOAbstractFixupEntry {
 public:
   enum class FixupKind { Bind, Rebase };
 
-  MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O, bool Parse);
+  LLVM_ABI MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O,
+                                  bool Parse);
 
-  bool operator==(const MachOChainedFixupEntry &) const;
+  LLVM_ABI bool operator==(const MachOChainedFixupEntry &) const;
 
   bool isBind() const { return Kind == FixupKind::Bind; }
   bool isRebase() const { return Kind == FixupKind::Rebase; }
 
-  void moveNext();
-  void moveToFirst();
-  void moveToEnd();
+  LLVM_ABI void moveNext();
+  LLVM_ABI void moveToFirst();
+  LLVM_ABI void moveToEnd();
 
 private:
   void findNextPageWithFixups();
@@ -403,7 +406,7 @@ private:
 };
 using fixup_iterator = content_iterator<MachOChainedFixupEntry>;
 
-class MachOObjectFile : public ObjectFile {
+class LLVM_ABI MachOObjectFile : public ObjectFile {
 public:
   struct LoadCommandInfo {
     const char *Ptr;      // Where in memory the load command is.
@@ -444,7 +447,7 @@ public:
   uint64_t getSectionAddress(DataRefImpl Sec) const override;
   uint64_t getSectionIndex(DataRefImpl Sec) const override;
   uint64_t getSectionSize(DataRefImpl Sec) const override;
-  ArrayRef<uint8_t> getSectionContents(uint32_t Offset, uint64_t Size) const;
+  ArrayRef<uint8_t> getSectionContents(uint64_t Offset, uint64_t Size) const;
   Expected<ArrayRef<uint8_t>>
   getSectionContents(DataRefImpl Sec) const override;
   uint64_t getSectionAlignment(DataRefImpl Sec) const override;

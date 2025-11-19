@@ -66,7 +66,7 @@ def find_compiler_libdir():
     # Fall back for older AppleClang that doesn't support `-print-runtime-dir`
     # Note `-print-file-name=<path to compiler-rt lib>` was broken for Apple
     # platforms so we can't use that approach here (see https://reviews.llvm.org/D101682).
-    if config.host_os == "Darwin":
+    if config.target_os == "Darwin":
         lib_dir, _ = get_path_from_clang(["-print-file-name=lib"], allow_failure=False)
         runtime_dir = os.path.join(lib_dir, "darwin")
         if not os.path.exists(runtime_dir):
@@ -195,16 +195,14 @@ test_cc_resource_dir, _ = get_path_from_clang(
 # Normalize the path for comparison
 if test_cc_resource_dir is not None:
     test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
-if lit_config.debug:
-    lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
+lit_config.dbg(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
 if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
     if config.compiler_id == "Clang":
-        if lit_config.debug:
-            lit_config.note(
-                f"Overriding test compiler resource dir to use "
-                f'libraries in "{config.compiler_rt_libdir}"'
-            )
+        lit_config.dbg(
+            f"Overriding test compiler resource dir to use "
+            f'libraries in "{config.compiler_rt_libdir}"'
+        )
         # Ensure that we use the just-built static libraries when linking by
         # overriding the Clang resource directory. Additionally, we want to use
         # the builtin headers shipped with clang (e.g. stdint.h), so we
@@ -312,7 +310,7 @@ config.environment["PATH"] = path
 if platform.system() == "Windows" and target_is_msvc:
     config.environment["LIB"] = os.environ["LIB"]
 
-config.available_features.add(config.host_os.lower())
+config.available_features.add(config.target_os.lower())
 
 if config.target_triple.startswith("ppc") or config.target_triple.startswith("powerpc"):
     config.available_features.add("ppc")
@@ -344,7 +342,7 @@ config.substitutions.append(
     )
 )
 
-if config.host_os == "NetBSD":
+if config.target_os == "NetBSD":
     nb_commands_dir = os.path.join(
         config.compiler_rt_src_root, "test", "sanitizer_common", "netbsd_commands"
     )
@@ -395,7 +393,7 @@ if config.have_disable_symbolizer_path_search:
         if sanitizer not in config.environment:
             config.environment[sanitizer] = symbolizer_path
 
-env_utility = "/opt/freeware/bin/env" if config.host_os == "AIX" else "env"
+env_utility = "/opt/freeware/bin/env" if config.target_os == "AIX" else "env"
 env_unset_command = " ".join(f"-u {var}" for var in tool_symbolizer_path_list)
 config.substitutions.append(
     ("%env_unset_tool_symbolizer_path", f"{env_utility} {env_unset_command}")
@@ -410,7 +408,7 @@ if emulator:
     lit_config.warning("%device_rm is not implemented")
     config.substitutions.append(("%device_rm", "echo "))
     config.compile_wrapper = ""
-elif config.host_os == "Darwin" and config.apple_platform != "osx":
+elif config.target_os == "Darwin" and config.apple_platform != "osx":
     # Darwin tests can be targetting macOS, a device or a simulator. All devices
     # are declared as "ios", even for iOS derivatives (tvOS, watchOS). Similarly,
     # all simulators are "iossim". See the table below.
@@ -498,12 +496,12 @@ else:
     config.compile_wrapper = ""
 
 # Define CHECK-%os to check for OS-dependent output.
-config.substitutions.append(("CHECK-%os", ("CHECK-" + config.host_os)))
+config.substitutions.append(("CHECK-%os", ("CHECK-" + config.target_os)))
 
 # Define %arch to check for architecture-dependent output.
 config.substitutions.append(("%arch", (config.host_arch)))
 
-if config.host_os == "Windows":
+if os.name == "nt":
     # FIXME: This isn't quite right. Specifically, it will succeed if the program
     # does not crash but exits with a non-zero exit code. We ought to merge
     # KillTheDoctor and not --crash to make the latter more useful and remove the
@@ -519,7 +517,7 @@ if target_arch:
     config.available_features.add(target_arch + "-target-arch")
     if target_arch in ["x86_64", "i386"]:
         config.available_features.add("x86-target-arch")
-    config.available_features.add(target_arch + "-" + config.host_os.lower())
+    config.available_features.add(target_arch + "-" + config.target_os.lower())
 
 compiler_rt_debug = getattr(config, "compiler_rt_debug", False)
 if not compiler_rt_debug:
@@ -565,7 +563,7 @@ config.substitutions.append(
     ("%darwin_min_target_with_tls_support", "%min_macos_deployment_target=10.12")
 )
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     osx_version = (10, 0, 0)
     try:
         osx_version = subprocess.check_output(
@@ -602,12 +600,12 @@ if config.host_os == "Darwin":
 
     def get_macos_aligned_version(macos_vers):
         platform = config.apple_platform
-        if platform == "osx":
+        macos_major, macos_minor = macos_vers
+
+        if platform == "osx" or macos_major >= 26:
             return macos_vers
 
-        macos_major, macos_minor = macos_vers
         assert macos_major >= 10
-
         if macos_major == 10:  # macOS 10.x
             major = macos_minor
             minor = 0
@@ -708,31 +706,7 @@ else:
     config.substitutions.append(("%push_to_device", "echo "))
     config.substitutions.append(("%adb_shell", "echo "))
 
-if config.host_os == "Linux":
-    def add_glibc_versions(ver_string):
-        if config.android:
-            return
-
-        from distutils.version import LooseVersion
-
-        ver = LooseVersion(ver_string)
-        any_glibc = False
-        for required in [
-            "2.19",
-            "2.27",
-            "2.30",
-            "2.33",
-            "2.34",
-            "2.37",
-            "2.38",
-            "2.40",
-        ]:
-            if ver >= LooseVersion(required):
-                config.available_features.add("glibc-" + required)
-                any_glibc = True
-            if any_glibc:
-                config.available_features.add("glibc")
-
+if config.target_os == "Linux" and not config.android:
     # detect whether we are using glibc, and which version
     cmd_args = [
         config.clang.strip(),
@@ -754,7 +728,27 @@ if config.host_os == "Linux":
     try:
         sout, _ = cmd.communicate(b"#include <features.h>")
         m = dict(re.findall(r"#define (__GLIBC__|__GLIBC_MINOR__) (\d+)", str(sout)))
-        add_glibc_versions(f"{m['__GLIBC__']}.{m['__GLIBC_MINOR__']}")
+        major = int(m["__GLIBC__"])
+        minor = int(m["__GLIBC_MINOR__"])
+        any_glibc = False
+        for required in [
+            (2, 19),
+            (2, 27),
+            (2, 30),
+            (2, 33),
+            (2, 34),
+            (2, 37),
+            (2, 38),
+            (2, 40),
+        ]:
+            if (major, minor) >= required:
+                (required_major, required_minor) = required
+                config.available_features.add(
+                    f"glibc-{required_major}.{required_minor}"
+                )
+                any_glibc = True
+            if any_glibc:
+                config.available_features.add("glibc")
     except:
         pass
 
@@ -806,10 +800,10 @@ def is_windows_lto_supported():
     return os.path.exists(os.path.join(config.llvm_tools_dir, "lld-link.exe"))
 
 
-if config.host_os == "Darwin" and is_darwin_lto_supported():
+if config.target_os == "Darwin" and is_darwin_lto_supported():
     config.lto_supported = True
     config.lto_flags = ["-Wl,-lto_library," + liblto_path()]
-elif config.host_os in ["Linux", "FreeBSD", "NetBSD"]:
+elif config.target_os in ["Linux", "FreeBSD", "NetBSD"]:
     config.lto_supported = False
     if config.use_lld and is_lld_lto_supported():
         config.lto_supported = True
@@ -822,7 +816,7 @@ elif config.host_os in ["Linux", "FreeBSD", "NetBSD"]:
             config.lto_flags = ["-fuse-ld=lld"]
         else:
             config.lto_flags = ["-fuse-ld=gold"]
-elif config.host_os == "Windows" and is_windows_lto_supported():
+elif config.target_os == "Windows" and is_windows_lto_supported():
     config.lto_supported = True
     config.lto_flags = ["-fuse-ld=lld"]
 else:
@@ -871,7 +865,7 @@ if platform.system() == "Darwin":
 # Note that substitutions with numbers have to be defined first to avoid
 # being subsumed by substitutions with smaller postfix.
 for postfix in ["2", "1", ""]:
-    if config.host_os == "Darwin":
+    if config.target_os == "Darwin":
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
@@ -881,31 +875,31 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_so" + postfix,
-                "-install_name @rpath/`basename %dynamiclib{}`".format(postfix),
+                "-install_name @rpath/%base_dynamiclib{}".format(postfix),
             )
         )
-    elif config.host_os in ("FreeBSD", "NetBSD", "OpenBSD"):
+    elif config.target_os in ("FreeBSD", "NetBSD", "OpenBSD"):
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                r"-Wl,-z,origin -Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec"
+                r"-Wl,-z,origin -Wl,-rpath,\$ORIGIN -L%t.dir -l%xdynamiclib_namespec"
                 + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
-    elif config.host_os == "Linux":
+    elif config.target_os == "Linux":
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                r"-Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
+                r"-Wl,-rpath,\$ORIGIN -L%t.dir -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
-    elif config.host_os == "SunOS":
+    elif config.target_os == "SunOS":
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                r"-Wl,-R\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
+                r"-Wl,-R\$ORIGIN -L%t.dir -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
@@ -920,7 +914,10 @@ for postfix in ["2", "1", ""]:
 
     # Must be defined after the substitutions that use %dynamiclib.
     config.substitutions.append(
-        ("%dynamiclib" + postfix, "%T/%xdynamiclib_filename" + postfix)
+        ("%dynamiclib" + postfix, "%t.dir/%xdynamiclib_filename" + postfix)
+    )
+    config.substitutions.append(
+        ("%base_dynamiclib" + postfix, "%xdynamiclib_filename" + postfix)
     )
 
     if config.host_os == "AIX":
@@ -941,7 +938,7 @@ for postfix in ["2", "1", ""]:
     config.substitutions.append(("%xdynamiclib_namespec", "%basename_t.dynamic"))
 
 config.default_sanitizer_opts = []
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     # On Darwin, we default to `abort_on_error=1`, which would make tests run
     # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
     config.default_sanitizer_opts += ["abort_on_error=0"]
@@ -983,6 +980,23 @@ if config.memprof_shadow_scale:
 else:
     config.available_features.add("memprof-shadow-scale-3")
 
+
+def target_page_size():
+    try:
+        proc = subprocess.Popen(
+            f"{emulator or ''} python3",
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        out, err = proc.communicate(b'import os; print(os.sysconf("SC_PAGESIZE"))')
+        return int(out)
+    except:
+        return 4096
+
+
+config.available_features.add(f"page-size-{target_page_size()}")
+
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 
@@ -1001,7 +1015,7 @@ if config.use_lld and config.has_lld and not config.use_lto:
 elif config.use_lld and (not config.has_lld):
     config.unsupported = True
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     if getattr(config, "darwin_linker_version", None):
         extra_cflags += ["-mlinker-version=" + config.darwin_linker_version]
 
@@ -1016,7 +1030,7 @@ config.clang = (
 )
 config.target_cflags = " " + " ".join(target_cflags + extra_cflags) + " "
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     config.substitutions.append(
         (
             "%get_pid_from_output",
@@ -1071,3 +1085,5 @@ if config.compiler_id == "GNU":
 # llvm.
 config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
 config.substitutions.append(("%llvm_src", config.llvm_src_root))
+
+config.substitutions.append(("%python", '"%s"' % (sys.executable)))

@@ -1,23 +1,33 @@
-#ifndef LLVM_PROFILEDATA_MEMPROF_H_
-#define LLVM_PROFILEDATA_MEMPROF_H_
+//===- MemProf.h - MemProf support ------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains common definitions used in the reading and writing of
+// memory profile data.
+//
+//===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/MapVector.h"
+#ifndef LLVM_PROFILEDATA_MEMPROF_H
+#define LLVM_PROFILEDATA_MEMPROF_H
+
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
-#include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <bitset>
 #include <cstdint>
-#include <optional>
 
 namespace llvm {
 namespace yaml {
@@ -35,10 +45,12 @@ enum IndexedVersion : uint64_t {
   // Version 3: Added a radix tree for call stacks.  Switched to linear IDs for
   // frames and call stacks.
   Version3 = 3,
+  // Version 4: Added CalleeGuids to call site info.
+  Version4 = 4,
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version2;
-constexpr uint64_t MaximumSupportedVersion = Version3;
+constexpr uint64_t MaximumSupportedVersion = Version4;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
@@ -64,10 +76,10 @@ enum class Meta : uint64_t {
 using MemProfSchema = llvm::SmallVector<Meta, static_cast<int>(Meta::Size)>;
 
 // Returns the full schema currently in use.
-MemProfSchema getFullSchema();
+LLVM_ABI MemProfSchema getFullSchema();
 
 // Returns the schema consisting of the fields used for hot cold memory hinting.
-MemProfSchema getHotColdSchema();
+LLVM_ABI MemProfSchema getHotColdSchema();
 
 // Holds the actual MemInfoBlock data with all fields. Contents may be read or
 // written partially by providing an appropriate schema to the serialize and
@@ -381,8 +393,8 @@ struct IndexedAllocationInfo {
       : CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize(const MemProfSchema &Schema,
-                        IndexedVersion Version) const;
+  LLVM_ABI size_t serializedSize(const MemProfSchema &Schema,
+                                 IndexedVersion Version) const;
 
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
@@ -442,8 +454,8 @@ struct IndexedMemProfRecord {
     AllocSites.append(Other.AllocSites);
   }
 
-  size_t serializedSize(const MemProfSchema &Schema,
-                        IndexedVersion Version) const;
+  LLVM_ABI size_t serializedSize(const MemProfSchema &Schema,
+                                 IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
     if (Other.AllocSites != AllocSites)
@@ -456,26 +468,26 @@ struct IndexedMemProfRecord {
 
   // Serializes the memprof records in \p Records to the ostream \p OS based
   // on the schema provided in \p Schema.
-  void serialize(const MemProfSchema &Schema, raw_ostream &OS,
-                 IndexedVersion Version,
-                 llvm::DenseMap<CallStackId, LinearCallStackId>
-                     *MemProfCallStackIndexes = nullptr) const;
+  LLVM_ABI void serialize(const MemProfSchema &Schema, raw_ostream &OS,
+                          IndexedVersion Version,
+                          llvm::DenseMap<CallStackId, LinearCallStackId>
+                              *MemProfCallStackIndexes = nullptr) const;
 
   // Deserializes memprof records from the Buffer.
-  static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
-                                          const unsigned char *Buffer,
-                                          IndexedVersion Version);
+  LLVM_ABI static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
+                                                   const unsigned char *Buffer,
+                                                   IndexedVersion Version);
 
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
-  MemProfRecord toMemProfRecord(
+  LLVM_ABI MemProfRecord toMemProfRecord(
       llvm::function_ref<std::vector<Frame>(const CallStackId)> Callback) const;
-
-  // Returns the GUID for the function name after canonicalization. For
-  // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
-  // mapped to functions using this GUID.
-  static GlobalValue::GUID getGUID(const StringRef FunctionName);
 };
+
+// Returns the GUID for the function name after canonicalization. For
+// memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
+// mapped to functions using this GUID.
+LLVM_ABI GlobalValue::GUID getGUID(const StringRef FunctionName);
 
 // Holds call site information with frame contents inline.
 struct CallSiteInfo {
@@ -536,7 +548,8 @@ struct MemProfRecord {
 // ids in the schema. Subsequent entries are integers which map to memprof::Meta
 // enum class entries. After successfully reading the schema, the pointer is one
 // byte past the schema contents.
-Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer);
+LLVM_ABI Expected<MemProfSchema>
+readMemProfSchema(const unsigned char *&Buffer);
 
 // Trait for reading IndexedMemProfRecord data from the on-disk hash table.
 class RecordLookupTrait {
@@ -816,139 +829,11 @@ public:
   }
 };
 
-namespace detail {
-// "Dereference" the iterator from DenseMap or OnDiskChainedHashTable.  We have
-// to do so in one of two different ways depending on the type of the hash
-// table.
-template <typename value_type, typename IterTy>
-value_type DerefIterator(IterTy Iter) {
-  using deref_type = llvm::remove_cvref_t<decltype(*Iter)>;
-  if constexpr (std::is_same_v<deref_type, value_type>)
-    return *Iter;
-  else
-    return Iter->second;
-}
-} // namespace detail
-
-// A function object that returns a frame for a given FrameId.
-template <typename MapTy> struct FrameIdConverter {
-  std::optional<FrameId> LastUnmappedId;
-  MapTy &Map;
-
-  FrameIdConverter() = delete;
-  FrameIdConverter(MapTy &Map) : Map(Map) {}
-
-  // Delete the copy constructor and copy assignment operator to avoid a
-  // situation where a copy of FrameIdConverter gets an error in LastUnmappedId
-  // while the original instance doesn't.
-  FrameIdConverter(const FrameIdConverter &) = delete;
-  FrameIdConverter &operator=(const FrameIdConverter &) = delete;
-
-  Frame operator()(FrameId Id) {
-    auto Iter = Map.find(Id);
-    if (Iter == Map.end()) {
-      LastUnmappedId = Id;
-      return Frame();
-    }
-    return detail::DerefIterator<Frame>(Iter);
-  }
-};
-
-// A function object that returns a call stack for a given CallStackId.
-template <typename MapTy> struct CallStackIdConverter {
-  std::optional<CallStackId> LastUnmappedId;
-  MapTy &Map;
-  llvm::function_ref<Frame(FrameId)> FrameIdToFrame;
-
-  CallStackIdConverter() = delete;
-  CallStackIdConverter(MapTy &Map,
-                       llvm::function_ref<Frame(FrameId)> FrameIdToFrame)
-      : Map(Map), FrameIdToFrame(FrameIdToFrame) {}
-
-  // Delete the copy constructor and copy assignment operator to avoid a
-  // situation where a copy of CallStackIdConverter gets an error in
-  // LastUnmappedId while the original instance doesn't.
-  CallStackIdConverter(const CallStackIdConverter &) = delete;
-  CallStackIdConverter &operator=(const CallStackIdConverter &) = delete;
-
-  std::vector<Frame> operator()(CallStackId CSId) {
-    std::vector<Frame> Frames;
-    auto CSIter = Map.find(CSId);
-    if (CSIter == Map.end()) {
-      LastUnmappedId = CSId;
-    } else {
-      llvm::SmallVector<FrameId> CS =
-          detail::DerefIterator<llvm::SmallVector<FrameId>>(CSIter);
-      Frames.reserve(CS.size());
-      for (FrameId Id : CS)
-        Frames.push_back(FrameIdToFrame(Id));
-    }
-    return Frames;
-  }
-};
-
-// A function object that returns a Frame stored at a given index into the Frame
-// array in the profile.
-struct LinearFrameIdConverter {
-  const unsigned char *FrameBase;
-
-  LinearFrameIdConverter() = delete;
-  LinearFrameIdConverter(const unsigned char *FrameBase)
-      : FrameBase(FrameBase) {}
-
-  Frame operator()(LinearFrameId LinearId) {
-    uint64_t Offset = static_cast<uint64_t>(LinearId) * Frame::serializedSize();
-    return Frame::deserialize(FrameBase + Offset);
-  }
-};
-
-// A function object that returns a call stack stored at a given index into the
-// call stack array in the profile.
-struct LinearCallStackIdConverter {
-  const unsigned char *CallStackBase;
-  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
-
-  LinearCallStackIdConverter() = delete;
-  LinearCallStackIdConverter(
-      const unsigned char *CallStackBase,
-      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame)
-      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
-
-  std::vector<Frame> operator()(LinearCallStackId LinearCSId) {
-    std::vector<Frame> Frames;
-
-    const unsigned char *Ptr =
-        CallStackBase +
-        static_cast<uint64_t>(LinearCSId) * sizeof(LinearFrameId);
-    uint32_t NumFrames =
-        support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
-    Frames.reserve(NumFrames);
-    for (; NumFrames; --NumFrames) {
-      LinearFrameId Elem =
-          support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
-      // Follow a pointer to the parent, if any.  See comments below on
-      // CallStackRadixTreeBuilder for the description of the radix tree format.
-      if (static_cast<std::make_signed_t<LinearFrameId>>(Elem) < 0) {
-        Ptr += (-Elem) * sizeof(LinearFrameId);
-        Elem =
-            support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
-      }
-      // We shouldn't encounter another pointer.
-      assert(static_cast<std::make_signed_t<LinearFrameId>>(Elem) >= 0);
-      Frames.push_back(FrameIdToFrame(Elem));
-      Ptr += sizeof(LinearFrameId);
-    }
-
-    return Frames;
-  }
-};
-
 struct LineLocation {
   LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Column(D) {}
 
   bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Column < O.Column);
+    return std::tie(LineOffset, Column) < std::tie(O.LineOffset, O.Column);
   }
 
   bool operator==(const LineLocation &O) const {
@@ -967,267 +852,6 @@ struct LineLocation {
 
 // A pair of a call site location and its corresponding callee GUID.
 using CallEdgeTy = std::pair<LineLocation, uint64_t>;
-
-// Used to extract caller-callee pairs from the call stack array.  The leaf
-// frame is assumed to call a heap allocation function with GUID 0.  The
-// resulting pairs are accumulated in CallerCalleePairs.  Users can take it
-// with:
-//
-//   auto Pairs = std::move(Extractor.CallerCalleePairs);
-struct CallerCalleePairExtractor {
-  // The base address of the radix tree array.
-  const unsigned char *CallStackBase;
-  // A functor to convert a linear FrameId to a Frame.
-  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
-  // A map from caller GUIDs to lists of call sites in respective callers.
-  DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> CallerCalleePairs;
-
-  // The set of linear call stack IDs that we've visited.
-  BitVector Visited;
-
-  CallerCalleePairExtractor() = delete;
-  CallerCalleePairExtractor(
-      const unsigned char *CallStackBase,
-      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame,
-      unsigned RadixTreeSize)
-      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame),
-        Visited(RadixTreeSize) {}
-
-  void operator()(LinearCallStackId LinearCSId) {
-    const unsigned char *Ptr =
-        CallStackBase +
-        static_cast<uint64_t>(LinearCSId) * sizeof(LinearFrameId);
-    uint32_t NumFrames =
-        support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
-    // The leaf frame calls a function with GUID 0.
-    uint64_t CalleeGUID = 0;
-    for (; NumFrames; --NumFrames) {
-      LinearFrameId Elem =
-          support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
-      // Follow a pointer to the parent, if any.  See comments below on
-      // CallStackRadixTreeBuilder for the description of the radix tree format.
-      if (static_cast<std::make_signed_t<LinearFrameId>>(Elem) < 0) {
-        Ptr += (-Elem) * sizeof(LinearFrameId);
-        Elem =
-            support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
-      }
-      // We shouldn't encounter another pointer.
-      assert(static_cast<std::make_signed_t<LinearFrameId>>(Elem) >= 0);
-
-      // Add a new caller-callee pair.
-      Frame F = FrameIdToFrame(Elem);
-      uint64_t CallerGUID = F.Function;
-      LineLocation Loc(F.LineOffset, F.Column);
-      CallerCalleePairs[CallerGUID].emplace_back(Loc, CalleeGUID);
-
-      // Keep track of the indices we've visited.  If we've already visited the
-      // current one, terminate the traversal.  We will not discover any new
-      // caller-callee pair by continuing the traversal.
-      unsigned Offset =
-          std::distance(CallStackBase, Ptr) / sizeof(LinearFrameId);
-      if (Visited.test(Offset))
-        break;
-      Visited.set(Offset);
-
-      Ptr += sizeof(LinearFrameId);
-      CalleeGUID = CallerGUID;
-    }
-  }
-};
-
-struct IndexedMemProfData {
-  // A map to hold memprof data per function. The lower 64 bits obtained from
-  // the md5 hash of the function name is used to index into the map.
-  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> Records;
-
-  // A map to hold frame id to frame mappings. The mappings are used to
-  // convert IndexedMemProfRecord to MemProfRecords with frame information
-  // inline.
-  llvm::MapVector<FrameId, Frame> Frames;
-
-  // A map to hold call stack id to call stacks.
-  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStacks;
-
-  FrameId addFrame(const Frame &F) {
-    const FrameId Id = hashFrame(F);
-    Frames.try_emplace(Id, F);
-    return Id;
-  }
-
-  CallStackId addCallStack(ArrayRef<FrameId> CS) {
-    CallStackId CSId = hashCallStack(CS);
-    CallStacks.try_emplace(CSId, CS);
-    return CSId;
-  }
-
-  CallStackId addCallStack(SmallVector<FrameId> &&CS) {
-    CallStackId CSId = hashCallStack(CS);
-    CallStacks.try_emplace(CSId, std::move(CS));
-    return CSId;
-  }
-
-private:
-  // Return a hash value based on the contents of the frame. Here we use a
-  // cryptographic hash function to minimize the chance of hash collisions.  We
-  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
-  // However, the deserializer never calls this function; it uses FrameIds
-  // merely as keys to look up Frames proper.
-  FrameId hashFrame(const Frame &F) const {
-    llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
-        HashBuilder;
-    HashBuilder.add(F.Function, F.LineOffset, F.Column, F.IsInlineFrame);
-    llvm::BLAKE3Result<8> Hash = HashBuilder.final();
-    FrameId Id;
-    std::memcpy(&Id, Hash.data(), sizeof(Hash));
-    return Id;
-  }
-
-  // Compute a CallStackId for a given call stack.
-  CallStackId hashCallStack(ArrayRef<FrameId> CS) const;
-};
-
-// A convenience wrapper around FrameIdConverter and CallStackIdConverter for
-// tests.
-struct IndexedCallstackIdConveter {
-  IndexedCallstackIdConveter() = delete;
-  IndexedCallstackIdConveter(IndexedMemProfData &MemProfData)
-      : FrameIdConv(MemProfData.Frames),
-        CSIdConv(MemProfData.CallStacks, FrameIdConv) {}
-
-  // Delete the copy constructor and copy assignment operator to avoid a
-  // situation where a copy of IndexedCallStackIdConverter gets an error in
-  // LastUnmappedId while the original instance doesn't.
-  IndexedCallstackIdConveter(const IndexedCallstackIdConveter &) = delete;
-  IndexedCallstackIdConveter &
-  operator=(const IndexedCallstackIdConveter &) = delete;
-
-  std::vector<Frame> operator()(CallStackId CSId) { return CSIdConv(CSId); }
-
-  FrameIdConverter<decltype(IndexedMemProfData::Frames)> FrameIdConv;
-  CallStackIdConverter<decltype(IndexedMemProfData::CallStacks)> CSIdConv;
-};
-
-struct FrameStat {
-  // The number of occurrences of a given FrameId.
-  uint64_t Count = 0;
-  // The sum of indexes where a given FrameId shows up.
-  uint64_t PositionSum = 0;
-};
-
-// Compute a histogram of Frames in call stacks.
-template <typename FrameIdTy>
-llvm::DenseMap<FrameIdTy, FrameStat>
-computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
-                          &MemProfCallStackData);
-
-// Construct a radix tree of call stacks.
-//
-// A set of call stacks might look like:
-//
-// CallStackId 1:  f1 -> f2 -> f3
-// CallStackId 2:  f1 -> f2 -> f4 -> f5
-// CallStackId 3:  f1 -> f2 -> f4 -> f6
-// CallStackId 4:  f7 -> f8 -> f9
-//
-// where each fn refers to a stack frame.
-//
-// Since we expect a lot of common prefixes, we can compress the call stacks
-// into a radix tree like:
-//
-// CallStackId 1:  f1 -> f2 -> f3
-//                       |
-// CallStackId 2:        +---> f4 -> f5
-//                             |
-// CallStackId 3:              +---> f6
-//
-// CallStackId 4:  f7 -> f8 -> f9
-//
-// Now, we are interested in retrieving call stacks for a given CallStackId, so
-// we just need a pointer from a given call stack to its parent.  For example,
-// CallStackId 2 would point to CallStackId 1 as a parent.
-//
-// We serialize the radix tree above into a single array along with the length
-// of each call stack and pointers to the parent call stacks.
-//
-// Index:              0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
-// Array:             L3 f9 f8 f7 L4 f6 J3 L4 f5 f4 J3 L3 f3 f2 f1
-//                     ^           ^        ^           ^
-//                     |           |        |           |
-// CallStackId 4:  0 --+           |        |           |
-// CallStackId 3:  4 --------------+        |           |
-// CallStackId 2:  7 -----------------------+           |
-// CallStackId 1: 11 -----------------------------------+
-//
-// - LN indicates the length of a call stack, encoded as ordinary integer N.
-//
-// - JN indicates a pointer to the parent, encoded as -N.
-//
-// The radix tree allows us to reconstruct call stacks in the leaf-to-root
-// order as we scan the array from left ro right while following pointers to
-// parents along the way.
-//
-// For example, if we are decoding CallStackId 2, we start a forward traversal
-// at Index 7, noting the call stack length of 4 and obtaining f5 and f4.  When
-// we see J3 at Index 10, we resume a forward traversal at Index 13 = 10 + 3,
-// picking up f2 and f1.  We are done after collecting 4 frames as indicated at
-// the beginning of the traversal.
-//
-// On-disk IndexedMemProfRecord will refer to call stacks by their indexes into
-// the radix tree array, so we do not explicitly encode mappings like:
-// "CallStackId 1 -> 11".
-template <typename FrameIdTy> class CallStackRadixTreeBuilder {
-  // The radix tree array.
-  std::vector<LinearFrameId> RadixArray;
-
-  // Mapping from CallStackIds to indexes into RadixArray.
-  llvm::DenseMap<CallStackId, LinearCallStackId> CallStackPos;
-
-  // In build, we partition a given call stack into two parts -- the prefix
-  // that's common with the previously encoded call stack and the frames beyond
-  // the common prefix -- the unique portion.  Then we want to find out where
-  // the common prefix is stored in RadixArray so that we can link the unique
-  // portion to the common prefix.  Indexes, declared below, helps with our
-  // needs.  Intuitively, Indexes tells us where each of the previously encoded
-  // call stack is stored in RadixArray.  More formally, Indexes satisfies:
-  //
-  //   RadixArray[Indexes[I]] == Prev[I]
-  //
-  // for every I, where Prev is the the call stack in the root-to-leaf order
-  // previously encoded by build.  (Note that Prev, as passed to
-  // encodeCallStack, is in the leaf-to-root order.)
-  //
-  // For example, if the call stack being encoded shares 5 frames at the root of
-  // the call stack with the previously encoded call stack,
-  // RadixArray[Indexes[0]] is the root frame of the common prefix.
-  // RadixArray[Indexes[5 - 1]] is the last frame of the common prefix.
-  std::vector<LinearCallStackId> Indexes;
-
-  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameIdTy>>;
-
-  // Encode a call stack into RadixArray.  Return the starting index within
-  // RadixArray.
-  LinearCallStackId encodeCallStack(
-      const llvm::SmallVector<FrameIdTy> *CallStack,
-      const llvm::SmallVector<FrameIdTy> *Prev,
-      const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes);
-
-public:
-  CallStackRadixTreeBuilder() = default;
-
-  // Build a radix tree array.
-  void
-  build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
-            &&MemProfCallStackData,
-        const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes,
-        llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram);
-
-  ArrayRef<LinearFrameId> getRadixArray() const { return RadixArray; }
-
-  llvm::DenseMap<CallStackId, LinearCallStackId> takeCallStackPos() {
-    return std::move(CallStackPos);
-  }
-};
 } // namespace memprof
 } // namespace llvm
-
-#endif // LLVM_PROFILEDATA_MEMPROF_H_
+#endif // LLVM_PROFILEDATA_MEMPROF_H

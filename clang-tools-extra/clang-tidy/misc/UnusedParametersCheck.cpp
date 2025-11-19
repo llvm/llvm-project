@@ -1,4 +1,4 @@
-//===--- UnusedParametersCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/STLExtras.h"
 #include <unordered_map>
 #include <unordered_set>
 
@@ -23,15 +22,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
-namespace {
-bool isOverrideMethod(const FunctionDecl *Function) {
+static bool isOverrideMethod(const FunctionDecl *Function) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Function))
     return MD->size_overridden_methods() > 0 || MD->hasAttr<OverrideAttr>();
   return false;
 }
 
-bool hasAttrAfterParam(const SourceManager *SourceManager,
-                       const ParmVarDecl *Param) {
+static bool hasAttrAfterParam(const SourceManager *SourceManager,
+                              const ParmVarDecl *Param) {
   for (const auto *Attr : Param->attrs()) {
     if (SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
                                                  Attr->getLocation())) {
@@ -40,7 +38,6 @@ bool hasAttrAfterParam(const SourceManager *SourceManager,
   }
   return false;
 }
-} // namespace
 
 void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(functionDecl(isDefinition(), hasBody(stmt()),
@@ -137,7 +134,7 @@ UnusedParametersCheck::~UnusedParametersCheck() = default;
 UnusedParametersCheck::UnusedParametersCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       IgnoreVirtual(Options.get("IgnoreVirtual", false)) {}
 
 void UnusedParametersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -168,7 +165,7 @@ void UnusedParametersCheck::warnOnUnusedParameter(
     if (!Result.Context->getLangOpts().CPlusPlus)
       return;
 
-    SourceRange RemovalRange(Param->getLocation());
+    const SourceRange RemovalRange(Param->getLocation());
     // Note: We always add a space before the '/*' to not accidentally create
     // a '*/*' for pointer types, which doesn't start a comment. clang-format
     // will clean this up afterwards.

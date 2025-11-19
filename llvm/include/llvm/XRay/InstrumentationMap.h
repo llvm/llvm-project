@@ -15,6 +15,7 @@
 #define LLVM_XRAY_INSTRUMENTATIONMAP_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
@@ -22,16 +23,15 @@
 #include <unordered_map>
 #include <vector>
 
-namespace llvm {
-
-namespace xray {
+namespace llvm::xray {
 
 // Forward declare to make a friend.
 class InstrumentationMap;
 
 /// Loads the instrumentation map from |Filename|. This auto-deduces the type of
 /// the instrumentation map.
-Expected<InstrumentationMap> loadInstrumentationMap(StringRef Filename);
+LLVM_ABI Expected<InstrumentationMap>
+loadInstrumentationMap(StringRef Filename);
 
 /// Represents an XRay instrumentation sled entry from an object file.
 struct SledEntry {
@@ -83,27 +83,28 @@ private:
   FunctionAddressMap FunctionAddresses;
   FunctionAddressReverseMap FunctionIds;
 
-  friend Expected<InstrumentationMap> loadInstrumentationMap(StringRef);
+  LLVM_ABI friend Expected<InstrumentationMap>
+      loadInstrumentationMap(StringRef);
 
 public:
   /// Provides a raw accessor to the unordered map of function addresses.
   const FunctionAddressMap &getFunctionAddresses() { return FunctionAddresses; }
 
   /// Returns an XRay computed function id, provided a function address.
-  std::optional<int32_t> getFunctionId(uint64_t Addr) const;
+  LLVM_ABI std::optional<int32_t> getFunctionId(uint64_t Addr) const;
 
   /// Returns the function address for a function id.
-  std::optional<uint64_t> getFunctionAddr(int32_t FuncId) const;
+  LLVM_ABI std::optional<uint64_t> getFunctionAddr(int32_t FuncId) const;
 
   /// Provide read-only access to the entries of the instrumentation map.
   const SledContainer &sleds() const { return Sleds; };
 };
 
-} // end namespace xray
+} // end namespace llvm::xray
 
-namespace yaml {
-
-template <> struct ScalarEnumerationTraits<xray::SledEntry::FunctionKinds> {
+namespace llvm {
+template <>
+struct yaml::ScalarEnumerationTraits<xray::SledEntry::FunctionKinds> {
   static void enumeration(IO &IO, xray::SledEntry::FunctionKinds &Kind) {
     IO.enumCase(Kind, "function-enter", xray::SledEntry::FunctionKinds::ENTRY);
     IO.enumCase(Kind, "function-exit", xray::SledEntry::FunctionKinds::EXIT);
@@ -115,7 +116,7 @@ template <> struct ScalarEnumerationTraits<xray::SledEntry::FunctionKinds> {
   }
 };
 
-template <> struct MappingTraits<xray::YAMLXRaySledEntry> {
+template <> struct yaml::MappingTraits<xray::YAMLXRaySledEntry> {
   static void mapping(IO &IO, xray::YAMLXRaySledEntry &Entry) {
     IO.mapRequired("id", Entry.FuncId);
     IO.mapRequired("address", Entry.Address);
@@ -128,10 +129,7 @@ template <> struct MappingTraits<xray::YAMLXRaySledEntry> {
 
   static constexpr bool flow = true;
 };
-
-} // end namespace yaml
-
-} // end namespace llvm
+} // namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(xray::YAMLXRaySledEntry)
 

@@ -47,6 +47,7 @@
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
@@ -68,15 +69,7 @@ namespace llvm {
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
-// TODO: Remove -debug-info-correlate in next LLVM release, in favor of
-// -profile-correlate=debug-info.
-cl::opt<bool> DebugInfoCorrelate(
-    "debug-info-correlate",
-    cl::desc("Use debug info to correlate profiles. (Deprecated, use "
-             "-profile-correlate=debug-info)"),
-    cl::init(false));
-
-cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
     cl::desc("Use debug info or binary file to correlate profiles."),
     cl::init(InstrProfCorrelator::NONE),
@@ -138,7 +131,7 @@ cl::opt<bool> ConditionalCounterUpdate(
     cl::init(false));
 
 // If the option is not specified, the default behavior about whether
-// counter promotion is done depends on how instrumentaiton lowering
+// counter promotion is done depends on how instrumentation lowering
 // pipeline is setup, i.e., the default value of true of this option
 // does not mean the promotion will be done by default. Explicitly
 // setting this option can override the default behavior.
@@ -1046,12 +1039,12 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // in lightweight mode. We need to move the value profile pointer to the
   // Counter struct to get this working.
   assert(
-      !DebugInfoCorrelate && ProfileCorrelate == InstrProfCorrelator::NONE &&
+      ProfileCorrelate == InstrProfCorrelator::NONE &&
       "Value profiling is not yet supported with lightweight instrumentation");
   GlobalVariable *Name = Ind->getName();
   auto It = ProfileDataMap.find(Name);
   assert(It != ProfileDataMap.end() && It->second.DataVar &&
-         "value profiling detected in function with no counter incerement");
+         "value profiling detected in function with no counter increment");
 
   GlobalVariable *DataVar = It->second.DataVar;
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
@@ -1503,7 +1496,7 @@ static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
 }
 
 void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
-  assert(!DebugInfoCorrelate &&
+  assert(ProfileCorrelate != InstrProfCorrelator::DEBUG_INFO &&
          "Value profiling is not supported with lightweight instrumentation");
   if (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
     return;
@@ -1583,8 +1576,7 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
 
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if ((DebugInfoCorrelate ||
-       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) &&
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO &&
       TT.isOSBinFormatMachO() && Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
@@ -1690,8 +1682,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
   PD.RegionCounters = CounterPtr;
 
-  if (DebugInfoCorrelate ||
-      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     LLVMContext &Ctx = M.getContext();
     Function *Fn = Inc->getParent()->getParent();
     if (auto *SP = Fn->getSubprogram()) {
@@ -1736,7 +1727,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
-  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     return;
 
   GlobalVariable *NamePtr = Inc->getName();
@@ -1938,8 +1929,6 @@ void InstrLowerer::emitVNodes() {
 }
 
 void InstrLowerer::emitNameData() {
-  std::string UncompressedData;
-
   if (ReferencedNames.empty())
     return;
 
@@ -1955,11 +1944,9 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
-
-  // Make names variable public if current target is a GPU
   if (isGPUProfTarget(M)) {
     NamesVar->setLinkage(GlobalValue::ExternalLinkage);
-    NamesVar->setVisibility(GlobalValue::VisibilityTypes::ProtectedVisibility);
+    NamesVar->setVisibility(GlobalValue::ProtectedVisibility);
   }
 
   NamesSize = CompressedNameStr.size();

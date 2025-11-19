@@ -146,10 +146,8 @@ define <4 x i32> @cmp_sel_0_or_minus1_vec(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @sel_1_or_0_vec(<4 x i1> %cond) {
 ; CHECK-LABEL: sel_1_or_0_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %add = select <4 x i1> %cond, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
@@ -171,11 +169,9 @@ define <4 x i32> @cmp_sel_1_or_0_vec(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @sel_0_or_1_vec(<4 x i1> %cond) {
 ; CHECK-LABEL: sel_0_or_1_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %add = select <4 x i1> %cond, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %add
@@ -369,10 +365,9 @@ define <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 define <vscale x 16 x i8> @signbit_mask_xor_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: signbit_mask_xor_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmplt p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
-; CHECK-NEXT:    mov z0.b, p0/m, #0 // =0x0
+; CHECK-NEXT:    eor z1.d, z0.d, z1.d
+; CHECK-NEXT:    asr z0.b, z0.b, #7
+; CHECK-NEXT:    bic z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %cond = icmp slt <vscale x 16 x i8> %a, zeroinitializer
   %xor = xor <vscale x 16 x i8> %a, %b

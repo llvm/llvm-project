@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=postra-machine-sink -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -passes='postra-machine-sink' -o - %s | FileCheck %s
 
 ---
 # Sink w19 to %bb.1.

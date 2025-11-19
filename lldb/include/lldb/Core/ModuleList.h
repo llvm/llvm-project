@@ -17,6 +17,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -351,6 +352,14 @@ public:
   // UUID values is very efficient and accurate.
   lldb::ModuleSP FindModule(const UUID &uuid) const;
 
+  /// Find a module by LLDB-specific unique identifier.
+  ///
+  /// \param[in] uid The UID of the module assigned to it on construction.
+  ///
+  /// \returns ModuleSP of module with \c uid. Returns nullptr if no such
+  /// module could be found.
+  lldb::ModuleSP FindModule(lldb::user_id_t uid) const;
+
   /// Finds the first module whose file specification matches \a module_spec.
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
@@ -426,7 +435,7 @@ public:
 
   size_t Remove(ModuleList &module_list);
 
-  bool RemoveIfOrphaned(const Module *module_ptr);
+  bool RemoveIfOrphaned(const lldb::ModuleWP module_ptr);
 
   size_t RemoveOrphans(bool mandatory);
 
@@ -467,9 +476,9 @@ public:
 
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                  const FileSpecList *module_search_paths_ptr,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr, bool always_create = false);
+                  bool *did_create_ptr, bool always_create = false,
+                  bool invoke_locate_callback = true);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
@@ -480,7 +489,7 @@ public:
 
   static size_t RemoveOrphanSharedModules(bool mandatory);
 
-  static bool RemoveSharedModuleIfOrphaned(const Module *module_ptr);
+  static bool RemoveSharedModuleIfOrphaned(const lldb::ModuleWP module_ptr);
 
   /// Applies 'callback' to each module in this ModuleList.
   /// If 'callback' returns false, iteration terminates.
@@ -488,8 +497,9 @@ public:
   /// be non-null.
   ///
   /// This function is thread-safe.
-  void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
-                   &callback) const;
+  void
+  ForEach(std::function<IterationAction(const lldb::ModuleSP &module_sp)> const
+              &callback) const;
 
   /// Returns true if 'callback' returns true for one of the modules
   /// in this ModuleList.
@@ -500,6 +510,12 @@ public:
 
   /// Atomically swaps the contents of this module list with \a other.
   void Swap(ModuleList &other);
+
+  /// For each module in this ModuleList, preload its symbols.
+  ///
+  /// \param[in] parallelize
+  ///     If true, all modules will be preloaded in parallel.
+  void PreloadSymbols(bool parallelize) const;
 
 protected:
   // Class typedefs.
@@ -520,6 +536,9 @@ protected:
   mutable std::recursive_mutex m_modules_mutex;
 
   Notifier *m_notifier = nullptr;
+
+  /// An orphaned module that lives only in the ModuleList has a count of 1.
+  static constexpr long kUseCountModuleListOrphaned = 1;
 
 public:
   typedef LockingAdaptedIterable<std::recursive_mutex, collection>

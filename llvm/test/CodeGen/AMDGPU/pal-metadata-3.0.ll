@@ -1,17 +1,14 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefixes=CHECK,GFX11,NODVGPR
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefixes=CHECK,NODVGPR
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr <%s | FileCheck %s --check-prefixes=CHECK,DVGPR
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefixes=CHECK,GFX11
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
-; NODVGPR: ; TotalNumSgprs: 4
-; DVGPR: ; TotalNumSgprs: 34
+; CHECK: ; TotalNumSgprs: 4
 ; CHECK: ; NumVgprs: 2
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
 ; CHECK-NEXT: amdpal.pipelines:
 ; CHECK-NEXT:   - .api:            Vulkan
 ; CHECK-NEXT:     .compute_registers:
-; DVGPR-NEXT:       .dynamic_vgpr_en:   true
 ; CHECK-NEXT:       .tg_size_en:     true
 ; CHECK-NEXT:       .tgid_x_en:      false
 ; CHECK-NEXT:       .tgid_y_en:      false
@@ -57,19 +54,18 @@
 ; CHECK-NEXT:      .cs:
 ; CHECK-NEXT:        .checksum_value: 0x9444d7d0
 ; CHECK-NEXT:        .debug_mode:     false
-; DVGPR-NEXT:        .dynamic_vgpr_saved_count: 0x70
-; CHECK-NEXT:        .entry_point:    _amdgpu_cs
+; CHECK-NEXT:        .entry_point:    _amdgpu_cs_main
 ; CHECK-NEXT:        .entry_point_symbol:    _amdgpu_cs_main
 ; CHECK-NEXT:        .excp_en:        0
 ; CHECK-NEXT:        .float_mode:     0xc0
+; CHECK-NEXT:        .forward_progress: true
 ; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .image_op:       false
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; NODVGPR-NEXT:      .sgpr_count:     0x4
-; DVGPR-NEXT:        .sgpr_count:     0x22
+; CHECK-NEXT:        .sgpr_count:     0x4
 ; CHECK-NEXT:        .sgpr_limit:     0x6a
 ; CHECK-NEXT:        .threadgroup_dimensions:
 ; CHECK-NEXT:          - 0x1
@@ -116,8 +112,9 @@
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .gs:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    _amdgpu_gs
+; CHECK-NEXT:        .entry_point:    _amdgpu_gs_main
 ; CHECK-NEXT:        .entry_point_symbol:    gs_shader
+; CHECK-NEXT:        .forward_progress: true
 ; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0x200
 ; CHECK-NEXT:        .mem_ordered:    true
@@ -128,8 +125,9 @@
 ; CHECK-NEXT:        .wgp_mode:       true
 ; CHECK-NEXT:      .hs:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    _amdgpu_hs
+; CHECK-NEXT:        .entry_point:    _amdgpu_hs_main
 ; CHECK-NEXT:        .entry_point_symbol:    hs_shader
+; CHECK-NEXT:        .forward_progress: true
 ; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0x1000
 ; CHECK-NEXT:        .mem_ordered:    true
@@ -140,8 +138,9 @@
 ; CHECK-NEXT:        .wgp_mode:       true
 ; CHECK-NEXT:      .ps:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    _amdgpu_ps
+; CHECK-NEXT:        .entry_point:    _amdgpu_ps_main
 ; CHECK-NEXT:        .entry_point_symbol:    ps_shader
+; CHECK-NEXT:        .forward_progress: true
 ; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .mem_ordered:    true
@@ -180,7 +179,7 @@ define dllexport amdgpu_ps void @ps_shader() #1 {
 
 @LDS.GS = external addrspace(3) global [1 x i32], align 4
 
-define dllexport amdgpu_gs void @gs_shader() #2 {
+define dllexport amdgpu_gs void @gs_shader() {
   %ptr = getelementptr i32, ptr addrspace(3) @LDS.GS, i32 0
   store i32 0, ptr addrspace(3) %ptr, align 4
   ret void
@@ -188,7 +187,7 @@ define dllexport amdgpu_gs void @gs_shader() #2 {
 
 @LDS.HS = external addrspace(3) global [1024 x i32], align 4
 
-define dllexport amdgpu_hs void @hs_shader() #2 {
+define dllexport amdgpu_hs void @hs_shader() {
   %ptr = getelementptr i32, ptr addrspace(3) @LDS.HS, i32 0
   store i32 0, ptr addrspace(3) %ptr, align 4
   ret void
@@ -196,16 +195,11 @@ define dllexport amdgpu_hs void @hs_shader() #2 {
 
 !amdgpu.pal.metadata.msgpack = !{!0}
 
-; Function Attrs: nounwind willreturn memory(none)
 declare ptr addrspace(7) @lgc.buffer.desc.to.ptr(<4 x i32>) #1
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i64 @llvm.amdgcn.s.getpc() #2
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
+declare i64 @llvm.amdgcn.s.getpc()
 declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg) #3
 
-attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="4" "denormal-fp-math-f32"="preserve-sign" "target-features"=",+wavefrontsize64,+cumode" }
+attributes #0 = { nounwind memory(readwrite) "target-features"=",+wavefrontsize64,+cumode" }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" }
 

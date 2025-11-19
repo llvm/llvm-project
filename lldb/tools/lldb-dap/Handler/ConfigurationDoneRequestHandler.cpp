@@ -8,60 +8,62 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "LLDBUtils.h"
+#include "Protocol/ProtocolEvents.h"
+#include "Protocol/ProtocolRequests.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBDebugger.h"
+
+using namespace llvm;
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
-// "ConfigurationDoneRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//             "type": "object",
-//             "description": "ConfigurationDone request; value of command field
-//             is 'configurationDone'.\nThe client of the debug protocol must
-//             send this request at the end of the sequence of configuration
-//             requests (which was started by the InitializedEvent).",
-//             "properties": {
-//             "command": {
-//             "type": "string",
-//             "enum": [ "configurationDone" ]
-//             },
-//             "arguments": {
-//             "$ref": "#/definitions/ConfigurationDoneArguments"
-//             }
-//             },
-//             "required": [ "command" ]
-//             }]
-// },
-// "ConfigurationDoneArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'configurationDone' request.\nThe
-//   configurationDone request has no standardized attributes."
-// },
-// "ConfigurationDoneResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//             "type": "object",
-//             "description": "Response to 'configurationDone' request. This is
-//             just an acknowledgement, so no body field is required."
-//             }]
-// },
+/// This request indicates that the client has finished initialization of the
+/// debug adapter.
+///
+/// So it is the last request in the sequence of configuration requests (which
+/// was started by the `initialized` event).
+///
+/// Clients should only call this request if the corresponding capability
+/// `supportsConfigurationDoneRequest` is true.
+llvm::Error
+ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
+  dap.configuration_done = true;
 
-void ConfigurationDoneRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-  dap.configuration_done_sent = true;
+  // Ensure any command scripts did not leave us in an unexpected state.
+  lldb::SBProcess process = dap.target.GetProcess();
+  if (!process.IsValid() ||
+      !lldb::SBDebugger::StateIsStoppedState(process.GetState()))
+    return make_error<DAPError>(
+        "Expected process to be stopped.\r\n\r\nProcess is in an unexpected "
+        "state and may have missed an initial configuration. Please check that "
+        "any debugger command scripts are not resuming the process during the "
+        "launch sequence.");
+
+  // Waiting until 'configurationDone' to send target based capabilities in case
+  // the launch or attach scripts adjust the target. The initial dummy target
+  // may have different capabilities than the final target.
+
+  /// Also send here custom capabilities to the client, which is consumed by the
+  /// lldb-dap specific editor extension.
+  SendExtraCapabilities(dap);
+
+  // Clients can request a baseline of currently existing threads after
+  // we acknowledge the configurationDone request.
+  // Client requests the baseline of currently existing threads after
+  // a successful or attach by sending a 'threads' request
+  // right after receiving the configurationDone response.
+  // Obtain the list of threads before we resume the process
+  dap.initial_thread_list = GetThreads(process, dap.thread_format);
+
+  SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
+
   if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else {
-    // Client requests the baseline of currently existing threads after
-    // a successful launch or attach by sending a 'threads' request
-    // right after receiving the configurationDone response.
-    // Obtain the list of threads before we resume the process
-    dap.initial_thread_list =
-        GetThreads(dap.target.GetProcess(), dap.thread_format);
-    dap.target.GetProcess().Continue();
-  }
+    return SendThreadStoppedEvent(dap, /*on_entry=*/true);
+
+  return ToError(process.Continue());
 }
 
 } // namespace lldb_dap

@@ -12,16 +12,20 @@
 #include "lldb/Core/Architecture.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterfaceUsages.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-interfaces.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
@@ -54,11 +58,66 @@ struct RegisteredPluginInfo {
   bool enabled = false;
 };
 
+// Define some data structures to describe known plugin "namespaces".
+// The PluginManager is organized into a series of static functions
+// that operate on different types of plugins. For example SystemRuntime
+// and ObjectFile plugins.
+//
+// The namespace name is used a prefix when matching plugin names. For example,
+// if we have an "macosx" plugin in the "system-runtime" namespace then we will
+// match a plugin name pattern against the "system-runtime.macosx" name.
+//
+// The plugin namespace here is used so we can operate on all the plugins
+// of a given type so it is easy to enable or disable them as a group.
+using GetPluginInfo = std::function<std::vector<RegisteredPluginInfo>()>;
+using SetPluginEnabled = std::function<bool(llvm::StringRef, bool)>;
+struct PluginNamespace {
+  llvm::StringRef name;
+  GetPluginInfo get_info;
+  SetPluginEnabled set_enabled;
+};
+
 class PluginManager {
 public:
   static void Initialize();
 
   static void Terminate();
+
+  // Support for enabling and disabling plugins.
+
+  // Return the plugins that can be enabled or disabled by the user.
+  static llvm::ArrayRef<PluginNamespace> GetPluginNamespaces();
+
+  // Generate a json object that describes the plugins that are available.
+  // This is a json representation of the plugin info returned by
+  // GetPluginNamespaces().
+  //
+  //    {
+  //       <plugin-namespace>: [
+  //           {
+  //               "enabled": <bool>,
+  //               "name": <plugin-name>,
+  //           },
+  //           ...
+  //       ],
+  //       ...
+  //    }
+  //
+  // If pattern is given it will be used to filter the plugins that are
+  // are returned. The pattern filters the plugin names using the
+  // PluginManager::MatchPluginName() function.
+  static llvm::json::Object GetJSON(llvm::StringRef pattern = "");
+
+  // Return true if the pattern matches the plugin name.
+  //
+  // The pattern matches the name if it is exactly equal to the namespace name
+  // or if it is equal to the qualified name, which is the namespace name
+  // followed by a dot and the plugin name (e.g. "system-runtime.foo").
+  //
+  // An empty pattern matches all plugins.
+  static bool MatchPluginName(llvm::StringRef pattern,
+                              const PluginNamespace &plugin_ns,
+                              const RegisteredPluginInfo &plugin);
 
   // ABI
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -141,8 +200,10 @@ public:
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
 
   // Language
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             LanguageCreateInstance create_callback);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 LanguageCreateInstance create_callback,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
 
@@ -175,12 +236,6 @@ public:
   static SystemRuntimeCreateInstance
   GetSystemRuntimeCreateCallbackAtIndex(uint32_t idx);
 
-  static std::vector<RegisteredPluginInfo> GetSystemRuntimePluginInfo();
-
-  // Modify the enabled state of a SystemRuntime plugin.
-  // Returns false if the plugin name is not found.
-  static bool SetSystemRuntimePluginEnabled(llvm::StringRef name, bool enabled);
-
   // ObjectFile
   static bool
   RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -206,8 +261,9 @@ public:
   static ObjectFileCreateMemoryInstance
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
-  static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         lldb_private::SaveCoreOptions &core_options);
+  static Status SaveCore(lldb_private::SaveCoreOptions &core_options);
+
+  static std::vector<llvm::StringRef> GetSaveCorePluginNames();
 
   // ObjectContainer
   static bool RegisterPlugin(
@@ -266,6 +322,17 @@ public:
   static void AutoCompleteProcessName(llvm::StringRef partial_name,
                                       CompletionRequest &request);
 
+  // Protocol
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             ProtocolServerCreateInstance create_callback);
+
+  static bool UnregisterPlugin(ProtocolServerCreateInstance create_callback);
+
+  static llvm::StringRef GetProtocolServerPluginNameAtIndex(uint32_t idx);
+
+  static ProtocolServerCreateInstance
+  GetProtocolCreateCallbackForPluginName(llvm::StringRef name);
+
   // Register Type Provider
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              RegisterTypeBuilderCreateInstance create_callback);
@@ -288,6 +355,24 @@ public:
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
+
+  // SyntheticFrameProvider
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 SyntheticFrameProviderCreateInstance create_native_callback,
+                 ScriptedFrameProviderCreateInstance create_scripted_callback);
+
+  static bool
+  UnregisterPlugin(SyntheticFrameProviderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(ScriptedFrameProviderCreateInstance create_callback);
+
+  static SyntheticFrameProviderCreateInstance
+  GetSyntheticFrameProviderCreateCallbackForPluginName(llvm::StringRef name);
+
+  static ScriptedFrameProviderCreateInstance
+  GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx);
 
   // StructuredDataPlugin
 
@@ -377,11 +462,13 @@ public:
   static SymbolLocatorCreateInstance
   GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
 
-  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec);
+  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec,
+                                               StatisticsMap &map);
 
   static FileSpec
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
-                             const FileSpecList &default_search_paths);
+                             const FileSpecList &default_search_paths,
+                             StatisticsMap &map);
 
   static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                           Status &error,
@@ -613,6 +700,113 @@ public:
   static bool CreateSettingForStructuredDataPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForCPlusPlusLanguagePlugin(Debugger &debugger,
+                                       llvm::StringRef setting_name);
+
+  static bool CreateSettingForCPlusPlusLanguagePlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
+  //
+  // Plugin Info+Enable Declarations
+  //
+  static std::vector<RegisteredPluginInfo> GetABIPluginInfo();
+  static bool SetABIPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetArchitecturePluginInfo();
+  static bool SetArchitecturePluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetDisassemblerPluginInfo();
+  static bool SetDisassemblerPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetDynamicLoaderPluginInfo();
+  static bool SetDynamicLoaderPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetEmulateInstructionPluginInfo();
+  static bool SetEmulateInstructionPluginEnabled(llvm::StringRef name,
+                                                 bool enable);
+
+  static std::vector<RegisteredPluginInfo>
+  GetInstrumentationRuntimePluginInfo();
+  static bool SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
+                                                     bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetJITLoaderPluginInfo();
+  static bool SetJITLoaderPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetLanguagePluginInfo();
+  static bool SetLanguagePluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetLanguageRuntimePluginInfo();
+  static bool SetLanguageRuntimePluginEnabled(llvm::StringRef name,
+                                              bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetMemoryHistoryPluginInfo();
+  static bool SetMemoryHistoryPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetObjectContainerPluginInfo();
+  static bool SetObjectContainerPluginEnabled(llvm::StringRef name,
+                                              bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetObjectFilePluginInfo();
+  static bool SetObjectFilePluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetOperatingSystemPluginInfo();
+  static bool SetOperatingSystemPluginEnabled(llvm::StringRef name,
+                                              bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetPlatformPluginInfo();
+  static bool SetPlatformPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetProcessPluginInfo();
+  static bool SetProcessPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetREPLPluginInfo();
+  static bool SetREPLPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetRegisterTypeBuilderPluginInfo();
+  static bool SetRegisterTypeBuilderPluginEnabled(llvm::StringRef name,
+                                                  bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetScriptInterpreterPluginInfo();
+  static bool SetScriptInterpreterPluginEnabled(llvm::StringRef name,
+                                                bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetScriptedInterfacePluginInfo();
+  static bool SetScriptedInterfacePluginEnabled(llvm::StringRef name,
+                                                bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetStructuredDataPluginInfo();
+  static bool SetStructuredDataPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetSymbolFilePluginInfo();
+  static bool SetSymbolFilePluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetSymbolLocatorPluginInfo();
+  static bool SetSymbolLocatorPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetSymbolVendorPluginInfo();
+  static bool SetSymbolVendorPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetSystemRuntimePluginInfo();
+  static bool SetSystemRuntimePluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetTracePluginInfo();
+  static bool SetTracePluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetTraceExporterPluginInfo();
+  static bool SetTraceExporterPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetTypeSystemPluginInfo();
+  static bool SetTypeSystemPluginEnabled(llvm::StringRef name, bool enable);
+
+  static std::vector<RegisteredPluginInfo> GetUnwindAssemblyPluginInfo();
+  static bool SetUnwindAssemblyPluginEnabled(llvm::StringRef name, bool enable);
+
+  static void AutoCompletePluginName(llvm::StringRef partial_name,
+                                     CompletionRequest &request);
 };
 
 } // namespace lldb_private

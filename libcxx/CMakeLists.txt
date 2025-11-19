@@ -66,6 +66,19 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
   message(FATAL_ERROR
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
+set(LIBCXX_SUPPORTED_ASSERTION_SEMANTICS hardening_dependent ignore observe quick_enforce enforce)
+set(LIBCXX_ASSERTION_SEMANTIC "hardening_dependent" CACHE STRING
+  "Specify the default assertion semantic to use. This semantic will be used
+  inside the compiled library and will be the default when compiling user code.
+  Note that users can override this setting in their own code. This does not
+  affect the ABI. Supported values are ${LIBCXX_SUPPORTED_ASSERTION_SEMANTICS}.
+  `hardening_dependent` is a special value that instructs the library to select
+  the assertion semantic based on the hardening mode in effect.")
+
+if (NOT "${LIBCXX_ASSERTION_SEMANTIC}" IN_LIST LIBCXX_SUPPORTED_ASSERTION_SEMANTICS)
+  message(FATAL_ERROR
+    "Unsupported assertion semantic: '${LIBCXX_ASSERTION_SEMANTIC}'. Supported values are ${LIBCXX_SUPPORTED_ASSERTION_SEMANTICS}.")
+endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
   "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
@@ -113,7 +126,7 @@ option(LIBCXX_ENABLE_MONOTONIC_CLOCK
 #
 # TODO TZDB make the default always ON when most platforms ship with the IANA
 # database.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   set(ENABLE_TIME_ZONE_DATABASE_DEFAULT ON)
 else()
   set(ENABLE_TIME_ZONE_DATABASE_DEFAULT OFF)
@@ -159,7 +172,7 @@ set(LIBCXX_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
 # TODO: Figure out how to build GoogleBenchmark on those platforms, and how to build when exceptions or RTTI is disabled
-if (WIN32 OR MINGW OR ANDROID OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"
+if (WIN32 OR MINGW OR ANDROID OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX"
     OR NOT LIBCXX_ENABLE_LOCALIZATION
     OR NOT LIBCXX_ENABLE_THREADS
     OR NOT LIBCXX_ENABLE_FILESYSTEM
@@ -224,14 +237,6 @@ endif()
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 set(LIBCXX_EXTRA_SITE_DEFINES "" CACHE STRING "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
-
-# C Library options -----------------------------------------------------------
-
-set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
-set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
-if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
-  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
-endif()
 
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
@@ -369,8 +374,7 @@ endif()
 if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
   message(FATAL_ERROR "Libc++ cannot be built with exceptions enabled but RTTI"
                       " disabled, since that configuration is broken. See"
-                      " https://github.com/llvm/llvm-project/issues/66117"
-                      " for details.")
+                      " https://llvm.org/PR66117 for details.")
 endif()
 
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
@@ -419,6 +423,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBCXX_TARGET_SUBDIR)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXX_TARGET_SUBDIR})
   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
   set(LIBCXX_GENERATED_MODULE_DIR "${LLVM_BINARY_DIR}/modules/c++/v1")
@@ -473,7 +478,7 @@ include(HandleLibcxxFlags)
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
@@ -770,6 +775,17 @@ elseif (LIBCXX_HARDENING_MODE STREQUAL "extensive")
   config_define(16 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
   config_define(8 _LIBCPP_HARDENING_MODE_DEFAULT)
+endif()
+if (LIBCXX_ASSERTION_SEMANTIC STREQUAL "hardening_dependent")
+  config_define(2 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "ignore")
+  config_define(4 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "observe")
+  config_define(8 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "quick_enforce")
+  config_define(16 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "enforce")
+  config_define(32 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
 endif()
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "serial")

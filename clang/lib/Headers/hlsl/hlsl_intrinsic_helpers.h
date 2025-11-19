@@ -12,7 +12,7 @@
 namespace hlsl {
 namespace __detail {
 
-constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
+constexpr int4 d3d_color_to_ubyte4_impl(float4 V) {
   // Use the same scaling factor used by FXC, and DXC for DXIL
   // (i.e., 255.001953)
   // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
@@ -71,6 +71,16 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 #endif
 }
 
+template <typename T, typename U> constexpr T refract_impl(T I, T N, U Eta) {
+#if (__has_builtin(__builtin_spirv_refract))
+  return __builtin_spirv_refract(I, N, Eta);
+#endif
+  T Mul = dot(N, I);
+  T K = 1 - Eta * Eta * (1 - Mul * Mul);
+  T Result = (Eta * I - (Eta * Mul + sqrt(K)) * N);
+  return select<T>(K < 0, static_cast<T>(0), Result);
+}
+
 template <typename T> constexpr T fmod_impl(T X, T Y) {
 #if !defined(__DIRECTX__)
   return __builtin_elementwise_fmod(X, Y);
@@ -124,6 +134,30 @@ template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
   T SpecularExp = exp(log(NDotH) * M);
   Result[2] = select<T>(SpecularCond, 0, SpecularExp);
   return Result;
+}
+
+template <typename T> constexpr T faceforward_impl(T N, T I, T Ng) {
+#if (__has_builtin(__builtin_spirv_faceforward))
+  return __builtin_spirv_faceforward(N, I, Ng);
+#else
+  return select(dot(I, Ng) < 0, N, -N);
+#endif
+}
+
+template <typename T> constexpr T ldexp_impl(T X, T Exp) {
+  return exp2(Exp) * X;
+}
+
+template <typename K, typename T, int BitWidth>
+constexpr K firstbithigh_impl(T X) {
+  K FBH = __builtin_hlsl_elementwise_firstbithigh(X);
+#if defined(__DIRECTX__)
+  // The firstbithigh DXIL ops count bits from the wrong side, so we need to
+  // invert it for DirectX.
+  K Inversion = (BitWidth - 1) - FBH;
+  FBH = select(FBH == -1, FBH, Inversion);
+#endif
+  return FBH;
 }
 
 } // namespace __detail

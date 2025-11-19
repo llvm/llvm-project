@@ -42,11 +42,13 @@ private:
   class VOPDCombineInfo {
   public:
     VOPDCombineInfo() = default;
-    VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
-        : FirstMI(First), SecondMI(Second) {}
+    VOPDCombineInfo(MachineInstr *First, MachineInstr *Second,
+                    bool VOPD3 = false)
+        : FirstMI(First), SecondMI(Second), IsVOPD3(VOPD3) {}
 
     MachineInstr *FirstMI;
     MachineInstr *SecondMI;
+    bool IsVOPD3;
   };
 
 public:
@@ -59,9 +61,9 @@ public:
     unsigned Opc2 = SecondMI->getOpcode();
     unsigned EncodingFamily =
         AMDGPU::getVOPDEncodingFamily(SII->getSubtarget());
-    int NewOpcode =
-        AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
-                            AMDGPU::getVOPDOpcode(Opc2), EncodingFamily);
+    int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1, CI.IsVOPD3),
+                                        AMDGPU::getVOPDOpcode(Opc2, CI.IsVOPD3),
+                                        EncodingFamily, CI.IsVOPD3);
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
 
@@ -79,12 +81,36 @@ public:
       VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
     }
 
+    const AMDGPU::OpName Mods[2][3] = {
+        {AMDGPU::OpName::src0X_modifiers, AMDGPU::OpName::vsrc1X_modifiers,
+         AMDGPU::OpName::vsrc2X_modifiers},
+        {AMDGPU::OpName::src0Y_modifiers, AMDGPU::OpName::vsrc1Y_modifiers,
+         AMDGPU::OpName::vsrc2Y_modifiers}};
+    const AMDGPU::OpName SrcMods[3] = {AMDGPU::OpName::src0_modifiers,
+                                       AMDGPU::OpName::src1_modifiers,
+                                       AMDGPU::OpName::src2_modifiers};
+    const unsigned VOPDOpc = VOPDInst->getOpcode();
+
     for (auto CompIdx : VOPD::COMPONENTS) {
       auto CompSrcOprNum = InstInfo[CompIdx].getCompSrcOperandsNum();
+      bool IsVOP3 = SII->isVOP3(*MI[CompIdx]);
       for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOprNum; ++CompSrcIdx) {
-        auto MCOprIdx = InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx);
+        if (AMDGPU::hasNamedOperand(VOPDOpc, Mods[CompIdx][CompSrcIdx])) {
+          const MachineOperand *Mod =
+              SII->getNamedOperand(*MI[CompIdx], SrcMods[CompSrcIdx]);
+          VOPDInst.addImm(Mod ? Mod->getImm() : 0);
+        }
+        auto MCOprIdx =
+            InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx, IsVOP3);
         VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
       }
+      if (MI[CompIdx]->getOpcode() == AMDGPU::V_CNDMASK_B32_e32 && CI.IsVOPD3)
+        VOPDInst.addReg(AMDGPU::VCC_LO);
+    }
+
+    if (CI.IsVOPD3) {
+      if (unsigned BitOp2 = AMDGPU::getBitOp2(Opc2))
+        VOPDInst.addImm(BitOp2);
     }
 
     SII->fixImplicitOperands(*VOPDInst);
@@ -109,6 +135,8 @@ public:
 
     const SIInstrInfo *SII = ST->getInstrInfo();
     bool Changed = false;
+    unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(*ST);
+    bool HasVOPD3 = ST->hasVOPD3();
 
     SmallVector<VOPDCombineInfo> ReplaceCandidates;
 
@@ -124,19 +152,27 @@ public:
         auto *SecondMI = &*MII;
         unsigned Opc = FirstMI->getOpcode();
         unsigned Opc2 = SecondMI->getOpcode();
-        llvm::AMDGPU::CanBeVOPD FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
-        llvm::AMDGPU::CanBeVOPD SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
         VOPDCombineInfo CI;
 
-        if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y)
-          CI = VOPDCombineInfo(FirstMI, SecondMI);
-        else if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)
-          CI = VOPDCombineInfo(SecondMI, FirstMI);
-        else
-          continue;
-        // checkVOPDRegConstraints cares about program order, but doReplace
-        // cares about X-Y order in the constituted VOPD
-        if (llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI)) {
+        const auto checkVOPD = [&](bool VOPD3) -> bool {
+          llvm::AMDGPU::CanBeVOPD FirstCanBeVOPD =
+              AMDGPU::getCanBeVOPD(Opc, EncodingFamily, VOPD3);
+          llvm::AMDGPU::CanBeVOPD SecondCanBeVOPD =
+              AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
+
+          if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y)
+            CI = VOPDCombineInfo(FirstMI, SecondMI, VOPD3);
+          else if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)
+            CI = VOPDCombineInfo(SecondMI, FirstMI, VOPD3);
+          else
+            return false;
+          // checkVOPDRegConstraints cares about program order, but doReplace
+          // cares about X-Y order in the constituted VOPD
+          return llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI,
+                                               VOPD3);
+        };
+
+        if (checkVOPD(false) || (HasVOPD3 && checkVOPD(true))) {
           ReplaceCandidates.push_back(CI);
           ++MII;
         }

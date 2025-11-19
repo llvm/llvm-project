@@ -279,10 +279,10 @@ def OP_CVT_F32_BF16
 
 // Splat operation - performs a range-checked splat over a vector
 def SPLAT  : WInst<"splat_lane", ".(!q)I",
-                   "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPl",
+                   "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPlmQm",
                     [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 def SPLATQ : WInst<"splat_laneq", ".(!Q)I",
-                   "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPl",
+                   "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPlmQm",
                    [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 
 let TargetGuard = "bf16,neon" in {
@@ -547,19 +547,19 @@ def VST4_LANE_F16 : WInst<"vst4_lane", "v*(4!)I", "hQh",
 // E.3.16 Extract lanes from a vector
 let InstName = "vmov" in
 def VGET_LANE : IInst<"vget_lane", "1.I",
-                      "UcUsUicsiPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUl",
+                      "UcUsUicsiPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlmQm",
                       [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.17 Set lanes within a vector
 let InstName = "vmov" in
 def VSET_LANE : IInst<"vset_lane", ".1.I",
-                      "UcUsUicsiPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUl",
+                      "UcUsUicsiPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlmQm",
                       [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.18 Initialize a vector from bit pattern
-def VCREATE : NoTestOpInst<"vcreate", ".(IU>)", "csihfUcUsUiUlPcPsl", OP_CAST> {
+def VCREATE : NoTestOpInst<"vcreate", ".(IU>)", "csihfUcUsUiUlPcPslm", OP_CAST> {
   let BigEndianSafe = 1;
 }
 
@@ -567,20 +567,20 @@ def VCREATE : NoTestOpInst<"vcreate", ".(IU>)", "csihfUcUsUiUlPcPsl", OP_CAST> {
 // E.3.19 Set all lanes to same value
 let InstName = "vmov" in {
 def VDUP_N   : WOpInst<"vdup_n", ".1",
-                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUl",
+                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUlmQm",
                        OP_DUP>;
 def VMOV_N   : WOpInst<"vmov_n", ".1",
-                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUl",
+                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUlmQm",
                        OP_DUP>;
 }
 let InstName = "" in
 def VDUP_LANE: WOpInst<"vdup_lane", ".qI",
-                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUl",
+                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUlmQm",
                        OP_DUP_LN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.20 Combining vectors
-def VCOMBINE : NoTestOpInst<"vcombine", "Q..", "csilhfUcUsUiUlPcPs", OP_CONC>;
+def VCOMBINE : NoTestOpInst<"vcombine", "Q..", "csilhfUcUsUiUlPcPsm", OP_CONC>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.21 Splitting vectors
@@ -589,8 +589,8 @@ def VCOMBINE : NoTestOpInst<"vcombine", "Q..", "csilhfUcUsUiUlPcPs", OP_CONC>;
 // versions of these intrinsics in both AArch32 and AArch64 architectures. See
 // D45668 for more details.
 let InstName = "vmov" in {
-def VGET_HIGH : NoTestOpInst<"vget_high", ".Q", "csilhfUcUsUiUlPcPs", OP_HI>;
-def VGET_LOW  : NoTestOpInst<"vget_low", ".Q", "csilhfUcUsUiUlPcPs", OP_LO>;
+def VGET_HIGH : NoTestOpInst<"vget_high", ".Q", "csilhfUcUsUiUlPcPsm", OP_HI>;
+def VGET_LOW  : NoTestOpInst<"vget_low", ".Q", "csilhfUcUsUiUlPcPsm", OP_LO>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -619,16 +619,16 @@ def VQMOVUN      : SInst<"vqmovun", "(<U)Q",  "sil">;
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.23-24 Table lookup, Extended table lookup
 let InstName = "vtbl" in {
-def VTBL1 : WInst<"vtbl1", "..p",  "UccPc">;
-def VTBL2 : WInst<"vtbl2", ".2p",  "UccPc">;
-def VTBL3 : WInst<"vtbl3", ".3p",  "UccPc">;
-def VTBL4 : WInst<"vtbl4", ".4p",  "UccPc">;
+def VTBL1 : WInst<"vtbl1", "..p",  "UccPcm">;
+def VTBL2 : WInst<"vtbl2", ".2p",  "UccPcm">;
+def VTBL3 : WInst<"vtbl3", ".3p",  "UccPcm">;
+def VTBL4 : WInst<"vtbl4", ".4p",  "UccPcm">;
 }
 let InstName = "vtbx" in {
-def VTBX1 : WInst<"vtbx1", "...p", "UccPc">;
-def VTBX2 : WInst<"vtbx2", "..2p", "UccPc">;
-def VTBX3 : WInst<"vtbx3", "..3p", "UccPc">;
-def VTBX4 : WInst<"vtbx4", "..4p", "UccPc">;
+def VTBX1 : WInst<"vtbx1", "...p", "UccPcm">;
+def VTBX2 : WInst<"vtbx2", "..2p", "UccPcm">;
+def VTBX3 : WInst<"vtbx3", "..3p", "UccPcm">;
+def VTBX4 : WInst<"vtbx4", "..4p", "UccPcm">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -677,15 +677,15 @@ def VQDMLSL_N     : SOpInst<"vqdmlsl_n", "(>Q)(>Q).1", "si", OP_QDMLSL_N>;
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.26 Vector Extract
 def VEXT : WInst<"vext", "...I",
-                 "cUcPcsUsPsiUilUlfQcQUcQPcQsQUsQPsQiQUiQlQUlQf",
+                 "cUcPcsUsPsiUilUlfQcQUcQPcQsQUsQPsQiQUiQlQUlQfmQm",
                  [ImmCheck<2, ImmCheckLaneIndex, 0>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.27 Reverse vector elements
-def VREV64 : WOpInst<"vrev64", "..", "csiUcUsUiPcPsfQcQsQiQUcQUsQUiQPcQPsQf",
+def VREV64 : WOpInst<"vrev64", "..", "csiUcUsUiPcPsfQcQsQiQUcQUsQUiQPcQPsQfmQm",
                   OP_REV64>;
-def VREV32 : WOpInst<"vrev32", "..", "csUcUsPcPsQcQsQUcQUsQPcQPs", OP_REV32>;
-def VREV16 : WOpInst<"vrev16", "..", "cUcPcQcQUcQPc", OP_REV16>;
+def VREV32 : WOpInst<"vrev32", "..", "csUcUsPcPsQcQsQUcQUsQPcQPsmQm", OP_REV32>;
+def VREV16 : WOpInst<"vrev16", "..", "cUcPcQcQUcQPcmQm", OP_REV16>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.28 Other single operand arithmetic
@@ -709,13 +709,13 @@ def VBIC : LOpInst<"vbic", "...", "csilUcUsUiUlQcQsQiQlQUcQUsQUiQUl", OP_ANDN>;
 def VORN : LOpInst<"vorn", "...", "csilUcUsUiUlQcQsQiQlQUcQUsQUiQUl", OP_ORN>;
 let isHiddenLInst = 1 in
 def VBSL : SInst<"vbsl", ".U..",
-                "csilUcUsUiUlfPcPsQcQsQiQlQUcQUsQUiQUlQfQPcQPs">;
+                "csilUcUsUiUlfPcPsQcQsQiQlQUcQUsQUiQUlQfQPcQPsmQm">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.30 Transposition operations
-def VTRN : WInst<"vtrn", "2..", "csiUcUsUifPcPsQcQsQiQUcQUsQUiQfQPcQPs">;
-def VZIP : WInst<"vzip", "2..", "csiUcUsUifPcPsQcQsQiQUcQUsQUiQfQPcQPs">;
-def VUZP : WInst<"vuzp", "2..", "csiUcUsUifPcPsQcQsQiQUcQUsQUiQfQPcQPs">;
+def VTRN : WInst<"vtrn", "2..", "csiUcUsUifPcPsQcQsQiQUcQUsQUiQfQPcQPsmQm">;
+def VZIP : WInst<"vzip", "2..", "csiUcUsUifPcPsQcQsQiQUcQUsQUiQfQPcQPsmQm">;
+def VUZP : WInst<"vuzp", "2..", "csiUcUsUifPcPsQcQsQiQUcQUsQUiQfQPcQPsmQm">;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -767,47 +767,47 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)" in {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Load/Store
-def LD1 : WInst<"vld1", ".(c*!)", "dQdPlQPl">;
-def LD2 : WInst<"vld2", "2(c*!)", "QUlQldQdPlQPl">;
-def LD3 : WInst<"vld3", "3(c*!)", "QUlQldQdPlQPl">;
-def LD4 : WInst<"vld4", "4(c*!)", "QUlQldQdPlQPl">;
-def ST1 : WInst<"vst1", "v*(.!)", "dQdPlQPl">;
-def ST2 : WInst<"vst2", "v*(2!)", "QUlQldQdPlQPl">;
-def ST3 : WInst<"vst3", "v*(3!)", "QUlQldQdPlQPl">;
-def ST4 : WInst<"vst4", "v*(4!)", "QUlQldQdPlQPl">;
+def LD1 : WInst<"vld1", ".(c*!)", "dQdPlQPlmQm">;
+def LD2 : WInst<"vld2", "2(c*!)", "QUlQldQdPlQPlmQm">;
+def LD3 : WInst<"vld3", "3(c*!)", "QUlQldQdPlQPlmQm">;
+def LD4 : WInst<"vld4", "4(c*!)", "QUlQldQdPlQPlmQm">;
+def ST1 : WInst<"vst1", "v*(.!)", "dQdPlQPlmQm">;
+def ST2 : WInst<"vst2", "v*(2!)", "QUlQldQdPlQPlmQm">;
+def ST3 : WInst<"vst3", "v*(3!)", "QUlQldQdPlQPlmQm">;
+def ST4 : WInst<"vst4", "v*(4!)", "QUlQldQdPlQPlmQm">;
 
 def LD1_X2 : WInst<"vld1_x2", "2(c*!)",
-                   "dQdPlQPl">;
+                   "dQdPlQPlmQm">;
 def LD1_X3 : WInst<"vld1_x3", "3(c*!)",
-                   "dQdPlQPl">;
+                   "dQdPlQPlmQm">;
 def LD1_X4 : WInst<"vld1_x4", "4(c*!)",
-                   "dQdPlQPl">;
+                   "dQdPlQPlmQm">;
 
-def ST1_X2 : WInst<"vst1_x2", "v*(2!)", "dQdPlQPl">;
-def ST1_X3 : WInst<"vst1_x3", "v*(3!)", "dQdPlQPl">;
-def ST1_X4 : WInst<"vst1_x4", "v*(4!)", "dQdPlQPl">;
+def ST1_X2 : WInst<"vst1_x2", "v*(2!)", "dQdPlQPlmQm">;
+def ST1_X3 : WInst<"vst1_x3", "v*(3!)", "dQdPlQPlmQm">;
+def ST1_X4 : WInst<"vst1_x4", "v*(4!)", "dQdPlQPlmQm">;
 
-def LD1_LANE : WInst<"vld1_lane", ".(c*!).I", "dQdPlQPl",
+def LD1_LANE : WInst<"vld1_lane", ".(c*!).I", "dQdPlQPlmQm",
                     [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
-def LD2_LANE : WInst<"vld2_lane", "2(c*!)2I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def LD2_LANE : WInst<"vld2_lane", "2(c*!)2I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def LD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def LD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
-def LD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def LD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<6, ImmCheckLaneIndex, 1>]>;
-def ST1_LANE : WInst<"vst1_lane", "v*(.!)I", "dQdPlQPl",
+def ST1_LANE : WInst<"vst1_lane", "v*(.!)I", "dQdPlQPlmQm",
                     [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
-def ST2_LANE : WInst<"vst2_lane", "v*(2!)I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def ST2_LANE : WInst<"vst2_lane", "v*(2!)I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<3, ImmCheckLaneIndex, 1>]>;
-def ST3_LANE : WInst<"vst3_lane", "v*(3!)I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def ST3_LANE : WInst<"vst3_lane", "v*(3!)I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def ST4_LANE : WInst<"vst4_lane", "v*(4!)I", "lUlQcQUcQPcQlQUldQdPlQPl",
+def ST4_LANE : WInst<"vst4_lane", "v*(4!)I", "lUlQcQUcQPcQlQUldQdPlQPlmQm",
                     [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
 
-def LD1_DUP  : WInst<"vld1_dup", ".(c*!)", "dQdPlQPl">;
-def LD2_DUP  : WInst<"vld2_dup", "2(c*!)", "dQdPlQPl">;
-def LD3_DUP  : WInst<"vld3_dup", "3(c*!)", "dQdPlQPl">;
-def LD4_DUP  : WInst<"vld4_dup", "4(c*!)", "dQdPlQPl">;
+def LD1_DUP  : WInst<"vld1_dup", ".(c*!)", "dQdPlQPlmQm">;
+def LD2_DUP  : WInst<"vld2_dup", "2(c*!)", "dQdPlQPlmQm">;
+def LD3_DUP  : WInst<"vld3_dup", "3(c*!)", "dQdPlQPlmQm">;
+def LD4_DUP  : WInst<"vld4_dup", "4(c*!)", "dQdPlQPlmQm">;
 
 def VLDRQ : WInst<"vldrq", "1(c*!)", "Pk">;
 def VSTRQ : WInst<"vstrq", "v*(1!)", "Pk">;
@@ -964,11 +964,11 @@ def SLI_N : WInst<"vsli_n", "...I", "PlQPl", [ImmCheck<2, ImmCheckShiftLeft, 0>]
 // Right shift narrow high
 def SHRN_HIGH_N    : IOpInst<"vshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
-def QSHRUN_HIGH_N  : SOpInst<"vqshrun_high_n", "<(<q).I",
+def QSHRUN_HIGH_N  : SOpInst<"vqshrun_high_n", "(<U)(<Uq).I",
                              "HsHiHl", OP_NARROW_HI>;
 def RSHRN_HIGH_N   : IOpInst<"vrshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
-def QRSHRUN_HIGH_N : SOpInst<"vqrshrun_high_n", "<(<q).I",
+def QRSHRUN_HIGH_N : SOpInst<"vqrshrun_high_n", "(<U)(<Uq).I",
                              "HsHiHl", OP_NARROW_HI>;
 def QSHRN_HIGH_N   : SOpInst<"vqshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
@@ -1028,19 +1028,19 @@ def GET_LANE : IInst<"vget_lane", "1.I", "dQdPlQPl",
 def SET_LANE : IInst<"vset_lane", ".1.I", "dQdPlQPl",
                       [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 def COPY_LANE : IOpInst<"vcopy_lane", "..I.I",
-                        "csilUcUsUiUlPcPsPlfd", OP_COPY_LN>;
+                        "csilUcUsUiUlPcPsPlfdm", OP_COPY_LN>;
 def COPYQ_LANE : IOpInst<"vcopy_lane", "..IqI",
-                        "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPl", OP_COPY_LN>;
+                        "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPlQm", OP_COPY_LN>;
 def COPY_LANEQ : IOpInst<"vcopy_laneq", "..IQI",
-                     "csilPcPsPlUcUsUiUlfd", OP_COPY_LN>;
+                     "csilPcPsPlUcUsUiUlfdm", OP_COPY_LN>;
 def COPYQ_LANEQ : IOpInst<"vcopy_laneq", "..I.I",
-                     "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPl", OP_COPY_LN>;
+                     "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPlQm", OP_COPY_LN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Set all lanes to same value
 def VDUP_LANE1: WOpInst<"vdup_lane", ".qI", "dQdPlQPl", OP_DUP_LN>;
 def VDUP_LANE2: WOpInst<"vdup_laneq", ".QI",
-                  "csilUcUsUiUlPcPshfdQcQsQiQlQPcQPsQUcQUsQUiQUlQhQfQdPlQPl",
+                  "csilUcUsUiUlPcPshfdQcQsQiQlQPcQPsQUcQUsQUiQUlQhQfQdPlQPlmQm",
                         OP_DUP_LN>;
 def DUP_N   : WOpInst<"vdup_n", ".1", "dQdPlQPl", OP_DUP>;
 def MOV_N   : WOpInst<"vmov_n", ".1", "dQdPlQPl", OP_DUP>;
@@ -1266,31 +1266,31 @@ def FMINNM_S64 : SInst<"vminnm", "...", "dQd">;
 ////////////////////////////////////////////////////////////////////////////////
 // Permutation
 def VTRN1 : SOpInst<"vtrn1", "...",
-                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPl", OP_TRN1>;
+                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPlmQm", OP_TRN1>;
 def VZIP1 : SOpInst<"vzip1", "...",
-                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPl", OP_ZIP1>;
+                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPlmQm", OP_ZIP1>;
 def VUZP1 : SOpInst<"vuzp1", "...",
-                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPl", OP_UZP1>;
+                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPlmQm", OP_UZP1>;
 def VTRN2 : SOpInst<"vtrn2", "...",
-                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPl", OP_TRN2>;
+                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPlmQm", OP_TRN2>;
 def VZIP2 : SOpInst<"vzip2", "...",
-                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPl", OP_ZIP2>;
+                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPlmQm", OP_ZIP2>;
 def VUZP2 : SOpInst<"vuzp2", "...",
-                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPl", OP_UZP2>;
+                    "csiUcUsUifPcPsQcQsQiQlQUcQUsQUiQUlQfQdQPcQPsQPlmQm", OP_UZP2>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Table lookup
 let InstName = "vtbl" in {
-def VQTBL1_A64 : WInst<"vqtbl1", ".QU",  "UccPcQUcQcQPc">;
-def VQTBL2_A64 : WInst<"vqtbl2", ".(2Q)U",  "UccPcQUcQcQPc">;
-def VQTBL3_A64 : WInst<"vqtbl3", ".(3Q)U",  "UccPcQUcQcQPc">;
-def VQTBL4_A64 : WInst<"vqtbl4", ".(4Q)U",  "UccPcQUcQcQPc">;
+def VQTBL1_A64 : WInst<"vqtbl1", ".QU",  "UccPcQUcQcQPcmQm">;
+def VQTBL2_A64 : WInst<"vqtbl2", ".(2Q)U",  "UccPcQUcQcQPcmQm">;
+def VQTBL3_A64 : WInst<"vqtbl3", ".(3Q)U",  "UccPcQUcQcQPcmQm">;
+def VQTBL4_A64 : WInst<"vqtbl4", ".(4Q)U",  "UccPcQUcQcQPcmQm">;
 }
 let InstName = "vtbx" in {
-def VQTBX1_A64 : WInst<"vqtbx1", "..QU", "UccPcQUcQcQPc">;
-def VQTBX2_A64 : WInst<"vqtbx2", "..(2Q)U", "UccPcQUcQcQPc">;
-def VQTBX3_A64 : WInst<"vqtbx3", "..(3Q)U", "UccPcQUcQcQPc">;
-def VQTBX4_A64 : WInst<"vqtbx4", "..(4Q)U", "UccPcQUcQcQPc">;
+def VQTBX1_A64 : WInst<"vqtbx1", "..QU", "UccPcQUcQcQPcmQm">;
+def VQTBX2_A64 : WInst<"vqtbx2", "..(2Q)U", "UccPcQUcQcQPcmQm">;
+def VQTBX3_A64 : WInst<"vqtbx3", "..(3Q)U", "UccPcQUcQcQPcmQm">;
+def VQTBX4_A64 : WInst<"vqtbx4", "..(4Q)U", "UccPcQUcQcQPcmQm">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1466,26 +1466,51 @@ def SCALAR_UCVTFD : SInst<"vcvt_f64", "(1F)(1!)", "SUl">;
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Floating-point Converts
 def SCALAR_FCVTXN  : IInst<"vcvtx_f32", "(1F<)(1!)", "Sd">;
-def SCALAR_FCVTNSS : SInst<"vcvtn_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTNUS : SInst<"vcvtn_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTNSD : SInst<"vcvtn_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTNUD : SInst<"vcvtn_u64", "(1U)1", "Sd">;
-def SCALAR_FCVTMSS : SInst<"vcvtm_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTMUS : SInst<"vcvtm_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTMSD : SInst<"vcvtm_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTMUD : SInst<"vcvtm_u64", "(1U)1", "Sd">;
-def SCALAR_FCVTASS : SInst<"vcvta_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTAUS : SInst<"vcvta_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTASD : SInst<"vcvta_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTAUD : SInst<"vcvta_u64", "(1U)1", "Sd">;
-def SCALAR_FCVTPSS : SInst<"vcvtp_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTPUS : SInst<"vcvtp_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTPSD : SInst<"vcvtp_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTPUD : SInst<"vcvtp_u64", "(1U)1", "Sd">;
-def SCALAR_FCVTZSS : SInst<"vcvt_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTZUS : SInst<"vcvt_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTZSD : SInst<"vcvt_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTZUD : SInst<"vcvt_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTN_F32toSS  : SInst<"vcvtn_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTN_F32toUS  : SInst<"vcvtn_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTN_F64toSS  : SInst<"vcvtn_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTN_F64toUS  : SInst<"vcvtn_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTN_F32toSD  : SInst<"vcvtn_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTN_F32toUD  : SInst<"vcvtn_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTN_F64toSD  : SInst<"vcvtn_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTN_F64toUD  : SInst<"vcvtn_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTM_F32toSS  : SInst<"vcvtm_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTM_F32toUS  : SInst<"vcvtm_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTM_F64toSS  : SInst<"vcvtm_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTM_F64toUS  : SInst<"vcvtm_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTM_F32toSD  : SInst<"vcvtm_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTM_F32toUD  : SInst<"vcvtm_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTM_F64toSD  : SInst<"vcvtm_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTM_F64toUD  : SInst<"vcvtm_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTA_F32toSS  : SInst<"vcvta_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTA_F32toUS  : SInst<"vcvta_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTA_F64toSS  : SInst<"vcvta_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTA_F64toUS  : SInst<"vcvta_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTA_F32toSD  : SInst<"vcvta_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTA_F32toUD  : SInst<"vcvta_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTA_F64toSD  : SInst<"vcvta_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTA_F64toUD  : SInst<"vcvta_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTP_F32toSS  : SInst<"vcvtp_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTP_F32toUS  : SInst<"vcvtp_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTP_F64toSS  : SInst<"vcvtp_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTP_F64toUS  : SInst<"vcvtp_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTP_F32toSD  : SInst<"vcvtp_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTP_F32toUD  : SInst<"vcvtp_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTP_F64toSD  : SInst<"vcvtp_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTP_F64toUD  : SInst<"vcvtp_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTZ_F32toSS  : SInst<"vcvt_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTZ_F32toUS  : SInst<"vcvt_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTZ_F64toSS  : SInst<"vcvt_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTZ_F64toUS  : SInst<"vcvt_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTZ_F32toSD  : SInst<"vcvt_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTZ_F32toUD  : SInst<"vcvt_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTZ_F64toSD  : SInst<"vcvt_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTZ_F64toUD  : SInst<"vcvt_u64", "(1U)1", "Sd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Floating-point Reciprocal Estimate
@@ -1654,9 +1679,9 @@ def SCALAR_SQRDMLSH_LANE : SOpInst<"vqrdmlsh_lane", "111.I", "SsSi", OP_SCALAR_Q
 def SCALAR_SQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "111QI", "SsSi", OP_SCALAR_QRDMLSH_LN>;
 } // TargetGuard = "v8.1a"
 
-def SCALAR_VDUP_LANE : IInst<"vdup_lane", "1.I", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs",
+def SCALAR_VDUP_LANE : IInst<"vdup_lane", "1.I", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPsSm",
                             [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
-def SCALAR_VDUP_LANEQ : IInst<"vdup_laneq", "1QI", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs",
+def SCALAR_VDUP_LANEQ : IInst<"vdup_laneq", "1QI", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPsSm",
                             [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 
 } // ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)"
@@ -1896,6 +1921,14 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "f
   def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN_Hi>;
 }
 
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f16mm,neon" in {
+  def VMMLA_F16_MF8 : VInst<"vmmla_f16_mf8_fpm", "(>F)(>F)..V", "Qm">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f32mm,neon" in {
+  def VMMLA_F32_MF8 : VInst<"vmmla_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
+}
+
 let TargetGuard = "i8mm,neon" in {
   def VMMLA   : SInst<"vmmla", "..(<<)(<<)", "QUiQi">;
   def VUSMMLA : SInst<"vusmmla", "..(<<U)(<<)", "Qi">;
@@ -2090,17 +2123,17 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "r
 
 // Lookup table read with 2-bit/4-bit indices
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
-  def VLUTI2_B    : SInst<"vluti2_lane", "Q.(qU)I", "cUcPcQcQUcQPc",
+  def VLUTI2_B    : SInst<"vluti2_lane", "Q.(qU)I", "cUcPcmQcQUcQPcQm",
                          [ImmCheck<2, ImmCheck0_1>]>;
-  def VLUTI2_B_Q  : SInst<"vluti2_laneq", "Q.(QU)I", "cUcPcQcQUcQPc",
+  def VLUTI2_B_Q  : SInst<"vluti2_laneq", "Q.(QU)I", "cUcPcmQcQUcQPcQm",
                          [ImmCheck<2, ImmCheck0_3>]>;
   def VLUTI2_H    : SInst<"vluti2_lane", "Q.(<qU)I", "sUsPshQsQUsQPsQh",
                          [ImmCheck<2, ImmCheck0_3>]>;
   def VLUTI2_H_Q  : SInst<"vluti2_laneq", "Q.(<QU)I", "sUsPshQsQUsQPsQh",
                          [ImmCheck<2, ImmCheck0_7>]>;
-  def VLUTI4_B    : SInst<"vluti4_lane", "..(qU)I", "QcQUcQPc",
+  def VLUTI4_B    : SInst<"vluti4_lane", "..(qU)I", "QcQUcQPcQm",
                          [ImmCheck<2, ImmCheck0_0>]>;
-  def VLUTI4_B_Q  : SInst<"vluti4_laneq", "..UI", "QcQUcQPc",
+  def VLUTI4_B_Q  : SInst<"vluti4_laneq", "..UI", "QcQUcQPcQm",
                          [ImmCheck<2, ImmCheck0_1>]>;
   def VLUTI4_H_X2 : SInst<"vluti4_lane_x2", ".2(<qU)I", "QsQUsQPsQh",
                           [ImmCheck<3, ImmCheck0_1>]>;

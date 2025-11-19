@@ -65,7 +65,6 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Target/VerboseTrapFrameRecognizer.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -79,16 +78,6 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
-
-// Comment out line below to disable memory caching, overriding the process
-// setting target.process.disable-memory-cache
-#define ENABLE_MEMORY_CACHING
-
-#ifdef ENABLE_MEMORY_CACHING
-#define DISABLE_MEM_CACHE_DEFAULT false
-#else
-#define DISABLE_MEM_CACHE_DEFAULT true
-#endif
 
 class ProcessOptionValueProperties
     : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
@@ -176,6 +165,9 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyDisableLangRuntimeUnwindPlans,
+        [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
 
   m_experimental_properties_up =
@@ -290,6 +282,15 @@ void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
   m_process->Flush();
 }
 
+void ProcessProperties::DisableLanguageRuntimeUnwindPlansCallback() {
+  if (!m_process)
+    return;
+  for (auto thread_sp : m_process->Threads()) {
+    thread_sp->ClearStackFrames();
+    thread_sp->DiscardThreadPlans(/*force*/ true);
+  }
+}
+
 bool ProcessProperties::GetDetachKeepsStopped() const {
   const uint32_t idx = ePropertyDetachKeepsStopped;
   return GetPropertyAtIndexAs<bool>(
@@ -368,6 +369,12 @@ FollowForkMode ProcessProperties::GetFollowForkMode() const {
   return GetPropertyAtIndexAs<FollowForkMode>(
       idx, static_cast<FollowForkMode>(
                g_process_properties[idx].default_uint_value));
+}
+
+bool ProcessProperties::TrackMemoryCacheChanges() const {
+  const uint32_t idx = ePropertyTrackMemoryCacheChanges;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
 }
 
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
@@ -505,7 +512,6 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   // We should have a plugin do the registration instead, for example, a
   // common C LanguageRuntime plugin.
   RegisterAssertFrameRecognizer(this);
-  RegisterVerboseTrapFrameRecognizer(*this);
 }
 
 Process::~Process() {
@@ -1275,7 +1281,7 @@ uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
 }
 
 StateType Process::GetState() {
-  if (CurrentThreadIsPrivateStateThread())
+  if (CurrentThreadPosesAsPrivateStateThread())
     return m_private_state.GetValue();
   else
     return m_public_state.GetValue();
@@ -1963,6 +1969,49 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
   }
 }
 
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                          llvm::MutableArrayRef<uint8_t> buffer) {
+  auto total_ranges_len = llvm::sum_of(
+      llvm::map_range(ranges, [](auto range) { return range.size; }));
+  // If the buffer is not large enough, this is a programmer error.
+  // In production builds, gracefully fail by returning a length of 0 for all
+  // ranges.
+  assert(buffer.size() >= total_ranges_len && "provided buffer is too short");
+  if (buffer.size() < total_ranges_len) {
+    llvm::MutableArrayRef<uint8_t> empty;
+    return {ranges.size(), empty};
+  }
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results;
+
+  // While `buffer` has space, take the next requested range and read
+  // memory into a `buffer` piece, then slice it to remove the used memory.
+  for (auto [addr, range_len] : ranges) {
+    Status status;
+    size_t num_bytes_read =
+        ReadMemoryFromInferior(addr, buffer.data(), range_len, status);
+    // FIXME: ReadMemoryFromInferior promises to return 0 in case of errors, but
+    // it doesn't; it never checks for errors.
+    if (status.Fail())
+      num_bytes_read = 0;
+
+    assert(num_bytes_read <= range_len && "read more than requested bytes");
+    if (num_bytes_read > range_len) {
+      // In production builds, gracefully fail by returning length zero for this
+      // range.
+      results.emplace_back();
+      continue;
+    }
+
+    results.push_back(buffer.take_front(num_bytes_read));
+    // Slice buffer to remove the used memory.
+    buffer = buffer.drop_front(num_bytes_read);
+  }
+
+  return results;
+}
+
 void Process::DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
                              const uint8_t *buf, size_t size,
                              AddressRanges &matches, size_t alignment,
@@ -2290,14 +2339,13 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
-#if defined(ENABLE_MEMORY_CACHING)
   m_memory_cache.Flush(addr, size);
-#endif
 
   if (buf == nullptr || size == 0)
     return 0;
 
-  m_mod_id.BumpMemoryID();
+  if (TrackMemoryCacheChanges() || !m_allocated_memory_cache.IsInCache(addr))
+    m_mod_id.BumpMemoryID();
 
   // We need to write any data that would go where any current software traps
   // (enabled software breakpoints) any software traps (breakpoints) that we
@@ -2426,7 +2474,6 @@ Status Process::WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) {
   return error;
 }
 
-#define USE_ALLOCATE_MEMORY_CACHE 1
 addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
                                Status &error) {
   if (GetPrivateState() != eStateStopped) {
@@ -2435,20 +2482,7 @@ addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
     return LLDB_INVALID_ADDRESS;
   }
 
-#if defined(USE_ALLOCATE_MEMORY_CACHE)
   return m_allocated_memory_cache.AllocateMemory(size, permissions, error);
-#else
-  addr_t allocated_addr = DoAllocateMemory(size, permissions, error);
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::AllocateMemory(size=%" PRIu64
-            ", permissions=%s) => 0x%16.16" PRIx64
-            " (m_stop_id = %u m_memory_id = %u)",
-            (uint64_t)size, GetPermissionsAsCString(permissions),
-            (uint64_t)allocated_addr, m_mod_id.GetStopID(),
-            m_mod_id.GetMemoryID());
-  return allocated_addr;
-#endif
 }
 
 addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
@@ -2501,21 +2535,10 @@ void Process::SetCanRunCode(bool can_run_code) {
 
 Status Process::DeallocateMemory(addr_t ptr) {
   Status error;
-#if defined(USE_ALLOCATE_MEMORY_CACHE)
   if (!m_allocated_memory_cache.DeallocateMemory(ptr)) {
     error = Status::FromErrorStringWithFormat(
         "deallocation of memory at 0x%" PRIx64 " failed.", (uint64_t)ptr);
   }
-#else
-  error = DoDeallocateMemory(ptr);
-
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::DeallocateMemory(addr=0x%16.16" PRIx64
-            ") => err = %s (m_stop_id = %u, m_memory_id = %u)",
-            ptr, error.AsCString("SUCCESS"), m_mod_id.GetStopID(),
-            m_mod_id.GetMemoryID());
-#endif
   return error;
 }
 
@@ -2664,6 +2687,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   m_jit_loaders_up.reset();
   m_system_runtime_up.reset();
   m_os_up.reset();
+  GetTarget().ClearAllLoadedSections();
 
   {
     std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
@@ -2788,6 +2812,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 }
 
 Status Process::LoadCore() {
+  GetTarget().ClearAllLoadedSections();
   Status error = DoLoadCore();
   if (error.Success()) {
     ListenerSP listener_sp(
@@ -2830,6 +2855,9 @@ Status Process::LoadCore() {
           "Did not get stopped event after loading the core file.");
     }
     RestoreProcessEvents();
+    // Since we hijacked the event stream, we will have we won't have run the
+    // stop hooks.  Make sure we do that here:
+    GetTarget().RunStopHooks(/* at_initial_stop= */ true);
   }
   return error;
 }
@@ -2970,6 +2998,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_jit_loaders_up.reset();
   m_system_runtime_up.reset();
   m_os_up.reset();
+  GetTarget().ClearAllLoadedSections();
 
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
@@ -3168,16 +3197,19 @@ void Process::CompleteAttach() {
     }
   }
 
-  if (!m_os_up) {
+  // If we don't have an operating system plugin loaded yet, see if
+  // LoadOperatingSystemPlugin can find one (and stuff it in m_os_up).
+  if (!m_os_up)
     LoadOperatingSystemPlugin(false);
-    if (m_os_up) {
-      // Somebody might have gotten threads before now, but we need to force the
-      // update after we've loaded the OperatingSystem plugin or it won't get a
-      // chance to process the threads.
-      m_thread_list.Clear();
-      UpdateThreadListIfNeeded();
-    }
+
+  if (m_os_up) {
+    // Somebody might have gotten threads before we loaded the OS Plugin above,
+    // so we need to force the update now or the newly loaded plugin won't get
+    // a chance to process the threads.
+    m_thread_list.Clear();
+    UpdateThreadListIfNeeded();
   }
+
   // Figure out which one is the executable, and set that in our target:
   ModuleSP new_executable_module_sp;
   for (ModuleSP module_sp : GetTarget().GetImages().Modules()) {
@@ -3200,6 +3232,9 @@ void Process::CompleteAttach() {
                         : "<none>");
     }
   }
+  // Since we hijacked the event stream, we will have we won't have run the
+  // stop hooks.  Make sure we do that here:
+  GetTarget().RunStopHooks(/* at_initial_stop= */ true);
 }
 
 Status Process::ConnectRemote(llvm::StringRef remote_url) {
@@ -3221,6 +3256,7 @@ Status Process::ConnectRemote(llvm::StringRef remote_url) {
       if (state == eStateStopped || state == eStateCrashed) {
         // If we attached and actually have a process on the other end, then
         // this ended up being the equivalent of an attach.
+        SetShouldDetach(true);
         CompleteAttach();
 
         // This delays passing the stopped event to listeners till
@@ -4275,6 +4311,14 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
         // appropriately. We also need to stop processing actions, since they
         // aren't expecting the target to be running.
 
+        // Clear the selected frame which may have been set as part of utility
+        // expressions that have been run as part of this stop. If we didn't
+        // clear this, then StopInfo::GetSuggestedStackFrameIndex would not
+        // take affect when we next called SelectMostRelevantFrame.
+        // PerformAction should not be the one setting a selected frame, instead
+        // this should be done via GetSuggestedStackFrameIndex.
+        thread_sp->ClearSelectedFrameIndex();
+
         // FIXME: we might have run.
         if (stop_info_sp->HasTargetRunSinceMe()) {
           SetRestarted(true);
@@ -4635,7 +4679,7 @@ public:
         m_process(process),
         m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
         m_write_file(write_fd, File::eOpenOptionWriteOnly, false) {
-    m_pipe.CreateNew(false);
+    m_pipe.CreateNew();
   }
 
   ~IOHandlerProcessSTDIO() override = default;
@@ -5859,7 +5903,7 @@ void Process::ClearPreResumeActions() { m_pre_resume_actions.clear(); }
 void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton)
 {
     PreResumeCallbackAndBaton element(callback, baton);
-    auto found_iter = std::find(m_pre_resume_actions.begin(), m_pre_resume_actions.end(), element);
+    auto found_iter = llvm::find(m_pre_resume_actions, element);
     if (found_iter != m_pre_resume_actions.end())
     {
         m_pre_resume_actions.erase(found_iter);
@@ -5877,6 +5921,13 @@ bool Process::CurrentThreadIsPrivateStateThread()
   return m_private_state_thread.EqualsThread(Host::GetCurrentThread());
 }
 
+bool Process::CurrentThreadPosesAsPrivateStateThread() {
+  // If we haven't started up the private state thread yet, then whatever thread
+  // is fetching this event should be temporarily the private state thread.
+  if (!m_private_state_thread.HasThread())
+    return true;
+  return m_private_state_thread.EqualsThread(Host::GetCurrentThread());
+}
 
 void Process::Flush() {
   m_thread_list.Flush();
@@ -6689,6 +6740,18 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
   }
 }
 
+// TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and
+// then add an intersect method on it, or MemoryRegionInfo.
+static MemoryRegionInfo Intersect(const MemoryRegionInfo &lhs,
+                                  const MemoryRegionInfo::RangeType &rhs) {
+
+  MemoryRegionInfo region_info;
+  region_info.SetLLDBPermissions(lhs.GetLLDBPermissions());
+  region_info.GetRange() = lhs.GetRange().Intersect(rhs);
+
+  return region_info;
+}
+
 static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
                                                const MemoryRegionInfos &regions,
                                                const SaveCoreOptions &options,
@@ -6698,9 +6761,15 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
     return;
 
   for (const auto &range : regions) {
-    auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry)
-      AddRegion(range, true, ranges);
+    auto *entry = option_ranges.FindEntryThatIntersects(range.GetRange());
+    if (entry) {
+      if (*entry != range.GetRange()) {
+        AddRegion(Intersect(range, *entry), true, ranges);
+      } else {
+        // If they match, add the range directly.
+        AddRegion(range, true, ranges);
+      }
+    }
   }
 }
 

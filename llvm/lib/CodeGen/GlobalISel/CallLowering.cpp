@@ -132,9 +132,10 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (const auto &Arg : CB.args()) {
-    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, getAttributesForArgIdx(CB, i),
-                    i < NumFixedArgs};
+    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, getAttributesForArgIdx(CB, i)};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
+    if (i >= NumFixedArgs)
+      OrigArg.Flags[0].setVarArg();
 
     // If we have an explicit sret argument that is an Instruction, (i.e., it
     // might point to function-local memory), we can't meaningfully tail-call.
@@ -291,7 +292,8 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   LLVMContext &Ctx = OrigArg.Ty->getContext();
 
   SmallVector<EVT, 4> SplitVTs;
-  ComputeValueVTs(*TLI, DL, OrigArg.Ty, SplitVTs, Offsets, 0);
+  ComputeValueVTs(*TLI, DL, OrigArg.Ty, SplitVTs, /*MemVTs=*/nullptr, Offsets,
+                  0);
 
   if (SplitVTs.size() == 0)
     return;
@@ -301,7 +303,7 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
     // double] -> double).
     SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
                            OrigArg.OrigArgIndex, OrigArg.Flags[0],
-                           OrigArg.IsFixed, OrigArg.OrigValue);
+                           OrigArg.OrigValue);
     return;
   }
 
@@ -313,7 +315,7 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   for (unsigned i = 0, e = SplitVTs.size(); i < e; ++i) {
     Type *SplitTy = SplitVTs[i].getTypeForEVT(Ctx);
     SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.OrigArgIndex,
-                           OrigArg.Flags[0], OrigArg.IsFixed);
+                           OrigArg.Flags[0]);
     if (NeedsRegBlock)
       SplitArgs.back().Flags[0].setInConsecutiveRegs();
   }
@@ -354,7 +356,7 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
 
   SmallVector<Register, 8> PadDstRegs(NumDst);
-  std::copy(DstRegs.begin(), DstRegs.end(), PadDstRegs.begin());
+  llvm::copy(DstRegs, PadDstRegs.begin());
 
   // Create the excess dead defs for the unmerge.
   for (int I = DstRegs.size(); I != NumDst; ++I)
@@ -995,7 +997,7 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   SmallVector<EVT, 4> SplitVTs;
   SmallVector<uint64_t, 4> Offsets;
-  ComputeValueVTs(*TLI, DL, RetTy, SplitVTs, &Offsets, 0);
+  ComputeValueVTs(*TLI, DL, RetTy, SplitVTs, /*MemVTs=*/nullptr, &Offsets, 0);
 
   assert(VRegs.size() == SplitVTs.size());
 
@@ -1009,7 +1011,8 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   for (unsigned I = 0; I < NumValues; ++I) {
     Register Addr;
-    MIRBuilder.materializePtrAdd(Addr, DemoteReg, OffsetLLTy, Offsets[I]);
+    MIRBuilder.materializeObjectPtrOffset(Addr, DemoteReg, OffsetLLTy,
+                                          Offsets[I]);
     auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
                                         MRI.getType(VRegs[I]),
                                         commonAlignment(BaseAlign, Offsets[I]));
@@ -1026,7 +1029,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   SmallVector<EVT, 4> SplitVTs;
   SmallVector<uint64_t, 4> Offsets;
-  ComputeValueVTs(*TLI, DL, RetTy, SplitVTs, &Offsets, 0);
+  ComputeValueVTs(*TLI, DL, RetTy, SplitVTs, /*MemVTs=*/nullptr, &Offsets, 0);
 
   assert(VRegs.size() == SplitVTs.size());
 
@@ -1039,7 +1042,8 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   for (unsigned I = 0; I < NumValues; ++I) {
     Register Addr;
-    MIRBuilder.materializePtrAdd(Addr, DemoteReg, OffsetLLTy, Offsets[I]);
+    MIRBuilder.materializeObjectPtrOffset(Addr, DemoteReg, OffsetLLTy,
+                                          Offsets[I]);
     auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
                                         MRI.getType(VRegs[I]),
                                         commonAlignment(BaseAlign, Offsets[I]));
@@ -1096,7 +1100,7 @@ bool CallLowering::checkReturn(CCState &CCInfo,
                                CCAssignFn *Fn) const {
   for (unsigned I = 0, E = Outs.size(); I < E; ++I) {
     MVT VT = MVT::getVT(Outs[I].Ty);
-    if (Fn(I, VT, VT, CCValAssign::Full, Outs[I].Flags[0], CCInfo))
+    if (Fn(I, VT, VT, CCValAssign::Full, Outs[I].Flags[0], Outs[I].Ty, CCInfo))
       return false;
   }
   return true;
@@ -1253,7 +1257,7 @@ LLT CallLowering::ValueHandler::getStackValueStoreType(
     if (Flags.isPointer()) {
       LLT PtrTy = LLT::pointer(Flags.getPointerAddrSpace(),
                                ValTy.getScalarSizeInBits());
-      if (ValVT.isVector())
+      if (ValVT.isVector() && ValVT.getVectorNumElements() != 1)
         return LLT::vector(ValTy.getElementCount(), PtrTy);
       return PtrTy;
     }

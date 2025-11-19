@@ -49,6 +49,7 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // hlsl_constant
     0,   // hlsl_private
     0,   // hlsl_device
+    0,   // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -94,10 +95,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasFMA = false;
   bool HasF16C = false;
   bool HasAVX10_1 = false;
-  bool HasAVX10_1_512 = false;
   bool HasAVX10_2 = false;
-  bool HasAVX10_2_512 = false;
-  bool HasEVEX512 = false;
   bool HasAVX512CD = false;
   bool HasAVX512VPOPCNTDQ = false;
   bool HasAVX512VNNI = false;
@@ -162,7 +160,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXCOMPLEX = false;
   bool HasAMXFP8 = false;
   bool HasAMXMOVRS = false;
-  bool HasAMXTRANSPOSE = false;
   bool HasAMXAVX512 = false;
   bool HasAMXTF32 = false;
   bool HasSERIALIZE = false;
@@ -387,7 +384,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -408,10 +405,11 @@ public:
     case CC_Swift:
     case CC_X86Pascal:
     case CC_IntelOclBicc:
-    case CC_OpenCLKernel:
       return CCCR_OK;
     case CC_SwiftAsync:
       return CCCR_Error;
+    case CC_DeviceKernel:
+      return IsOpenCL ? CCCR_OK : CCCR_Warning;
     default:
       return CCCR_Warning;
     }
@@ -439,7 +437,14 @@ public:
   uint64_t getPointerAlignV(LangAS AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
+    IsOpenCL = Opts.OpenCL;
+  }
 
+private:
+  bool IsOpenCL = false;
 };
 
 // X86-32 generic target
@@ -639,6 +644,8 @@ public:
   CygwinX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_32TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
+    this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
     DoubleAlign = LongLongAlign = 64;
     resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
                     "i128:128-f80:32-n8:16:32-a:0:32-S32",
@@ -785,8 +792,9 @@ public:
     case CC_PreserveAll:
     case CC_PreserveNone:
     case CC_X86RegCall:
-    case CC_OpenCLKernel:
       return CCCR_OK;
+    case CC_DeviceKernel:
+      return IsOpenCL ? CCCR_OK : CCCR_Warning;
     default:
       return CCCR_Warning;
     }
@@ -817,7 +825,6 @@ public:
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);
   }
-
   void setMaxAtomicWidth() override {
     if (hasFeature("cx16"))
       MaxAtomicInlineWidth = 128;
@@ -829,6 +836,15 @@ public:
   size_t getMaxBitIntWidth() const override {
     return llvm::IntegerType::MAX_INT_BITS;
   }
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
+    IsOpenCL = Opts.OpenCL;
+  }
+
+private:
+  bool IsOpenCL = false;
 };
 
 // x86-64 UEFI target
@@ -837,8 +853,23 @@ class LLVM_LIBRARY_VISIBILITY UEFIX86_64TargetInfo
 public:
   UEFIX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : UEFITargetInfo<X86_64TargetInfo>(Triple, Opts) {
+    // The UEFI spec does not mandate specific C++ ABI, integer widths, or
+    // alignment. We are setting these defaults to match the Windows target as
+    // it is the only way to build EFI applications with Clang/LLVM today. We
+    // intend to offer flexibility by supporting choices that are not default in
+    // Windows target in the future.
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
-    this->MaxTLSAlign = 8192u * this->getCharWidth();
+    LongWidth = LongAlign = 32;
+    DoubleAlign = LongLongAlign = 64;
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    IntMaxType = SignedLongLong;
+    Int64Type = SignedLongLong;
+    SizeType = UnsignedLongLong;
+    PtrDiffType = SignedLongLong;
+    IntPtrType = SignedLongLong;
+    WCharType = UnsignedShort;
+    WIntType = UnsignedShort;
     this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
   }
@@ -851,6 +882,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Win64:
+    case CC_X86_64SysV:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -898,7 +930,7 @@ public:
     case CC_Swift:
     case CC_SwiftAsync:
     case CC_X86RegCall:
-    case CC_OpenCLKernel:
+    case CC_DeviceKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -950,7 +982,8 @@ public:
   CygwinX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
-    TLSSupported = false;
+    this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -963,6 +996,33 @@ public:
     DefineStd(Builder, "unix", Opts);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_X86StdCall:
+    case CC_X86ThisCall:
+    case CC_X86FastCall:
+      return CCCR_Ignore;
+    case CC_C:
+    case CC_X86VectorCall:
+    case CC_IntelOclBicc:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
+    case CC_PreserveNone:
+    case CC_X86_64SysV:
+    case CC_Swift:
+    case CC_SwiftAsync:
+    case CC_X86RegCall:
+    case CC_DeviceKernel:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
+  }
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
   }
 };
 

@@ -17,6 +17,7 @@ namespace mlir {
 
 class OpBuilder;
 class LLVMTypeConverter;
+class SymbolTableCollection;
 
 namespace LLVM {
 
@@ -26,7 +27,8 @@ namespace LLVM {
 LogicalResult createPrintStrCall(
     OpBuilder &builder, Location loc, ModuleOp moduleOp, StringRef symbolName,
     StringRef string, const LLVMTypeConverter &typeConverter,
-    bool addNewline = true, std::optional<StringRef> runtimeFunctionName = {});
+    bool addNewline = true, std::optional<StringRef> runtimeFunctionName = {},
+    SymbolTableCollection *symbolTables = nullptr);
 } // namespace LLVM
 
 } // namespace mlir

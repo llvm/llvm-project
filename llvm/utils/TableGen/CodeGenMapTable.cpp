@@ -84,9 +84,9 @@
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
-typedef std::map<std::string, std::vector<const Record *>> InstrRelMapTy;
-typedef std::map<std::vector<const Init *>, std::vector<const Record *>>
-    RowInstrMapTy;
+using InstrRelMapTy = std::map<std::string, std::vector<const Record *>>;
+using RowInstrMapTy =
+    std::map<std::vector<const Init *>, std::vector<const Record *>>;
 
 namespace {
 
@@ -103,7 +103,7 @@ private:
 
 public:
   InstrMap(const Record *MapRec) {
-    Name = std::string(MapRec->getName());
+    Name = MapRec->getName().str();
 
     // FilterClass - It's used to reduce the search space only to the
     // instructions that define the kind of relationship modeled by
@@ -133,18 +133,18 @@ public:
 
     // Each instruction map must specify at least one column for it to be valid.
     if (ColValList->empty())
-      PrintFatalError(MapRec->getLoc(), "InstrMapping record `" +
-                                            MapRec->getName() + "' has empty " +
+      PrintFatalError(MapRec->getLoc(), "InstrMapping record `" + Name +
+                                            "' has empty " +
                                             "`ValueCols' field!");
 
-    for (const Init *I : ColValList->getValues()) {
+    for (const Init *I : ColValList->getElements()) {
       const auto *ColI = cast<ListInit>(I);
 
       // Make sure that all the sub-lists in 'ValueCols' have same number of
       // elements as the fields in 'ColFields'.
       if (ColI->size() != ColFields->size())
         PrintFatalError(MapRec->getLoc(),
-                        "Record `" + MapRec->getName() +
+                        "Record `" + Name +
                             "', field `ValueCols' entries don't match with " +
                             " the entries in 'ColFields'!");
       ValueCols.push_back(ColI);
@@ -228,7 +228,7 @@ void MapTableEmitter::buildRowInstrMap() {
   for (const Record *CurInstr : InstrDefs) {
     std::vector<const Init *> KeyValue;
     const ListInit *RowFields = InstrMapDesc.getRowFields();
-    for (const Init *RowField : RowFields->getValues()) {
+    for (const Init *RowField : RowFields->getElements()) {
       const RecordVal *RecVal = CurInstr->getValue(RowField);
       if (RecVal == nullptr)
         PrintFatalError(CurInstr->getLoc(),
@@ -303,7 +303,7 @@ const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
   std::vector<const Init *> KeyValue;
 
   // Construct KeyValue using KeyInstr's values for RowFields.
-  for (const Init *RowField : RowFields->getValues()) {
+  for (const Init *RowField : RowFields->getElements()) {
     const Init *KeyInstrVal = KeyInstr->getValue(RowField)->getValue();
     KeyValue.push_back(KeyInstrVal);
   }
@@ -358,7 +358,7 @@ const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
 
 unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
   StringRef Namespace = Target.getInstNamespace();
   ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   unsigned NumCol = ValueCols.size();
@@ -475,7 +475,7 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
   OS << "// " << InstrMapDesc.getName() << "\nLLVM_READONLY\n";
   OS << "int " << InstrMapDesc.getName() << "(uint16_t Opcode";
   if (ValueCols.size() > 1) {
-    for (const Init *CF : ColFields->getValues()) {
+    for (const Init *CF : ColFields->getElements()) {
       std::string ColName = CF->getAsUnquotedString();
       OS << ", enum " << ColName << " in" << ColName;
     }

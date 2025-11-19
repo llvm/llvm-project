@@ -277,13 +277,13 @@ void f() {
 
 // WIN32-LIFETIME-LABEL: define dso_local void @"?f@lifetime_marker@@YAXXZ"()
 // WIN32-LIFETIME: %[[c:.*]] = alloca %"struct.lifetime_marker::C"
-// WIN32-LIFETIME: call void @llvm.lifetime.start.p0(i64 1, ptr %c)
+// WIN32-LIFETIME: call void @llvm.lifetime.start.p0(ptr %c)
 // WIN32-LIFETIME: invoke void @"?g@lifetime_marker@@YAXXZ"()
 // WIN32-LIFETIME-NEXT: to label %[[cont:[^ ]*]] unwind label %[[lpad0:[^ ]*]]
 //
 // WIN32-LIFETIME: [[cont]]
 // WIN32-LIFETIME: call x86_thiscallcc void @"??1C@lifetime_marker@@QAE@XZ"({{.*}})
-// WIN32-LIFETIME: call void @llvm.lifetime.end.p0(i64 1, ptr %[[c]])
+// WIN32-LIFETIME: call void @llvm.lifetime.end.p0(ptr %[[c]])
 //
 // WIN32-LIFETIME: [[lpad0]]
 // WIN32-LIFETIME-NEXT: cleanuppad
@@ -292,7 +292,7 @@ void f() {
 //
 // WIN32-LIFETIME: [[lpad1]]
 // WIN32-LIFETIME-NEXT: cleanuppad
-// WIN32-LIFETIME: call void @llvm.lifetime.end.p0(i64 1, ptr %[[c]])
+// WIN32-LIFETIME: call void @llvm.lifetime.end.p0(ptr %[[c]])
 }
 
 struct class_2 {

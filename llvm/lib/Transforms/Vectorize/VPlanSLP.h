@@ -47,7 +47,8 @@ class VPInterleavedAccessInfo {
                   InterleavedAccessInfo &IAI);
 
 public:
-  VPInterleavedAccessInfo(VPlan &Plan, InterleavedAccessInfo &IAI);
+  LLVM_ABI_FOR_TEST VPInterleavedAccessInfo(VPlan &Plan,
+                                            InterleavedAccessInfo &IAI);
   VPInterleavedAccessInfo(const VPInterleavedAccessInfo &) = delete;
   VPInterleavedAccessInfo &operator=(const VPInterleavedAccessInfo &) = delete;
 
@@ -73,30 +74,8 @@ public:
 class VPlanSlp {
   enum class OpMode { Failed, Load, Opcode };
 
-  /// A DenseMapInfo implementation for using SmallVector<VPValue *, 4> as
-  /// DenseMap keys.
-  struct BundleDenseMapInfo {
-    static SmallVector<VPValue *, 4> getEmptyKey() {
-      return {reinterpret_cast<VPValue *>(-1)};
-    }
-
-    static SmallVector<VPValue *, 4> getTombstoneKey() {
-      return {reinterpret_cast<VPValue *>(-2)};
-    }
-
-    static unsigned getHashValue(const SmallVector<VPValue *, 4> &V) {
-      return static_cast<unsigned>(hash_combine_range(V));
-    }
-
-    static bool isEqual(const SmallVector<VPValue *, 4> &LHS,
-                        const SmallVector<VPValue *, 4> &RHS) {
-      return LHS == RHS;
-    }
-  };
-
   /// Mapping of values in the original VPlan to a combined VPInstruction.
-  DenseMap<SmallVector<VPValue *, 4>, VPInstruction *, BundleDenseMapInfo>
-      BundleToCombined;
+  DenseMap<SmallVector<VPValue *, 4>, VPInstruction *> BundleToCombined;
 
   VPInterleavedAccessInfo &IAI;
 
@@ -110,8 +89,7 @@ class VPlanSlp {
   /// Width of the widest combined bundle in bits.
   unsigned WidestBundleBits = 0;
 
-  using MultiNodeOpTy =
-      typename std::pair<VPInstruction *, SmallVector<VPValue *, 4>>;
+  using MultiNodeOpTy = std::pair<VPInstruction *, SmallVector<VPValue *, 4>>;
 
   // Input operand bundles for the current multi node. Each multi node operand
   // bundle contains values not matching the multi node's opcode. They will
@@ -154,7 +132,7 @@ public:
 
   /// Tries to build an SLP tree rooted at \p Operands and returns a
   /// VPInstruction combining \p Operands, if they can be combined.
-  VPInstruction *buildGraph(ArrayRef<VPValue *> Operands);
+  LLVM_ABI_FOR_TEST VPInstruction *buildGraph(ArrayRef<VPValue *> Operands);
 
   /// Return the width of the widest combined bundle in bits.
   unsigned getWidestBundleBits() const { return WidestBundleBits; }

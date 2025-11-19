@@ -253,8 +253,8 @@ public:
     ClangASTSource &m_original;
   };
 
-  clang::ExternalASTSource *CreateProxy() {
-    return new ClangASTSourceProxy(*this);
+  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> CreateProxy() {
+    return llvm::makeIntrusiveRefCnt<ClangASTSourceProxy>(*this);
   }
 
 protected:

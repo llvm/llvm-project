@@ -149,23 +149,23 @@ static FunctionType *getOriginalFunctionType(const Function &F) {
         return isa<MDString>(N->getOperand(0)) &&
                cast<MDString>(N->getOperand(0))->getString() == F.getName();
       });
-  // TODO: probably one function can have numerous type mutations,
-  // so we should support this.
   if (ThisFuncMDIt != NamedMD->op_end()) {
     auto *ThisFuncMD = *ThisFuncMDIt;
-    MDNode *MD = dyn_cast<MDNode>(ThisFuncMD->getOperand(1));
-    assert(MD && "MDNode operand is expected");
-    ConstantInt *Const = getConstInt(MD, 0);
-    if (Const) {
-      auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
-      assert(CMeta && "ConstantAsMetadata operand is expected");
-      assert(Const->getSExtValue() >= -1);
-      // Currently -1 indicates return value, greater values mean
-      // argument numbers.
-      if (Const->getSExtValue() == -1)
-        RetTy = CMeta->getType();
-      else
-        ArgTypes[Const->getSExtValue()] = CMeta->getType();
+    for (unsigned I = 1; I != ThisFuncMD->getNumOperands(); ++I) {
+      MDNode *MD = dyn_cast<MDNode>(ThisFuncMD->getOperand(I));
+      assert(MD && "MDNode operand is expected");
+      ConstantInt *Const = getConstInt(MD, 0);
+      if (Const) {
+        auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
+        assert(CMeta && "ConstantAsMetadata operand is expected");
+        assert(Const->getSExtValue() >= -1);
+        // Currently -1 indicates return value, greater values mean
+        // argument numbers.
+        if (Const->getSExtValue() == -1)
+          RetTy = CMeta->getType();
+        else
+          ArgTypes[Const->getSExtValue()] = CMeta->getType();
+      }
     }
   }
 
@@ -267,18 +267,49 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
-  if (STI.isOpenCLEnv())
+  if (STI.isKernel())
     return SPIRV::ExecutionModel::Kernel;
 
+  if (STI.isShader()) {
+    auto attribute = F.getFnAttribute("hlsl.shader");
+    if (!attribute.isValid()) {
+      report_fatal_error(
+          "This entry point lacks mandatory hlsl.shader attribute.");
+    }
+
+    const auto value = attribute.getValueAsString();
+    if (value == "compute")
+      return SPIRV::ExecutionModel::GLCompute;
+    if (value == "vertex")
+      return SPIRV::ExecutionModel::Vertex;
+    if (value == "pixel")
+      return SPIRV::ExecutionModel::Fragment;
+
+    report_fatal_error(
+        "This HLSL entry point is not supported by this backend.");
+  }
+
+  assert(STI.getEnv() == SPIRVSubtarget::Unknown);
+  // "hlsl.shader" attribute is mandatory for Vulkan, so we can set Env to
+  // Shader whenever we find it, and to Kernel otherwise.
+
+  // We will now change the Env based on the attribute, so we need to strip
+  // `const` out of the ref to STI.
+  SPIRVSubtarget *NonConstSTI = const_cast<SPIRVSubtarget *>(&STI);
   auto attribute = F.getFnAttribute("hlsl.shader");
   if (!attribute.isValid()) {
-    report_fatal_error(
-        "This entry point lacks mandatory hlsl.shader attribute.");
+    NonConstSTI->setEnv(SPIRVSubtarget::Kernel);
+    return SPIRV::ExecutionModel::Kernel;
   }
+  NonConstSTI->setEnv(SPIRVSubtarget::Shader);
 
   const auto value = attribute.getValueAsString();
   if (value == "compute")
     return SPIRV::ExecutionModel::GLCompute;
+  if (value == "vertex")
+    return SPIRV::ExecutionModel::Vertex;
+  if (value == "pixel")
+    return SPIRV::ExecutionModel::Fragment;
 
   report_fatal_error("This HLSL entry point is not supported by this backend.");
 }
@@ -319,7 +350,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }
-      if (Arg.hasAttribute(Attribute::Alignment)) {
+      if (Arg.hasAttribute(Attribute::Alignment) && !ST->isShader()) {
         auto Alignment = static_cast<unsigned>(
             Arg.getAttribute(Attribute::Alignment).getValueAsInt());
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
@@ -439,22 +470,18 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
+    // EntryPoints can help us to determine the environment we're working on.
+    // Therefore, we need a non-const pointer to SPIRVSubtarget to update the
+    // environment if we need to.
+    const SPIRVSubtarget *ST =
+        static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (F.getLinkage() != GlobalValue::InternalLinkage &&
-             F.getLinkage() != GlobalValue::PrivateLinkage) {
-    SPIRV::LinkageType::LinkageType LnkTy =
-        F.isDeclaration()
-            ? SPIRV::LinkageType::Import
-            : (F.getLinkage() == GlobalValue::LinkOnceODRLinkage &&
-                       ST->canUseExtension(
-                           SPIRV::Extension::SPV_KHR_linkonce_odr)
-                   ? SPIRV::LinkageType::LinkOnceODR
-                   : SPIRV::LinkageType::Export);
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
+                    {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
 
   // Handle function pointers decoration
@@ -604,9 +631,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    GR->getPointerSize()));
       }
     }
-    if (auto Res =
-            SPIRV::lowerBuiltin(DemangledName, ST->getPreferredInstructionSet(),
-                                MIRBuilder, ResVReg, OrigRetTy, ArgVRegs, GR))
+    if (auto Res = SPIRV::lowerBuiltin(
+            DemangledName, ST->getPreferredInstructionSet(), MIRBuilder,
+            ResVReg, OrigRetTy, ArgVRegs, GR, *Info.CB))
       return *Res;
   }
 

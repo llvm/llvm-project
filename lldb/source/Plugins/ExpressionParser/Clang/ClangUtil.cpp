@@ -19,7 +19,7 @@ bool ClangUtil::IsClangType(const CompilerType &ct) {
   if (!ct)
     return false;
 
-  if (!ct.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>())
+  if (!ct.GetTypeSystem<TypeSystemClang>())
     return false;
 
   if (!ct.GetOpaqueQualType())

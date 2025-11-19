@@ -1,4 +1,4 @@
-//===--- UseNullptrCheck.cpp - clang-tidy----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,14 +21,16 @@ using namespace llvm;
 namespace clang::tidy::modernize {
 namespace {
 
-const char CastSequence[] = "sequence";
-
 AST_MATCHER(Type, sugaredNullptrType) {
   const Type *DesugaredType = Node.getUnqualifiedDesugaredType();
   if (const auto *BT = dyn_cast<BuiltinType>(DesugaredType))
     return BT->getKind() == BuiltinType::NullPtr;
   return false;
 }
+
+} // namespace
+
+static const char CastSequence[] = "sequence";
 
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
@@ -43,7 +45,8 @@ AST_MATCHER(Type, sugaredNullptrType) {
 /// would check for the "NULL" macro instead, but that'd be harder to express.
 /// In practice, "NULL" is often defined as "__null", and this is a useful
 /// condition.
-StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
+static StatementMatcher
+makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
   auto ImplicitCastToNull = implicitCastExpr(
       anyOf(hasCastKind(CK_NullToPointer), hasCastKind(CK_NullToMemberPointer)),
       anyOf(hasSourceExpression(gnuNullExpr()),
@@ -53,7 +56,7 @@ StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(NameList)))));
 
-  auto IsOrHasDescendant = [](auto InnerMatcher) {
+  auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 
@@ -79,22 +82,23 @@ StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
                 unless(hasAncestor(functionDecl(isDefaulted()))))));
 }
 
-bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
-                        const SourceManager &SM) {
+static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
+                               const SourceManager &SM) {
   return SM.isWrittenInSameFile(StartLoc, EndLoc);
 }
 
 /// Replaces the provided range with the text "nullptr", but only if
 /// the start and end location are both in main file.
 /// Returns true if and only if a replacement was made.
-void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
-                        SourceLocation StartLoc, SourceLocation EndLoc) {
-  CharSourceRange Range(SourceRange(StartLoc, EndLoc), true);
+static void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
+                               SourceLocation StartLoc, SourceLocation EndLoc) {
+  const CharSourceRange Range(SourceRange(StartLoc, EndLoc), true);
   // Add a space if nullptr follows an alphanumeric character. This happens
   // whenever there is an c-style explicit cast to nullptr not surrounded by
   // parentheses and right beside a return statement.
-  SourceLocation PreviousLocation = StartLoc.getLocWithOffset(-1);
-  bool NeedsSpace = isAlphanumeric(*SM.getCharacterData(PreviousLocation));
+  const SourceLocation PreviousLocation = StartLoc.getLocWithOffset(-1);
+  const bool NeedsSpace =
+      isAlphanumeric(*SM.getCharacterData(PreviousLocation));
   Check.diag(Range.getBegin(), "use nullptr") << FixItHint::CreateReplacement(
       Range, NeedsSpace ? " nullptr" : "nullptr");
 }
@@ -106,8 +110,9 @@ void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
 /// #define MY_NULL NULL
 /// \endcode
 /// If \p Loc points to NULL, this function will return the name MY_NULL.
-StringRef getOutermostMacroName(SourceLocation Loc, const SourceManager &SM,
-                                const LangOptions &LO) {
+static StringRef getOutermostMacroName(SourceLocation Loc,
+                                       const SourceManager &SM,
+                                       const LangOptions &LO) {
   assert(Loc.isMacroID());
   SourceLocation OutermostMacroLoc;
 
@@ -118,6 +123,8 @@ StringRef getOutermostMacroName(SourceLocation Loc, const SourceManager &SM,
 
   return Lexer::getImmediateMacroName(OutermostMacroLoc, SM, LO);
 }
+
+namespace {
 
 /// RecursiveASTVisitor for ensuring all nodes rooted at a given AST
 /// subtree that have file-level source locations corresponding to a macro
@@ -130,7 +137,7 @@ public:
   }
 
   bool TraverseStmt(Stmt *S) {
-    bool VisitedPreviously = Visited;
+    const bool VisitedPreviously = Visited;
 
     if (!RecursiveASTVisitor<MacroArgUsageVisitor>::TraverseStmt(S))
       return false;
@@ -229,7 +236,7 @@ public:
       return true;
     }
 
-    auto* CastSubExpr = C->getSubExpr()->IgnoreParens();
+    auto *CastSubExpr = C->getSubExpr()->IgnoreParens();
     // Ignore cast expressions which cast nullptr literal.
     if (isa<CXXNullPtrLiteralExpr>(CastSubExpr)) {
       return true;
@@ -252,8 +259,8 @@ public:
     // If the location comes from a macro body expansion, check to see if its
     // coming from one of the allowed 'NULL' macros.
     if (SM.isMacroArgExpansion(StartLoc) && SM.isMacroArgExpansion(EndLoc)) {
-      SourceLocation FileLocStart = SM.getFileLoc(StartLoc),
-                     FileLocEnd = SM.getFileLoc(EndLoc);
+      const SourceLocation FileLocStart = SM.getFileLoc(StartLoc),
+                           FileLocEnd = SM.getFileLoc(EndLoc);
       SourceLocation ImmediateMacroArgLoc, MacroLoc;
       // Skip NULL macros used in macro.
       if (!getMacroAndArgLocations(StartLoc, ImmediateMacroArgLoc, MacroLoc) ||
@@ -268,7 +275,7 @@ public:
     }
 
     if (SM.isMacroBodyExpansion(StartLoc) && SM.isMacroBodyExpansion(EndLoc)) {
-      StringRef OutermostMacroName =
+      const StringRef OutermostMacroName =
           getOutermostMacroName(StartLoc, SM, Context.getLangOpts());
 
       // Check to see if the user wants to replace the macro being expanded.
@@ -296,7 +303,7 @@ private:
   /// Tests that all expansions of a macro arg, one of which expands to
   /// result in \p CE, yield NullTo(Member)Pointer casts.
   bool allArgUsesValid(const CastExpr *CE) {
-    SourceLocation CastLoc = CE->getBeginLoc();
+    const SourceLocation CastLoc = CE->getBeginLoc();
 
     // Step 1: Get location of macro arg and location of the macro the arg was
     // provided to.
@@ -342,17 +349,17 @@ private:
 
     // Find the location of the immediate macro expansion.
     while (true) {
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(ArgLoc);
+      const std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(ArgLoc);
       const SrcMgr::SLocEntry *E = &SM.getSLocEntry(LocInfo.first);
       const SrcMgr::ExpansionInfo &Expansion = E->getExpansion();
 
-      SourceLocation OldArgLoc = ArgLoc;
+      const SourceLocation OldArgLoc = ArgLoc;
       ArgLoc = Expansion.getExpansionLocStart();
       if (!Expansion.isMacroArgExpansion()) {
         if (!MacroLoc.isFileID())
           return false;
 
-        StringRef Name =
+        const StringRef Name =
             Lexer::getImmediateMacroName(OldArgLoc, SM, Context.getLangOpts());
         return llvm::is_contained(NullMacros, Name);
       }
@@ -365,7 +372,7 @@ private:
 
       // If spelling location resides in the same FileID as macro expansion
       // location, it means there is no inner macro.
-      FileID MacroFID = SM.getFileID(MacroLoc);
+      const FileID MacroFID = SM.getFileID(MacroLoc);
       if (SM.isInFileID(ArgLoc, MacroFID)) {
         // Don't transform this case. If the characters that caused the
         // null-conversion come from within a macro, they can't be changed.
@@ -395,7 +402,7 @@ private:
     SourceLocation Loc = TestLoc, MacroLoc;
 
     while (true) {
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+      const std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
       const SrcMgr::SLocEntry *E = &SM.getSLocEntry(LocInfo.first);
       const SrcMgr::ExpansionInfo &Expansion = E->getExpansion();
 
@@ -494,7 +501,7 @@ UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
       NullMacrosStr(Options.get("NullMacros", "NULL")),
       IgnoredTypes(utils::options::parseStringList(Options.get(
           "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))) {
-  StringRef(NullMacrosStr).split(NullMacros, ",");
+  NullMacrosStr.split(NullMacros, ",");
 }
 
 void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

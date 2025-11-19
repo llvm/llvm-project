@@ -93,7 +93,7 @@ define dso_local i32 @all_gpr_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c
 ; CHECK-NEXT:    mov x5, #0 // =0x0
 ; CHECK-NEXT:    mov x6, #0 // =0x0
 ; CHECK-NEXT:    mov x7, #0 // =0x0
-; CHECK-NEXT:    mov x18, #0 // =0x0
+; CHECK-NEXT:    mov x15, #0 // =0x0
 ; CHECK-NEXT:    orr w0, w8, w2
 ; CHECK-NEXT:    mov x2, #0 // =0x0
 ; CHECK-NEXT:    mov x8, #0 // =0x0
@@ -146,7 +146,7 @@ define dso_local i32 @all_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) lo
 ; DEFAULT-NEXT:    mov x5, #0 // =0x0
 ; DEFAULT-NEXT:    mov x6, #0 // =0x0
 ; DEFAULT-NEXT:    mov x7, #0 // =0x0
-; DEFAULT-NEXT:    mov x18, #0 // =0x0
+; DEFAULT-NEXT:    mov x15, #0 // =0x0
 ; DEFAULT-NEXT:    movi v0.2d, #0000000000000000
 ; DEFAULT-NEXT:    orr w0, w8, w2
 ; DEFAULT-NEXT:    mov x2, #0 // =0x0
@@ -169,7 +169,7 @@ define dso_local i32 @all_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) lo
 ; SVE-OR-SME-NEXT:    mov x5, #0 // =0x0
 ; SVE-OR-SME-NEXT:    mov x6, #0 // =0x0
 ; SVE-OR-SME-NEXT:    mov x7, #0 // =0x0
-; SVE-OR-SME-NEXT:    mov x18, #0 // =0x0
+; SVE-OR-SME-NEXT:    mov x15, #0 // =0x0
 ; SVE-OR-SME-NEXT:    mov z0.d, #0 // =0x0
 ; SVE-OR-SME-NEXT:    orr w0, w8, w2
 ; SVE-OR-SME-NEXT:    mov x2, #0 // =0x0
@@ -196,7 +196,7 @@ define dso_local i32 @all_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) lo
 ; STREAMING-COMPAT-NEXT:    mov x5, #0 // =0x0
 ; STREAMING-COMPAT-NEXT:    mov x6, #0 // =0x0
 ; STREAMING-COMPAT-NEXT:    mov x7, #0 // =0x0
-; STREAMING-COMPAT-NEXT:    mov x18, #0 // =0x0
+; STREAMING-COMPAT-NEXT:    mov x15, #0 // =0x0
 ; STREAMING-COMPAT-NEXT:    fmov d0, xzr
 ; STREAMING-COMPAT-NEXT:    orr w0, w8, w2
 ; STREAMING-COMPAT-NEXT:    mov x2, #0 // =0x0
@@ -492,7 +492,7 @@ define dso_local double @all_gpr_arg_float(double noundef %a, float noundef %b) 
 ; CHECK-NEXT:    mov x6, #0 // =0x0
 ; CHECK-NEXT:    mov x7, #0 // =0x0
 ; CHECK-NEXT:    mov x8, #0 // =0x0
-; CHECK-NEXT:    mov x18, #0 // =0x0
+; CHECK-NEXT:    mov x15, #0 // =0x0
 ; CHECK-NEXT:    ret
 
 entry:
@@ -547,7 +547,7 @@ define dso_local double @all_arg_float(double noundef %a, float noundef %b) loca
 ; DEFAULT-NEXT:    mov x6, #0 // =0x0
 ; DEFAULT-NEXT:    mov x7, #0 // =0x0
 ; DEFAULT-NEXT:    mov x8, #0 // =0x0
-; DEFAULT-NEXT:    mov x18, #0 // =0x0
+; DEFAULT-NEXT:    mov x15, #0 // =0x0
 ; DEFAULT-NEXT:    movi v1.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v2.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v3.2d, #0000000000000000
@@ -570,7 +570,7 @@ define dso_local double @all_arg_float(double noundef %a, float noundef %b) loca
 ; SVE-OR-SME-NEXT:    mov x6, #0 // =0x0
 ; SVE-OR-SME-NEXT:    mov x7, #0 // =0x0
 ; SVE-OR-SME-NEXT:    mov x8, #0 // =0x0
-; SVE-OR-SME-NEXT:    mov x18, #0 // =0x0
+; SVE-OR-SME-NEXT:    mov x15, #0 // =0x0
 ; SVE-OR-SME-NEXT:    mov z1.d, #0 // =0x0
 ; SVE-OR-SME-NEXT:    mov z2.d, #0 // =0x0
 ; SVE-OR-SME-NEXT:    mov z3.d, #0 // =0x0
@@ -597,7 +597,7 @@ define dso_local double @all_arg_float(double noundef %a, float noundef %b) loca
 ; STREAMING-COMPAT-NEXT:    mov x6, #0 // =0x0
 ; STREAMING-COMPAT-NEXT:    mov x7, #0 // =0x0
 ; STREAMING-COMPAT-NEXT:    mov x8, #0 // =0x0
-; STREAMING-COMPAT-NEXT:    mov x18, #0 // =0x0
+; STREAMING-COMPAT-NEXT:    mov x15, #0 // =0x0
 ; STREAMING-COMPAT-NEXT:    fmov d1, xzr
 ; STREAMING-COMPAT-NEXT:    fmov d2, xzr
 ; STREAMING-COMPAT-NEXT:    fmov d3, xzr

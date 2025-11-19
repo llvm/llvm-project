@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S < %s -p loop-vectorize -enable-early-exit-vectorization -disable-output \
+; RUN: opt -S < %s -p loop-vectorize -disable-output \
 ; RUN:   -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefixes=CHECK
 
 target triple = "aarch64-unknown-linux-gnu"
@@ -10,10 +10,10 @@ define i64 @same_exit_block_pre_inc_use1_sve() #1 {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_sve'
 ; CHECK: LV: Selecting VF: vscale x 16
 ; CHECK: Calculating cost of work in exit block vector.early.exit
-; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane vp<{{.*}}>
+; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF vscale x 16: EMIT vp<{{.*}}> = add
 ; CHECK-NEXT: Cost of 0 for VF vscale x 16: vp<{{.*}}> = DERIVED-IV
-; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane vp<{{.*}}>
+; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF vscale x 16: EMIT vp<{{.*}}> = add
 ; CHECK-NEXT: Cost of 0 for VF vscale x 16: vp<{{.*}}> = DERIVED-IV
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:16
@@ -51,10 +51,10 @@ define i64 @same_exit_block_pre_inc_use1_nosve() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_nosve'
 ; CHECK: LV: Selecting VF: 16
 ; CHECK: Calculating cost of work in exit block vector.early.exit
-; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}> = first-active-lane vp<{{.*}}>
+; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.*}}> = add
 ; CHECK-NEXT: Cost of 0 for VF 16: vp<{{.*}}> = DERIVED-IV
-; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}> = first-active-lane vp<{{.*}}>
+; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.*}}> = add
 ; CHECK-NEXT: Cost of 0 for VF 16: vp<{{.*}}> = DERIVED-IV
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:160
@@ -94,6 +94,8 @@ define i64 @vectorization_not_profitable_due_to_trunc(ptr dereferenceable(800) %
 ; CHECK-LABEL: LV: Checking a loop in 'vectorization_not_profitable_due_to_trunc'
 ; CHECK: LV: Selecting VF: 1.
 ; CHECK-NEXT: Calculating cost of work in exit block vector.early.exit:
+; CHECK-NEXT: Cost of 1 for VF 1: EMIT vp<%first.active.lane> = first-active-lane ir<%t>
+; CHECK-NEXT: Cost of 0 for VF 1: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%l>
 ; CHECK-NEXT: LV: Vectorization is possible but not beneficial.
 entry:
   br label %loop.header

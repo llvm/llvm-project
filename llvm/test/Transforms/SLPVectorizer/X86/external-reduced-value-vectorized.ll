@@ -17,7 +17,8 @@ define i32 @test(ptr %c, i16 %a, i16 %0) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i16 [[A]], -2
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i1> [[TMP10]], i1 [[TMP9]], i32 7
-; CHECK-NEXT:    [[TMP12:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v4i1(<8 x i1> [[TMP11]], <4 x i1> [[TMP8]], i64 0)
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i1> [[TMP8]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i1> [[TMP11]], <8 x i1> [[TMP17]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze <8 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext i1 [[TMP14]] to i32

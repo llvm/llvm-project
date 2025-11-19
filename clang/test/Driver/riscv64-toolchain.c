@@ -28,7 +28,7 @@
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtbegin.o"
 // C-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
 // C-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib"
-// C-RV64-BAREMETAL-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV64-BAREMETAL-LP64: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld= \
@@ -42,7 +42,7 @@
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtbegin.o"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../../../riscv64-unknown-elf/lib"
-// C-RV64-BAREMETAL-NOSYSROOT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV64-BAREMETAL-NOSYSROOT-LP64: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
@@ -58,7 +58,7 @@
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtbegin.o"
 // CXX-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
 // CXX-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib"
-// CXX-RV64-BAREMETAL-LP64: "-lstdc++" "-lm" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// CXX-RV64-BAREMETAL-LP64: "-lstdc++" "-lm" "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
@@ -73,7 +73,7 @@
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtbegin.o"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../../../riscv64-unknown-elf/lib"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "-lm" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "-lm" "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld= -no-pie \
@@ -118,7 +118,7 @@
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64/crtbegin.o"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib"
-// C-RV64IMAC-BAREMETAL-MULTI-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV64IMAC-BAREMETAL-MULTI-LP64: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
@@ -133,7 +133,7 @@
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imafdc/lp64d/crtbegin.o"
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib"
-// C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imafdc/lp64d/crtend.o"
 
 // Check that --rtlib can be used to override the used runtime library
@@ -143,7 +143,7 @@
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-LIBGCC-LP64 %s
 // C-RV64-RTLIB-LIBGCC-LP64: "{{.*}}crt0.o"
 // C-RV64-RTLIB-LIBGCC-LP64: "{{.*}}crtbegin.o"
-// C-RV64-RTLIB-LIBGCC-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV64-RTLIB-LIBGCC-LP64: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV64-RTLIB-LIBGCC-LP64: "{{.*}}crtend.o"
 
 // RUN: %clang -### %s \
@@ -152,7 +152,7 @@
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-COMPILERRT-LP64 %s
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}crt0.o"
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtbegin.o"
-// C-RV64-RTLIB-COMPILERRT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins.a"
+// C-RV64-RTLIB-COMPILERRT-LP64: "--start-group" "{{.*}}libclang_rt.builtins.a" "-lc" "-lgloss" "--end-group"
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s --target=riscv64 \
@@ -171,7 +171,7 @@
 
 // RUN: %clang --target=riscv64 %s -emit-llvm -S -o - | FileCheck %s
 
-// Check that "--no-relax" is forwarded to the linker for RISC-V (RISCVToolchain.cpp).
+/// Check that "--no-relax" is forwarded to the linker for RISC-V.
 // RUN: env "PATH=" %clang %s -### 2>&1 -mno-relax \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv64imac -mabi=lp64\
@@ -179,7 +179,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-RV64-NORELAX %s
 // CHECK-RV64-NORELAX: "--no-relax"
 
-// Check that "--no-relax" is not forwarded to the linker for RISC-V (RISCVToolchain.cpp).
+/// Check that "--no-relax" is not forwarded to the linker for RISC-V.
 // RUN:env "PATH=" %clang %s -### 2>&1 \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv64imac -mabi=lp64\
@@ -187,7 +187,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-RV64-RELAX %s
 // CHECK-RV64-RELAX-NOT: "--no-relax"
 
-// Check that "--no-relax" is forwarded to the linker for RISC-V (Gnu.cpp).
+/// Check that "--no-relax" is forwarded to the linker for RISC-V (Gnu.cpp).
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie -mno-relax \
 // RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=lp64 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
@@ -195,13 +195,26 @@
 // RUN:   | FileCheck -check-prefix=CHECK-RV64-GNU-NORELAX %s
 // CHECK-RV64-GNU-NORELAX: "--no-relax"
 
-// Check that "--no-relax" is not forwarded to the linker for RISC-V (Gnu.cpp).
+/// Check that "--no-relax" is not forwarded to the linker for RISC-V (Gnu.cpp).
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
 // RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=lp64 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-RV64-GNU-RELAX %s
 // CHECK-RV64-GNU-RELAX-NOT: "--no-relax"
+
+/// Check that "-static -pie" is forwarded to linker when "-static-pie" is used
+// RUN: %clang -static-pie -### %s -fuse-ld= \
+// RUN:   --target=riscv64-unknown-elf -rtlib=platform --unwindlib=platform \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
+// RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV64-STATIC-PIE %s
+
+// C-RV64-STATIC-PIE: "-Bstatic" "-pie" "--no-dynamic-linker" "-z" "text" "-m" "elf64lriscv" "-X"
+// C-RV64-STATIC-PIE: "{{.*}}rcrt1.o"
+// C-RV64-STATIC-PIE: "{{.*}}crtbeginS.o"
+// C-RV64-STATIC-PIE: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
+// C-RV64-STATIC-PIE: "{{.*}}crtendS.o"
 
 typedef __builtin_va_list va_list;
 typedef __SIZE_TYPE__ size_t;

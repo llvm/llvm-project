@@ -22,6 +22,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Parse/ParseHLSLRootSignature.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
@@ -30,7 +31,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -140,7 +140,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   Consumers.push_back(std::make_unique<PCHGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
-      FrontendOpts.ModuleFileExtensions,
+      CI.getCodeGenOpts(), FrontendOpts.ModuleFileExtensions,
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
       FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule,
       +CI.getLangOpts().CacheGeneratedPCH));
@@ -182,7 +182,7 @@ bool GeneratePCHAction::shouldEraseOutputFiles() {
 
 bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
   CI.getLangOpts().CompilingPCH = true;
-  return true;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
 std::vector<std::unique_ptr<ASTConsumer>>
@@ -200,7 +200,7 @@ GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
 
   Consumers.push_back(std::make_unique<PCHGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
-      CI.getFrontendOpts().ModuleFileExtensions,
+      CI.getCodeGenOpts(), CI.getFrontendOpts().ModuleFileExtensions,
       /*AllowASTWithErrors=*/
       +CI.getFrontendOpts().AllowPCMWithCompilerErrors,
       /*IncludeTimestamps=*/
@@ -263,6 +263,20 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                     /*ForceUseTemporary=*/true);
 }
 
+bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
+    CompilerInstance &CI) {
+  for (const auto &FIF : CI.getFrontendOpts().Inputs) {
+    if (const auto InputFormat = FIF.getKind().getFormat();
+        InputFormat != InputKind::Format::Source) {
+      CI.getDiagnostics().Report(
+          diag::err_frontend_action_unsupported_input_format)
+          << "module interface compilation" << FIF.getFile() << InputFormat;
+      return false;
+    }
+  }
+  return GenerateModuleAction::PrepareToExecuteAction(CI);
+}
+
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
@@ -279,13 +293,13 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {
     Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath,
+        CI.getFrontendOpts().ModuleOutputPath, CI.getCodeGenOpts(),
         +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
   }
 
   Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile,
+      CI.getFrontendOpts().OutputFile, CI.getCodeGenOpts(),
       +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
@@ -300,9 +314,9 @@ GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
 std::unique_ptr<ASTConsumer>
 GenerateReducedModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                         StringRef InFile) {
-  return std::make_unique<ReducedBMIGenerator>(CI.getPreprocessor(),
-                                               CI.getModuleCache(),
-                                               CI.getFrontendOpts().OutputFile);
+  return std::make_unique<ReducedBMIGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(),
+      CI.getFrontendOpts().OutputFile, CI.getCodeGenOpts());
 }
 
 bool GenerateHeaderUnitAction::BeginSourceFileAction(CompilerInstance &CI) {
@@ -345,12 +359,13 @@ void VerifyPCHAction::ExecuteAction() {
   const std::string &Sysroot = CI.getHeaderSearchOpts().Sysroot;
   std::unique_ptr<ASTReader> Reader(new ASTReader(
       CI.getPreprocessor(), CI.getModuleCache(), &CI.getASTContext(),
-      CI.getPCHContainerReader(), CI.getFrontendOpts().ModuleFileExtensions,
+      CI.getPCHContainerReader(), CI.getCodeGenOpts(),
+      CI.getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       DisableValidationForModuleKind::None,
       /*AllowASTWithCompilerErrors*/ false,
       /*AllowConfigurationMismatch*/ true,
-      /*ValidateSystemInputs*/ true));
+      /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
   Reader->ReadAST(getCurrentFile(),
                   Preamble ? serialization::MK_Preamble
@@ -630,16 +645,20 @@ namespace {
     bool ReadLanguageOptions(const LangOptions &LangOpts,
                              StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
+      // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+      using CK = LangOptions::CompatibilityKind;
+
       Out.indent(2) << "Language options:\n";
-#define LANGOPT(Name, Bits, Default, Description) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       DUMP_BOOLEAN(LangOpts.Name, Description);
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-      Out.indent(4) << Description << ": "                   \
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
+      Out.indent(4) << Description << ": "                                     \
                     << static_cast<unsigned>(LangOpts.get##Name()) << "\n";
-#define VALUE_LANGOPT(Name, Bits, Default, Description) \
+#define VALUE_LANGOPT(Name, Bits, Default, Compatibility, Description)         \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       Out.indent(4) << Description << ": " << LangOpts.Name << "\n";
-#define BENIGN_LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
 #include "clang/Basic/LangOptions.def"
 
       if (!LangOpts.ModuleFeatures.empty()) {
@@ -671,21 +690,21 @@ namespace {
       return false;
     }
 
-    bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+    bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                                StringRef ModuleFilename,
                                bool Complain) override {
       Out.indent(2) << "Diagnostic options:\n";
-#define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts->Name, #Name);
-#define ENUM_DIAGOPT(Name, Type, Bits, Default) \
-      Out.indent(4) << #Name << ": " << DiagOpts->get##Name() << "\n";
-#define VALUE_DIAGOPT(Name, Bits, Default) \
-      Out.indent(4) << #Name << ": " << DiagOpts->Name << "\n";
+#define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts.Name, #Name);
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)                              \
+    Out.indent(4) << #Name << ": " << DiagOpts.get##Name() << "\n";
+#define VALUE_DIAGOPT(Name, Bits, Default)                                   \
+    Out.indent(4) << #Name << ": " << DiagOpts.Name << "\n";
 #include "clang/Basic/DiagnosticOptions.def"
 
       Out.indent(4) << "Diagnostic flags:\n";
-      for (const std::string &Warning : DiagOpts->Warnings)
+      for (const std::string &Warning : DiagOpts.Warnings)
         Out.indent(6) << "-W" << Warning << "\n";
-      for (const std::string &Remark : DiagOpts->Remarks)
+      for (const std::string &Remark : DiagOpts.Remarks)
         Out.indent(6) << "-R" << Remark << "\n";
 
       return false;
@@ -777,9 +796,10 @@ namespace {
     /// Indicates that the AST file contains particular input file.
     ///
     /// \returns true to continue receiving the next input file, false to stop.
-    bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                        bool isSystem, bool isOverridden,
-                        bool isExplicitModule) override {
+    bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                   StringRef Filename, bool isSystem,
+                                   bool isOverridden,
+                                   bool isExplicitModule) override {
 
       Out.indent(2) << "Input file: " << FilenameAsRequested;
 
@@ -951,14 +971,17 @@ void DumpModuleInfoAction::ExecuteAction() {
     // Emit the macro definitions in the module file so that we can know how
     // much definitions in the module file quickly.
     // TODO: Emit the macro definition bodies completely.
-    if (auto FilteredMacros = llvm::make_filter_range(
-            R->getPreprocessor().macros(),
-            [](const auto &Macro) { return Macro.first->isFromAST(); });
-        !FilteredMacros.empty()) {
-      Out << "   Macro Definitions:\n";
-      for (/*<IdentifierInfo *, MacroState> pair*/ const auto &Macro :
-           FilteredMacros)
-        Out << "     " << Macro.first->getName() << "\n";
+    {
+      std::vector<StringRef> MacroNames;
+      for (const auto &M : R->getPreprocessor().macros()) {
+        if (M.first->isFromAST())
+          MacroNames.push_back(M.first->getName());
+      }
+      llvm::sort(MacroNames);
+      if (!MacroNames.empty())
+        Out << "   Macro Definitions:\n";
+      for (StringRef Name : MacroNames)
+        Out << "     " << Name << "\n";
     }
 
     // Now let's print out any modules we did not see as part of the Primary.
@@ -1210,16 +1233,95 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
                                     llvm::outs());
 }
 
-void GetDependenciesByModuleNameAction::ExecuteAction() {
+//===----------------------------------------------------------------------===//
+// HLSL Specific Actions
+//===----------------------------------------------------------------------===//
+
+class InjectRootSignatureCallback : public PPCallbacks {
+private:
+  Sema &Actions;
+  StringRef RootSigName;
+  llvm::dxbc::RootSignatureVersion Version;
+
+  std::optional<StringLiteral *> processStringLiteral(ArrayRef<Token> Tokens) {
+    for (Token Tok : Tokens)
+      if (!tok::isStringLiteral(Tok.getKind()))
+        return std::nullopt;
+
+    ExprResult StringResult = Actions.ActOnUnevaluatedStringLiteral(Tokens);
+    if (StringResult.isInvalid())
+      return std::nullopt;
+
+    if (auto Signature = dyn_cast<StringLiteral>(StringResult.get()))
+      return Signature;
+
+    return std::nullopt;
+  }
+
+public:
+  void MacroDefined(const Token &MacroNameTok,
+                    const MacroDirective *MD) override {
+    if (RootSigName != MacroNameTok.getIdentifierInfo()->getName())
+      return;
+
+    const MacroInfo *MI = MD->getMacroInfo();
+    auto Signature = processStringLiteral(MI->tokens());
+    if (!Signature.has_value()) {
+      Actions.getDiagnostics().Report(MI->getDefinitionLoc(),
+                                      diag::err_expected_string_literal)
+          << /*in attributes...*/ 4 << "RootSignature";
+      return;
+    }
+
+    IdentifierInfo *DeclIdent =
+        hlsl::ParseHLSLRootSignature(Actions, Version, *Signature);
+    Actions.HLSL().SetRootSignatureOverride(DeclIdent);
+  }
+
+  InjectRootSignatureCallback(Sema &Actions, StringRef RootSigName,
+                              llvm::dxbc::RootSignatureVersion Version)
+      : PPCallbacks(), Actions(Actions), RootSigName(RootSigName),
+        Version(Version) {}
+};
+
+void HLSLFrontendAction::ExecuteAction() {
+  // Pre-requisites to invoke
   CompilerInstance &CI = getCompilerInstance();
+  if (!CI.hasASTContext() || !CI.hasPreprocessor())
+    return WrapperFrontendAction::ExecuteAction();
+
+  // InjectRootSignatureCallback requires access to invoke Sema to lookup/
+  // register a root signature declaration. The wrapped action is required to
+  // account for this by only creating a Sema if one doesn't already exist
+  // (like we have done, and, ASTFrontendAction::ExecuteAction)
+  if (!CI.hasSema())
+    CI.createSema(getTranslationUnitKind(),
+                  /*CodeCompleteConsumer=*/nullptr);
+  Sema &S = CI.getSema();
+
+  auto &TargetInfo = CI.getASTContext().getTargetInfo();
+  bool IsRootSignatureTarget =
+      TargetInfo.getTriple().getEnvironment() == llvm::Triple::RootSignature;
+  StringRef HLSLEntry = TargetInfo.getTargetOpts().HLSLEntry;
+
+  // Register HLSL specific callbacks
+  auto LangOpts = CI.getLangOpts();
+  StringRef RootSigName =
+      IsRootSignatureTarget ? HLSLEntry : LangOpts.HLSLRootSigOverride;
+
+  auto MacroCallback = std::make_unique<InjectRootSignatureCallback>(
+      S, RootSigName, LangOpts.HLSLRootSigVer);
+
   Preprocessor &PP = CI.getPreprocessor();
-  SourceManager &SM = PP.getSourceManager();
-  FileID MainFileID = SM.getMainFileID();
-  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<IdentifierLoc, 2> Path;
-  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.emplace_back(FileStart, ModuleID);
-  auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
-  PPCallbacks *CB = PP.getPPCallbacks();
-  CB->moduleImport(SourceLocation(), Path, ModResult);
+  PP.addPPCallbacks(std::move(MacroCallback));
+
+  // If we are targeting a root signature, invoke custom handling
+  if (IsRootSignatureTarget)
+    return hlsl::HandleRootSignatureTarget(S, HLSLEntry);
+  else // otherwise, invoke as normal
+    return WrapperFrontendAction::ExecuteAction();
 }
+
+HLSLFrontendAction::HLSLFrontendAction(
+    std::unique_ptr<FrontendAction> WrappedAction)
+    : WrapperFrontendAction(std::move(WrappedAction)) {}

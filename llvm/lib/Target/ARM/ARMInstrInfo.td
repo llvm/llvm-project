@@ -164,10 +164,9 @@ def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
 def ARMWrapperJT     : SDNode<"ARMISD::WrapperJT",   SDTIntUnaryOp>;
 
 def ARMcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_ARMCallSeqStart,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOutGlue]>;
 def ARMcallseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_ARMCallSeqEnd,
-                              [SDNPHasChain, SDNPSideEffect,
-                               SDNPOptInGlue, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def ARMcopystructbyval : SDNode<"ARMISD::COPY_STRUCT_BYVAL" ,
                                 SDT_ARMStructByVal,
                                 [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
@@ -421,7 +420,7 @@ def imm16_31 : ImmLeaf<i32, [{
 
 // sext_16_node predicate - True if the SDNode is sign-extended 16 or more bits.
 def sext_16_node : PatLeaf<(i32 GPR:$a), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N,0)) >= 17;
+  return CurDAG->ComputeNumSignBits(Op) >= 17;
 }]>;
 
 def sext_bottom_16 : PatFrag<(ops node:$a),
@@ -451,14 +450,14 @@ def lo16AllZero : PatLeaf<(i32 imm), [{
 
 // top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
 def top16Zero: PatLeaf<(i32 GPR:$src), [{
-  return !SDValue(N,0)->getValueType(0).isVector() &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  return !Op.getValueType().isVector() &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 16));
   }]>;
 
 // topbitsallzero - Return true if all bits except the lowest bit are known zero
 def topbitsallzero32 : PatLeaf<(i32 GPRwithZR:$src), [{
-  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  return Op.getValueType() == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 31));
   }]>;
 
 class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;
@@ -474,21 +473,16 @@ def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs)>;
 
 // An 'fmul' node with a single use.
 let HasOneUse = 1 in
-def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (fmul node:$lhs, node:$rhs)>;
+def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (any_fmul node:$lhs, node:$rhs)>;
 
 // An 'fadd' node which checks for single non-hazardous use.
-def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
+def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fadd node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
 // An 'fsub' node which checks for single non-hazardous use.
-def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
+def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
-}]>;
-
-// An 'fadd' node which can be contracted into a fma
-def fadd_contract : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
-  return N->getFlags().hasAllowContract();
 }]>;
 
 def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
@@ -771,7 +765,6 @@ class MVEVectorIndexOperand<int NumLanes> : AsmOperandClass {
 class MVEVectorIndex<int NumLanes> : Operand<i32> {
   let PrintMethod = "printVectorIndex";
   let ParserMatchClass = MVEVectorIndexOperand<NumLanes>;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // shift_imm: An integer that encodes a shift amount and the type of shift
@@ -1187,7 +1180,6 @@ def PostIdxImm8AsmOperand : AsmOperandClass { let Name = "PostIdxImm8"; }
 def postidx_imm8 : MemOperand {
   let PrintMethod = "printPostIdxImm8Operand";
   let ParserMatchClass = PostIdxImm8AsmOperand;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // postidx_imm8s4 := +/- [0,1020]
@@ -2387,29 +2379,13 @@ def UDF : AInoP<(outs), (ins imm0_65535:$imm16), MiscFrm, NoItinerary,
 /*
  * A5.4 Permanently UNDEFINED instructions.
  *
- * For most targets use UDF #65006, for which the OS will generate SIGTRAP.
- * Other UDF encodings generate SIGILL.
+ * Targets use UDF #65006, for which the OS will generate SIGTRAP.
  *
- * NaCl's OS instead chooses an ARM UDF encoding that's also a UDF in Thumb.
- * Encoding A1:
- *  1110 0111 1111 iiii iiii iiii 1111 iiii
- * Encoding T1:
- *  1101 1110 iiii iiii
- * It uses the following encoding:
- *  1110 0111 1111 1110 1101 1110 1111 0000
- *  - In ARM: UDF #60896;
- *  - In Thumb: UDF #254 followed by a branch-to-self.
  */
-let isTrap = 1 in
-def TRAPNaCl : AXI<(outs), (ins), MiscFrm, NoItinerary,
-               "trap", [(trap)]>,
-           Requires<[IsARM,UseNaClTrap]> {
-  let Inst = 0xe7fedef0;
-}
 let isTrap = 1 in
 def TRAP : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
-           Requires<[IsARM,DontUseNaClTrap]> {
+           Requires<[IsARM]> {
   let Inst = 0xe7ffdefe;
 }
 
@@ -5210,12 +5186,6 @@ def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
 }
 
 let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
-  // Pseudo instruction that combines movs + predicated rsbmi
-  // to implement integer ABS
-  def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
-}
-
-let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
     def COPY_STRUCT_BYVAL_I32 : PseudoInst<
       (outs), (ins GPR:$dst, GPR:$src, i32imm:$size, i32imm:$alignment),
       NoItinerary,
@@ -5376,15 +5346,15 @@ def : ARMPat<(stlex_1 (and GPR:$Rt, 0xff), addr_offset_none:$addr),
 def : ARMPat<(stlex_2 (and GPR:$Rt, 0xffff), addr_offset_none:$addr),
              (STLEXH GPR:$Rt, addr_offset_none:$addr)>;
 
-class acquiring_load<PatFrag base>
+class acquiring_load<PatFrags base>
   : PatFrag<(ops node:$ptr), (base node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return isAcquireOrStronger(Ordering);
 }]>;
 
-def atomic_load_acquire_8  : acquiring_load<atomic_load_8>;
-def atomic_load_acquire_16 : acquiring_load<atomic_load_16>;
-def atomic_load_acquire_32 : acquiring_load<atomic_load_32>;
+def atomic_load_azext_acquire_8  : acquiring_load<atomic_load_azext_8>;
+def atomic_load_azext_acquire_16 : acquiring_load<atomic_load_azext_16>;
+def atomic_load_nonext_acquire_32 : acquiring_load<atomic_load_nonext_32>;
 
 class releasing_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr), [{
@@ -5397,9 +5367,9 @@ def atomic_store_release_16 : releasing_store<atomic_store_16>;
 def atomic_store_release_32 : releasing_store<atomic_store_32>;
 
 let AddedComplexity = 8 in {
-  def : ARMPat<(atomic_load_acquire_8 addr_offset_none:$addr),  (LDAB addr_offset_none:$addr)>;
-  def : ARMPat<(atomic_load_acquire_16 addr_offset_none:$addr), (LDAH addr_offset_none:$addr)>;
-  def : ARMPat<(atomic_load_acquire_32 addr_offset_none:$addr), (LDA  addr_offset_none:$addr)>;
+  def : ARMPat<(atomic_load_azext_acquire_8 addr_offset_none:$addr),  (LDAB addr_offset_none:$addr)>;
+  def : ARMPat<(atomic_load_azext_acquire_16 addr_offset_none:$addr), (LDAH addr_offset_none:$addr)>;
+  def : ARMPat<(atomic_load_nonext_acquire_32 addr_offset_none:$addr), (LDA  addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_8 addr_offset_none:$addr, GPR:$val),  (STLB GPR:$val, addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_16 addr_offset_none:$addr, GPR:$val), (STLH GPR:$val, addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_32 addr_offset_none:$addr, GPR:$val), (STL  GPR:$val, addr_offset_none:$addr)>;
@@ -6214,15 +6184,15 @@ def : ARMV6Pat<(add GPR:$Rn, (sext_inreg GPRnopc:$Rm, i16)),
                (SXTAH GPR:$Rn, GPRnopc:$Rm, 0)>;
 
 // Atomic load/store patterns
-def : ARMPat<(atomic_load_8 ldst_so_reg:$src),
+def : ARMPat<(atomic_load_azext_8 ldst_so_reg:$src),
              (LDRBrs ldst_so_reg:$src)>;
-def : ARMPat<(atomic_load_8 addrmode_imm12:$src),
+def : ARMPat<(atomic_load_azext_8 addrmode_imm12:$src),
              (LDRBi12 addrmode_imm12:$src)>;
-def : ARMPat<(atomic_load_16 addrmode3:$src),
+def : ARMPat<(atomic_load_azext_16 addrmode3:$src),
              (LDRH addrmode3:$src)>;
-def : ARMPat<(atomic_load_32 ldst_so_reg:$src),
+def : ARMPat<(atomic_load_nonext_32 ldst_so_reg:$src),
              (LDRrs ldst_so_reg:$src)>;
-def : ARMPat<(atomic_load_32 addrmode_imm12:$src),
+def : ARMPat<(atomic_load_nonext_32 addrmode_imm12:$src),
              (LDRi12 addrmode_imm12:$src)>;
 def : ARMPat<(atomic_store_8 GPR:$val, ldst_so_reg:$ptr),
              (STRBrs GPR:$val, ldst_so_reg:$ptr)>;
@@ -6469,7 +6439,7 @@ def : ARMInstAlias<"neg${s}${p} $Rd, $Rm",
                    (RSBri GPR:$Rd, GPR:$Rm, 0, pred:$p, cc_out:$s)>;
 
 // Pre-v6, 'mov r0, r0' was used as a NOP encoding.
-def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, zero_reg), 0>,
+def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, (cc_out zero_reg)), 0>,
          Requires<[IsARM, NoV6]>;
 
 // MUL/UMLAL/SMLAL/UMULL/SMULL are available on all arches, but
@@ -6564,6 +6534,38 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPRPair:$addr_temp_out),
 }
 
 def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
+
+//===----------------------------------------------------------------------===//
+// KCFI check pseudo-instruction.
+//===----------------------------------------------------------------------===//
+// KCFI_CHECK pseudo-instruction for Kernel Control-Flow Integrity.
+// Expands to a sequence that verifies the function pointer's type hash.
+// Different sizes for different architectures due to different expansions.
+
+def KCFI_CHECK_ARM
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsARM]> {
+  let Size = 40; // worst-case 10 instructions @ 4 bytes each
+                 // (push, bic, ldr, 4x eor, pop, beq, udf)
+}
+
+def KCFI_CHECK_Thumb2
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsThumb2]> {
+  let Size = 34; // worst-case (push.w[2], bic[4], ldr[4], 4x eor[16], pop.w[2],
+                 // beq.w[4], udf[2])
+}
+
+def KCFI_CHECK_Thumb1
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsThumb1Only]> {
+  let Size = 38; // worst-case 19 instructions @ 2 bytes each
+                 // (2x push, 3x bic-helper, subs+ldr, 13x type-building, cmp,
+                 // 2x pop, beq, bkpt)
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on Windows.

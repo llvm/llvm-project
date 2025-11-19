@@ -14,6 +14,7 @@ add_lv_impl_folder(Core
   Core/LVReader.cpp
   Core/LVScope.cpp
   Core/LVSort.cpp
+  Core/LVSourceLanguage.cpp
   Core/LVSupport.cpp
   Core/LVSymbol.cpp
   Core/LVType.cpp
@@ -46,7 +47,8 @@ add_llvm_component_library(LLVMDebugInfoLogicalView
   MC
   Support
   TargetParser
-  DebugInfoDWARF
   DebugInfoCodeView
+  DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   DebugInfoPDB
   )

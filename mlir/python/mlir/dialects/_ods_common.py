@@ -78,12 +78,12 @@ def equally_sized_accessor(
 def get_default_loc_context(location=None):
     """
     Returns a context in which the defaulted location is created. If the location
-    is None, takes the current location from the stack, raises ValueError if there
-    is no location on the stack.
+    is None, takes the current location from the stack.
     """
     if location is None:
-        # Location.current raises ValueError if there is no current location.
-        return _cext.ir.Location.current.context
+        if _cext.ir.Location.current:
+            return _cext.ir.Location.current.context
+        return None
     return location.context
 
 
@@ -105,7 +105,7 @@ def get_op_result_or_value(
     elif isinstance(arg, _cext.ir.OpResultList):
         return arg[0]
     else:
-        assert isinstance(arg, _cext.ir.Value)
+        assert isinstance(arg, _cext.ir.Value), f"expects Value, got {type(arg)}"
         return arg
 
 
@@ -146,6 +146,7 @@ def get_op_result_or_op_results(
         return op.operation
     else:
         return op
+
 
 ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
 ResultValueT = _Union[ResultValueTypeTuple]

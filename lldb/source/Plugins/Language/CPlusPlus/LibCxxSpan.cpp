@@ -55,7 +55,7 @@ public:
   // from the only other place it can be: the template argument.
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_start = nullptr; ///< First element of span. Held, not owned.
@@ -128,11 +128,17 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eReuse;
 }
 
-size_t lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t> lldb_private::formatters::
+    LibcxxStdSpanSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
-    return UINT32_MAX;
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return *optional_idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

@@ -363,7 +363,7 @@ void TailDuplicator::processPHI(
   Register SrcReg = MI->getOperand(SrcOpIdx).getReg();
   unsigned SrcSubReg = MI->getOperand(SrcOpIdx).getSubReg();
   const TargetRegisterClass *RC = MRI->getRegClass(DefReg);
-  LocalVRMap.insert(std::make_pair(DefReg, RegSubRegPair(SrcReg, SrcSubReg)));
+  LocalVRMap.try_emplace(DefReg, SrcReg, SrcSubReg);
 
   // Insert a copy from source to the end of the block. The def register is the
   // available value liveout of the block.
@@ -375,9 +375,8 @@ void TailDuplicator::processPHI(
   if (!Remove)
     return;
 
-  // Remove PredBB from the PHI node.
-  MI->removeOperand(SrcOpIdx + 1);
-  MI->removeOperand(SrcOpIdx);
+  MI->removePHIIncomingValueFor(*PredBB);
+
   if (MI->getNumOperands() == 1 && !TailBB->hasAddressTaken())
     MI->eraseFromParent();
   else if (MI->getNumOperands() == 1)
@@ -399,81 +398,81 @@ void TailDuplicator::duplicateInstruction(
     return;
   }
   MachineInstr &NewMI = TII->duplicate(*PredBB, PredBB->end(), *MI);
-  if (PreRegAlloc) {
-    for (unsigned i = 0, e = NewMI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = NewMI.getOperand(i);
-      if (!MO.isReg())
-        continue;
-      Register Reg = MO.getReg();
-      if (!Reg.isVirtual())
-        continue;
-      if (MO.isDef()) {
-        const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-        Register NewReg = MRI->createVirtualRegister(RC);
-        MO.setReg(NewReg);
-        LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
-        if (isDefLiveOut(Reg, TailBB, MRI) || UsedByPhi.count(Reg))
-          addSSAUpdateEntry(Reg, NewReg, PredBB);
-      } else {
-        auto VI = LocalVRMap.find(Reg);
-        if (VI != LocalVRMap.end()) {
-          // Need to make sure that the register class of the mapped register
-          // will satisfy the constraints of the class of the register being
-          // replaced.
-          auto *OrigRC = MRI->getRegClass(Reg);
-          auto *MappedRC = MRI->getRegClass(VI->second.Reg);
-          const TargetRegisterClass *ConstrRC;
-          if (VI->second.SubReg != 0) {
-            ConstrRC = TRI->getMatchingSuperRegClass(MappedRC, OrigRC,
-                                                     VI->second.SubReg);
-            if (ConstrRC) {
-              // The actual constraining (as in "find appropriate new class")
-              // is done by getMatchingSuperRegClass, so now we only need to
-              // change the class of the mapped register.
-              MRI->setRegClass(VI->second.Reg, ConstrRC);
-            }
-          } else {
-            // For mapped registers that do not have sub-registers, simply
-            // restrict their class to match the original one.
-
-            // We don't want debug instructions affecting the resulting code so
-            // if we're cloning a debug instruction then just use MappedRC
-            // rather than constraining the register class further.
-            ConstrRC = NewMI.isDebugInstr()
-                           ? MappedRC
-                           : MRI->constrainRegClass(VI->second.Reg, OrigRC);
-          }
-
-          if (ConstrRC) {
-            // If the class constraining succeeded, we can simply replace
-            // the old register with the mapped one.
-            MO.setReg(VI->second.Reg);
-            // We have Reg -> VI.Reg:VI.SubReg, so if Reg is used with a
-            // sub-register, we need to compose the sub-register indices.
-            MO.setSubReg(
-                TRI->composeSubRegIndices(VI->second.SubReg, MO.getSubReg()));
-          } else {
-            // The direct replacement is not possible, due to failing register
-            // class constraints. An explicit COPY is necessary. Create one
-            // that can be reused.
-            Register NewReg = MRI->createVirtualRegister(OrigRC);
-            BuildMI(*PredBB, NewMI, NewMI.getDebugLoc(),
-                    TII->get(TargetOpcode::COPY), NewReg)
-                .addReg(VI->second.Reg, 0, VI->second.SubReg);
-            LocalVRMap.erase(VI);
-            LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
-            MO.setReg(NewReg);
-            // The composed VI.Reg:VI.SubReg is replaced with NewReg, which
-            // is equivalent to the whole register Reg. Hence, Reg:subreg
-            // is same as NewReg:subreg, so keep the sub-register index
-            // unchanged.
-          }
-          // Clear any kill flags from this operand.  The new register could
-          // have uses after this one, so kills are not valid here.
-          MO.setIsKill(false);
-        }
-      }
+  if (!PreRegAlloc)
+    return;
+  for (unsigned i = 0, e = NewMI.getNumOperands(); i != e; ++i) {
+    MachineOperand &MO = NewMI.getOperand(i);
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (!Reg.isVirtual())
+      continue;
+    if (MO.isDef()) {
+      const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+      Register NewReg = MRI->createVirtualRegister(RC);
+      MO.setReg(NewReg);
+      LocalVRMap.try_emplace(Reg, NewReg, 0);
+      if (isDefLiveOut(Reg, TailBB, MRI) || UsedByPhi.count(Reg))
+        addSSAUpdateEntry(Reg, NewReg, PredBB);
+      continue;
     }
+    auto VI = LocalVRMap.find(Reg);
+    if (VI == LocalVRMap.end())
+      continue;
+    // Need to make sure that the register class of the mapped register
+    // will satisfy the constraints of the class of the register being
+    // replaced.
+    auto *OrigRC = MRI->getRegClass(Reg);
+    auto *MappedRC = MRI->getRegClass(VI->second.Reg);
+    const TargetRegisterClass *ConstrRC;
+    if (VI->second.SubReg != 0) {
+      ConstrRC =
+          TRI->getMatchingSuperRegClass(MappedRC, OrigRC, VI->second.SubReg);
+      if (ConstrRC) {
+        // The actual constraining (as in "find appropriate new class")
+        // is done by getMatchingSuperRegClass, so now we only need to
+        // change the class of the mapped register.
+        MRI->setRegClass(VI->second.Reg, ConstrRC);
+      }
+    } else {
+      // For mapped registers that do not have sub-registers, simply
+      // restrict their class to match the original one.
+
+      // We don't want debug instructions affecting the resulting code so
+      // if we're cloning a debug instruction then just use MappedRC
+      // rather than constraining the register class further.
+      ConstrRC = NewMI.isDebugInstr()
+                     ? MappedRC
+                     : MRI->constrainRegClass(VI->second.Reg, OrigRC);
+    }
+
+    if (ConstrRC) {
+      // If the class constraining succeeded, we can simply replace
+      // the old register with the mapped one.
+      MO.setReg(VI->second.Reg);
+      // We have Reg -> VI.Reg:VI.SubReg, so if Reg is used with a
+      // sub-register, we need to compose the sub-register indices.
+      MO.setSubReg(
+          TRI->composeSubRegIndices(VI->second.SubReg, MO.getSubReg()));
+    } else {
+      // The direct replacement is not possible, due to failing register
+      // class constraints. An explicit COPY is necessary. Create one
+      // that can be reused.
+      Register NewReg = MRI->createVirtualRegister(OrigRC);
+      BuildMI(*PredBB, NewMI, NewMI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+              NewReg)
+          .addReg(VI->second.Reg, 0, VI->second.SubReg);
+      LocalVRMap.erase(VI);
+      LocalVRMap.try_emplace(Reg, NewReg, 0);
+      MO.setReg(NewReg);
+      // The composed VI.Reg:VI.SubReg is replaced with NewReg, which
+      // is equivalent to the whole register Reg. Hence, Reg:subreg
+      // is same as NewReg:subreg, so keep the sub-register index
+      // unchanged.
+    }
+    // Clear any kill flags from this operand.  The new register could
+    // have uses after this one, so kills are not valid here.
+    MO.setIsKill(false);
   }
 }
 
@@ -604,11 +603,20 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   bool HasComputedGoto = false;
   if (!TailBB.empty()) {
     HasIndirectbr = TailBB.back().isIndirectBranch();
-    HasComputedGoto = TailBB.terminatorIsComputedGoto();
+    HasComputedGoto = TailBB.terminatorIsComputedGotoWithSuccessors();
   }
 
   if (HasIndirectbr && PreRegAlloc)
     MaxDuplicateCount = TailDupIndirectBranchSize;
+
+  // Allow higher limits when the block has computed-gotos and running after
+  // register allocation. NB. This basically unfactors computed gotos that were
+  // factored early on in the compilation process to speed up edge based data
+  // flow. If we do not unfactor them again, it can seriously pessimize code
+  // with many computed jumps in the source code, such as interpreters.
+  // Therefore we do not restrict the computed gotos.
+  if (HasComputedGoto && !PreRegAlloc)
+    MaxDuplicateCount = std::max(MaxDuplicateCount, 10u);
 
   // Check the instructions in the block to determine whether tail-duplication
   // is invalid or unlikely to be profitable.
@@ -663,12 +671,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // Duplicating a BB which has both multiple predecessors and successors will
   // may cause huge amount of PHI nodes. If we want to remove this limitation,
   // we have to address https://github.com/llvm/llvm-project/issues/78578.
-  // NB. This basically unfactors computed gotos that were factored early on in
-  // the compilation process to speed up edge based data flow. If we do not
-  // unfactor them again, it can seriously pessimize code with many computed
-  // jumps in the source code, such as interpreters. Therefore we do not
-  // restrict the computed gotos.
-  if (!HasComputedGoto && TailBB.pred_size() > TailDupPredSize &&
+  if (PreRegAlloc && TailBB.pred_size() > TailDupPredSize &&
       TailBB.succ_size() > TailDupSuccSize) {
     // If TailBB or any of its successors contains a phi, we may have to add a
     // large number of additional phis with additional incoming values.
@@ -751,8 +754,8 @@ bool TailDuplicator::canCompletelyDuplicateBB(MachineBasicBlock &BB) {
 bool TailDuplicator::duplicateSimpleBB(
     MachineBasicBlock *TailBB, SmallVectorImpl<MachineBasicBlock *> &TDBBs,
     const DenseSet<Register> &UsedByPhi) {
-  SmallPtrSet<MachineBasicBlock *, 8> Succs(TailBB->succ_begin(),
-                                            TailBB->succ_end());
+  SmallPtrSet<MachineBasicBlock *, 8> Succs(llvm::from_range,
+                                            TailBB->successors());
   SmallVector<MachineBasicBlock *, 8> Preds(TailBB->predecessors());
   bool Changed = false;
   for (MachineBasicBlock *PredBB : Preds) {

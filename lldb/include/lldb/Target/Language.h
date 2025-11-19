@@ -15,6 +15,7 @@
 #include <set>
 #include <vector>
 
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
@@ -165,7 +166,7 @@ public:
                               llvm::StringRef file_path);
 
   // return false from callback to stop iterating
-  static void ForEach(std::function<bool(Language *)> callback);
+  static void ForEach(llvm::function_ref<IterationAction(Language *)> callback);
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
@@ -317,7 +318,9 @@ public:
   ///
   /// This function should only return true if there is a high confidence
   /// that the name actually belongs to this language.
-  virtual bool SymbolNameFitsToLanguage(Mangled name) const { return false; }
+  virtual bool SymbolNameFitsToLanguage(const Mangled &name) const {
+    return false;
+  }
 
   /// An individual data formatter may apply to several types and cross language
   /// boundaries. Each of those languages may want to customize the display of
@@ -371,6 +374,13 @@ public:
                                       FunctionNameRepresentation representation,
                                       Stream &s);
 
+  virtual bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                         const ExecutionContext *exe_ctx,
+                                         FormatEntity::Entry::Type type,
+                                         Stream &s) {
+    return false;
+  }
+
   virtual ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
     if (ConstString demangled = mangled.GetDemangledName())
@@ -396,7 +406,14 @@ public:
   GetLanguageTypeFromString(const char *string) = delete;
   static lldb::LanguageType GetLanguageTypeFromString(llvm::StringRef string);
 
+  /// Returns the internal LLDB name for the specified language. When presenting
+  /// the language name to users, use \ref GetDisplayNameForLanguageType
+  /// instead.
   static const char *GetNameForLanguageType(lldb::LanguageType language);
+
+  /// Returns a user-friendly name for the specified language.
+  static llvm::StringRef
+  GetDisplayNameForLanguageType(lldb::LanguageType language);
 
   static void PrintAllLanguages(Stream &s, const char *prefix,
                                 const char *suffix);
@@ -412,7 +429,8 @@ public:
                                                     llvm::StringRef suffix);
 
   // return false from callback to stop iterating
-  static void ForAllLanguages(std::function<bool(lldb::LanguageType)> callback);
+  static void ForAllLanguages(
+      llvm::function_ref<IterationAction(lldb::LanguageType)> callback);
 
   static bool LanguageIsCPlusPlus(lldb::LanguageType language);
 
@@ -486,6 +504,8 @@ public:
   /// Returns the keyword used for catch statements in this language, e.g.
   /// Python uses \b except. Defaults to \b catch.
   virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
+
+  virtual FormatEntity::Entry GetFunctionNameFormat() const { return {}; }
 
 protected:
   // Classes that inherit from Language can see and modify these

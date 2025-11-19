@@ -41,12 +41,24 @@ global_load_lds_dwordx4 v2, s[4:5] offset:4
 v_permlane16_swap_b32 v1, v2
 
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_permlane16_swap_b32_e32 v218, v219    ; encoding: [0xdb,0xb3,0xb4,0x7f]
+v_permlane16_swap_b32 v218, v219
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
 // GFX950: v_permlane16_swap_b32_e32 v1, v2        ; encoding: [0x02,0xb3,0x02,0x7e]
 v_permlane16_swap_b32_e32 v1, v2
 
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_permlane16_swap_b32_e32 v218, v219    ; encoding: [0xdb,0xb3,0xb4,0x7f]
+v_permlane16_swap_b32_e32 v218, v219
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
 // GFX950: v_permlane16_swap_b32_e64 v1, v2        ; encoding: [0x01,0x00,0x99,0xd1,0x02,0x01,0x00,0x00]
 v_permlane16_swap_b32_e64 v1, v2
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_permlane16_swap_b32_e64 v218, v219    ; encoding: [0xda,0x00,0x99,0xd1,0xdb,0x01,0x00,0x00]
+v_permlane16_swap_b32_e64 v218, v219
 
 // FIXME: Parsed as bound_ctrl:1?
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
@@ -82,12 +94,24 @@ v_permlane16_swap_b32_e64 v1, v2 bound_ctrl:1 fi:1
 v_permlane32_swap_b32 v1, v2
 
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_permlane32_swap_b32_e32 v218, v219    ; encoding: [0xdb,0xb5,0xb4,0x7f]
+v_permlane32_swap_b32 v218, v219
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
 // GFX950: v_permlane32_swap_b32_e32 v1, v2        ; encoding: [0x02,0xb5,0x02,0x7e]
 v_permlane32_swap_b32_e32 v1, v2
 
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_permlane32_swap_b32_e32 v218, v219    ; encoding: [0xdb,0xb5,0xb4,0x7f]
+v_permlane32_swap_b32_e32 v218, v219
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
 // GFX950: v_permlane32_swap_b32_e64 v1, v2        ; encoding: [0x01,0x00,0x9a,0xd1,0x02,0x01,0x00,0x00]
 v_permlane32_swap_b32_e64 v1, v2
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_permlane32_swap_b32_e64 v218, v219    ; encoding: [0xda,0x00,0x9a,0xd1,0xdb,0x01,0x00,0x00]
+v_permlane32_swap_b32_e64 v218, v219
 
 // FIXME: Parsed as bound_ctrl:1?
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:

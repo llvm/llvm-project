@@ -32,6 +32,26 @@ enum E2 : S<E2>::I { e };
 #endif
 } // namespace cwg2516
 
+namespace cwg2517 { // cwg2517: 21
+#if __cplusplus >= 202002L
+template<typename ArrayType>
+concept LargeArray = requires (ArrayType my_array) {
+  requires my_array.size() > 5;
+};
+
+struct Big {
+  constexpr int size() const { return 100; }
+};
+
+struct Small {
+  constexpr int size() const { return 3; }
+};
+
+static_assert(LargeArray<Big>);
+static_assert(!LargeArray<Small>);
+#endif
+} // namespace cwg2517
+
 namespace cwg2518 { // cwg2518: 17
 
 #if __cplusplus >= 201103L
@@ -223,19 +243,20 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
   //   since-cxx20-note@#cwg2565-VC {{because 'b' would be invalid: argument may not have 'void' type}}
 
   template<typename T>
-  concept ErrorRequires = requires (ErrorRequires auto x) {
+  concept ErrorRequires = requires (ErrorRequires auto x) { // #cwg2565-expr
   // since-cxx20-error@-1 {{a concept definition cannot refer to itself}}
   //   since-cxx20-note@-2 {{declared here}}
   // since-cxx20-error@-3 {{'auto' not allowed in requires expression parameter}}
     x;
   };
   static_assert(ErrorRequires<int>);
-  // since-cxx20-error@-1 {{static assertion failed}}
-  //   since-cxx20-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // since-cxx20-error@-1 {{static assertion failed}} \
+  //   since-cxx20-note@-1 {{because 'int' does not satisfy 'ErrorRequires'}} \
+  //   since-cxx20-note@#cwg2565-expr {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
   template<typename T>
   concept NestedErrorInRequires = requires (T x) { // #cwg2565-NEIR
-    requires requires (NestedErrorInRequires auto y) {
+    requires requires (NestedErrorInRequires auto y) { // #cwg2565-NEIR-inner
     // since-cxx20-error@-1 {{a concept definition cannot refer to itself}}
     //   since-cxx20-note@#cwg2565-NEIR {{declared here}}
     // since-cxx20-error@-3 {{'auto' not allowed in requires expression parameter}}
@@ -243,8 +264,9 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
     };
   };
   static_assert(NestedErrorInRequires<int>);
-  // since-cxx20-error@-1 {{static assertion failed}}
-  //   since-cxx20-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // since-cxx20-error@-1 {{static assertion failed}} \
+  //   since-cxx20-note@-1 {{because 'int' does not satisfy 'NestedErrorInRequires'}} \
+  //   since-cxx20-note-re@#cwg2565-NEIR-inner {{because {{.*}} would be invalid: constraint depends on a previously diagnosed expression}}
 
 #endif
 } // namespace cwg2565

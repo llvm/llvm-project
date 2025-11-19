@@ -100,6 +100,7 @@ public:
   void SetStopOnSharedLibraryEvents(bool stop);
   bool GetDisableLangRuntimeUnwindPlans() const;
   void SetDisableLangRuntimeUnwindPlans(bool disable);
+  void DisableLanguageRuntimeUnwindPlansCallback();
   bool GetDetachKeepsStopped() const;
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
@@ -111,6 +112,7 @@ public:
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
   FollowForkMode GetFollowForkMode() const;
+  bool TrackMemoryCacheChanges() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
@@ -125,10 +127,7 @@ class ProcessAttachInfo : public ProcessInstanceInfo {
 public:
   ProcessAttachInfo() = default;
 
-  ProcessAttachInfo(const ProcessLaunchInfo &launch_info)
-      : m_resume_count(0), m_wait_for_launch(false), m_ignore_existing(true),
-        m_continue_once_attached(false), m_detach_on_error(true),
-        m_async(false) {
+  ProcessAttachInfo(const ProcessLaunchInfo &launch_info) {
     ProcessInfo::operator=(launch_info);
     SetProcessPluginName(launch_info.GetProcessPluginName());
     SetResumeCount(launch_info.GetResumeCount());
@@ -310,6 +309,18 @@ public:
     if (stop_id == m_last_natural_stop_id)
       return m_last_natural_stop_event;
     return lldb::EventSP();
+  }
+
+  void Dump(Stream &stream) const {
+    stream.Format("ProcessModID:\n"
+                  "  m_stop_id: {0}\n  m_last_natural_stop_id: {1}\n"
+                  "  m_resume_id: {2}\n  m_memory_id: {3}\n"
+                  "  m_last_user_expression_resume: {4}\n"
+                  "  m_running_user_expression: {5}\n"
+                  "  m_running_utility_function: {6}\n",
+                  m_stop_id, m_last_natural_stop_id, m_resume_id, m_memory_id,
+                  m_last_user_expression_resume, m_running_user_expression,
+                  m_running_utility_function);
   }
 
 private:
@@ -592,7 +603,7 @@ public:
 
   /// The underlying plugin might store the low-level communication history for
   /// this session.  Dump it into the provided stream.
-  virtual void DumpPluginHistory(Stream &s) { return; }
+  virtual void DumpPluginHistory(Stream &s) {}
 
   /// Launch a new process.
   ///
@@ -1114,10 +1125,9 @@ public:
   virtual Status DoResume(lldb::RunDirection direction) {
     if (direction == lldb::RunDirection::eRunForward)
       return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support resuming processes", GetPluginName());
+          "{0} does not support resuming processes", GetPluginName());
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
+        "{0} does not support reverse execution of processes", GetPluginName());
   }
 
   /// Called after resuming a process.
@@ -1557,6 +1567,28 @@ public:
   ///     returned in the case of an error.
   virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                             Status &error);
+
+  /// Read from multiple memory ranges and write the results into buffer.
+  /// This calls ReadMemoryFromInferior multiple times, once per range,
+  /// bypassing the read cache. Process implementations that can perform this
+  /// operation more efficiently should override this.
+  ///
+  /// \param[in] ranges
+  ///     A collection of ranges (base address + size) to read from.
+  ///
+  /// \param[out] buffer
+  ///     A buffer where the read memory will be written to. It must be at least
+  ///     as long as the sum of the sizes of each range.
+  ///
+  /// \return
+  ///     A vector of MutableArrayRef, where each MutableArrayRef is a slice of
+  ///     the input buffer into which the memory contents were copied. The size
+  ///     of the slice indicates how many bytes were read successfully. Partial
+  ///     reads are always performed from the start of the requested range,
+  ///     never from the middle or end.
+  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                   llvm::MutableArrayRef<uint8_t> buffer);
 
   /// Read of memory from a process.
   ///
@@ -2535,6 +2567,8 @@ void PruneThreadPlans();
 
   bool CurrentThreadIsPrivateStateThread();
 
+  bool CurrentThreadPosesAsPrivateStateThread();
+
   virtual Status SendEventData(const char *data) {
     return Status::FromErrorString(
         "Sending an event is not supported for this process.");
@@ -2605,7 +2639,7 @@ void PruneThreadPlans();
 
   void ResetExtendedCrashInfoDict() {
     // StructuredData::Dictionary is add only, so we have to make a new one:
-    m_crash_info_dict_sp.reset(new StructuredData::Dictionary());
+    m_crash_info_dict_sp = std::make_shared<StructuredData::Dictionary>();
   }
 
   size_t AddImageToken(lldb::addr_t image_ptr);

@@ -755,6 +755,12 @@ def BSwap : Builtin, Template<["unsigned short", "uint32_t", "uint64_t"],
   let Prototype = "T(T)";
 }
 
+def BSwapg : Builtin {
+  let Spellings = ["__builtin_bswapg"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
+
 def Bitreverse : BitInt8_16_32_64BuiltinsTemplate, Builtin {
   let Spellings = ["__builtin_bitreverse"];
   let Attributes = [NoThrow, Const, Constexpr];
@@ -854,7 +860,7 @@ def BuiltinAssumeAligned : Builtin {
 def BuiltinAssumeDereferenceable : Builtin {
   let Spellings = ["__builtin_assume_dereferenceable"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "void(void const*, _Constant size_t)";
+  let Prototype = "void(void const*, size_t)";
 }
 
 def BuiltinFree : Builtin {
@@ -968,6 +974,12 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__builtin_is_within_lifetime"];
   let Attributes = [NoThrow, CustomTypeChecking, Consteval];
   let Prototype = "bool(void*)";
+}
+
+def GetVtablePointer : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_get_vtable_pointer"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*)";
 }
 
 // GCC exception builtins
@@ -1226,6 +1238,42 @@ def ConvertVector : Builtin {
   let Prototype = "void(...)";
 }
 
+def MaskedLoad : Builtin {
+  let Spellings = ["__builtin_masked_load"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedStore : Builtin {
+  let Spellings = ["__builtin_masked_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedExpandLoad : Builtin {
+  let Spellings = ["__builtin_masked_expand_load"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedCompressStore : Builtin {
+  let Spellings = ["__builtin_masked_compress_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedGather : Builtin {
+  let Spellings = ["__builtin_masked_gather"];
+  let Attributes = [NoThrow, Pure, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedScatter : Builtin {
+  let Spellings = ["__builtin_masked_scatter"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -1258,7 +1306,7 @@ def NondetermenisticValue : Builtin {
 
 def ElementwiseAbs : Builtin {
   let Spellings = ["__builtin_elementwise_abs"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1294,13 +1342,13 @@ def ElementwiseBitreverse : Builtin {
 
 def ElementwiseMax : Builtin {
   let Spellings = ["__builtin_elementwise_max"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseMin : Builtin {
   let Spellings = ["__builtin_elementwise_min"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1324,6 +1372,18 @@ def ElementwiseMaximum : Builtin {
 
 def ElementwiseMinimum : Builtin {
   let Spellings = ["__builtin_elementwise_minimum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMaximumNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maximumnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinimumNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minimumnum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1360,6 +1420,12 @@ def ElementwiseExp2 : Builtin {
 
 def ElementwiseExp10 : Builtin {
   let Spellings = ["__builtin_elementwise_exp10"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseLdexp : Builtin {
+  let Spellings = ["__builtin_elementwise_ldexp"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1480,7 +1546,7 @@ def ElementwiseCopysign : Builtin {
 
 def ElementwiseFma : Builtin {
   let Spellings = ["__builtin_elementwise_fma"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1492,6 +1558,30 @@ def ElementwiseAddSat : Builtin {
 
 def ElementwiseSubSat : Builtin {
   let Spellings = ["__builtin_elementwise_sub_sat"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFshl : Builtin {
+  let Spellings = ["__builtin_elementwise_fshl"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFshr : Builtin {
+  let Spellings = ["__builtin_elementwise_fshr"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseCtlz : Builtin {
+  let Spellings = ["__builtin_elementwise_clzg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseCttz : Builtin {
+  let Spellings = ["__builtin_elementwise_ctzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
@@ -2582,6 +2672,24 @@ def InterlockedBittestAndReset_rel : MSLangBuiltin {
   let Prototype = "unsigned char(msint32_t volatile*, msint32_t)";
 }
 
+def InterlockedBittestAndReset64_acq : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_acq"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndReset64_nf : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_nf"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndReset64_rel : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_rel"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
 def InterlockedBittestAndSet : MSLangBuiltin, MSInt32_64Template {
   let Spellings = ["_interlockedbittestandset"];
   let Attributes = [NoThrow];
@@ -2604,6 +2712,24 @@ def InterlockedBittestAndSet_rel : MSLangBuiltin {
   let Spellings = ["_interlockedbittestandset_rel"];
   let Attributes = [NoThrow];
   let Prototype = "unsigned char(msint32_t volatile*, msint32_t)";
+}
+
+def InterlockedBittestAndSet64_acq : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_acq"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndSet64_nf : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_nf"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndSet64_rel : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_rel"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
 }
 
 def IsoVolatileLoad : MSLangBuiltin, Int8_16_32_64Template {
@@ -2851,6 +2977,12 @@ def MemMove : LibBuiltin<"string.h"> {
   let Attributes = [NoThrow, Constexpr];
   let Prototype = "void*(void*, void const*, size_t)";
   let AddBuiltinPrefixedAlias = 1;
+}
+
+def BuiltinTriviallyRelocate : Builtin {
+  let Spellings = ["__builtin_trivially_relocate"];
+  let Attributes = [FunctionWithBuiltinPrefix, CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*, void*, size_t)";
 }
 
 def StrCpy : LibBuiltin<"string.h"> {
@@ -4266,6 +4398,12 @@ def MoveIfNsoexcept : CxxLibBuiltin<"utility"> {
   let Namespace = "std";
 }
 
+def Invoke : Builtin {
+  let Spellings = ["__builtin_invoke"];
+  let Attributes = [CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
 def Annotation : Builtin {
   let Spellings = ["__builtin_annotation"];
   let Attributes = [NoThrow, CustomTypeChecking];
@@ -4601,6 +4739,13 @@ def PtrauthStringDiscriminator : Builtin {
   let Prototype = "size_t(char const*)";
 }
 
+// AllocToken builtins.
+def InferAllocToken : Builtin {
+  let Spellings = ["__builtin_infer_alloc_token"];
+  let Attributes = [NoThrow, Const, Pure, CustomTypeChecking, Constexpr, UnevaluatedArguments];
+  let Prototype = "size_t(...)";
+}
+
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 def ReadPipe : OCLPipeLangBuiltin {
@@ -4801,6 +4946,48 @@ def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefrombinding"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefromimplicitbinding"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_counterhandlefromimplicitbinding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_nonuniformindex"];
+  let Attributes = [NoThrow];
+  let Prototype = "uint32_t(uint32_t)";
+}
+
+def HLSLResourceGetDimensionsX : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_x"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getstride"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
@@ -4855,6 +5042,12 @@ def HLSLWaveActiveMax : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLWaveActiveMin : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_min"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
+}
+
 def HLSLWaveActiveSum : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_sum"];
   let Attributes = [NoThrow, Const];
@@ -4879,16 +5072,28 @@ def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveGetLaneCount : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_get_lane_count"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int()";
+}
+
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HLSLCross: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_cross"];
+def HLSLCrossFloat: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_crossf32"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
+  let Prototype = "_ExtVector<3, float>(_ExtVector<3, float>, _ExtVector<3, float>)";
+}
+
+def HLSLCrossHalf: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_crossf16"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "_ExtVector<3, __fp16>(_ExtVector<3, __fp16>, _ExtVector<3, __fp16>)";
 }
 
 def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
@@ -4939,6 +5144,12 @@ def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLIsnan : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isnan"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_lerp"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -4947,7 +5158,7 @@ def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLMad : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_mad"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
@@ -5021,6 +5232,37 @@ def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void()";
+}
+
+class HLSLScalarTemplate
+    : Template<["bool", "char", "short", "int", "long long int",
+                "unsigned short", "unsigned int", "unsigned long long int",
+                "__fp16", "float", "double"],
+               ["_bool", "_char", "_short", "_int", "_longlong", "_ushort",
+                "_uint", "_ulonglong", "_half", "_float", "_double"]>;
+
+def HLSLGetSpirvSpecConstant : LangBuiltin<"HLSL_LANG">, HLSLScalarTemplate {
+  let Spellings = ["__builtin_get_spirv_spec_constant"];
+  let Attributes = [NoThrow, Const, Pure];
+  let Prototype = "T(unsigned int, T)";
+}
+
+def HLSLF16ToF32 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_f16tof32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdxCoarse : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddx_coarse"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdyCoarse : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddy_coarse"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 // Builtins for XRay.

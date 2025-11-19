@@ -124,17 +124,12 @@ ExprResult SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc,
   if (!collection)
     return ExprError();
 
-  ExprResult result = SemaRef.CorrectDelayedTyposInExpr(collection);
-  if (!result.isUsable())
-    return ExprError();
-  collection = result.get();
-
   // Bail out early if we've got a type-dependent expression.
   if (collection->isTypeDependent())
     return collection;
 
   // Perform normal l-value conversion.
-  result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
+  ExprResult result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
   if (result.isInvalid())
     return ExprError();
   collection = result.get();
@@ -696,7 +691,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   if (!anyPackExpansions && finalTypeArgs.size() != numTypeParams) {
     S.Diag(loc, diag::err_objc_type_args_wrong_arity)
         << (typeArgs.size() < typeParams->size()) << objcClass->getDeclName()
-        << (unsigned)finalTypeArgs.size() << (unsigned)numTypeParams;
+        << (unsigned)finalTypeArgs.size() << numTypeParams;
     S.Diag(objcClass->getLocation(), diag::note_previous_decl) << objcClass;
 
     if (failOnError)
@@ -1245,8 +1240,9 @@ bool SemaObjC::CheckObjCString(Expr *Arg) {
 
 bool SemaObjC::CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation lbrac,
                                    ArrayRef<const Expr *> Args) {
-  Sema::VariadicCallType CallType =
-      Method->isVariadic() ? Sema::VariadicMethod : Sema::VariadicDoesNotApply;
+  VariadicCallType CallType = Method->isVariadic()
+                                  ? VariadicCallType::Method
+                                  : VariadicCallType::DoesNotApply;
 
   SemaRef.checkCall(Method, nullptr, /*ThisArg=*/nullptr, Args,
                     /*IsMemberFunction=*/false, lbrac, Method->getSourceRange(),
@@ -1384,7 +1380,7 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
 
   // If we don't have a class type in C++, there's no way we can get an
   // expression of integral or enumeration type.
-  const RecordType *RecordTy = T->getAs<RecordType>();
+  const RecordType *RecordTy = T->getAsCanonical<RecordType>();
   if (!RecordTy && (T->isObjCObjectPointerType() || T->isVoidPointerType()))
     // All other scalar cases are assumed to be dictionary indexing which
     // caller handles, with diagnostics if needed.
@@ -1412,6 +1408,7 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
   SmallVector<CXXConversionDecl *, 4> ConversionDecls;
 
   for (NamedDecl *D : cast<CXXRecordDecl>(RecordTy->getDecl())
+                          ->getDefinitionOrSelf()
                           ->getVisibleConversionFunctions()) {
     if (CXXConversionDecl *Conversion =
             dyn_cast<CXXConversionDecl>(D->getUnderlyingDecl())) {
@@ -1510,7 +1507,7 @@ bool SemaObjC::isCFStringType(QualType T) {
   if (!PT)
     return false;
 
-  const auto *RT = PT->getPointeeType()->getAs<RecordType>();
+  const auto *RT = PT->getPointeeType()->getAsCanonical<RecordType>();
   if (!RT)
     return false;
 
@@ -2259,7 +2256,7 @@ void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
 
 bool SemaObjC::GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx) {
   Sema::FormatStringInfo FSI;
-  if ((SemaRef.GetFormatStringType(Format) == Sema::FST_NSString) &&
+  if ((SemaRef.GetFormatStringType(Format) == FormatStringType::NSString) &&
       SemaRef.getFormatStringInfo(Format->getFormatIdx(), Format->getFirstArg(),
                                   false, true, &FSI)) {
     Idx = FSI.FormatIdx;
@@ -2313,8 +2310,8 @@ bool SemaObjC::isSignedCharBool(QualType Ty) {
 }
 
 void SemaObjC::adornBoolConversionDiagWithTernaryFixit(
-    Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder) {
-  Expr *Ignored = SourceExpr->IgnoreImplicit();
+    const Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder) {
+  const Expr *Ignored = SourceExpr->IgnoreImplicit();
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(Ignored))
     Ignored = OVE->getSourceExpr();
   bool NeedsParens = isa<AbstractConditionalOperator>(Ignored) ||

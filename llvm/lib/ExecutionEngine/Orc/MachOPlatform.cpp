@@ -487,7 +487,7 @@ MachOPlatform::MachOPlatform(
     if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
                                                    ForceEHFrames)))
       return;
-    this->ForceEHFrames = ForceEHFrames.has_value() ? *ForceEHFrames : false;
+    this->ForceEHFrames = ForceEHFrames.value_or(false);
   }
 
   BootstrapInfo BI;
@@ -570,7 +570,7 @@ MachOPlatform::MachOPlatform(
 
   // Step (3) Wait for any incidental linker work to complete.
   {
-    std::unique_lock<std::mutex> Lock(BI.Mutex);
+    std::unique_lock<std::mutex> Lock(PlatformMutex);
     BI.CV.wait(Lock, [&]() { return BI.ActiveGraphs == 0; });
     Bootstrap = nullptr;
   }
@@ -955,7 +955,7 @@ Error MachOPlatform::MachOPlatformPlugin::
 
 Error MachOPlatform::MachOPlatformPlugin::bootstrapPipelineEnd(
     jitlink::LinkGraph &G) {
-  std::lock_guard<std::mutex> Lock(MP.Bootstrap->Mutex);
+  std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
 
   --MP.Bootstrap->ActiveGraphs;
   // Notify Bootstrap->CV while holding the mutex because the mutex is
@@ -1441,7 +1441,7 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     if (LLVM_LIKELY(!InBootstrapPhase))
       G.allocActions().push_back(std::move(AllocActions));
     else {
-      std::lock_guard<std::mutex> Lock(MP.Bootstrap->Mutex);
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
       MP.Bootstrap->DeferredAAs.push_back(std::move(AllocActions));
     }
   }
@@ -1716,7 +1716,7 @@ Error MachOPlatform::MachOPlatformPlugin::addSymbolTableRegistration(
     // If we're in the bootstrap phase then just record these symbols in the
     // bootstrap object and then bail out -- registration will be attached to
     // the bootstrap graph.
-    std::lock_guard<std::mutex> Lock(MP.Bootstrap->Mutex);
+    std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
     auto &SymTab = MP.Bootstrap->SymTab;
     for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
       SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),

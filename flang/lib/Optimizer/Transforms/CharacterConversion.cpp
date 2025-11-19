@@ -48,12 +48,13 @@ public:
                << "running character conversion on " << conv << '\n');
 
     // Establish a loop that executes count iterations.
-    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
-    auto one = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
+    auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto one = mlir::arith::ConstantIndexOp::create(rewriter, loc, 1);
     auto idxTy = rewriter.getIndexType();
-    auto castCnt = rewriter.create<fir::ConvertOp>(loc, idxTy, conv.getCount());
-    auto countm1 = rewriter.create<mlir::arith::SubIOp>(loc, castCnt, one);
-    auto loop = rewriter.create<fir::DoLoopOp>(loc, zero, countm1, one);
+    auto castCnt =
+        fir::ConvertOp::create(rewriter, loc, idxTy, conv.getCount());
+    auto countm1 = mlir::arith::SubIOp::create(rewriter, loc, castCnt, one);
+    auto loop = fir::DoLoopOp::create(rewriter, loc, zero, countm1, one);
     auto insPt = rewriter.saveInsertionPoint();
     rewriter.setInsertionPointToStart(loop.getBody());
 
@@ -75,21 +76,22 @@ public:
     auto toTy = rewriter.getIntegerType(toBits);
     auto toPtrTy = pointerType(toBits);
     auto fromPtr =
-        rewriter.create<fir::ConvertOp>(loc, fromPtrTy, conv.getFrom());
-    auto toPtr = rewriter.create<fir::ConvertOp>(loc, toPtrTy, conv.getTo());
+        fir::ConvertOp::create(rewriter, loc, fromPtrTy, conv.getFrom());
+    auto toPtr = fir::ConvertOp::create(rewriter, loc, toPtrTy, conv.getTo());
     auto getEleTy = [&](unsigned bits) {
       return fir::ReferenceType::get(rewriter.getIntegerType(bits));
     };
-    auto fromi = rewriter.create<fir::CoordinateOp>(
-        loc, getEleTy(fromBits), fromPtr,
-        mlir::ValueRange{loop.getInductionVar()});
-    auto toi = rewriter.create<fir::CoordinateOp>(
-        loc, getEleTy(toBits), toPtr, mlir::ValueRange{loop.getInductionVar()});
-    auto load = rewriter.create<fir::LoadOp>(loc, fromi);
+    auto fromi =
+        fir::CoordinateOp::create(rewriter, loc, getEleTy(fromBits), fromPtr,
+                                  mlir::ValueRange{loop.getInductionVar()});
+    auto toi =
+        fir::CoordinateOp::create(rewriter, loc, getEleTy(toBits), toPtr,
+                                  mlir::ValueRange{loop.getInductionVar()});
+    auto load = fir::LoadOp::create(rewriter, loc, fromi);
     mlir::Value icast =
         (fromBits >= toBits)
-            ? rewriter.create<fir::ConvertOp>(loc, toTy, load).getResult()
-            : rewriter.create<mlir::arith::ExtUIOp>(loc, toTy, load)
+            ? fir::ConvertOp::create(rewriter, loc, toTy, load).getResult()
+            : mlir::arith::ExtUIOp::create(rewriter, loc, toTy, load)
                   .getResult();
     rewriter.replaceOpWithNewOp<fir::StoreOp>(conv, icast, toi);
     rewriter.restoreInsertionPoint(insPt);

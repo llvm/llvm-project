@@ -32,7 +32,7 @@
 // because the function does not return.
 DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
   .cfi_startproc
-  .variant_pcs SYMBOL_NAME(do_abort)
+  .variant_pcs FUNC_SYMBOL(SYMBOL_NAME(do_abort))
   BTI_C
   stp  x29, x30, [sp, #-32]!
   cntd x0
@@ -42,14 +42,14 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
   .cfi_offset w30, -24
   .cfi_offset w29, -32
   .cfi_offset 46, -16
-  bl  SYMBOL_NAME(__arm_sme_state)
+  bl  FUNC_SYMBOL(SYMBOL_NAME(__arm_sme_state))
   tbz  x0, #0, 2f
 1:
   smstop sm
 2:
   // We can't make this into a tail-call because the unwinder would
   // need to restore the value of VG.
-  bl  SYMBOL_NAME(abort)
+  bl  FUNC_SYMBOL(SYMBOL_NAME(abort))
   .cfi_endproc
 END_COMPILERRT_FUNCTION(do_abort)
 
@@ -107,7 +107,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
 1:
   ret
 2:
-  b  SYMBOL_NAME(do_abort)
+  b  FUNC_SYMBOL(SYMBOL_NAME(do_abort))
 END_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
 
 DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_save)
@@ -148,7 +148,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_save)
 1:
   ret
 2:
-  b  SYMBOL_NAME(do_abort)
+  b  FUNC_SYMBOL(SYMBOL_NAME(do_abort))
 END_COMPILERRT_FUNCTION(__arm_tpidr2_save)
 
 DEFINE_COMPILERRT_FUNCTION(__arm_za_disable)
@@ -169,7 +169,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_za_disable)
   .cfi_def_cfa w29, 16
   .cfi_offset w30, -8
   .cfi_offset w29, -16
-  bl  SYMBOL_NAME(__arm_tpidr2_save)
+  bl  FUNC_SYMBOL(SYMBOL_NAME(__arm_tpidr2_save))
 
   // * Set TPIDR2_EL0 to null.
   msr TPIDR2_EL0, xzr
@@ -280,17 +280,17 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   mov     w16, #1
   str     x16, [x0]
 
-  add     x18, x0, #32
+  add     x16, x0, #32
   tbz     x17, #FEAT_SME2_BIT, 1f
 
   // Store ZT0
-  str     zt0, [x18]
-  add     x18, x18, #64
+  str     zt0, [x16]
+  add     x16, x16, #64
 
 1:
-  // Set up lazy-save (x18 = pointer to buffer)
+  // Set up lazy-save (x16 = pointer to buffer)
   rdsvl   x17, #1
-  str     x18, [x0, #16]!
+  str     x16, [x0, #16]!
   strh    w17, [x0, #8]
   strh    wzr, [x0, #10]
   str     wzr, [x0, #12]
@@ -301,7 +301,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   ret
 
 3:
-  b       SYMBOL_NAME(do_abort)
+  b       FUNC_SYMBOL(SYMBOL_NAME(do_abort))
 END_COMPILERRT_FUNCTION(__arm_sme_save)
 
 DEFINE_COMPILERRT_FUNCTION(__arm_sme_restore)
@@ -365,11 +365,11 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_restore)
   ret
 
 3:
-  b       SYMBOL_NAME(do_abort)
+  b       FUNC_SYMBOL(SYMBOL_NAME(do_abort))
   .cfi_endproc
 END_COMPILERRT_FUNCTION(__arm_sme_restore)
 
 NO_EXEC_STACK_DIRECTIVE
 
-// GNU property note for BTI and PAC
-GNU_PROPERTY_BTI_PAC
+// GNU property note for BTI, PAC, and GCS
+GNU_PROPERTY_BTI_PAC_GCS

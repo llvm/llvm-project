@@ -32,7 +32,7 @@ static_assert(HasStdErase<std::vector<int>>);
 static_assert(!HasStdErase<std::flat_set<int>>);
 
 template <class M>
-M make(std::initializer_list<int> vals) {
+constexpr M make(std::initializer_list<int> vals) {
   M ret;
   for (int v : vals)
     ret.emplace(v);
@@ -40,8 +40,8 @@ M make(std::initializer_list<int> vals) {
 }
 
 template <class M, class Pred>
-void test0(
-    std::initializer_list<int> vals, Pred p, std::initializer_list<int> expected, std::size_t expected_erased_count) {
+constexpr void
+test0(std::initializer_list<int> vals, Pred p, std::initializer_list<int> expected, std::size_t expected_erased_count) {
   M s = make<M>(vals);
   ASSERT_SAME_TYPE(typename M::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
@@ -50,11 +50,11 @@ void test0(
 
 struct NotBool {
   bool b;
-  explicit operator bool() const { return b; }
+  constexpr explicit operator bool() const { return b; }
 };
 
 template <class S>
-void test_one() {
+constexpr void test_one() {
   // Test all the plausible signatures for this predicate.
   auto is1        = [](typename S::const_reference v) { return v == 1; };
   auto is2        = [](typename S::value_type v) { return v == 2; };
@@ -84,18 +84,28 @@ void test_one() {
   test0<S>({1, 2, 3}, nonBoolIs1, {2, 3}, 1);
 }
 
-void test() {
+constexpr bool test() {
   test_one<std::flat_set<int>>();
   test_one<std::flat_set<int, std::less<int>, std::vector<int, min_allocator<int>>>>();
   test_one<std::flat_set<int, std::greater<int>, std::vector<int, test_allocator<int>>>>();
-  test_one<std::flat_set<int, std::less<int>, std::deque<int, min_allocator<int>>>>();
-  test_one<std::flat_set<int, std::greater<int>, std::deque<int, test_allocator<int>>>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test_one<std::flat_set<int, std::less<int>, std::deque<int, min_allocator<int>>>>();
+    test_one<std::flat_set<int, std::greater<int>, std::deque<int, test_allocator<int>>>>();
+  }
   test_one<std::flat_set<long>>();
   test_one<std::flat_set<double>>();
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -792,7 +792,7 @@ regBankSelected: true
 body:             |
   bb.0:
     liveins: $q0, $x0
-    ;This test should not select an LD1 instruction as there is a store instruction between G_INSERT_VECTOR_ELT and G_LOAD 
+    ;This test should not select an LD1 instruction as there is a store instruction between G_INSERT_VECTOR_ELT and G_LOAD
     ; CHECK-LABEL: name: load_s32_gpr_GIM
     ; CHECK: liveins: $q0, $x0
     ; CHECK-NEXT: {{  $}}

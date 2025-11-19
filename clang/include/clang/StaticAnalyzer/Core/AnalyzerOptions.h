@@ -19,6 +19,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -176,7 +177,7 @@ private:
 /// and should be eventually converted into -analyzer-config flags. New analyzer
 /// options should not be implemented as frontend flags. Frontend flags still
 /// make sense for things that do not affect the actual analysis.
-class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
+class AnalyzerOptions {
 public:
   using ConfigTable = llvm::StringMap<std::string>;
 
@@ -269,7 +270,8 @@ public:
   unsigned NoRetryExhausted : 1;
 
   /// Emit analyzer warnings as errors.
-  bool AnalyzerWerror : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned AnalyzerWerror : 1;
 
   /// The inlining stack depth limit.
   unsigned InlineMaxStackDepth;
@@ -309,8 +311,7 @@ public:
       return AnalyzerConfigCmdFlags;
     }();
 
-    return !std::binary_search(AnalyzerConfigCmdFlags.begin(),
-                               AnalyzerConfigCmdFlags.end(), Name);
+    return !llvm::binary_search(AnalyzerConfigCmdFlags, Name);
   }
 
   AnalyzerOptions()
@@ -410,13 +411,11 @@ public:
             // an alias to the new verbose filename option because this
             // closely mimics the behavior under the old option.
             ShouldWriteStableReportFilename || ShouldWriteVerboseReportFilename,
-            AnalyzerWerror,
+            static_cast<bool>(AnalyzerWerror),
             ShouldApplyFixIts,
             ShouldDisplayCheckerNameForText};
   }
 };
-
-using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
 
 //===----------------------------------------------------------------------===//
 // We'll use AnalyzerOptions in the frontend, but we can't link the frontend

@@ -183,7 +183,7 @@ module module1
     x1 = t1(0)(usedfrom1)
     x1 = t1(0)(modulevar1)
     x1 = t1(0)(commonvar1)
-    !WARNING: Pointer target is not a definable variable
+    !WARNING: Pointer target is not a definable variable [-Wpointer-to-undefinable]
     !BECAUSE: 'dummy1' is an INTENT(IN) dummy argument
     x1 = t1(0)(dummy1)
     x1 = t1(0)(dummy2)

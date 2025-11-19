@@ -1,6 +1,6 @@
 # RUN: %python %s --target=cuda --tests=suld,sust,tex,tld4 --gen-list=%t.list > %t-cuda.ll
 # RUN: llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | FileCheck %t-cuda.ll
-# RUN: %if ptxas %{ llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | %ptxas-verify %}
+# RUN: %if ptxas-sm_60 && ptxas-isa-4.3 %{ llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | %ptxas-verify -arch=sm_60 %}
 
 # We only need to run this second time for texture tests, because
 # there is a difference between unified and non-unified intrinsics.
@@ -48,7 +48,7 @@ def get_ptx_reg(ty):
         "b16": "%rs{{[0-9]+}}",
         "b32": "%r{{[0-9]+}}",
         "b64": "%rd{{[0-9]+}}",
-        "f32": "%f{{[0-9]+}}",
+        "f32": "%r{{[0-9]+}}",
         "u32": "%r{{[0-9]+}}",
         "s32": "%r{{[0-9]+}}",
     }
@@ -757,10 +757,10 @@ def get_llvm_tld4_access_type(geom):
 
 def get_ptx_tld4_access(geom):
     geom_to_access = {
-        "2d": "{%f{{[0-9]+}}, %f{{[0-9]+}}}",
-        "a2d": "{%r{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}",
-        "cube": "{%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}",
-        "acube": "{%r{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}",
+        "2d": "{%r{{[0-9]+}}, %r{{[0-9]+}}}",
+        "a2d": "{%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}",
+        "cube": "{%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}",
+        "acube": "{%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}",
     }
     return geom_to_access[geom]
 

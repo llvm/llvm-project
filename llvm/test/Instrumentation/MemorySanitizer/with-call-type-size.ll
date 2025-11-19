@@ -73,13 +73,30 @@ define <4 x i32> @test64(<4 x i32> %vec, i64 %idx, i32 %x) sanitize_memory {
 ; CHECK:         call void @__msan_maybe_warning_8(i64 zeroext %{{.*}}, i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
-; Type size too large => inline check.
+; Type size too large => use variable-size handler.
 define <4 x i32> @test65(<4 x i32> %vec, i65 %idx, i32 %x) sanitize_memory {
   %vec1 = insertelement <4 x i32> %vec, i32 %x, i65 %idx
   ret <4 x i32> %vec1
 }
 ; CHECK-LABEL: @test65(
-; CHECK:         call void @__msan_warning_noreturn
+; CHECK:         %[[A:.*]] = zext i65 %1 to i128
+; CHECK:         call void @__msan_maybe_warning_N(ptr %{{.*}}, i64 zeroext 16, i32 zeroext 0)
+; CHECK:         ret <4 x i32>
+
+define <4 x i32> @test128(<4 x i32> %vec, i128 %idx, i32 %x) sanitize_memory {
+  %vec1 = insertelement <4 x i32> %vec, i32 %x, i128 %idx
+  ret <4 x i32> %vec1
+}
+; CHECK-LABEL: @test128(
+; CHECK:         call void @__msan_maybe_warning_N(ptr %{{.*}}, i64 zeroext 16, i32 zeroext 0)
+; CHECK:         ret <4 x i32>
+
+define <4 x i32> @test256(<4 x i32> %vec, i256 %idx, i32 %x) sanitize_memory {
+  %vec1 = insertelement <4 x i32> %vec, i32 %x, i256 %idx
+  ret <4 x i32> %vec1
+}
+; CHECK-LABEL: @test256(
+; CHECK:         call void @__msan_maybe_warning_N(ptr %{{.*}}, i64 zeroext 32, i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @testUndef(<4 x i32> %vec, i32 %x) sanitize_memory {

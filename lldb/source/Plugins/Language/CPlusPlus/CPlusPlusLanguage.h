@@ -92,9 +92,9 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
-  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
-  
-  bool DemangledNameContainsPath(llvm::StringRef path, 
+  bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
+
+  bool DemangledNameContainsPath(llvm::StringRef path,
                                  ConstString demangled) const override;
 
   ConstString
@@ -104,6 +104,43 @@ public:
                               const ExecutionContext *exe_ctx,
                               FunctionNameRepresentation representation,
                               Stream &s) override;
+
+  bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                 const ExecutionContext *exe_ctx,
+                                 FormatEntity::Entry::Type type,
+                                 Stream &s) override;
+
+  static bool IsCPPMangledName(llvm::StringRef name);
+
+  static llvm::StringRef GetDemangledBasename(llvm::StringRef demangled,
+                                              const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledTemplateArguments(llvm::StringRef demangled,
+                                const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledReturnTypeLHS(llvm::StringRef demangled,
+                            const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionQualifiers(llvm::StringRef demangled,
+                                 const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledScope(llvm::StringRef demangled, const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledReturnTypeRHS(llvm::StringRef demangled,
+                            const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionArguments(llvm::StringRef demangled,
+                                const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionSuffix(llvm::StringRef demangled,
+                             const DemangledNameInfo &info);
 
   // Extract C++ context and identifier from a string using heuristic matching
   // (as opposed to
@@ -127,10 +164,85 @@ public:
   ConstString FindBestAlternateFunctionMangledName(
       const Mangled mangled, const SymbolContext &sym_ctx) const override;
 
+  /// Substitutes Itanium type encoding substrings given by \c subst_from
+  /// in \c mangled_name with \c subst_to.
+  ///
+  /// This function will only replace Itanium type encodings (i.e., <type>
+  /// productions in the Itanium ABI mangling grammar). However, no verifiction
+  /// is done on whether \c subst_from or \c subst_to is a valid type encoding.
+  ///
+  /// \param[in] mangled_name Mangled name to perform the substitutions in.
+  /// This function only supports Itanium ABI mangling.
+  ///
+  /// \param[in] subst_from The substring to substitute.
+  ///
+  /// \param[in] subst_to The substring to insert.
+  ///
+  /// \returns The mangled string with substitutions. If no substitutions
+  /// have been made, returns an empty \c ConstString (even if the string
+  /// already contained the substitutions). If an error occurred, this function
+  /// returns the error.
+  ///
+  static llvm::Expected<ConstString>
+  SubstituteType_ItaniumMangle(llvm::StringRef mangled_name,
+                               llvm::StringRef subst_from,
+                               llvm::StringRef subst_to);
+
+  /// Substitutes Itanium structor encoding substrings given by \c subst_from
+  /// in \c mangled_name with \c subst_to.
+  ///
+  /// This function will only replace Itanium structor encodings (i.e.,
+  /// <ctor-dtor-name> productions in the Itanium ABI mangling grammar).
+  /// However, no verifiction is done on whether \c subst_from or \c subst_to is
+  /// a valid structor encoding.
+  ///
+  /// \param[in] mangled_name Mangled name to perform the substitutions in.
+  /// This function only supports Itanium ABI mangling.
+  ///
+  /// \param[in] subst_from The substring to substitute.
+  ///
+  /// \param[in] subst_to The substring to insert.
+  ///
+  /// \returns The mangled string with substitutions. If no substitutions
+  /// have been made, returns an empty \c ConstString (even if the string
+  /// already contained the substitutions). If an error occurred, this function
+  /// returns the error.
+  ///
+  static llvm::Expected<ConstString>
+  SubstituteStructor_ItaniumMangle(llvm::StringRef mangled_name,
+                                   llvm::StringRef subst_from,
+                                   llvm::StringRef subst_to);
+
+  /// Tries replacing Itanium structor encoding substrings in \c mangled_name
+  /// with potential aliases.j
+  ///
+  /// This function will only replace Itanium structor encodings (i.e.,
+  /// <ctor-dtor-name> productions in the Itanium ABI mangling grammar).
+  ///
+  /// E.g., on some platforms, the C1/D1 variants are aliased to the C2/D2
+  /// variants. This function will try to replace occurrences of C1/D1 with
+  /// C2/D2.
+  ///
+  /// \param[in] mangled_name Mangled name to perform the substitutions in.
+  /// This function only supports Itanium ABI mangling.
+  ///
+  /// \returns The mangled string with substitutions. If no substitutions
+  /// have been made, returns an empty \c ConstString (even if the string
+  /// already contained the substitutions). If an error occurred, this function
+  /// returns the error.
+  ///
+  static llvm::Expected<ConstString>
+  SubstituteStructorAliases_ItaniumMangle(llvm::StringRef mangled_name);
+
   llvm::StringRef GetInstanceVariableName() override { return "this"; }
+
+  FormatEntity::Entry GetFunctionNameFormat() const override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+private:
+  static void DebuggerInitialize(Debugger &);
 };
 
 } // namespace lldb_private

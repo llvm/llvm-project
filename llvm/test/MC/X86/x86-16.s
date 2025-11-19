@@ -1056,17 +1056,6 @@ xsusldtrk
 // CHECK: encoding: [0xf2,0x0f,0x01,0xe9]
 xresldtrk
 
-// CHECK: jmp foo
-// CHECK:  encoding: [0xe9,A,A]
-// CHECK:  fixup A - offset: 1, value: foo-2, kind: FK_PCRel_2
-{disp32} jmp foo
-foo:
-
-// CHECK: je foo
-// CHECK:  encoding: [0x0f,0x84,A,A]
-// CHECK:  fixup A - offset: 2, value: foo-2, kind: FK_PCRel_2
-{disp32} je foo
-
 // CHECK: movl nearer, %ebx
 // CHECK:  encoding: [0x66,0x8b,0x1e,A,A]
 // CHECK:  fixup A - offset: 3, value: nearer, kind: FK_Data_2

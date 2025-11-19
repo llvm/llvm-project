@@ -142,13 +142,13 @@ namespace look_into_current_instantiation {
                     // templates, and members of the current instantiation
   A<float> &r = a;
 
-  template<typename T> struct B { // expected-note {{could not match 'B<T>' against 'int'}} \
-                                  // expected-note {{implicit deduction guide declared as 'template <typename T> B(B<T>) -> B<T>'}}
+  template<typename T> struct B { // expected-note {{could not match 'look_into_current_instantiation::B<T>' against 'int'}} \
+                                  // expected-note {{implicit deduction guide declared as 'template <typename T> B(look_into_current_instantiation::B<T>) -> look_into_current_instantiation::B<T>'}}
     struct X {
       typedef T type;
     };
     B(typename X::type); // expected-note {{couldn't infer template argument 'T'}} \
-                         // expected-note {{implicit deduction guide declared as 'template <typename T> B(typename X::type) -> B<T>'}}
+                         // expected-note {{implicit deduction guide declared as 'template <typename T> B(typename X::type) -> look_into_current_instantiation::B<T>'}}
   };
   B b = 0; // expected-error {{no viable}}
 
@@ -607,7 +607,7 @@ namespace function_prototypes {
   void t0() { foo0(&bar0); }
 
   template<class T> void foo1(fptr1<const T *>) {
-     static_assert(__is_same(T, char));  
+     static_assert(__is_same(T, char));
   }
   void bar1(const char * __restrict);
   void t1() { foo1(&bar1); }

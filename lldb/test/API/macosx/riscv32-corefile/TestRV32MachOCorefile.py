@@ -13,18 +13,16 @@ from lldbsuite.test import lldbutil
 class TestRV32MachOCorefile(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @no_debug_info_test
     def test_riscv32_gpr_corefile_registers(self):
-        self.build()
-        create_corefile = self.getBuildArtifact("create-empty-riscv-corefile")
         corefile = self.getBuildArtifact("core")
-        call(create_corefile + " " + corefile, shell=True)
+        self.yaml2macho_core("riscv32-registers.yaml", corefile)
 
         target = self.dbg.CreateTarget("")
         process = target.LoadCore(corefile)
 
         process = target.GetProcess()
-        self.assertEqual(process.GetNumThreads(), 1)
+        self.assertEqual(process.GetNumThreads(), 2)
 
         thread = process.GetThreadAtIndex(0)
         self.assertEqual(thread.GetNumFrames(), 1)
@@ -80,3 +78,12 @@ class TestRV32MachOCorefile(TestBase):
             val = idx | (idx << 8) | (idx << 16) | (idx << 24)
             self.assertEqual(gpr_regs.GetChildAtIndex(idx).GetValueAsUnsigned(), val)
             idx = idx + 1
+
+        thread = process.GetThreadAtIndex(1)
+        self.assertEqual(thread.GetNumFrames(), 1)
+
+        frame = thread.GetFrameAtIndex(0)
+        gpr_regs = frame.registers.GetValueAtIndex(0)
+
+        self.assertEqual(gpr_regs.GetChildAtIndex(0).GetValueAsUnsigned(), 0x90000000)
+        self.assertEqual(gpr_regs.GetChildAtIndex(32).GetValueAsUnsigned(), 0x90202020)

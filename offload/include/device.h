@@ -33,7 +33,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "GlobalHandler.h"
 #include "PluginInterface.h"
+
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
 // Forward declarations.
@@ -98,6 +100,10 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
+  // Insert a data fence between previous data operations and the following
+  // operations if necessary for the device.
+  int32_t dataFence(AsyncInfoTy &AsyncInfo);
+
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
   int32_t notifyDataMapped(void *HstPtr, int64_t Size);
@@ -151,6 +157,9 @@ struct DeviceTy {
 
   /// Ask the device whether the runtime should use auto zero-copy.
   bool useAutoZeroCopy();
+
+  /// Ask the device whether the storage is accessible.
+  bool isAccessiblePtr(const void *Ptr, size_t Size);
 
   /// Check if there are pending images for this device.
   bool hasPendingImages() const { return HasPendingImages; }

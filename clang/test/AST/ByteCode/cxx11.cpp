@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=both,expected -std=c++11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=both,ref -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=both,expected -std=c++11 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=both,ref      -std=c++11 %s
 
 namespace IntOrEnum {
   const int k = 0;
@@ -23,13 +23,24 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // expected-error {{variable length array declaration not allowed at file scope}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
 
+constexpr int b = b; // both-error {{must be initialized by a constant expression}} \
+                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}}
+
+
+[[clang::require_constant_initialization]] int c = c; // both-error {{variable does not have a constant initializer}} \
+                                                      // both-note {{attribute here}} \
+                                                      // both-note {{read of non-const variable}} \
+                                                      // both-note {{declared here}}
+
+
 struct S {
   int m;
 };
 constexpr S s = { 5 };
 constexpr const int *p = &s.m + 1;
 
-constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok
+constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // both-error {{constexpr variable 'np2' must be initialized by a constant expression}} \
+                                                      // both-note  {{dereferencing a null pointer is not allowed in a constant expression}}
 
 constexpr int preDec(int x) { // both-error {{never produces a constant expression}}
   return --x;                 // both-note {{subexpression}}
@@ -135,6 +146,14 @@ void testValueInRangeOfEnumerationValues() {
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
 }
+struct EnumTest {
+  enum type {
+      Type1,
+      BOUND
+  };
+  static const type binding_completed = type(BOUND + 1); // both-error {{in-class initializer for static data member is not a constant expression}} \
+                                                         // both-note {{integer value 2 is outside the valid range of values}}
+};
 
 template<class T, unsigned size> struct Bitfield {
   static constexpr T max = static_cast<T>((1 << size) - 1);
@@ -193,4 +212,210 @@ namespace DynamicCast {
     int b : reinterpret_cast<S*>(sptr) == reinterpret_cast<S*>(sptr);
     int g : (S*)(void*)(sptr) == sptr;
   };
+}
+
+namespace GlobalInitializer {
+  extern int &g; // both-note {{here}}
+  struct S {
+    int G : g; // both-error {{constant expression}} \
+               // both-note {{initializer of 'g' is unknown}}
+  };
+}
+
+namespace ExternPointer {
+  struct S { int a; };
+  extern const S pu;
+  constexpr const int *pua = &pu.a; // Ok.
+}
+
+namespace PseudoDtor {
+  typedef int I;
+  constexpr int f(int a = 1) { // both-error {{never produces a constant expression}} \
+                               // ref-note {{destroying object 'a' whose lifetime has already ended}}
+    return (
+        a.~I(), // both-note {{pseudo-destructor call is not permitted}} \
+                // expected-note {{pseudo-destructor call is not permitted}}
+        0);
+  }
+  static_assert(f() == 0, ""); // both-error {{constant expression}} \
+                               // expected-note {{in call to}}
+}
+
+namespace IntToPtrCast {
+  typedef __INTPTR_TYPE__ intptr_t;
+
+  constexpr intptr_t f(intptr_t x) {
+    return (((x) >> 21) * 8);
+  }
+
+  extern "C" int foo;
+  constexpr intptr_t i = f((intptr_t)&foo - 10); // both-error{{constexpr variable 'i' must be initialized by a constant expression}} \
+                                                 // both-note{{reinterpret_cast}}
+}
+
+namespace Volatile {
+  constexpr int f(volatile int &&r) {
+    return r; // both-note {{read of volatile-qualified type 'volatile int'}}
+  }
+  struct S {
+    int j : f(0); // both-error {{constant expression}} \
+                  // both-note {{in call to 'f(0)'}}
+  };
+}
+
+namespace ZeroSizeCmp {
+  extern void (*start[])();
+  extern void (*end[])();
+  static_assert(&start != &end, ""); // both-error {{constant expression}} \
+                                     // both-note {{comparison of pointers '&start' and '&end' to unrelated zero-sized objects}}
+}
+
+namespace OverlappingStrings {
+  static_assert(+"foo" != +"bar", "");
+  static_assert(&"xfoo"[1] != &"yfoo"[1], "");
+  static_assert(+"foot" != +"foo", "");
+  static_assert(+"foo\0bar" != +"foo\0baz", "");
+
+
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+  static_assert(fold((const char*)u"A" != (const char*)"\0A\0x"), "");
+  static_assert(fold((const char*)u"A" != (const char*)"A\0\0x"), "");
+  static_assert(fold((const char*)u"AAA" != (const char*)"AAA\0\0x"), "");
+
+  constexpr const char *string = "hello";
+  constexpr const char *also_string = string;
+  static_assert(string == string, "");
+  static_assert(string == also_string, "");
+
+
+  // These strings may overlap, and so the result of the comparison is unknown.
+  constexpr bool may_overlap_1 = +"foo" == +"foo"; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+  constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+  constexpr bool may_overlap_3 = +"foo" == &"bar\0foo"[4]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+  constexpr bool may_overlap_4 = &"xfoo"[1] == &"xfoo"[1]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+
+
+  /// Used to crash.
+  const bool x = &"ab"[0] == &"ba"[3];
+
+}
+
+namespace NonConstLocal {
+  int a() {
+    const int t=t; // both-note {{declared here}}
+
+    switch(1) {
+      case t:; // both-note {{initializer of 't' is not a constant expression}} \
+               // both-error {{case value is not a constant expression}}
+    }
+  }
+}
+
+#define ATTR __attribute__((require_constant_initialization))
+int somefunc() {
+  const int non_global = 42; // both-note {{declared here}}
+  ATTR static const int &local_init = non_global; // both-error {{variable does not have a constant initializer}} \
+                                                  // both-note {{required by}} \
+                                                  // both-note {{reference to 'non_global' is not a constant expression}}
+}
+
+namespace PR19010 {
+  struct Empty {};
+  struct Empty2 : Empty {};
+  struct Test : Empty2 {
+    constexpr Test() {}
+    Empty2 array[2];
+  };
+  void test() { constexpr Test t; }
+}
+
+namespace ReadMutableInCopyCtor {
+  struct G {
+    struct X {};
+    union U { X a; };
+    mutable U u; // both-note {{declared here}}
+  };
+  constexpr G g1 = {};
+  constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{read of mutable member 'u'}} \
+                       // both-note {{in call to 'G(g1)'}}
+}
+
+namespace GH150709 {
+  struct C { };
+  struct D : C {
+    constexpr int f() const { return 1; };
+  };
+  struct E : C { };
+  struct F : D { };
+  struct G : E { };
+  
+  constexpr C c1, c2[2];
+  constexpr D d1, d2[2];
+  constexpr E e1, e2[2];
+  constexpr F f;
+  constexpr G g;
+
+  constexpr auto mp = static_cast<int (C::*)() const>(&D::f);
+
+  // sanity checks for fix of GH150709 (unchanged behavior)
+  static_assert((c1.*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((d1.*mp)() == 1, "");
+  static_assert((f.*mp)() == 1, "");
+  static_assert((c2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((d2[0].*mp)() == 1, "");
+
+  // incorrectly undiagnosed before fix of GH150709
+  static_assert((e1.*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
+}
+
+namespace DiscardedAddrLabel {
+  void foo(void) {
+  L:
+    *&&L; // both-error {{indirection not permitted on operand of type 'void *'}} \
+          // both-warning {{expression result unused}}
+  }
+}
+
+struct Counter {
+  int copies;
+  constexpr Counter(int copies) : copies(copies) {}
+  constexpr Counter(const Counter& other) : copies(other.copies + 1) {}
+};
+// Passing an lvalue by value makes a non-elidable copy.
+constexpr int PassByValue(Counter c) { return c.copies; }
+static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
+
+namespace PointerCast {
+  /// The two interpreters disagree here.
+  struct S { int x, y; } s;
+  constexpr S* sptr = &s;
+  struct U {};
+  struct Str {
+    int e : (Str*)(sptr) == (Str*)(sptr); // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+  };
+}
+
+namespace DummyToGlobalBlockMove {
+  struct Baz {
+    unsigned int n;
+  };
+
+  struct AP {
+    const AP *p;
+    const Baz *lp;
+  };
+
+  class Bar {
+  public:
+    static Baz _m[];
+    static const AP m;
+  };
+
+  const AP Bar::m = {0, &Bar::_m[0]};
+  Baz Bar::_m[] = {{0}};
+  const AP m = {&Bar ::m};
 }

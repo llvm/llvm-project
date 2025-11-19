@@ -290,8 +290,7 @@ define i32 @unsigned_sat_variable_i32_using_cmp_sum(i32 %x, i32 %y) {
 define i32 @unsigned_sat_variable_i32_using_cmp_notval(i32 %x, i32 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i32_using_cmp_notval:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmn w1, w0
+; CHECK-NEXT:    adds w8, w1, w0
 ; CHECK-NEXT:    csinv w0, w8, wzr, lo
 ; CHECK-NEXT:    ret
   %noty = xor i32 %y, -1
@@ -331,8 +330,7 @@ define i64 @unsigned_sat_variable_i64_using_cmp_sum(i64 %x, i64 %y) {
 define i64 @unsigned_sat_variable_i64_using_cmp_notval(i64 %x, i64 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i64_using_cmp_notval:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1
-; CHECK-NEXT:    cmn x1, x0
+; CHECK-NEXT:    adds x8, x1, x0
 ; CHECK-NEXT:    csinv x0, x8, xzr, lo
 ; CHECK-NEXT:    ret
   %noty = xor i64 %y, -1
@@ -530,7 +528,7 @@ define <16 x i8> @unsigned_sat_variable_v16i8_using_cmp_notval(<16 x i8> %x, <16
 ; CHECK-NEXT:    mvn v2.16b, v1.16b
 ; CHECK-NEXT:    add v1.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %noty = xor <16 x i8> %y, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %a = add <16 x i8> %x, %y
@@ -570,7 +568,7 @@ define <8 x i16> @unsigned_sat_variable_v8i16_using_cmp_notval(<8 x i16> %x, <8 
 ; CHECK-NEXT:    mvn v2.16b, v1.16b
 ; CHECK-NEXT:    add v1.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    cmhi v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %noty = xor <8 x i16> %y, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %a = add <8 x i16> %x, %y
@@ -610,7 +608,7 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_notval(<4 x i32> %x, <4 
 ; CHECK-NEXT:    mvn v2.16b, v1.16b
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %noty = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
   %a = add <4 x i32> %x, %y
@@ -651,7 +649,7 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 
 ; CHECK-NEXT:    mvn v2.16b, v1.16b
 ; CHECK-NEXT:    add v1.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %noty = xor <2 x i64> %y, <i64 -1, i64 -1>
   %a = add <2 x i64> %x, %y

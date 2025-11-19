@@ -17,7 +17,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/GenericLoopInfo.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 #include <optional>
 #include <utility>
 
@@ -32,7 +33,7 @@ class ScalarEvolution;
 class raw_ostream;
 
 // Implementation in Support/GenericLoopInfoImpl.h
-extern template class LoopBase<BasicBlock, Loop>;
+extern template class LLVM_TEMPLATE_ABI LoopBase<BasicBlock, Loop>;
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
@@ -157,7 +158,7 @@ public:
     /// - the final value of the induction variable can be found
     ///
     /// Else std::nullopt.
-    static std::optional<Loop::LoopBounds>
+    LLVM_ABI static std::optional<Loop::LoopBounds>
     getBounds(const Loop &L, PHINode &IndVar, ScalarEvolution &SE);
 
     /// Get the initial value of the loop induction variable.
@@ -206,7 +207,7 @@ public:
     /// The predicate would be sgt if both (1) and (2) are satisfied.
     /// getCanonicalPredicate() returns sgt for this example.
     /// Note: The IR is not changed.
-    ICmpInst::Predicate getCanonicalPredicate() const;
+    LLVM_ABI ICmpInst::Predicate getCanonicalPredicate() const;
 
     /// An enum for the direction of the loop
     /// - for (int i = 0; i < ub; ++i)  --> Increasing
@@ -215,7 +216,7 @@ public:
     enum class Direction { Increasing, Decreasing, Unknown };
 
     /// Get the direction of the loop.
-    Direction getDirection() const;
+    LLVM_ABI Direction getDirection() const;
 
   private:
     LoopBounds(const Loop &Loop, Value &I, Instruction &SI, Value *SV, Value &F,
@@ -402,7 +403,7 @@ private:
 };
 
 // Implementation in Support/GenericLoopInfoImpl.h
-extern template class LoopInfoBase<BasicBlock, Loop>;
+extern template class LLVM_TEMPLATE_ABI LoopInfoBase<BasicBlock, Loop>;
 
 class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
   typedef LoopInfoBase<BasicBlock, Loop> BaseT;
@@ -414,7 +415,8 @@ class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
 
 public:
   LoopInfo() = default;
-  explicit LoopInfo(const DominatorTreeBase<BasicBlock, false> &DomTree);
+  LLVM_ABI explicit LoopInfo(
+      const DominatorTreeBase<BasicBlock, false> &DomTree);
 
   LoopInfo(LoopInfo &&Arg) : BaseT(std::move(static_cast<BaseT &>(Arg))) {}
   LoopInfo &operator=(LoopInfo &&RHS) {
@@ -423,8 +425,8 @@ public:
   }
 
   /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
 
   // Most of the public interface is provided via LoopInfoBase.
 
@@ -432,7 +434,7 @@ public:
   /// the loop forest and parent loops for each block so that \c L is no longer
   /// referenced, but does not actually delete \c L immediately. The pointer
   /// will remain valid until this LoopInfo's memory is released.
-  void erase(Loop *L);
+  LLVM_ABI void erase(Loop *L);
 
   /// Returns true if replacing From with To everywhere is guaranteed to
   /// preserve LCSSA form.
@@ -529,11 +531,12 @@ public:
   }
 
   // Return true if a new use of V added in ExitBB would require an LCSSA PHI
-  // to be inserted at the begining of the block.  Note that V is assumed to
+  // to be inserted at the beginning of the block.  Note that V is assumed to
   // dominate ExitBB, and ExitBB must be the exit block of some loop.  The
   // IR is assumed to be in LCSSA form before the planned insertion.
-  bool wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
-                                         const BasicBlock *ExitBB) const;
+  LLVM_ABI bool
+  wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
+                                    const BasicBlock *ExitBB) const;
 };
 
 /// Enable verification of loop info.
@@ -541,7 +544,7 @@ public:
 /// The flag enables checks which are expensive and are disabled by default
 /// unless the `EXPENSIVE_CHECKS` macro is defined.  The `-verify-loop-info`
 /// flag allows the checks to be enabled selectively without re-compilation.
-extern bool VerifyLoopInfo;
+LLVM_ABI extern bool VerifyLoopInfo;
 
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const Loop *> {
@@ -565,12 +568,12 @@ template <> struct GraphTraits<Loop *> {
 /// Analysis pass that exposes the \c LoopInfo for a function.
 class LoopAnalysis : public AnalysisInfoMixin<LoopAnalysis> {
   friend AnalysisInfoMixin<LoopAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   typedef LoopInfo Result;
 
-  LoopInfo run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI LoopInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c LoopAnalysis results.
@@ -579,18 +582,18 @@ class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
 struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 /// The legacy pass manager's analysis pass to compute loop information.
-class LoopInfoWrapperPass : public FunctionPass {
+class LLVM_ABI LoopInfoWrapperPass : public FunctionPass {
   LoopInfo LI;
 
 public:
@@ -614,56 +617,58 @@ public:
 };
 
 /// Function to print a loop's contents as LLVM's text IR assembly.
-void printLoop(Loop &L, raw_ostream &OS, const std::string &Banner = "");
+LLVM_ABI void printLoop(const Loop &L, raw_ostream &OS,
+                        const std::string &Banner = "");
 
 /// Find and return the loop attribute node for the attribute @p Name in
 /// @p LoopID. Return nullptr if there is no such attribute.
-MDNode *findOptionMDForLoopID(MDNode *LoopID, StringRef Name);
+LLVM_ABI MDNode *findOptionMDForLoopID(MDNode *LoopID, StringRef Name);
 
 /// Find string metadata for a loop.
 ///
 /// Returns the MDNode where the first operand is the metadata's name. The
 /// following operands are the metadata's values. If no metadata with @p Name is
 /// found, return nullptr.
-MDNode *findOptionMDForLoop(const Loop *TheLoop, StringRef Name);
+LLVM_ABI MDNode *findOptionMDForLoop(const Loop *TheLoop, StringRef Name);
 
-std::optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
-                                                 StringRef Name);
+LLVM_ABI std::optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
+                                                          StringRef Name);
 
 /// Returns true if Name is applied to TheLoop and enabled.
-bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
+LLVM_ABI bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
 
 /// Find named metadata for a loop with an integer value.
-std::optional<int> getOptionalIntLoopAttribute(const Loop *TheLoop,
-                                               StringRef Name);
+LLVM_ABI std::optional<int> getOptionalIntLoopAttribute(const Loop *TheLoop,
+                                                        StringRef Name);
 
 /// Find named metadata for a loop with an integer value. Return \p Default if
 /// not set.
-int getIntLoopAttribute(const Loop *TheLoop, StringRef Name, int Default = 0);
+LLVM_ABI int getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
+                                 int Default = 0);
 
 /// Find string metadata for loop
 ///
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
 /// Optional's not-a-value.
-std::optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
-                                                           StringRef Name);
+LLVM_ABI std::optional<const MDOperand *>
+findStringMetadataForLoop(const Loop *TheLoop, StringRef Name);
 
 /// Find the convergence heart of the loop.
-CallBase *getLoopConvergenceHeart(const Loop *TheLoop);
+LLVM_ABI CallBase *getLoopConvergenceHeart(const Loop *TheLoop);
 
 /// Look for the loop attribute that requires progress within the loop.
 /// Note: Most consumers probably want "isMustProgress" which checks
 /// the containing function attribute too.
-bool hasMustProgress(const Loop *L);
+LLVM_ABI bool hasMustProgress(const Loop *L);
 
 /// Return true if this loop can be assumed to make progress.  (i.e. can't
 /// be infinite without side effects without also being undefined)
-bool isMustProgress(const Loop *L);
+LLVM_ABI bool isMustProgress(const Loop *L);
 
 /// Return true if this loop can be assumed to run for a finite number of
 /// iterations.
-bool isFinite(const Loop *L);
+LLVM_ABI bool isFinite(const Loop *L);
 
 /// Return whether an MDNode might represent an access group.
 ///
@@ -672,7 +677,7 @@ bool isFinite(const Loop *L);
 /// MDNodes are designed immutable -- would require creating a new MDNode). Note
 /// that this is not a sufficient condition: not every distinct and empty NDNode
 /// is representing an access group.
-bool isValidAsAccessGroup(MDNode *AccGroup);
+LLVM_ABI bool isValidAsAccessGroup(MDNode *AccGroup);
 
 /// Create a new LoopID after the loop has been transformed.
 ///
@@ -689,7 +694,7 @@ bool isValidAsAccessGroup(MDNode *AccGroup);
 /// @param AddAttrs       Add these loop attributes to the new LoopID.
 ///
 /// @return A new LoopID that can be applied using Loop::setLoopID().
-llvm::MDNode *
+LLVM_ABI llvm::MDNode *
 makePostTransformationMetadata(llvm::LLVMContext &Context, MDNode *OrigLoopID,
                                llvm::ArrayRef<llvm::StringRef> RemovePrefixes,
                                llvm::ArrayRef<llvm::MDNode *> AddAttrs);

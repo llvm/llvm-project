@@ -3,13 +3,19 @@ RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/AstRestoreT
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
 RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=GLOBAL %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=GLOBAL %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=BASE %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=BASE %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
 RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=INNER %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=INNER %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=TEMPLATE %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=TEMPLATE %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=FOO %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=FOO %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=MAIN %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=MAIN %s
 
 ENUM: Module: {{.*}}
 ENUM: namespace N0 {

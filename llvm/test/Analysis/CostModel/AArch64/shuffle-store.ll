@@ -239,39 +239,39 @@ define void @splatstore(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <8 x i8> %v8i8, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <16 x i8> %v16i8, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <32 x i8> %v32i8, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v64i8 = shufflevector <64 x i8> undef, <64 x i8> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v64i8 = shufflevector <64 x i8> undef, <64 x i8> undef, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <64 x i8> %v64i8, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <4 x i16> %v4i16, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <8 x i16> %v8i16, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <16 x i16> %v16i16, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v32i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v32i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <32 x i16> %v32i16, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v64i16 = shufflevector <64 x i16> undef, <64 x i16> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v64i16 = shufflevector <64 x i16> undef, <64 x i16> undef, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:1 SizeLat:8 for: store <64 x i16> %v64i16, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <4 x i32> %v4i32, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <8 x i32> %v8i32, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v16i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <16 x i32> %v16i32, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v32i32 = shufflevector <32 x i32> undef, <32 x i32> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v32i32 = shufflevector <32 x i32> undef, <32 x i32> undef, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:1 SizeLat:8 for: store <32 x i32> %v32i32, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v64i32 = shufflevector <64 x i32> undef, <64 x i32> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v64i32 = shufflevector <64 x i32> undef, <64 x i32> undef, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:16 Lat:1 SizeLat:16 for: store <64 x i32> %v64i32, ptr %p, align 256
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <4 x i64> %v4i64, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v8i64 = shufflevector <8 x i64> undef, <8 x i64> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i64 = shufflevector <8 x i64> undef, <8 x i64> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:1 SizeLat:4 for: store <8 x i64> %v8i64, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v16i64 = shufflevector <16 x i64> undef, <16 x i64> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i64 = shufflevector <16 x i64> undef, <16 x i64> undef, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:1 SizeLat:8 for: store <16 x i64> %v16i64, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v32i64 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v32i64 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:16 Lat:1 SizeLat:16 for: store <32 x i64> %v32i64, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Found costs of 32 for: %v64i64 = shufflevector <64 x i64> undef, <64 x i64> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v64i64 = shufflevector <64 x i64> undef, <64 x i64> undef, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:32 Lat:1 SizeLat:32 for: store <64 x i64> %v64i64, ptr %p, align 512
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;

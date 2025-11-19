@@ -1,4 +1,5 @@
-# RUN: cd %T
+# RUN: mkdir -p %t.dir
+# RUN: cd %t.dir
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s >debug_rnglists-dwo.o
 # RUN: %lldb debug_rnglists-dwo.o -o "image lookup -v -s lookup_rnglists" \
 # RUN:   -o exit | FileCheck %s

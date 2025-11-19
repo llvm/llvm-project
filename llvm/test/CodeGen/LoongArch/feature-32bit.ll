@@ -3,3 +3,4 @@
 
 ; CHECK: Available features for this target:
 ; CHECK: 32bit - LA32 Basic Integer and Privilege Instruction Set.
+; CHECK: 32s - LA32 Standard Basic Instruction Extension.

@@ -165,10 +165,10 @@ define double @callee_double_stack(i64 %a, i64 %b, i64 %c, i64 %d, double %e, do
 ;
 ; RV32IZFINXZDINX-LABEL: callee_double_stack:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
 ; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 0(sp)
 ; RV32IZFINXZDINX-NEXT:    lw a3, 4(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a2, 0(sp)
 ; RV32IZFINXZDINX-NEXT:    fadd.d a0, a2, a0
 ; RV32IZFINXZDINX-NEXT:    ret
   %1 = fadd double %e, %f
@@ -241,5 +241,5 @@ define double @func_return_double_undef() nounwind {
 ; RV32IZFINXZDINX-LABEL: func_return_double_undef:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    ret
-  ret double undef
+  ret double poison
 }

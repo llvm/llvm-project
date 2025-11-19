@@ -15,7 +15,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body.preheader>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -42,16 +42,16 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.end.loopexit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.end.loopexit>
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
-; CHECK-NEXT:    EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.end.loopexit>
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
@@ -83,7 +83,7 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body.preheader>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -113,16 +113,16 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.end.loopexit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.end.loopexit>
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
-; CHECK-NEXT:    EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.end.loopexit>
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
@@ -157,7 +157,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1 smax %n)
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -165,7 +165,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:   ir<%i> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   ir<%i> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%i>, ir<5>
 ; CHECK-NEXT: Successor(s): pred.udiv
@@ -202,16 +202,16 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.end>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
 ; CHECK-NEXT:    IR   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %cmp = icmp ult i64 %i, 5
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.end>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -251,7 +251,7 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT: Live-in ir<256> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   vp<[[IV_END:%.+]]> = DERIVED-IV ir<0> + vp<[[VTC]]> * ir<4>
@@ -285,16 +285,16 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.end>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[IV_END]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[IV_END]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %cmp = icmp slt i64 %iv.next, 1024
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.end>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -329,8 +329,8 @@ for.end:
   ret void
 }
 
-define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {
-; CHECK-LABEL: Checking a loop in 'debug_loc_vpinstruction'
+define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
+; CHECK-LABEL: Checking a loop in 'recipe_debug_loc_location'
 ; CHECK:    VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
@@ -338,7 +338,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT: Live-in ir<128> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -347,14 +347,20 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:    vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:    CLONE ir<%isd> = getelementptr inbounds ir<%asd>, vp<[[STEPS]]>
+; CHECK-NEXT:    CLONE ir<%isd> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
+; CHECK-NOT:     !dbg
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%isd>
+; CHECK-NOT:     !dbg
 ; CHECK-NEXT:    WIDEN ir<%lsd> = load vp<[[VEC_PTR]]>
+; CHECK-NOT:     !dbg
 ; CHECK-NEXT:    WIDEN ir<%psd> = add nuw nsw ir<%lsd>, ir<23>
+; CHECK-NOT:     !dbg
 ; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp slt ir<%lsd>, ir<100>
-; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>, !dbg /tmp/s.c:5:3
+; CHECK-NOT:     !dbg
+; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>, !dbg /tmp/s.c:9:3
 ; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>
-; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = logical-and vp<[[NOT1]]>, ir<%cmp2>, !dbg /tmp/s.c:5:21
+; CHECK-NOT:     !dbg
+; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = logical-and vp<[[NOT1]]>, ir<%cmp2>, !dbg /tmp/s.c:11:3
 ; CHECK-NEXT:    EMIT vp<[[OR1:%.+]]> = or vp<[[SEL1]]>, ir<%cmp1>
 ; CHECK-NEXT:  Successor(s): pred.sdiv
 ; CHECK-EMPTY:
@@ -365,20 +371,23 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.sdiv.if:
 ; CHECK-NEXT:      REPLICATE ir<%sd1> = sdiv ir<%psd>, ir<%lsd> (S->V)
+; CHECK-NOT:       !dbg
 ; CHECK-NEXT:    Successor(s): pred.sdiv.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.sdiv.continue:
 ; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[PHI:%.+]]> = ir<%sd1>
+; CHECK-NOT:       !dbg
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.0:
-; CHECK-NEXT:    EMIT vp<[[NOT2:%.+]]> = not ir<%cmp2>
-; CHECK-NEXT:    EMIT vp<[[SEL2:%.+]]> = logical-and vp<[[NOT1]]>, vp<[[NOT2]]>
-; CHECK-NEXT:    BLEND ir<%ysd.0> = vp<[[PHI]]> ir<%psd>/vp<[[SEL2]]>
+; CHECK-NEXT:    BLEND ir<%ysd.0> = ir<%psd> vp<[[PHI]]>/vp<[[OR1]]>
+; CHECK-NOT:     !dbg
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%isd>
+; CHECK-NOT:     !dbg
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%ysd.0>
+; CHECK-NOT:     !dbg
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:  No successors
@@ -390,16 +399,16 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %if.end ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %cmp1 = icmp slt i32 %lsd, 100
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT:}
 ;
@@ -408,23 +417,23 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %if.end ]
-  %isd = getelementptr inbounds i32, ptr %asd, i64 %iv
-  %lsd = load i32, ptr %isd, align 4
-  %psd = add nuw nsw i32 %lsd, 23
-  %cmp1 = icmp slt i32 %lsd, 100
-  br i1 %cmp1, label %if.then, label %check, !dbg !7
+  %isd = getelementptr inbounds i32, ptr %src, i64 %iv, !dbg !7
+  %lsd = load i32, ptr %isd, align 4, !dbg !8
+  %psd = add nuw nsw i32 %lsd, 23, !dbg !9
+  %cmp1 = icmp slt i32 %lsd, 100, !dbg !10
+  br i1 %cmp1, label %if.then, label %check, !dbg !11
 
 check:
-  %cmp2 = icmp sge i32 %lsd, 200
-  br i1 %cmp2, label %if.then, label %if.end, !dbg !8
+  %cmp2 = icmp sge i32 %lsd, 200, !dbg !12
+  br i1 %cmp2, label %if.then, label %if.end, !dbg !13
 
 if.then:
-  %sd1 = sdiv i32 %psd, %lsd
+  %sd1 = sdiv i32 %psd, %lsd, !dbg !14
   br label %if.end
 
 if.end:
-  %ysd.0 = phi i32 [ %sd1, %if.then ], [ %psd, %check ]
-  store i32 %ysd.0, ptr %isd, align 4
+  %ysd.0 = phi i32 [ %sd1, %if.then ], [ %psd, %check ], !dbg !16
+  store i32 %ysd.0, ptr %isd, align 4, !dbg !17
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 128
   br i1 %exitcond, label %exit, label %loop
@@ -449,7 +458,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:   IR %inc = add i64 %div, 1
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + ((15 + (%y /u 492802768830814060))<nuw><nsw> /u (1 + (%y /u 492802768830814060))<nuw><nsw>))<nuw><nsw>
 ; CHECK-NEXT:   EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   vp<[[IV_END:%.+]]> = DERIVED-IV ir<0> + vp<[[VTC]]> * vp<[[EXP_SCEV]]>
@@ -475,16 +484,16 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<loop.exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<loop.exit>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[IV_END]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[IV_END]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %iv.next = add i64 %iv, %inc
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop.exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -517,7 +526,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -525,7 +534,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add ir<%iv>, ir<%off>
@@ -538,22 +547,22 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-from-end ir<%add>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-element ir<%add>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT:   IR %lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[EXIT]]> from middle.block)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %ec = icmp eq i32 %iv.next, 1000
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:   IR %lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[EXIT]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -583,7 +592,7 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -612,16 +621,16 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -654,7 +663,7 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -682,18 +691,18 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
+; ; CHECK-NEXT: }
 ;
 entry:
   br label %loop
@@ -723,7 +732,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -772,16 +781,16 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<end>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<end>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.loop ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %ifcond = fcmp oeq float %ld.value, 5.0
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<end>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -823,7 +832,7 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -851,16 +860,16 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -892,7 +901,7 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:  Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:  Successor(s): vector loop
@@ -905,7 +914,8 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:    WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN-CAST ir<%zext> = zext nneg ir<%l>
-; CHECK-NEXT:    REPLICATE store ir<%zext>, ir<%p1>
+; CHECK-NEXT:    EMIT vp<[[EXT:%.+]]> = extract-last-element ir<%zext>
+; CHECK-NEXT:    CLONE store vp<[[EXT]]>, ir<%p1>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:  No successors
@@ -937,7 +947,7 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -961,25 +971,25 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-from-end ir<%for.1.next>, ir<2>
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT:   IR %for.1.lcssa = phi i16 [ %for.1, %loop ] (extra operand: vp<[[FOR_RESULT]]> from middle.block)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
-; CHECK-NEXT:   EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_P:%.*]]> = phi [ vp<[[RESUME_1]]>, middle.block ], [ ir<22>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %for.1 = phi i16 [ 22, %entry ], [ %for.1.next, %loop ] (extra operand: vp<[[RESUME_P]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %exitcond.not = icmp eq i64 %iv.next, 1000
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:   IR %for.1.lcssa = phi i16 [ %for.1, %loop ] (extra operand: vp<[[FOR_RESULT]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -1010,7 +1020,7 @@ define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-NEXT: Live-in ir<%N> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -1079,4 +1089,15 @@ attributes #0 = { readonly nounwind "vector-function-abi-variant"="_ZGV_LLVM_M2v
 !5 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !6, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !6 = !DISubroutineType(types: !2)
 !7 = !DILocation(line: 5, column: 3, scope: !5)
-!8 = !DILocation(line: 5, column: 21, scope: !5)
+!8 = !DILocation(line: 6, column: 3, scope: !5)
+!9 = !DILocation(line: 7, column: 3, scope: !5)
+!10 = !DILocation(line: 8, column: 3, scope: !5)
+!11 = !DILocation(line: 9, column: 3, scope: !5)
+!12 = !DILocation(line: 10, column: 3, scope: !5)
+!13 = !DILocation(line: 11, column: 3, scope: !5)
+!14 = !DILocation(line: 12, column: 3, scope: !5)
+!15 = !DILocation(line: 13, column: 3, scope: !5)
+!16 = !DILocation(line: 14, column: 3, scope: !5)
+!17 = !DILocation(line: 15, column: 3, scope: !5)
+!18 = !DILocation(line: 16, column: 3, scope: !5)
+!19 = !DILocation(line: 17, column: 3, scope: !5)

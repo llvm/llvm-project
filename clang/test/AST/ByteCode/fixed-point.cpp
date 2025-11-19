@@ -17,6 +17,14 @@ constexpr _Accum acc = (0.5r, 6.9k);
 constexpr _Accum A{};
 static_assert(A == 0.0k);
 static_assert(A == 0);
+static_assert(!A);
+
+constexpr bool toBool() {
+  if (A)
+    return true;
+  return false;
+}
+static_assert(!toBool());
 
 namespace IntToFixedPointCast {
   constexpr _Accum B = 13;

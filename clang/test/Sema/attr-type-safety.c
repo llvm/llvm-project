@@ -4,7 +4,7 @@ struct A {};
 
 typedef struct A *MPI_Datatype;
 
-extern struct A datatype_wrong1 [[clang::type_tag_for_datatype]]; // expected-error {{'type_tag_for_datatype' attribute requires parameter 1 to be an identifier}}
+extern struct A datatype_wrong1 [[clang::type_tag_for_datatype]]; // expected-error {{'clang::type_tag_for_datatype' attribute requires parameter 1 to be an identifier}}
 
 extern struct A datatype_wrong2 [[clang::type_tag_for_datatype(mpi,1,2)]]; // expected-error {{expected a type}}
 
@@ -22,7 +22,7 @@ extern struct A B_tag [[clang::type_tag_for_datatype(b,int)]];
 static const int C_tag [[clang::type_tag_for_datatype(c,int)]] = 10;
 static const int D_tag [[clang::type_tag_for_datatype(d,int)]] = 20;
 
-[[clang::pointer_with_type_tag]] // expected-error {{'pointer_with_type_tag' attribute requires exactly 3 arguments}}
+[[clang::pointer_with_type_tag]] // expected-error {{'clang::pointer_with_type_tag' attribute requires exactly 3 arguments}}
 int wrong1(void *buf, MPI_Datatype datatype);
 
 [[clang::pointer_with_type_tag(mpi,0,7)]]  // expected-error {{attribute parameter 2 is out of bounds}}

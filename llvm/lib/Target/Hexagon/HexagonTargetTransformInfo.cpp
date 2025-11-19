@@ -31,6 +31,10 @@ using namespace llvm;
 static cl::opt<bool> HexagonAutoHVX("hexagon-autohvx", cl::init(false),
     cl::Hidden, cl::desc("Enable loop vectorizer for HVX"));
 
+cl::opt<bool> HexagonAllowScatterGatherHVX(
+    "hexagon-allow-scatter-gather-hvx", cl::init(false), cl::Hidden,
+    cl::desc("Allow auto-generation of HVX scatter-gather"));
+
 static cl::opt<bool> EnableV68FloatAutoHVX(
     "force-hvx-float", cl::Hidden,
     cl::desc("Enable auto-vectorization of floatint point types on v68."));
@@ -156,9 +160,10 @@ HexagonTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-InstructionCost HexagonTTIImpl::getAddressComputationCost(Type *Tp,
-                                                          ScalarEvolution *SE,
-                                                          const SCEV *S) const {
+InstructionCost
+HexagonTTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                          const SCEV *S,
+                                          TTI::TargetCostKind CostKind) const {
   return 0;
 }
 
@@ -226,10 +231,12 @@ HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       CostKind);
 }
 
-InstructionCost HexagonTTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+InstructionCost
+HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                               VectorType *SrcTy, ArrayRef<int> Mask,
+                               TTI::TargetCostKind CostKind, int Index,
+                               VectorType *SubTp, ArrayRef<const Value *> Args,
+                               const Instruction *CxtI) const {
   return 1;
 }
 
@@ -316,8 +323,9 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
 
 InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
-                                                   unsigned Index, Value *Op0,
-                                                   Value *Op1) const {
+                                                   unsigned Index,
+                                                   const Value *Op0,
+                                                   const Value *Op1) const {
   Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
                                    : Val;
   if (Opcode == Instruction::InsertElement) {
@@ -348,6 +356,61 @@ bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/,
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
   return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
+}
+
+bool HexagonTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) const {
+  // For now assume we can not deal with all HVX datatypes.
+  if (!Ty->isVectorTy() || !ST.isTypeForHVX(Ty) ||
+      !HexagonAllowScatterGatherHVX)
+    return false;
+  // This must be in sync with HexagonVectorCombine pass.
+  switch (Ty->getScalarSizeInBits()) {
+  case 8:
+    return (getTypeNumElements(Ty) == 128);
+  case 16:
+    if (getTypeNumElements(Ty) == 64 || getTypeNumElements(Ty) == 32)
+      return (Alignment >= 2);
+    break;
+  case 32:
+    if (getTypeNumElements(Ty) == 32)
+      return (Alignment >= 4);
+    break;
+  default:
+    break;
+  }
+  return false;
+}
+
+bool HexagonTTIImpl::isLegalMaskedScatter(Type *Ty, Align Alignment) const {
+  if (!Ty->isVectorTy() || !ST.isTypeForHVX(Ty) ||
+      !HexagonAllowScatterGatherHVX)
+    return false;
+  // This must be in sync with HexagonVectorCombine pass.
+  switch (Ty->getScalarSizeInBits()) {
+  case 8:
+    return (getTypeNumElements(Ty) == 128);
+  case 16:
+    if (getTypeNumElements(Ty) == 64)
+      return (Alignment >= 2);
+    break;
+  case 32:
+    if (getTypeNumElements(Ty) == 32)
+      return (Alignment >= 4);
+    break;
+  default:
+    break;
+  }
+  return false;
+}
+
+bool HexagonTTIImpl::forceScalarizeMaskedGather(VectorType *VTy,
+                                                Align Alignment) const {
+  return !isLegalMaskedGather(VTy, Alignment);
+}
+
+bool HexagonTTIImpl::forceScalarizeMaskedScatter(VectorType *VTy,
+                                                 Align Alignment) const {
+  return !isLegalMaskedScatter(VTy, Alignment);
 }
 
 /// --- Vector TTI end ---

@@ -50,7 +50,6 @@ using mlir::tblgen::EnumCase;
 using mlir::tblgen::EnumInfo;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
-using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//
@@ -115,13 +114,12 @@ Availability::Availability(const Record *def) : def(def) {
 }
 
 StringRef Availability::getClass() const {
-  SmallVector<const Record *, 1> parentClass;
-  def->getDirectSuperClasses(parentClass);
-  if (parentClass.size() != 1) {
+  if (def->getDirectSuperClasses().size() != 1) {
     PrintFatalError(def->getLoc(),
                     "expected to only have one direct superclass");
   }
-  return parentClass.front()->getName();
+  const Record *parentClass = def->getDirectSuperClasses().front().first;
+  return parentClass->getName();
 }
 
 StringRef Availability::getInterfaceClassNamespace() const {
@@ -205,18 +203,17 @@ static bool emitInterfaceDefs(const RecordKeeper &records, raw_ostream &os) {
   auto defs = records.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 1> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<const Record *, 1> parent;
-    def->getDirectSuperClasses(parent);
-    if (parent.size() != 1) {
+    if (def->getDirectSuperClasses().size() != 1) {
       PrintFatalError(def->getLoc(),
                       "expected to only have one direct superclass");
     }
-    if (llvm::is_contained(handledClasses, parent.front()))
+    const Record *parent = def->getDirectSuperClasses().front().first;
+    if (llvm::is_contained(handledClasses, parent))
       continue;
 
     Availability availability(def);
     emitInterfaceDef(availability, os);
-    handledClasses.push_back(parent.front());
+    handledClasses.push_back(parent);
   }
   return false;
 }
@@ -262,8 +259,8 @@ static void emitInterfaceDecl(const Availability &availability,
   std::string interfaceTraitsName =
       std::string(formatv("{0}Traits", interfaceName));
 
-  StringRef cppNamespace = availability.getInterfaceClassNamespace();
-  NamespaceEmitter nsEmitter(os, cppNamespace);
+  llvm::NamespaceEmitter nsEmitter(os,
+                                   availability.getInterfaceClassNamespace());
   os << "class " << interfaceName << ";\n\n";
 
   // Emit the traits struct containing the concept and model declarations.
@@ -294,18 +291,17 @@ static bool emitInterfaceDecls(const RecordKeeper &records, raw_ostream &os) {
   auto defs = records.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 4> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<const Record *, 1> parent;
-    def->getDirectSuperClasses(parent);
-    if (parent.size() != 1) {
+    if (def->getDirectSuperClasses().size() != 1) {
       PrintFatalError(def->getLoc(),
                       "expected to only have one direct superclass");
     }
-    if (llvm::is_contained(handledClasses, parent.front()))
+    const Record *parent = def->getDirectSuperClasses().front().first;
+    if (llvm::is_contained(handledClasses, parent))
       continue;
 
     Availability avail(def);
     emitInterfaceDecl(avail, os);
-    handledClasses.push_back(parent.front());
+    handledClasses.push_back(parent);
   }
   return false;
 }
@@ -400,10 +396,9 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                   avail.getMergeInstanceType(), avail.getQueryFnName(),
                   enumName);
 
-    os << formatv(
-        "  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
-        " && \"cannot have more than one bit set\");\n",
-        underlyingType);
+    os << formatv("  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
+                  " && \"cannot have more than one bit set\");\n",
+                  underlyingType);
 
     os << "  switch (value) {\n";
     for (const auto &caseSpecPair : classCasePair.getValue()) {
@@ -423,15 +418,9 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
 static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
   StringRef enumName = enumInfo.getEnumClassName();
-  StringRef cppNamespace = enumInfo.getCppNamespace();
   auto enumerants = enumInfo.getAllCases();
 
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
   llvm::StringSet<> handledClasses;
 
   // Place all availability specifications to their corresponding
@@ -446,9 +435,6 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
                     enumName);
       handledClasses.insert(className);
     }
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
@@ -464,31 +450,19 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
 
 static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
-  StringRef cppNamespace = enumInfo.getCppNamespace();
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
 
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
-  if (enumInfo.isBitEnum()) {
+  if (enumInfo.isBitEnum())
     emitAvailabilityQueryForBitEnum(enumDef, os);
-  } else {
+  else
     emitAvailabilityQueryForIntEnum(enumDef, os);
-  }
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
-  os << "\n";
 }
 
 static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Definitions", os,
                              records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumInfo");
-  for (const auto *def : defs)
+  for (const Record *def : records.getAllDerivedDefinitions("EnumInfo"))
     emitEnumDef(*def, os);
 
   return false;
@@ -936,7 +910,8 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
   // Process operands/attributes
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto *valueArg = llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
+    if (auto *valueArg =
+            llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(
@@ -1047,7 +1022,7 @@ static void emitDeserializationFunction(const Record *attrClass,
   emitDecorationDeserialization(op, "  ", valueID, attributes, os);
 
   os << formatv("  Location loc = createFileLineColLoc(opBuilder);\n");
-  os << formatv("  auto {1} = opBuilder.create<{0}>(loc, {2}, {3}, {4}); "
+  os << formatv("  auto {1} = {0}::create(opBuilder, loc, {2}, {3}, {4}); "
                 "(void){1};\n",
                 op.getQualCppClassName(), opVar, resultTypes, operands,
                 attributes);
@@ -1183,8 +1158,7 @@ static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Serialization Utilities/Functions", os,
                              records);
 
-  std::string dSerFnString, dDesFnString, serFnString, deserFnString,
-      utilsString;
+  std::string dSerFnString, dDesFnString, serFnString, deserFnString;
   raw_string_ostream dSerFn(dSerFnString), dDesFn(dDesFnString),
       serFn(serFnString), deserFn(deserFnString);
   const Record *attrClass = records.getClass("Attr");

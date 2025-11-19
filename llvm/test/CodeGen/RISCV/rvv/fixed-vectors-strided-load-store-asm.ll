@@ -36,7 +36,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
@@ -122,7 +122,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ <i64 31, i64 30, i64 29, i64 28, i64 27, i64 26, i64 25, i64 24, i64 23, i64 22, i64 21, i64 20, i64 19, i64 18, i64 17, i64 16, i64 15, i64 14, i64 13, i64 12, i64 11, i64 10, i64 9, i64 8, i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
@@ -161,7 +161,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ zeroinitializer, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
@@ -199,7 +199,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ zeroinitializer, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <8 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 4
   %i4 = add <8 x i32> %wide.load, %wide.masked.gather
@@ -274,7 +274,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ zeroinitializer, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = udiv <32 x i8> %wide.masked.gather, %wide.load
@@ -320,7 +320,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %wide.load = load <32 x i8>, ptr %i, align 1
   %i2 = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i3 = getelementptr inbounds i8, ptr %A, <32 x i64> %i2
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i3, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i3, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i4 = add <32 x i8> %wide.masked.gather, %wide.load
   call void @llvm.masked.scatter.v32i8.v32p0(<32 x i8> %i4, <32 x ptr> %i3, i32 1, <32 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 32
@@ -411,7 +411,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = shl nsw <8 x i64> %vec.ind, splat (i64 2)
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 1
   %i4 = add <8 x i32> %wide.load, %wide.masked.gather
@@ -459,7 +459,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %wide.load = load <8 x i32>, ptr %i, align 1
   %i2 = shl nuw nsw <8 x i64> %vec.ind, splat (i64 2)
   %i3 = getelementptr inbounds i32, ptr %A, <8 x i64> %i2
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i3, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i3, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i4 = add <8 x i32> %wide.masked.gather, %wide.load
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i4, <8 x ptr> %i3, i32 4, <8 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 8
@@ -513,8 +513,8 @@ vector.body:                                      ; preds = %vector.body, %entry
   %step.add = add <8 x i64> %vec.ind, splat (i64 8)
   %i = getelementptr inbounds %struct.foo, ptr %B, <8 x i64> %vec.ind, i32 1
   %i1 = getelementptr inbounds %struct.foo, ptr %B, <8 x i64> %step.add, i32 1
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
-  %wide.masked.gather9 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
+  %wide.masked.gather9 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 4
   %i4 = getelementptr inbounds i32, ptr %i2, i64 8
@@ -585,33 +585,33 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 4, i64 8, i64 12, i64 16, i64 20, i64 24, i64 28>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = shl nuw nsw <8 x i64> %vec.ind, splat (i64 2)
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i32, ptr %A, <8 x i64> %vec.ind
-  %wide.masked.gather52 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i2, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather52 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i2, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i3 = add nsw <8 x i32> %wide.masked.gather52, %wide.masked.gather
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i3, <8 x ptr> %i2, i32 4, <8 x i1> splat (i1 true))
   %i4 = or disjoint <8 x i64> %vec.ind, splat (i64 1)
   %i5 = shl nsw <8 x i64> %i4, splat (i64 2)
   %i6 = getelementptr inbounds i32, ptr %B, <8 x i64> %i5
-  %wide.masked.gather53 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i6, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather53 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i6, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i7 = getelementptr inbounds i32, ptr %A, <8 x i64> %i4
-  %wide.masked.gather54 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i7, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather54 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i7, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i8 = add nsw <8 x i32> %wide.masked.gather54, %wide.masked.gather53
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i8, <8 x ptr> %i7, i32 4, <8 x i1> splat (i1 true))
   %i9 = or disjoint <8 x i64> %vec.ind, splat (i64 2)
   %i10 = shl nsw <8 x i64> %i9, splat (i64 2)
   %i11 = getelementptr inbounds i32, ptr %B, <8 x i64> %i10
-  %wide.masked.gather55 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i11, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather55 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i11, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i12 = getelementptr inbounds i32, ptr %A, <8 x i64> %i9
-  %wide.masked.gather56 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i12, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather56 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i12, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i13 = add nsw <8 x i32> %wide.masked.gather56, %wide.masked.gather55
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i13, <8 x ptr> %i12, i32 4, <8 x i1> splat (i1 true))
   %i14 = or disjoint <8 x i64> %vec.ind, <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>
   %i15 = shl nsw <8 x i64> %i14, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
   %i16 = getelementptr inbounds i32, ptr %B, <8 x i64> %i15
-  %wide.masked.gather57 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i16, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather57 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i16, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i17 = getelementptr inbounds i32, ptr %A, <8 x i64> %i14
-  %wide.masked.gather58 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i17, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather58 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i17, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i18 = add nsw <8 x i32> %wide.masked.gather58, %wide.masked.gather57
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i18, <8 x ptr> %i17, i32 4, <8 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 8
@@ -653,28 +653,31 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; ZVE32F-LABEL: gather_of_pointers:
 ; ZVE32F:       # %bb.0: # %bb
 ; ZVE32F-NEXT:    li a2, 0
-; ZVE32F-NEXT:    lui a4, 2
-; ZVE32F-NEXT:    li a3, 1
-; ZVE32F-NEXT:    add a4, a0, a4
-; ZVE32F-NEXT:    li a5, 40
+; ZVE32F-NEXT:    lui a3, 2
+; ZVE32F-NEXT:    add a3, a0, a3
+; ZVE32F-NEXT:    li a4, 1
 ; ZVE32F-NEXT:  .LBB12_1: # %bb2
 ; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
-; ZVE32F-NEXT:    mul a6, a3, a5
-; ZVE32F-NEXT:    mul a7, a2, a5
+; ZVE32F-NEXT:    slli a5, a4, 3
+; ZVE32F-NEXT:    slli a6, a4, 5
+; ZVE32F-NEXT:    slli a7, a2, 3
+; ZVE32F-NEXT:    slli t0, a2, 5
 ; ZVE32F-NEXT:    addi a2, a2, 4
-; ZVE32F-NEXT:    add a6, a1, a6
+; ZVE32F-NEXT:    add a5, a6, a5
+; ZVE32F-NEXT:    add a7, t0, a7
+; ZVE32F-NEXT:    add a5, a1, a5
 ; ZVE32F-NEXT:    add a7, a1, a7
-; ZVE32F-NEXT:    ld t0, 0(a7)
-; ZVE32F-NEXT:    ld t1, 0(a6)
+; ZVE32F-NEXT:    ld a6, 0(a7)
+; ZVE32F-NEXT:    ld t0, 0(a5)
 ; ZVE32F-NEXT:    ld a7, 80(a7)
-; ZVE32F-NEXT:    ld a6, 80(a6)
-; ZVE32F-NEXT:    sd t0, 0(a0)
-; ZVE32F-NEXT:    sd t1, 8(a0)
+; ZVE32F-NEXT:    ld a5, 80(a5)
+; ZVE32F-NEXT:    sd a6, 0(a0)
+; ZVE32F-NEXT:    sd t0, 8(a0)
 ; ZVE32F-NEXT:    sd a7, 16(a0)
-; ZVE32F-NEXT:    sd a6, 24(a0)
+; ZVE32F-NEXT:    sd a5, 24(a0)
 ; ZVE32F-NEXT:    addi a0, a0, 32
-; ZVE32F-NEXT:    addi a3, a3, 4
-; ZVE32F-NEXT:    bne a0, a4, .LBB12_1
+; ZVE32F-NEXT:    addi a4, a4, 4
+; ZVE32F-NEXT:    bne a0, a3, .LBB12_1
 ; ZVE32F-NEXT:  # %bb.2: # %bb18
 ; ZVE32F-NEXT:    ret
 ;
@@ -701,28 +704,31 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; OPTV-LABEL: gather_of_pointers:
 ; OPTV:       # %bb.0: # %bb
 ; OPTV-NEXT:    li a2, 0
-; OPTV-NEXT:    lui a4, 2
-; OPTV-NEXT:    li a3, 1
-; OPTV-NEXT:    add a4, a0, a4
-; OPTV-NEXT:    li a5, 40
+; OPTV-NEXT:    lui a3, 2
+; OPTV-NEXT:    add a3, a0, a3
+; OPTV-NEXT:    li a4, 1
 ; OPTV-NEXT:  .LBB12_1: # %bb2
 ; OPTV-NEXT:    # =>This Inner Loop Header: Depth=1
-; OPTV-NEXT:    mul a6, a3, a5
-; OPTV-NEXT:    mul a7, a2, a5
+; OPTV-NEXT:    slli a5, a4, 3
+; OPTV-NEXT:    slli a6, a4, 5
+; OPTV-NEXT:    slli a7, a2, 3
+; OPTV-NEXT:    slli t0, a2, 5
 ; OPTV-NEXT:    addi a2, a2, 4
-; OPTV-NEXT:    add a6, a1, a6
+; OPTV-NEXT:    add a5, a6, a5
+; OPTV-NEXT:    add a7, t0, a7
+; OPTV-NEXT:    add a5, a1, a5
 ; OPTV-NEXT:    add a7, a1, a7
-; OPTV-NEXT:    ld t0, 0(a7)
-; OPTV-NEXT:    ld t1, 0(a6)
+; OPTV-NEXT:    ld a6, 0(a7)
+; OPTV-NEXT:    ld t0, 0(a5)
 ; OPTV-NEXT:    ld a7, 80(a7)
-; OPTV-NEXT:    ld a6, 80(a6)
-; OPTV-NEXT:    sd t0, 0(a0)
-; OPTV-NEXT:    sd t1, 8(a0)
+; OPTV-NEXT:    ld a5, 80(a5)
+; OPTV-NEXT:    sd a6, 0(a0)
+; OPTV-NEXT:    sd t0, 8(a0)
 ; OPTV-NEXT:    sd a7, 16(a0)
-; OPTV-NEXT:    sd a6, 24(a0)
+; OPTV-NEXT:    sd a5, 24(a0)
 ; OPTV-NEXT:    addi a0, a0, 32
-; OPTV-NEXT:    addi a3, a3, 4
-; OPTV-NEXT:    bne a0, a4, .LBB12_1
+; OPTV-NEXT:    addi a4, a4, 4
+; OPTV-NEXT:    bne a0, a3, .LBB12_1
 ; OPTV-NEXT:  # %bb.2: # %bb18
 ; OPTV-NEXT:    ret
 bb:
@@ -736,8 +742,8 @@ bb2:                                              ; preds = %bb2, %bb
   %i6 = add <2 x i64> %i5, <i64 10, i64 10>
   %i7 = getelementptr inbounds ptr, ptr %arg1, <2 x i64> %i4
   %i8 = getelementptr inbounds ptr, ptr %arg1, <2 x i64> %i6
-  %i9 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i7, i32 8, <2 x i1> splat (i1 true), <2 x ptr> undef)
-  %i10 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i8, i32 8, <2 x i1> splat (i1 true), <2 x ptr> undef)
+  %i9 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i7, i32 8, <2 x i1> splat (i1 true), <2 x ptr> poison)
+  %i10 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i8, i32 8, <2 x i1> splat (i1 true), <2 x ptr> poison)
   %i11 = getelementptr inbounds ptr, ptr %arg, i64 %i
   store <2 x ptr> %i9, ptr %i11, align 8
   %i13 = getelementptr inbounds ptr, ptr %i11, i64 2
@@ -778,28 +784,31 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; ZVE32F-LABEL: scatter_of_pointers:
 ; ZVE32F:       # %bb.0: # %bb
 ; ZVE32F-NEXT:    li a2, 0
-; ZVE32F-NEXT:    lui a4, 2
-; ZVE32F-NEXT:    li a3, 1
-; ZVE32F-NEXT:    add a4, a1, a4
-; ZVE32F-NEXT:    li a5, 40
+; ZVE32F-NEXT:    lui a3, 2
+; ZVE32F-NEXT:    add a3, a1, a3
+; ZVE32F-NEXT:    li a4, 1
 ; ZVE32F-NEXT:  .LBB13_1: # %bb2
 ; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
-; ZVE32F-NEXT:    ld a6, 0(a1)
-; ZVE32F-NEXT:    ld a7, 8(a1)
-; ZVE32F-NEXT:    ld t0, 16(a1)
-; ZVE32F-NEXT:    ld t1, 24(a1)
-; ZVE32F-NEXT:    mul t2, a3, a5
-; ZVE32F-NEXT:    mul t3, a2, a5
+; ZVE32F-NEXT:    ld a5, 0(a1)
+; ZVE32F-NEXT:    ld a6, 8(a1)
+; ZVE32F-NEXT:    ld a7, 16(a1)
+; ZVE32F-NEXT:    ld t0, 24(a1)
+; ZVE32F-NEXT:    slli t1, a4, 3
+; ZVE32F-NEXT:    slli t2, a4, 5
+; ZVE32F-NEXT:    slli t3, a2, 3
+; ZVE32F-NEXT:    add t1, t2, t1
+; ZVE32F-NEXT:    slli t2, a2, 5
 ; ZVE32F-NEXT:    addi a2, a2, 4
 ; ZVE32F-NEXT:    addi a1, a1, 32
+; ZVE32F-NEXT:    add t2, t2, t3
+; ZVE32F-NEXT:    add t1, a0, t1
 ; ZVE32F-NEXT:    add t2, a0, t2
-; ZVE32F-NEXT:    add t3, a0, t3
-; ZVE32F-NEXT:    sd a6, 0(t3)
-; ZVE32F-NEXT:    sd a7, 0(t2)
-; ZVE32F-NEXT:    sd t0, 80(t3)
-; ZVE32F-NEXT:    sd t1, 80(t2)
-; ZVE32F-NEXT:    addi a3, a3, 4
-; ZVE32F-NEXT:    bne a1, a4, .LBB13_1
+; ZVE32F-NEXT:    sd a5, 0(t2)
+; ZVE32F-NEXT:    sd a6, 0(t1)
+; ZVE32F-NEXT:    sd a7, 80(t2)
+; ZVE32F-NEXT:    sd t0, 80(t1)
+; ZVE32F-NEXT:    addi a4, a4, 4
+; ZVE32F-NEXT:    bne a1, a3, .LBB13_1
 ; ZVE32F-NEXT:  # %bb.2: # %bb18
 ; ZVE32F-NEXT:    ret
 ;
@@ -826,28 +835,31 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; OPTV-LABEL: scatter_of_pointers:
 ; OPTV:       # %bb.0: # %bb
 ; OPTV-NEXT:    li a2, 0
-; OPTV-NEXT:    lui a4, 2
-; OPTV-NEXT:    li a3, 1
-; OPTV-NEXT:    add a4, a1, a4
-; OPTV-NEXT:    li a5, 40
+; OPTV-NEXT:    lui a3, 2
+; OPTV-NEXT:    add a3, a1, a3
+; OPTV-NEXT:    li a4, 1
 ; OPTV-NEXT:  .LBB13_1: # %bb2
 ; OPTV-NEXT:    # =>This Inner Loop Header: Depth=1
-; OPTV-NEXT:    ld a6, 0(a1)
-; OPTV-NEXT:    ld a7, 8(a1)
-; OPTV-NEXT:    ld t0, 16(a1)
-; OPTV-NEXT:    ld t1, 24(a1)
-; OPTV-NEXT:    mul t2, a3, a5
-; OPTV-NEXT:    mul t3, a2, a5
+; OPTV-NEXT:    ld a5, 0(a1)
+; OPTV-NEXT:    ld a6, 8(a1)
+; OPTV-NEXT:    ld a7, 16(a1)
+; OPTV-NEXT:    ld t0, 24(a1)
+; OPTV-NEXT:    slli t1, a4, 3
+; OPTV-NEXT:    slli t2, a4, 5
+; OPTV-NEXT:    slli t3, a2, 3
+; OPTV-NEXT:    add t1, t2, t1
+; OPTV-NEXT:    slli t2, a2, 5
 ; OPTV-NEXT:    addi a2, a2, 4
 ; OPTV-NEXT:    addi a1, a1, 32
+; OPTV-NEXT:    add t2, t2, t3
+; OPTV-NEXT:    add t1, a0, t1
 ; OPTV-NEXT:    add t2, a0, t2
-; OPTV-NEXT:    add t3, a0, t3
-; OPTV-NEXT:    sd a6, 0(t3)
-; OPTV-NEXT:    sd a7, 0(t2)
-; OPTV-NEXT:    sd t0, 80(t3)
-; OPTV-NEXT:    sd t1, 80(t2)
-; OPTV-NEXT:    addi a3, a3, 4
-; OPTV-NEXT:    bne a1, a4, .LBB13_1
+; OPTV-NEXT:    sd a5, 0(t2)
+; OPTV-NEXT:    sd a6, 0(t1)
+; OPTV-NEXT:    sd a7, 80(t2)
+; OPTV-NEXT:    sd t0, 80(t1)
+; OPTV-NEXT:    addi a4, a4, 4
+; OPTV-NEXT:    bne a1, a3, .LBB13_1
 ; OPTV-NEXT:  # %bb.2: # %bb18
 ; OPTV-NEXT:    ret
 bb:
@@ -900,7 +912,7 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    addi a6, a4, 1
 ; CHECK-NEXT:    andi a7, a6, -32
 ; CHECK-NEXT:    add a4, a7, a2
-; CHECK-NEXT:    add a2, a4, a0
+; CHECK-NEXT:    add a2, a0, a4
 ; CHECK-NEXT:    li t1, 5
 ; CHECK-NEXT:    vsetvli zero, t2, e8, m1, ta, ma
 ; CHECK-NEXT:  .LBB14_3: # %bb15
@@ -918,11 +930,11 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    add a2, a0, a4
 ; CHECK-NEXT:    slli a5, a4, 2
 ; CHECK-NEXT:    add a1, a1, a4
-; CHECK-NEXT:    subw a3, a3, a4
+; CHECK-NEXT:    sub a3, a3, a4
 ; CHECK-NEXT:    add a1, a1, a5
 ; CHECK-NEXT:    slli a3, a3, 32
 ; CHECK-NEXT:    srli a3, a3, 32
-; CHECK-NEXT:    add a0, a4, a0
+; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:  .LBB14_6: # %bb35
@@ -962,7 +974,7 @@ bb15:                                             ; preds = %bb15, %bb9
   %i18 = add i64 %i16, %i4
   %i19 = mul nsw <32 x i64> %i17, splat (i64 5)
   %i20 = getelementptr inbounds i8, ptr %arg1, <32 x i64> %i19
-  %i21 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i20, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %i21 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i20, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i22 = getelementptr inbounds i8, ptr %arg, i64 %i18
   %i24 = load <32 x i8>, ptr %i22, align 1
   %i25 = add <32 x i8> %i24, %i21
@@ -1007,10 +1019,7 @@ define void @gather_no_scalar_remainder(ptr noalias nocapture noundef %arg, ptr 
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    beqz a2, .LBB15_3
 ; CHECK-NEXT:  # %bb.1: # %bb2
-; CHECK-NEXT:    addi a2, a2, -16
-; CHECK-NEXT:    andi a2, a2, -16
-; CHECK-NEXT:    add a2, a2, a0
-; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    add a2, a0, a2
 ; CHECK-NEXT:    li a3, 5
 ; CHECK-NEXT:    vsetivli zero, 16, e8, mf2, ta, ma
 ; CHECK-NEXT:  .LBB15_2: # %bb4
@@ -1037,7 +1046,7 @@ bb4:                                              ; preds = %bb4, %bb2
   %i6 = phi <16 x i64> [ %i14, %bb4 ], [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, %bb2 ]
   %i7 = mul <16 x i64> %i6, splat (i64 5)
   %i8 = getelementptr inbounds i8, ptr %arg1, <16 x i64> %i7
-  %i9 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %i8, i32 1, <16 x i1> splat (i1 true), <16 x i8> undef)
+  %i9 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %i8, i32 1, <16 x i1> splat (i1 true), <16 x i8> poison)
   %i10 = getelementptr inbounds i8, ptr %arg, i64 %i5
   %i11 = load <16 x i8>, ptr %i10, align 1
   %i12 = add <16 x i8> %i11, %i9
@@ -1076,7 +1085,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ zeroinitializer, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <8 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds float, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x float> @llvm.masked.gather.v8f32.v32p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x float> undef)
+  %wide.masked.gather = call <8 x float> @llvm.masked.gather.v8f32.v32p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x float> poison)
   %i2 = getelementptr inbounds float, ptr %A, i64 %index
   %wide.load = load <8 x float>, ptr %i2, align 4
   %i4 = fadd <8 x float> %wide.load, %wide.masked.gather

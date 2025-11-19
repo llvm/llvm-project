@@ -15,14 +15,11 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
@@ -77,9 +74,8 @@ fillInterchangeVector(ArrayRef<int64_t> interchangeVector,
 //===----------------------------------------------------------------------===//
 
 /// Verify the tile size options are set in a consistent manner.
-static LogicalResult
-verifyTileSizeOptions(RewriterBase &rewriter, Location loc,
-                      const scf::SCFTilingOptions &options) {
+static LogicalResult verifyOptions(RewriterBase &rewriter, Location loc,
+                                   const scf::SCFTilingOptions &options) {
   // Specifying number of threads is only supported on `scf.forall` op.
   if (options.numThreadsComputationFunction &&
       options.loopType != scf::SCFTilingOptions::LoopType::ForallOp) {
@@ -133,7 +129,7 @@ getUserTileSizesAndNumThreads(RewriterBase &rewriter, TilingInterface op,
     tileSizes.resize(numLoops, zero);
     for (auto [index, range, nt] :
          llvm::enumerate(iterationDomain, numThreads)) {
-      if (isConstantIntValue(nt, 0))
+      if (isZeroInteger(nt))
         continue;
 
       tileSizes[index] = affine::makeComposedFoldedAffineApply(
@@ -156,37 +152,70 @@ getUserTileSizesAndNumThreads(RewriterBase &rewriter, TilingInterface op,
 }
 
 /// Checks if any of the tiled loops are not parallel.
-static void checkSafeToTileToForall(TilingInterface op,
-                                    ArrayRef<OpFoldResult> tileSizes,
+static LogicalResult checkTileSizes(TilingInterface op,
+                                    scf::SCFTilingOptions::LoopType loopType,
+                                    ReductionTilingStrategy reductionStrategy,
+                                    ArrayRef<OpFoldResult> givenTileSizes,
                                     ArrayRef<OpFoldResult> numThreads) {
   auto iterators = op.getLoopIteratorTypes();
-  assert(iterators.size() == tileSizes.size() &&
+  assert(iterators.size() == givenTileSizes.size() &&
          "expected as many tile size values as number of loops");
   assert((numThreads.empty() || (numThreads.size() == iterators.size())) &&
          "when specified, expected number of threads to use for each loop");
 
-  for (auto [index, iterator, tileSize] :
-       llvm::enumerate(iterators, tileSizes)) {
-    // If num threads is specified, check that it is greater than one only for
-    // parallel dimensions.
-    if (!numThreads.empty()) {
-      if (std::optional<int64_t> constNumThreads =
-              getConstantIntValue(numThreads[index])) {
-        if (constNumThreads.value() > 1 &&
+  bool isParallelTiling = false;
+  for (auto [index, iterator, givenTileSize] :
+       llvm::enumerate(iterators, givenTileSizes)) {
+    if (!isConstantIntValue(givenTileSize, 0)) {
+      isParallelTiling |= iterator == utils::IteratorType::parallel;
+    }
+
+    if (loopType == scf::SCFTilingOptions::LoopType::ForallOp &&
+        reductionStrategy == ReductionTilingStrategy::FullReduction) {
+      // If num threads is specified, check that it is greater than one only for
+      // parallel dimensions.
+      if (!numThreads.empty()) {
+        if (std::optional<int64_t> constNumThreads =
+                getConstantIntValue(numThreads[index])) {
+          if (constNumThreads.value() > 1 &&
+              iterator != utils::IteratorType::parallel) {
+            op.emitWarning() << "tiling is not thread safe at axis #" << index;
+          }
+        }
+        continue;
+      }
+
+      if (std::optional<int64_t> constTileSize =
+              getConstantIntValue(givenTileSize)) {
+        if (constTileSize.value() > 0 &&
             iterator != utils::IteratorType::parallel) {
           op.emitWarning() << "tiling is not thread safe at axis #" << index;
         }
       }
-      continue;
-    }
-
-    if (std::optional<int64_t> constTileSize = getConstantIntValue(tileSize)) {
-      if (constTileSize.value() > 0 &&
-          iterator != utils::IteratorType::parallel) {
-        op.emitWarning() << "tiling is not thread safe at axis #" << index;
-      }
     }
   }
+
+  if (reductionStrategy != ReductionTilingStrategy::FullReduction) {
+    if (isParallelTiling) {
+      return op->emitOpError("tiling parallel dimensions is not supported with "
+                             "partial reduction tiling strategies");
+    }
+  }
+  return success();
+}
+
+/// Get the reduction dims that are tiled. This accounts for reduction dims
+/// that are specified as tiled, but the tile size is 0.
+static SetVector<unsigned>
+getSanitizedReductionDims(ArrayRef<OpFoldResult> givenTileSizes,
+                          const scf::SCFTilingOptions &options) {
+  SetVector<unsigned> reductionDims;
+  for (auto dim : options.reductionDims) {
+    if (isConstantIntValue(givenTileSizes[dim], 0))
+      continue;
+    reductionDims.insert(dim);
+  }
+  return reductionDims;
 }
 
 /// Check if `stride` evenly divides the trip count `size - offset`.
@@ -207,14 +236,14 @@ static bool tileDividesIterationDomain(Range loopRange) {
 /// `tileSize`, i.e., `min(tileSize, range.end() - offset)`.
 static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
                                        Range loopRange, OpFoldResult offset,
-                                       OpFoldResult tileSize) {
-  std::optional<int64_t> ts = getConstantIntValue(tileSize);
+                                       OpFoldResult givenTileSize) {
+  std::optional<int64_t> ts = getConstantIntValue(givenTileSize);
   if (ts && ts.value() == 1)
-    return tileSize;
+    return givenTileSize;
 
   if (tileDividesIterationDomain(
-          Range{loopRange.offset, loopRange.size, tileSize}))
-    return tileSize;
+          Range{loopRange.offset, loopRange.size, givenTileSize}))
+    return givenTileSize;
 
   // The tile size to use (to avoid out of bounds access) is  minimum of
   // `tileSize` and `ub - iv`, where `iv` is the induction variable of the tiled
@@ -225,15 +254,15 @@ static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
   AffineMap minMap = AffineMap::get(1, 2, {s0 - d0, s1}, b.getContext());
   Value size = getValueOrCreateConstantIndexOp(b, loc, loopRange.size);
   return affine::makeComposedFoldedAffineMin(
-      b, loc, minMap, SmallVector<OpFoldResult>{offset, size, tileSize});
+      b, loc, minMap, SmallVector<OpFoldResult>{offset, size, givenTileSize});
 }
 
 /// Returns true if the maximum tile offset `tileSize * numThreads-1` is less
 /// than `iterationSize`.
-static bool canOmitTileOffsetInBoundsCheck(OpFoldResult tileSize,
+static bool canOmitTileOffsetInBoundsCheck(OpFoldResult givenTileSize,
                                            OpFoldResult numThreads,
                                            OpFoldResult iterationSize) {
-  std::optional<int64_t> tileSizeConst = getConstantIntValue(tileSize);
+  std::optional<int64_t> tileSizeConst = getConstantIntValue(givenTileSize);
   std::optional<int64_t> numThreadsConst = getConstantIntValue(numThreads);
   std::optional<int64_t> iterSizeConst = getConstantIntValue(iterationSize);
   if (!tileSizeConst || !numThreadsConst || !iterSizeConst)
@@ -247,110 +276,49 @@ static bool canOmitTileOffsetInBoundsCheck(OpFoldResult tileSize,
 static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
 getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
                       ArrayRef<Range> iterationDomain,
-                      ArrayRef<OpFoldResult> tileSizes,
-                      ArrayRef<OpFoldResult> numThreads) {
+                      ArrayRef<OpFoldResult> givenTileSizes) {
   SmallVector<OpFoldResult> offsets, sizes;
   int materializedLoopNum = 0;
+  for (auto [givenTileSize, loopRange] :
+       llvm::zip_equal(givenTileSizes, iterationDomain)) {
 
-  if (!numThreads.empty()) {
-    AffineExpr d0, d1, s0, s1;
-    AffineExpr offsetExpr, residualTileSizeExpr;
-    bindDims(rewriter.getContext(), d0, d1);
-    bindSymbols(rewriter.getContext(), s0, s1);
-    offsetExpr = d0 + d1 * s0;
-    residualTileSizeExpr = s1 - (d0 + d1 * s0);
-
-    for (auto [nt, tileSize, loopRange] :
-         llvm::zip_equal(numThreads, tileSizes, iterationDomain)) {
-
-      // Non-tiled cases, set the offset and size to the
-      // `loopRange.offset/size`.
-      if (isConstantIntValue(nt, 0)) {
-        offsets.push_back(loopRange.offset);
-        sizes.push_back(loopRange.size);
-        continue;
-      }
-
-      Value iv = ivs[materializedLoopNum++];
-      OpFoldResult offset = affine::makeComposedFoldedAffineApply(
-          rewriter, loc, offsetExpr,
-          ArrayRef<OpFoldResult>{loopRange.offset, iv, tileSize});
-      OpFoldResult residualTileSize = affine::makeComposedFoldedAffineApply(
-          rewriter, loc, residualTileSizeExpr,
-          {loopRange.offset, nt, tileSize, loopRange.size});
-
-      OpFoldResult size = tileSize;
-      if (!isConstantIntValue(residualTileSize, 0)) {
-        OpFoldResult sizeMinusOffsetPerThread =
-            affine::makeComposedFoldedAffineApply(rewriter, loc, s0 - d0,
-                                                  {offset, loopRange.size});
-        size = affine::makeComposedFoldedAffineMin(
-            rewriter, loc,
-            AffineMap::getMultiDimIdentityMap(2, rewriter.getContext()),
-            {sizeMinusOffsetPerThread, tileSize});
-      }
-
-      // Consider the case where the original loop was `[0, 100)`.
-      // If number of threads are `7`, the tile size would be computed as
-      // `ceilDiv(100, 7) = 15`. For the last thread (thread_id = 6)
-      // - `offset = 0 + 6 * 15 = 105`
-      // - `tileSize = min(15, 100 - 105) = -5`
-      // To avoid negative tile sizes, we need to do a further
-      // `nonNegativeTileSize = affine.max(0, tileSize)`.
-      // This `max` can be avoided if
-      //  `offset + tileSize * (numThreads - 1) < (ub - lb)`
-      if (!canOmitTileOffsetInBoundsCheck(tileSize, nt, loopRange.size)) {
-        AffineMap maxMap =
-            AffineMap::getMultiDimIdentityMap(2, rewriter.getContext());
-        size = affine::makeComposedFoldedAffineMax(
-            rewriter, loc, maxMap, {rewriter.getIndexAttr(0), size});
-      }
-
-      offsets.push_back(offset);
-      sizes.push_back(size);
+    // Non-tiled cases, set the offset and size to the
+    // `loopRange.offset/size`.
+    if (isZeroInteger(givenTileSize)) {
+      offsets.push_back(loopRange.offset);
+      sizes.push_back(loopRange.size);
+      continue;
     }
-    return {offsets, sizes};
-  } else {
-    for (auto [tileSize, loopRange] :
-         llvm::zip_equal(tileSizes, iterationDomain)) {
 
-      // Non-tiled cases, set the offset and size to the
-      // `loopRange.offset/size`.
-      if (isConstantIntValue(tileSize, 0)) {
-        offsets.push_back(loopRange.offset);
-        sizes.push_back(loopRange.size);
-        continue;
-      }
-
-      Value iv = ivs[materializedLoopNum++];
-      OpFoldResult offset = getAsOpFoldResult(iv);
-      offsets.push_back(offset);
-      OpFoldResult size =
-          getBoundedTileSize(rewriter, loc, loopRange, offset, tileSize);
-      sizes.push_back(size);
-    }
-    return {offsets, sizes};
+    Value iv = ivs[materializedLoopNum++];
+    OpFoldResult offset = getAsOpFoldResult(iv);
+    offsets.push_back(offset);
+    OpFoldResult size =
+        getBoundedTileSize(rewriter, loc, loopRange, offset, givenTileSize);
+    sizes.push_back(size);
   }
+  return {offsets, sizes};
 }
 
 /// Function to return the bounds of the loops to be generated.
 static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
                   SmallVector<OpFoldResult>>
 getLoopBounds(RewriterBase &rewriter, Location loc, ArrayRef<Range> loopRanges,
-              ArrayRef<OpFoldResult> tileSizes) {
+              ArrayRef<OpFoldResult> givenTileSizes) {
   SmallVector<OpFoldResult> lbs, ubs, steps;
-  for (auto [loopRange, tileSize] : llvm::zip_equal(loopRanges, tileSizes)) {
+  for (auto [loopRange, givenTileSize] :
+       llvm::zip_equal(loopRanges, givenTileSizes)) {
     // No loop if the tile size is 0.
-    if (isConstantIntValue(tileSize, 0))
+    if (isZeroInteger(givenTileSize))
       continue;
     lbs.push_back(loopRange.offset);
     ubs.push_back(loopRange.size);
-    steps.push_back(tileSize);
+    steps.push_back(givenTileSize);
   }
   return {lbs, ubs, steps};
 }
 
-/// A function that allows returning additional yielded values during
+/// Typedef for function that allows returning additional yielded values during
 /// `yieldTiledValuesAndReplace`.
 /// - `ivs` induction variable for the loop.
 /// - `newBbArgs` basic block arguments corresponding to newly added iter_args.
@@ -371,6 +339,30 @@ using YieldTiledValuesFn = std::function<LogicalResult(
     SmallVector<SmallVector<OpFoldResult>> &resultOffsets,
     SmallVector<SmallVector<OpFoldResult>> &resultSizes)>;
 
+/// Typedef for function that implements the body of a tiled loop.
+/// - `ivs` induction variable for the loop.
+/// - `tileOffsets` represents offsets for the tiled iteration space.
+/// - `tileSizes` represents the sizes for the tiled iteraiton space.
+/// - `outerDestinationTensors` tensor that holds the result. Is same size
+///   as the destination operands of the original operations.
+/// - `tiledResults` results of the tiled computation, corresponds to
+///   tiles of the original operation computed by the loop body.
+///   Should be same size as the `destinationTensors`
+/// - `resultOffsets` is of the same size as `tiledResults` and represents
+///   the offset to use when writing the corresponding element from
+///   `tiledResults` into `destinationTensors`.
+/// - `resultOffsets` is of the same size as `tiledResults` and represents
+///   the size to use when writing the corresponding element from
+///   `tiledResults` into `destinationTensors`.
+/// In case the method needs to return `failure()` the method is expected
+/// to clean up any inserted operations.
+using GenerateTiledBodyFn = std::function<LogicalResult(
+    RewriterBase &rewriter, Location Loc, ValueRange ivs,
+    ArrayRef<OpFoldResult> tileOffsets, ArrayRef<OpFoldResult> tileSizes,
+    ValueRange outerDestinationTensors, SmallVector<Value> &tiledResults,
+    SmallVector<SmallVector<OpFoldResult>> &resultOffsets,
+    SmallVector<SmallVector<OpFoldResult>> &resultSizes)>;
+
 /// Clones the operation and updates the destination if the operation
 /// implements the `DestinationStyleOpInterface`.
 static Operation *cloneOpAndUpdateDestinationArgs(RewriterBase &rewriter,
@@ -386,26 +378,25 @@ static Operation *cloneOpAndUpdateDestinationArgs(RewriterBase &rewriter,
 
 /// Generate the tile-loop nest using `scf.for` operation.
 /// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
-/// - `tileSizes` is the tile sizes to use. Zero represent untiled loops.
-/// - `destinationTensors` are the init values to use for the outer most loop.
-/// - `yieldTiledValuesFn` is called to generated the loop body of the inner
+/// - `givenTileSizes` is the tile sizes to use. Zero represent untiled loops.
+/// - `outerDestinationTensors` are the init values to use for the outer most
+/// loop.
+/// - `tiledBodyFn` is called to generated the loop body of the inner
 /// most
 ///    loop.
-/// - `loops` is an in-out parameter into which the generated loops are
-///    populated.
-static LogicalResult generateLoopNestUsingForOp(
+/// Returns the generated `scf.for` loops on success.
+static FailureOr<SmallVector<LoopLikeOpInterface>> generateLoopNestUsingForOp(
     RewriterBase &rewriter, Location loc, ArrayRef<Range> loopRanges,
-    ArrayRef<OpFoldResult> tileSizes, ValueRange destinationTensors,
-    YieldTiledValuesFn yieldTiledValuesFn,
-    SmallVector<LoopLikeOpInterface> &loops) {
+    ArrayRef<OpFoldResult> givenTileSizes, ValueRange outerDestinationTensors,
+    GenerateTiledBodyFn tiledBodyFn) {
   assert(!loopRanges.empty() && "unexpected empty loop ranges");
-  assert(loopRanges.size() == tileSizes.size() &&
+  assert(loopRanges.size() == givenTileSizes.size() &&
          "expected as many tile sizes as loop ranges");
   OpBuilder::InsertionGuard guard(rewriter);
 
   SmallVector<OpFoldResult> lbs, ubs, steps;
   std::tie(lbs, ubs, steps) =
-      getLoopBounds(rewriter, loc, loopRanges, tileSizes);
+      getLoopBounds(rewriter, loc, loopRanges, givenTileSizes);
   SmallVector<Value> lbVals =
       getValueOrCreateConstantIndexOp(rewriter, loc, lbs);
   SmallVector<Value> ubVals =
@@ -414,43 +405,53 @@ static LogicalResult generateLoopNestUsingForOp(
       getValueOrCreateConstantIndexOp(rewriter, loc, steps);
 
   SmallVector<Value> ivs;
+  SmallVector<LoopLikeOpInterface> loops;
+  ValueRange innerDestinationTensors(outerDestinationTensors);
   for (auto [lb, ub, step] : llvm::zip_equal(lbVals, ubVals, stepVals)) {
     auto loop =
-        rewriter.create<scf::ForOp>(loc, lb, ub, step, destinationTensors,
-                                    [](OpBuilder &bodyBuilder, Location bodyLoc,
-                                       Value iv, ValueRange /*iterArgs*/) {});
+        scf::ForOp::create(rewriter, loc, lb, ub, step, innerDestinationTensors,
+                           [](OpBuilder &bodyBuilder, Location bodyLoc,
+                              Value iv, ValueRange /*iterArgs*/) {});
     loops.push_back(loop);
     ivs.push_back(loop.getInductionVar());
     rewriter.setInsertionPointToEnd(loop.getBody());
-    destinationTensors = loop.getRegionIterArgs();
-  }
-
-  SmallVector<Value> tiledResults;
-  SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
-  if (failed(yieldTiledValuesFn(rewriter, loc, ivs, destinationTensors,
-                                tiledResults, resultOffsets, resultSizes))) {
-    return rewriter.notifyMatchFailure(
-        loc, "failed to generate inner tile loop body");
+    innerDestinationTensors = loop.getRegionIterArgs();
   }
   if (loops.empty())
     return success();
 
-  assert(tiledResults.size() == destinationTensors.size() &&
+  // Compute the `offsets` and `sizes` to use for tiling.
+  SmallVector<OpFoldResult> offsets, sizes;
+  std::tie(offsets, sizes) =
+      getTileOffsetAndSizes(rewriter, loc, ivs, loopRanges, givenTileSizes);
+
+  SmallVector<Value> tiledResults;
+  SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
+  if (failed(tiledBodyFn(rewriter, loc, ivs, offsets, sizes,
+                         innerDestinationTensors, tiledResults, resultOffsets,
+                         resultSizes))) {
+    return rewriter.notifyMatchFailure(
+        loc, "failed to generate inner tile loop body");
+  }
+  if (loops.empty())
+    return loops;
+
+  assert(tiledResults.size() == innerDestinationTensors.size() &&
          "Number of results of body should be equal to number of iter args");
 
   // 6. Yield all the results of the tiled operation.
   SmallVector<Value> yieldedValues;
   for (auto [tiledValue, destinationTensor, resultOffset, resultSize] :
-       llvm::zip_equal(tiledResults, destinationTensors, resultOffsets,
+       llvm::zip_equal(tiledResults, innerDestinationTensors, resultOffsets,
                        resultSizes)) {
     SmallVector<OpFoldResult> resultStride(resultOffset.size(),
                                            rewriter.getIndexAttr(1));
-    auto insertSlice = rewriter.create<tensor::InsertSliceOp>(
-        loc, tiledValue, destinationTensor, resultOffset, resultSize,
+    auto insertSlice = tensor::InsertSliceOp::create(
+        rewriter, loc, tiledValue, destinationTensor, resultOffset, resultSize,
         resultStride);
     yieldedValues.push_back(insertSlice);
   }
-  rewriter.create<scf::YieldOp>(loc, yieldedValues);
+  scf::YieldOp::create(rewriter, loc, yieldedValues);
 
   // Add the scf.yield operations for all the outer loops.
   for (auto [outerLoop, innerLoop] :
@@ -458,33 +459,112 @@ static LogicalResult generateLoopNestUsingForOp(
                        MutableArrayRef(loops).drop_front())) {
     rewriter.setInsertionPointToEnd(
         cast<scf::ForOp>(outerLoop.getOperation()).getBody());
-    rewriter.create<scf::YieldOp>(outerLoop.getLoc(), innerLoop->getResults());
+    scf::YieldOp::create(rewriter, outerLoop.getLoc(), innerLoop->getResults());
   }
-  return success();
+  return loops;
+}
+
+/// Compute the `OpFoldResult`s that represents the multi-dimensional
+/// `offset`s and `size`s of the tile of the iteration space that the
+/// innermost loop body of the generated tiled loops corresponds to
+/// when tiling using `forall` op. This is handle separately due to
+/// the special case handling needed for when the tiling is done by
+/// specifying number of threads.
+static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
+getTileOffsetAndSizesWithForAllOp(RewriterBase &rewriter, Location loc,
+                                  ValueRange ivs,
+                                  ArrayRef<Range> iterationDomain,
+                                  ArrayRef<OpFoldResult> givenTileSizes,
+                                  ArrayRef<OpFoldResult> numThreads) {
+  if (numThreads.empty()) {
+    return getTileOffsetAndSizes(rewriter, loc, ivs, iterationDomain,
+                                 givenTileSizes);
+  }
+
+  SmallVector<OpFoldResult> offsets, sizes;
+  int materializedLoopNum = 0;
+
+  AffineExpr d0, d1, s0, s1;
+  AffineExpr offsetExpr, residualTileSizeExpr;
+  bindDims(rewriter.getContext(), d0, d1);
+  bindSymbols(rewriter.getContext(), s0, s1);
+  offsetExpr = d0 + d1 * s0;
+  residualTileSizeExpr = s1 - (d0 + d1 * s0);
+
+  for (auto [index, nt, givenTileSize, loopRange] :
+       llvm::enumerate(numThreads, givenTileSizes, iterationDomain)) {
+
+    // Non-tiled cases, set the offset and size to the
+    // `loopRange.offset/size`.
+    if (isZeroInteger(nt)) {
+      offsets.push_back(loopRange.offset);
+      sizes.push_back(loopRange.size);
+      continue;
+    }
+
+    Value iv = ivs[materializedLoopNum++];
+    OpFoldResult offset = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, offsetExpr,
+        ArrayRef<OpFoldResult>{loopRange.offset, iv, givenTileSize});
+    OpFoldResult residualTileSize = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, residualTileSizeExpr,
+        {loopRange.offset, nt, givenTileSize, loopRange.size});
+
+    OpFoldResult size = givenTileSize;
+    if (!isZeroInteger(residualTileSize)) {
+      OpFoldResult sizeMinusOffsetPerThread =
+          affine::makeComposedFoldedAffineApply(rewriter, loc, s0 - d0,
+                                                {offset, loopRange.size});
+      size = affine::makeComposedFoldedAffineMin(
+          rewriter, loc,
+          AffineMap::getMultiDimIdentityMap(2, rewriter.getContext()),
+          {sizeMinusOffsetPerThread, givenTileSize});
+    }
+
+    // Consider the case where the original loop was `[0, 100)`.
+    // If number of threads are `7`, the tile size would be computed as
+    // `ceilDiv(100, 7) = 15`. For the last thread (thread_id = 6)
+    // - `offset = 0 + 6 * 15 = 105`
+    // - `tileSize = min(15, 100 - 105) = -5`
+    // To avoid negative tile sizes, we need to do a further
+    // `nonNegativeTileSize = affine.max(0, tileSize)`.
+    // This `max` can be avoided if
+    //  `offset + tileSize * (numThreads - 1) < (ub - lb)`
+    if (!canOmitTileOffsetInBoundsCheck(givenTileSize, nt, loopRange.size)) {
+      AffineMap maxMap =
+          AffineMap::getMultiDimIdentityMap(2, rewriter.getContext());
+      size = affine::makeComposedFoldedAffineMax(
+          rewriter, loc, maxMap, {rewriter.getIndexAttr(0), size});
+    }
+
+    offsets.push_back(offset);
+    sizes.push_back(size);
+  }
+  return {offsets, sizes};
 }
 
 /// Generate the tile-loop nest using `scf.forall` operation.
 /// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
-/// - `tileSizes` is the tile sizes to use. Zero represent untiled loops.
-/// - `destinationTensors` are the init values to use for the outer most loop.
+/// - `giventileSizes` is the tile sizes to use. Zero represent untiled loops.
+/// - `outerDestinationTensors` are the init values to use for the loop.
 /// - `mappingVector` is the mapping attributes to use for loop construction.
 ///   Can be empty.
-/// - `yieldTiledValuesFn` is called to generated the loop body of the inner
+/// - `tiledBodyFn` is called to generated the loop body of the inner
 /// most
 ///    loop.
-/// - `loops` is an in-out parameter into which the generated loops are
-///    populated.
-static LogicalResult generateLoopNestUsingForallOp(
-    RewriterBase &rewriter, Location loc, ArrayRef<Range> loopRanges,
-    ArrayRef<OpFoldResult> tileSizes, ArrayRef<OpFoldResult> numThreads,
-    ArrayRef<Attribute> mappingVector, ValueRange destinationTensors,
-    YieldTiledValuesFn tiledBodyFn, SmallVector<LoopLikeOpInterface> &loops) {
+/// Returns the generated `scf.forall` loop on success.
+static FailureOr<SmallVector<LoopLikeOpInterface>>
+generateLoopNestUsingForallOp(RewriterBase &rewriter, Location loc,
+                              ArrayRef<Range> loopRanges,
+                              ArrayRef<OpFoldResult> givenTileSizes,
+                              ArrayRef<OpFoldResult> numThreads,
+                              ArrayRef<Attribute> mappingVector,
+                              ValueRange outerDestinationTensors,
+                              GenerateTiledBodyFn tiledBodyFn) {
   assert(!loopRanges.empty() && "unexpected empty loop ranges");
-  assert(loopRanges.size() == tileSizes.size() &&
+  assert(loopRanges.size() == givenTileSizes.size() &&
          "expected as many tile sizes as loop ranges");
   OpBuilder::InsertionGuard guard(rewriter);
-  SmallVector<OpFoldResult> offsets(loopRanges.size()),
-      sizes(loopRanges.size());
 
   std::optional<ArrayAttr> mappingAttr;
   if (!mappingVector.empty())
@@ -493,228 +573,323 @@ static LogicalResult generateLoopNestUsingForallOp(
   scf::ForallOp forallOp;
   bool useNumThreads = !numThreads.empty();
 
+  SmallVector<LoopLikeOpInterface> loops;
   if (useNumThreads) {
     // Prune the zero numthreads.
     SmallVector<OpFoldResult> nonZeroNumThreads;
     for (auto nt : numThreads) {
-      if (isConstantIntValue(nt, 0))
+      if (isZeroInteger(nt))
         continue;
       nonZeroNumThreads.push_back(nt);
     }
-    forallOp = rewriter.create<scf::ForallOp>(loc, nonZeroNumThreads,
-                                              destinationTensors, mappingAttr);
+    forallOp = scf::ForallOp::create(rewriter, loc, nonZeroNumThreads,
+                                     outerDestinationTensors, mappingAttr);
   } else {
     SmallVector<OpFoldResult> lbs, ubs, steps;
     std::tie(lbs, ubs, steps) =
-        getLoopBounds(rewriter, loc, loopRanges, tileSizes);
-    forallOp = rewriter.create<scf::ForallOp>(loc, lbs, ubs, steps,
-                                              destinationTensors, mappingAttr);
+        getLoopBounds(rewriter, loc, loopRanges, givenTileSizes);
+    forallOp = scf::ForallOp::create(rewriter, loc, lbs, ubs, steps,
+                                     outerDestinationTensors, mappingAttr);
   }
   loops.push_back(forallOp);
 
   rewriter.setInsertionPoint(forallOp.getTerminator());
-  destinationTensors = forallOp.getRegionOutArgs();
+  ValueRange innerDestinationTensors = forallOp.getRegionOutArgs();
+  SmallVector<Value> ivs = forallOp.getInductionVars();
+
+  // Compute the `offsets` and `sizes` to use for tiling.
+  SmallVector<OpFoldResult> offsets, sizes;
+  std::tie(offsets, sizes) = getTileOffsetAndSizesWithForAllOp(
+      rewriter, loc, ivs, loopRanges, givenTileSizes, numThreads);
 
   SmallVector<Value> tiledResults;
   SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
-  if (failed(tiledBodyFn(rewriter, loc, forallOp.getInductionVars(),
-                         destinationTensors, tiledResults, resultOffsets,
+  if (failed(tiledBodyFn(rewriter, loc, ivs, offsets, sizes,
+                         innerDestinationTensors, tiledResults, resultOffsets,
                          resultSizes)))
     return rewriter.notifyMatchFailure(loc, "failed to generate loop body");
 
   rewriter.setInsertionPointToEnd(forallOp.getTerminator().getBody());
   for (auto [tiledValue, destinationTensor, resultOffset, resultSize] :
-       llvm::zip_equal(tiledResults, destinationTensors, resultOffsets,
+       llvm::zip_equal(tiledResults, innerDestinationTensors, resultOffsets,
                        resultSizes)) {
     SmallVector<OpFoldResult> resultStride(resultOffset.size(),
                                            rewriter.getIndexAttr(1));
 
-    rewriter.create<tensor::ParallelInsertSliceOp>(
-        loc, tiledValue, destinationTensor, resultOffset, resultSize,
-        resultStride);
+    tensor::ParallelInsertSliceOp::create(rewriter, loc, tiledValue,
+                                          destinationTensor, resultOffset,
+                                          resultSize, resultStride);
   }
-  return success();
+  return loops;
+}
+
+/// Generate the tile-loop nest using custom loop operation.
+/// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
+/// - `tileSizes` is the tile sizes to use. Zero represent untiled loops.
+/// - `destinationTensors` are the init values to use for the outer most loop.
+/// - `mappingVector` is the mapping attributes to use for loop construction.
+///   Can be empty.
+/// - `tiledBodyFn` is called to generated the loop body of the inner
+/// most
+///    loop.
+/// Returns the generated `scf.forall` loop on success.
+static FailureOr<SmallVector<LoopLikeOpInterface>>
+generateLoopNestUsingCustomOp(
+    RewriterBase &rewriter, Location loc, ArrayRef<Range> loopRanges,
+    ArrayRef<OpFoldResult> givenTileSizes, ValueRange outerDestinationTensors,
+    const scf::SCFTilingOptions::GenerateLoopHeaderFn &generateLoopHeaderFn,
+    const scf::SCFTilingOptions::GenerateLoopTerminatorFn
+        &generateLoopTerminatorFn,
+    GenerateTiledBodyFn tiledBodyFn) {
+  assert(!loopRanges.empty() && "unexpected empty loop ranges");
+  assert(loopRanges.size() == givenTileSizes.size() &&
+         "expected as many tile sizes as loop ranges");
+  assert(generateLoopHeaderFn && generateLoopTerminatorFn &&
+         "expected loop header/terminator generation function");
+  OpBuilder::InsertionGuard guard(rewriter);
+
+  FailureOr<scf::SCFTilingOptions::CustomLoopHeaderInfo> loopHeaderInfo =
+      generateLoopHeaderFn(rewriter, loc, loopRanges, givenTileSizes,
+                           outerDestinationTensors);
+  if (failed(loopHeaderInfo)) {
+    return failure();
+  }
+
+  SmallVector<Value> ivs;
+  SmallVector<Value> tiledResults;
+  SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
+  if (failed(tiledBodyFn(rewriter, loc, ivs, loopHeaderInfo->tileOffset,
+                         loopHeaderInfo->tileSizes,
+                         loopHeaderInfo->destinationTensors, tiledResults,
+                         resultOffsets, resultSizes))) {
+    return failure();
+  }
+
+  if (failed(generateLoopTerminatorFn(rewriter, loc, loopHeaderInfo->loops,
+                                      tiledResults, resultOffsets, resultSizes,
+                                      loopHeaderInfo->destinationTensors))) {
+    return failure();
+  }
+
+  return loopHeaderInfo->loops;
 }
 
 /// Generate the tile-loop nest using the loop construct specifed in `options`.
 /// - `options`: Tiling options specified.
 /// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
 /// - `tileSizes` is the tile sizes to use. Zero represent untiled loops.
-/// - `destinationTensors` are the init values to use for the outer most loop.
+/// - `outerDestinationTensors` are the init values to use for the outer most
+/// loop.
 /// - `yieldTiledValuesFn` is called to generated the loop body of the inner
 /// most
 ///    loop.
-/// - `loops` is an in-out parameter into which the generated loops are
-///    populated.
-static LogicalResult generateLoopNest(
+/// Returns the generated loops on success.
+static FailureOr<SmallVector<LoopLikeOpInterface>> generateLoopNest(
     RewriterBase &rewriter, Location loc, const scf::SCFTilingOptions &options,
-    ArrayRef<Range> loopRanges, ArrayRef<OpFoldResult> tileSizes,
+    ArrayRef<Range> loopRanges, ArrayRef<OpFoldResult> givenTileSizes,
     ArrayRef<OpFoldResult> numThreads, ValueRange destinationTensors,
-    YieldTiledValuesFn tiledBodyFn, SmallVector<LoopLikeOpInterface> &loops) {
+    GenerateTiledBodyFn tiledBodyFn) {
   // If the tile sizes are all zero, no loops are generated. Just call the
   // callback function to handle untiled case.
-  if (llvm::all_of(tileSizes, isZeroIndex)) {
+  if (llvm::all_of(givenTileSizes, isZeroInteger)) {
     SmallVector<Value> tiledResults;
     SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
-    return tiledBodyFn(rewriter, loc, ValueRange{}, destinationTensors,
-                       tiledResults, resultOffsets, resultSizes);
+    auto tileOffsets =
+        llvm::map_to_vector(loopRanges, [](Range r) { return r.offset; });
+    auto tileSizes =
+        llvm::map_to_vector(loopRanges, [](Range r) { return r.size; });
+    if (failed(tiledBodyFn(rewriter, loc, ValueRange{}, tileOffsets, tileSizes,
+                           destinationTensors, tiledResults, resultOffsets,
+                           resultSizes))) {
+      return failure();
+    }
+    return SmallVector<LoopLikeOpInterface>{};
   }
   if (options.loopType == scf::SCFTilingOptions::LoopType::ForOp) {
-    return generateLoopNestUsingForOp(rewriter, loc, loopRanges, tileSizes,
-                                      destinationTensors, tiledBodyFn, loops);
+    return generateLoopNestUsingForOp(rewriter, loc, loopRanges, givenTileSizes,
+                                      destinationTensors, tiledBodyFn);
   }
   if (options.loopType == scf::SCFTilingOptions::LoopType::ForallOp) {
     return generateLoopNestUsingForallOp(
-        rewriter, loc, loopRanges, tileSizes, numThreads, options.mappingVector,
-        destinationTensors, tiledBodyFn, loops);
+        rewriter, loc, loopRanges, givenTileSizes, numThreads,
+        options.mappingVector, destinationTensors, tiledBodyFn);
+  }
+  if (options.loopType == scf::SCFTilingOptions::LoopType::CustomOp) {
+    return generateLoopNestUsingCustomOp(
+        rewriter, loc, loopRanges, givenTileSizes, destinationTensors,
+        options.generateLoopHeaderFn, options.generateLoopTerminatorFn,
+        tiledBodyFn);
   }
   return rewriter.notifyMatchFailure(loc, "unhandled loop type");
 }
 
-static FailureOr<SmallVector<Value>>
-createInitialTensorsForTiling(RewriterBase &rewriter, TilingInterface op,
-                              ArrayRef<OpFoldResult> tileSizes,
-                              const scf::SCFTilingOptions &options) {
+static FailureOr<SmallVector<Value>> createInitialTensorsForTiling(
+    RewriterBase &rewriter, TilingInterface op,
+    ReductionTilingStrategy reductionStrategy, ArrayRef<Range> iterationDomain,
+    ArrayRef<OpFoldResult> numThreads, ArrayRef<OpFoldResult> givenTileSizes,
+    const SetVector<unsigned> &reductionDims) {
   SmallVector<Value> initTensors;
   Location loc = op->getLoc();
-  switch (options.reductionStrategy) {
-  case scf::SCFTilingOptions::ReductionTilingStrategy::FullReduction:
+  if (reductionStrategy == ReductionTilingStrategy::FullReduction) {
     if (failed(tensor::getOrCreateDestinations(rewriter, loc, op, initTensors)))
       return failure();
     return initTensors;
-  case scf::SCFTilingOptions::ReductionTilingStrategy::
-      PartialReductionOuterReduction: {
-    auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
-    if (!redOp) {
-      return rewriter.notifyMatchFailure(
-          op, "PartialReductionOuterReduction tiling strategy is only supported"
-              "for operations implementing PartialReductionOpInterface");
-    }
-    // Get reduction dimensions.
-    // TODO: PartialReductionOpInterface should really query TilingInterface
-    // itself and find reduction dimensions.
-    SmallVector<int> reductionDims;
-    for (auto [idx, iteratorType] :
-         llvm::enumerate(op.getLoopIteratorTypes())) {
-      if (iteratorType == utils::IteratorType::reduction)
-        reductionDims.push_back(idx);
-    }
-    return redOp.generateInitialTensorForPartialReduction(
-        rewriter, loc, tileSizes, reductionDims);
   }
-  default:
-    return rewriter.notifyMatchFailure(op,
-                                       "unhandled reduction tiling strategy");
+
+  auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
+  if (!redOp) {
+    return op->emitOpError(
+        "PartialReductionOuterReduction tiling strategy is only supported for "
+        "operations implementing PartialReductionOpInterface");
   }
+  SmallVector<OpFoldResult> sizes(iterationDomain.size());
+  AffineExpr s0, s1, s2;
+  bindSymbols(rewriter.getContext(), s0, s1, s2);
+  AffineExpr sizeExpr = ((s0 - s1).ceilDiv(s2));
+  AffineExpr divExpr = s0.ceilDiv(s1);
+  for (auto [index, domain, tileSize] :
+       llvm::enumerate(iterationDomain, givenTileSizes)) {
+    if (!numThreads.empty()) {
+      // Untiled case.
+      if (isConstantIntValue(numThreads[index], 0)) {
+        sizes[index] = affine::makeComposedFoldedAffineApply(
+            rewriter, op.getLoc(), sizeExpr,
+            {domain.size, domain.offset, domain.stride});
+        continue;
+      }
+      sizes[index] = numThreads[index];
+      continue;
+    }
+
+    // Non reduction dimensions/non-tiled dimensions.
+    if (!reductionDims.contains(index) || isConstantIntValue(tileSize, 0)) {
+      sizes[index] = affine::makeComposedFoldedAffineApply(
+          rewriter, op.getLoc(), sizeExpr,
+          {domain.size, domain.offset, domain.stride});
+      continue;
+    }
+
+    if (reductionStrategy ==
+        ReductionTilingStrategy::PartialReductionOuterReduction) {
+      sizes[index] = tileSize;
+      continue;
+    }
+
+    assert(reductionStrategy ==
+           ReductionTilingStrategy::PartialReductionOuterParallel);
+    OpFoldResult normalizedRange = affine::makeComposedFoldedAffineApply(
+        rewriter, op.getLoc(), sizeExpr,
+        {domain.size, domain.offset, domain.stride});
+    sizes[index] = affine::makeComposedFoldedAffineApply(
+        rewriter, op.getLoc(), divExpr, {normalizedRange, tileSize});
+  }
+  return redOp.generateInitialTensorForPartialReduction(rewriter, loc, sizes,
+                                                        reductionDims);
+}
+
+/// For the case of `ReductionTilingStrategy::PartialReductionOuterParallel`
+/// the `PartialReductionOpInterface` methods need the index of the parallel
+/// split reduction being executed.
+static SmallVector<OpFoldResult>
+getSplitReductionIvs(RewriterBase &rewriter, Location loc,
+                     ReductionTilingStrategy reductionStrategy, ValueRange ivs,
+                     ArrayRef<OpFoldResult> numThreads,
+                     ArrayRef<OpFoldResult> givenTileSizes,
+                     const SetVector<unsigned> &reductionDims) {
+  SmallVector<OpFoldResult> splitReductionIvs;
+  splitReductionIvs.resize(reductionDims.size(), rewriter.getIndexAttr(0));
+  AffineExpr s0, s1;
+  bindSymbols(rewriter.getContext(), s0, s1);
+  AffineExpr divExpr = s0.floorDiv(s1);
+  int ivIndex = 0;
+  if (reductionStrategy ==
+      ReductionTilingStrategy::PartialReductionOuterParallel) {
+    for (auto [index, reductionDim] : llvm::enumerate(reductionDims)) {
+      if (!numThreads.empty()) {
+        splitReductionIvs[index] = ivs[ivIndex++];
+        continue;
+      }
+      splitReductionIvs[index] = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, divExpr,
+          ArrayRef<OpFoldResult>{ivs[ivIndex++], givenTileSizes[reductionDim]});
+    }
+  }
+  return splitReductionIvs;
 }
 
 static FailureOr<TilingResult>
 getTiledImplementation(RewriterBase &rewriter, TilingInterface op,
+                       ReductionTilingStrategy reductionStrategy,
                        ValueRange regionIterArg, ArrayRef<OpFoldResult> offsets,
-                       ArrayRef<OpFoldResult> sizes,
-                       const scf::SCFTilingOptions &options) {
-  switch (options.reductionStrategy) {
-  case scf::SCFTilingOptions::ReductionTilingStrategy::FullReduction:
+                       ArrayRef<OpFoldResult> sizes, ValueRange ivs,
+                       ArrayRef<OpFoldResult> numThreads,
+                       ArrayRef<OpFoldResult> givenTileSizes,
+                       const SetVector<unsigned> &reductionDims) {
+  if (reductionStrategy == ReductionTilingStrategy::FullReduction) {
     return op.getTiledImplementation(rewriter, offsets, sizes);
-  case scf::SCFTilingOptions::ReductionTilingStrategy::
-      PartialReductionOuterReduction: {
-    auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
-    if (!redOp) {
-      return rewriter.notifyMatchFailure(
-          op, "PartialReductionOuterReduction tiling strategy is only "
-              "supported for operations "
-              "implementing PartialReductionOpInterface");
-    }
-    // Get reduction dimensions.
-    // TODO: PartialReductionOpInterface should really query TilingInterface
-    // itself and find reduction dimensions.
-    SmallVector<int> reductionDims;
-    for (auto [idx, iteratorType] :
-         llvm::enumerate(op.getLoopIteratorTypes())) {
-      if (iteratorType == utils::IteratorType::reduction)
-        reductionDims.push_back(idx);
-    }
-    return redOp.tileToPartialReduction(rewriter, op.getLoc(), regionIterArg,
-                                        offsets, sizes, reductionDims);
   }
-  default:
-    return rewriter.notifyMatchFailure(op,
-                                       "unhandled reduction tiling strategy");
+
+  auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
+  if (!redOp) {
+    return rewriter.notifyMatchFailure(
+        op, "PartialReductionOuterReduction tiling strategy is only "
+            "supported for operations "
+            "implementing PartialReductionOpInterface");
   }
+
+  SmallVector<OpFoldResult> splitReductionIvs =
+      getSplitReductionIvs(rewriter, op.getLoc(), reductionStrategy, ivs,
+                           numThreads, givenTileSizes, reductionDims);
+  return redOp.tileToPartialReduction(rewriter, op.getLoc(), reductionStrategy,
+                                      regionIterArg, offsets, sizes,
+                                      reductionDims, splitReductionIvs);
 }
 
-static LogicalResult
-getResultTilePosition(RewriterBase &rewriter, int64_t index, Value tiledResult,
-                      TilingInterface op, ArrayRef<OpFoldResult> offsets,
-                      ArrayRef<OpFoldResult> sizes,
-                      SmallVector<OpFoldResult> &resultOffset,
-                      SmallVector<OpFoldResult> &resultSize,
-                      const scf::SCFTilingOptions &options) {
+static LogicalResult getResultTilePosition(
+    RewriterBase &rewriter, ReductionTilingStrategy reductionStrategy,
+    int64_t index, Value tiledResult, TilingInterface op,
+    ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+    ValueRange ivs, ArrayRef<OpFoldResult> numThreads,
+    ArrayRef<OpFoldResult> givenTileSizes,
+    const SetVector<unsigned> &reductionDims,
+    SmallVector<OpFoldResult> &resultOffset,
+    SmallVector<OpFoldResult> &resultSize) {
 
-  switch (options.reductionStrategy) {
-  case scf::SCFTilingOptions::ReductionTilingStrategy::FullReduction:
+  if (reductionStrategy == ReductionTilingStrategy::FullReduction) {
     return op.getResultTilePosition(rewriter, index, offsets, sizes,
                                     resultOffset, resultSize);
-  case scf::SCFTilingOptions::ReductionTilingStrategy::
-      PartialReductionOuterReduction: {
-    auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
-    if (!redOp) {
-      return rewriter.notifyMatchFailure(
-          op, "PartialReductionOuterReduction tiling strategy is only supported"
-              "for operations implementing PartialReductionOpInterface");
-    }
-    // Get reduction dimensions.
-    // TODO: PartialReductionOpInterface should really query TilingInterface
-    // itself and find reduction dimensions.
-    SmallVector<int> reductionDims;
-    for (auto [idx, iteratorType] :
-         llvm::enumerate(op.getLoopIteratorTypes())) {
-      if (iteratorType == utils::IteratorType::reduction)
-        reductionDims.push_back(idx);
-    }
-    return redOp.getPartialResultTilePosition(rewriter, index, offsets, sizes,
-                                              resultOffset, resultSize,
-                                              reductionDims);
   }
-  default:
-    return rewriter.notifyMatchFailure(op,
-                                       "unhandled reduction tiling strategy");
+  auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
+  if (!redOp) {
+    return rewriter.notifyMatchFailure(
+        op, "PartialReductionOuterReduction tiling strategy is only supported"
+            "for operations implementing PartialReductionOpInterface");
   }
+  SmallVector<OpFoldResult> splitReductionIvs =
+      getSplitReductionIvs(rewriter, op.getLoc(), reductionStrategy, ivs,
+                           numThreads, givenTileSizes, reductionDims);
+  return redOp.getPartialResultTilePosition(
+      rewriter, index, reductionStrategy, offsets, sizes, reductionDims,
+      splitReductionIvs, resultOffset, resultSize);
 }
 
 static FailureOr<MergeResult>
 mergeTilingResults(RewriterBase &rewriter, TilingInterface op,
-                   ValueRange partialResults,
-                   const scf::SCFTilingOptions &options) {
-  switch (options.reductionStrategy) {
-  case scf::SCFTilingOptions::ReductionTilingStrategy::FullReduction:
-    // No need to merge results for reduction tiling strategy.
-    return MergeResult{{}, partialResults};
-  case scf::SCFTilingOptions::ReductionTilingStrategy::
-      PartialReductionOuterReduction: {
-    auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
-    if (!redOp) {
-      return rewriter.notifyMatchFailure(
-          op, "PartialReductionOuterReduction tiling strategy is only "
-              "supported for operations "
-              "implementing PartialReductionOpInterface");
-    }
-    // Get reduction dimensions.
-    // TODO: PartialReductionOpInterface should really query TilingInterface
-    // itself and find reduction dimensions.
-    SmallVector<int> reductionDims;
-    for (auto [idx, iteratorType] :
-         llvm::enumerate(op.getLoopIteratorTypes())) {
-      if (iteratorType == utils::IteratorType::reduction)
-        reductionDims.push_back(idx);
-    }
-    return redOp.mergeReductions(rewriter, op.getLoc(), partialResults,
-                                 reductionDims);
+                   ReductionTilingStrategy reductionStrategy,
+                   const SetVector<unsigned> &reductionDims,
+                   ValueRange partialResults) {
+  assert(reductionStrategy != ReductionTilingStrategy::FullReduction &&
+         "expected merge to be called for only partial reduction cases");
+
+  auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
+  if (!redOp) {
+    return rewriter.notifyMatchFailure(
+        op, "PartialReductionOuterReduction tiling strategy is only "
+            "supported for operations "
+            "implementing PartialReductionOpInterface");
   }
-  default:
-    return rewriter.notifyMatchFailure(op,
-                                       "unhandled reduction tiling strategy");
-  }
+  return redOp.mergeReductions(rewriter, op.getLoc(), partialResults,
+                               reductionDims);
 }
 
 /// Append the specified additional `newInitOperands` operands to the
@@ -743,9 +918,10 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForOp>(
 
   auto inits = llvm::to_vector(loopOp.getInitArgs());
   inits.append(newInitOperands.begin(), newInitOperands.end());
-  auto newLoop = rewriter.create<scf::ForOp>(
-      loc, loopOp.getLowerBound(), loopOp.getUpperBound(), loopOp.getStep(),
-      inits, [](OpBuilder &, Location, Value, ValueRange) {});
+  auto newLoop = scf::ForOp::create(
+      rewriter, loc, loopOp.getLowerBound(), loopOp.getUpperBound(),
+      loopOp.getStep(), inits, [](OpBuilder &, Location, Value, ValueRange) {},
+      loopOp.getUnsignedCmp());
 
   // Move the loop body to the new op.
   Block *loopBody = loopOp.getBody();
@@ -774,9 +950,9 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForOp>(
                        resultSizes)) {
     SmallVector<OpFoldResult> resultStride(resultOffset.size(),
                                            rewriter.getIndexAttr(1));
-    Value insert = rewriter.create<tensor::InsertSliceOp>(
-        yieldOp->getLoc(), tiledValue, regionIterArg, resultOffset, resultSize,
-        resultStride);
+    Value insert = tensor::InsertSliceOp::create(
+        rewriter, yieldOp->getLoc(), tiledValue, regionIterArg, resultOffset,
+        resultSize, resultStride);
     newYieldValues.push_back(insert);
   }
 
@@ -796,8 +972,8 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForallOp>(
   rewriter.setInsertionPoint(loopOp);
   auto inits = llvm::to_vector(loopOp.getOutputs());
   inits.append(newInitOperands.begin(), newInitOperands.end());
-  auto newLoop = rewriter.create<scf::ForallOp>(
-      loc, loopOp.getMixedLowerBound(), loopOp.getMixedUpperBound(),
+  auto newLoop = scf::ForallOp::create(
+      rewriter, loc, loopOp.getMixedLowerBound(), loopOp.getMixedUpperBound(),
       loopOp.getMixedStep(), inits, loopOp.getMapping(),
       [](OpBuilder &, Location, ValueRange) {});
 
@@ -829,9 +1005,9 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForallOp>(
            tiledValues, regionIterArgs, resultOffsets, resultSizes)) {
     SmallVector<OpFoldResult> resultStride(resultOffset.size(),
                                            rewriter.getIndexAttr(1));
-    rewriter.create<tensor::ParallelInsertSliceOp>(
-        terminator.getLoc(), tiledValue, iterArg, resultOffset, resultSize,
-        resultStride);
+    tensor::ParallelInsertSliceOp::create(rewriter, terminator.getLoc(),
+                                          tiledValue, iterArg, resultOffset,
+                                          resultSize, resultStride);
   }
 
   rewriter.replaceOp(loopOp,
@@ -865,7 +1041,6 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop(
 static LogicalResult addInitOperandsToLoopNest(
     RewriterBase &rewriter, MutableArrayRef<LoopLikeOpInterface> loops,
     ValueRange newInitValues, YieldTiledValuesFn getNewTiledYieldsFn) {
-  SmallVector<scf::ForOp> newLoops;
   if (loops.empty())
     return success();
   OpBuilder::InsertionGuard g(rewriter);
@@ -881,10 +1056,11 @@ static LogicalResult addInitOperandsToLoopNest(
     // Create a new loop with the new init values for this loop.
     SmallVector<Value> newInits = llvm::to_vector(forLoop.getInitArgs());
     newInits.append(newInitValues.begin(), newInitValues.end());
-    auto newLoop = rewriter.create<scf::ForOp>(
-        forLoop.getLoc(), forLoop.getLowerBound(), forLoop.getUpperBound(),
-        forLoop.getStep(), newInits,
-        [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {});
+    auto newLoop = scf::ForOp::create(
+        rewriter, forLoop.getLoc(), forLoop.getLowerBound(),
+        forLoop.getUpperBound(), forLoop.getStep(), newInits,
+        [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {},
+        forLoop.getUnsignedCmp());
 
     // Merge the body of the new loop with the body of the old loops.
     SmallVector<Value> sourceBlockArgs;
@@ -935,7 +1111,7 @@ static LogicalResult addInitOperandsToLoopNest(
 FailureOr<scf::SCFTilingResult>
 mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
                         const scf::SCFTilingOptions &options) {
-  if (failed(verifyTileSizeOptions(rewriter, op.getLoc(), options))) {
+  if (failed(verifyOptions(rewriter, op.getLoc(), options))) {
     return failure();
   }
 
@@ -946,15 +1122,20 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   SmallVector<Range> iterationDomain = op.getIterationDomain(rewriter);
 
   // 2. Materialize the tile sizes and/or number of threads;
-  SmallVector<OpFoldResult> tileSizes, numThreads;
-  std::tie(tileSizes, numThreads) =
+  SmallVector<OpFoldResult> givenTileSizes, numThreads;
+  std::tie(givenTileSizes, numThreads) =
       getUserTileSizesAndNumThreads(rewriter, op, iterationDomain, options);
 
   // Check if it is safe to tile. This is hold over from previous iterations
   // of tile to for-all. Consider dropping it.
-  if (options.loopType == scf::SCFTilingOptions::LoopType::ForallOp) {
-    checkSafeToTileToForall(op, tileSizes, numThreads);
+  if (failed(checkTileSizes(op, options.loopType, options.reductionStrategy,
+                            givenTileSizes, numThreads))) {
+    return failure();
   }
+
+  // Get the reduction dims
+  SetVector<unsigned> reductionDims =
+      getSanitizedReductionDims(givenTileSizes, options);
 
   // 3. If there is an interchange specified, permute the iteration domain and
   // the tile sizes.
@@ -966,7 +1147,7 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
            "expected interchange vector to be a permutation");
 
     applyPermutationToVector(iterationDomain, interchangeVector);
-    applyPermutationToVector(tileSizes, interchangeVector);
+    applyPermutationToVector(givenTileSizes, interchangeVector);
     if (!numThreads.empty())
       applyPermutationToVector(numThreads, interchangeVector);
   }
@@ -974,23 +1155,21 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   FailureOr<TilingResult> tilingResult;
   // 4. Define the lambda function used later to generate the body of the
   // innermost tiled loop.
-  YieldTiledValuesFn innerYieldTiledValuesFn =
+  GenerateTiledBodyFn innerYieldTiledValuesFn =
       [&](RewriterBase &rewriter, Location loc, ValueRange ivs,
+          ArrayRef<OpFoldResult> tileOffsets, ArrayRef<OpFoldResult> tileSizes,
           ValueRange regionIterArgs, SmallVector<Value> &tiledResults,
           SmallVector<SmallVector<OpFoldResult>> &resultOffsets,
           SmallVector<SmallVector<OpFoldResult>> &resultSizes)
       -> LogicalResult {
-    // 4a. Compute the `offsets` and `sizes` to use for tiling.
-    SmallVector<OpFoldResult> offsets, sizes;
-    std::tie(offsets, sizes) = getTileOffsetAndSizes(
-        rewriter, loc, ivs, iterationDomain, tileSizes, numThreads);
-
     // 4b. If interchange was provided, apply inverse of the interchange
     //     to get back the offsets/sizes in the order to be specified.
+    SmallVector<OpFoldResult> tileOffsetsVec = llvm::to_vector(tileOffsets);
+    SmallVector<OpFoldResult> tileSizesVec = llvm::to_vector(tileSizes);
     if (!interchangeVector.empty()) {
       auto inversePermutation = invertPermutationVector(interchangeVector);
-      applyPermutationToVector(offsets, inversePermutation);
-      applyPermutationToVector(sizes, inversePermutation);
+      applyPermutationToVector(tileOffsetsVec, inversePermutation);
+      applyPermutationToVector(tileSizesVec, inversePermutation);
     }
 
     // 5. Generate the tiled implementation within the inner most loop.
@@ -1002,7 +1181,7 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
     // 5b. Early return cloned op if tiling is not happening. We can not
     // return the original op because it could lead to `rewriter.replaceOp(op,
     // op->getResults())` and users would get crash.
-    if (llvm::all_of(tileSizes, isZeroIndex)) {
+    if (llvm::all_of(givenTileSizes, isZeroInteger)) {
       tiledResults.append(clonedOp->result_begin(), clonedOp->result_end());
       tilingResult =
           TilingResult{/*tiledOps=*/{clonedOp}, clonedOp->getResults(),
@@ -1011,8 +1190,10 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
     }
 
     // 5c. Tile the cloned operation.
-    tilingResult = getTiledImplementation(rewriter, clonedOp, regionIterArgs,
-                                          offsets, sizes, options);
+    tilingResult =
+        getTiledImplementation(rewriter, clonedOp, options.reductionStrategy,
+                               regionIterArgs, tileOffsetsVec, tileSizesVec,
+                               ivs, numThreads, givenTileSizes, reductionDims);
     if (failed(tilingResult)) {
       rewriter.eraseOp(clonedOp);
       return op.emitOpError("faild to tile operation");
@@ -1027,9 +1208,10 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
          llvm::enumerate(tilingResult->tiledValues)) {
       tiledResults.push_back(tiledValue);
       SmallVector<OpFoldResult> resultOffset, resultSize;
-      if (failed(getResultTilePosition(rewriter, index, tiledValue, op, offsets,
-                                       sizes, resultOffset, resultSize,
-                                       options))) {
+      if (failed(getResultTilePosition(
+              rewriter, options.reductionStrategy, index, tiledValue, op,
+              tileOffsetsVec, tileSizesVec, ivs, numThreads, givenTileSizes,
+              reductionDims, resultOffset, resultSize))) {
         for (auto op : tilingResult->tiledOps) {
           rewriter.eraseOp(op);
         }
@@ -1044,8 +1226,9 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   };
 
   // 6. Find the destination tensors to use for the operation.
-  FailureOr<SmallVector<Value>> maybeInits =
-      createInitialTensorsForTiling(rewriter, op, tileSizes, options);
+  FailureOr<SmallVector<Value>> maybeInits = createInitialTensorsForTiling(
+      rewriter, op, options.reductionStrategy, iterationDomain, numThreads,
+      givenTileSizes, reductionDims);
   if (failed(maybeInits)) {
     return rewriter.notifyMatchFailure(
         op, "unable to create initial tensors for tiling");
@@ -1054,55 +1237,68 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
 
   // 7. Generate the tiled loops nest using the callback defined above.
   SmallVector<LoopLikeOpInterface> loops;
-  if (failed(generateLoopNest(rewriter, op.getLoc(), options, iterationDomain,
-                              tileSizes, numThreads, initTensors,
-                              innerYieldTiledValuesFn, loops)))
-    return op.emitOpError("failed to generate tiling loops");
-  assert(succeeded(tilingResult) &&
-         "expected tiling result to be computed after loop generation");
+  {
+    FailureOr<SmallVector<LoopLikeOpInterface>> loopsOr = generateLoopNest(
+        rewriter, op.getLoc(), options, iterationDomain, givenTileSizes,
+        numThreads, initTensors, innerYieldTiledValuesFn);
+    if (failed(loopsOr))
+      return op.emitOpError("failed to generate tiling loops");
+    assert(succeeded(tilingResult) &&
+           "expected tiling result to be computed after loop generation");
+    std::swap(loops, loopsOr.value());
+  }
 
-  SmallVector<Value> partialResults;
   if (loops.empty()) {
     // If loops are empty, the tiled op is used as the replacement for the
     // untiled op.
-    partialResults = tilingResult->tiledValues;
-  } else {
-    partialResults = llvm::map_to_vector(loops.front()->getResults(),
-                                         [](OpResult r) -> Value { return r; });
+    return scf::SCFTilingResult{tilingResult->tiledOps,
+                                initTensors,
+                                loops,
+                                tilingResult->tiledValues,
+                                tilingResult->generatedSlices,
+                                {}};
   }
 
-  FailureOr<MergeResult> mergeResult =
-      mergeTilingResults(rewriter, op, partialResults, options);
+  auto loopResults = llvm::map_to_vector(loops.front()->getResults(),
+                                         [](OpResult r) -> Value { return r; });
+
+  // For the full reduction case, there is nothing more to do.
+  if (options.reductionStrategy == ReductionTilingStrategy::FullReduction) {
+    return scf::SCFTilingResult{
+        tilingResult->tiledOps,        initTensors, loops, loopResults,
+        tilingResult->generatedSlices, {}};
+  }
+
+  // The results of the loop needs to be merged.
+  FailureOr<MergeResult> mergeResult = mergeTilingResults(
+      rewriter, op, options.reductionStrategy, reductionDims, loopResults);
   if (failed(mergeResult)) {
     return rewriter.notifyMatchFailure(
         op, "Failed to merge partial results from tiling");
   }
-
-  return scf::SCFTilingResult{tilingResult->tiledOps, initTensors, loops,
-                              mergeResult.value(),
-                              tilingResult->generatedSlices};
+  return scf::SCFTilingResult{tilingResult->tiledOps,
+                              initTensors,
+                              loops,
+                              mergeResult->replacements,
+                              tilingResult->generatedSlices,
+                              mergeResult->mergeOps};
 }
 
 FailureOr<scf::SCFTilingResult>
 mlir::scf::tileReductionUsingScf(RewriterBase &b,
                                  PartialReductionOpInterface op,
-                                 ArrayRef<OpFoldResult> tileSizes) {
-  SCFTilingOptions options;
-  options.setLoopType(SCFTilingOptions::LoopType::ForOp);
-  options.setReductionTilingStrategy(SCFTilingOptions::ReductionTilingStrategy::
-                                         PartialReductionOuterReduction);
-  options.setTileSizes(tileSizes);
-
-  TilingInterface tilingInterfaceOp =
-      dyn_cast<TilingInterface>(op.getOperation());
-  if (!tilingInterfaceOp) {
-    return b.notifyMatchFailure(
-        op,
-        "Operation implementing PartialReductionOpInterface should implement "
-        "TilingInterface");
-  }
-
-  return tileUsingSCF(b, tilingInterfaceOp, options);
+                                 ArrayRef<OpFoldResult> tileSize) {
+  scf::SCFTilingOptions options;
+  options.setLoopType(scf::SCFTilingOptions::LoopType::ForOp);
+  options.setReductionTilingStrategy(
+      ReductionTilingStrategy::PartialReductionOuterReduction);
+  options.setTileSizes(tileSize);
+  SmallVector<unsigned> reductionDims;
+  for (auto [index, iteratorType] : llvm::enumerate(op.getLoopIteratorTypes()))
+    if (iteratorType == utils::IteratorType::reduction)
+      reductionDims.push_back(index);
+  options.setReductionDims(reductionDims);
+  return tileUsingSCF(b, op, options);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1293,9 +1489,7 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
                               sliceSizes = sliceOp.getMixedSizes();
 
     // expect all strides of sliceOp being 1
-    if (llvm::any_of(sliceOp.getMixedStrides(), [](OpFoldResult ofr) {
-          return !isConstantIntValue(ofr, 1);
-        }))
+    if (!llvm::all_of(sliceOp.getMixedStrides(), isOneInteger))
       return failure();
 
     unsigned sliceResultNumber =
@@ -1348,8 +1542,8 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
       rewriter.setInsertionPoint(tiledDestStyleOp);
       for (const auto &&[index, newRegionArg] :
            llvm::enumerate(newRegionIterArgs)) {
-        auto destSlice = rewriter.create<tensor::ExtractSliceOp>(
-            loc, newRegionArg, offsetList[index], sizesList[index],
+        auto destSlice = tensor::ExtractSliceOp::create(
+            rewriter, loc, newRegionArg, offsetList[index], sizesList[index],
             SmallVector<OpFoldResult>(offsetList[index].size(),
                                       rewriter.getIndexAttr(1)));
         generatedSlices.push_back(destSlice);
@@ -1535,7 +1729,6 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
 
   // 1. First tile the consumer.
   SetVector<Operation *> fusedProducers, tiledAndFusedOps;
-  llvm::SmallDenseMap<Value, size_t> origProducerToLoopResultNum;
 
   FailureOr<scf::SCFTilingResult> tilingResult =
       tileUsingSCF(rewriter, consumer, options.tilingOptions);
@@ -1545,8 +1738,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   tiledAndFusedOps.insert_range(tilingResult->tiledOps);
 
   DenseMap<Value, Value> replacements;
-  for (auto [origVal, replacement] : llvm::zip_equal(
-           consumer->getResults(), tilingResult->mergeResult.replacements)) {
+  for (auto [origVal, replacement] :
+       llvm::zip_equal(consumer->getResults(), tilingResult->replacements)) {
     replacements[origVal] = replacement;
   }
 
@@ -1778,7 +1971,9 @@ checkAssumptionForLoop(Operation *loopOp, Operation *consumerOp,
   };
   llvm::SetVector<Operation *> slice;
   for (auto operand : consumerOp->getOperands()) {
-    getBackwardSlice(operand, &slice, options);
+    LogicalResult result = getBackwardSlice(operand, &slice, options);
+    assert(result.succeeded() && "expected a backward slice");
+    (void)result;
   }
 
   if (!slice.empty()) {
@@ -1843,63 +2038,6 @@ static FailureOr<OpOperand *> getConsumerFromLoopUses(RewriterBase &rewriter,
     return &opOperand;
   }
   return failure();
-}
-
-/// Check that the loop is perfectly nested.
-/// The loops are expected to be ordered from outer most to inner most.
-/// For example:
-/// ```
-///  %0 = scf.for()
-///    %1 = scf.for()
-///      %2 = scf.for()
-///         %3 = ...
-///         yield %3
-///      yield %2
-///    yield %1
-/// ```
-/// Here loops should be [%0, %1].
-static bool
-isPerfectlyNestedForLoops(MutableArrayRef<LoopLikeOpInterface> loops) {
-  assert(!loops.empty() && "unexpected empty loop nest");
-  if (loops.size() == 1) {
-    return isa_and_nonnull<scf::ForOp>(loops.front().getOperation());
-  }
-  for (auto [outerLoop, innerLoop] :
-       llvm::zip_equal(loops.drop_back(), loops.drop_front())) {
-    auto outerFor = dyn_cast_or_null<scf::ForOp>(outerLoop.getOperation());
-    auto innerFor = dyn_cast_or_null<scf::ForOp>(innerLoop.getOperation());
-    if (!outerFor || !innerFor) {
-      return false;
-    }
-    auto outerBBArgs = outerFor.getRegionIterArgs();
-    auto innerIterArgs = innerFor.getInitArgs();
-    if (outerBBArgs.size() != innerIterArgs.size()) {
-      return false;
-    }
-
-    for (auto [outerBBArg, innerIterArg] :
-         llvm::zip_equal(outerBBArgs, innerIterArgs)) {
-      if (!llvm::hasSingleElement(outerBBArg.getUses()) ||
-          innerIterArg != outerBBArg) {
-        return false;
-      }
-    }
-
-    ValueRange outerYields =
-        cast<scf::YieldOp>(outerFor.getBody()->getTerminator())->getOperands();
-    ValueRange innerResults = innerFor.getResults();
-    if (outerYields.size() != innerResults.size()) {
-      return false;
-    }
-    for (auto [outerYield, innerResult] :
-         llvm::zip_equal(outerYields, innerResults)) {
-      if (!llvm::hasSingleElement(innerResult.getUses()) ||
-          outerYield != innerResult) {
-        return false;
-      }
-    }
-  }
-  return true;
 }
 
 /// Fetch the untiled consumer of the outermost scf.for's result which is
@@ -1975,53 +2113,118 @@ getUntiledConsumerFromSlice(RewriterBase &rewriter,
 
 /// A utility to fetch an untiled consumer of
 /// tensor.insert_slice/tensor.parallel_insert_slice.
-static FailureOr<OpOperand *>
-getUntiledConsumerFromSlice(RewriterBase &rewriter, Operation *sliceOp,
-                            MutableArrayRef<LoopLikeOpInterface> loops) {
+static FailureOr<SmallVector<OpOperand *>> getUntiledConsumerOperandsFromSlices(
+    RewriterBase &rewriter, ArrayRef<Operation *> sliceOps,
+    MutableArrayRef<LoopLikeOpInterface> loops) {
   assert(!loops.empty() && "unexpected empty loops");
-  if (auto insertSlice = dyn_cast<tensor::InsertSliceOp>(sliceOp)) {
-    return getUntiledConsumerFromSlice(rewriter, insertSlice, loops);
-  } else if (auto parallelInsertSlice =
-                 dyn_cast<tensor::ParallelInsertSliceOp>(sliceOp)) {
-    return getUntiledConsumerFromSlice(rewriter, parallelInsertSlice, loops);
-  } else {
-    return failure();
+  assert(!sliceOps.empty() && "unexpected empty list of candidate slices");
+  SmallVector<OpOperand *> fusedOperands;
+  for (auto sliceOp : sliceOps) {
+    FailureOr<OpOperand *> fusedOperand =
+        TypeSwitch<Operation *, FailureOr<OpOperand *>>(sliceOp)
+            .Case<tensor::InsertSliceOp, tensor::ParallelInsertSliceOp>(
+                [&](auto op) {
+                  return getUntiledConsumerFromSlice(rewriter, op, loops);
+                })
+            .Default([&](Operation *op) {
+              return rewriter.notifyMatchFailure(op, "unhandled slice type");
+            });
+    if (failed(fusedOperand)) {
+      return failure();
+    }
+    if (!fusedOperands.empty() &&
+        fusedOperand.value()->getOwner() != fusedOperands.front()->getOwner()) {
+      return rewriter.notifyMatchFailure(
+          fusedOperand.value()->getOwner(),
+          "all candidate slices must be to the same consumer");
+    }
+    fusedOperands.push_back(fusedOperand.value());
   }
+  return fusedOperands;
+}
+
+template <typename InsertSliceOpTy>
+static tensor::InsertSliceOp cloneAsInsertSlice(RewriterBase &rewriter,
+                                                InsertSliceOpTy sliceOp);
+
+template <>
+tensor::InsertSliceOp
+cloneAsInsertSlice<tensor::InsertSliceOp>(RewriterBase &rewriter,
+                                          tensor::InsertSliceOp insertSliceOp) {
+  return cast<tensor::InsertSliceOp>(
+      rewriter.clone(*insertSliceOp.getOperation()));
+}
+
+template <>
+tensor::InsertSliceOp cloneAsInsertSlice<tensor::ParallelInsertSliceOp>(
+    RewriterBase &rewriter, tensor::ParallelInsertSliceOp insertSliceOp) {
+  return tensor::InsertSliceOp::create(
+      rewriter, insertSliceOp->getLoc(), insertSliceOp.getSource(),
+      insertSliceOp.getDest(), insertSliceOp.getMixedOffsets(),
+      insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
+}
+
+static SmallVector<tensor::InsertSliceOp>
+cloneAsInsertSlices(RewriterBase &rewriter,
+                    ArrayRef<Operation *> candidateSlices) {
+  assert(!candidateSlices.empty() &&
+         "unexpected empty list of slices to clone");
+  SmallVector<tensor::InsertSliceOp> clonedSlices;
+  for (auto sliceOp : candidateSlices) {
+    TypeSwitch<Operation *>(sliceOp)
+        .Case<tensor::InsertSliceOp, tensor::ParallelInsertSliceOp>(
+            [&](auto op) {
+              auto clonedOp = cloneAsInsertSlice(rewriter, op);
+              clonedSlices.push_back(clonedOp);
+            })
+        // Assert here assuming this has already been checked.
+        .DefaultUnreachable(
+            "unexpected slice type while cloning as insert slice");
+  }
+  return clonedSlices;
 }
 
 /// Implementation of fusing consumer of a single slice by computing the
 /// slice of the consumer in-place for scf loop.
 FailureOr<scf::SCFFuseConsumerOfSliceResult>
-mlir::scf::tileAndFuseConsumerOfSlice(
-    RewriterBase &rewriter, Operation *candidateSliceOp,
+mlir::scf::tileAndFuseConsumerOfSlices(
+    RewriterBase &rewriter, ArrayRef<Operation *> candidateSlices,
     MutableArrayRef<LoopLikeOpInterface> loops) {
+  if (candidateSlices.empty()) {
+    return rewriter.notifyMatchFailure(
+        rewriter.getUnknownLoc(),
+        "no candidate slices provided for consumer fusion");
+  }
   // Return if `loops` is empty, return an error for now. Caller is expected
   // to handle this case.
   if (loops.empty()) {
-    return candidateSliceOp->emitOpError(
+    return rewriter.notifyMatchFailure(
+        candidateSlices.front(),
         "cannot call tile and fuse consumer with an empty loop nest");
   }
-  if (!isa<tensor::InsertSliceOp, tensor::ParallelInsertSliceOp>(
-          candidateSliceOp))
-    return failure();
+
+  if (!(llvm::all_of(candidateSlices, llvm::IsaPred<tensor::InsertSliceOp>) ||
+        llvm::all_of(candidateSlices,
+                     llvm::IsaPred<tensor::ParallelInsertSliceOp>))) {
+    return rewriter.notifyMatchFailure(
+        candidateSlices.front(),
+        "candidates slices need to be all `tensor.extract_slice`s or "
+        "`tensor.parallel_insert_slice`s");
+  }
 
   // 1. Get the consumer of scf.for for the result yielded by
   // tensor.insert_slice/parallel_insert_slice.
-  FailureOr<OpOperand *> maybeConsumerOpOperand =
-      getUntiledConsumerFromSlice(rewriter, candidateSliceOp, loops);
-  if (failed(maybeConsumerOpOperand)) {
-    return rewriter.notifyMatchFailure(candidateSliceOp,
-                                       "could not fetch consumer to fuse");
-  }
-  OpOperand *consumerOpOperand = *maybeConsumerOpOperand;
-  Operation *consumerOp = consumerOpOperand->getOwner();
-  unsigned operandNumber = consumerOpOperand->getOperandNumber();
-  unsigned resultNumber = 0;
-  if (auto producerResult = dyn_cast<OpResult>(consumerOpOperand->get())) {
-    resultNumber = producerResult.getResultNumber();
-  } else {
-    return rewriter.notifyMatchFailure(
-        consumerOp, "consumer op's operand doesn't seem to be an OpResult");
+  SmallVector<OpOperand *> consumerOpOperands;
+  Operation *consumerOp;
+  {
+    FailureOr<SmallVector<OpOperand *>> maybeConsumerOpOperand =
+        getUntiledConsumerOperandsFromSlices(rewriter, candidateSlices, loops);
+    if (failed(maybeConsumerOpOperand)) {
+      return rewriter.notifyMatchFailure(candidateSlices.front(),
+                                         "could not fetch consumer to fuse");
+    }
+    std::swap(consumerOpOperands, maybeConsumerOpOperand.value());
+    consumerOp = consumerOpOperands.front()->getOwner();
   }
 
   LoopLikeOpInterface outerMostLoop = loops.front();
@@ -2041,16 +2244,14 @@ mlir::scf::tileAndFuseConsumerOfSlice(
   if (!dstOp)
     return rewriter.notifyMatchFailure(consumerOp,
                                        "consumer op is not DPS operation");
-  SmallVector<Value> dpsInits =
-      llvm::map_to_vector(dstOp.getDpsInits(), [](Value v) { return v; });
-  if (llvm::is_contained(dpsInits, outerMostLoop->getResult(resultNumber))) {
+  if (llvm::any_of(consumerOpOperands, [&](OpOperand *opOperand) {
+        return dstOp.isDpsInit(opOperand);
+      })) {
     return rewriter.notifyMatchFailure(
         consumerOp,
         "consumer op taking the result of scf.for as init is not supported");
   }
-  SmallVector<Value> newInits = dpsInits;
-
-  Location loc = outerMostLoop->getLoc();
+  SmallVector<Value> newInits = llvm::to_vector(dstOp.getDpsInits());
 
   // 3. Move the whole loop structure right before firstUserOfLoop, the
   // dominance should be already ensured by `checkAssumptionForLoop`.
@@ -2065,43 +2266,52 @@ mlir::scf::tileAndFuseConsumerOfSlice(
   // tensor.insert_slice. In the scf.for case this is a clone of the
   // candidateSliceOp whereas in the scf.forall case this is created from the
   // operands of tensor.parallel_insert_slice.
-  tensor::InsertSliceOp clonedInsertSliceOp;
   if (auto sliceOp =
-          dyn_cast<tensor::ParallelInsertSliceOp>(candidateSliceOp)) {
+          dyn_cast<tensor::ParallelInsertSliceOp>(candidateSlices.front())) {
     auto newForallOp = cast<scf::ForallOp>(innerMostLoop.getOperation());
     rewriter.setInsertionPoint(newForallOp.getTerminator());
-    clonedInsertSliceOp = rewriter.create<tensor::InsertSliceOp>(
-        loc, sliceOp.getSource(), sliceOp.getDest(), sliceOp.getMixedOffsets(),
-        sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
   } else {
-    rewriter.setInsertionPoint(candidateSliceOp);
-    clonedInsertSliceOp =
-        cast<tensor::InsertSliceOp>(rewriter.clone(*candidateSliceOp));
+    rewriter.setInsertionPoint(candidateSlices.front());
   }
+  // 5.a. Clone all the candidate slices as equivalent insert slice ops.
+  SmallVector<tensor::InsertSliceOp> clonedInsertSlices =
+      cloneAsInsertSlices(rewriter, candidateSlices);
 
-  // 5.a. Clone consumer op.
+  // 5.b. Clone consumer op.
   auto clonedConsumerOp = cast<TilingInterface>(rewriter.clone(*consumerOp));
+  SmallVector<unsigned> operandNumbers =
+      llvm::map_to_vector(consumerOpOperands, [](OpOperand *opOperand) {
+        return opOperand->getOperandNumber();
+      });
+  SmallVector<OpOperand *> clonedOpFusedOperandsList =
+      llvm::map_to_vector(operandNumbers, [&](unsigned operandNum) {
+        return &clonedConsumerOp->getOpOperand(operandNum);
+      });
 
-  // 5.b. Replace all uses of the loop result with the result of the cloned
+  // 5.c. Replace all uses of the loop result with the result of the cloned
   // tensor.insert_slice.
-  OpOperand &operandToReplace = clonedConsumerOp->getOpOperand(operandNumber);
   rewriter.modifyOpInPlace(clonedConsumerOp, [&]() {
-    operandToReplace.set(clonedInsertSliceOp.getResult());
+    for (auto [operandToReplace, clonedSliceOp] :
+         llvm::zip_equal(clonedOpFusedOperandsList, clonedInsertSlices)) {
+      operandToReplace->set(clonedSliceOp.getResult());
+    }
   });
 
   // 6. Perform tiling of the cloned consumer and replace the operand at
   // `operandNumber` with the source of the cloned tensor.insert_slice op.
-  auto ossSliceOp =
-      cast<OffsetSizeAndStrideOpInterface>(clonedInsertSliceOp.getOperation());
   FailureOr<TilingResult> tileAndFuseResult =
-      tensor::replaceInsertSliceWithTiledConsumer(
-          rewriter, ossSliceOp, clonedConsumerOp->getOpOperand(operandNumber));
+      tensor::replaceInsertSlicesWithTiledConsumer(rewriter, clonedInsertSlices,
+                                                   clonedOpFusedOperandsList);
   if (failed(tileAndFuseResult)) {
     return failure();
   }
+
   auto tiledConsumerOp = cast<TilingInterface>(tileAndFuseResult->tiledOps[0]);
-  rewriter.replaceAllUsesWith(tiledConsumerOp->getOperand(operandNumber),
-                              clonedInsertSliceOp.getSource());
+  for (auto [operandNum, clonedSliceOp] :
+       llvm::zip_equal(operandNumbers, clonedInsertSlices)) {
+    rewriter.replaceAllUsesWith(tiledConsumerOp->getOperand(operandNum),
+                                clonedSliceOp.getSource());
+  }
 
   // 7. Reconstruct [nested] loop with new inits.
   YieldTiledValuesFn newYieldValuesFn =
@@ -2113,16 +2323,20 @@ mlir::scf::tileAndFuseConsumerOfSlice(
     // 8. Set inner insertPoint right before tiled consumer op.
     innerRewriter.setInsertionPoint(tiledConsumerOp);
 
-    SmallVector<OpFoldResult> offsets = ossSliceOp.getMixedOffsets();
-    SmallVector<OpFoldResult> sizes = ossSliceOp.getMixedSizes();
-    SmallVector<OpFoldResult> strides = ossSliceOp.getMixedStrides();
+    SmallVector<SmallVector<OpFoldResult>> allOffsets, allSizes;
+    for (auto candidateSliceOp : clonedInsertSlices) {
+      SmallVector<OpFoldResult> offsets = candidateSliceOp.getMixedOffsets();
+      SmallVector<OpFoldResult> sizes = candidateSliceOp.getMixedSizes();
+      SmallVector<OpFoldResult> strides = candidateSliceOp.getMixedStrides();
 
-    // 9. Check all insert stride is 1.
-    if (llvm::any_of(strides, [](OpFoldResult stride) {
-          return !isConstantIntValue(stride, 1);
-        })) {
-      return rewriter.notifyMatchFailure(
-          candidateSliceOp, "containingOp's result yield with stride");
+      // 9. Check all insert stride is 1.
+      if (!llvm::all_of(strides, isOneInteger)) {
+        return rewriter.notifyMatchFailure(
+            candidateSliceOp, "containingOp's result yield with stride");
+      }
+
+      allOffsets.emplace_back(std::move(offsets));
+      allSizes.emplace_back(std::move(sizes));
     }
 
     // 10. Try to get iter domain position from input position. Use
@@ -2132,8 +2346,8 @@ mlir::scf::tileAndFuseConsumerOfSlice(
     // tiledConsumerOp could lead to some chained unnecessary extra index
     // computation.
     SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
-    if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTile(
-            rewriter, operandNumber, offsets, sizes, iterDomainOffsets,
+    if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTiles(
+            rewriter, operandNumbers, allOffsets, allSizes, iterDomainOffsets,
             iterDomainSizes))) {
       return rewriter.notifyMatchFailure(
           clonedConsumerOp,
@@ -2165,8 +2379,9 @@ mlir::scf::tileAndFuseConsumerOfSlice(
       rewriter.setInsertionPoint(tiledDestStyleOp);
       for (const auto &&[index, newRegionArg] :
            llvm::enumerate(newRegionIterArgs)) {
-        auto destSlice = rewriter.create<tensor::ExtractSliceOp>(
-            loc, newRegionArg, resultOffsets[index], resultSizes[index],
+        auto destSlice = tensor::ExtractSliceOp::create(
+            rewriter, loc, newRegionArg, resultOffsets[index],
+            resultSizes[index],
             SmallVector<OpFoldResult>(resultOffsets[index].size(),
                                       rewriter.getIndexAttr(1)));
         // Make a copy of index to avoid a capturing structured binding, which
@@ -2209,10 +2424,13 @@ mlir::scf::tileAndFuseConsumerOfSlice(
   // 16. Need to erase the old scf loop and the cloned consumer op.
   rewriter.eraseOp(clonedConsumerOp);
 
+  SmallVector<OpOperand *> tiledAndFusedOpOperands =
+      llvm::map_to_vector(operandNumbers, [&](unsigned operandNum) {
+        return &tileAndFuseResult->tiledOps[0]->getOpOperand(operandNum);
+      });
   return scf::SCFFuseConsumerOfSliceResult{
-      consumerOpOperand,
-      &(tileAndFuseResult->tiledOps[0]->getOpOperand(operandNumber)),
-      tileAndFuseResult->tiledOps};
+      std::move(consumerOpOperands), std::move(tiledAndFusedOpOperands),
+      std::move(tileAndFuseResult->tiledOps)};
 }
 
 //===----------------------------------------------------------------------===//
@@ -2239,8 +2457,8 @@ mlir::scf::lowerToLoopsUsingSCFForOp(RewriterBase &rewriter,
         getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.size);
     Value strideVal =
         getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.stride);
-    auto loop = rewriter.create<scf::ForOp>(op.getLoc(), offsetVal, sizeVal,
-                                            strideVal, ValueRange{});
+    auto loop = scf::ForOp::create(rewriter, op.getLoc(), offsetVal, sizeVal,
+                                   strideVal, ValueRange{});
     loops.push_back(loop);
     ivs.push_back(loop.getInductionVar());
     rewriter.setInsertionPoint(loop.getBody()->getTerminator());

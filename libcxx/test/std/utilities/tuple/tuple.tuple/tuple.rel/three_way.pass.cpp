@@ -13,6 +13,8 @@
 // template<class... TTypes, class... UTypes>
 //   auto
 //   operator<=>(const tuple<TTypes...>& t, const tuple<UTypes...>& u);
+// template<tuple-like UTuple>
+//   friend constexpr auto operator<=>(const tuple& t, const UTuple& u); // since C++23
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
@@ -22,11 +24,15 @@ TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
 TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
 TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244)
 
+#include <array>
 #include <cassert>
 #include <compare>
+#include <complex>
 #include <limits>
+#include <ranges>
 #include <tuple>
 #include <type_traits> // std::is_constant_evaluated
+#include <utility>
 
 // A custom three-way result type
 struct CustomEquality {
@@ -36,6 +42,11 @@ struct CustomEquality {
 };
 
 constexpr bool test() {
+  struct WeakSpaceship {
+    constexpr bool operator==(const WeakSpaceship&) const { return true; }
+    constexpr std::weak_ordering operator<=>(const WeakSpaceship&) const { return std::weak_ordering::equivalent; }
+  };
+
   // Empty tuple
   {
     typedef std::tuple<> T0;
@@ -135,23 +146,17 @@ constexpr bool test() {
     ASSERT_SAME_TYPE(decltype(T1() <=> T2()), std::strong_ordering);
   }
   {
-    struct WeakSpaceship {
-      constexpr bool operator==(const WeakSpaceship&) const { return true; }
-      constexpr std::weak_ordering operator<=>(const WeakSpaceship&) const { return std::weak_ordering::equivalent; }
-    };
-    {
-      typedef std::tuple<int, unsigned int, WeakSpaceship> T1;
-      typedef std::tuple<int, unsigned long, WeakSpaceship> T2;
-      // Strongly ordered members and a weakly ordered member yields weak ordering.
-      ASSERT_SAME_TYPE(decltype(T1() <=> T2()), std::weak_ordering);
-    }
-    {
-      typedef std::tuple<unsigned int, int, WeakSpaceship> T1;
-      typedef std::tuple<double, long, WeakSpaceship> T2;
-      // Doubles are partially ordered, so one partial, one strong, and one weak ordering
-      // yields partial ordering.
-      ASSERT_SAME_TYPE(decltype(T1() <=> T2()), std::partial_ordering);
-    }
+    typedef std::tuple<int, unsigned int, WeakSpaceship> T1;
+    typedef std::tuple<int, unsigned long, WeakSpaceship> T2;
+    // Strongly ordered members and a weakly ordered member yields weak ordering.
+    ASSERT_SAME_TYPE(decltype(T1() <=> T2()), std::weak_ordering);
+  }
+  {
+    typedef std::tuple<unsigned int, int, WeakSpaceship> T1;
+    typedef std::tuple<double, long, WeakSpaceship> T2;
+    // Doubles are partially ordered, so one partial, one strong, and one weak ordering
+    // yields partial ordering.
+    ASSERT_SAME_TYPE(decltype(T1() <=> T2()), std::partial_ordering);
   }
   {
     struct NoSpaceship {
@@ -223,6 +228,134 @@ constexpr bool test() {
       assert((T1(1, 2, nan) <=> T2(1, 2, 3)) == std::partial_ordering::unordered);
     }
   }
+
+// Heterogeneous comparisons enabled by P2165R4.
+#if TEST_STD_VER >= 23
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::pair<int, long>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1, 2};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::strong_ordering);
+    assert((t1 <=> t2) == std::strong_ordering::equal);
+  }
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::pair<int, long>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1, 0};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::strong_ordering);
+    assert((t1 <=> t2) == std::strong_ordering::greater);
+  }
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::pair<double, long>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1.1, 3};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::partial_ordering);
+    assert((t1 <=> t2) == std::partial_ordering::less);
+  }
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::pair<double, long>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1.0, 2};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::partial_ordering);
+    assert((t1 <=> t2) == std::partial_ordering::equivalent);
+  }
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::pair<double, long>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1.1, 3};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::partial_ordering);
+    assert((t1 <=> t2) == std::partial_ordering::less);
+  }
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::array<double, 2>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1.0, 2.0};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::partial_ordering);
+    assert((t1 <=> t2) == std::partial_ordering::equivalent);
+  }
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::array<double, 2>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1.1, 3.0};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::partial_ordering);
+    assert((t1 <=> t2) == std::partial_ordering::less);
+  }
+  {
+    using T1 = std::tuple<const int*, const int*>;
+    using T2 = std::ranges::subrange<const int*>;
+
+    int arr[1]{};
+    T1 t1{arr, arr + 1};
+    T2 t2{arr};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::strong_ordering);
+    assert((t1 <=> t2) == std::strong_ordering::equal);
+  }
+  {
+    using T1 = std::tuple<const int*, const int*>;
+    using T2 = std::ranges::subrange<const int*>;
+
+    int arr[1]{};
+    T1 t1{arr + 1, arr + 1};
+    T2 t2{arr};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::strong_ordering);
+    assert((t1 <=> t2) == std::strong_ordering::greater);
+  }
+  {
+    constexpr std::tuple<WeakSpaceship, WeakSpaceship> t1{};
+    constexpr std::pair<WeakSpaceship, WeakSpaceship> t2{};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::weak_ordering);
+    assert((t1 <=> t2) == std::weak_ordering::equivalent);
+  }
+  {
+    constexpr std::tuple<WeakSpaceship, WeakSpaceship> t1{};
+    constexpr std::array<WeakSpaceship, 2> t2{};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::weak_ordering);
+    assert((t1 <=> t2) == std::weak_ordering::equivalent);
+  }
+  {
+    constexpr std::tuple<> t1{};
+    constexpr std::array<int*, 0> t2{};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::strong_ordering);
+    assert((t1 <=> t2) == std::strong_ordering::equal);
+  }
+  {
+    constexpr std::tuple<> t1{};
+    constexpr std::array<double, 0> t2{};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::strong_ordering);
+    assert((t1 <=> t2) == std::strong_ordering::equal);
+  }
+  {
+    constexpr std::tuple<> t1{};
+    constexpr std::array<WeakSpaceship, 0> t2{};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::strong_ordering);
+    assert((t1 <=> t2) == std::strong_ordering::equal);
+  }
+#endif
+#if TEST_STD_VER >= 26
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::complex<double>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1.0, 2.0};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::partial_ordering);
+    assert((t1 <=> t2) == std::partial_ordering::equivalent);
+  }
+  {
+    using T1 = std::tuple<long, int>;
+    using T2 = std::complex<double>;
+    constexpr T1 t1{1, 2};
+    constexpr T2 t2{1.1, 3.0};
+    ASSERT_SAME_TYPE(decltype(t1 <=> t2), std::partial_ordering);
+    assert((t1 <=> t2) == std::partial_ordering::less);
+  }
+#endif
 
   return true;
 }

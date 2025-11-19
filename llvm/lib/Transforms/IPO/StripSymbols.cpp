@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/StripSymbols.h"
+
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -33,7 +34,6 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
@@ -309,8 +309,7 @@ PreservedAnalyses StripDeadCGProfilePass::run(Module &M,
   SmallVector<Metadata *, 16> ValidCGEdges;
   for (Metadata *Edge : CGProf->operands()) {
     if (auto *EdgeAsNode = dyn_cast_or_null<MDNode>(Edge))
-      if (llvm::all_of(EdgeAsNode->operands(),
-                       [](const Metadata *V) { return V != nullptr; }))
+      if (!llvm::is_contained(EdgeAsNode->operands(), nullptr))
         ValidCGEdges.push_back(Edge);
   }
   M.setModuleFlag(Module::Append, "CG Profile",

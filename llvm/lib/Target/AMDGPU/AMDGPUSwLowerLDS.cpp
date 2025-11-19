@@ -104,7 +104,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
@@ -524,7 +523,7 @@ static void replacesUsesOfGlobalInFunction(Function *Func, GlobalVariable *GV,
   auto ReplaceUsesLambda = [Func](const Use &U) -> bool {
     auto *V = U.getUser();
     if (auto *Inst = dyn_cast<Instruction>(V)) {
-      auto *Func1 = Inst->getParent()->getParent();
+      auto *Func1 = Inst->getFunction();
       if (Func == Func1)
         return true;
     }
@@ -1256,7 +1255,7 @@ bool AMDGPUSwLowerLDS::run() {
     }
     for (Function *Func : FuncLDSAccessInfo.NonKernelsWithLDSArgument) {
       auto &K = FuncLDSAccessInfo.NonKernelToLDSAccessMap;
-      if (K.find(Func) != K.end())
+      if (K.contains(Func))
         continue;
       SetVector<llvm::GlobalVariable *> Vec;
       lowerNonKernelLDSAccesses(Func, Vec, NKLDSParams);

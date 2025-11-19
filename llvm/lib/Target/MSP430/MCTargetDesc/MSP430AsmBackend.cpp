@@ -14,7 +14,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -36,10 +35,8 @@ public:
       : MCAsmBackend(llvm::endianness::little), OSABI(OSABI) {}
   ~MSP430AsmBackend() override = default;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -47,21 +44,23 @@ public:
   }
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+    // clang-format off
     const static MCFixupKindInfo Infos[MSP430::NumTargetFixupKinds] = {
       // This table must be in the same order of enum in MSP430FixupKinds.h.
       //
       // name            offset bits flags
       {"fixup_32",            0, 32, 0},
-      {"fixup_10_pcrel",      0, 10, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_10_pcrel",      0, 10, 0},
       {"fixup_16",            0, 16, 0},
-      {"fixup_16_pcrel",      0, 16, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_16_pcrel",      0, 16, 0},
       {"fixup_16_byte",       0, 16, 0},
-      {"fixup_16_pcrel_byte", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_2x_pcrel",      0, 10, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_rl_pcrel",      0, 16, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_16_pcrel_byte", 0, 16, 0},
+      {"fixup_2x_pcrel",      0, 10, 0},
+      {"fixup_rl_pcrel",      0, 16, 0},
       {"fixup_8",             0,  8, 0},
       {"fixup_sym_diff",      0, 32, 0},
     };
+    // clang-format on
     static_assert((std::size(Infos)) == MSP430::NumTargetFixupKinds,
                   "Not all fixup kinds added to Infos array");
 
@@ -104,12 +103,11 @@ uint64_t MSP430AsmBackend::adjustFixupValue(const MCFixup &Fixup,
   }
 }
 
-void MSP430AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                                  const MCValue &Target,
-                                  MutableArrayRef<char> Data,
-                                  uint64_t Value, bool IsResolved,
-                                  const MCSubtargetInfo *STI) const {
-  Value = adjustFixupValue(Fixup, Value, Asm.getContext());
+void MSP430AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                  const MCValue &Target, uint8_t *Data,
+                                  uint64_t Value, bool IsResolved) {
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
+  Value = adjustFixupValue(Fixup, Value, getContext());
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   if (!Value)
     return; // Doesn't change encoding.
@@ -117,15 +115,14 @@ void MSP430AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
-
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i) {
-    Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+    Data[i] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 

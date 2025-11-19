@@ -10,7 +10,7 @@
 # RUN: llvm-readelf -S %t | FileCheck %s
 
 ## Check we don't warn in the absence of SECTIONS.
-# RUN: ld.lld --fatal-warnings -Ttext=0x10000 %t.o -o /dev/null
+# RUN: ld.lld --fatal-warnings -Ttext=0x10000 --image-base=0x10000 %t.o -o /dev/null
 
 # WARN: warning: address (0x10004) of section .data.rel.ro is not a multiple of alignment (16)
 # WARN: warning: address (0x20001) of section .data2 is not a multiple of alignment (8)

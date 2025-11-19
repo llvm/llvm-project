@@ -1,10 +1,20 @@
-;RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length128b < %s -o - | FileCheck %s
+;RUN: llc -mtriple=hexagon  < %s -o - | FileCheck %s --check-prefix=CHECK
+;RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length64b < %s -o - | FileCheck %s --check-prefixes=CHECK-64,CHECK-64-128
+;RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length128b < %s -o - | FileCheck %s --check-prefixes=CHECK-128,CHECK-64-128
 
 ; CHECK-LABEL: compare_vectors
-; CHECK: [[REG1:(q[0-9]+)]] = vcmp.eq(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
-; CHECK: [[REG2:(r[0-9]+)]] = #-1
-; CHECK: v0 = vand([[REG1]],[[REG2]])
-
+; CHECK: [[REG8:(r[0-9]+):[0-9]]] = CONST64(#72340172838076673)
+; CHECK: r{{[0-9]+}}:{{[0-9]+}} = and(r{{[0-9]+}}:{{[0-9]+}},[[REG8]])
+; CHECK: r{{[0-9]+}}:{{[0-9]+}} = and(r{{[0-9]+}}:{{[0-9]+}},[[REG8]])
+; CHECK: r{{[0-9]+}}:{{[0-9]+}} = and(r{{[0-9]+}}:{{[0-9]+}},[[REG8]])
+; CHECK-128: [[REG1:(q[0-9]+)]] = vcmp.eq(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
+; CHECK-128: [[REG2:(r[0-9]+)]] = #-1
+; CHECK-128: v0 = vand([[REG1]],[[REG2]])
+; CHECK-64: [[REG5:(q[0-9]+)]] = vcmp.eq(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
+; CHECK-64: [[REG6:(q[0-9]+)]] = vcmp.eq(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
+; CHECK-64: [[REG7:(r[0-9]+)]] = #-1
+; CHECK-64: v0 = vand([[REG5]],[[REG7]])
+; CHECK-64: v1 = vand([[REG6]],[[REG7]])
 define void @compare_vectors(<128 x i8> %a, <128 x i8> %b) {
 entry:
   %result = icmp eq <128 x i8> %a, %b
@@ -13,11 +23,13 @@ entry:
 }
 
 ; CHECK-LABEL: f.1:
-; CHECK: [[REG3:(q[0-9]+)]] = vand(v0,r{{[0-9]+}})
-; CHECK: [[REG4:(v[0-9]+)]] = vand([[REG3]],r{{[0-9]+}})
-; CHECK: r{{[0-9]+}} = vextract([[REG4]],r{{[0-9]+}})
+; CHECK: [[REG9:(r[0-9]+)]] = and([[REG9]],##16843009)
+; CHECK: [[REG10:(r[0-9]+)]] = and([[REG10]],##16843009)
+; CHECK-64-128: [[REG3:(q[0-9]+)]] = vand(v0,r{{[0-9]+}})
+; CHECK-64-128: [[REG4:(v[0-9]+)]] = vand([[REG3]],r{{[0-9]+}})
+; CHECK-64-128: r{{[0-9]+}} = vextract([[REG4]],r{{[0-9]+}})
 
-define i32 @f.1(<128 x i1> %vec) {
+define i32 @f.1(<128 x i1> %vec){
   %element = extractelement <128 x i1> %vec, i32 6
   %is_true = icmp eq i1 %element, true
   br i1 %is_true, label %if_true, label %if_false

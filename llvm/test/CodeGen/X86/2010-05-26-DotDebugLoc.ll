@@ -64,15 +64,15 @@ attributes #1 = { nounwind readnone }
 ; CHECK-NEXT: [[CLOBBER:Ltmp[0-9]*]]
 
 ; CHECK: Ldebug_loc0:
-; CHECK-NEXT: .set [[SET1:.*]], Lfunc_begin0-Lfunc_begin0
+; CHECK-NEXT: [[SET1:.*]] = Lfunc_begin0-Lfunc_begin0
 ; CHECK-NEXT: .quad   [[SET1]]
-; CHECK-NEXT: .set [[SET2:.*]], [[LABEL]]-Lfunc_begin0
+; CHECK-NEXT: [[SET2:.*]] = [[LABEL]]-Lfunc_begin0
 ; CHECK-NEXT: .quad   [[SET2]]
 ; CHECK-NEXT: .short  1     ## Loc expr size
 ; CHECK-NEXT: .byte   85
-; CHECK-NEXT: .set [[SET3:.*]], [[LABEL]]-Lfunc_begin0
+; CHECK-NEXT: [[SET3:.*]] = [[LABEL]]-Lfunc_begin0
 ; CHECK-NEXT: .quad   [[SET3]]
-; CHECK-NEXT: .set [[SET4:.*]], [[CLOBBER]]-Lfunc_begin0
+; CHECK-NEXT: [[SET4:.*]] = [[CLOBBER]]-Lfunc_begin0
 ; CHECK-NEXT: .quad   [[SET4]]
 ; CHECK-NEXT: .short  1     ## Loc expr size
 ; CHECK-NEXT: .byte   83

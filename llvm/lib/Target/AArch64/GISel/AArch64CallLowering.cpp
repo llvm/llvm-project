@@ -17,14 +17,15 @@
 #include "AArch64ISelLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
@@ -35,6 +36,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -123,12 +125,12 @@ struct AArch64OutgoingValueAssigner
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
 
     bool Res;
-    if (Info.IsFixed && !UseVarArgsCCForFixed) {
+    if (!Flags.isVarArg() && !UseVarArgsCCForFixed) {
       if (!IsReturn)
         applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
-      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
     } else
-      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
 
     StackSize = State.getStackSize();
     return Res;
@@ -280,7 +282,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 
   /// We need to fixup the reported store size for certain value types because
   /// we invert the interpretation of ValVT and LocVT in certain cases. This is
-  /// for compatability with the DAG call lowering implementation, which we're
+  /// for compatibility with the DAG call lowering implementation, which we're
   /// currently building on top of.
   LLT getStackValueStoreType(const DataLayout &DL, const CCValAssign &VA,
                              ISD::ArgFlagsTy Flags) const override {
@@ -296,10 +298,57 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
+  /// Check whether a stack argument requires lowering in a tail call.
+  static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
+                                          const CCValAssign &VA,
+                                          Register ValVReg,
+                                          Register StoreAddr) {
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    // Print the defining instruction for the value.
+    auto *DefMI = MRI.getVRegDef(ValVReg);
+    assert(DefMI && "No defining instruction");
+    for (;;) {
+      // Look through nodes that don't alter the bits of the incoming value.
+      unsigned Op = DefMI->getOpcode();
+      if (Op == TargetOpcode::G_ZEXT || Op == TargetOpcode::G_ANYEXT ||
+          Op == TargetOpcode::G_BITCAST || isAssertMI(*DefMI)) {
+        DefMI = MRI.getVRegDef(DefMI->getOperand(1).getReg());
+        continue;
+      }
+      break;
+    }
+
+    auto *Load = dyn_cast<GLoad>(DefMI);
+    if (!Load)
+      return true;
+    Register LoadReg = Load->getPointerReg();
+    auto *LoadAddrDef = MRI.getVRegDef(LoadReg);
+    if (LoadAddrDef->getOpcode() != TargetOpcode::G_FRAME_INDEX)
+      return true;
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+    int LoadFI = LoadAddrDef->getOperand(1).getIndex();
+
+    auto *StoreAddrDef = MRI.getVRegDef(StoreAddr);
+    if (StoreAddrDef->getOpcode() != TargetOpcode::G_FRAME_INDEX)
+      return true;
+    int StoreFI = StoreAddrDef->getOperand(1).getIndex();
+
+    if (!MFI.isImmutableObjectIndex(LoadFI))
+      return true;
+    if (MFI.getObjectOffset(LoadFI) != MFI.getObjectOffset(StoreFI))
+      return true;
+    if (Load->getMemSize() != MFI.getObjectSize(StoreFI))
+      return true;
+
+    return false;
+  }
+
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             const MachinePointerInfo &MPO,
                             const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
+    if (!FPDiff && !shouldLowerTailCallStackArg(MF, VA, ValVReg, Addr))
+      return;
     auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, MemTy,
                                        inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
@@ -312,7 +361,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     unsigned MaxSize = MemTy.getSizeInBytes() * 8;
     // For varargs, we always want to extend them to 8 bytes, in which case
     // we disable setting a max.
-    if (!Arg.IsFixed)
+    if (Arg.Flags[0].isVarArg())
       MaxSize = 0;
 
     Register ValVReg = Arg.Regs[RegIndex];
@@ -539,7 +588,7 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
     return true;
   }
 
-  SMEAttrs Attrs(F);
+  SMEAttrs Attrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
   if (Attrs.hasZAState() || Attrs.hasZT0State() ||
       Attrs.hasStreamingInterfaceOrBody() ||
       Attrs.hasStreamingCompatibleInterface())
@@ -1363,6 +1412,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // just before the call target.
     Function *ARCFn = *objcarc::getAttachedARCFunction(Info.CB);
     MIB.addGlobalAddress(ARCFn);
+    ++CalleeOpNo;
+
+    // We may or may not need to emit both the marker and the retain/claim call.
+    // Tell the pseudo expansion using an additional boolean op.
+    MIB.addImm(objcarc::attachedCallOpBundleNeedsMarker(Info.CB));
     ++CalleeOpNo;
   } else if (Info.CFIType) {
     MIB->setCFIType(MF, Info.CFIType->getZExtValue());

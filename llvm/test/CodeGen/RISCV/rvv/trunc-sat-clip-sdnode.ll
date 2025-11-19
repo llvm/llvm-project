@@ -267,7 +267,7 @@ define void @trunc_sat_i32i64_notopt(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4re64.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a0
 ; CHECK-NEXT:    li a0, 1

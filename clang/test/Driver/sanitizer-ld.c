@@ -920,7 +920,7 @@
 // CHECK-CFI-MINRT-LINUX: "{{.*}}ld{{(.exe)?}}"
 
 // CFI with diagnostics links the UBSan runtime.
-// RUN: not %clang -fsanitize=cfi -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
+// RUN: %clang -fsanitize=cfi -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
 // RUN:     -flto -fvisibility=hidden \
 // RUN:     -fsanitize-minimal-runtime \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -928,7 +928,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-DIAG-LINUX
-// CHECK-CFI-MINRT-DIAG-LINUX: '-fsanitize-minimal-runtime' only allowed with '-fsanitize-trap=cfi'
 // CHECK-CFI-MINRT-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-MINRT-DIAG-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.ubsan_minimal.a" "--no-whole-archive"
 
@@ -946,7 +945,7 @@
 // CHECK-CFI-MINRT-CROSS-DSO-LINUX: -export-dynamic
 
 // Cross-DSO CFI with diagnostics links just the CFI runtime.
-// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
+// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     -flto -fvisibility=hidden \
 // RUN:     -fsanitize-minimal-runtime \
 // RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
@@ -955,7 +954,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX
-// CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX: '-fsanitize-minimal-runtime' only allowed with '-fsanitize-trap=cfi'
 // CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.cfi_diag.a" "--no-whole-archive"
 // CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX: -export-dynamic
@@ -972,7 +970,7 @@
 // CHECK-CFI-MINRT-CROSS-DSO-ANDROID: "{{.*}}ld{{(.exe)?}}"
 
 // Cross-DSO CFI with diagnostics on Android links just the UBSAN runtime.
-// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
+// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     -flto -fvisibility=hidden \
 // RUN:     -fsanitize-minimal-runtime \
 // RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
@@ -981,7 +979,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID
-// CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID: '-fsanitize-minimal-runtime' only allowed with '-fsanitize-trap=cfi'
 // CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_minimal.so"
 // CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
@@ -1036,7 +1033,7 @@
 // RUN:     --target=riscv32-unknown-elf -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-ELF-RISCV32
 // CHECK-SHADOWCALLSTACK-ELF-RISCV32-NOT: error:
-// CHECK-SHADOWCALLSTACK-ELF-RISCV32: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
+// CHECK-SHADOWCALLSTACK-ELF-RISCV32: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=riscv64-unknown-linux -fuse-ld=ld \
@@ -1372,3 +1369,27 @@
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lresolv"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "--export-dynamic"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "--dynamic-list"
+
+// RUN: %clang -fsanitize=address,undefined -r -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-RELOCATABLE-LINK-ASAN-UBSAN-RTLIB
+//
+// CHECK-RELOCATABLE-LINK-ASAN-UBSAN-RTLIB-NOT: "{{.*}}(asan|ubsan){{.*}}"
+
+// RUN: %clang -fsanitize=address -r -fsanitize-link-runtime -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE-LINK-FORCE-LINK-ASAN
+//
+// CHECK-RELOCATABLE-LINK-FORCE-LINK-ASAN: "{{.*}}asan{{.*}}"
+
+// RUN: %clang -fsanitize=thread -r -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-RELOCATABLE-LINK-TSAN-RTLIB
+//
+// CHECK-RELOCATABLE-LINK-TSAN-RTLIB-NOT: "{{.*}}tsan{{.*}}"

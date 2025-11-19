@@ -31,6 +31,9 @@ multiclass B_priv<string name> {
 def align   : P<"align", "Section alignment">;
 def aligncomm : P<"aligncomm", "Set common symbol alignment">;
 def alternatename : P<"alternatename", "Define weak alias">;
+def arm64xsameaddress
+    : P<"arm64xsameaddress", "Generate a thunk for the symbol with the same "
+                             "address in both native and EC views on ARM64X.">;
 def base    : P<"base", "Base address of the program">;
 def color_diagnostics: Flag<["--"], "color-diagnostics">,
     HelpText<"Alias for --color-diagnostics=always">;
@@ -87,6 +90,8 @@ def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
 def nodefaultlib : P<"nodefaultlib", "Remove a default library">;
+def nodbgdirmerge : F<"nodbgdirmerge">,
+                      HelpText<"Emit the debug directory in a separate section">;
 def opt     : P<"opt", "Control optimizations">;
 def order   : P<"order", "Put functions in order">;
 def out     : P<"out", "Path to file to write output">;
@@ -99,6 +104,7 @@ def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,
     MetaVarName<"<name>=<file>">,
     HelpText<"Embed the contents of <file> in the PDB as named stream <name>">;
 def section : P<"section", "Specify section attributes">;
+def sectionlayout : P<"sectionlayout", "Specifies the layout strategy for output sections">;
 def stack   : P<"stack", "Size of the stack">;
 def stub    : P<"stub", "Specify DOS stub file">;
 def subsystem : P<"subsystem", "Specify subsystem">;
@@ -196,6 +202,12 @@ defm appcontainer : B<"appcontainer",
                       "Image can run outside an app container (default)">;
 defm cetcompat : B<"cetcompat", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack",
                    "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack (default)">;
+defm cetcompatstrict : B<"cetcompatstrict", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in strict mode",
+                         "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in strict mode (default)">;
+defm cetdynamicapisinproc : B<"cetdynamicapisinproc", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in such a way that dynamic APIs allowed in process",
+                              "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with dynamic APIs allowed in process (default)">;
+defm cetipvalidationrelaxed : B<"cetipvalidationrelaxed", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with relaxed context IP validation",
+                                "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with relaxed context IP validation (default)">;
 defm dynamicbase : B<"dynamicbase", "Enable ASLR (default unless /fixed)",
                      "Disable ASLR (default when /fixed)">;
 defm fixed : B<"fixed", "Disable base relocations",
@@ -203,6 +215,8 @@ defm fixed : B<"fixed", "Disable base relocations",
 defm highentropyva : B<"highentropyva",
                        "Enable 64-bit ASLR (default on 64-bit)",
                        "Disable 64-bit ASLR">;
+defm hotpatchcompatible : B<"hotpatchcompatible", "Mark executable image as compatible with hotpatch",
+                            "Don't mark executable image as compatible with hotpatch (default)">;
 defm incremental : B<"incremental",
                      "Keep original import library if contents are unchanged",
                      "Overwrite import library even if contents are unchanged">;
@@ -270,6 +284,20 @@ def thinlto_object_suffix_replace : P<
 def thinlto_prefix_replace: P<
     "thinlto-prefix-replace",
     "'old;new' replace old prefix with new prefix in ThinLTO outputs">;
+def thinlto_distributor : P<"thinlto-distributor",
+  "Distributor to use for ThinLTO backend compilations. If specified, ThinLTO "
+  "backend compilations will be distributed">;
+def thinlto_distributor_arg : P<"thinlto-distributor-arg",
+  "Arguments to pass to the ThinLTO distributor">;
+def thinlto_remote_compiler : P<"thinlto-remote-compiler",
+  "Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
+  "compilations">;
+def thinlto_remote_compiler_prepend_arg : P<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
+def thinlto_remote_compiler_arg : P<"thinlto-remote-compiler-arg",
+  "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
 def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;
@@ -342,7 +370,13 @@ def fastfail : F<"fastfail">;
 def kernel : F<"kernel">;
 def pdbcompress : F<"pdbcompress">;
 def emitpogophaseinfo : F<"emitpogophaseinfo">;
+defm emittoolversioninfo: B<
+    "emittoolversioninfo",
+    "Emit a tool version info after DOS header (so-called Rich header, default)",
+    "Do not emit a tool version info after DOS header (so-called Rich header)">;
+def nocoffgrpinfo: F<"nocoffgrpinfo">;
 def noexp : F<"noexp">;
+def novcfeature: F<"novcfeature">;
 
 def delay : P_priv<"delay">;
 def errorreport : P_priv<"errorreport">;

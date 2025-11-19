@@ -1,4 +1,4 @@
-//===--- LambdaFunctionNameCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,14 +34,13 @@ public:
       LambdaFunctionNameCheck::SourceRangeSet *SME)
       : SuppressMacroExpansions(SME) {}
 
-  void MacroExpands(const Token &MacroNameTok,
-                    const MacroDefinition &MD, SourceRange Range,
-                    const MacroArgs *Args) override {
+  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override {
     bool HasFile = false;
     bool HasLine = false;
-    for (const auto& T : MD.getMacroInfo()->tokens()) {
+    for (const Token &T : MD.getMacroInfo()->tokens()) {
       if (T.is(tok::identifier)) {
-        StringRef IdentName = T.getIdentifierInfo()->getName();
+        const StringRef IdentName = T.getIdentifierInfo()->getName();
         if (IdentName == "__FILE__") {
           HasFile = true;
         } else if (IdentName == "__LINE__") {
@@ -55,7 +54,7 @@ public:
   }
 
 private:
-  LambdaFunctionNameCheck::SourceRangeSet* SuppressMacroExpansions;
+  LambdaFunctionNameCheck::SourceRangeSet *SuppressMacroExpansions;
 };
 
 AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
@@ -65,8 +64,7 @@ AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
 LambdaFunctionNameCheck::LambdaFunctionNameCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(
-          Options.getLocalOrGlobal("IgnoreMacros", DefaultIgnoreMacros)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", DefaultIgnoreMacros)) {}
 
 void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

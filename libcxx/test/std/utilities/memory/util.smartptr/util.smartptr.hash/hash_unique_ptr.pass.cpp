@@ -90,12 +90,10 @@ int main(int, char**)
     test_enabled_with_deleter<A, PointerDeleter<A, 1>>();
     test_enabled_with_deleter<A[], PointerDeleter<A[], 1>>();
 
-#if TEST_STD_VER > 14
     test_disabled_with_deleter<int, PointerDeleter<int, 0>>();
     test_disabled_with_deleter<int[], PointerDeleter<int[], 0>>();
     test_disabled_with_deleter<A, PointerDeleter<A, 0>>();
     test_disabled_with_deleter<A[], PointerDeleter<A[], 0>>();
-#endif
   }
 #endif
 

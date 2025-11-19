@@ -18,11 +18,14 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/UniqueBBID.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -46,8 +49,6 @@ class LiveIntervals;
 class LiveVariables;
 class TargetRegisterClass;
 class TargetRegisterInfo;
-template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
-using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
 // This structure uniquely identifies a basic block section.
 // Possible values are
@@ -66,8 +67,8 @@ struct MBBSectionID {
   MBBSectionID(unsigned N) : Type(Default), Number(N) {}
 
   // Special unique sections for cold and exception blocks.
-  const static MBBSectionID ColdSectionID;
-  const static MBBSectionID ExceptionSectionID;
+  LLVM_ABI const static MBBSectionID ColdSectionID;
+  LLVM_ABI const static MBBSectionID ExceptionSectionID;
 
   bool operator==(const MBBSectionID &Other) const {
     return Type == Other.Type && Number == Other.Number;
@@ -99,13 +100,6 @@ template <> struct DenseMapInfo<MBBSectionID> {
   }
 };
 
-// This structure represents the information for a basic block pertaining to
-// the basic block sections profile.
-struct UniqueBBID {
-  unsigned BaseID;
-  unsigned CloneID;
-};
-
 template <> struct ilist_traits<MachineInstr> {
 private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
@@ -116,11 +110,12 @@ private:
       simple_ilist<MachineInstr, ilist_sentinel_tracking<true>>::iterator;
 
 public:
-  void addNodeToList(MachineInstr *N);
-  void removeNodeFromList(MachineInstr *N);
-  void transferNodesFromList(ilist_traits &FromList, instr_iterator First,
-                             instr_iterator Last);
-  void deleteNode(MachineInstr *MI);
+  LLVM_ABI void addNodeToList(MachineInstr *N);
+  LLVM_ABI void removeNodeFromList(MachineInstr *N);
+  LLVM_ABI void transferNodesFromList(ilist_traits &FromList,
+                                      instr_iterator First,
+                                      instr_iterator Last);
+  LLVM_ABI void deleteNode(MachineInstr *MI);
 };
 
 class MachineBasicBlock
@@ -134,7 +129,7 @@ public:
     MCRegister PhysReg;
     LaneBitmask LaneMask;
 
-    RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
+    RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
 
     bool operator==(const RegisterMaskPair &other) const {
@@ -264,30 +259,45 @@ public:
   }
 
   /// Check if there is a name of corresponding LLVM basic block.
-  bool hasName() const;
+  LLVM_ABI bool hasName() const;
 
   /// Return the name of the corresponding LLVM basic block, or an empty string.
-  StringRef getName() const;
+  LLVM_ABI StringRef getName() const;
 
   /// Return a formatted string to identify this block and its parent function.
-  std::string getFullName() const;
+  LLVM_ABI std::string getFullName() const;
 
   /// Test whether this block is used as something other than the target
   /// of a terminator, exception-handling target, or jump table. This is
   /// either the result of an IR-level "blockaddress", or some form
   /// of target-specific branch lowering.
+  ///
+  /// The name of this function `hasAddressTaken` implies that the address of
+  /// the block is known and used in a general sense, but not necessarily that
+  /// the address is used by an indirect branch instruction. So branch target
+  /// enforcement need not put a BTI instruction (or equivalent) at the start
+  /// of a block just because this function returns true. The decision about
+  /// whether to add a BTI can be more subtle than that, and depends on the
+  /// more detailed checks that this function aggregates together.
   bool hasAddressTaken() const {
-    return MachineBlockAddressTaken || AddressTakenIRBlock;
+    return MachineBlockAddressTaken || AddressTakenIRBlock ||
+           IsInlineAsmBrIndirectTarget;
   }
 
   /// Test whether this block is used as something other than the target of a
   /// terminator, exception-handling target, jump table, or IR blockaddress.
   /// For example, its address might be loaded into a register, or
   /// stored in some branch table that isn't part of MachineJumpTableInfo.
+  ///
+  /// If this function returns true, it _does_ mean that branch target
+  /// enforcement needs to put a BTI or equivalent at the start of the block.
   bool isMachineBlockAddressTaken() const { return MachineBlockAddressTaken; }
 
   /// Test whether this block is the target of an IR BlockAddress.  (There can
   /// more than one MBB associated with an IR BB where the address is taken.)
+  ///
+  /// If this function returns true, it _does_ mean that branch target
+  /// enforcement needs to put a BTI or equivalent at the start of the block.
   bool isIRBlockAddressTaken() const { return AddressTakenIRBlock; }
 
   /// Retrieves the BasicBlock which corresponds to this MachineBasicBlock.
@@ -313,10 +323,11 @@ public:
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
 
-  /// Returns true if the original IR terminator is an `indirectbr`. This
-  /// typically corresponds to a `goto` in C, rather than jump tables.
-  bool terminatorIsComputedGoto() const {
-    return back().isIndirectBranch() &&
+  /// Returns true if the original IR terminator is an `indirectbr` with
+  /// successor blocks. This typically corresponds to a `goto` in C, rather than
+  /// jump tables.
+  bool terminatorIsComputedGotoWithSuccessors() const {
+    return back().isIndirectBranch() && !succ_empty() &&
            llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
              return Succ->isIRBlockAddressTaken();
            });
@@ -334,7 +345,7 @@ public:
       MachineInstrBundleIterator<const MachineInstr, true>;
 
   unsigned size() const { return (unsigned)Insts.size(); }
-  bool sizeWithoutDebugLargerThan(unsigned Limit) const;
+  LLVM_ABI bool sizeWithoutDebugLargerThan(unsigned Limit) const;
   bool empty() const { return Insts.empty(); }
 
   MachineInstr       &instr_front()       { return Insts.front(); }
@@ -475,27 +486,33 @@ public:
   /// Sorts and uniques the LiveIns vector. It can be significantly faster to do
   /// this than repeatedly calling isLiveIn before calling addLiveIn for every
   /// LiveIn insertion.
-  void sortUniqueLiveIns();
+  LLVM_ABI void sortUniqueLiveIns();
 
   /// Clear live in list.
-  void clearLiveIns();
+  LLVM_ABI void clearLiveIns();
 
   /// Clear the live in list, and return the removed live in's in \p OldLiveIns.
   /// Requires that the vector \p OldLiveIns is empty.
-  void clearLiveIns(std::vector<RegisterMaskPair> &OldLiveIns);
+  LLVM_ABI void clearLiveIns(std::vector<RegisterMaskPair> &OldLiveIns);
 
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
   /// that is a copy of the live in PhysReg.
-  Register addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
+  LLVM_ABI Register addLiveIn(MCRegister PhysReg,
+                              const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
-  void removeLiveIn(MCRegister Reg,
-                    LaneBitmask LaneMask = LaneBitmask::getAll());
+  LLVM_ABI void removeLiveIn(MCRegister Reg,
+                             LaneBitmask LaneMask = LaneBitmask::getAll());
+
+  /// Remove the specified register from any overlapped live in. The method is
+  /// subreg-aware and removes Reg and its subregs from the live in set. It also
+  /// clears the corresponding bitmask from its live-in super registers.
+  LLVM_ABI void removeLiveInOverlappedWith(MCRegister Reg);
 
   /// Return true if the specified register is in the live in set.
-  bool isLiveIn(MCRegister Reg,
-                LaneBitmask LaneMask = LaneBitmask::getAll()) const;
+  LLVM_ABI bool isLiveIn(MCRegister Reg,
+                         LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
@@ -510,7 +527,7 @@ public:
     return make_range(livein_begin_dbg(), livein_end());
   }
 
-  livein_iterator livein_begin() const;
+  LLVM_ABI livein_iterator livein_begin() const;
   livein_iterator livein_end()   const { return LiveIns.end(); }
   bool            livein_empty() const { return LiveIns.empty(); }
   iterator_range<livein_iterator> liveins() const {
@@ -518,7 +535,7 @@ public:
   }
 
   /// Remove entry from the livein set and return iterator to the next.
-  livein_iterator removeLiveIn(livein_iterator I);
+  LLVM_ABI livein_iterator removeLiveIn(livein_iterator I);
 
   const std::vector<RegisterMaskPair> &getLiveIns() const { return LiveIns; }
 
@@ -541,8 +558,8 @@ public:
         LiveRegI = (*BlockI)->livein_begin();
         if (!advanceToValidPosition())
           return;
-        if (LiveRegI->PhysReg == ExceptionPointer ||
-            LiveRegI->PhysReg == ExceptionSelector)
+        if ((*BlockI)->isEHPad() && (LiveRegI->PhysReg == ExceptionPointer ||
+                                     LiveRegI->PhysReg == ExceptionSelector))
           ++(*this);
       }
     }
@@ -605,7 +622,7 @@ public:
   /// Iterator scanning successor basic blocks' liveins to determine the
   /// registers potentially live at the end of this block. There may be
   /// duplicates or overlapping registers in the list returned.
-  liveout_iterator liveout_begin() const;
+  LLVM_ABI liveout_iterator liveout_begin() const;
   liveout_iterator liveout_end() const {
     return liveout_iterator(*this, 0, 0, true);
   }
@@ -615,11 +632,13 @@ public:
 
   /// Get the clobber mask for the start of this basic block. Funclets use this
   /// to prevent register allocation across funclet transitions.
-  const uint32_t *getBeginClobberMask(const TargetRegisterInfo *TRI) const;
+  LLVM_ABI const uint32_t *
+  getBeginClobberMask(const TargetRegisterInfo *TRI) const;
 
   /// Get the clobber mask for the end of the basic block.
   /// \see getBeginClobberMask()
-  const uint32_t *getEndClobberMask(const TargetRegisterInfo *TRI) const;
+  LLVM_ABI const uint32_t *
+  getEndClobberMask(const TargetRegisterInfo *TRI) const;
 
   /// Return alignment of the basic block.
   Align getAlignment() const { return Alignment; }
@@ -648,10 +667,10 @@ public:
   /// via an exception handler.
   void setIsEHPad(bool V = true) { IsEHPad = V; }
 
-  bool hasEHPadSuccessor() const;
+  LLVM_ABI bool hasEHPadSuccessor() const;
 
   /// Returns true if this is the entry block of the function.
-  bool isEntryBlock() const;
+  LLVM_ABI bool isEntryBlock() const;
 
   /// Returns true if this is the entry block of an EH scope, i.e., the block
   /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
@@ -704,12 +723,12 @@ public:
   void setSectionID(MBBSectionID V) { SectionID = V; }
 
   /// Returns the MCSymbol marking the end of this basic block.
-  MCSymbol *getEndSymbol() const;
+  LLVM_ABI MCSymbol *getEndSymbol() const;
 
   /// Returns true if this block may have an INLINEASM_BR (overestimate, by
   /// checking if any of the successors are indirect targets of any inlineasm_br
   /// in the function).
-  bool mayHaveInlineAsmBr() const;
+  LLVM_ABI bool mayHaveInlineAsmBr() const;
 
   /// Returns true if this is the indirect dest of an INLINEASM_BR.
   bool isInlineAsmBrIndirectTarget() const {
@@ -722,15 +741,15 @@ public:
   }
 
   /// Returns true if it is legal to hoist instructions into this block.
-  bool isLegalToHoistInto() const;
+  LLVM_ABI bool isLegalToHoistInto() const;
 
   // Code Layout methods.
 
   /// Move 'this' block before or after the specified block.  This only moves
   /// the block, it does not modify the CFG or adjust potential fall-throughs at
   /// the end of the block.
-  void moveBefore(MachineBasicBlock *NewAfter);
-  void moveAfter(MachineBasicBlock *NewBefore);
+  LLVM_ABI void moveBefore(MachineBasicBlock *NewAfter);
+  LLVM_ABI void moveAfter(MachineBasicBlock *NewBefore);
 
   /// Returns true if this and MBB belong to the same section.
   bool sameSection(const MachineBasicBlock *MBB) const {
@@ -743,7 +762,7 @@ public:
   /// layout was modified.  If the block previously fell through to that block,
   /// it may now need a branch. If it previously branched to another block, it
   /// may now be able to fallthrough to the current layout successor.
-  void updateTerminator(MachineBasicBlock *PreviousLayoutSuccessor);
+  LLVM_ABI void updateTerminator(MachineBasicBlock *PreviousLayoutSuccessor);
 
   // Machine-CFG mutators
 
@@ -755,17 +774,18 @@ public:
   /// probability for each successor, where N is the number of successors.
   ///
   /// Note that duplicate Machine CFG edges are not allowed.
-  void addSuccessor(MachineBasicBlock *Succ,
-                    BranchProbability Prob = BranchProbability::getUnknown());
+  LLVM_ABI void
+  addSuccessor(MachineBasicBlock *Succ,
+               BranchProbability Prob = BranchProbability::getUnknown());
 
   /// Add Succ as a successor of this MachineBasicBlock.  The Predecessors list
   /// of Succ is automatically updated. The probability is not provided because
   /// BPI is not available (e.g. -O0 is used), in which case edge probabilities
   /// won't be used. Using this interface can save some space.
-  void addSuccessorWithoutProb(MachineBasicBlock *Succ);
+  LLVM_ABI void addSuccessorWithoutProb(MachineBasicBlock *Succ);
 
   /// Set successor probability of a given iterator.
-  void setSuccProbability(succ_iterator I, BranchProbability Prob);
+  LLVM_ABI void setSuccProbability(succ_iterator I, BranchProbability Prob);
 
   /// Normalize probabilities of all successors so that the sum of them becomes
   /// one. This is usually done when the current update on this MBB is done, and
@@ -778,67 +798,68 @@ public:
 
   /// Validate successors' probabilities and check if the sum of them is
   /// approximate one. This only works in DEBUG mode.
-  void validateSuccProbs() const;
+  LLVM_ABI void validateSuccProbs() const;
 
   /// Remove successor from the successors list of this MachineBasicBlock. The
   /// Predecessors list of Succ is automatically updated.
   /// If NormalizeSuccProbs is true, then normalize successors' probabilities
   /// after the successor is removed.
-  void removeSuccessor(MachineBasicBlock *Succ,
-                       bool NormalizeSuccProbs = false);
+  LLVM_ABI void removeSuccessor(MachineBasicBlock *Succ,
+                                bool NormalizeSuccProbs = false);
 
   /// Remove specified successor from the successors list of this
   /// MachineBasicBlock. The Predecessors list of Succ is automatically updated.
   /// If NormalizeSuccProbs is true, then normalize successors' probabilities
   /// after the successor is removed.
   /// Return the iterator to the element after the one removed.
-  succ_iterator removeSuccessor(succ_iterator I,
-                                bool NormalizeSuccProbs = false);
+  LLVM_ABI succ_iterator removeSuccessor(succ_iterator I,
+                                         bool NormalizeSuccProbs = false);
 
   /// Replace successor OLD with NEW and update probability info.
-  void replaceSuccessor(MachineBasicBlock *Old, MachineBasicBlock *New);
+  LLVM_ABI void replaceSuccessor(MachineBasicBlock *Old,
+                                 MachineBasicBlock *New);
 
   /// Copy a successor (and any probability info) from original block to this
   /// block's. Uses an iterator into the original blocks successors.
   ///
   /// This is useful when doing a partial clone of successors. Afterward, the
   /// probabilities may need to be normalized.
-  void copySuccessor(const MachineBasicBlock *Orig, succ_iterator I);
+  LLVM_ABI void copySuccessor(const MachineBasicBlock *Orig, succ_iterator I);
 
   /// Split the old successor into old plus new and updates the probability
   /// info.
-  void splitSuccessor(MachineBasicBlock *Old, MachineBasicBlock *New,
-                      bool NormalizeSuccProbs = false);
+  LLVM_ABI void splitSuccessor(MachineBasicBlock *Old, MachineBasicBlock *New,
+                               bool NormalizeSuccProbs = false);
 
   /// Transfers all the successors from MBB to this machine basic block (i.e.,
   /// copies all the successors FromMBB and remove all the successors from
   /// FromMBB).
-  void transferSuccessors(MachineBasicBlock *FromMBB);
+  LLVM_ABI void transferSuccessors(MachineBasicBlock *FromMBB);
 
   /// Transfers all the successors, as in transferSuccessors, and update PHI
   /// operands in the successor blocks which refer to FromMBB to refer to this.
-  void transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB);
+  LLVM_ABI void transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB);
 
   /// Return true if any of the successors have probabilities attached to them.
   bool hasSuccessorProbabilities() const { return !Probs.empty(); }
 
   /// Return true if the specified MBB is a predecessor of this block.
-  bool isPredecessor(const MachineBasicBlock *MBB) const;
+  LLVM_ABI bool isPredecessor(const MachineBasicBlock *MBB) const;
 
   /// Return true if the specified MBB is a successor of this block.
-  bool isSuccessor(const MachineBasicBlock *MBB) const;
+  LLVM_ABI bool isSuccessor(const MachineBasicBlock *MBB) const;
 
   /// Return true if the specified MBB will be emitted immediately after this
   /// block, such that if this block exits by falling through, control will
   /// transfer to the specified MBB. Note that MBB need not be a successor at
   /// all, for example if this block ends with an unconditional branch to some
   /// other block.
-  bool isLayoutSuccessor(const MachineBasicBlock *MBB) const;
+  LLVM_ABI bool isLayoutSuccessor(const MachineBasicBlock *MBB) const;
 
   /// Return the successor of this block if it has a single successor.
   /// Otherwise return a null pointer.
   ///
-  const MachineBasicBlock *getSingleSuccessor() const;
+  LLVM_ABI const MachineBasicBlock *getSingleSuccessor() const;
   MachineBasicBlock *getSingleSuccessor() {
     return const_cast<MachineBasicBlock *>(
         static_cast<const MachineBasicBlock *>(this)->getSingleSuccessor());
@@ -847,7 +868,7 @@ public:
   /// Return the predecessor of this block if it has a single predecessor.
   /// Otherwise return a null pointer.
   ///
-  const MachineBasicBlock *getSinglePredecessor() const;
+  LLVM_ABI const MachineBasicBlock *getSinglePredecessor() const;
   MachineBasicBlock *getSinglePredecessor() {
     return const_cast<MachineBasicBlock *>(
         static_cast<const MachineBasicBlock *>(this)->getSinglePredecessor());
@@ -858,7 +879,7 @@ public:
   /// it. If an explicit branch to the fallthrough block is not allowed,
   /// set JumpToFallThrough to be false. Non-null return is a conservative
   /// answer.
-  MachineBasicBlock *getFallThrough(bool JumpToFallThrough = true);
+  LLVM_ABI MachineBasicBlock *getFallThrough(bool JumpToFallThrough = true);
 
   /// Return the fallthrough block if the block can implicitly
   /// transfer control to it's successor, whether by a branch or
@@ -870,14 +891,14 @@ public:
   /// false if it can reach the block after it, but it uses an
   /// explicit branch to do so (e.g., a table jump).  True is a
   /// conservative answer.
-  bool canFallThrough();
+  LLVM_ABI bool canFallThrough();
 
   /// Returns a pointer to the first instruction in this block that is not a
   /// PHINode instruction. When adding instructions to the beginning of the
   /// basic block, they should be added before the returned value, not before
   /// the first instruction, which might be PHI.
   /// Returns end() is there's no non-PHI instruction.
-  iterator getFirstNonPHI();
+  LLVM_ABI iterator getFirstNonPHI();
   const_iterator getFirstNonPHI() const {
     return const_cast<MachineBasicBlock *>(this)->getFirstNonPHI();
   }
@@ -885,30 +906,31 @@ public:
   /// Return the first instruction in MBB after I that is not a PHI or a label.
   /// This is the correct point to insert lowered copies at the beginning of a
   /// basic block that must be before any debugging information.
-  iterator SkipPHIsAndLabels(iterator I);
+  LLVM_ABI iterator SkipPHIsAndLabels(iterator I);
 
   /// Return the first instruction in MBB after I that is not a PHI, label or
   /// debug.  This is the correct point to insert copies at the beginning of a
   /// basic block. \p Reg is the register being used by a spill or defined for a
   /// restore/split during register allocation.
-  iterator SkipPHIsLabelsAndDebug(iterator I, Register Reg = Register(),
-                                  bool SkipPseudoOp = true);
+  LLVM_ABI iterator SkipPHIsLabelsAndDebug(iterator I,
+                                           Register Reg = Register(),
+                                           bool SkipPseudoOp = true);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().
-  iterator getFirstTerminator();
+  LLVM_ABI iterator getFirstTerminator();
   const_iterator getFirstTerminator() const {
     return const_cast<MachineBasicBlock *>(this)->getFirstTerminator();
   }
 
   /// Same getFirstTerminator but it ignores bundles and return an
   /// instr_iterator instead.
-  instr_iterator getFirstInstrTerminator();
+  LLVM_ABI instr_iterator getFirstInstrTerminator();
 
   /// Finds the first terminator in a block by scanning forward. This can handle
   /// cases in GlobalISel where there may be non-terminator instructions between
   /// terminators, for which getFirstTerminator() will not work correctly.
-  iterator getFirstTerminatorForward();
+  LLVM_ABI iterator getFirstTerminatorForward();
 
   /// Returns an iterator to the first non-debug instruction in the basic block,
   /// or end(). Skip any pseudo probe operation if \c SkipPseudoOp is true.
@@ -926,7 +948,7 @@ public:
   /// value of \c SkipPseudoOp is set to true to maximize code quality in
   /// general, with an explict false value passed in in a few places like branch
   /// folding and if-conversion to favor profile quality.
-  iterator getFirstNonDebugInstr(bool SkipPseudoOp = true);
+  LLVM_ABI iterator getFirstNonDebugInstr(bool SkipPseudoOp = true);
   const_iterator getFirstNonDebugInstr(bool SkipPseudoOp = true) const {
     return const_cast<MachineBasicBlock *>(this)->getFirstNonDebugInstr(
         SkipPseudoOp);
@@ -948,7 +970,7 @@ public:
   /// value of \c SkipPseudoOp is set to true to maximize code quality in
   /// general, with an explict false value passed in in a few places like branch
   /// folding and if-conversion to favor profile quality.
-  iterator getLastNonDebugInstr(bool SkipPseudoOp = true);
+  LLVM_ABI iterator getLastNonDebugInstr(bool SkipPseudoOp = true);
   const_iterator getLastNonDebugInstr(bool SkipPseudoOp = true) const {
     return const_cast<MachineBasicBlock *>(this)->getLastNonDebugInstr(
         SkipPseudoOp);
@@ -974,8 +996,9 @@ public:
   ///
   /// If \p UpdateLiveIns is true, this will ensure the live ins list is
   /// accurate, including for physreg uses/defs in the original block.
-  MachineBasicBlock *splitAt(MachineInstr &SplitInst, bool UpdateLiveIns = true,
-                             LiveIntervals *LIS = nullptr);
+  LLVM_ABI MachineBasicBlock *splitAt(MachineInstr &SplitInst,
+                                      bool UpdateLiveIns = true,
+                                      LiveIntervals *LIS = nullptr);
 
   /// Split the critical edge from this block to the given successor block, and
   /// return the newly created block, or null if splitting is not possible.
@@ -1005,11 +1028,11 @@ public:
   }
 
   // Helper method for new pass manager migration.
-  MachineBasicBlock *SplitCriticalEdge(
+  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
       MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
       std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
 
-  MachineBasicBlock *SplitCriticalEdge(
+  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
       MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
       std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
 
@@ -1017,7 +1040,9 @@ public:
   /// Succ, can be split. If this returns true a subsequent call to
   /// SplitCriticalEdge is guaranteed to return a valid basic block if
   /// no changes occurred in the meantime.
-  bool canSplitCriticalEdge(const MachineBasicBlock *Succ) const;
+  LLVM_ABI bool
+  canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                       const MachineLoopInfo *MLI = nullptr) const;
 
   void pop_front() { Insts.pop_front(); }
   void pop_back() { Insts.pop_back(); }
@@ -1029,7 +1054,7 @@ public:
   /// otherwise MI will not be added to any bundle. That means this function
   /// alone can't be used to prepend or append instructions to bundles. See
   /// MIBundleBuilder::insert() for a more reliable way of doing that.
-  instr_iterator insert(instr_iterator I, MachineInstr *M);
+  LLVM_ABI instr_iterator insert(instr_iterator I, MachineInstr *M);
 
   /// Insert a range of instructions into the instruction list before I.
   template<typename IT>
@@ -1073,7 +1098,7 @@ public:
   ///
   /// If the instruction is part of a bundle, the other instructions in the
   /// bundle will still be bundled after removing the single instruction.
-  instr_iterator erase(instr_iterator I);
+  LLVM_ABI instr_iterator erase(instr_iterator I);
 
   /// Remove an instruction from the instruction list and delete it.
   ///
@@ -1118,7 +1143,7 @@ public:
   ///
   /// If the instruction is part of a bundle, the other instructions in the
   /// bundle will still be bundled after removing the single instruction.
-  MachineInstr *remove_instr(MachineInstr *I);
+  LLVM_ABI MachineInstr *remove_instr(MachineInstr *I);
 
   void clear() {
     Insts.clear();
@@ -1147,22 +1172,24 @@ public:
 
   /// This method unlinks 'this' from the containing function, and returns it,
   /// but does not delete it.
-  MachineBasicBlock *removeFromParent();
+  LLVM_ABI MachineBasicBlock *removeFromParent();
 
   /// This method unlinks 'this' from the containing function and deletes it.
-  void eraseFromParent();
+  LLVM_ABI void eraseFromParent();
 
   /// Given a machine basic block that branched to 'Old', change the code and
   /// CFG so that it branches to 'New' instead.
-  void ReplaceUsesOfBlockWith(MachineBasicBlock *Old, MachineBasicBlock *New);
+  LLVM_ABI void ReplaceUsesOfBlockWith(MachineBasicBlock *Old,
+                                       MachineBasicBlock *New);
 
   /// Update all phi nodes in this basic block to refer to basic block \p New
   /// instead of basic block \p Old.
-  void replacePhiUsesWith(MachineBasicBlock *Old, MachineBasicBlock *New);
+  LLVM_ABI void replacePhiUsesWith(MachineBasicBlock *Old,
+                                   MachineBasicBlock *New);
 
   /// Find the next valid DebugLoc starting at MBBI, skipping any debug
   /// instructions.  Return UnknownLoc if there is none.
-  DebugLoc findDebugLoc(instr_iterator MBBI);
+  LLVM_ABI DebugLoc findDebugLoc(instr_iterator MBBI);
   DebugLoc findDebugLoc(iterator MBBI) {
     return findDebugLoc(MBBI.getInstrIterator());
   }
@@ -1170,7 +1197,7 @@ public:
   /// Has exact same behavior as @ref findDebugLoc (it also searches towards the
   /// end of this MBB) except that this function takes a reverse iterator to
   /// identify the starting MI.
-  DebugLoc rfindDebugLoc(reverse_instr_iterator MBBI);
+  LLVM_ABI DebugLoc rfindDebugLoc(reverse_instr_iterator MBBI);
   DebugLoc rfindDebugLoc(reverse_iterator MBBI) {
     return rfindDebugLoc(MBBI.getInstrIterator());
   }
@@ -1178,7 +1205,7 @@ public:
   /// Find the previous valid DebugLoc preceding MBBI, skipping any debug
   /// instructions. It is possible to find the last DebugLoc in the MBB using
   /// findPrevDebugLoc(instr_end()).  Return UnknownLoc if there is none.
-  DebugLoc findPrevDebugLoc(instr_iterator MBBI);
+  LLVM_ABI DebugLoc findPrevDebugLoc(instr_iterator MBBI);
   DebugLoc findPrevDebugLoc(iterator MBBI) {
     return findPrevDebugLoc(MBBI.getInstrIterator());
   }
@@ -1187,14 +1214,14 @@ public:
   /// the beginning of this MBB) except that this function takes reverse
   /// iterator to identify the starting MI. A minor difference compared to
   /// findPrevDebugLoc is that we can't start scanning at "instr_end".
-  DebugLoc rfindPrevDebugLoc(reverse_instr_iterator MBBI);
+  LLVM_ABI DebugLoc rfindPrevDebugLoc(reverse_instr_iterator MBBI);
   DebugLoc rfindPrevDebugLoc(reverse_iterator MBBI) {
     return rfindPrevDebugLoc(MBBI.getInstrIterator());
   }
 
   /// Find and return the merged DebugLoc of the branch instructions of the
   /// block. Return UnknownLoc if there is none.
-  DebugLoc findBranchDebugLoc();
+  LLVM_ABI DebugLoc findBranchDebugLoc();
 
   /// Possible outcome of a register liveness query to computeRegisterLiveness()
   enum LivenessQueryResult {
@@ -1211,28 +1238,29 @@ public:
   /// after (searching just for defs) \p Before.
   ///
   /// \p Reg must be a physical register.
-  LivenessQueryResult computeRegisterLiveness(const TargetRegisterInfo *TRI,
-                                              MCRegister Reg,
-                                              const_iterator Before,
-                                              unsigned Neighborhood = 10) const;
+  LLVM_ABI LivenessQueryResult computeRegisterLiveness(
+      const TargetRegisterInfo *TRI, MCRegister Reg, const_iterator Before,
+      unsigned Neighborhood = 10) const;
 
   // Debugging methods.
-  void dump() const;
-  void print(raw_ostream &OS, const SlotIndexes * = nullptr,
-             bool IsStandalone = true) const;
-  void print(raw_ostream &OS, ModuleSlotTracker &MST,
-             const SlotIndexes * = nullptr, bool IsStandalone = true) const;
+  LLVM_ABI void dump() const;
+  LLVM_ABI void print(raw_ostream &OS, const SlotIndexes * = nullptr,
+                      bool IsStandalone = true) const;
+  LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
+                      const SlotIndexes * = nullptr,
+                      bool IsStandalone = true) const;
 
   enum PrintNameFlag {
     PrintNameIr = (1 << 0), ///< Add IR name where available
     PrintNameAttributes = (1 << 1), ///< Print attributes
   };
 
-  void printName(raw_ostream &os, unsigned printNameFlags = PrintNameIr,
-                 ModuleSlotTracker *moduleSlotTracker = nullptr) const;
+  LLVM_ABI void printName(raw_ostream &os,
+                          unsigned printNameFlags = PrintNameIr,
+                          ModuleSlotTracker *moduleSlotTracker = nullptr) const;
 
   // Printing method used by LoopInfo.
-  void printAsOperand(raw_ostream &OS, bool PrintType = true) const;
+  LLVM_ABI void printAsOperand(raw_ostream &OS, bool PrintType = true) const;
 
   /// MachineBasicBlocks are uniquely numbered at the function level, unless
   /// they're not in a MachineFunction yet, in which case this will return -1.
@@ -1245,10 +1273,10 @@ public:
   void setCallFrameSize(unsigned N) { CallFrameSize = N; }
 
   /// Return the MCSymbol for this basic block.
-  MCSymbol *getSymbol() const;
+  LLVM_ABI MCSymbol *getSymbol() const;
 
   /// Return the Windows EH Continuation Symbol for this basic block.
-  MCSymbol *getEHContSymbol() const;
+  LLVM_ABI MCSymbol *getEHContSymbol() const;
 
   std::optional<uint64_t> getIrrLoopHeaderWeight() const {
     return IrrLoopHeaderWeight;
@@ -1261,7 +1289,19 @@ public:
   /// Return probability of the edge from this block to MBB. This method should
   /// NOT be called directly, but by using getEdgeProbability method from
   /// MachineBranchProbabilityInfo class.
-  BranchProbability getSuccProbability(const_succ_iterator Succ) const;
+  LLVM_ABI BranchProbability getSuccProbability(const_succ_iterator Succ) const;
+
+  // Helper function for MIRPrinter.
+  LLVM_ABI bool canPredictBranchProbabilities() const;
+
+  /// Iterate over block PHI instructions and remove all incoming values for
+  /// PredMBB.
+  ///
+  /// Method does not erase PHI instructions even if they have single income or
+  /// do not have incoming values ar all. It is a caller responsibility to make
+  /// decision how to process PHI instructions after incoming values removal.
+  LLVM_ABI void
+  removePHIsIncomingValuesForPredecessor(const MachineBasicBlock &PredMBB);
 
 private:
   /// Return probability iterator corresponding to the I successor iterator.
@@ -1270,7 +1310,6 @@ private:
   getProbabilityIterator(const_succ_iterator I) const;
 
   friend class MachineBranchProbabilityInfo;
-  friend class MIPrinter;
 
   // Methods used to maintain doubly linked list of blocks...
   friend struct ilist_callback_traits<MachineBasicBlock>;
@@ -1288,7 +1327,7 @@ private:
   void removePredecessor(MachineBasicBlock *Pred);
 };
 
-raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
 
 /// Prints a machine basic block reference.
 ///
@@ -1296,7 +1335,7 @@ raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
 ///   %bb.5           - a machine basic block with MBB.getNumber() == 5.
 ///
 /// Usage: OS << printMBBReference(MBB) << '\n';
-Printable printMBBReference(const MachineBasicBlock &MBB);
+LLVM_ABI Printable printMBBReference(const MachineBasicBlock &MBB);
 
 // This is useful when building IndexedMaps keyed on basic block pointers.
 struct MBB2NumberFunctor {

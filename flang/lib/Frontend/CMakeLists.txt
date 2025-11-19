@@ -19,6 +19,7 @@ add_flang_library(flangFrontend
   FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
   HLFIRDialect
+  MIFDialect
 
   LINK_LIBS
   CUFDialect
@@ -41,10 +42,12 @@ add_flang_library(flangFrontend
   FIROpenACCSupport
   FIROpenMPSupport
   FlangOpenMPTransforms
+  MIFDialect
 
   LINK_COMPONENTS
   Passes
   Analysis
+  BitReader
   Extensions
   IRPrinter
   IRReader
@@ -73,4 +76,13 @@ add_flang_library(flangFrontend
   CLANG_LIBS
   clangBasic
   clangDriver
+  clangOptions
+)
+
+target_precompile_headers(flangFrontend PRIVATE
+  [["flang/Parser/parsing.h"]]
+  [["flang/Parser/parse-tree.h"]]
+  [["flang/Parser/dump-parse-tree.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/Bridge.h"]]
 )

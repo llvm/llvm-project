@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
@@ -49,6 +50,7 @@ static AMDGPUMCExpr::Specifier getSpecifier(unsigned MOFlags) {
   default:
     return AMDGPUMCExpr::S_None;
   case SIInstrInfo::MO_GOTPCREL:
+  case SIInstrInfo::MO_GOTPCREL64:
     return AMDGPUMCExpr::S_GOTPCREL;
   case SIInstrInfo::MO_GOTPCREL32_LO:
     return AMDGPUMCExpr::S_GOTPCREL32_LO;
@@ -58,10 +60,14 @@ static AMDGPUMCExpr::Specifier getSpecifier(unsigned MOFlags) {
     return AMDGPUMCExpr::S_REL32_LO;
   case SIInstrInfo::MO_REL32_HI:
     return AMDGPUMCExpr::S_REL32_HI;
+  case SIInstrInfo::MO_REL64:
+    return AMDGPUMCExpr::S_REL64;
   case SIInstrInfo::MO_ABS32_LO:
     return AMDGPUMCExpr::S_ABS32_LO;
   case SIInstrInfo::MO_ABS32_HI:
     return AMDGPUMCExpr::S_ABS32_HI;
+  case SIInstrInfo::MO_ABS64:
+    return AMDGPUMCExpr::S_ABS64;
   }
 }
 
@@ -169,6 +175,40 @@ void AMDGPUMCInstLower::lowerT16D16Helper(const MachineInstr *MI,
   }
 }
 
+void AMDGPUMCInstLower::lowerT16FmaMixFP16(const MachineInstr *MI,
+                                           MCInst &OutMI) const {
+  unsigned Opcode = MI->getOpcode();
+  const auto *TII = static_cast<const SIInstrInfo *>(ST.getInstrInfo());
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+
+  int VDstIdx = AMDGPU::getNamedOperandIdx(Opcode, llvm::AMDGPU::OpName::vdst);
+  const MachineOperand &VDst = MI->getOperand(VDstIdx);
+  bool IsHi = AMDGPU::isHi16Reg(VDst.getReg(), TRI);
+  switch (Opcode) {
+  case AMDGPU::V_FMA_MIX_F16_t16:
+    Opcode = IsHi ? AMDGPU::V_FMA_MIXHI_F16 : AMDGPU::V_FMA_MIXLO_F16;
+    break;
+  case AMDGPU::V_FMA_MIX_BF16_t16:
+    Opcode = IsHi ? AMDGPU::V_FMA_MIXHI_BF16 : AMDGPU::V_FMA_MIXLO_BF16;
+    break;
+  }
+  int MCOpcode = TII->pseudoToMCOpcode(Opcode);
+  assert(MCOpcode != -1 &&
+         "Pseudo instruction doesn't have a target-specific version");
+  OutMI.setOpcode(MCOpcode);
+
+  // lower operands
+  for (int I = 0, E = MI->getNumExplicitOperands(); I < E; I++) {
+    const MachineOperand &MO = MI->getOperand(I);
+    MCOperand MCOp;
+    if (I == VDstIdx)
+      MCOp = MCOperand::createReg(TRI.get32BitRegister(VDst.getReg()));
+    else
+      lowerOperand(MO, MCOp);
+    OutMI.addOperand(MCOp);
+  }
+}
+
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
   const auto *TII = static_cast<const SIInstrInfo *>(ST.getInstrInfo());
@@ -195,11 +235,15 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   } else if (AMDGPU::getT16D16Helper(Opcode)) {
     lowerT16D16Helper(MI, OutMI);
     return;
+  } else if (Opcode == AMDGPU::V_FMA_MIX_F16_t16 ||
+             Opcode == AMDGPU::V_FMA_MIX_BF16_t16) {
+    lowerT16FmaMixFP16(MI, OutMI);
+    return;
   }
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);
   if (MCOpcode == -1) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("AMDGPUMCInstLower::lower - Pseudo instruction doesn't have "
                 "a target-specific version: " + Twine(MI->getOpcode()));
   }
@@ -243,6 +287,36 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
   return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
 
+static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI,
+                                 const SIMachineFunctionInfo *MFI,
+                                 MCStreamer &OS) {
+  // The instruction will only transfer a subset of the registers in the block,
+  // based on the mask that is stored in m0. We could search for the instruction
+  // that sets m0, but most of the time we'll already have the mask stored in
+  // the machine function info. Try to use that. This assumes that we only use
+  // block loads/stores for CSR spills.
+  Register RegBlock =
+      TII->getNamedOperand(*MI, MI->mayLoad() ? AMDGPU::OpName::vdst
+                                              : AMDGPU::OpName::vdata)
+          ->getReg();
+  Register FirstRegInBlock = TRI->getSubReg(RegBlock, AMDGPU::sub0);
+  uint32_t Mask = MFI->getMaskForVGPRBlockOps(RegBlock);
+
+  if (!Mask)
+    return; // Nothing to report
+
+  SmallString<512> TransferredRegs;
+  for (unsigned I = 0; I < sizeof(Mask) * 8; ++I) {
+    if (Mask & (1 << I)) {
+      (llvm::Twine(" ") + TRI->getRegAsmName(FirstRegInBlock + I))
+          .toVector(TransferredRegs);
+    }
+  }
+
+  OS.emitRawComment(" transferring at most " + TransferredRegs);
+}
+
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -258,7 +332,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->print(errs());
   }
@@ -329,6 +403,19 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       if (isVerbose())
         OutStreamer->emitRawComment(" meta instruction");
       return;
+    }
+
+    if (isVerbose())
+      if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
+        emitVGPRBlockComment(MI, STI.getInstrInfo(), STI.getRegisterInfo(),
+                             MF->getInfo<SIMachineFunctionInfo>(),
+                             *OutStreamer);
+
+    if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+      unsigned V = MI->getOperand(0).getImm() & 0xff;
+      OutStreamer->AddComment(
+          " msbs: dst=" + Twine(V >> 6) + " src0=" + Twine(V & 3) +
+          " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));
     }
 
     MCInst TmpInst;

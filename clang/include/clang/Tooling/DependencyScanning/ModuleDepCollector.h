@@ -288,6 +288,8 @@ public:
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
 
+  PPCallbacks *getPPCallbacks() { return CollectorPPPtr; }
+
   /// Apply any changes implied by the discovered dependencies to the given
   /// invocation, (e.g. disable implicit modules, add explicit module paths).
   void applyDiscoveredDependencies(CompilerInvocation &CI);
@@ -311,8 +313,6 @@ private:
   const ArrayRef<StringRef> StableDirs;
   /// Path to the main source file.
   std::string MainFile;
-  /// Hash identifying the compilation conditions of the current TU.
-  std::string ContextHash;
   /// Non-modular file dependencies. This includes the main source file and
   /// textually included header files.
   std::vector<std::string> FileDeps;
@@ -325,6 +325,11 @@ private:
   llvm::MapVector<const Module *, PrebuiltModuleDep> DirectPrebuiltModularDeps;
   /// Working set of direct modular dependencies.
   llvm::SetVector<const Module *> DirectModularDeps;
+  /// Working set of direct modular dependencies, as they were imported.
+  llvm::SmallPtrSet<const Module *, 32> DirectImports;
+  /// All direct and transitive visible modules.
+  llvm::StringSet<> VisibleModules;
+
   /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// A Clang invocation that's based on the original TU invocation and that has
@@ -336,8 +341,16 @@ private:
   std::optional<P1689ModuleInfo> ProvidedStdCXXModule;
   std::vector<P1689ModuleInfo> RequiredStdCXXModules;
 
+  /// A pointer to the preprocessor callback so we can invoke it directly
+  /// if needed. The callback is created and added to a Preprocessor instance by
+  /// attachToPreprocessor and the Preprocessor instance owns it.
+  ModuleDepCollectorPP *CollectorPPPtr = nullptr;
+
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);
+
+  /// Computes all visible modules resolved from direct imports.
+  void addVisibleModules();
 
   /// Adds \p Path to \c FileDeps, making it absolute if necessary.
   void addFileDep(StringRef Path);

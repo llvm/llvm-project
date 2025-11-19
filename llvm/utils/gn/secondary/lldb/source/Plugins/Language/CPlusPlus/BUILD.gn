@@ -1,3 +1,14 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("LanguageCPlusPlusProperties") {
+  args = [ "-gen-lldb-property-defs" ]
+}
+
+lldb_tablegen("LanguageCPlusPlusPropertiesEnum") {
+  args = [ "-gen-lldb-property-enum-defs" ]
+  td_file = "LanguageCPlusPlusProperties.td"
+}
+
 static_library("CPlusPlus") {
   output_name = "lldbPluginCPlusPlusLanguage"
   configs += [
@@ -5,6 +16,8 @@ static_library("CPlusPlus") {
     "//llvm/utils/gn/build:lldb_code",
   ]
   deps = [
+    ":LanguageCPlusPlusProperties",
+    ":LanguageCPlusPlusPropertiesEnum",
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",
     "//lldb/source/Host",
@@ -26,12 +39,13 @@ static_library("CPlusPlus") {
     "CPlusPlusNameParser.cpp",
     "Coroutines.cpp",
     "CxxStringTypes.cpp",
+    "Generic.cpp",
     "GenericBitset.cpp",
+    "GenericInitializerList.cpp",
+    "GenericList.cpp",
     "GenericOptional.cpp",
     "LibCxx.cpp",
     "LibCxxAtomic.cpp",
-    "LibCxxInitializerList.cpp",
-    "LibCxxList.cpp",
     "LibCxxMap.cpp",
     "LibCxxProxyArray.cpp",
     "LibCxxQueue.cpp",
@@ -47,5 +61,14 @@ static_library("CPlusPlus") {
     "LibStdcppTuple.cpp",
     "LibStdcppUniquePointer.cpp",
     "MSVCUndecoratedNameParser.cpp",
+    "MsvcStl.cpp",
+    "MsvcStlAtomic.cpp",
+    "MsvcStlDeque.cpp",
+    "MsvcStlSmartPointer.cpp",
+    "MsvcStlTree.cpp",
+    "MsvcStlTuple.cpp",
+    "MsvcStlUnordered.cpp",
+    "MsvcStlVariant.cpp",
+    "MsvcStlVector.cpp",
   ]
 }

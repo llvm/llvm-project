@@ -19,11 +19,14 @@
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -62,20 +65,6 @@ static cl::opt<bool> DumpReproducers(
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
-
-// A helper to multiply 2 signed integers where overflowing is allowed.
-static int64_t multiplyWithOverflow(int64_t A, int64_t B) {
-  int64_t Result;
-  MulOverflow(A, B, Result);
-  return Result;
-}
-
-// A helper to add 2 signed integers where overflowing is allowed.
-static int64_t addWithOverflow(int64_t A, int64_t B) {
-  int64_t Result;
-  AddOverflow(A, B, Result);
-  return Result;
-}
 
 static Instruction *getContextInstForUse(Use &U) {
   Instruction *UserI = cast<Instruction>(U.getUser());
@@ -183,10 +172,12 @@ struct State {
   DominatorTree &DT;
   LoopInfo &LI;
   ScalarEvolution &SE;
+  TargetLibraryInfo &TLI;
   SmallVector<FactOrCheck, 64> WorkList;
 
-  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE)
-      : DT(DT), LI(LI), SE(SE) {}
+  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
+        TargetLibraryInfo &TLI)
+      : DT(DT), LI(LI), SE(SE), TLI(TLI) {}
 
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
@@ -365,26 +356,42 @@ struct Decomposition {
   Decomposition(int64_t Offset, ArrayRef<DecompEntry> Vars)
       : Offset(Offset), Vars(Vars) {}
 
-  void add(int64_t OtherOffset) {
-    Offset = addWithOverflow(Offset, OtherOffset);
+  /// Add \p OtherOffset and return true if the operation overflows, i.e. the
+  /// new decomposition is invalid.
+  [[nodiscard]] bool add(int64_t OtherOffset) {
+    return AddOverflow(Offset, OtherOffset, Offset);
   }
 
-  void add(const Decomposition &Other) {
-    add(Other.Offset);
+  /// Add \p Other and return true if the operation overflows, i.e. the new
+  /// decomposition is invalid.
+  [[nodiscard]] bool add(const Decomposition &Other) {
+    if (add(Other.Offset))
+      return true;
     append_range(Vars, Other.Vars);
+    return false;
   }
 
-  void sub(const Decomposition &Other) {
+  /// Subtract \p Other and return true if the operation overflows, i.e. the new
+  /// decomposition is invalid.
+  [[nodiscard]] bool sub(const Decomposition &Other) {
     Decomposition Tmp = Other;
-    Tmp.mul(-1);
-    add(Tmp.Offset);
+    if (Tmp.mul(-1))
+      return true;
+    if (add(Tmp.Offset))
+      return true;
     append_range(Vars, Tmp.Vars);
+    return false;
   }
 
-  void mul(int64_t Factor) {
-    Offset = multiplyWithOverflow(Offset, Factor);
+  /// Multiply all coefficients by \p Factor and return true if the operation
+  /// overflows, i.e. the new decomposition is invalid.
+  [[nodiscard]] bool mul(int64_t Factor) {
+    if (MulOverflow(Offset, Factor, Offset))
+      return true;
     for (auto &Var : Vars)
-      Var.Coefficient = multiplyWithOverflow(Var.Coefficient, Factor);
+      if (MulOverflow(Var.Coefficient, Factor, Var.Coefficient))
+        return true;
+    return false;
   }
 };
 
@@ -466,8 +473,10 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
   for (auto [Index, Scale] : VariableOffsets) {
     auto IdxResult = decompose(Index, Preconditions, IsSigned, DL);
-    IdxResult.mul(Scale.getSExtValue());
-    Result.add(IdxResult);
+    if (IdxResult.mul(Scale.getSExtValue()))
+      return &GEP;
+    if (Result.add(IdxResult))
+      return &GEP;
 
     if (!NW.hasNoUnsignedWrap()) {
       // Try to prove nuw from nusw and nneg.
@@ -487,11 +496,13 @@ static Decomposition decompose(Value *V,
                                SmallVectorImpl<ConditionTy> &Preconditions,
                                bool IsSigned, const DataLayout &DL) {
 
-  auto MergeResults = [&Preconditions, IsSigned, &DL](Value *A, Value *B,
-                                                      bool IsSignedB) {
+  auto MergeResults = [&Preconditions, IsSigned,
+                       &DL](Value *A, Value *B,
+                            bool IsSignedB) -> std::optional<Decomposition> {
     auto ResA = decompose(A, Preconditions, IsSigned, DL);
     auto ResB = decompose(B, Preconditions, IsSignedB, DL);
-    ResA.add(ResB);
+    if (ResA.add(ResB))
+      return std::nullopt;
     return ResA;
   };
 
@@ -532,21 +543,26 @@ static Decomposition decompose(Value *V,
         V = Op0;
     }
 
-    if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
-      return MergeResults(Op0, Op1, IsSigned);
+    if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
+      if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
+        return *Decomp;
+      return {V, IsKnownNonNegative};
+    }
 
     if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
       auto ResA = decompose(Op0, Preconditions, IsSigned, DL);
       auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
-      ResA.sub(ResB);
-      return ResA;
+      if (!ResA.sub(ResB))
+        return ResA;
+      return {V, IsKnownNonNegative};
     }
 
     ConstantInt *CI;
     if (match(V, m_NSWMul(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI)) {
       auto Result = decompose(Op0, Preconditions, IsSigned, DL);
-      Result.mul(CI->getSExtValue());
-      return Result;
+      if (!Result.mul(CI->getSExtValue()))
+        return Result;
+      return {V, IsKnownNonNegative};
     }
 
     // (shl nsw x, shift) is (mul nsw x, (1<<shift)), with the exception of
@@ -556,8 +572,9 @@ static Decomposition decompose(Value *V,
       if (Shift < Ty->getIntegerBitWidth() - 1) {
         assert(Shift < 64 && "Would overflow");
         auto Result = decompose(Op0, Preconditions, IsSigned, DL);
-        Result.mul(int64_t(1) << Shift);
-        return Result;
+        if (!Result.mul(int64_t(1) << Shift))
+          return Result;
+        return {V, IsKnownNonNegative};
       }
     }
 
@@ -592,8 +609,21 @@ static Decomposition decompose(Value *V,
   Value *Op1;
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
-    return MergeResults(Op0, Op1, IsSigned);
+    if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
+      return *Decomp;
+    return {V, IsKnownNonNegative};
   }
+
+  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
+      canUseSExt(CI)) {
+    Preconditions.emplace_back(
+        CmpInst::ICMP_UGE, Op0,
+        ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
+    if (auto Decomp = MergeResults(Op0, CI, true))
+      return *Decomp;
+    return {V, IsKnownNonNegative};
+  }
+
   if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
     if (!isKnownNonNegative(Op0, DL))
       Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
@@ -602,41 +632,41 @@ static Decomposition decompose(Value *V,
       Preconditions.emplace_back(CmpInst::ICMP_SGE, Op1,
                                  ConstantInt::get(Op1->getType(), 0));
 
-    return MergeResults(Op0, Op1, IsSigned);
-  }
-
-  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
-      canUseSExt(CI)) {
-    Preconditions.emplace_back(
-        CmpInst::ICMP_UGE, Op0,
-        ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
-    return MergeResults(Op0, CI, true);
+    if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
+      return *Decomp;
+    return {V, IsKnownNonNegative};
   }
 
   // Decompose or as an add if there are no common bits between the operands.
-  if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI))))
-    return MergeResults(Op0, CI, IsSigned);
+  if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI)))) {
+    if (auto Decomp = MergeResults(Op0, CI, IsSigned))
+      return *Decomp;
+    return {V, IsKnownNonNegative};
+  }
 
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 64)
       return {V, IsKnownNonNegative};
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
-    Result.mul(int64_t{1} << CI->getSExtValue());
-    return Result;
+    if (!Result.mul(int64_t{1} << CI->getSExtValue()))
+      return Result;
+    return {V, IsKnownNonNegative};
   }
 
   if (match(V, m_NUWMul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
       (!CI->isNegative())) {
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
-    Result.mul(CI->getSExtValue());
-    return Result;
+    if (!Result.mul(CI->getSExtValue()))
+      return Result;
+    return {V, IsKnownNonNegative};
   }
 
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1)))) {
     auto ResA = decompose(Op0, Preconditions, IsSigned, DL);
     auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
-    ResA.sub(ResB);
-    return ResA;
+    if (!ResA.sub(ResB))
+      return ResA;
+    return {V, IsKnownNonNegative};
   }
 
   return {V, IsKnownNonNegative};
@@ -984,9 +1014,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
   auto IncUnsigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
   auto IncSigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT);
   bool MonotonicallyIncreasingUnsigned =
-      IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
+      IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
   bool MonotonicallyIncreasingSigned =
-      IncSigned && *IncSigned == ScalarEvolution::MonotonicallyIncreasing;
+      IncSigned == ScalarEvolution::MonotonicallyIncreasing;
   // If SCEV guarantees that AR does not wrap, PN >= StartValue can be added
   // unconditionally.
   if (MonotonicallyIncreasingUnsigned)
@@ -1083,10 +1113,54 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 }
 
+static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
+                                          uint64_t AccessSize,
+                                          CmpPredicate &Pred, Value *&A,
+                                          Value *&B, const DataLayout &DL,
+                                          const TargetLibraryInfo &TLI) {
+  auto Offset = collectOffsets(cast<GEPOperator>(GEP), DL);
+  if (!Offset.NW.hasNoUnsignedWrap())
+    return false;
+
+  if (Offset.VariableOffsets.size() != 1)
+    return false;
+
+  uint64_t BitWidth = Offset.ConstantOffset.getBitWidth();
+  auto &[Index, Scale] = Offset.VariableOffsets.front();
+  // Bail out on non-canonical GEPs.
+  if (Index->getType()->getScalarSizeInBits() != BitWidth)
+    return false;
+
+  ObjectSizeOpts Opts;
+  // Workaround for gep inbounds, ptr null, idx.
+  Opts.NullIsUnknownSize = true;
+  // Be conservative since we are not clear on whether an out of bounds access
+  // to the padding is UB or not.
+  Opts.RoundToAlign = true;
+  std::optional<TypeSize> Size =
+      getBaseObjectSize(Offset.BasePtr, DL, &TLI, Opts);
+  if (!Size || Size->isScalable())
+    return false;
+
+  // Index * Scale + ConstOffset + AccessSize <= AllocSize
+  // With nuw flag, we know that the index addition doesn't have unsigned wrap.
+  // If (AllocSize - (ConstOffset + AccessSize)) wraps around, there is no valid
+  // value for Index.
+  APInt MaxIndex = (APInt(BitWidth, Size->getFixedValue() - AccessSize,
+                          /*isSigned=*/false, /*implicitTrunc=*/true) -
+                    Offset.ConstantOffset)
+                       .udiv(Scale);
+  Pred = ICmpInst::ICMP_ULE;
+  A = Index;
+  B = ConstantInt::get(Index->getType(), MaxIndex);
+  return true;
+}
+
 void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
+  auto &DL = BB.getDataLayout();
 
-  // True as long as long as the current instruction is guaranteed to execute.
+  // True as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
@@ -1099,6 +1173,38 @@ void State::addInfoFor(BasicBlock &BB) {
         WorkList.push_back(FactOrCheck::getCheck(DTN, &U));
       }
       continue;
+    }
+
+    auto AddFactFromMemoryAccess = [&](Value *Ptr, Type *AccessType) {
+      auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+      if (!GEP)
+        return;
+      TypeSize AccessSize = DL.getTypeStoreSize(AccessType);
+      if (!AccessSize.isFixed())
+        return;
+      if (GuaranteedToExecute) {
+        CmpPredicate Pred;
+        Value *A, *B;
+        if (getConstraintFromMemoryAccess(*GEP, AccessSize.getFixedValue(),
+                                          Pred, A, B, DL, TLI)) {
+          // The memory access is guaranteed to execute when BB is entered,
+          // hence the constraint holds on entry to BB.
+          WorkList.emplace_back(FactOrCheck::getConditionFact(
+              DT.getNode(I.getParent()), Pred, A, B));
+        }
+      } else {
+        WorkList.emplace_back(
+            FactOrCheck::getInstFact(DT.getNode(I.getParent()), &I));
+      }
+    };
+
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!LI->isVolatile())
+        AddFactFromMemoryAccess(LI->getPointerOperand(), LI->getAccessType());
+    }
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (!SI->isVolatile())
+        AddFactFromMemoryAccess(SI->getPointerOperand(), SI->getAccessType());
     }
 
     auto *II = dyn_cast<IntrinsicInst>(&I);
@@ -1135,6 +1241,9 @@ void State::addInfoFor(BasicBlock &BB) {
       // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
+      [[fallthrough]];
+    case Intrinsic::uadd_sat:
+    case Intrinsic::usub_sat:
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
       if (!isGuaranteedNotToBePoison(&I))
@@ -1391,7 +1500,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (R.empty() || !R.isValid(Info)){
+  if (R.empty() || !R.isValid(Info)) {
     LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
     return std::nullopt;
   }
@@ -1454,8 +1563,28 @@ static bool checkAndReplaceCondition(
       return ShouldReplace;
     });
     NumCondsRemoved++;
+
+    // Update the debug value records that satisfy the same condition used
+    // in replaceUsesWithIf.
+    SmallVector<DbgVariableRecord *> DVRUsers;
+    findDbgUsers(Cmp, DVRUsers);
+
+    for (auto *DVR : DVRUsers) {
+      auto *DTN = DT.getNode(DVR->getParent());
+      if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
+        continue;
+
+      auto *MarkedI = DVR->getInstruction();
+      if (MarkedI->getParent() == ContextInst->getParent() &&
+          MarkedI->comesBefore(ContextInst))
+        continue;
+
+      DVR->replaceVariableLocationOp(Cmp, ConstantC);
+    }
+
     if (Cmp->use_empty())
       ToRemove.push_back(Cmp);
+
     return Changed;
   };
 
@@ -1538,8 +1667,12 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
 static bool checkOrAndOpImpliedByOther(
     FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
     SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
-    SmallVectorImpl<StackEntry> &DFSInStack) {
+    SmallVectorImpl<StackEntry> &DFSInStack,
+    SmallVectorImpl<Instruction *> &ToRemove) {
   Instruction *JoinOp = CB.getContextInst();
+  if (JoinOp->use_empty())
+    return false;
+
   CmpInst *CmpToCheck = cast<CmpInst>(CB.getInstructionToSimplify());
   unsigned OtherOpIdx = JoinOp->getOperand(0) == CmpToCheck ? 1 : 0;
 
@@ -1586,15 +1719,12 @@ static bool checkOrAndOpImpliedByOther(
   if (auto ImpliedCondition =
           checkCondition(CmpToCheck->getPredicate(), CmpToCheck->getOperand(0),
                          CmpToCheck->getOperand(1), CmpToCheck, Info)) {
-    if (IsOr && isa<SelectInst>(JoinOp)) {
-      JoinOp->setOperand(
-          OtherOpIdx == 0 ? 2 : 0,
+    if (IsOr == *ImpliedCondition)
+      JoinOp->replaceAllUsesWith(
           ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
-    } else
-      JoinOp->setOperand(
-          1 - OtherOpIdx,
-          ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
-
+    else
+      JoinOp->replaceAllUsesWith(JoinOp->getOperand(OtherOpIdx));
+    ToRemove.push_back(JoinOp);
     return true;
   }
 
@@ -1735,12 +1865,13 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution &SE,
-                                 OptimizationRemarkEmitter &ORE) {
+                                 OptimizationRemarkEmitter &ORE,
+                                 TargetLibraryInfo &TLI) {
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
-  State S(DT, LI, SE);
+  State S(DT, LI, SE, TLI);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
 
@@ -1827,9 +1958,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
         if (!Simplified &&
             match(CB.getContextInst(), m_LogicalOp(m_Value(), m_Value()))) {
-          Simplified =
-              checkOrAndOpImpliedByOther(CB, Info, ReproducerModule.get(),
-                                         ReproducerCondStack, DFSInStack);
+          Simplified = checkOrAndOpImpliedByOther(
+              CB, Info, ReproducerModule.get(), ReproducerCondStack, DFSInStack,
+              ToRemove);
         }
         Changed |= Simplified;
       } else if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Inst)) {
@@ -1896,6 +2027,40 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         AddFact(Pred, MinMax, MinMax->getRHS());
         continue;
       }
+      if (auto *USatI = dyn_cast<SaturatingInst>(CB.Inst)) {
+        switch (USatI->getIntrinsicID()) {
+        default:
+          llvm_unreachable("Unexpected intrinsic.");
+        case Intrinsic::uadd_sat:
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getLHS());
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getRHS());
+          break;
+        case Intrinsic::usub_sat:
+          AddFact(ICmpInst::ICMP_ULE, USatI, USatI->getLHS());
+          break;
+        }
+        continue;
+      }
+
+      auto &DL = F.getDataLayout();
+      auto AddFactsAboutIndices = [&](Value *Ptr, Type *AccessType) {
+        CmpPredicate Pred;
+        Value *A, *B;
+        if (getConstraintFromMemoryAccess(
+                *cast<GetElementPtrInst>(Ptr),
+                DL.getTypeStoreSize(AccessType).getFixedValue(), Pred, A, B, DL,
+                TLI))
+          AddFact(Pred, A, B);
+      };
+
+      if (auto *LI = dyn_cast<LoadInst>(CB.Inst)) {
+        AddFactsAboutIndices(LI->getPointerOperand(), LI->getAccessType());
+        continue;
+      }
+      if (auto *SI = dyn_cast<StoreInst>(CB.Inst)) {
+        AddFactsAboutIndices(SI->getPointerOperand(), SI->getAccessType());
+        continue;
+      }
     }
 
     Value *A = nullptr, *B = nullptr;
@@ -1954,7 +2119,8 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  if (!eliminateConstraints(F, DT, LI, SE, ORE))
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  if (!eliminateConstraints(F, DT, LI, SE, ORE, TLI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

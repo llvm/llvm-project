@@ -270,6 +270,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool WaveLimiter = false;
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
+  uint16_t NumWaveDispatchSGPRs = 0;
+  uint16_t NumWaveDispatchVGPRs = 0;
   uint32_t HighBitsOf32BitAddress = 0;
 
   // TODO: 10 may be a better default since it's the maximum.
@@ -298,7 +300,9 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
+  bool IsWholeWaveFunction = false;
 
+  unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   SIMachineFunctionInfo() = default;
@@ -307,7 +311,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
                         const llvm::MachineFunction &MF);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~SIMachineFunctionInfo() = default;
+  ~SIMachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<SIMachineFunctionInfo> {
@@ -325,6 +329,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
     YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
     YamlIO.mapOptional("hasSpilledVGPRs", MFI.HasSpilledVGPRs, false);
+    YamlIO.mapOptional("numWaveDispatchSGPRs", MFI.NumWaveDispatchSGPRs, false);
+    YamlIO.mapOptional("numWaveDispatchVGPRs", MFI.NumWaveDispatchVGPRs, false);
     YamlIO.mapOptional("scratchRSrcReg", MFI.ScratchRSrcReg,
                        StringValue("$private_rsrc_reg"));
     YamlIO.mapOptional("frameOffsetReg", MFI.FrameOffsetReg,
@@ -352,8 +358,10 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
+    YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
   }
 };
 
@@ -386,6 +394,16 @@ public:
   Register getReg() const { return Reg; }
   int getIndex() const { return Index; }
   SGPRSaveKind getKind() const { return Kind; }
+};
+
+struct VGPRBlock2IndexFunctor {
+  using argument_type = Register;
+  unsigned operator()(Register Reg) const {
+    assert(AMDGPU::VReg_1024RegClass.contains(Reg) && "Expecting a VGPR block");
+
+    const MCRegister FirstVGPRBlock = AMDGPU::VReg_1024RegClass.getRegister(0);
+    return Reg - FirstVGPRBlock;
+  }
 };
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
@@ -447,9 +465,15 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   // Default/requested number of work groups for the function.
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
 
+  // Requested cluster dimensions.
+  AMDGPU::ClusterDimsAttr ClusterDims;
+
 private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
+
+  unsigned NumWaveDispatchSGPRs = 0;
+  unsigned NumWaveDispatchVGPRs = 0;
 
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
@@ -458,6 +482,8 @@ private:
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
+
+  unsigned DynamicVGPRBlockSize = 0;
 
   // The size in bytes of the scratch space reserved for the CWSR trap handler
   // to spill some of the dynamic VGPRs.
@@ -483,7 +509,9 @@ private:
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
 
-  bool MayNeedAGPRs : 1;
+  /// Minimum number of AGPRs required to allocate in the function. Only
+  /// relevant for gfx90a-gfx950. For gfx908, this should be infinite.
+  unsigned MinNumAGPRs = ~0u;
 
   // The hard-wired high half of the address of the global information table
   // for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
@@ -511,6 +539,8 @@ private:
   void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
 public:
+  static bool MFMAVGPRForm;
+
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
     bool FullyAllocated = false;
@@ -551,6 +581,8 @@ private:
   // the serialization easier.
   ReservedRegSet WWMReservedRegs;
 
+  bool IsWholeWaveFunction = false;
+
   using PrologEpilogSGPRSpill =
       std::pair<Register, PrologEpilogSGPRSaveRestoreInfo>;
   // To track the SGPR spill method used for a CSR SGPR register during
@@ -574,6 +606,11 @@ private:
   // frame, so save it here and add it to the RegScavenger later.
   std::optional<int> ScavengeFI;
 
+  // Map each VGPR CSR to the mask needed to save and restore it using block
+  // load/store instructions. Only used if the subtarget feature for VGPR block
+  // load/store is enabled.
+  IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
+
 private:
   Register VGPRForAGPRCopy;
 
@@ -593,6 +630,19 @@ public:
   }
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
+
+  void setMaskForVGPRBlockOps(Register RegisterBlock, uint32_t Mask) {
+    MaskForVGPRBlockOps.grow(RegisterBlock);
+    MaskForVGPRBlockOps[RegisterBlock] = Mask;
+  }
+
+  uint32_t getMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps[RegisterBlock];
+  }
+
+  bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps.inBounds(RegisterBlock);
+  }
 
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
@@ -633,6 +683,12 @@ public:
 
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
+
+  bool isWWMReservedRegister(Register Reg) const {
+    return WWMReservedRegs.contains(Reg);
+  }
+
+  bool isWholeWaveFunction() const { return IsWholeWaveFunction; }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
@@ -787,6 +843,9 @@ public:
   void setBytesInStackArgArea(unsigned Bytes) {
     BytesInStackArgArea = Bytes;
   }
+
+  bool isDynamicVGPREnabled() const { return DynamicVGPRBlockSize != 0; }
+  unsigned getDynamicVGPRBlockSize() const { return DynamicVGPRBlockSize; }
 
   // This is only used if we need to save any dynamic VGPRs in scratch.
   unsigned getScratchReservedForDynamicVGPRs() const {
@@ -946,8 +1005,18 @@ public:
     return UserSGPRInfo.getNumKernargPreloadSGPRs();
   }
 
+  unsigned getNumWaveDispatchSGPRs() const { return NumWaveDispatchSGPRs; }
+
+  void setNumWaveDispatchSGPRs(unsigned Count) { NumWaveDispatchSGPRs = Count; }
+
+  unsigned getNumWaveDispatchVGPRs() const { return NumWaveDispatchVGPRs; }
+
+  void setNumWaveDispatchVGPRs(unsigned Count) { NumWaveDispatchVGPRs = Count; }
+
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {
-    return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    if (ArgInfo.PrivateSegmentWaveByteOffset)
+      return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    return MCRegister();
   }
 
   /// Returns the physical register reserved for use as the resource
@@ -1133,8 +1202,12 @@ public:
 
   unsigned getMaxMemoryClusterDWords() const { return MaxMemoryClusterDWords; }
 
-  bool mayNeedAGPRs() const {
-    return MayNeedAGPRs;
+  unsigned getMinNumAGPRs() const { return MinNumAGPRs; }
+
+  /// Return true if an MFMA that requires at least \p NumRegs should select to
+  /// the AGPR form, instead of the VGPR form.
+  bool selectAGPRFormMFMA(unsigned NumRegs) const {
+    return !MFMAVGPRForm && getMinNumAGPRs() >= NumRegs;
   }
 
   // \returns true if a function has a use of AGPRs via inline asm or
@@ -1147,6 +1220,8 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+
+  AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
 };
 
 } // end namespace llvm

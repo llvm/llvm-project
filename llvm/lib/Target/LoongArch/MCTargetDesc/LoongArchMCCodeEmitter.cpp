@@ -11,8 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchFixupKinds.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -37,7 +38,7 @@ public:
   LoongArchMCCodeEmitter(MCContext &ctx, MCInstrInfo const &MCII)
       : Ctx(ctx), MCII(MCII) {}
 
-  ~LoongArchMCCodeEmitter() override {}
+  ~LoongArchMCCodeEmitter() override = default;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -96,6 +97,18 @@ public:
 };
 } // end namespace
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case LoongArch::fixup_loongarch_b16:
+  case LoongArch::fixup_loongarch_b21:
+  case LoongArch::fixup_loongarch_b26:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 unsigned
 LoongArchMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                                           SmallVectorImpl<MCFixup> &Fixups,
@@ -129,181 +142,51 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
   unsigned FixupKind = LoongArch::fixup_loongarch_invalid;
-  if (Kind == MCExpr::Target) {
+  if (Kind == MCExpr::Specifier) {
     const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
-
+    FixupKind = LAExpr->getSpecifier();
     RelaxCandidate = LAExpr->getRelaxHint();
-    switch (LAExpr->getSpecifier()) {
+    switch (uint16_t(LAExpr->getSpecifier())) {
     case LoongArchMCExpr::VK_None:
       llvm_unreachable("Unhandled fixup kind!");
-    case LoongArchMCExpr::VK_TLS_LE_ADD_R:
-      llvm_unreachable("VK_TLS_LE_ADD_R should not represent an "
+    case ELF::R_LARCH_TLS_LE_ADD_R:
+      llvm_unreachable("ELF::R_LARCH_TLS_LE_ADD_R should not represent an "
                        "instruction operand");
-    case LoongArchMCExpr::VK_B16:
+    case ELF::R_LARCH_B16:
       FixupKind = LoongArch::fixup_loongarch_b16;
       break;
-    case LoongArchMCExpr::VK_B21:
+    case ELF::R_LARCH_B21:
       FixupKind = LoongArch::fixup_loongarch_b21;
       break;
-    case LoongArchMCExpr::VK_B26:
-    case LoongArchMCExpr::VK_CALL:
-    case LoongArchMCExpr::VK_CALL_PLT:
+    case ELF::R_LARCH_B26:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
-    case LoongArchMCExpr::VK_ABS_HI20:
+    case ELF::R_LARCH_MARK_LA:
+      // Match gas behavior: generate `R_LARCH_MARK_LA` relocation when using
+      // `la.abs`.
+      Fixups.push_back(
+          MCFixup::create(0, MCConstantExpr::create(0, Ctx),
+                          FirstLiteralRelocationKind + ELF::R_LARCH_MARK_LA));
+      [[fallthrough]];
+    case ELF::R_LARCH_ABS_HI20:
       FixupKind = LoongArch::fixup_loongarch_abs_hi20;
       break;
-    case LoongArchMCExpr::VK_ABS_LO12:
+    case ELF::R_LARCH_ABS_LO12:
       FixupKind = LoongArch::fixup_loongarch_abs_lo12;
       break;
-    case LoongArchMCExpr::VK_ABS64_LO20:
+    case ELF::R_LARCH_ABS64_LO20:
       FixupKind = LoongArch::fixup_loongarch_abs64_lo20;
       break;
-    case LoongArchMCExpr::VK_ABS64_HI12:
+    case ELF::R_LARCH_ABS64_HI12:
       FixupKind = LoongArch::fixup_loongarch_abs64_hi12;
       break;
-    case LoongArchMCExpr::VK_PCALA_HI20:
-      FixupKind = ELF::R_LARCH_PCALA_HI20;
-      break;
-    case LoongArchMCExpr::VK_PCALA_LO12:
-      FixupKind = ELF::R_LARCH_PCALA_LO12;
-      break;
-    case LoongArchMCExpr::VK_PCALA64_LO20:
-      FixupKind = ELF::R_LARCH_PCALA64_LO20;
-      break;
-    case LoongArchMCExpr::VK_PCALA64_HI12:
-      FixupKind = ELF::R_LARCH_PCALA64_HI12;
-      break;
-    case LoongArchMCExpr::VK_GOT_PC_HI20:
-      FixupKind = ELF::R_LARCH_GOT_PC_HI20;
-      break;
-    case LoongArchMCExpr::VK_GOT_PC_LO12:
-      FixupKind = ELF::R_LARCH_GOT_PC_LO12;
-      break;
-    case LoongArchMCExpr::VK_GOT64_PC_LO20:
-      FixupKind = ELF::R_LARCH_GOT64_PC_LO20;
-      break;
-    case LoongArchMCExpr::VK_GOT64_PC_HI12:
-      FixupKind = ELF::R_LARCH_GOT64_PC_HI12;
-      break;
-    case LoongArchMCExpr::VK_GOT_HI20:
-      FixupKind = ELF::R_LARCH_GOT_HI20;
-      break;
-    case LoongArchMCExpr::VK_GOT_LO12:
-      FixupKind = ELF::R_LARCH_GOT_LO12;
-      break;
-    case LoongArchMCExpr::VK_GOT64_LO20:
-      FixupKind = ELF::R_LARCH_GOT64_LO20;
-      break;
-    case LoongArchMCExpr::VK_GOT64_HI12:
-      FixupKind = ELF::R_LARCH_GOT64_HI12;
-      break;
-    case LoongArchMCExpr::VK_TLS_LE_HI20:
-      FixupKind = ELF::R_LARCH_TLS_LE_HI20;
-      break;
-    case LoongArchMCExpr::VK_TLS_LE_LO12:
-      FixupKind = ELF::R_LARCH_TLS_LE_LO12;
-      break;
-    case LoongArchMCExpr::VK_TLS_LE64_LO20:
-      FixupKind = ELF::R_LARCH_TLS_LE64_LO20;
-      break;
-    case LoongArchMCExpr::VK_TLS_LE64_HI12:
-      FixupKind = ELF::R_LARCH_TLS_LE64_HI12;
-      break;
-    case LoongArchMCExpr::VK_TLS_IE_PC_HI20:
-      FixupKind = ELF::R_LARCH_TLS_IE_PC_HI20;
-      break;
-    case LoongArchMCExpr::VK_TLS_IE_PC_LO12:
-      FixupKind = ELF::R_LARCH_TLS_IE_PC_LO12;
-      break;
-    case LoongArchMCExpr::VK_TLS_IE64_PC_LO20:
-      FixupKind = ELF::R_LARCH_TLS_IE64_PC_LO20;
-      break;
-    case LoongArchMCExpr::VK_TLS_IE64_PC_HI12:
-      FixupKind = ELF::R_LARCH_TLS_IE64_PC_HI12;
-      break;
-    case LoongArchMCExpr::VK_TLS_IE_HI20:
-      FixupKind = ELF::R_LARCH_TLS_IE_HI20;
-      break;
-    case LoongArchMCExpr::VK_TLS_IE_LO12:
-      FixupKind = ELF::R_LARCH_TLS_IE_LO12;
-      break;
-    case LoongArchMCExpr::VK_TLS_IE64_LO20:
-      FixupKind = ELF::R_LARCH_TLS_IE64_LO20;
-      break;
-    case LoongArchMCExpr::VK_TLS_IE64_HI12:
-      FixupKind = ELF::R_LARCH_TLS_IE64_HI12;
-      break;
-    case LoongArchMCExpr::VK_TLS_LD_PC_HI20:
-      FixupKind = ELF::R_LARCH_TLS_LD_PC_HI20;
-      break;
-    case LoongArchMCExpr::VK_TLS_LD_HI20:
-      FixupKind = ELF::R_LARCH_TLS_LD_HI20;
-      break;
-    case LoongArchMCExpr::VK_TLS_GD_PC_HI20:
-      FixupKind = ELF::R_LARCH_TLS_GD_PC_HI20;
-      break;
-    case LoongArchMCExpr::VK_TLS_GD_HI20:
-      FixupKind = ELF::R_LARCH_TLS_GD_HI20;
-      break;
-    case LoongArchMCExpr::VK_CALL36:
-      FixupKind = ELF::R_LARCH_CALL36;
+    case ELF::R_LARCH_CALL36:
+    case ELF::R_LARCH_TLS_LE_HI20_R:
+    case ELF::R_LARCH_TLS_LE_LO12_R:
       RelaxCandidate = true;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC_PC_HI20:
-      FixupKind = ELF::R_LARCH_TLS_DESC_PC_HI20;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC_PC_LO12:
-      FixupKind = ELF::R_LARCH_TLS_DESC_PC_LO12;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC64_PC_LO20:
-      FixupKind = ELF::R_LARCH_TLS_DESC64_PC_LO20;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC64_PC_HI12:
-      FixupKind = ELF::R_LARCH_TLS_DESC64_PC_HI12;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC_HI20:
-      FixupKind = ELF::R_LARCH_TLS_DESC_HI20;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC_LO12:
-      FixupKind = ELF::R_LARCH_TLS_DESC_LO12;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC64_LO20:
-      FixupKind = ELF::R_LARCH_TLS_DESC64_LO20;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC64_HI12:
-      FixupKind = ELF::R_LARCH_TLS_DESC64_HI12;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC_LD:
-      FixupKind = ELF::R_LARCH_TLS_DESC_LD;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC_CALL:
-      FixupKind = ELF::R_LARCH_TLS_DESC_CALL;
-      break;
-    case LoongArchMCExpr::VK_TLS_LE_HI20_R:
-      FixupKind = ELF::R_LARCH_TLS_LE_HI20_R;
-      RelaxCandidate = true;
-      break;
-    case LoongArchMCExpr::VK_TLS_LE_LO12_R:
-      FixupKind = ELF::R_LARCH_TLS_LE_LO12_R;
-      RelaxCandidate = true;
-      break;
-    case LoongArchMCExpr::VK_PCREL20_S2:
-      FixupKind = ELF::R_LARCH_PCREL20_S2;
-      break;
-    case LoongArchMCExpr::VK_TLS_LD_PCREL20_S2:
-      FixupKind = ELF::R_LARCH_TLS_LD_PCREL20_S2;
-      break;
-    case LoongArchMCExpr::VK_TLS_GD_PCREL20_S2:
-      FixupKind = ELF::R_LARCH_TLS_GD_PCREL20_S2;
-      break;
-    case LoongArchMCExpr::VK_TLS_DESC_PCREL20_S2:
-      FixupKind = ELF::R_LARCH_TLS_DESC_PCREL20_S2;
       break;
     }
-  } else if (Kind == MCExpr::SymbolRef &&
-             cast<MCSymbolRefExpr>(Expr)->getKind() ==
-                 MCSymbolRefExpr::VK_None) {
+  } else if (Kind == MCExpr::SymbolRef) {
     switch (MI.getOpcode()) {
     default:
       break;
@@ -331,16 +214,12 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   assert(FixupKind != LoongArch::fixup_loongarch_invalid &&
          "Unhandled expression!");
 
-  Fixups.push_back(
-      MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
-
-  // Emit an R_LARCH_RELAX if linker relaxation is enabled and LAExpr has relax
-  // hint.
-  if (EnableRelax && RelaxCandidate) {
-    const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
-    Fixups.push_back(
-        MCFixup::create(0, Dummy, ELF::R_LARCH_RELAX, MI.getLoc()));
-  }
+  addFixup(Fixups, 0, Expr, FixupKind);
+  // If linker relaxation is enabled and supported by this relocation, set
+  // a bit so that if fixup is unresolved, a R_LARCH_RELAX relocation will be
+  // appended.
+  if (EnableRelax && RelaxCandidate)
+    Fixups.back().setLinkerRelaxable();
 
   return 0;
 }
@@ -384,19 +263,13 @@ void LoongArchMCCodeEmitter::expandAddTPRel(const MCInst &MI,
          "Expected expression as third input to TP-relative add");
 
   const LoongArchMCExpr *Expr = dyn_cast<LoongArchMCExpr>(Symbol.getExpr());
-  assert(Expr && Expr->getSpecifier() == LoongArchMCExpr::VK_TLS_LE_ADD_R &&
+  assert(Expr && Expr->getSpecifier() == ELF::R_LARCH_TLS_LE_ADD_R &&
          "Expected %le_add_r relocation on TP-relative symbol");
 
   // Emit the correct %le_add_r relocation for the symbol.
-  Fixups.push_back(
-      MCFixup::create(0, Expr, ELF::R_LARCH_TLS_LE_ADD_R, MI.getLoc()));
-
-  // Emit R_LARCH_RELAX for %le_add_r when the relax feature is enabled.
-  if (STI.hasFeature(LoongArch::FeatureRelax)) {
-    const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
-    Fixups.push_back(
-        MCFixup::create(0, Dummy, ELF::R_LARCH_RELAX, MI.getLoc()));
-  }
+  addFixup(Fixups, 0, Expr, ELF::R_LARCH_TLS_LE_ADD_R);
+  if (STI.hasFeature(LoongArch::FeatureRelax))
+    Fixups.back().setLinkerRelaxable();
 
   // Emit a normal ADD instruction with the given operands.
   unsigned ADD = MI.getOpcode() == LoongArch::PseudoAddTPRel_D
