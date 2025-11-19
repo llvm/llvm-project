@@ -7561,7 +7561,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   // TODO: Do this for any permute or mismatching element counts.
   if (Depth == 0 && !ZeroMask && TLI.isTypeLegal(VT) && VT.isVector() &&
       NumElems == VT.getVectorNumElements()) {
-    SmallVector<SDValue, 4> ReverseElts(Elts.rbegin(), Elts.rend());
+    SmallVector<SDValue, 16> ReverseElts(Elts.rbegin(), Elts.rend());
     if (SDValue RevLd = EltsFromConsecutiveLoads(
             VT, ReverseElts, DL, DAG, Subtarget, IsAfterLegalize, Depth + 1)) {
       SmallVector<int, 16> ReverseMask(NumElems);
