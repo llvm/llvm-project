@@ -91,9 +91,9 @@ class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
       ARM::FeatureAvoidMOVsShOp, ARM::FeatureHasRetAddrStack,
       ARM::FeatureHasNoBranchPredictor, ARM::FeatureDSP, ARM::FeatureMP,
       ARM::FeatureVirtualization, ARM::FeatureMClass, ARM::FeatureRClass,
-      ARM::FeatureAClass, ARM::FeatureNaClTrap, ARM::FeatureStrictAlign,
-      ARM::FeatureLongCalls, ARM::FeatureExecuteOnly, ARM::FeatureReserveR9,
-      ARM::FeatureNoMovt, ARM::FeatureNoNegativeImmediates
+      ARM::FeatureAClass, ARM::FeatureStrictAlign, ARM::FeatureLongCalls,
+      ARM::FeatureExecuteOnly, ARM::FeatureReserveR9, ARM::FeatureNoMovt,
+      ARM::FeatureNoNegativeImmediates
   };
 
   const ARMSubtarget *getST() const { return ST; }
@@ -257,8 +257,9 @@ public:
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
 
-  InstructionCost getAddressComputationCost(Type *Val, ScalarEvolution *SE,
-                                            const SCEV *Ptr) const override;
+  InstructionCost
+  getAddressComputationCost(Type *Val, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -274,8 +275,7 @@ public:
       const Instruction *I = nullptr) const override;
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getInterleavedMemoryOpCost(
@@ -298,7 +298,8 @@ public:
                            VectorType *ValTy, std::optional<FastMathFlags> FMF,
                            TTI::TargetCostKind CostKind) const override;
   InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *ValTy,
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
+                         VectorType *ValTy,
                          TTI::TargetCostKind CostKind) const override;
 
   InstructionCost

@@ -58,6 +58,10 @@ def SDT_PPCVecShift : SDTypeProfile<1, 3, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisVec<2>, SDTCisPtrTy<3>
 ]>;
 
+def SDT_PPCVecShiftQuad : SDTypeProfile<1, 2, [
+  SDTCisVec<0>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>
+]>;
+
 def SDT_PPCVecInsert : SDTypeProfile<1, 3, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisVec<2>, SDTCisInt<3>
 ]>;
@@ -145,26 +149,49 @@ def SDT_PPCBinaryArithWithFlagsInOut : SDTypeProfile<2, 3, [
 
 def PPCfre    : SDNode<"PPCISD::FRE",     SDTFPUnaryOp, []>;
 def PPCfrsqrte: SDNode<"PPCISD::FRSQRTE", SDTFPUnaryOp, []>;
+
+// Square root instruction.
 def PPCfsqrt  : SDNode<"PPCISD::FSQRT",   SDTFPUnaryOp, []>;
+
+// Test instruction for software square root.
 def PPCftsqrt : SDNode<"PPCISD::FTSQRT",  SDT_PPCFtsqrt,[]>;
 
+// FCFID - The FCFID instruction, taking an f64 operand and producing
+// and f64 value containing the FP representation of the integer that
+// was temporarily in the f64 operand.
 def PPCfcfid  : SDNode<"PPCISD::FCFID",   SDTFPUnaryOp, []>;
+
+// Newer FCFID[US] integer-to-floating-point conversion instructions for
+// unsigned integers and single-precision outputs.
 def PPCfcfidu : SDNode<"PPCISD::FCFIDU",  SDTFPUnaryOp, []>;
 def PPCfcfids : SDNode<"PPCISD::FCFIDS",  SDTFPRoundOp, []>;
 def PPCfcfidus: SDNode<"PPCISD::FCFIDUS", SDTFPRoundOp, []>;
+
+// FCTI[D,W]Z - The FCTIDZ and FCTIWZ instructions, taking an f32 or f64
+// operand, producing an f64 value containing the integer representation
+// of that FP value.
 def PPCfctidz : SDNode<"PPCISD::FCTIDZ", SDTFPUnaryOp, []>;
 def PPCfctiwz : SDNode<"PPCISD::FCTIWZ", SDTFPUnaryOp, []>;
+
+// Newer FCTI[D,W]UZ floating-point-to-integer conversion instructions for
+// unsigned integers with round toward zero.
 def PPCfctiduz: SDNode<"PPCISD::FCTIDUZ",SDTFPUnaryOp, []>;
 def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
 
-def PPCstrict_fcfid : SDNode<"PPCISD::STRICT_FCFID",
-                             SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fcfidu : SDNode<"PPCISD::STRICT_FCFIDU",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fcfids : SDNode<"PPCISD::STRICT_FCFIDS",
-                             SDTFPRoundOp, [SDNPHasChain]>;
-def PPCstrict_fcfidus : SDNode<"PPCISD::STRICT_FCFIDUS",
-                              SDTFPRoundOp, [SDNPHasChain]>;
+// VSRQ - The ISA 3.1 (P10) Vector Shift right quadword instruction
+def PPCvsrq: SDNode<"PPCISD::VSRQ", SDT_PPCVecShiftQuad, []>;
+
+// Constrained integer-to-floating-point conversion instructions.
+let IsStrictFP = true in {
+  def PPCstrict_fcfid  : SDNode<"PPCISD::STRICT_FCFID",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fcfidu : SDNode<"PPCISD::STRICT_FCFIDU",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fcfids : SDNode<"PPCISD::STRICT_FCFIDS",
+                                SDTFPRoundOp, [SDNPHasChain]>;
+  def PPCstrict_fcfidus : SDNode<"PPCISD::STRICT_FCFIDUS",
+                                 SDTFPRoundOp, [SDNPHasChain]>;
+}
 
 def PPCany_fcfid : PatFrags<(ops node:$op),
                              [(PPCfcfid node:$op),
@@ -179,28 +206,56 @@ def PPCany_fcfidus : PatFrags<(ops node:$op),
                               [(PPCfcfidus node:$op),
                                (PPCstrict_fcfidus node:$op)]>;
 
+// Store scalar integers from VSR.
 def PPCstore_scal_int_from_vsr:
    SDNode<"PPCISD::ST_VSR_SCAL_INT", SDT_PPCstore_scal_int_from_vsr,
            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// STFIWX - The STFIWX instruction.  The first operand is an input token
+// chain, then an f64 value to store, then an address to store it to.
 def PPCstfiwx : SDNode<"PPCISD::STFIWX", SDT_PPCstfiwx,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// GPRC, CHAIN = LFIWAX CHAIN, Ptr - This is a floating-point
+// load which sign-extends from a 32-bit integer value into the
+// destination 64-bit register.
 def PPClfiwax : SDNode<"PPCISD::LFIWAX", SDT_PPClfiwx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// GPRC, CHAIN = LFIWZX CHAIN, Ptr - This is a floating-point
+// load which zero-extends from a 32-bit integer value into the
+// destination 64-bit register.
 def PPClfiwzx : SDNode<"PPCISD::LFIWZX", SDT_PPClfiwx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// GPRC, CHAIN = LXSIZX, CHAIN, Ptr, ByteWidth - This is a load of an
+// integer smaller than 64 bits into a VSR. The integer is zero-extended.
+// This can be used for converting loaded integers to floating point.
 def PPClxsizx : SDNode<"PPCISD::LXSIZX", SDT_PPCLxsizx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// STXSIX - The STXSI[bh]X instruction. The first operand is an input
+// chain, then an f64 value to store, then an address to store it to,
+// followed by a byte-width for the store.
 def PPCstxsix : SDNode<"PPCISD::STXSIX", SDT_PPCstxsix,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// VEXTS, ByteWidth - takes an input in VSFRC and produces an output in
+// VSFRC that is sign-extended from ByteWidth to a 64-byte integer.
 def PPCVexts  : SDNode<"PPCISD::VEXTS", SDT_PPCVexts, []>;
 
-// Extract FPSCR (not modeled at the DAG level).
+// F8RC = MFFS - This moves the FPSCR (not modeled) into the register.
 def PPCmffs   : SDNode<"PPCISD::MFFS",
                        SDTypeProfile<1, 0, [SDTCisVT<0, f64>]>,
                        [SDNPHasChain]>;
 
-// Perform FADD in round-to-zero mode.
+// F8RC = FADDRTZ F8RC, F8RC - This is an FADD done with rounding
+// towards zero.  Used only as part of the long double-to-int
+// conversion sequence.
 def PPCfaddrtz: SDNode<"PPCISD::FADDRTZ", SDTFPBinOp, []>;
+
+// Constrained floating point add in round-to-zero mode.
+let IsStrictFP = true in
 def PPCstrict_faddrtz: SDNode<"PPCISD::STRICT_FADDRTZ", SDTFPBinOp,
                               [SDNPHasChain]>;
 
@@ -208,72 +263,194 @@ def PPCany_faddrtz: PatFrags<(ops node:$lhs, node:$rhs),
                              [(PPCfaddrtz node:$lhs, node:$rhs),
                               (PPCstrict_faddrtz node:$lhs, node:$rhs)]>;
 
+// FSEL - Traditional three-operand fsel node.
 def PPCfsel   : SDNode<"PPCISD::FSEL",
    // Type constraint for fsel.
    SDTypeProfile<1, 3, [SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,
                         SDTCisFP<0>, SDTCisVT<1, f64>]>, []>;
+
+// XSMAXC[DQ]P, XSMINC[DQ]P - C-type min/max instructions.
 def PPCxsmaxc : SDNode<"PPCISD::XSMAXC", SDT_PPCFPMinMax, []>;
 def PPCxsminc : SDNode<"PPCISD::XSMINC", SDT_PPCFPMinMax, []>;
+
+// Hi/Lo - These represent the high and low 16-bit parts of a global
+// address respectively.  These nodes have two operands, the first of
+// which must be a TargetGlobalAddress, and the second of which must be a
+// Constant.  Selected naively, these turn into 'lis G+C' and 'li G+C',
+// though these are usually folded into other nodes.
 def PPChi       : SDNode<"PPCISD::Hi", SDTIntBinOp, []>;
 def PPClo       : SDNode<"PPCISD::Lo", SDTIntBinOp, []>;
+
+// GPRC = TOC_ENTRY GA, TOC
+// Loads the entry for GA from the TOC, where the TOC base is given by
+// the last operand.
 def PPCtoc_entry: SDNode<"PPCISD::TOC_ENTRY", SDTIntBinOp,
                          [SDNPMayLoad, SDNPMemOperand]>;
 
+// GPRC = address of _GLOBAL_OFFSET_TABLE_. Used by initial-exec TLS
+// for non-position independent code on PPC32.
 def PPCppc32GOT : SDNode<"PPCISD::PPC32_GOT", SDTIntLeaf, []>;
 
+// G8RC = ADDIS_GOT_TPREL_HA %x2, Symbol - Used by the initial-exec
+// TLS model, produces an ADDIS8 instruction that adds the GOT
+// base to sym\@got\@tprel\@ha.
 def PPCaddisGotTprelHA : SDNode<"PPCISD::ADDIS_GOT_TPREL_HA", SDTIntBinOp>;
+
+// G8RC = LD_GOT_TPREL_L Symbol, G8RReg - Used by the initial-exec
+// TLS model, produces a LD instruction with base register G8RReg
+// and offset sym\@got\@tprel\@l.  This completes the addition that
+// finds the offset of "sym" relative to the thread pointer.
 def PPCldGotTprelL : SDNode<"PPCISD::LD_GOT_TPREL_L", SDTIntBinOp,
                             [SDNPMayLoad]>;
+
+// G8RC = ADD_TLS G8RReg, Symbol - Can be used by the initial-exec
+// and local-exec TLS models, produces an ADD instruction that adds
+// the contents of G8RReg to the thread pointer.  Symbol contains a
+// relocation sym\@tls which is to be replaced by the thread pointer
+// and identifies to the linker that the instruction is part of a
+// TLS sequence.
 def PPCaddTls     : SDNode<"PPCISD::ADD_TLS", SDTIntBinOp, []>;
+
+// G8RC = ADDIS_TLSGD_HA %x2, Symbol - For the general-dynamic TLS
+// model, produces an ADDIS8 instruction that adds the GOT base
+// register to sym\@got\@tlsgd\@ha.
 def PPCaddisTlsgdHA : SDNode<"PPCISD::ADDIS_TLSGD_HA", SDTIntBinOp>;
+
+// %x3 = ADDI_TLSGD_L G8RReg, Symbol - For the general-dynamic TLS
+// model, produces an ADDI8 instruction that adds G8RReg to
+// sym\@got\@tlsgd\@l and stores the result in X3.  Hidden by
+// ADDIS_TLSGD_L_ADDR until after register assignment.
 def PPCaddiTlsgdL   : SDNode<"PPCISD::ADDI_TLSGD_L", SDTIntBinOp>;
+
+// %x3 = GET_TLS_ADDR %x3, Symbol - For the general-dynamic TLS
+// model, produces a call to __tls_get_addr(sym\@tlsgd).  Hidden by
+// ADDIS_TLSGD_L_ADDR until after register assignment.
 def PPCgetTlsAddr   : SDNode<"PPCISD::GET_TLS_ADDR", SDTIntBinOp>;
+
+// %x3 = GET_TLS_MOD_AIX _$TLSML - For the AIX local-dynamic TLS model,
+// produces a call to .__tls_get_mod(_$TLSML\@ml).
 def PPCgetTlsMod   : SDNode<"PPCISD::GET_TLS_MOD_AIX", SDTIntUnaryOp>;
+
+// %x3 = GET_TPOINTER - Used for the local- and initial-exec TLS model on
+// 32-bit AIX, produces a call to .__get_tpointer to retrieve the thread
+// pointer. At the end of the call, the thread pointer is found in R3.
 def PPCgetTpointer : SDNode<"PPCISD::GET_TPOINTER", SDTIntLeaf, []>;
+
+// G8RC = ADDI_TLSGD_L_ADDR G8RReg, Symbol, Symbol - Op that
+// combines ADDI_TLSGD_L and GET_TLS_ADDR until expansion following
+// register assignment.
 def PPCaddiTlsgdLAddr : SDNode<"PPCISD::ADDI_TLSGD_L_ADDR",
                                SDTypeProfile<1, 3, [
                                  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                                  SDTCisSameAs<0, 3>, SDTCisInt<0> ]>>;
+
+// GPRC = TLSGD_AIX, TOC_ENTRY, TOC_ENTRY
+// G8RC = TLSGD_AIX, TOC_ENTRY, TOC_ENTRY
+// Op that combines two register copies of TOC entries
+// (region handle into R3 and variable offset into R4) followed by a
+// GET_TLS_ADDR node which will be expanded to a call to .__tls_get_addr.
+// This node is used in 64-bit mode as well (in which case the result is
+// G8RC and inputs are X3/X4).
 def PPCTlsgdAIX     : SDNode<"PPCISD::TLSGD_AIX", SDTIntBinOp>;
+
+// [GP|G8]RC = TLSLD_AIX, TOC_ENTRY(module handle)
+// Op that requires a single input of the module handle TOC entry in R3,
+// and generates a GET_TLS_MOD_AIX node which will be expanded into a call
+// to .__tls_get_mod. This node is used in both 32-bit and 64-bit modes.
+// The only difference is the register class.
 def PPCTlsldAIX     : SDNode<"PPCISD::TLSLD_AIX", SDTIntUnaryOp>;
+
+// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
+// model, produces an ADDIS8 instruction that adds the GOT base
+// register to sym\@got\@tlsld\@ha.
 def PPCaddisTlsldHA : SDNode<"PPCISD::ADDIS_TLSLD_HA", SDTIntBinOp>;
+
+// %x3 = ADDI_TLSLD_L G8RReg, Symbol - For the local-dynamic TLS
+// model, produces an ADDI8 instruction that adds G8RReg to
+// sym\@got\@tlsld\@l and stores the result in X3.  Hidden by
+// ADDIS_TLSLD_L_ADDR until after register assignment.
 def PPCaddiTlsldL   : SDNode<"PPCISD::ADDI_TLSLD_L", SDTIntBinOp>;
+
+// %x3 = GET_TLSLD_ADDR %x3, Symbol - For the local-dynamic TLS
+// model, produces a call to __tls_get_addr(sym\@tlsld).  Hidden by
+// ADDIS_TLSLD_L_ADDR until after register assignment.
 def PPCgetTlsldAddr : SDNode<"PPCISD::GET_TLSLD_ADDR", SDTIntBinOp>;
+
+// G8RC = ADDI_TLSLD_L_ADDR G8RReg, Symbol, Symbol - Op that
+// combines ADDI_TLSLD_L and GET_TLSLD_ADDR until expansion
+// following register assignment.
 def PPCaddiTlsldLAddr : SDNode<"PPCISD::ADDI_TLSLD_L_ADDR",
                                SDTypeProfile<1, 3, [
                                  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                                  SDTCisSameAs<0, 3>, SDTCisInt<0> ]>>;
+
+// G8RC = ADDIS_DTPREL_HA %x3, Symbol - For the local-dynamic TLS
+// model, produces an ADDIS8 instruction that adds X3 to
+// sym\@dtprel\@ha.
 def PPCaddisDtprelHA : SDNode<"PPCISD::ADDIS_DTPREL_HA", SDTIntBinOp>;
+
+// G8RC = ADDI_DTPREL_L G8RReg, Symbol - For the local-dynamic TLS
+// model, produces an ADDI8 instruction that adds G8RReg to
+// sym\@got\@dtprel\@l.
 def PPCaddiDtprelL   : SDNode<"PPCISD::ADDI_DTPREL_L", SDTIntBinOp>;
+
+// G8RC = PADDI_DTPREL %x3, Symbol - For the pc-rel based local-dynamic TLS
+// model, produces a PADDI8 instruction that adds X3 to sym\@dtprel.
 def PPCpaddiDtprel   : SDNode<"PPCISD::PADDI_DTPREL", SDTIntBinOp>;
 
+// VPERM - The PPC VPERM Instruction.
 def PPCvperm     : SDNode<"PPCISD::VPERM", SDT_PPCvperm, []>;
+
+// XXSPLT - The PPC VSX splat instructions
 def PPCxxsplt    : SDNode<"PPCISD::XXSPLT", SDT_PPCVecSplat, []>;
+
+// XXSPLTI_SP_TO_DP - The PPC VSX splat instructions for immediates for
+// converting immediate single precision numbers to double precision
+// vector or scalar.
 def PPCxxspltidp : SDNode<"PPCISD::XXSPLTI_SP_TO_DP", SDT_PPCSpToDp, []>;
+
+// VECINSERT - The PPC vector insert instruction
 def PPCvecinsert : SDNode<"PPCISD::VECINSERT", SDT_PPCVecInsert, []>;
+
+// XXPERMDI - The PPC XXPERMDI instruction
 def PPCxxpermdi  : SDNode<"PPCISD::XXPERMDI", SDT_PPCxxpermdi, []>;
+
+// VECSHL - The PPC vector shift left instruction
 def PPCvecshl    : SDNode<"PPCISD::VECSHL", SDT_PPCVecShift, []>;
 
+// The CMPB instruction (takes two operands of i32 or i64).
 def PPCcmpb     : SDNode<"PPCISD::CMPB", SDTIntBinOp, []>;
 
 // These nodes represent the 32-bit PPC shifts that operate on 6-bit shift
 // amounts.  These nodes are generated by the multi-precision shift code.
+//
+// For scalar types, only the last `n + 1` bits of the shift amounts
+// are used, where n is log2(sizeof(element) * 8). See sld/slw, etc.
+// for exact behaviors.
+//
+// For vector types, only the last n bits are used. See vsld.
 def PPCsrl        : SDNode<"PPCISD::SRL"       , SDTIntShiftOp>;
 def PPCsra        : SDNode<"PPCISD::SRA"       , SDTIntShiftOp>;
 def PPCshl        : SDNode<"PPCISD::SHL"       , SDTIntShiftOp>;
 
+// FNMSUB - Negated multiply-subtract instruction.
 def PPCfnmsub     : SDNode<"PPCISD::FNMSUB"    , SDTFPTernaryOp>;
 
+// EXTSWSLI = The PPC extswsli instruction, which does an extend-sign
+// word and shift left immediate.
 def PPCextswsli : SDNode<"PPCISD::EXTSWSLI" , SDT_PPCextswsli>;
 
-def PPCstrict_fctidz : SDNode<"PPCISD::STRICT_FCTIDZ",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiwz : SDNode<"PPCISD::STRICT_FCTIWZ",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiduz : SDNode<"PPCISD::STRICT_FCTIDUZ",
-                               SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiwuz : SDNode<"PPCISD::STRICT_FCTIWUZ",
+// Constrained conversion from floating point to int
+let IsStrictFP = true in {
+  def PPCstrict_fctidz : SDNode<"PPCISD::STRICT_FCTIDZ",
                                 SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fctiwz : SDNode<"PPCISD::STRICT_FCTIWZ",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fctiduz : SDNode<"PPCISD::STRICT_FCTIDUZ",
+                                 SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fctiwuz : SDNode<"PPCISD::STRICT_FCTIWUZ",
+                                 SDTFPUnaryOp, [SDNPHasChain]>;
+}
 
 def PPCany_fctidz : PatFrags<(ops node:$op),
                              [(PPCstrict_fctidz node:$op),
@@ -288,19 +465,24 @@ def PPCany_fctiwuz : PatFrags<(ops node:$op),
                               [(PPCstrict_fctiwuz node:$op),
                                (PPCfctiwuz node:$op)]>;
 
-// Move 2 i64 values into a VSX register
+// Direct move of 2 consecutive GPR to a VSX register.
 def PPCbuild_fp128: SDNode<"PPCISD::BUILD_FP128",
                            SDTypeProfile<1, 2,
                              [SDTCisFP<0>, SDTCisSameSizeAs<1,2>,
                               SDTCisSameAs<1,2>]>,
                            []>;
 
+// BUILD_SPE64 and EXTRACT_SPE are analogous to BUILD_PAIR and
+// EXTRACT_ELEMENT but take f64 arguments instead of i64, as i64 is
+// unsupported for this target.
+// Merge 2 GPRs to a single SPE register.
 def PPCbuild_spe64: SDNode<"PPCISD::BUILD_SPE64",
                            SDTypeProfile<1, 2,
                              [SDTCisVT<0, f64>, SDTCisVT<1,i32>,
                              SDTCisVT<1,i32>]>,
                            []>;
 
+// Extract SPE register component, second argument is high or low.
 def PPCextract_spe : SDNode<"PPCISD::EXTRACT_SPE",
                             SDTypeProfile<1, 2,
                               [SDTCisVT<0, i32>, SDTCisVT<1, f64>,
@@ -314,6 +496,11 @@ def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_PPCCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 def SDT_PPCCall   : SDTypeProfile<0, -1, [SDTCisInt<0>]>;
+
+// CALL - A direct function call.
+// CALL_NOP is a call with the special NOP which follows 64-bit
+// CALL_NOTOC the caller does not use the TOC.
+// SVR4 calls and 32-bit/64-bit AIX calls.
 def PPCcall  : SDNode<"PPCISD::CALL", SDT_PPCCall,
                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                        SDNPVariadic]>;
@@ -323,17 +510,28 @@ def PPCcall_nop  : SDNode<"PPCISD::CALL_NOP", SDT_PPCCall,
 def PPCcall_notoc : SDNode<"PPCISD::CALL_NOTOC", SDT_PPCCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;
+
+// CHAIN,FLAG = MTCTR(VAL, CHAIN[, INFLAG]) - Directly corresponds to a
+// MTCTR instruction.
 def PPCmtctr      : SDNode<"PPCISD::MTCTR", SDT_PPCCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+// CHAIN,FLAG = BCTRL(CHAIN, INFLAG) - Directly corresponds to a
+// BCTRL instruction.
 def PPCbctrl : SDNode<"PPCISD::BCTRL", SDTNone,
                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                        SDNPVariadic]>;
+
+// CHAIN,FLAG = BCTRL(CHAIN, ADDR, INFLAG) - The combination of a bctrl
+// instruction and the TOC reload required on 64-bit ELF, 32-bit AIX
+// and 64-bit AIX.
 def PPCbctrl_load_toc : SDNode<"PPCISD::BCTRL_LOAD_TOC",
                                SDTypeProfile<0, 1, []>,
                                [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                 SDNPVariadic]>;
 
-// Call nodes for strictfp calls (that define RM).
+// The variants that implicitly define rounding mode for calls with
+// strictfp semantics.
 def PPCcall_rm  : SDNode<"PPCISD::CALL_RM", SDT_PPCCall,
                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                           SDNPVariadic]>;
@@ -351,52 +549,81 @@ def PPCbctrl_load_toc_rm : SDNode<"PPCISD::BCTRL_LOAD_TOC_RM",
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
 
+// Return with a glue operand, matched by 'blr'
 def PPCretglue   : SDNode<"PPCISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
+// TC_RETURN - A tail call return.
+//   operand #0 chain
+//   operand #1 callee (register or absolute)
+//   operand #2 stack adjustment
+//   operand #3 optional in flag
 def PPCtc_return : SDNode<"PPCISD::TC_RETURN", SDT_PPCTC_ret,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+// EH_SJLJ_SETJMP - SjLj exception handling setjmp.
 def PPCeh_sjlj_setjmp  : SDNode<"PPCISD::EH_SJLJ_SETJMP",
                                 SDTypeProfile<1, 1, [SDTCisInt<0>,
                                                      SDTCisPtrTy<1>]>,
                                 [SDNPHasChain, SDNPSideEffect]>;
+
+// EH_SJLJ_LONGJMP - SjLj exception handling longjmp.
 def PPCeh_sjlj_longjmp : SDNode<"PPCISD::EH_SJLJ_LONGJMP",
                                 SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
                                 [SDNPHasChain, SDNPSideEffect]>;
 
-def SDT_PPCsc     : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def PPCsc         : SDNode<"PPCISD::SC", SDT_PPCsc,
-                           [SDNPHasChain, SDNPSideEffect]>;
-
-def PPCclrbhrb    : SDNode<"PPCISD::CLRBHRB", SDTNone,
-                           [SDNPHasChain, SDNPSideEffect]>;
-def PPCmfbhrbe    : SDNode<"PPCISD::MFBHRBE", SDTIntBinOp, [SDNPHasChain]>;
-def PPCrfebb      : SDNode<"PPCISD::RFEBB", SDT_PPCsc,
-                           [SDNPHasChain, SDNPSideEffect]>;
-
+// RESVEC = VCMP(LHS, RHS, OPC) - Represents one of the altivec VCMP*
+// instructions.  For lack of better number, we use the opcode number
+// encoding for the OPC field to identify the compare.  For example, 838
+// is VCMPGTSH.
 def PPCvcmp       : SDNode<"PPCISD::VCMP" , SDT_PPCvcmp, []>;
+
+// RESVEC, OUTFLAG = VCMP_rec(LHS, RHS, OPC) - Represents one of the
+// altivec VCMP*_rec instructions.  For lack of better number, we use the
+// opcode number encoding for the OPC field to identify the compare.  For
+// example, 838 is VCMPGTSH.
 def PPCvcmp_rec   : SDNode<"PPCISD::VCMP_rec", SDT_PPCvcmp, [SDNPOutGlue]>;
 
+// CHAIN = COND_BRANCH CHAIN, CRRC, OPC, DESTBB [, INFLAG] - This
+// corresponds to the COND_BRANCH pseudo instruction.  CRRC is the
+// condition register to branch on, OPC is the branch opcode to use (e.g.
+// PPC::BLE), DESTBB is the destination block to branch to, and INFLAG is
+// an optional input flag argument.
 def PPCcondbranch : SDNode<"PPCISD::COND_BRANCH", SDT_PPCcondbr,
                            [SDNPHasChain, SDNPOptInGlue]>;
 
-// PPC-specific atomic operations.
+// ATOMIC_CMP_SWAP - the exact same as the target-independent nodes
+// except they ensure that the compare input is zero-extended for
+// sub-word versions because the atomic loads zero-extend.
 def PPCatomicCmpSwap_8 :
   SDNode<"PPCISD::ATOMIC_CMP_SWAP_8", SDTAtomic3,
          [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def PPCatomicCmpSwap_16 :
   SDNode<"PPCISD::ATOMIC_CMP_SWAP_16", SDTAtomic3,
          [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+
+// GPRC, CHAIN = LBRX CHAIN, Ptr, Type - This is a
+// byte-swapping load instruction.  It loads "Type" bits, byte swaps it,
+// then puts it in the bottom bits of the GPRC.  TYPE can be either i16
+// or i32.
 def PPClbrx       : SDNode<"PPCISD::LBRX", SDT_PPClbrx,
                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
+// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
+// the GPRC input, then stores it through Ptr.  Type can be either i16 or
+// i32.
 def PPCstbrx      : SDNode<"PPCISD::STBRX", SDT_PPCstbrx,
                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// CHAIN,Glue = STORE_COND CHAIN, GPR, Ptr
+// The store conditional instruction ST[BHWD]ARX that produces a glue
+// result to attach it to a conditional branch.
 def PPCStoreCond  : SDNode<"PPCISD::STORE_COND", SDT_StoreCond,
                            [SDNPHasChain, SDNPMayStore,
                             SDNPMemOperand, SDNPOutGlue]>;
 
-// Instructions to set/unset CR bit 6 for SVR4 vararg calls
+// ch, gl = CR6[UN]SET ch, inglue - Toggle CR bit 6 for SVR4 vararg calls
 def PPCcr6set   : SDNode<"PPCISD::CR6SET", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def PPCcr6unset : SDNode<"PPCISD::CR6UNSET", SDTNone,
@@ -405,17 +632,44 @@ def PPCcr6unset : SDNode<"PPCISD::CR6UNSET", SDTNone,
 // Instructions to support dynamic alloca.
 def SDTDynOp  : SDTypeProfile<1, 2, []>;
 def SDTDynAreaOp  : SDTypeProfile<1, 1, []>;
+
+// The following two target-specific nodes are used for calls through
+// function pointers in the 64-bit SVR4 ABI.
+
+// OPRC, CHAIN = DYNALLOC(CHAIN, NEGSIZE, FRAME_INDEX)
+// This instruction is lowered in PPCRegisterInfo::eliminateFrameIndex to
+// compute an allocation on the stack.
 def PPCdynalloc   : SDNode<"PPCISD::DYNALLOC", SDTDynOp, [SDNPHasChain]>;
+
+// This instruction is lowered in PPCRegisterInfo::eliminateFrameIndex to
+// compute an offset from native SP to the address  of the most recent
+// dynamic alloca.
 def PPCdynareaoffset   : SDNode<"PPCISD::DYNAREAOFFSET", SDTDynAreaOp, [SDNPHasChain]>;
+
+// To avoid stack clash, allocation is performed by block and each block is
+// probed.
 def PPCprobedalloca : SDNode<"PPCISD::PROBED_ALLOCA", SDTDynOp, [SDNPHasChain]>;
 
 // PC Relative Specific Nodes
+
+// MAT_PCREL_ADDR = Materialize a PC Relative address. This can be done
+// either through an add like PADDI or through a PC Relative load like
+// PLD.
 def PPCmatpcreladdr : SDNode<"PPCISD::MAT_PCREL_ADDR", SDTIntUnaryOp, []>;
+
+// TLS_DYNAMIC_MAT_PCREL_ADDR = Materialize a PC Relative address for
+// TLS global address when using dynamic access models. This can be done
+// through an add like PADDI.
 def PPCtlsdynamatpcreladdr : SDNode<"PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR",
                                     SDTIntUnaryOp, []>;
+
+// TLS_LOCAL_EXEC_MAT_ADDR = Materialize an address for TLS global address
+// when using local exec access models, and when prefixed instructions are
+// available. This is used with ADD_TLS to produce an add like PADDI.
 def PPCtlslocalexecmataddr : SDNode<"PPCISD::TLS_LOCAL_EXEC_MAT_ADDR",
                                     SDTIntUnaryOp, []>;
 
+// These nodes represent PPC arithmetic operations with carry.
 def PPCaddc : SDNode<"PPCISD::ADDC", SDT_PPCBinaryArithWithFlagsOut,
                      [SDNPCommutative]>;
 def PPCadde : SDNode<"PPCISD::ADDE", SDT_PPCBinaryArithWithFlagsInOut,
@@ -675,9 +929,6 @@ class isRecordForm   { bit RC = 1; }
 class RegConstraint<string C> {
   string Constraints = C;
 }
-class NoEncode<string E> {
-  string DisableEncoding = E;
-}
 
 
 // Define PowerPC specific addressing mode.
@@ -719,42 +970,6 @@ let WantsParent = true in {
   def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm">;
   def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm">;
 }
-
-//===----------------------------------------------------------------------===//
-// PowerPC Instruction Predicate Definitions.
-def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
-def IsBookE  : Predicate<"Subtarget->isBookE()">;
-def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
-def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
-def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
-def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
-def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
-def IsE500  : Predicate<"Subtarget->isE500()">;
-def HasSPE  : Predicate<"Subtarget->hasSPE()">;
-def HasICBT : Predicate<"Subtarget->hasICBT()">;
-def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
-def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
-def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
-def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
-def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
-def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
-def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
-def HasFPU : Predicate<"Subtarget->hasFPU()">;
-def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
-def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
-
-// AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
-                 AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
-def IsAIX : Predicate<"Subtarget->isAIXABI()">;
-def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
-def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
-def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
@@ -1325,7 +1540,7 @@ def RESTORE_CRBIT : PPCEmitTimePseudo<(outs crbitrc:$cond), (ins memri:$F),
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isPredicable = 1, isReturn = 1, Uses = [LR, RM] in
     def BLR : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
-                           [(PPCretglue)]>, Requires<[In32BitMode]>;
+                           [(PPCretglue)]>, Requires<[IsPPC32]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR] in {
     let isPredicable = 1 in
       def BCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
@@ -1498,7 +1713,7 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR] in {
     let isPredicable = 1 in
       def BCTRL : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
                               "bctrl", IIC_BrB, [(PPCbctrl)]>,
-                  Requires<[In32BitMode]>;
+                  Requires<[IsPPC32]>;
 
     let isCodeGenOnly = 1 in {
       def BCCCTRL : XLForm_2_br<19, 528, 1, (outs), (ins (pred $BIBO, $CR):$cond),
@@ -1584,7 +1799,7 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR, RM], isCodeGenOnly = 1 in {
     let isPredicable = 1 in
       def BCTRL_RM : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
                                   "bctrl", IIC_BrB, [(PPCbctrl_rm)]>,
-                  Requires<[In32BitMode]>;
+                  Requires<[IsPPC32]>;
   }
 }
 
@@ -1610,7 +1825,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
   def BCTRL_LWZinto_toc:
     XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
      (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
-     [(PPCbctrl_load_toc iaddr:$addr)]>, Requires<[In32BitMode]>;
+     [(PPCbctrl_load_toc iaddr:$addr)]>, Requires<[IsPPC32]>;
 
 }
 
@@ -1619,7 +1834,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
   def BCTRL_LWZinto_toc_RM:
     XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
      (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
-     [(PPCbctrl_load_toc_rm iaddr:$addr)]>, Requires<[In32BitMode]>;
+     [(PPCbctrl_load_toc_rm iaddr:$addr)]>, Requires<[IsPPC32]>;
 
 }
 
@@ -1628,7 +1843,7 @@ let isCodeGenOnly = 1, hasSideEffects = 0 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, isBranch = 1,
     isIndirectBranch = 1, isCall = 1, isReturn = 1, Uses = [CTR, RM]  in
 def TAILBCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
-                            []>, Requires<[In32BitMode]>;
+                            []>, Requires<[IsPPC32]>;
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
     isBarrier = 1, isCall = 1, isReturn = 1, Uses = [RM] in
@@ -1651,7 +1866,7 @@ let hasSideEffects = 1 in {
   def EH_SjLj_SetJmp32  : PPCCustomInserterPseudo<(outs gprc:$dst), (ins memr:$buf),
                             "#EH_SJLJ_SETJMP32",
                             [(set i32:$dst, (PPCeh_sjlj_setjmp addr:$buf))]>,
-                          Requires<[In32BitMode]>;
+                          Requires<[IsPPC32]>;
 }
 
 let hasSideEffects = 1, isBarrier = 1 in {
@@ -1659,7 +1874,7 @@ let hasSideEffects = 1, isBarrier = 1 in {
   def EH_SjLj_LongJmp32 : PPCCustomInserterPseudo<(outs), (ins memr:$buf),
                             "#EH_SJLJ_LONGJMP32",
                             [(PPCeh_sjlj_longjmp addr:$buf)]>,
-                          Requires<[In32BitMode]>;
+                          Requires<[IsPPC32]>;
 }
 
 // This pseudo is never removed from the function, as it serves as
@@ -1673,7 +1888,7 @@ let isBranch = 1, isTerminator = 1, Size = 0 in {
 // System call.
 let PPC970_Unit = 7 in {
   def SC     : SCForm<17, 1, 0, (outs), (ins i32imm:$LEV),
-                      "sc $LEV", IIC_BrB, [(PPCsc (i32 imm:$LEV))]>;
+                      "sc $LEV", IIC_BrB, []>;
 }
 
 // We mark SCV as having no scheduling model since it is only meant to be used
@@ -1685,21 +1900,14 @@ let Predicates = [IsISA3_0], hasNoSchedulingInfo = 1 in {
 }
 
 // Branch history rolling buffer.
-def CLRBHRB : XForm_0<31, 430, (outs), (ins), "clrbhrb", IIC_BrB,
-                      [(PPCclrbhrb)]>,
+def CLRBHRB : XForm_0<31, 430, (outs), (ins), "clrbhrb", IIC_BrB, []>,
                       PPC970_DGroup_Single;
-// The $dmy argument used for MFBHRBE is not needed; however, including
-// it avoids automatic generation of PPCFastISel::fastEmit_i(), which
-// interferes with necessary special handling (see PPCFastISel.cpp).
-def MFBHRBE : XFXForm_3p<31, 302, (outs gprc:$RT),
-                         (ins u10imm:$imm, u10imm:$dmy),
-                         "mfbhrbe $RT, $imm", IIC_BrB,
-                         [(set i32:$RT,
-                               (PPCmfbhrbe imm:$imm, imm:$dmy))]>,
+
+def MFBHRBE : XFXForm_3p<31, 302, (outs gprc:$RT), (ins u10imm:$imm),
+                         "mfbhrbe $RT, $imm", IIC_BrB, []>,
                          PPC970_DGroup_First;
 
-def RFEBB : XLForm_S<19, 146, (outs), (ins u1imm:$S), "rfebb $S",
-                     IIC_BrB, [(PPCrfebb (i32 imm:$S))]>,
+def RFEBB : XLForm_S<19, 146, (outs), (ins u1imm:$S), "rfebb $S", IIC_BrB, []>,
                      PPC970_DGroup_Single;
 
 def : InstAlias<"rfebb", (RFEBB 1)>;
@@ -2006,29 +2214,24 @@ def LBZU : DForm_1<35, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D,
 
 def LHAU : DForm_1<43, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lhau $RST, $addr", IIC_LdStLHAU,
-                   []>, RegConstraint<"$addr.reg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.reg = $ea_result">;
 
 def LHZU : DForm_1<41, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lhzu $RST, $addr", IIC_LdStLoadUpd,
-                   []>, RegConstraint<"$addr.reg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.reg = $ea_result">;
 
 def LWZU : DForm_1<33, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lwzu $RST, $addr", IIC_LdStLoadUpd,
-                   []>, RegConstraint<"$addr.reg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.reg = $ea_result">;
 
 let Predicates = [HasFPU] in {
 def LFSU : DForm_1<49, (outs f4rc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                   "lfsu $RST, $addr", IIC_LdStLFDU,
-                  []>, RegConstraint<"$addr.reg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                  []>, RegConstraint<"$addr.reg = $ea_result">;
 
 def LFDU : DForm_1<51, (outs f8rc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                   "lfdu $RST, $addr", IIC_LdStLFDU,
-                  []>, RegConstraint<"$addr.reg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                  []>, RegConstraint<"$addr.reg = $ea_result">;
 }
 
 
@@ -2036,39 +2239,33 @@ def LFDU : DForm_1<51, (outs f8rc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D,
 def LBZUX : XForm_1_memOp<31, 119, (outs gprc:$RST, ptr_rc_nor0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lbzux $RST, $addr", IIC_LdStLoadUpdX,
-                   []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
 def LHAUX : XForm_1_memOp<31, 375, (outs gprc:$RST, ptr_rc_nor0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lhaux $RST, $addr", IIC_LdStLHAUX,
-                   []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
 def LHZUX : XForm_1_memOp<31, 311, (outs gprc:$RST, ptr_rc_nor0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lhzux $RST, $addr", IIC_LdStLoadUpdX,
-                   []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
 def LWZUX : XForm_1_memOp<31, 55, (outs gprc:$RST, ptr_rc_nor0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lwzux $RST, $addr", IIC_LdStLoadUpdX,
-                   []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
 let Predicates = [HasFPU] in {
 def LFSUX : XForm_1_memOp<31, 567, (outs f4rc:$RST, ptr_rc_nor0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lfsux $RST, $addr", IIC_LdStLFDUX,
-                   []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
 def LFDUX : XForm_1_memOp<31, 631, (outs f8rc:$RST, ptr_rc_nor0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lfdux $RST, $addr", IIC_LdStLFDUX,
-                   []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 }
 }
 }
@@ -2149,20 +2346,20 @@ def STFD : DForm_1<54, (outs), (ins f8rc:$RST, (memri $D, $RA):$dst),
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 def STBU  : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "stbu $RST, $dst", IIC_LdStSTU, []>,
-                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
+                    RegConstraint<"$dst.reg = $ea_res">;
 def STHU  : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "sthu $RST, $dst", IIC_LdStSTU, []>,
-                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
+                    RegConstraint<"$dst.reg = $ea_res">;
 def STWU  : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "stwu $RST, $dst", IIC_LdStSTU, []>,
-                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
+                    RegConstraint<"$dst.reg = $ea_res">;
 let Predicates = [HasFPU] in {
 def STFSU : DForm_1<53, (outs ptr_rc_nor0:$ea_res), (ins f4rc:$RST, (memri $D, $RA):$dst),
                     "stfsu $RST, $dst", IIC_LdStSTFDU, []>,
-                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
+                    RegConstraint<"$dst.reg = $ea_res">;
 def STFDU : DForm_1<55, (outs ptr_rc_nor0:$ea_res), (ins f8rc:$RST, (memri $D, $RA):$dst),
                     "stfdu $RST, $dst", IIC_LdStSTFDU, []>,
-                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
+                    RegConstraint<"$dst.reg = $ea_res">;
 }
 }
 
@@ -2224,32 +2421,27 @@ def STBUX : XForm_8_memOp<31, 247, (outs ptr_rc_nor0:$ea_res),
                           (ins gprc:$RST, (memrr $RA, $RB):$addr),
                           "stbux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STHUX : XForm_8_memOp<31, 439, (outs ptr_rc_nor0:$ea_res),
                           (ins gprc:$RST, (memrr $RA, $RB):$addr),
                           "sthux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STWUX : XForm_8_memOp<31, 183, (outs ptr_rc_nor0:$ea_res),
                           (ins gprc:$RST, (memrr $RA, $RB):$addr),
                           "stwux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 let Predicates = [HasFPU] in {
 def STFSUX: XForm_8_memOp<31, 695, (outs ptr_rc_nor0:$ea_res),
                           (ins f4rc:$RST, (memrr $RA, $RB):$addr),
                           "stfsux $RST, $addr", IIC_LdStSTFDU, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STFDUX: XForm_8_memOp<31, 759, (outs ptr_rc_nor0:$ea_res),
                           (ins f8rc:$RST, (memrr $RA, $RB):$addr),
                           "stfdux $RST, $addr", IIC_LdStSTFDU, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 }
 }
@@ -2601,6 +2793,7 @@ defm FCPSGND : XForm_28r<63, 8, (outs f8rc:$RST), (ins f8rc:$RA, f8rc:$RB),
 
 // Reciprocal estimates.
 let mayRaiseFPException = 1 in {
+// Reciprocal estimate instructions (unary FP ops).
 defm FRE      : XForm_26r<63, 24, (outs f8rc:$RST), (ins f8rc:$RB),
                           "fre", "$RST, $RB", IIC_FPGeneral,
                           [(set f64:$RST, (PPCfre f64:$RB))]>;
@@ -3116,7 +3309,7 @@ defm RLWIMI : MForm_2r<20, (outs gprc:$RA),
                        (ins gprc:$RAi, gprc:$RS, u5imm:$SH, u5imm:$MB,
                        u5imm:$ME), "rlwimi", "$RA, $RS, $SH, $MB, $ME",
                        IIC_IntRotate, []>, PPC970_DGroup_Cracked,
-                       RegConstraint<"$RAi = $RA">, NoEncode<"$RAi">;
+                       RegConstraint<"$RAi = $RA">;
 }
 let BaseName = "rlwinm" in {
 def RLWINM : MForm_2<21,
@@ -3252,9 +3445,10 @@ def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins), "#PPC32GOT",
 
 // Get the _GLOBAL_OFFSET_TABLE_ in PIC mode.
 // This uses two output registers, the first as the real output, the second as a
-// temporary register, used internally in code generation.
+// temporary register, used internally in code generation. A "bl" also clobbers LR.
+let Defs = [LR] in
 def PPC32PICGOT: PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins), "#PPC32PICGOT",
-                []>, NoEncode<"$rT">;
+                []>;
 
 def LDgotTprelL32: PPCEmitTimePseudo<(outs gprc_nor0:$rD), (ins s16imm:$disp, gprc_nor0:$reg),
                            "#LDgotTprelL32",
@@ -3502,8 +3696,6 @@ class PPCAsmPseudo<string asm, dag iops>
 def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
 def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
 def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
-
-def MMA : Predicate<"Subtarget->hasMMA()">;
 
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
@@ -4304,7 +4496,7 @@ def WRTEEI: I<31, (outs), (ins i1imm:$E), "wrteei $E", IIC_SprMTMSR>,
   bits<1> E;
 
   let Inst{16} = E;
-  let Inst{21-30} = 163;
+  let Inst{21...30} = 163;
 }
 
 def DCCCI : XForm_tlb<454, (outs), (ins gprc:$RA, gprc:$RB),
@@ -4388,7 +4580,22 @@ def TLBLI : XForm_16b<31, 1010, (outs), (ins gprc:$RB),
                           "tlbli $RB", IIC_LdStLoad, []>, Requires<[IsPPC6xx]>;
 
 def TLBIE : XForm_26<31, 306, (outs), (ins gprc:$RST, gprc:$RB),
-                          "tlbie $RB,$RST", IIC_SprTLBIE, []>;
+                     "tlbie $RB, $RST", IIC_SprTLBIE, []>,
+            Requires<[IsNotISA3_0]>;
+
+let Predicates = [IsISA3_0] in {
+  def TLBIEP9 : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
+                                        (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
+                                            u1imm:$PRS, u1imm:$R),
+                                        "tlbie $RB, $RS, $RIC, $PRS, $R", []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def TLBIE8P9
+        : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
+                                  (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC,
+                                      u1imm:$PRS, u1imm:$R),
+                                  "tlbie $RB, $RS, $RIC, $PRS, $R", []>;
+  }
+}
 
 def TLBSX : XForm_tlb<914, (outs), (ins gprc:$RA, gprc:$RB), "tlbsx $RA, $RB",
                 IIC_LdStLoad>, Requires<[IsBookE]>;
@@ -4645,6 +4852,8 @@ def : InstAlias<"mfamr $Rx", (MFSPR gprc:$Rx, 29)>;
 
 def : InstAlias<"mtpid $Rx", (MTSPR 48, gprc:$Rx)>, Requires<[IsBookE]>;
 def : InstAlias<"mfpid $Rx", (MFSPR gprc:$Rx, 48)>, Requires<[IsBookE]>;
+def : InstAlias<"mtpidr $Rx", (MTSPR 48, gprc:$Rx)>, Requires<[IsISA3_0]>;
+def : InstAlias<"mfpidr $Rx", (MFSPR gprc:$Rx, 48)>, Requires<[IsISA3_0]>;
 
 foreach SPRG = 4-7 in {
   def : InstAlias<"mfsprg $RT, "#SPRG, (MFSPR gprc:$RT, !add(SPRG, 256))>,
@@ -4734,7 +4943,11 @@ def : InstAlias<"mficcr $Rx", (MFSPR gprc:$Rx, 1019)>, Requires<[IsPPC4xx]>;
 
 }
 
-def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>;
+def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>,  Requires<[IsNotISA3_0]>;
+let Predicates = [IsISA3_0] in {
+  def : InstAlias<"tlbie $RB", (TLBIEP9 R0, gprc:$RB, 0, 0, 0)>;
+  def : InstAlias<"tlbie $RB, $RS", (TLBIEP9 gprc:$RB, gprc:$RS, 0, 0, 0)>;
+}
 
 def : InstAlias<"tlbrehi $RS, $A", (TLBRE2 gprc:$RS, gprc:$A, 0)>,
                 Requires<[IsPPC4xx]>;
@@ -4984,44 +5197,44 @@ defm : BranchSimpleMnemonic1<"dzf", "", 2>;
 
 multiclass BranchExtendedMnemonicPM<string name, string pm, int bibo> {
   def : InstAlias<"b"#name#pm#" $cc, $dst",
-                  (BCC bibo, crrc:$cc, condbrtarget:$dst)>;
+                  (BCC (pred bibo, crrc:$cc), condbrtarget:$dst)>;
   def : InstAlias<"b"#name#pm#" $dst",
-                  (BCC bibo, CR0, condbrtarget:$dst)>;
+                  (BCC (pred bibo, CR0), condbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"a"#pm#" $cc, $dst",
-                  (BCCA bibo, crrc:$cc, abscondbrtarget:$dst)>;
+                  (BCCA (pred bibo, crrc:$cc), abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"a"#pm#" $dst",
-                  (BCCA bibo, CR0, abscondbrtarget:$dst)>;
+                  (BCCA (pred bibo, CR0), abscondbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"lr"#pm#" $cc",
-                  (BCCLR bibo, crrc:$cc)>;
+                  (BCCLR (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"lr"#pm,
-                  (BCCLR bibo, CR0)>;
+                  (BCCLR (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"ctr"#pm#" $cc",
-                  (BCCCTR bibo, crrc:$cc)>;
+                  (BCCCTR (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"ctr"#pm,
-                  (BCCCTR bibo, CR0)>;
+                  (BCCCTR (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"l"#pm#" $cc, $dst",
-                  (BCCL bibo, crrc:$cc, condbrtarget:$dst)>;
+                  (BCCL (pred bibo, crrc:$cc), condbrtarget:$dst)>;
   def : InstAlias<"b"#name#"l"#pm#" $dst",
-                  (BCCL bibo, CR0, condbrtarget:$dst)>;
+                  (BCCL (pred bibo, CR0), condbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"la"#pm#" $cc, $dst",
-                  (BCCLA bibo, crrc:$cc, abscondbrtarget:$dst)>;
+                  (BCCLA (pred bibo, crrc:$cc), abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"la"#pm#" $dst",
-                  (BCCLA bibo, CR0, abscondbrtarget:$dst)>;
+                  (BCCLA (pred bibo, CR0), abscondbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"lrl"#pm#" $cc",
-                  (BCCLRL bibo, crrc:$cc)>;
+                  (BCCLRL (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"lrl"#pm,
-                  (BCCLRL bibo, CR0)>;
+                  (BCCLRL (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"ctrl"#pm#" $cc",
-                  (BCCCTRL bibo, crrc:$cc)>;
+                  (BCCCTRL (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"ctrl"#pm,
-                  (BCCCTRL bibo, CR0)>;
+                  (BCCCTRL (pred bibo, CR0))>;
 }
 multiclass BranchExtendedMnemonic<string name, int bibo> {
   defm : BranchExtendedMnemonicPM<name, "", bibo>;
@@ -5209,9 +5422,9 @@ def RotateInsertByte1 {
 }
 
 // Clear the upper half of the register when in 64-bit mode
-let Predicates = [In64BitMode] in
+let Predicates = [IsPPC64] in
 def : Pat<(i32 (bitreverse i32:$A)), (RLDICL_32 RotateInsertByte1.Left, 0, 32)>;
-let Predicates = [In32BitMode] in
+let Predicates = [IsPPC32] in
 def : Pat<(i32 (bitreverse i32:$A)), RotateInsertByte1.Left>;
 
 // Fast 64-bit reverse bits algorithm:

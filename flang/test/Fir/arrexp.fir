@@ -146,7 +146,9 @@ func.func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
   // CHECK: %[[EXT_GEP:.*]] = getelementptr {{.*}} %[[A]], i32 0, i32 7, i64 0, i32 1
   // CHECK: %[[EXTENT:.*]] = load i64, ptr %[[EXT_GEP]]
   // CHECK: %[[SIZE:.*]] = mul i64 4, %[[EXTENT]]
-  // CHECK: %[[MALLOC:.*]] = call ptr @malloc(i64 %[[SIZE]])
+  // CHECK: %[[CMP:.*]] = icmp sgt i64 %[[SIZE]], 0
+  // CHECK: %[[SZ:.*]] = select i1 %[[CMP]], i64 %[[SIZE]], i64 1
+  // CHECK: %[[MALLOC:.*]] = call ptr @malloc(i64 %[[SZ]])
   %1 = fir.slice %c2, %c10, %c1 : (index, index, index) -> !fir.slice<1>
   %2 = fir.array_load %arg0 [%1] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.array<?xf32>
   %3 = fir.slice %c1, %c9, %c1 : (index, index, index) -> !fir.slice<1>

@@ -229,12 +229,14 @@ class TargetInfo : public TransferrableTargetInfo,
 protected:
   // Target values set by the ctor of the actual target implementation.  Default
   // values are specified by the TargetInfo constructor.
+  bool HasMustTail;
   bool BigEndian;
   bool TLSSupported;
   bool VLASupported;
   bool NoAsmVariants;  // True if {|} are normal characters.
-  bool HasLegalHalfType; // True if the backend supports operations on the half
-                         // LLVM IR type.
+  bool HasFastHalfType;    // True if the backend has native half float support,
+                           // and performing calculations in float instead does
+                           // not have a performance advantage.
   bool HalfArgsAndReturns; // OpenCL 6.1.1.1, NEON (IEEE 754-2008 half) type.
   bool HasFloat128;
   bool HasFloat16;
@@ -336,10 +338,6 @@ public:
     /// __builtin_va_list as defined by the AArch64 ABI
     /// http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055a/IHI0055A_aapcs64.pdf
     AArch64ABIBuiltinVaList,
-
-    /// __builtin_va_list as defined by the PNaCl ABI:
-    /// http://www.chromium.org/nativeclient/pnacl/bitcode-abi#TOC-Machine-Types
-    PNaClABIBuiltinVaList,
 
     /// __builtin_va_list as defined by the Power ABI:
     /// https://www.power.org
@@ -672,6 +670,8 @@ public:
                                        : getLongFractScale() + 1;
   }
 
+  virtual bool hasMustTail() const { return HasMustTail; }
+
   /// Determine whether the __int128 type is supported on this target.
   virtual bool hasInt128Type() const {
     return (getPointerWidth(LangAS::Default) >= 64) ||
@@ -704,8 +704,9 @@ public:
     return 128;
   }
 
-  /// Determine whether _Float16 is supported on this target.
-  virtual bool hasLegalHalfType() const { return HasLegalHalfType; }
+  /// Determine whether the target has fast native support for operations
+  /// on half types.
+  virtual bool hasFastHalfType() const { return HasFastHalfType; }
 
   /// Whether half args and returns are supported.
   virtual bool allowHalfArgsAndReturns() const { return HalfArgsAndReturns; }
@@ -1075,6 +1076,17 @@ public:
   /// as Custom Datapath.
   uint32_t getARMCDECoprocMask() const { return ARMCDECoprocMask; }
 
+  /// For ARM targets returns a mask defining which data sizes are suitable for
+  /// __builtin_arm_ldrex and __builtin_arm_strex.
+  enum {
+    ARM_LDREX_B = (1 << 0), /// byte (8-bit)
+    ARM_LDREX_H = (1 << 1), /// half (16-bit)
+    ARM_LDREX_W = (1 << 2), /// word (32-bit)
+    ARM_LDREX_D = (1 << 3), /// double (64-bit)
+  };
+
+  virtual unsigned getARMLDREXMask() const { return 0; }
+
   /// Returns whether the passed in string is a valid clobber in an
   /// inline asm statement.
   ///
@@ -1202,6 +1214,25 @@ public:
       TiedOperand = N;
       // Don't copy Name or constraint string.
     }
+
+    // For output operand constraints, the target can set bounds to indicate
+    // that the result value is guaranteed to fall within a certain range.
+    // This will cause corresponding assertions to be emitted that will allow
+    // for potential optimization based of that guarantee.
+    //
+    // NOTE: This re-uses the `ImmRange` fields to store the range, which are
+    // otherwise unused for constraint types used for output operands.
+    void setOutputOperandBounds(unsigned Min, unsigned Max) {
+      ImmRange.Min = Min;
+      ImmRange.Max = Max;
+      ImmRange.isConstrained = true;
+    }
+    std::optional<std::pair<unsigned, unsigned>>
+    getOutputOperandBounds() const {
+      return ImmRange.isConstrained
+                 ? std::make_pair(ImmRange.Min, ImmRange.Max)
+                 : std::optional<std::pair<unsigned, unsigned>>();
+    }
   };
 
   /// Validate register name used for global register variables.
@@ -1249,6 +1280,10 @@ public:
   bool resolveSymbolicName(const char *&Name,
                            ArrayRef<ConstraintInfo> OutputConstraints,
                            unsigned &Index) const;
+
+  std::string
+  simplifyConstraint(StringRef Constraint,
+                     SmallVectorImpl<ConstraintInfo> *OutCons = nullptr) const;
 
   // Constraint parm will be left pointing at the last character of
   // the constraint.  In practice, it won't be changed unless the
@@ -1555,8 +1590,8 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual uint64_t getFMVPriority(ArrayRef<StringRef> Features) const {
-    return 0;
+  virtual llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const {
+    return llvm::APInt::getZero(32);
   }
 
   // Validate the contents of the __builtin_cpu_is(const char*)
@@ -1702,8 +1737,11 @@ public:
   /// Controls if __arithmetic_fence is supported in the targeted backend.
   virtual bool checkArithmeticFenceSupported() const { return false; }
 
-  /// Gets the default calling convention for the given target and
-  /// declaration context.
+  /// Gets the default calling convention for the given target.
+  ///
+  /// This function does not take into account any user options to override the
+  /// default calling convention. For that, see
+  /// ASTContext::getDefaultCallingConvention().
   virtual CallingConv getDefaultCallingConv() const {
     // Not all targets will specify an explicit calling convention that we can
     // express.  This will always do the right thing, even though it's not
@@ -1749,6 +1787,19 @@ public:
   /// with GCC/Itanium ABI, and remains disqualifying for targets that need
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
   virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
+
+  /// Controls whether global operator delete is called by the deleting
+  /// destructor or at the point where ::delete was called. Historically Clang
+  /// called global operator delete outside of the deleting destructor for both
+  /// Microsoft and Itanium ABI. In Clang 21 support for ::delete was aligned
+  /// with Microsoft ABI, so it will call global operator delete in the deleting
+  /// destructor body.
+  virtual bool callGlobalDeleteInDeletingDtor(const LangOptions &) const;
+
+  /// Controls whether to emit MSVC vector deleting destructors. The support for
+  /// vector deleting affects vtable layout and therefore is an ABI breaking
+  /// change. The support was only implemented at Clang 22 timeframe.
+  virtual bool emitVectorDeletingDtors(const LangOptions &) const;
 
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.

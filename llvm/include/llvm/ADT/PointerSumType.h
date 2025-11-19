@@ -9,12 +9,12 @@
 #ifndef LLVM_ADT_POINTERSUMTYPE_H
 #define LLVM_ADT_POINTERSUMTYPE_H
 
-#include "llvm/ADT/bit.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <type_traits>
 
 namespace llvm {
 
@@ -226,37 +226,21 @@ struct PointerSumTypeHelper : MemberTs... {
   };
 
   // Next we need to compute the number of bits available for the discriminant
-  // by taking the min of the bits available for each member. Much of this
-  // would be amazingly easier with good constexpr support.
-  template <uintptr_t V, uintptr_t... Vs>
-  struct Min : std::integral_constant<
-                   uintptr_t, (V < Min<Vs...>::value ? V : Min<Vs...>::value)> {
-  };
-  template <uintptr_t V>
-  struct Min<V> : std::integral_constant<uintptr_t, V> {};
-  enum { NumTagBits = Min<MemberTs::TraitsT::NumLowBitsAvailable...>::value };
+  // by taking the min of the bits available for each member.
+  static constexpr int NumTagBits =
+      std::min({MemberTs::TraitsT::NumLowBitsAvailable...});
 
   // Also compute the smallest discriminant and various masks for convenience.
   constexpr static TagT MinTag =
-      static_cast<TagT>(Min<MemberTs::Tag...>::value);
+      static_cast<TagT>(std::min({static_cast<TagT>(MemberTs::Tag)...}));
   enum : uint64_t {
     PointerMask = static_cast<uint64_t>(-1) << NumTagBits,
     TagMask = ~PointerMask
   };
 
-  // Finally we need a recursive template to do static checks of each
-  // member.
-  template <typename MemberT, typename... InnerMemberTs>
-  struct Checker : Checker<InnerMemberTs...> {
-    static_assert(MemberT::Tag < (1 << NumTagBits),
-                  "This discriminant value requires too many bits!");
-  };
-  template <typename MemberT> struct Checker<MemberT> : std::true_type {
-    static_assert(MemberT::Tag < (1 << NumTagBits),
-                  "This discriminant value requires too many bits!");
-  };
-  static_assert(Checker<MemberTs...>::value,
-                "Each member must pass the checker.");
+  // Finally, statically check each member.
+  static_assert(((MemberTs::Tag < (1 << NumTagBits)) && ...),
+                "A discriminant value requires too many bits!");
 };
 
 } // end namespace detail

@@ -895,12 +895,12 @@ namespace cwg666 { // cwg666: 2.8
   template<int> int f();
   template<typename T> int f() {
     T::type *p = 0;
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
     //   expected-note@#cwg666-f-Y {{in instantiation of function template specialization 'cwg666::f<cwg666::Y>' requested here}}
     int a(T::type);
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
     return f<T::type>();
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
   }
   struct X { static const int type = 0; };
   struct Y { typedef int type; };

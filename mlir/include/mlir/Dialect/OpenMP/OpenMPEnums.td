@@ -101,6 +101,60 @@ def ClauseRequires : OpenMP_BitEnumAttr<
 
 def ClauseRequiresAttr : OpenMP_EnumAttr<ClauseRequires, "clause_requires">;
 
+
+//===----------------------------------------------------------------------===//
+// clause_map_flag enum.
+//===----------------------------------------------------------------------===//
+
+def ClauseMapFlagsNone : I32BitEnumAttrCaseNone<"none">;
+def ClauseMapFlagsStorage : I32BitEnumAttrCaseBit<"storage", 0>; // alloc/release synonym
+def ClauseMapFlagsTo : I32BitEnumAttrCaseBit<"to", 1>;
+def ClauseMapFlagsFrom : I32BitEnumAttrCaseBit<"from", 2>;
+def ClauseMapFlagsAlways : I32BitEnumAttrCaseBit<"always", 3>;
+def ClauseMapFlagsDelete : I32BitEnumAttrCaseBit<"del", 4>; // delete, is reserved by C/C++
+def ClauseMapFlagsReturnParam : I32BitEnumAttrCaseBit<"return_param", 5>;
+def ClauseMapFlagsPrivate : I32BitEnumAttrCaseBit<"priv", 6>; // private, is reserved by C/C++
+def ClauseMapFlagsLiteral : I32BitEnumAttrCaseBit<"literal", 7>;
+def ClauseMapFlagsImplicit : I32BitEnumAttrCaseBit<"implicit", 8>;
+def ClauseMapFlagsClose : I32BitEnumAttrCaseBit<"close", 9>;
+def ClauseMapFlagsPresent : I32BitEnumAttrCaseBit<"present", 10>;
+def ClauseMapFlagsOMPXHold : I32BitEnumAttrCaseBit<"ompx_hold", 11>;
+def ClauseMapFlagsAttach : I32BitEnumAttrCaseBit<"attach", 12>;
+def ClauseMapFlagsAttachAlways : I32BitEnumAttrCaseBit<"attach_always", 13>;
+def ClauseMapFlagsAttachNone : I32BitEnumAttrCaseBit<"attach_none", 14>;
+def ClauseMapFlagsAttachAuto : I32BitEnumAttrCaseBit<"attach_auto", 15>;
+def ClauseMapFlagsRefPtr : I32BitEnumAttrCaseBit<"ref_ptr", 16>;
+def ClauseMapFlagsRefPtee : I32BitEnumAttrCaseBit<"ref_ptee", 17>;
+def ClauseMapFlagsRefPtrPtee : I32BitEnumAttrCaseBit<"ref_ptr_ptee", 18>;
+
+def ClauseMapFlags : OpenMP_BitEnumAttr<
+    "ClauseMapFlags",
+    "Map types and modifiers tied to data maps", [
+      ClauseMapFlagsNone,
+      ClauseMapFlagsStorage,
+      ClauseMapFlagsTo,
+      ClauseMapFlagsFrom,
+      ClauseMapFlagsAlways,
+      ClauseMapFlagsDelete,
+      ClauseMapFlagsReturnParam,
+      ClauseMapFlagsPrivate,
+      ClauseMapFlagsLiteral,
+      ClauseMapFlagsImplicit,
+      ClauseMapFlagsClose,
+      ClauseMapFlagsPresent,
+      ClauseMapFlagsOMPXHold,
+      ClauseMapFlagsAttach,
+      ClauseMapFlagsAttachAlways,
+      ClauseMapFlagsAttachNone,
+      ClauseMapFlagsAttachAuto,
+      ClauseMapFlagsRefPtr,
+      ClauseMapFlagsRefPtee,
+      ClauseMapFlagsRefPtrPtee
+    ]>;
+
+def ClauseMapFlagsAttr : OpenMP_EnumAttr<ClauseMapFlags,
+                                         "clause_map_flags">;
+
 //===----------------------------------------------------------------------===//
 // clause_task_depend enum.
 //===----------------------------------------------------------------------===//
@@ -230,14 +284,24 @@ def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
 def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
 def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
 def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
+def TargetRegionFlagsNoLoop : I32BitEnumAttrCaseBit<"no_loop", 3>;
 
 def TargetRegionFlags : OpenMP_BitEnumAttr<
     "TargetRegionFlags",
-    "target region property flags", [
+    "These flags describe properties of the target kernel. "
+    "TargetRegionFlagsGeneric - denotes generic kernel. "
+    "TargetRegionFlagsSpmd - denotes SPMD kernel. "
+    "TargetRegionFlagsNoLoop - denotes kernel where "
+    "num_teams * num_threads >= loop_trip_count. It allows the conversion "
+    "of loops into sequential code by ensuring that each team/thread "
+    "executes at most one iteration. "
+    "TargetRegionFlagsTripCount - checks if the loop trip count should be "
+    "calculated.", [
       TargetRegionFlagsNone,
       TargetRegionFlagsGeneric,
       TargetRegionFlagsSpmd,
-      TargetRegionFlagsTripCount
+      TargetRegionFlagsTripCount,
+      TargetRegionFlagsNoLoop
     ]>;
 
 //===----------------------------------------------------------------------===//

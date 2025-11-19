@@ -1,23 +1,21 @@
 header: sys/statvfs.h
-header_template: statvfs.h.def
-macros: []
+standards:
+  - posix
 types:
   - type_name: struct_statvfs
   - type_name: fsblkcnt_t
   - type_name: fsfilcnt_t
-enums: []
-objects: []
 functions:
   - name: fstatvfs
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: struct statvfs *
   - name: statvfs
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *__restrict

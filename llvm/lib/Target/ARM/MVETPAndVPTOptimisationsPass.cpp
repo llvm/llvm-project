@@ -534,7 +534,7 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
     Register LR = LoopPhi->getOperand(0).getReg();
     for (MachineInstr *MI : MVEInstrs) {
       int Idx = findFirstVPTPredOperandIdx(*MI);
-      MI->getOperand(Idx + 2).setReg(LR);
+      MI->getOperand(Idx + ARM::SUBOP_vpred_n_tp_reg).setReg(LR);
     }
   }
 
@@ -922,7 +922,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
   // the function.
   unsigned LastVPTImm = 0;
   Register LastVPTReg = 0;
-  SmallSet<MachineInstr *, 4> DeadInstructions;
+  SmallPtrSet<MachineInstr *, 4> DeadInstructions;
 
   for (MachineInstr &Instr : MBB.instrs()) {
     // Look for predicated MVE instructions.

@@ -21,7 +21,6 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_5]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_6]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:           %[[VAL_8:.*]] = arith.constant true
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_10]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_12:.*]] = fir.shape_shift %[[VAL_11]]#0, %[[VAL_11]]#1 : (index, index) -> !fir.shapeshift<1>
@@ -64,11 +63,11 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPmax_array_reduction(
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "l"},
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
-! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {uniq_name = "_QFmax_array_reductionEl"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] {uniq_name = "_QFmax_array_reductionEr"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
-! CHECK:           fir.store %[[VAL_3]]#1 to %[[VAL_5]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFmax_array_reductionEl"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFmax_array_reductionEr"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           fir.store %[[VAL_3]]#0 to %[[VAL_5]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
 ! CHECK:           omp.parallel reduction(byref @max_byref_box_Uxi32 %[[VAL_5]] -> %[[VAL_6:.*]] : !fir.ref<!fir.box<!fir.array<?xi32>>>) {
 ! CHECK:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmax_array_reductionEl"} : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> (!fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.array<?xi32>>>)
 ! CHECK:             %[[VAL_8:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.array<?xi32>>>

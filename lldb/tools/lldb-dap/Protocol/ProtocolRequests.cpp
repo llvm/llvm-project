@@ -8,6 +8,8 @@
 
 #include "Protocol/ProtocolRequests.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -218,7 +220,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
          OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
          OM.map("linesStartAt1", IRA.linesStartAt1) &&
          OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
-         OM.map("pathFormat", IRA.pathFormat) &&
+         OM.mapOptional("pathFormat", IRA.pathFormat) &&
          OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
@@ -262,6 +264,34 @@ json::Value toJSON(const BreakpointLocationsResponseBody &BLRB) {
   return json::Object{{"breakpoints", BLRB.breakpoints}};
 }
 
+bool fromJSON(const json::Value &Params, Console &C, json::Path P) {
+  auto oldFormatConsole = Params.getAsBoolean();
+  if (oldFormatConsole) {
+    C = *oldFormatConsole ? eConsoleIntegratedTerminal : eConsoleInternal;
+    return true;
+  }
+  auto newFormatConsole = Params.getAsString();
+  if (!newFormatConsole) {
+    P.report("expected a string");
+    return false;
+  }
+
+  std::optional<Console> console =
+      StringSwitch<std::optional<Console>>(*newFormatConsole)
+          .Case("internalConsole", eConsoleInternal)
+          .Case("integratedTerminal", eConsoleIntegratedTerminal)
+          .Case("externalTerminal", eConsoleExternalTerminal)
+          .Default(std::nullopt);
+  if (!console) {
+    P.report("unexpected value, expected 'internalConsole', "
+             "'integratedTerminal' or 'externalTerminal'");
+    return false;
+  }
+
+  C = *console;
+  return true;
+}
+
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -273,9 +303,9 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("disableASLR", LRA.disableASLR) &&
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
-
-         O.mapOptional("runInTerminal", LRA.runInTerminal) &&
-         parseEnv(Params, LRA.env, P);
+         O.mapOptional("runInTerminal", LRA.console) &&
+         O.mapOptional("console", LRA.console) &&
+         O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
 }
 
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
@@ -301,6 +331,17 @@ json::Value toJSON(const ContinueResponseBody &CRB) {
   return std::move(Body);
 }
 
+bool fromJSON(const json::Value &Params, CompletionsArguments &CA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("text", CA.text) && O.map("column", CA.column) &&
+         O.mapOptional("frameId", CA.frameId) && O.mapOptional("line", CA.line);
+}
+
+json::Value toJSON(const CompletionsResponseBody &CRB) {
+  return json::Object{{"targets", CRB.targets}};
+}
+
 bool fromJSON(const json::Value &Params, SetVariableArguments &SVA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -311,26 +352,24 @@ bool fromJSON(const json::Value &Params, SetVariableArguments &SVA,
 
 json::Value toJSON(const SetVariableResponseBody &SVR) {
   json::Object Body{{"value", SVR.value}};
-  if (SVR.type.has_value())
+
+  if (!SVR.type.empty())
     Body.insert({"type", SVR.type});
-
-  if (SVR.variablesReference.has_value())
+  if (SVR.variablesReference)
     Body.insert({"variablesReference", SVR.variablesReference});
-
-  if (SVR.namedVariables.has_value())
+  if (SVR.namedVariables)
     Body.insert({"namedVariables", SVR.namedVariables});
-
-  if (SVR.indexedVariables.has_value())
+  if (SVR.indexedVariables)
     Body.insert({"indexedVariables", SVR.indexedVariables});
-
-  if (SVR.memoryReference.has_value())
-    Body.insert({"memoryReference", SVR.memoryReference});
-
-  if (SVR.valueLocationReference.has_value())
+  if (SVR.memoryReference != LLDB_INVALID_ADDRESS)
+    Body.insert(
+        {"memoryReference", EncodeMemoryReference(SVR.memoryReference)});
+  if (SVR.valueLocationReference)
     Body.insert({"valueLocationReference", SVR.valueLocationReference});
 
   return json::Value(std::move(Body));
 }
+
 bool fromJSON(const json::Value &Params, ScopesArguments &SCA, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("frameId", SCA.frameId);
@@ -423,7 +462,7 @@ bool fromJSON(const json::Value &Params, DataBreakpointInfoArguments &DBIA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("variablesReference", DBIA.variablesReference) &&
-         O.map("name", DBIA.name) && O.map("frameId", DBIA.frameId) &&
+         O.map("name", DBIA.name) && O.mapOptional("frameId", DBIA.frameId) &&
          O.map("bytes", DBIA.bytes) && O.map("asAddress", DBIA.asAddress) &&
          O.map("mode", DBIA.mode);
 }
@@ -471,7 +510,9 @@ json::Value toJSON(const ThreadsResponseBody &TR) {
 bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.map("memoryReference", DA.memoryReference) &&
+  return O &&
+         DecodeMemoryReference(Params, "memoryReference", DA.memoryReference, P,
+                               /*required=*/true) &&
          O.mapOptional("offset", DA.offset) &&
          O.mapOptional("instructionOffset", DA.instructionOffset) &&
          O.map("instructionCount", DA.instructionCount) &&
@@ -485,29 +526,14 @@ json::Value toJSON(const DisassembleResponseBody &DRB) {
 bool fromJSON(const json::Value &Params, ReadMemoryArguments &RMA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-
-  const json::Object *rma_obj = Params.getAsObject();
-  constexpr llvm::StringRef ref_key = "memoryReference";
-  const std::optional<llvm::StringRef> memory_ref = rma_obj->getString(ref_key);
-  if (!memory_ref) {
-    P.field(ref_key).report("missing value");
-    return false;
-  }
-
-  const std::optional<lldb::addr_t> addr_opt =
-      DecodeMemoryReference(*memory_ref);
-  if (!addr_opt) {
-    P.field(ref_key).report("Malformed memory reference");
-    return false;
-  }
-
-  RMA.memoryReference = *addr_opt;
-
-  return O && O.map("count", RMA.count) && O.mapOptional("offset", RMA.offset);
+  return O &&
+         DecodeMemoryReference(Params, "memoryReference", RMA.memoryReference,
+                               P, /*required=*/true) &&
+         O.map("count", RMA.count) && O.mapOptional("offset", RMA.offset);
 }
 
 json::Value toJSON(const ReadMemoryResponseBody &RMR) {
-  json::Object result{{"address", RMR.address}};
+  json::Object result{{"address", EncodeMemoryReference(RMR.address)}};
 
   if (RMR.unreadableBytes != 0)
     result.insert({"unreadableBytes", RMR.unreadableBytes});
@@ -531,28 +557,49 @@ json::Value toJSON(const ModulesResponseBody &MR) {
   return result;
 }
 
+bool fromJSON(const json::Value &Param, VariablesArguments::VariablesFilter &VA,
+              json::Path Path) {
+  auto rawFilter = Param.getAsString();
+  if (!rawFilter) {
+    Path.report("expected a string");
+    return false;
+  }
+  std::optional<VariablesArguments::VariablesFilter> filter =
+      StringSwitch<std::optional<VariablesArguments::VariablesFilter>>(
+          *rawFilter)
+          .Case("indexed", VariablesArguments::eVariablesFilterIndexed)
+          .Case("named", VariablesArguments::eVariablesFilterNamed)
+          .Default(std::nullopt);
+  if (!filter) {
+    Path.report("unexpected value, expected 'named' or 'indexed'");
+    return false;
+  }
+
+  VA = *filter;
+  return true;
+}
+
+bool fromJSON(const json::Value &Param, VariablesArguments &VA,
+              json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.map("variablesReference", VA.variablesReference) &&
+         O.mapOptional("filter", VA.filter) &&
+         O.mapOptional("start", VA.start) && O.mapOptional("count", VA.count) &&
+         O.mapOptional("format", VA.format);
+}
+
+json::Value toJSON(const VariablesResponseBody &VRB) {
+  return json::Object{{"variables", VRB.variables}};
+}
+
 bool fromJSON(const json::Value &Params, WriteMemoryArguments &WMA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
 
-  const json::Object *wma_obj = Params.getAsObject();
-  constexpr llvm::StringRef ref_key = "memoryReference";
-  const std::optional<llvm::StringRef> memory_ref = wma_obj->getString(ref_key);
-  if (!memory_ref) {
-    P.field(ref_key).report("missing value");
-    return false;
-  }
-
-  const std::optional<lldb::addr_t> addr_opt =
-      DecodeMemoryReference(*memory_ref);
-  if (!addr_opt) {
-    P.field(ref_key).report("Malformed memory reference");
-    return false;
-  }
-
-  WMA.memoryReference = *addr_opt;
-
-  return O && O.mapOptional("allowPartial", WMA.allowPartial) &&
+  return O &&
+         DecodeMemoryReference(Params, "memoryReference", WMA.memoryReference,
+                               P, /*required=*/true) &&
+         O.mapOptional("allowPartial", WMA.allowPartial) &&
          O.mapOptional("offset", WMA.offset) && O.map("data", WMA.data);
 }
 
@@ -561,6 +608,87 @@ json::Value toJSON(const WriteMemoryResponseBody &WMR) {
 
   if (WMR.bytesWritten != 0)
     result.insert({"bytesWritten", WMR.bytesWritten});
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, ModuleSymbolsArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("moduleId", Args.moduleId) &&
+         O.map("moduleName", Args.moduleName) &&
+         O.mapOptional("startIndex", Args.startIndex) &&
+         O.mapOptional("count", Args.count);
+}
+
+llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
+  json::Object result;
+  result.insert({"symbols", DGMSR.symbols});
+  return result;
+}
+
+bool fromJSON(const json::Value &Params, ExceptionInfoArguments &Args,
+              json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
+json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
+  json::Object result{{"exceptionId", ERB.exceptionId},
+                      {"breakMode", ERB.breakMode}};
+
+  if (!ERB.description.empty())
+    result.insert({"description", ERB.description});
+  if (ERB.details.has_value())
+    result.insert({"details", *ERB.details});
+  return result;
+}
+
+static bool fromJSON(const llvm::json::Value &Params, EvaluateContext &C,
+                     llvm::json::Path P) {
+  auto rawContext = Params.getAsString();
+  if (!rawContext) {
+    P.report("expected a string");
+    return false;
+  }
+  C = StringSwitch<EvaluateContext>(*rawContext)
+          .Case("watch", EvaluateContext::eEvaluateContextWatch)
+          .Case("repl", EvaluateContext::eEvaluateContextRepl)
+          .Case("hover", EvaluateContext::eEvaluateContextHover)
+          .Case("clipboard", EvaluateContext::eEvaluateContextClipboard)
+          .Case("variables", EvaluateContext::eEvaluateContextVariables)
+          .Default(eEvaluateContextUnknown);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, EvaluateArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("expression", Args.expression) &&
+         O.mapOptional("frameId", Args.frameId) &&
+         O.mapOptional("line", Args.line) &&
+         O.mapOptional("column", Args.column) &&
+         O.mapOptional("source", Args.source) &&
+         O.mapOptional("context", Args.context) &&
+         O.mapOptional("format", Args.format);
+}
+
+llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
+  json::Object result{{"result", Body.result},
+                      {"variablesReference", Body.variablesReference}};
+
+  if (!Body.type.empty())
+    result.insert({"type", Body.type});
+  if (Body.presentationHint)
+    result.insert({"presentationHint", Body.presentationHint});
+  if (Body.namedVariables)
+    result.insert({"namedVariables", Body.namedVariables});
+  if (Body.indexedVariables)
+    result.insert({"indexedVariables", Body.indexedVariables});
+  if (!Body.memoryReference.empty())
+    result.insert({"memoryReference", Body.memoryReference});
+  if (Body.valueLocationReference != LLDB_DAP_INVALID_VALUE_LOC)
+    result.insert({"valueLocationReference", Body.valueLocationReference});
+
   return result;
 }
 

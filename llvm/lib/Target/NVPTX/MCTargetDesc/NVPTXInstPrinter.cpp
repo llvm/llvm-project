@@ -149,6 +149,9 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
     case NVPTX::PTXCvtMode::RNA:
       O << ".rna";
       return;
+    case NVPTX::PTXCvtMode::RS:
+      O << ".rs";
+      return;
     }
   }
   llvm_unreachable("Invalid conversion modifier");
@@ -268,8 +271,8 @@ void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
   llvm_unreachable("Empty Modifier");
 }
 
-void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O, StringRef Modifier) {
+void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
+                                       raw_ostream &O, StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
   if (Modifier == "sem") {
@@ -286,22 +289,25 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     case NVPTX::Ordering::Release:
       O << ".release";
       return;
+    case NVPTX::Ordering::AcquireRelease:
+      O << ".acq_rel";
+      return;
+    case NVPTX::Ordering::SequentiallyConsistent:
+      report_fatal_error(
+          "NVPTX AtomicCode Printer does not support \"seq_cst\" ordering.");
+      return;
     case NVPTX::Ordering::Volatile:
       O << ".volatile";
       return;
     case NVPTX::Ordering::RelaxedMMIO:
       O << ".mmio.relaxed";
       return;
-    default:
-      report_fatal_error(formatv(
-          "NVPTX LdStCode Printer does not support \"{}\" sem modifier. "
-          "Loads/Stores cannot be AcquireRelease or SequentiallyConsistent.",
-          OrderingToString(Ordering)));
     }
   } else if (Modifier == "scope") {
     auto S = NVPTX::Scope(Imm);
     switch (S) {
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       return;
     case NVPTX::Scope::System:
       O << ".sys";
@@ -316,9 +322,9 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       O << ".gpu";
       return;
     }
-    report_fatal_error(
-        formatv("NVPTX LdStCode Printer does not support \"{}\" sco modifier.",
-                ScopeToString(S)));
+    report_fatal_error(formatv(
+        "NVPTX AtomicCode Printer does not support \"{}\" scope modifier.",
+        ScopeToString(S)));
   } else if (Modifier == "addsp") {
     auto A = NVPTX::AddressSpace(Imm);
     switch (A) {
@@ -334,7 +340,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       return;
     }
     report_fatal_error(formatv(
-        "NVPTX LdStCode Printer does not support \"{}\" addsp modifier.",
+        "NVPTX AtomicCode Printer does not support \"{}\" addsp modifier.",
         AddressSpaceToString(A)));
   } else if (Modifier == "sign") {
     switch (Imm) {
@@ -386,16 +392,6 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
       return; // don't print ',0' or '+0'
     O << "+";
     printOperand(MI, OpNum + 1, O);
-  }
-}
-
-void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
-                                         raw_ostream &O) {
-  auto &Op = MI->getOperand(OpNum);
-  assert(Op.isImm() && "Invalid operand");
-  if (Op.getImm() != 0) {
-    O << "+";
-    printOperand(MI, OpNum, O);
   }
 }
 

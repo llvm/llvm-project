@@ -95,7 +95,7 @@ struct common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_C
 
 namespace chrono {
 
-template <class _ToDuration, class _Clock, class _Duration>
+template <class _ToDuration, class _Clock, class _Duration, __enable_if_t<__is_duration_v<_ToDuration>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 time_point<_Clock, _ToDuration>
 time_point_cast(const time_point<_Clock, _Duration>& __t) {
   return time_point<_Clock, _ToDuration>(chrono::duration_cast<_ToDuration>(__t.time_since_epoch()));

@@ -174,10 +174,11 @@ def note_constexpr_heap_alloc_limit_exceeded : Note<
 def note_constexpr_this : Note<
   "%select{|implicit }0use of 'this' pointer is only allowed within the "
   "evaluation of a call to a 'constexpr' member function">;
-def access_kind : TextSubstitution<
-  "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to|construction of|"
-  "destruction of|read of}0">;
+def access_kind
+    : TextSubstitution<
+          "%select{read of|read of|assignment to|increment of|decrement of|"
+          "member call on|dynamic_cast of|typeid applied to|construction of|"
+          "destruction of|read of|read of}0">;
 def access_kind_subobject : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|"
@@ -222,6 +223,9 @@ def note_constexpr_ltor_incomplete_type : Note<
 def note_constexpr_access_null : Note<
   "%sub{access_kind}0 "
   "dereferenced null pointer is not allowed in a constant expression">;
+def note_constexpr_dereferencing_null
+    : Note<"dereferencing a null pointer is not allowed in a constant "
+           "expression">;
 def note_constexpr_access_past_end : Note<
   "%sub{access_kind}0 dereferenced one-past-the-end pointer "
   "is not allowed in a constant expression">;
@@ -396,6 +400,15 @@ def note_constexpr_non_const_vectorelements : Note<
   "cannot determine number of elements for sizeless vectors in a constant expression">;
 def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
+def note_constexpr_countzeroes_zero : Note<
+  "evaluation of %select{__builtin_elementwise_clzg|__builtin_elementwise_ctzg}0 "
+  "with a zero value is undefined">;
+def note_constexpr_infer_alloc_token_type_inference_failed : Note<
+  "could not infer allocation type for __builtin_infer_alloc_token">;
+def note_constexpr_infer_alloc_token_no_metadata : Note<
+  "could not get token metadata for inferred type">;
+def note_constexpr_infer_alloc_token_stateful_mode : Note<
+  "stateful alloc token mode not supported in constexpr">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
@@ -507,6 +520,14 @@ def note_odr_number_of_bases : Note<
   "class has %0 base %plural{1:class|:classes}0">;
 def note_odr_enumerator : Note<"enumerator %0 with value %1 here">;
 def note_odr_missing_enumerator : Note<"no corresponding enumerator here">;
+def note_odr_incompatible_fixed_underlying_type : Note<
+  "enumeration %0 declared with incompatible fixed underlying types (%1 vs. "
+  "%2)">;
+def note_odr_fixed_underlying_type : Note<
+  "enumeration %0 has fixed underlying type here">;
+def note_odr_missing_fixed_underlying_type : Note<
+  "enumeration %0 missing fixed underlying type here">;
+
 def err_odr_field_type_inconsistent : Error<
   "field %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">;

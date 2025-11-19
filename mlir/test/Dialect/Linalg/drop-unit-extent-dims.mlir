@@ -915,7 +915,7 @@ func.func @sparse_case(%arg0: tensor<8x8xf32, #CSR>, %arg1: tensor<8xf32>) -> te
 
 // -----
 
-func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
+func.func @parallel_insert_slice() -> tensor<4x2xf32> {
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.000000e+00 : f32
@@ -923,6 +923,7 @@ func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
   %res = scf.forall (%arg0, %arg1) in (%c4, %c2) shared_outs(%o = %0) -> (tensor<4x2xf32>) {
     %1 = tensor.empty() : tensor<1x1xf32>
     %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<1x1xf32>) -> tensor<1x1xf32>
+    // CHECK: scf.forall.in_parallel
     scf.forall.in_parallel {
       //      CHECK: tensor.parallel_insert_slice %{{[0-9a-z]*}} into %{{[0-9a-z]*}}
       // CHECK-SAME: [%{{.*}}, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<4x2xf32>
@@ -1076,6 +1077,44 @@ func.func @drop_known_unit_constant_low_high(%arg0: tensor<1x383x128xf32>) -> te
 
 // -----
 
+func.func @drop_unit_dim_mixed_static_dynamic(%arg0: tensor<1x?xf32>) -> tensor<1x16xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %padded = tensor.pad %arg0 low[%c0, %c1] high[%c0, %c0] {
+  ^bb0(%arg1: index, %arg2: index):
+    tensor.yield %cst : f32
+  } : tensor<1x?xf32> to tensor<1x16xf32>
+  return %padded : tensor<1x16xf32>
+}
+// CHECK-LABEL: func @drop_unit_dim_mixed_static_dynamic
+//       CHECK:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARGS:.*]] : tensor<1x?xf32> into tensor<?xf32>
+//       CHECK:   %[[PADDED:.*]] = tensor.pad %[[COLLAPSE]] low[1] high[0] {
+//       CHECK:   ^bb0(%[[IDX:.*]]: index):
+//       CHECK:     tensor.yield %[[CST]] : f32
+//       CHECK:   } : tensor<?xf32> to tensor<16xf32>
+//       CHECK:   %[[EXPANDED:.*]] = tensor.expand_shape %[[PADDED]] {{\[\[}}0, 1]] output_shape [1, 16] : tensor<16xf32> into tensor<1x16xf32>
+//       CHECK:   return %[[EXPANDED]] : tensor<1x16xf32>
+
+// -----
+
+#map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
+#map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+#map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+module {
+  func.func @drop_unit_dim_corresponding_to_dynamic_dim(%arg0: tensor<1x?x?x1xf32>, %arg1: index) -> tensor<?x1x61x1xf32> {
+    %cst = arith.constant dense<1.000000e+00> : tensor<1x1x1x1xf32>
+    %0 = tensor.empty(%arg1) : tensor<?x1x61x1xf32>
+    %1 = linalg.generic {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]} ins(%arg0, %cst : tensor<1x?x?x1xf32>, tensor<1x1x1x1xf32>) outs(%0 : tensor<?x1x61x1xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %2 = arith.mulf %in, %in_0 : f32
+      %3 = arith.addf %out, %2 : f32
+      linalg.yield %3 : f32
+    } -> tensor<?x1x61x1xf32>
+    return %1 : tensor<?x1x61x1xf32>
+  }
+}
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (0, d0)>
 // CHECK: #[[$MAP2:.+]] = affine_map<(d0) -> ()>
 
@@ -1096,23 +1135,6 @@ func.func @drop_known_unit_constant_low_high(%arg0: tensor<1x383x128xf32>) -> te
 // CHECK:           %[[VAL_14:.*]] = tensor.expand_shape %[[VAL_7]] {{\[\[}}0, 1], [2, 3]] output_shape {{\[}}%[[VAL_0]], 1, 61, 1] : tensor<?x61xf32> into tensor<?x1x61x1xf32>
 // CHECK:           return %[[VAL_14]] : tensor<?x1x61x1xf32>
 // CHECK:         }
-
-#map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
-#map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
-#map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
-module {
-  func.func @drop_unit_dim_corresponding_to_dynamic_dim(%arg0: tensor<1x?x?x1xf32>, %arg1: index) -> tensor<?x1x61x1xf32> {
-    %cst = arith.constant dense<1.000000e+00> : tensor<1x1x1x1xf32>
-    %0 = tensor.empty(%arg1) : tensor<?x1x61x1xf32>
-    %1 = linalg.generic {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]} ins(%arg0, %cst : tensor<1x?x?x1xf32>, tensor<1x1x1x1xf32>) outs(%0 : tensor<?x1x61x1xf32>) {
-    ^bb0(%in: f32, %in_0: f32, %out: f32):
-      %2 = arith.mulf %in, %in_0 : f32
-      %3 = arith.addf %out, %2 : f32
-      linalg.yield %3 : f32
-    } -> tensor<?x1x61x1xf32>
-    return %1 : tensor<?x1x61x1xf32>
-  }
-}
 
 // -----
 

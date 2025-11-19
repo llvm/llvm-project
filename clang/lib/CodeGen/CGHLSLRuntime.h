@@ -15,18 +15,19 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
+#include "Address.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
+#include "clang/Basic/Builtins.h"
+#include "clang/Basic/HLSLRuntime.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-
-#include "clang/Basic/Builtins.h"
-#include "clang/Basic/HLSLRuntime.h"
-
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Frontend/HLSL/HLSLResource.h"
 
 #include <optional>
 #include <vector>
@@ -62,11 +63,14 @@ class VarDecl;
 class ParmVarDecl;
 class InitListExpr;
 class HLSLBufferDecl;
+class HLSLRootSignatureDecl;
+class HLSLVkBindingAttr;
 class HLSLResourceBindingAttr;
 class Type;
 class RecordType;
 class DeclContext;
 class HLSLPackOffsetAttr;
+class ArraySubscriptExpr;
 
 class FunctionDecl;
 
@@ -74,6 +78,41 @@ namespace CodeGen {
 
 class CodeGenModule;
 class CodeGenFunction;
+class LValue;
+
+class CGHLSLOffsetInfo {
+  SmallVector<uint32_t> Offsets;
+
+public:
+  static const uint32_t Unspecified = ~0U;
+
+  /// Iterates over all declarations in the HLSL buffer and based on the
+  /// packoffset or register(c#) annotations it fills outs the Offsets vector
+  /// with the user-specified layout offsets. The buffer offsets can be
+  /// specified 2 ways: 1. declarations in cbuffer {} block can have a
+  /// packoffset annotation (translates to HLSLPackOffsetAttr) 2. default
+  /// constant buffer declarations at global scope can have register(c#)
+  /// annotations (translates to HLSLResourceBindingAttr with RegisterType::C)
+  /// It is not guaranteed that all declarations in a buffer have an annotation.
+  /// For those where it is not specified a `~0U` value is added to the Offsets
+  /// vector. In the final layout these declarations will be placed at the end
+  /// of the HLSL buffer after all of the elements with specified offset.
+  static CGHLSLOffsetInfo fromDecl(const HLSLBufferDecl &BufDecl);
+
+  /// Comparison function for offsets received from `operator[]` suitable for
+  /// use in a `stable_sort`. This will order implicit bindings after explicit
+  /// offsets.
+  static bool compareOffsets(uint32_t LHS, uint32_t RHS) { return LHS < RHS; }
+
+  /// Get the given offset, or `~0U` if there is no offset for the member.
+  uint32_t operator[](size_t I) const {
+    if (Offsets.empty())
+      return Unspecified;
+    return Offsets[I];
+  }
+
+  bool empty() const { return Offsets.empty(); }
+};
 
 class CGHLSLRuntime {
 public:
@@ -88,6 +127,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
                                    flattened_thread_id_in_group)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(IsInf, isinf)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(IsNaN, isnan)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -122,9 +163,14 @@ public:
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
                                    resource_handlefromimplicitbinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(NonUniformResourceIndex,
+                                   resource_nonuniformindex)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdxCoarse, ddx_coarse)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
@@ -133,20 +179,66 @@ public:
 protected:
   CodeGenModule &CGM;
 
-  llvm::Value *emitInputSemantic(llvm::IRBuilder<> &B, const ParmVarDecl &D,
-                                 llvm::Type *Ty);
+  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                      const clang::DeclaratorDecl *Decl,
+                                      HLSLAppliedSemanticAttr *Semantic,
+                                      std::optional<unsigned> Index);
+
+  void emitSystemSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                               const clang::DeclaratorDecl *Decl,
+                               HLSLAppliedSemanticAttr *Semantic,
+                               std::optional<unsigned> Index);
+
+  llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
+                                        const FunctionDecl *FD,
+                                        llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        HLSLAppliedSemanticAttr *Semantic);
+
+  void handleScalarSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                                 llvm::Value *Source,
+                                 const clang::DeclaratorDecl *Decl,
+                                 HLSLAppliedSemanticAttr *Semantic);
+
+  std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+  handleStructSemanticLoad(
+      llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+      const clang::DeclaratorDecl *Decl,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+
+  specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
+      llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+      const clang::DeclaratorDecl *Decl,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
+
+  std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+  handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                     llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+
+  specific_attr_iterator<HLSLAppliedSemanticAttr>
+  handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                      llvm::Value *Source, const clang::DeclaratorDecl *Decl,
+                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGHLSLRuntime() {}
 
-  llvm::Type *
-  convertHLSLSpecificType(const Type *T,
-                          SmallVector<int32_t> *Packoffsets = nullptr);
+  llvm::Type *convertHLSLSpecificType(const Type *T,
+                                      const CGHLSLOffsetInfo &OffsetInfo);
+  llvm::Type *convertHLSLSpecificType(const Type *T) {
+    return convertHLSLSpecificType(T, CGHLSLOffsetInfo());
+  }
 
   void generateGlobalCtorDtorCalls();
 
   void addBuffer(const HLSLBufferDecl *D);
+  void addRootSignature(const HLSLRootSignatureDecl *D);
   void finishCodeGen();
 
   void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
@@ -157,21 +249,61 @@ public:
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
-  llvm::TargetExtType *
-  getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
+  llvm::StructType *getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
   void addHLSLBufferLayoutType(const RecordType *LayoutStructTy,
-                               llvm::TargetExtType *LayoutTy);
+                               llvm::StructType *LayoutTy);
   void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
+
+  std::optional<LValue>
+  emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
+                                 CodeGenFunction &CGF);
+
+  std::optional<LValue> emitBufferArraySubscriptExpr(
+      const ArraySubscriptExpr *E, CodeGenFunction &CGF,
+      llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase);
+
+  bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
+                      QualType CType);
+
+  LValue emitBufferMemberExpr(CodeGenFunction &CGF, const MemberExpr *E);
 
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
-                                    llvm::GlobalVariable *BufGV);
+                                    llvm::GlobalVariable *BufGV,
+                                    const CGHLSLOffsetInfo &OffsetInfo);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                    llvm::GlobalVariable *GV,
                                    HLSLResourceBindingAttr *RBA);
+
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         HLSLAppliedSemanticAttr *Semantic,
+                                         std::optional<unsigned> Index);
+  llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        HLSLAppliedSemanticAttr *Semantic,
+                                        std::optional<unsigned> Index);
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                    const clang::DeclaratorDecl *Decl,
+                                    HLSLAppliedSemanticAttr *Semantic,
+                                    std::optional<unsigned> Index);
+
+  void emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                  HLSLAppliedSemanticAttr *Semantic,
+                                  std::optional<unsigned> Index);
+  void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                 HLSLAppliedSemanticAttr *Semantic,
+                                 std::optional<unsigned> Index);
+  void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                             const clang::DeclaratorDecl *Decl,
+                             HLSLAppliedSemanticAttr *Semantic,
+                             std::optional<unsigned> Index);
+
   llvm::Triple::ArchType getArch();
 
-  llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
+  llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
+  unsigned SPIRVLastAssignedInputSemanticLocation = 0;
+  unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
 };
 
 } // namespace CodeGen

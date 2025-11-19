@@ -116,23 +116,6 @@ static cl::opt<bool>
                             cl::desc("Disable minimum alignment of 1 for "
                                      "arguments passed by value on stack"));
 
-namespace {
-
-  class HexagonCCState : public CCState {
-    unsigned NumNamedVarArgParams = 0;
-
-  public:
-    HexagonCCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
-                   SmallVectorImpl<CCValAssign> &locs, LLVMContext &C,
-                   unsigned NumNamedArgs)
-        : CCState(CC, IsVarArg, MF, locs, C),
-          NumNamedVarArgParams(NumNamedArgs) {}
-    unsigned getNumNamedVarArgParams() const { return NumNamedVarArgParams; }
-  };
-
-} // end anonymous namespace
-
-
 // Implement calling convention for Hexagon.
 
 static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
@@ -236,7 +219,16 @@ MVT HexagonTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 SDValue
 HexagonTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG)
       const {
-  return SDValue();
+  unsigned IntNo = Op.getConstantOperandVal(0);
+  SDLoc dl(Op);
+  switch (IntNo) {
+  default:
+    return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::thread_pointer: {
+    EVT PtrVT = getPointerTy(DAG.getDataLayout());
+    return DAG.getNode(HexagonISD::THREAD_POINTER, dl, PtrVT);
+  }
+  }
 }
 
 /// CreateCopyOfByValArgument - Make a copy of an aggregate at address specified
@@ -488,7 +480,6 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto PtrVT = getPointerTy(MF.getDataLayout());
 
-  unsigned NumParams = CLI.CB ? CLI.CB->getFunctionType()->getNumParams() : 0;
   if (GlobalAddressSDNode *GAN = dyn_cast<GlobalAddressSDNode>(Callee))
     Callee = DAG.getTargetGlobalAddress(GAN->getGlobal(), dl, MVT::i32);
 
@@ -497,8 +488,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  HexagonCCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext(),
-                        NumParams);
+  CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
   if (Subtarget.useHVXOps())
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_HVX);
@@ -871,9 +861,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  HexagonCCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs,
-                        *DAG.getContext(),
-                        MF.getFunction().getFunctionType()->getNumParams());
+  CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
   if (Subtarget.useHVXOps())
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_HVX);
@@ -1588,6 +1576,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::PREFETCH,             MVT::Other, Custom);
   setOperationAction(ISD::READCYCLECOUNTER,     MVT::i64,   Custom);
   setOperationAction(ISD::READSTEADYCOUNTER,    MVT::i64,   Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID,       MVT::Other, Custom);
   setOperationAction(ISD::EH_RETURN,            MVT::Other, Custom);
   setOperationAction(ISD::GLOBAL_OFFSET_TABLE,  MVT::i32,   Custom);
@@ -1688,6 +1677,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   }
   // Turn FP truncstore into trunc + store.
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
   // Turn FP extload into load/fpextend.
   for (MVT VT : MVT::fp_valuetypes())
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
@@ -1761,6 +1752,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SHL, VT, Custom);
     setOperationAction(ISD::SRL, VT, Custom);
   }
+
+  setOperationAction(ISD::SADDSAT, MVT::i32, Legal);
+  setOperationAction(ISD::SADDSAT, MVT::i64, Legal);
 
   // Extending loads from (native) vectors of i8 into (native) vectors of i16
   // are legal.
@@ -1880,9 +1874,15 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+  setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::FP_TO_BF16, MVT::f64, Expand);
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
+
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f16, Expand);
 
@@ -1960,6 +1960,8 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VROR:          return "HexagonISD::VROR";
   case HexagonISD::READCYCLE:     return "HexagonISD::READCYCLE";
   case HexagonISD::READTIMER:     return "HexagonISD::READTIMER";
+  case HexagonISD::THREAD_POINTER:
+    return "HexagonISD::THREAD_POINTER";
   case HexagonISD::PTRUE:         return "HexagonISD::PTRUE";
   case HexagonISD::PFALSE:        return "HexagonISD::PFALSE";
   case HexagonISD::D2P:           return "HexagonISD::D2P";
@@ -2151,7 +2153,9 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::hexagon_V6_vgathermhq:
   case Intrinsic::hexagon_V6_vgathermhq_128B:
   case Intrinsic::hexagon_V6_vgathermhwq:
-  case Intrinsic::hexagon_V6_vgathermhwq_128B: {
+  case Intrinsic::hexagon_V6_vgathermhwq_128B:
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B: {
     const Module &M = *I.getParent()->getParent()->getParent();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Type *VecTy = I.getArgOperand(1)->getType();
@@ -3358,7 +3362,6 @@ HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
-
   // Handle INLINEASM first.
   if (Opc == ISD::INLINEASM || Opc == ISD::INLINEASM_BR)
     return LowerINLINEASM(Op, DAG);
@@ -3952,4 +3955,52 @@ TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
+}
+
+bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(
+    const Instruction &AndI) const {
+  // Only sink 'and' mask to cmp use block if it is masking a single bit since
+  // this will fold the and/cmp/br into a single tstbit instruction.
+  ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
+  if (!Mask)
+    return false;
+  return Mask->getValue().isPowerOf2();
+}
+
+// Check if the result of the node is only used as a return value, as
+// otherwise we can't perform a tail-call.
+bool HexagonTargetLowering::isUsedByReturnOnly(SDNode *N,
+                                               SDValue &Chain) const {
+  if (N->getNumValues() != 1)
+    return false;
+  if (!N->hasNUsesOfValue(1, 0))
+    return false;
+
+  SDNode *Copy = *N->user_begin();
+
+  if (Copy->getOpcode() == ISD::BITCAST) {
+    return isUsedByReturnOnly(Copy, Chain);
+  }
+
+  if (Copy->getOpcode() != ISD::CopyToReg) {
+    return false;
+  }
+
+  // If the ISD::CopyToReg has a glue operand, we conservatively assume it
+  // isn't safe to perform a tail call.
+  if (Copy->getOperand(Copy->getNumOperands() - 1).getValueType() == MVT::Glue)
+    return false;
+
+  // The copy must be used by a HexagonISD::RET_GLUE, and nothing else.
+  bool HasRet = false;
+  for (SDNode *Node : Copy->users()) {
+    if (Node->getOpcode() != HexagonISD::RET_GLUE)
+      return false;
+    HasRet = true;
+  }
+  if (!HasRet)
+    return false;
+
+  Chain = Copy->getOperand(0);
+  return true;
 }

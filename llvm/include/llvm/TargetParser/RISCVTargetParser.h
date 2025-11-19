@@ -98,7 +98,7 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
 }
 
 LLVM_ABI unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
-                              bool MaskAgnostic);
+                              bool MaskAgnostic, bool AltFmt = false);
 
 LLVM_ABI unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt);
 
@@ -160,6 +160,8 @@ inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
 
 LLVM_ABI void printVType(unsigned VType, raw_ostream &OS);
+
+LLVM_ABI void printXSfmmVType(unsigned VType, raw_ostream &OS);
 
 LLVM_ABI unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
 

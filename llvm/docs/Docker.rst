@@ -16,7 +16,7 @@ to fill out in order to produce Dockerfiles for a new docker image.
 Why?
 ----
 Docker images provide a way to produce binary distributions of
-software inside a controlled environment. Having Dockerfiles to builds docker images
+software inside a controlled environment. Having Dockerfiles to build docker images
 inside LLVM repo makes them much more discoverable than putting them into any other
 place.
 
@@ -27,15 +27,15 @@ to get a very basic explanation of it.
 `Docker <https://www.docker.com/>`_ is a popular solution for running programs in
 an isolated and reproducible environment, especially to maintain releases for
 software deployed to large distributed fleets.
-It uses linux kernel namespaces and cgroups to provide a lightweight isolation
-inside currently running linux kernel.
+It uses Linux kernel namespaces and cgroups to provide a lightweight isolation
+inside currently running Linux kernel.
 A single active instance of dockerized environment is called a *docker
 container*.
 A snapshot of a docker container filesystem is called a *docker image*.
 One can start a container from a prebuilt docker image.
 
 Docker images are built from a so-called *Dockerfile*, a source file written in
-a specialized language that defines instructions to be used when build
+a specialized language that defines instructions to be used when building
 the docker image (see `official
 documentation <https://docs.docker.com/engine/reference/builder/>`_ for more
 details). A minimal Dockerfile typically contains a base image and a number
@@ -127,17 +127,17 @@ Which image should I choose?
 We currently provide two images: Debian12-based and nvidia-cuda-based. They
 differ in the base image that they use, i.e. they have a different set of
 preinstalled binaries. Debian8 is very minimal, nvidia-cuda is larger, but has
-preinstalled CUDA libraries and allows to access a GPU, installed on your
+preinstalled CUDA libraries and allows access to a GPU, installed on your
 machine.
 
-If you need a minimal linux distribution with only clang and libstdc++ included,
+If you need a minimal Linux distribution with only clang and libstdc++ included,
 you should try Debian12-based image.
 
 If you want to use CUDA libraries and have access to a GPU on your machine,
 you should choose nvidia-cuda-based image and use `nvidia-docker
 <https://github.com/NVIDIA/nvidia-docker>`_ to run your docker containers. Note
 that you don't need nvidia-docker to build the images, but you need it in order
-to have an access to GPU from a docker container that is running the built
+to have access to a GPU from a docker container that is running the built
 image.
 
 If you have a different use-case, you could create your own image based on
@@ -176,4 +176,4 @@ The first image is only used during build and does not have a descriptive name,
 i.e. it is only accessible via the hash value after the build is finished.
 The second image is our resulting image. It contains only the built binaries
 and not any build dependencies. It is also accessible via a descriptive name
-(specified by -d and -t flags).
+(specified by ``-d`` and ``-t`` flags).

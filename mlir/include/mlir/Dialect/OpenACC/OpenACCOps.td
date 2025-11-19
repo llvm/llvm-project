@@ -134,6 +134,44 @@ def OpenACC_VariableTypeCategory : I32BitEnumAttr<
   let printBitEnumPrimaryGroups = 1;
 }
 
+// These are parallelism determination modes for `acc loop`.
+// In the enum names, we use the "loop_" prefix because "auto" is
+// a language keyword - and thus for consistency all other cases
+// do the same.
+def OpenACC_LoopSeq : I32EnumAttrCase<"loop_seq", 0>;
+def OpenACC_LoopAuto : I32EnumAttrCase<"loop_auto", 1>;
+def OpenACC_LoopIndependent : I32EnumAttrCase<"loop_independent", 2>;
+
+def OpenACC_LoopParMode : I32EnumAttr<
+    "LoopParMode",
+    "Encodes the options for loop parallelism determination mode",
+    [
+      OpenACC_LoopAuto, OpenACC_LoopIndependent,
+      OpenACC_LoopSeq]> {
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+}
+
+def OpenACC_PrivateRecipe : I32EnumAttrCase<"private_recipe", 0>;
+def OpenACC_FirstprivateRecipe : I32EnumAttrCase<"firstprivate_recipe", 1>;
+def OpenACC_ReductionRecipe : I32EnumAttrCase<"reduction_recipe", 2>;
+
+def OpenACC_RecipeKind : I32EnumAttr<
+    "RecipeKind",
+    "Encodes the options for kinds of recipes availabie in acc dialect",
+    [
+      OpenACC_PrivateRecipe, OpenACC_FirstprivateRecipe,
+      OpenACC_ReductionRecipe]> {
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+}
+
+def OpenACC_RecipeKindAttr : EnumAttr<OpenACC_Dialect,
+                                             OpenACC_RecipeKind,
+                                             "recipe_kind"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
@@ -397,6 +435,13 @@ def OpenACC_ConstructResource : Resource<"::mlir::acc::ConstructResource">;
 // Define a resource for the OpenACC current device setting.
 def OpenACC_CurrentDeviceIdResource : Resource<"::mlir::acc::CurrentDeviceIdResource">;
 
+// Attribute for saving variable names - this can be attached to non-acc-dialect
+// operations in order to ensure the name is preserved.
+def OpenACC_VarNameAttr : OpenACC_Attr<"VarName", "var_name"> {
+  let parameters = (ins StringRefParameter<"">:$name);
+  let assemblyFormat = "`<` $name `>`";
+}
+
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
@@ -485,6 +530,84 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
       }]
     >
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// DataBounds accessor operations
+//===----------------------------------------------------------------------===//
+
+def OpenACC_GetLowerboundOp : OpenACC_Op<"get_lowerbound", [NoMemoryEffect]> {
+  let summary = "Extract lowerbound from OpenACC data bounds.";
+  let description = [{
+    This operation extracts the lowerbound value from an `acc.bounds` value.
+    If the data bounds does not have a lowerbound specified, it means it is zero.
+
+    Example:
+    ```mlir
+    %lb = acc.get_lowerbound %bounds : (!acc.data_bounds_ty) -> index
+    ```
+  }];
+
+  let arguments = (ins OpenACC_DataBoundsType:$bounds);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "$bounds attr-dict `:` `(` type($bounds) `)` `->` type($result)";
+}
+
+def OpenACC_GetUpperboundOp : OpenACC_Op<"get_upperbound", [NoMemoryEffect]> {
+  let summary = "Extract upperbound from OpenACC data bounds.";
+  let description = [{
+    This operation extracts the upperbound value from an `acc.bounds` value.
+    If the data bounds does not have an upperbound specified, this operation
+    uses the extent to compute it.
+
+    Example:
+    ```mlir
+    %ub = acc.get_upperbound %bounds : (!acc.data_bounds_ty) -> index
+    ```
+  }];
+
+  let arguments = (ins OpenACC_DataBoundsType:$bounds);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "$bounds attr-dict `:` `(` type($bounds) `)` `->` type($result)";
+}
+
+def OpenACC_GetStrideOp : OpenACC_Op<"get_stride", [NoMemoryEffect]> {
+  let summary = "Extract stride from OpenACC data bounds.";
+  let description = [{
+    This operation extracts the stride value from an `acc.bounds` value.
+    If the data bounds does not have a stride specified, it defaults to 1.
+
+    Example:
+    ```mlir
+    %stride = acc.get_stride %bounds : (!acc.data_bounds_ty) -> index
+    ```
+  }];
+
+  let arguments = (ins OpenACC_DataBoundsType:$bounds);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "$bounds attr-dict `:` `(` type($bounds) `)` `->` type($result)";
+}
+
+def OpenACC_GetExtentOp : OpenACC_Op<"get_extent", [NoMemoryEffect]> {
+  let summary = "Extract extent from OpenACC data bounds.";
+  let description = [{
+    This operation extracts the extent value from an `acc.bounds` value.
+    If the data bounds does not have an extent specified, it is computed
+    from the upperbound.
+
+    Example:
+    ```mlir
+    %extent = acc.get_extent %bounds : (!acc.data_bounds_ty) -> index
+    ```
+  }];
+
+  let arguments = (ins OpenACC_DataBoundsType:$bounds);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "$bounds attr-dict `:` `(` type($bounds) `)` `->` type($result)";
 }
 
 // Data entry operation does not refer to OpenACC spec terminology, but to
@@ -679,6 +802,21 @@ def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
     (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
   let summary = "Represents firstprivate semantic for the acc firstprivate "
                 "clause.";
+  let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
+                          "Accelerator mapped variable",[MemWrite]>:$accVar);
+  let extraClassDeclaration = extraClassDeclarationBase;
+}
+
+// The mapping of firstprivate cannot be represented through an `acc.copyin`
+// since that operation includes present counter updates (and private variables
+// do not impact counters). Instead, the below operation is used to represent
+// the mapping of that initial value which can be used to initialize the private
+// copies.
+def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
+    "mlir::acc::DataClause::acc_firstprivate", "", [],
+    (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
+  let summary = "Used to decompose firstprivate semantics and represents the "
+                "mapping of the initial value.";
   let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
                           "Accelerator mapped variable",[MemWrite]>:$accVar);
   let extraClassDeclaration = extraClassDeclarationBase;
@@ -1162,11 +1300,12 @@ def OpenACC_PrivateRecipeOp
       1. The initializer region specifies how to allocate and initialize a new
          private value. For example in Fortran, a derived-type might have a
          default initialization. The region has an argument that contains the
-         value that need to be privatized. This is useful if the type is not
-         known at compile time and the private value is needed to create its
-         copy.
+         original value that needs to be privatized, followed by bounds arguments
+         (if any) in order from innermost to outermost dimension. The region
+         must yield the privatized copy.
       2. The destroy region specifies how to destruct the value when it reaches
-         its end of life. It takes the privatized value as argument.
+         its end of life. It takes the original value, the privatized value, and
+         bounds arguments (if any) in the same order as the init region.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.
@@ -1174,18 +1313,35 @@ def OpenACC_PrivateRecipeOp
     Example:
 
     ```mlir
-    acc.private.recipe @privatization_f32 : f32 init {
-    ^bb0(%0: f32):
+    acc.private.recipe @privatization_memref : memref<10x20xf32> init {
+    ^bb0(%original: memref<10x20xf32>):
       // init region contains a sequence of operations to create and
-      // initialize the copy if needed. It yields the create copy.
+      // initialize the copy. It yields the privatized copy.
+      %alloca = memref.alloca() : memref<10x20xf32>
+      acc.yield %alloca : memref<10x20xf32>
     } destroy {
-    ^bb0(%0: f32)
-      // destroy region contains a sequences of operations to destruct the
-      // created copy.
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>):
+      // destroy region is empty since alloca is automatically cleaned up
+      acc.terminator
+    }
+
+    // Example with bounds for array slicing:
+    acc.private.recipe @privatization_slice : memref<10x20xf32> init {
+    ^bb0(%original: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Extract bounds and create appropriately sized allocation
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+      %slice_alloc = memref.alloca(%extent_outer, %extent_inner) : memref<?x?xf32>
+      // ... base pointer adjustment logic ...
+      acc.yield %result : memref<10x20xf32>
+    } destroy {
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Cleanup is automatic for alloca-based allocations
+      acc.terminator
     }
 
     // The privatization symbol is then used in the corresponding operation.
-    acc.parallel private(@privatization_f32 -> %a : f32) {
+    acc.parallel private(@privatization_memref -> %a : memref<10x20xf32>) {
     }
     ```
   }];
@@ -1202,6 +1358,24 @@ def OpenACC_PrivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a PrivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<PrivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1221,15 +1395,15 @@ def OpenACC_FirstprivateRecipeOp
       1. The initializer region specifies how to allocate and initialize a new
          private value. For example in Fortran, a derived-type might have a
          default initialization. The region has an argument that contains the
-         value that need to be privatized. This is useful if the type is not
-         known at compile time and the private value is needed to create its
-         copy.
+         original value that needs to be privatized, followed by bounds arguments
+         (if any) in order from innermost to outermost dimension. The region must
+         yield the privatized copy.
       2. The copy region specifies how to copy the initial value to the newly
-         created private value. It takes the initial value and the privatized
-         value as arguments.
+         created private value. It takes the original value, the privatized
+         value, followed by bounds arguments (if any) in the same order.
       3. The destroy region specifies how to destruct the value when it reaches
-         its end of life. It takes the privatized value as argument. It is
-         optional.
+         its end of life. It takes the original value, the privatized value, and
+         bounds arguments (if any) in the same order. It is optional.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.
@@ -1237,22 +1411,48 @@ def OpenACC_FirstprivateRecipeOp
     Example:
 
     ```mlir
-    acc.firstprivate.recipe @privatization_f32 : f32 init {
-    ^bb0(%0: f32):
+    acc.firstprivate.recipe @firstprivate_memref : memref<10x20xf32> init {
+    ^bb0(%original: memref<10x20xf32>):
       // init region contains a sequence of operations to create and
-      // initialize the copy if needed. It yields the create copy.
+      // initialize the copy. It yields the privatized copy.
+      %alloca = memref.alloca() : memref<10x20xf32>
+      acc.yield %alloca : memref<10x20xf32>
     } copy {
-    ^bb0(%0: f32, %1: !llvm.ptr):
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>):
       // copy region contains a sequence of operations to copy the initial value
       // of the firstprivate value to the newly created value.
+      memref.copy %original, %privatized : memref<10x20xf32> to memref<10x20xf32>
+      acc.terminator
     } destroy {
-    ^bb0(%0: f32)
-      // destroy region contains a sequences of operations to destruct the
-      // created copy.
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>):
+      // destroy region is empty since alloca is automatically cleaned up
+      acc.terminator
+    }
+
+    // Example with bounds for array slicing:
+    acc.firstprivate.recipe @firstprivate_slice : memref<10x20xf32> init {
+    ^bb0(%original: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Extract bounds and create appropriately sized allocation
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+      %slice_alloc = memref.alloca(%extent_outer, %extent_inner) : memref<?x?xf32>
+      // ... base pointer adjustment logic ...
+      acc.yield %result : memref<10x20xf32>
+    } copy {
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Copy the slice portion from original to privatized
+      %lb_inner = acc.get_lowerbound %bounds_inner : (!acc.data_bounds_ty) -> index
+      %lb_outer = acc.get_lowerbound %bounds_outer : (!acc.data_bounds_ty) -> index
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+      %subview = memref.subview %original[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+      // Copy subview to privatized...
+      acc.terminator
     }
 
     // The privatization symbol is then used in the corresponding operation.
-    acc.parallel firstprivate(@privatization_f32 -> %a : f32) {
+    acc.parallel firstprivate(@firstprivate_memref -> %a : memref<10x20xf32>) {
     }
     ```
   }];
@@ -1270,6 +1470,24 @@ def OpenACC_FirstprivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a FirstprivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<FirstprivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1284,37 +1502,78 @@ def OpenACC_ReductionRecipeOp
 
   let description = [{
     Declares an OpenACC reduction recipe. The operation requires two
-    mandatory regions.
+    mandatory regions and one optional region.
 
       1. The initializer region specifies how to initialize the local reduction
-         value. The region has a first argument that contains the value of the
-         reduction accumulator at the start of the reduction. It is expected to
-         `acc.yield` the new value. Extra arguments can be added to deal with
-         dynamic arrays.
-      2. The reduction region contains a sequences of operations to combine two
-         values of the reduction type into one. It has at least two arguments
-         and it is expected to `acc.yield` the combined value. Extra arguments
-         can be added to deal with dynamic arrays.
+         value. The region has a first argument that contains the original value
+         that needs to be reduced, followed by bounds arguments (if any) in order
+         from innermost to outermost dimension. It is expected to `acc.yield` the
+         initialized reduction value.
+      2. The combiner region contains a sequence of operations to combine two
+         values of the reduction type into one. It has the first reduction value,
+         the second reduction value, followed by bounds arguments (if any) in the
+         same order. It is expected to `acc.yield` the combined value.
+      3. The optional destroy region specifies how to destruct the value when it
+         reaches its end of life. It takes the original value, the reduction value,
+         and bounds arguments (if any) in the same order.
 
     Example:
 
     ```mlir
-    acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
-    ^bb0(%0: i64):
+    acc.reduction.recipe @reduction_add_memref : memref<10x20xf32> reduction_operator<add> init {
+    ^bb0(%original: memref<10x20xf32>):
       // init region contains a sequence of operations to initialize the local
       // reduction value as specified in 2.5.15
-      %c0 = arith.constant 0 : i64
-      acc.yield %c0 : i64
+      %alloca = memref.alloca() : memref<10x20xf32>
+      %cst = arith.constant 0.0 : f32
+      linalg.fill ins(%cst : f32) outs(%alloca : memref<10x20xf32>)
+      acc.yield %alloca : memref<10x20xf32>
     } combiner {
-    ^bb0(%0: i64, %1: i64)
+    ^bb0(%lhs: memref<10x20xf32>, %rhs: memref<10x20xf32>):
       // combiner region contains a sequence of operations to combine
       // two values into one.
-      %2 = arith.addi %0, %1 : i64
-      acc.yield %2 : i64
+      linalg.add ins(%lhs, %rhs : memref<10x20xf32>, memref<10x20xf32>)
+                 outs(%lhs : memref<10x20xf32>)
+      acc.yield %lhs : memref<10x20xf32>
+    } destroy {
+    ^bb0(%original: memref<10x20xf32>, %reduction: memref<10x20xf32>):
+      // destroy region is empty since alloca is automatically cleaned up
+      acc.terminator
+    }
+
+    // Example with bounds for array slicing:
+    acc.reduction.recipe @reduction_add_slice : memref<10x20xf32> reduction_operator<add> init {
+    ^bb0(%original: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Extract bounds and create appropriately sized allocation
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+      %slice_alloc = memref.alloca(%extent_outer, %extent_inner) : memref<?x?xf32>
+      %cst = arith.constant 0.0 : f32
+      linalg.fill ins(%cst : f32) outs(%slice_alloc : memref<?x?xf32>)
+      // ... base pointer adjustment logic ...
+      acc.yield %result : memref<10x20xf32>
+    } combiner {
+    ^bb0(%lhs: memref<10x20xf32>, %rhs: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Extract bounds to operate only on the slice portion
+      %lb_inner = acc.get_lowerbound %bounds_inner : (!acc.data_bounds_ty) -> index
+      %lb_outer = acc.get_lowerbound %bounds_outer : (!acc.data_bounds_ty) -> index
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+
+      // Create subviews to access only the slice portions
+      %lhs_slice = memref.subview %lhs[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+      %rhs_slice = memref.subview %rhs[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+
+      // Combine only the slice portions
+      linalg.add ins(%lhs_slice, %rhs_slice : memref<?x?xf32, strided<[20, 1], offset: ?>>, memref<?x?xf32, strided<[20, 1], offset: ?>>)
+                 outs(%lhs_slice : memref<?x?xf32, strided<[20, 1], offset: ?>>)
+      acc.yield %lhs : memref<10x20xf32>
     }
 
     // The reduction symbol is then used in the corresponding operation.
-    acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
+    acc.parallel reduction(@reduction_add_memref -> %a : memref<10x20xf32>) {
     }
     ```
 
@@ -1344,12 +1603,14 @@ def OpenACC_ReductionRecipeOp
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
 
   let regions = (region AnyRegion:$initRegion,
-                        AnyRegion:$combinerRegion);
+                        AnyRegion:$combinerRegion,
+                        AnyRegion:$destroyRegion);
 
   let assemblyFormat = [{
     $sym_name `:` $type attr-dict-with-keyword
     `reduction_operator` $reductionOperator
     `init` $initRegion `combiner` $combinerRegion
+    (`destroy` $destroyRegion^)?
   }];
 
   let hasRegionVerifier = 1;
@@ -1514,6 +1775,19 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -1656,6 +1930,17 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -1849,6 +2134,58 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// acc.kernel_environment
+//===----------------------------------------------------------------------===//
+
+def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
+    [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
+     NoTerminator,
+     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+  let summary = "Decomposition of compute constructs to capture data mapping "
+                "and asynchronous behavior information";
+  let description = [{
+    The `acc.kernel_environment` operation represents a decomposition of
+    any OpenACC compute construct (acc.kernels, acc.parallel, or
+    acc.serial) that captures data mapping and asynchronous behavior:
+    - data clause operands
+    - async clause operands
+    - wait clause operands
+
+    This allows kernel execution parallelism and privatization to be
+    handled separately, facilitating eventual lowering to GPU dialect where
+    kernel launching and compute offloading are handled separately.
+  }];
+
+  let arguments = (ins
+    Variadic<AnyType>:$dataClauseOperands,
+    Variadic<IntOrIndex>:$asyncOperands,
+    OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
+    OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
+    Variadic<IntOrIndex>:$waitOperands,
+    OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
+    OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+    OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
+    OptionalAttr<DeviceTypeArrayAttr>:$waitOnly);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = [{
+    oilist(
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
+      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
+          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
+          $waitOnly)
+    )
+    $region attr-dict
+  }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2176,15 +2513,38 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   let summary = "loop construct";
 
   let description = [{
-    The "acc.loop" operation represents the OpenACC loop construct. The lower
-    and upper bounds specify a half-open range: the range includes the lower
-    bound but does not include the upper bound. If the `inclusive` attribute is
-    set then the upper bound is included.
+    The `acc.loop` operation represents the OpenACC loop construct and when
+    bounds are included, the associated source language loop iterators. The
+    lower and upper bounds specify a half-open range: the range includes the
+    lower bound but does not include the upper bound. If the `inclusive`
+    attribute is set then the upper bound is included.
+
+    In cases where the OpenACC loop directive needs to capture multiple
+    source language loops, such as in the case of `collapse` or `tile`,
+    the multiple induction arguments are used to capture each case. Having
+    such a representation makes sure no intermediate transformation such
+    as Loop Invariant Code Motion breaks the property requested by the
+    clause on the loop constructs.
+
+    Each `acc.loop` holds private and reduction operands which are the
+    ssa values from the corresponding `acc.private` or `acc.reduction`
+    operations. Additionally, firstprivate operands are supported to
+    represent cases where privatization is needed with initialization
+    from an original value. While the OpenACC specification does not
+    explicitly support firstprivate on loop constructs, this extension
+    enables representing privatization scenarios that arise from an
+    optimization and codegen pipeline operating on acc dialect.
+
+    The operation supports capturing information that it comes combined
+    constructs (e.g., `parallel loop`, `kernels loop`, `serial loop`)
+    through the `combined` attribute despite requiring the `acc.loop`
+    to be decomposed from the compute operation representing compute
+    construct.
 
     Example:
 
     ```mlir
-    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) = 
+    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) =
         (%c0, %c0, %c0 : index, index, index) to 
         (%c10, %c10, %c10 : index, index, index) step 
         (%c1, %c1, %c1 : index, index, index) {
@@ -2193,10 +2553,18 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     } attributes { collapse = [3] }
     ```
 
-    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto` and
-    `tile` operands are supported with `device_type` information. They should
-    only be accessed by the extra provided getters. If modified, the
-    corresponding `device_type` attributes must be modified as well.
+    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto`,
+    `cache`, and `tile` operands are supported with `device_type`
+    information. These clauses should only be accessed through the provided
+    device-type-aware getter methods. When modifying these operands, the
+    corresponding `device_type` attributes must be updated to maintain
+    consistency between operands and their target device types.
+
+    The `unstructured` attribute indicates that the loops inside the OpenACC
+    construct contain early exits and cannot be lowered to structured MLIR
+    operations. When this flag is set, the acc.loop should have no induction
+    variables and the loop must be implemented via explicit control flow
+    inside its body.
   }];
 
   let arguments = (ins
@@ -2226,9 +2594,12 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       Variadic<OpenACC_AnyPointerOrMappableType>:$cacheOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
+      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
-      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined
+      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined,
+      UnitAttr:$unstructured
   );
 
   let results = (outs Variadic<AnyType>:$results);
@@ -2373,6 +2744,23 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     // Return whether this LoopOp has a gang, worker, or vector applying to the
     // 'default'/None device-type.
     bool hasDefaultGangWorkerVector();
+
+    // Used to obtain the parallelism mode for the requested device type.
+    // This first checks if the mode is set for the device_type requested.
+    // And if not, it returns the non-device_type mode.
+    LoopParMode getDefaultOrDeviceTypeParallelism(DeviceType);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -2389,6 +2777,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
             type($vectorOperands), $vectorOperandsDeviceType, $vector)
       | `private` `(` custom<SymOperandList>(
             $privateOperands, type($privateOperands), $privatizationRecipes) `)`
+      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
+            type($firstprivateOperands), $firstprivatizationRecipes) `)`
       | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
             type($tileOperands), $tileOperandsDeviceType, $tileOperandsSegments)
         `)`
@@ -2404,6 +2794,55 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   }];
 
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "::mlir::ValueRange":$lowerbounds,
+                   "::mlir::ValueRange":$upperbounds,
+                   "::mlir::ValueRange":$steps,
+                   "LoopParMode":$parMode), [{
+        auto deviceNoneAttr = mlir::acc::DeviceTypeAttr::get(
+          $_builder.getContext(), mlir::acc::DeviceType::None);
+        auto arrOfDeviceNone = mlir::ArrayAttr::get(
+          $_builder.getContext(), deviceNoneAttr);
+        build($_builder, $_state,
+          /*results=*/{},
+          /*lowerbound=*/lowerbounds,
+          /*upperbound=*/upperbounds,
+          /*step=*/steps,
+          /*inclusiveUpperbound=*/nullptr,
+          /*collapse=*/nullptr,
+          /*collapseDeviceType=*/nullptr,
+          /*gangOperands=*/{},
+          /*gangOperandsArgType=*/nullptr,
+          /*gangOperandsSegments=*/nullptr,
+          /*gangOperandsDeviceType=*/nullptr,
+          /*workerNumOperands=*/{},
+          /*workerNumOperandsDeviceType=*/nullptr,
+          /*vectorOperands=*/{},
+          /*vectorOperandsDeviceType=*/nullptr,
+          /*seq=*/parMode == LoopParMode::loop_seq ?
+            arrOfDeviceNone : nullptr,
+          /*independent=*/parMode == LoopParMode::loop_independent ?
+            arrOfDeviceNone : nullptr,
+          /*auto_=*/parMode == LoopParMode::loop_auto ?
+            arrOfDeviceNone : nullptr,
+          /*gang=*/nullptr,
+          /*worker=*/nullptr,
+          /*vector=*/nullptr,
+          /*tileOperands=*/{},
+          /*tileOperandsSegments=*/nullptr,
+          /*tileOperandsDeviceType=*/nullptr,
+          /*cacheOperands=*/{},
+          /*privateOperands=*/{},
+          /*privatizationRecipes=*/nullptr,
+          /*firstprivateOperands=*/{},
+          /*firstprivatizationRecipes=*/nullptr,
+          /*reductionOperands=*/{},
+          /*reductionRecipes=*/nullptr,
+          /*combined=*/nullptr);
+      }]
+    >
+  ];
 }
 
 // Yield operation for the acc.loop and acc.parallel operations.
@@ -2442,10 +2881,14 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
                        OpenACC_PointerLikeType:$v,
-                       TypeAttr:$element_type);
+                       TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $v `=` $x
-    `:` type($v) `,` type($x) `,` $element_type attr-dict
+    `:` type($v) `,` type($x) `,` $element_type
+    attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -2464,8 +2907,12 @@ def AtomicWriteOp : OpenACC_Op<"atomic.write",[AtomicWriteOpInterface]> {
   }];
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
-                       AnyType:$expr);
+                       AnyType:$expr,
+                       Optional<I1>:$ifCond);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $x `=` $expr
     `:` type($x) `,` type($expr)
     attr-dict
@@ -2505,10 +2952,15 @@ def AtomicUpdateOp : OpenACC_Op<"atomic.update",
 
   let arguments = (ins Arg<OpenACC_PointerLikeType,
                            "Address of variable to be updated",
-                           [MemRead, MemWrite]>:$x);
+                           [MemRead, MemWrite]>:$x,
+                       Optional<I1>:$ifCond);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
-    $x `:` type($x) $region attr-dict
+    oilist(
+        `if` `(` $ifCond `)`
+    )
+    $x `:` type($x)
+      $region attr-dict
   }];
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -2551,8 +3003,13 @@ def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
 
   }];
 
+  let arguments = (ins Optional<I1>:$ifCond);
+
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $region attr-dict
   }];
   let hasRegionVerifier = 1;
@@ -2772,8 +3229,10 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name, SymbolRefAttr:$func_name,
-      OptionalAttr<StrArrayAttr>:$bindName,
-      OptionalAttr<DeviceTypeArrayAttr>:$bindNameDeviceType,
+      OptionalAttr<SymbolRefArrayAttr>:$bindIdName,
+      OptionalAttr<StrArrayAttr>:$bindStrName,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindIdNameDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindStrNameDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$worker,
       OptionalAttr<DeviceTypeArrayAttr>:$vector,
       OptionalAttr<DeviceTypeArrayAttr>:$seq, UnitAttr:$nohost,
@@ -2815,14 +3274,14 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     std::optional<int64_t> getGangDimValue();
     std::optional<int64_t> getGangDimValue(mlir::acc::DeviceType deviceType);
 
-    std::optional<llvm::StringRef> getBindNameValue();
-    std::optional<llvm::StringRef> getBindNameValue(mlir::acc::DeviceType deviceType);
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     $sym_name `func` `(` $func_name `)`
     oilist (
-        `bind` `(` custom<BindName>($bindName, $bindNameDeviceType) `)`
+        `bind` `(` custom<BindName>($bindIdName, $bindStrName ,$bindIdNameDeviceType, $bindStrNameDeviceType) `)`
       | `gang` `` custom<RoutineGangClause>($gang, $gangDim, $gangDimDeviceType)
       | `worker` custom<DeviceTypeArrayAttr>($worker)
       | `vector` custom<DeviceTypeArrayAttr>($vector)

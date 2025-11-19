@@ -57,6 +57,10 @@ struct TranslationUnitDeps {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
+  /// A list of module names that are visible to this translation unit. This
+  /// includes both direct and transitive module dependencies.
+  std::vector<std::string> VisibleModules;
+
   /// A list of the C++20 named modules this translation unit depends on.
   std::vector<std::string> NamedModuleDeps;
 
@@ -150,10 +154,51 @@ public:
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of module with the given name, and return the
   /// information needed for explicit build.
-  llvm::Expected<ModuleDepsGraph> getModuleDependencies(
+  /// TODO: this method should be removed as soon as Swift and our C-APIs adopt
+  /// CompilerInstanceWithContext. We are keeping it here so that it is easier
+  /// to coordinate with Swift and C-API changes.
+  llvm::Expected<TranslationUnitDeps> getModuleDependencies(
       StringRef ModuleName, const std::vector<std::string> &CommandLine,
       StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
       LookupModuleOutputCallback LookupModuleOutput);
+
+  /// The following three methods provide a new interface to perform
+  /// by name dependency scan. The new interface's intention is to improve
+  /// dependency scanning performance when a sequence of name is looked up
+  /// with the same current working directory and the command line.
+
+  /// @brief Initializing the context and the compiler instance.
+  ///        This method must be called before calling
+  ///        computeDependenciesByNameWithContext.
+  /// @param CWD The current working directory used during the scan.
+  /// @param CommandLine The commandline used for the scan.
+  /// @return Error if the initializaiton fails.
+  llvm::Error initializeCompilerInstanceWithContext(
+      StringRef CWD, const std::vector<std::string> &CommandLine);
+
+  /// @brief Computes the dependeny for the module named ModuleName.
+  /// @param ModuleName The name of the module for which this method computes
+  ///.                  dependencies.
+  /// @param AlreadySeen This stores modules which have previously been
+  ///                    reported. Use the same instance for all calls to this
+  ///                    function for a single \c DependencyScanningTool in a
+  ///                    single build. Note that this parameter is not part of
+  ///                    the context because it can be shared across different
+  ///                    worker threads and each worker thread may update it.
+  /// @param LookupModuleOutput This function is called to fill in
+  ///                           "-fmodule-file=", "-o" and other output
+  ///                           arguments for dependencies.
+  /// @return An instance of \c TranslationUnitDeps if the scan is successful.
+  ///         Otherwise it returns an error.
+  llvm::Expected<TranslationUnitDeps> computeDependenciesByNameWithContext(
+      StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
+      LookupModuleOutputCallback LookupModuleOutput);
+
+  /// @brief This method finializes the compiler instance. It finalizes the
+  ///        diagnostics and deletes the compiler instance. Call this method
+  ///        once all names for a same commandline are scanned.
+  /// @return Error if an error occured during finalization.
+  llvm::Error finalizeCompilerInstanceWithContext();
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
@@ -188,6 +233,10 @@ public:
     DirectModuleDeps.push_back(ID);
   }
 
+  void handleVisibleModule(std::string ModuleName) override {
+    VisibleModules.push_back(ModuleName);
+  }
+
   void handleContextHash(std::string Hash) override {
     ContextHash = std::move(Hash);
   }
@@ -201,7 +250,6 @@ public:
   }
 
   TranslationUnitDeps takeTranslationUnitDeps();
-  ModuleDepsGraph takeModuleGraphDeps();
 
 private:
   std::vector<std::string> Dependencies;
@@ -210,9 +258,9 @@ private:
   std::string ModuleName;
   std::vector<std::string> NamedModuleDeps;
   std::vector<ModuleID> DirectModuleDeps;
+  std::vector<std::string> VisibleModules;
   std::vector<Command> Commands;
   std::string ContextHash;
-  std::vector<std::string> OutputPaths;
   const llvm::DenseSet<ModuleID> &AlreadySeen;
 };
 

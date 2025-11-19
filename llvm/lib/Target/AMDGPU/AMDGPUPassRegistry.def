@@ -20,6 +20,7 @@ MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
 MODULE_PASS("amdgpu-export-kernel-runtime-handles", AMDGPUExportKernelRuntimeHandlesPass())
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
             AMDGPULowerBufferFatPointersPass(*this))
+MODULE_PASS("amdgpu-lower-intrinsics", AMDGPULowerIntrinsicsPass(*this))
 MODULE_PASS("amdgpu-lower-ctor-dtor", AMDGPUCtorDtorLoweringPass())
 MODULE_PASS("amdgpu-lower-module-lds", AMDGPULowerModuleLDSPass(*this))
 MODULE_PASS("amdgpu-perf-hint",
@@ -28,8 +29,8 @@ MODULE_PASS("amdgpu-perf-hint",
 MODULE_PASS("amdgpu-preload-kernel-arguments", AMDGPUPreloadKernelArgumentsPass(*this))
 MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
 MODULE_PASS("amdgpu-remove-incompatible-functions", AMDGPURemoveIncompatibleFunctionsPass(*this))
+MODULE_PASS("amdgpu-lower-exec-sync", AMDGPULowerExecSyncPass())
 MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
-MODULE_PASS("amdgpu-unify-metadata", AMDGPUUnifyMetadataPass())
 #undef MODULE_PASS
 
 #ifndef MODULE_PASS_WITH_PARAMS
@@ -68,6 +69,7 @@ FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
               AMDGPUUnifyDivergentExitNodesPass())
 FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
 FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
+FUNCTION_PASS("amdgpu-uniform-intrinsic-combine", AMDGPUUniformIntrinsicCombinePass())
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_ANALYSIS
@@ -106,6 +108,7 @@ MACHINE_FUNCTION_ANALYSIS("amdgpu-resource-usage", AMDGPUResourceUsageAnalysis(*
 #endif
 MACHINE_FUNCTION_PASS("amdgpu-insert-delay-alu", AMDGPUInsertDelayAluPass())
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
+MACHINE_FUNCTION_PASS("amdgpu-lower-vgpr-encoding", AMDGPULowerVGPREncodingPass())
 MACHINE_FUNCTION_PASS("amdgpu-mark-last-scratch-load", AMDGPUMarkLastScratchLoadPass())
 MACHINE_FUNCTION_PASS("amdgpu-pre-ra-long-branch-reg", GCNPreRALongBranchRegPass())
 MACHINE_FUNCTION_PASS("amdgpu-reserve-wwm-regs", AMDGPUReserveWWMRegsPass())
@@ -114,7 +117,9 @@ MACHINE_FUNCTION_PASS("amdgpu-rewrite-partial-reg-uses", GCNRewritePartialRegUse
 MACHINE_FUNCTION_PASS("amdgpu-set-wave-priority", AMDGPUSetWavePriorityPass())
 MACHINE_FUNCTION_PASS("amdgpu-pre-ra-optimizations", GCNPreRAOptimizationsPass())
 MACHINE_FUNCTION_PASS("amdgpu-preload-kern-arg-prolog", AMDGPUPreloadKernArgPrologPass())
+MACHINE_FUNCTION_PASS("amdgpu-prepare-agpr-alloc", AMDGPUPrepareAGPRAllocPass())
 MACHINE_FUNCTION_PASS("amdgpu-nsa-reassign", GCNNSAReassignPass())
+MACHINE_FUNCTION_PASS("amdgpu-wait-sgpr-hazards", AMDGPUWaitSGPRHazardsPass())
 MACHINE_FUNCTION_PASS("gcn-create-vopd", GCNCreateVOPDPass())
 MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())

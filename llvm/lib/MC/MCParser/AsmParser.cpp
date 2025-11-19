@@ -46,6 +46,7 @@
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -228,11 +229,9 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
-  bool Warning(SMLoc L, const Twine &Msg,
-               SMRange Range = std::nullopt) override;
-  bool printError(SMLoc L, const Twine &Msg,
-                  SMRange Range = std::nullopt) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool printError(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
 
   const AsmToken &Lex() override;
 
@@ -312,7 +311,7 @@ private:
 
   void printMacroInstantiations();
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = std::nullopt) const {
+                    SMRange Range = {}) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -421,9 +420,6 @@ private:
     DK_ORG,
     DK_FILL,
     DK_ENDR,
-    DK_BUNDLE_ALIGN_MODE,
-    DK_BUNDLE_LOCK,
-    DK_BUNDLE_UNLOCK,
     DK_ZERO,
     DK_EXTERN,
     DK_GLOBL,
@@ -533,6 +529,7 @@ private:
     DK_LTO_SET_CONDITIONAL,
     DK_CFI_MTE_TAGGED_FRAME,
     DK_MEMTAG,
+    DK_BASE64,
     DK_END
   };
 
@@ -555,6 +552,7 @@ private:
 
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
+  bool parseDirectiveBase64();                  // ".base64"
   bool parseDirectiveReloc(SMLoc DirectiveLoc); // ".reloc"
   bool parseDirectiveValue(StringRef IDVal,
                            unsigned Size);       // ".byte", ".long", ...
@@ -567,7 +565,7 @@ private:
   bool parseDirectiveSet(StringRef IDVal, AssignmentKind Kind);
   bool parseDirectiveOrg(); // ".org"
   // ".align{,32}", ".p2align{,w,l}"
-  bool parseDirectiveAlign(bool IsPow2, unsigned ValueSize);
+  bool parseDirectiveAlign(bool IsPow2, uint8_t ValueSize);
 
   // ".file", ".line", ".loc", ".loc_label", ".stabs"
   bool parseDirectiveFile(SMLoc DirectiveLoc);
@@ -624,12 +622,6 @@ private:
   bool parseDirectiveMacrosOnOff(StringRef Directive);
   // alternate macro mode directives
   bool parseDirectiveAltmacro(StringRef Directive);
-  // ".bundle_align_mode"
-  bool parseDirectiveBundleAlignMode();
-  // ".bundle_lock"
-  bool parseDirectiveBundleLock();
-  // ".bundle_unlock"
-  bool parseDirectiveBundleUnlock();
 
   // ".space", ".skip"
   bool parseDirectiveSpace(StringRef IDVal);
@@ -735,7 +727,7 @@ public:
     Lexer.setLexHLASMStrings(true);
   }
 
-  ~HLASMAsmParser() { Lexer.setSkipSpace(true); }
+  ~HLASMAsmParser() override { Lexer.setSkipSpace(true); }
 
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI) override;
@@ -746,13 +738,6 @@ public:
 namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
-extern MCAsmParserExtension *createDarwinAsmParser();
-extern MCAsmParserExtension *createELFAsmParser();
-extern MCAsmParserExtension *createCOFFAsmParser();
-extern MCAsmParserExtension *createGOFFAsmParser();
-extern MCAsmParserExtension *createXCOFFAsmParser();
-extern MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 
@@ -1222,8 +1207,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
     if (!Sym)
-      Sym = getContext().getOrCreateSymbol(MAI.isHLASM() ? SymbolName.upper()
-                                                         : SymbolName);
+      Sym = getContext().parseSymbol(MAI.isHLASM() ? SymbolName.upper()
+                                                   : SymbolName);
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
@@ -1854,7 +1839,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
                                        RewrittenLabel);
         IDVal = RewrittenLabel;
       }
-      Sym = getContext().getOrCreateSymbol(IDVal);
+      Sym = getContext().parseSymbol(IDVal);
     } else
       Sym = Ctx.createDirectionalLocalSymbol(LocalLabelVal);
     // End of Labels should be treated as end of line for lexing
@@ -1873,11 +1858,13 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc &&
-        Sym->isExternal() && !cast<MCSymbolMachO>(Sym)->isAltEntry())
-      return Error(StartTokLoc, "non-private labels cannot appear between "
-                                ".cfi_startproc / .cfi_endproc pairs") &&
-             Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
+    if (MAI.isMachO() && CFIStartProcLoc) {
+      auto *SymM = static_cast<MCSymbolMachO *>(Sym);
+      if (SymM->isExternal() && !SymM->isAltEntry())
+        return Error(StartTokLoc, "non-private labels cannot appear between "
+                                  ".cfi_startproc / .cfi_endproc pairs") &&
+               Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
+    }
 
     if (discardLTOSymbol(IDVal))
       return false;
@@ -1960,6 +1947,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_ASCIZ:
     case DK_STRING:
       return parseDirectiveAscii(IDVal, true);
+    case DK_BASE64:
+      return parseDirectiveBase64();
     case DK_BYTE:
     case DK_DC_B:
       return parseDirectiveValue(IDVal, 1);
@@ -2062,12 +2051,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveIrpc(IDLoc);
     case DK_ENDR:
       return parseDirectiveEndr(IDLoc);
-    case DK_BUNDLE_ALIGN_MODE:
-      return parseDirectiveBundleAlignMode();
-    case DK_BUNDLE_LOCK:
-      return parseDirectiveBundleLock();
-    case DK_BUNDLE_UNLOCK:
-      return parseDirectiveBundleUnlock();
     case DK_SLEB128:
       return parseDirectiveLEB128(true);
     case DK_ULEB128:
@@ -3089,12 +3072,42 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   return parseMany(parseOp);
 }
 
+/// parseDirectiveBase64:
+//    ::= .base64 "string" (, "string" )*
+bool AsmParser::parseDirectiveBase64() {
+  auto parseOp = [&]() -> bool {
+    if (checkForValidSection())
+      return true;
+
+    if (getTok().isNot(AsmToken::String)) {
+      return true;
+    }
+
+    std::vector<char> Decoded;
+    std::string const str = getTok().getStringContents().str();
+    if (check(str.empty(), "expected nonempty string")) {
+      return true;
+    }
+
+    llvm::Error e = decodeBase64(str, Decoded);
+    if (e) {
+      consumeError(std::move(e));
+      return Error(Lexer.getLoc(), "failed to base64 decode string data");
+    }
+
+    getStreamer().emitBytes(std::string(Decoded.begin(), Decoded.end()));
+    Lex();
+    return false;
+  };
+
+  return check(parseMany(parseOp), "expected string");
+}
+
 /// parseDirectiveReloc
 ///  ::= .reloc expression , identifier [ , expression ]
 bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   const MCExpr *Offset;
   const MCExpr *Expr = nullptr;
-  SMLoc OffsetLoc = Lexer.getTok().getLoc();
 
   if (parseExpression(Offset))
     return true;
@@ -3120,13 +3133,7 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   if (parseEOL())
     return true;
 
-  const MCTargetAsmParser &MCT = getTargetParser();
-  const MCSubtargetInfo &STI = MCT.getSTI();
-  if (std::optional<std::pair<bool, std::string>> Err =
-          getStreamer().emitRelocDirective(*Offset, Name, Expr, DirectiveLoc,
-                                           STI))
-    return Error(Err->first ? NameLoc : OffsetLoc, Err->second);
-
+  getStreamer().emitRelocDirective(*Offset, Name, Expr, NameLoc);
   return false;
 }
 
@@ -3340,7 +3347,7 @@ bool AsmParser::parseDirectiveOrg() {
 
 /// parseDirectiveAlign
 ///  ::= {.align, ...} expression [ , expression [ , expression ]]
-bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
+bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   SMLoc AlignmentLoc = getLexer().getLoc();
   int64_t Alignment;
   SMLoc MaxBytesLoc;
@@ -3426,17 +3433,16 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
 
-  if (HasFillExpr && FillExpr != 0 && Section->isVirtualSection()) {
+  if (HasFillExpr && FillExpr != 0 && Section->isBssSection()) {
     ReturnVal |=
-        Warning(FillExprLoc, "ignoring non-zero fill value in " +
-                                 Section->getVirtualSectionKind() +
-                                 " section '" + Section->getName() + "'");
+        Warning(FillExprLoc, "ignoring non-zero fill value in BSS section '" +
+                                 Section->getName() + "'");
     FillExpr = 0;
   }
 
   // Check whether we should use optimal code alignment for this .align
   // directive.
-  if (Section->useCodeAlign() && !HasFillExpr) {
+  if (MAI.useCodeAlign(*Section) && !HasFillExpr) {
     getStreamer().emitCodeAlignment(
         Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
@@ -3897,19 +3903,14 @@ bool AsmParser::parseDirectiveCVLoc() {
 /// ::= .cv_linetable FunctionId, FnStart, FnEnd
 bool AsmParser::parseDirectiveCVLinetable() {
   int64_t FunctionId;
-  StringRef FnStartName, FnEndName;
+  MCSymbol *FnStartSym, *FnEndSym;
   SMLoc Loc = getTok().getLoc();
   if (parseCVFunctionId(FunctionId, ".cv_linetable") || parseComma() ||
       parseTokenLoc(Loc) ||
-      check(parseIdentifier(FnStartName), Loc,
-            "expected identifier in directive") ||
+      check(parseSymbol(FnStartSym), Loc, "expected identifier in directive") ||
       parseComma() || parseTokenLoc(Loc) ||
-      check(parseIdentifier(FnEndName), Loc,
-            "expected identifier in directive"))
+      check(parseSymbol(FnEndSym), Loc, "expected identifier in directive"))
     return true;
-
-  MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
-  MCSymbol *FnEndSym = getContext().getOrCreateSymbol(FnEndName);
 
   getStreamer().emitCVLinetableDirective(FunctionId, FnStartSym, FnEndSym);
   return false;
@@ -3919,7 +3920,7 @@ bool AsmParser::parseDirectiveCVLinetable() {
 /// ::= .cv_inline_linetable PrimaryFunctionId FileId LineNum FnStart FnEnd
 bool AsmParser::parseDirectiveCVInlineLinetable() {
   int64_t PrimaryFunctionId, SourceFileId, SourceLineNum;
-  StringRef FnStartName, FnEndName;
+  MCSymbol *FnStartSym, *FnEndSym;
   SMLoc Loc = getTok().getLoc();
   if (parseCVFunctionId(PrimaryFunctionId, ".cv_inline_linetable") ||
       parseTokenLoc(Loc) ||
@@ -3929,16 +3930,14 @@ bool AsmParser::parseDirectiveCVInlineLinetable() {
       parseIntToken(SourceLineNum, "expected SourceLineNum") ||
       check(SourceLineNum < 0, Loc, "Line number less than zero") ||
       parseTokenLoc(Loc) ||
-      check(parseIdentifier(FnStartName), Loc, "expected identifier") ||
+      check(parseSymbol(FnStartSym), Loc, "expected identifier") ||
       parseTokenLoc(Loc) ||
-      check(parseIdentifier(FnEndName), Loc, "expected identifier"))
+      check(parseSymbol(FnEndSym), Loc, "expected identifier"))
     return true;
 
   if (parseEOL())
     return true;
 
-  MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
-  MCSymbol *FnEndSym = getContext().getOrCreateSymbol(FnEndName);
   getStreamer().emitCVInlineLinetableDirective(PrimaryFunctionId, SourceFileId,
                                                SourceLineNum, FnStartSym,
                                                FnEndSym);
@@ -3959,16 +3958,14 @@ bool AsmParser::parseDirectiveCVDefRange() {
   std::vector<std::pair<const MCSymbol *, const MCSymbol *>> Ranges;
   while (getLexer().is(AsmToken::Identifier)) {
     Loc = getLexer().getLoc();
-    StringRef GapStartName;
-    if (parseIdentifier(GapStartName))
+    MCSymbol *GapStartSym;
+    if (parseSymbol(GapStartSym))
       return Error(Loc, "expected identifier in directive");
-    MCSymbol *GapStartSym = getContext().getOrCreateSymbol(GapStartName);
 
     Loc = getLexer().getLoc();
-    StringRef GapEndName;
-    if (parseIdentifier(GapEndName))
+    MCSymbol *GapEndSym;
+    if (parseSymbol(GapEndSym))
       return Error(Loc, "expected identifier in directive");
-    MCSymbol *GapEndSym = getContext().getOrCreateSymbol(GapEndName);
 
     Ranges.push_back({GapStartSym, GapEndSym});
   }
@@ -4105,38 +4102,40 @@ bool AsmParser::parseDirectiveCVFileChecksumOffset() {
 /// ::= .cv_fpo_data procsym
 bool AsmParser::parseDirectiveCVFPOData() {
   SMLoc DirLoc = getLexer().getLoc();
-  StringRef ProcName;
-  if (parseIdentifier(ProcName))
+  MCSymbol *ProcSym;
+  if (parseSymbol(ProcSym))
     return TokError("expected symbol name");
   if (parseEOL())
     return true;
-  MCSymbol *ProcSym = getContext().getOrCreateSymbol(ProcName);
   getStreamer().emitCVFPOData(ProcSym, DirLoc);
   return false;
 }
 
 /// parseDirectiveCFISections
-/// ::= .cfi_sections section [, section]
+/// ::= .cfi_sections section [, section][, section]
 bool AsmParser::parseDirectiveCFISections() {
   StringRef Name;
   bool EH = false;
   bool Debug = false;
+  bool SFrame = false;
 
   if (!parseOptionalToken(AsmToken::EndOfStatement)) {
     for (;;) {
       if (parseIdentifier(Name))
-        return TokError("expected .eh_frame or .debug_frame");
+        return TokError("expected .eh_frame, .debug_frame, or .sframe");
       if (Name == ".eh_frame")
         EH = true;
       else if (Name == ".debug_frame")
         Debug = true;
+      else if (Name == ".sframe")
+        SFrame = true;
       if (parseOptionalToken(AsmToken::EndOfStatement))
         break;
       if (parseComma())
         return true;
     }
   }
-  getStreamer().emitCFISections(EH, Debug);
+  getStreamer().emitCFISections(EH, Debug, SFrame);
   return false;
 }
 
@@ -4329,14 +4328,11 @@ bool AsmParser::parseDirectiveCFIPersonalityOrLsda(bool IsPersonality) {
   if (Encoding == dwarf::DW_EH_PE_omit)
     return false;
 
-  StringRef Name;
+  MCSymbol *Sym;
   if (check(!isValidEncoding(Encoding), "unsupported encoding.") ||
       parseComma() ||
-      check(parseIdentifier(Name), "expected identifier in directive") ||
-      parseEOL())
+      check(parseSymbol(Sym), "expected identifier in directive") || parseEOL())
     return true;
-
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (IsPersonality)
     getStreamer().emitCFIPersonality(Sym, Encoding);
@@ -4779,56 +4775,6 @@ bool AsmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
   return false;
 }
 
-/// parseDirectiveBundleAlignMode
-/// ::= {.bundle_align_mode} expression
-bool AsmParser::parseDirectiveBundleAlignMode() {
-  // Expect a single argument: an expression that evaluates to a constant
-  // in the inclusive range 0-30.
-  SMLoc ExprLoc = getLexer().getLoc();
-  int64_t AlignSizePow2;
-  if (checkForValidSection() || parseAbsoluteExpression(AlignSizePow2) ||
-      parseEOL() ||
-      check(AlignSizePow2 < 0 || AlignSizePow2 > 30, ExprLoc,
-            "invalid bundle alignment size (expected between 0 and 30)"))
-    return true;
-
-  getStreamer().emitBundleAlignMode(Align(1ULL << AlignSizePow2));
-  return false;
-}
-
-/// parseDirectiveBundleLock
-/// ::= {.bundle_lock} [align_to_end]
-bool AsmParser::parseDirectiveBundleLock() {
-  if (checkForValidSection())
-    return true;
-  bool AlignToEnd = false;
-
-  StringRef Option;
-  SMLoc Loc = getTok().getLoc();
-  const char *kInvalidOptionError =
-      "invalid option for '.bundle_lock' directive";
-
-  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
-    if (check(parseIdentifier(Option), Loc, kInvalidOptionError) ||
-        check(Option != "align_to_end", Loc, kInvalidOptionError) || parseEOL())
-      return true;
-    AlignToEnd = true;
-  }
-
-  getStreamer().emitBundleLock(AlignToEnd);
-  return false;
-}
-
-/// parseDirectiveBundleLock
-/// ::= {.bundle_lock}
-bool AsmParser::parseDirectiveBundleUnlock() {
-  if (checkForValidSection() || parseEOL())
-    return true;
-
-  getStreamer().emitBundleUnlock();
-  return false;
-}
-
 /// parseDirectiveSpace
 /// ::= (.skip | .space) expression [ , expression ]
 bool AsmParser::parseDirectiveSpace(StringRef IDVal) {
@@ -4966,7 +4912,7 @@ bool AsmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
     if (discardLTOSymbol(Name))
       return false;
 
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
 
     // Assembler local symbols don't make any sense here, except for directives
     // that the symbol should be tagged.
@@ -4988,12 +4934,9 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
     return true;
 
   SMLoc IDLoc = getLexer().getLoc();
-  StringRef Name;
-  if (parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // Handle the identifier as the key symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (parseComma())
     return true;
@@ -5429,6 +5372,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".asciz"] = DK_ASCIZ;
   DirectiveKindMap[".string"] = DK_STRING;
   DirectiveKindMap[".byte"] = DK_BYTE;
+  DirectiveKindMap[".base64"] = DK_BASE64;
   DirectiveKindMap[".short"] = DK_SHORT;
   DirectiveKindMap[".value"] = DK_VALUE;
   DirectiveKindMap[".2byte"] = DK_2BYTE;
@@ -5477,9 +5421,6 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".irp"] = DK_IRP;
   DirectiveKindMap[".irpc"] = DK_IRPC;
   DirectiveKindMap[".endr"] = DK_ENDR;
-  DirectiveKindMap[".bundle_align_mode"] = DK_BUNDLE_ALIGN_MODE;
-  DirectiveKindMap[".bundle_lock"] = DK_BUNDLE_LOCK;
-  DirectiveKindMap[".bundle_unlock"] = DK_BUNDLE_UNLOCK;
   DirectiveKindMap[".if"] = DK_IF;
   DirectiveKindMap[".ifeq"] = DK_IFEQ;
   DirectiveKindMap[".ifge"] = DK_IFGE;
@@ -5827,10 +5768,9 @@ bool AsmParser::parseDirectiveAddrsig() {
 }
 
 bool AsmParser::parseDirectiveAddrsigSym() {
-  StringRef Name;
-  if (check(parseIdentifier(Name), "expected identifier") || parseEOL())
+  MCSymbol *Sym;
+  if (check(parseSymbol(Sym), "expected identifier") || parseEOL())
     return true;
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
   getStreamer().emitAddrsigSym(Sym);
   return false;
 }
@@ -6230,7 +6170,7 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
     return Error(LabelLoc,
                  "Cannot have just a label for an HLASM inline asm statement");
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(
+  MCSymbol *Sym = getContext().parseSymbol(
       getContext().getAsmInfo()->isHLASM() ? LabelVal.upper() : LabelVal);
 
   // Emit the label.
@@ -6323,12 +6263,11 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
   return parseAsMachineInstruction(Info, SI);
 }
 
-namespace llvm {
-namespace MCParserUtils {
-
-bool parseAssignmentExpression(StringRef Name, bool allow_redef,
-                               MCAsmParser &Parser, MCSymbol *&Sym,
-                               const MCExpr *&Value) {
+bool llvm::MCParserUtils::parseAssignmentExpression(StringRef Name,
+                                                    bool allow_redef,
+                                                    MCAsmParser &Parser,
+                                                    MCSymbol *&Sym,
+                                                    const MCExpr *&Value) {
 
   // FIXME: Use better location, we should use proper tokens.
   SMLoc EqualLoc = Parser.getTok().getLoc();
@@ -6346,7 +6285,8 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
   // used as a symbol, or it is an absolute symbol).
   Sym = Parser.getContext().lookupSymbol(Name);
   if (Sym) {
-    if (!Sym->isUnset() && (!allow_redef || !Sym->isRedefinable()))
+    if ((Sym->isVariable() || Sym->isDefined()) &&
+        (!allow_redef || !Sym->isRedefinable()))
       return Parser.Error(EqualLoc, "redefinition of '" + Name + "'");
     // If the symbol is redefinable, clone it and update the symbol table
     // to the new symbol. Existing references to the original symbol remain
@@ -6357,15 +6297,12 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     Parser.getStreamer().emitValueToOffset(Value, 0, EqualLoc);
     return false;
   } else
-    Sym = Parser.getContext().getOrCreateSymbol(Name);
+    Sym = Parser.getContext().parseSymbol(Name);
 
   Sym->setRedefinable(allow_redef);
 
   return false;
 }
-
-} // end namespace MCParserUtils
-} // end namespace llvm
 
 /// Create an MCAsmParser instance.
 MCAsmParser *llvm::createMCAsmParser(SourceMgr &SM, MCContext &C,

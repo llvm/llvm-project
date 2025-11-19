@@ -1,4 +1,4 @@
-//===--- MakeMemberFunctionConstCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,7 +59,7 @@ public:
   UsageKind Usage = Unused;
 
   template <class T> const T *getParent(const Expr *E) {
-    DynTypedNodeList Parents = Ctxt.getParents(*E);
+    const DynTypedNodeList Parents = Ctxt.getParents(*E);
     if (Parents.size() != 1)
       return nullptr;
 
@@ -211,7 +211,7 @@ AST_MATCHER(CXXMethodDecl, usesThisAsConst) {
   FindUsageOfThis UsageOfThis(Finder->getASTContext());
 
   // TraverseStmt does not modify its argument.
-  UsageOfThis.TraverseStmt(const_cast<Stmt *>(Node.getBody()));
+  UsageOfThis.TraverseStmt(Node.getBody());
 
   return UsageOfThis.Usage == Const;
 }
@@ -241,7 +241,7 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static SourceLocation getConstInsertionPoint(const CXXMethodDecl *M) {
-  TypeSourceInfo *TSI = M->getTypeSourceInfo();
+  const TypeSourceInfo *TSI = M->getTypeSourceInfo();
   if (!TSI)
     return {};
 

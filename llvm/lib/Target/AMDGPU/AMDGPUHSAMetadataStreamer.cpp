@@ -204,7 +204,7 @@ MetadataStreamerMsgPackV4::getWorkGroupDimensions(MDNode *Node) const {
 
   for (auto &Op : Node->operands())
     Dims.push_back(Dims.getDocument()->getNode(
-        uint64_t(mdconst::extract<ConstantInt>(Op)->getZExtValue())));
+        mdconst::extract<ConstantInt>(Op)->getZExtValue()));
   return Dims;
 }
 
@@ -254,9 +254,9 @@ void MetadataStreamerMsgPackV4::emitKernelLanguage(const Function &Func,
 }
 
 void MetadataStreamerMsgPackV4::emitKernelAttrs(const AMDGPUTargetMachine &TM,
-                                                const Function &Func,
+                                                const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-
+  const Function &Func = MF.getFunction();
   if (auto *Node = Func.getMetadata("reqd_work_group_size"))
     Kern[".reqd_workgroup_size"] = getWorkGroupDimensions(Node);
   if (auto *Node = Func.getMetadata("work_group_size_hint"))
@@ -599,7 +599,7 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
     Kern[".symbol"] = Kern.getDocument()->getNode(
         (Twine(Func.getName()) + Twine(".kd")).str(), /*Copy=*/true);
     emitKernelLanguage(Func, Kern);
-    emitKernelAttrs(TM, Func, Kern);
+    emitKernelAttrs(TM, MF, Kern);
     emitKernelArgs(MF, Kern);
   }
 
@@ -726,10 +726,11 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
 }
 
 void MetadataStreamerMsgPackV5::emitKernelAttrs(const AMDGPUTargetMachine &TM,
-                                                const Function &Func,
+                                                const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-  MetadataStreamerMsgPackV4::emitKernelAttrs(TM, Func, Kern);
+  MetadataStreamerMsgPackV4::emitKernelAttrs(TM, MF, Kern);
 
+  const Function &Func = MF.getFunction();
   if (Func.getFnAttribute("uniform-work-group-size").getValueAsBool())
     Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
 }
@@ -743,6 +744,22 @@ void MetadataStreamerMsgPackV6::emitVersion() {
   Version.push_back(Version.getDocument()->getNode(VersionMajorV6));
   Version.push_back(Version.getDocument()->getNode(VersionMinorV6));
   getRootMetadata("amdhsa.version") = Version;
+}
+
+void MetadataStreamerMsgPackV6::emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                                                const MachineFunction &MF,
+                                                msgpack::MapDocNode Kern) {
+  MetadataStreamerMsgPackV5::emitKernelAttrs(TM, MF, Kern);
+
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  ClusterDimsAttr Attr = MFI.getClusterDims();
+  if (Attr.isFixedDims()) {
+    msgpack::ArrayDocNode ClusterDimsNode = HSAMetadataDoc->getArrayNode();
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[0]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[1]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[2]));
+    Kern[".cluster_dims"] = ClusterDimsNode;
+  }
 }
 
 } // end namespace AMDGPU::HSAMD

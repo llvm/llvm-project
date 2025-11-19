@@ -256,10 +256,10 @@ public:
       TargetTransformInfo *TTI, TargetLibraryInfo *TLI, Function *F,
       LoopAccessInfoManager &LAIs, LoopInfo *LI, OptimizationRemarkEmitter *ORE,
       LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
-      AssumptionCache *AC, BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI)
+      AssumptionCache *AC, bool AllowRuntimeSCEVChecks, AAResults *AA)
       : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
-        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC), BFI(BFI),
-        PSI(PSI) {}
+        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
+        AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -400,19 +400,19 @@ public:
 
   /// Returns true if the loop has exactly one uncountable early exit, i.e. an
   /// uncountable exit that isn't the latch block.
-  bool hasUncountableEarlyExit() const {
-    return getUncountableEdge().has_value();
-  }
+  bool hasUncountableEarlyExit() const { return UncountableExitingBB; }
 
   /// Returns the uncountable early exiting block, if there is exactly one.
   BasicBlock *getUncountableEarlyExitingBlock() const {
-    return hasUncountableEarlyExit() ? getUncountableEdge()->first : nullptr;
+    return UncountableExitingBB;
   }
 
-  /// Returns the destination of the uncountable early exiting block, if there
-  /// is exactly one.
-  BasicBlock *getUncountableEarlyExitBlock() const {
-    return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
+  /// Returns true if this is an early exit loop with state-changing or
+  /// potentially-faulting operations and the condition for the uncountable
+  /// exit must be determined before any of the state changes or potentially
+  /// faulting operations take place.
+  bool hasUncountableExitWithSideEffects() const {
+    return UncountableExitWithSideEffects;
   }
 
   /// Return true if there is store-load forwarding dependencies.
@@ -453,6 +453,12 @@ public:
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
 
+  /// Returns potentially faulting loads.
+  const SmallPtrSetImpl<const Instruction *> &
+  getPotentiallyFaultingLoads() const {
+    return PotentiallyFaultingLoads;
+  }
+
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
   }
@@ -471,13 +477,6 @@ public:
   /// exit-not-taken count is known exactly at compile time.
   const SmallVector<BasicBlock *, 4> &getCountableExitingBlocks() const {
     return CountableExitingBlocks;
-  }
-
-  /// Returns the loop edge to an uncountable exit, or std::nullopt if there
-  /// isn't a single such edge.
-  std::optional<std::pair<BasicBlock *, BasicBlock *>>
-  getUncountableEdge() const {
-    return UncountableEdge;
   }
 
 private:
@@ -508,6 +507,9 @@ private:
   /// and we only need to check individual instructions.
   bool canVectorizeInstrs();
 
+  /// Check if an individual instruction is vectorizable.
+  bool canVectorizeInstr(Instruction &I);
+
   /// When we vectorize loops we may change the order in which
   /// we read and write from memory. This method checks if it is
   /// legal to vectorize the code, considering only memory constrains.
@@ -530,19 +532,86 @@ private:
   /// Returns true if this is an early exit loop that can be vectorized.
   /// Currently, a loop with an uncountable early exit is considered
   /// vectorizable if:
-  ///   1. There are no writes to memory in the loop.
+  ///   1. Writes to memory will access different underlying objects than
+  ///      any load used as part of the uncountable exit condition.
   ///   2. The loop has only one early uncountable exit
   ///   3. The early exit block dominates the latch block.
   ///   4. The latch block has an exact exit count.
   ///   5. The loop does not contain reductions or recurrences.
   ///   6. We can prove at compile-time that loops will not contain faulting
-  ///   loads.
+  ///      loads, or that any faulting loads would also occur in a purely
+  ///      scalar loop.
   ///   7. It is safe to speculatively execute instructions such as divide or
-  ///   call instructions.
+  ///      call instructions.
   /// The list above is not based on theoretical limitations of vectorization,
   /// but simply a statement that more work is needed to support these
   /// additional cases safely.
   bool isVectorizableEarlyExitLoop();
+
+  /// When vectorizing an early exit loop containing side effects, we need to
+  /// determine whether an uncounted exit will be taken before any operation
+  /// that has side effects.
+  ///
+  /// Consider a loop like the following:
+  /// for (int i = 0; i < N; ++i) {
+  ///   a[i] = b[i];
+  ///   if (c[i] == 0)
+  ///     break;
+  /// }
+  ///
+  /// We have both a load and a store operation occurring before the condition
+  /// is checked for early termination. We could potentially restrict
+  /// vectorization to cases where we know all addresses are guaranteed to be
+  /// dereferenceable, which would allow the load before the condition check to
+  /// be vectorized.
+  ///
+  /// The store, however, should not execute across all lanes if early
+  /// termination occurs before the end of the vector. We must only store to the
+  /// locations that would have been stored to by a scalar loop. So we need to
+  /// know what the result of 'c[i] == 0' is before performing the vector store,
+  /// with or without masking.
+  ///
+  /// We can either do this by moving the condition load to the top of the
+  /// vector body and using the comparison to create masks for other operations
+  /// in the loop, or by looking ahead one vector iteration and bailing out to
+  /// the scalar loop if an exit would occur.
+  ///
+  /// Using the latter approach (applicable to more targets), we need to hoist
+  /// the first load (of c[0]) out of the loop then rotate the load within the
+  /// loop to the next iteration, remembering to adjust the vector trip count.
+  /// Something like the following:
+  ///
+  /// vec.ph:
+  ///   %ci.0 = load <4 x i32>, ptr %c
+  ///   %cmp.0 = icmp eq <4 x i32> %ci.0, zeroinitializer
+  ///   %any.of.0 = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %cmp.0)
+  ///   br i1 %any.of.0, label %scalar.ph, label %vec.body
+  /// vec.body:
+  ///   %iv = phi...
+  ///   phi for c[i] if used elsewhere in the loop...
+  ///   other operations in the loop...
+  ///   %iv.next = add i64 %iv, 4
+  ///   %addr.next = getelementptr i32, ptr %c, i64 %iv.next
+  ///   %ci.next = load <4 x i32>, ptr %addr.next
+  ///   %cmp.next = icmp eq <4 x i32> %ci.next, zeroinitializer
+  ///   %any.of.next = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %cmp.next)
+  ///   iv.next compared with shortened vector tripcount...
+  ///   uncountable condition combined with counted condition...
+  ///   br...
+  ///
+  /// Doing this means the last few iterations will always be performed by a
+  /// scalar loop regardless of which exit is taken, and so vector iterations
+  /// will never execute a memory operation to a location that the scalar loop
+  /// would not have.
+  ///
+  /// This means we must ensure that it is safe to move the load for 'c[i]'
+  /// before other memory operations (or any other observable side effects) in
+  /// the loop.
+  ///
+  /// Currently, c[i] must have only one user (the comparison used for the
+  /// uncountable exit) since we would otherwise need to introduce a PHI node
+  /// for it.
+  bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
@@ -645,9 +714,15 @@ private:
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
 
-  /// BFI and PSI are used to check for profile guided size optimizations.
-  BlockFrequencyInfo *BFI;
-  ProfileSummaryInfo *PSI;
+  /// Hold potentially faulting loads.
+  SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
+
+  /// Whether or not creating SCEV predicates is allowed.
+  bool AllowRuntimeSCEVChecks;
+
+  // Alias Analysis results used to check for possible aliasing with loads
+  // used in uncountable exit conditions.
+  AAResults *AA;
 
   /// If we discover function calls within the loop which have a valid
   /// vectorized variant, record that fact so that LoopVectorize can
@@ -659,9 +734,13 @@ private:
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
-  /// Keep track of the loop edge to an uncountable exit, comprising a pair
-  /// of (Exiting, Exit) blocks, if there is exactly one early exit.
-  std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
+  /// Keep track of an uncountable exiting block, if there is exactly one early
+  /// exit.
+  BasicBlock *UncountableExitingBB = nullptr;
+
+  /// If true, the loop has at least one uncountable exit and operations within
+  /// the loop may have observable side effects.
+  bool UncountableExitWithSideEffects = false;
 };
 
 } // namespace llvm

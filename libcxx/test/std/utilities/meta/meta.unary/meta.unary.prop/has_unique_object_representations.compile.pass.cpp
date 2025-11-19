@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// The Clang version that Android currently uses in the CI is too old.
-// XFAIL: LIBCXX-ANDROID-FIXME
-
 // type_traits
 
 // has_unique_object_representations
@@ -98,7 +95,7 @@ void test() {
   test<true, char[][2]>();
   test<true, char[][2][3]>();
 
-  // Important test case for https://github.com/llvm/llvm-project/issues/95311.
+  // Important test case for https://llvm.org/PR95311.
   // Note that the order is important here, we want to instantiate the array
   // variants before the non-array ones, otherwise we don't trigger the bug.
   {

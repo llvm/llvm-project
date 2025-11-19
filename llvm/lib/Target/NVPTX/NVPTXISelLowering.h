@@ -20,80 +20,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
-namespace NVPTXISD {
-enum NodeType : unsigned {
-  // Start the numbering from where ISD NodeType finishes.
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  RET_GLUE,
-
-  /// These nodes represent a parameter declaration. In PTX this will look like:
-  ///   .param .align 16 .b8 param0[1024];
-  ///   .param .b32 retval0;
-  ///
-  /// DeclareArrayParam(Chain, Externalsym, Align, Size, Glue)
-  /// DeclareScalarParam(Chain, Externalsym, Size, Glue)
-  DeclareScalarParam,
-  DeclareArrayParam,
-
-  /// This node represents a PTX call instruction. It's operands are as follows:
-  ///
-  /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-  ///      NumParams, Callee, Proto, InGlue)
-  CALL,
-
-  MoveParam,
-  CallPrototype,
-  ProxyReg,
-  FSHL_CLAMP,
-  FSHR_CLAMP,
-  MUL_WIDE_SIGNED,
-  MUL_WIDE_UNSIGNED,
-  SETP_F16X2,
-  SETP_BF16X2,
-  BFE,
-  BFI,
-  PRMT,
-
-  /// This node is similar to ISD::BUILD_VECTOR except that the output may be
-  /// implicitly bitcast to a scalar. This allows for the representation of
-  /// packing move instructions for vector types which are not legal i.e. v2i32
-  BUILD_VECTOR,
-
-  /// This node is the inverse of NVPTX::BUILD_VECTOR. It takes a single value
-  /// which may be a scalar and unpacks it into multiple values by implicitly
-  /// converting it to a vector.
-  UNPACK_VECTOR,
-
-  FCOPYSIGN,
-  DYNAMIC_STACKALLOC,
-  STACKRESTORE,
-  STACKSAVE,
-  BrxStart,
-  BrxItem,
-  BrxEnd,
-  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED,
-  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X,
-  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y,
-  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z,
-
-  FIRST_MEMORY_OPCODE,
-  LoadV2 = FIRST_MEMORY_OPCODE,
-  LoadV4,
-  LoadV8,
-  LDUV2, // LDU.v2
-  LDUV4, // LDU.v4
-  StoreV2,
-  StoreV4,
-  StoreV8,
-  LoadParam,
-  LoadParamV2,
-  LoadParamV4,
-  StoreParam,
-  StoreParamV2,
-  StoreParamV4,
-  LAST_MEMORY_OPCODE = StoreParamV4,
-};
-}
 
 class NVPTXSubtarget;
 
@@ -105,8 +31,6 @@ public:
   explicit NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-
-  const char *getTargetNodeName(unsigned Opcode) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
                           MachineFunction &MF,
@@ -208,8 +132,7 @@ public:
 
   // Get whether we should use a precise or approximate 32-bit floating point
   // sqrt instruction.
-  bool usePrecSqrtF32(const MachineFunction &MF,
-                      const SDNode *N = nullptr) const;
+  bool usePrecSqrtF32(const SDNode *N = nullptr) const;
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
@@ -222,7 +145,6 @@ public:
   unsigned combineRepeatedFPDivisors() const override { return 2; }
 
   bool allowFMA(MachineFunction &MF, CodeGenOptLevel OptLevel) const;
-  bool allowUnsafeFPMath(const MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT) const override {
@@ -272,6 +194,16 @@ public:
   unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
                                      EVT ToVT) const override;
 
+  void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth = 0) const override;
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth = 0) const override;
+
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
@@ -283,6 +215,7 @@ private:
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
@@ -302,11 +235,8 @@ private:
   SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerLOADi1(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;

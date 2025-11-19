@@ -399,7 +399,7 @@ pointer.
 This design in the Standard precludes the use of static descriptors that
 could be associated with dynamic base addresses.
 
-The F18 runtime cannot use just the mandated interoperable
+Flang's runtime cannot use just the mandated interoperable
 `struct CFI_cdesc_t` argument descriptor structure as its
 all-purpose data descriptor.
 It has no information about derived type components, overridable

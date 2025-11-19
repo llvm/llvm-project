@@ -608,8 +608,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
-  llvm::ErrorOr<bool> NeedConversion =
-      llvm::needConversion(Filename.str().c_str());
+  llvm::ErrorOr<bool> NeedConversion = llvm::needConversion(Filename);
   if (NeedConversion && *NeedConversion) {
     // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
     // conversion.
@@ -908,56 +907,25 @@ getExpansionLocSlowCase(SourceLocation Loc) const {
 
 SourceLocation SourceManager::getSpellingLocSlowCase(SourceLocation Loc) const {
   do {
-    FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
-    Loc = getSLocEntry(LocInfo.first).getExpansion().getSpellingLoc();
-    Loc = Loc.getLocWithOffset(LocInfo.second);
+    const SLocEntry &Entry = getSLocEntry(getFileID(Loc));
+    Loc = Entry.getExpansion().getSpellingLoc().getLocWithOffset(
+        Loc.getOffset() - Entry.getOffset());
   } while (!Loc.isFileID());
   return Loc;
 }
 
 SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc) const {
   do {
-    if (isMacroArgExpansion(Loc))
-      Loc = getImmediateSpellingLoc(Loc);
-    else
-      Loc = getImmediateExpansionRange(Loc).getBegin();
+    const SLocEntry &Entry = getSLocEntry(getFileID(Loc));
+    const ExpansionInfo &ExpInfo = Entry.getExpansion();
+    if (ExpInfo.isMacroArgExpansion()) {
+      Loc = ExpInfo.getSpellingLoc().getLocWithOffset(Loc.getOffset() -
+                                                      Entry.getOffset());
+    } else {
+      Loc = ExpInfo.getExpansionLocStart();
+    }
   } while (!Loc.isFileID());
   return Loc;
-}
-
-FileIDAndOffset SourceManager::getDecomposedExpansionLocSlowCase(
-    const SrcMgr::SLocEntry *E) const {
-  // If this is an expansion record, walk through all the expansion points.
-  FileID FID;
-  SourceLocation Loc;
-  unsigned Offset;
-  do {
-    Loc = E->getExpansion().getExpansionLocStart();
-
-    FID = getFileID(Loc);
-    E = &getSLocEntry(FID);
-    Offset = Loc.getOffset()-E->getOffset();
-  } while (!Loc.isFileID());
-
-  return std::make_pair(FID, Offset);
-}
-
-FileIDAndOffset
-SourceManager::getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
-                                                unsigned Offset) const {
-  // If this is an expansion record, walk through all the expansion points.
-  FileID FID;
-  SourceLocation Loc;
-  do {
-    Loc = E->getExpansion().getSpellingLoc();
-    Loc = Loc.getLocWithOffset(Offset);
-
-    FID = getFileID(Loc);
-    E = &getSLocEntry(FID);
-    Offset = Loc.getOffset()-E->getOffset();
-  } while (!Loc.isFileID());
-
-  return std::make_pair(FID, Offset);
 }
 
 /// getImmediateSpellingLoc - Given a SourceLocation object, return the
@@ -1171,14 +1139,14 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
         if (Buf[FilePos - 1] == '\r' || Buf[FilePos - 1] == '\n')
           --FilePos;
       }
-      return FilePos - LineStart + 1;
+      return (FilePos - LineStart) + 1;
     }
   }
 
   unsigned LineStart = FilePos;
   while (LineStart && Buf[LineStart-1] != '\n' && Buf[LineStart-1] != '\r')
     --LineStart;
-  return FilePos-LineStart+1;
+  return (FilePos - LineStart) + 1;
 }
 
 // isInvalid - Return the result of calling loc.isInvalid(), and
@@ -1191,17 +1159,11 @@ static bool isInvalid(LocType Loc, bool *Invalid) {
   return MyInvalid;
 }
 
-unsigned SourceManager::getSpellingColumnNumber(SourceLocation Loc,
-                                                bool *Invalid) const {
+unsigned SourceManager::getColumnNumber(SourceLocation Loc,
+                                        bool *Invalid) const {
+  assert(Loc.isFileID());
   if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedSpellingLoc(Loc);
-  return getColumnNumber(LocInfo.first, LocInfo.second, Invalid);
-}
-
-unsigned SourceManager::getExpansionColumnNumber(SourceLocation Loc,
-                                                 bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedExpansionLoc(Loc);
+  FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
   return getColumnNumber(LocInfo.first, LocInfo.second, Invalid);
 }
 
@@ -1399,18 +1361,13 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
   return LineNo;
 }
 
-unsigned SourceManager::getSpellingLineNumber(SourceLocation Loc,
-                                              bool *Invalid) const {
+unsigned SourceManager::getLineNumber(SourceLocation Loc, bool *Invalid) const {
+  assert(Loc.isFileID());
   if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedSpellingLoc(Loc);
+  FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
   return getLineNumber(LocInfo.first, LocInfo.second);
 }
-unsigned SourceManager::getExpansionLineNumber(SourceLocation Loc,
-                                               bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedExpansionLoc(Loc);
-  return getLineNumber(LocInfo.first, LocInfo.second);
-}
+
 unsigned SourceManager::getPresumedLineNumber(SourceLocation Loc,
                                               bool *Invalid) const {
   PresumedLoc PLoc = getPresumedLoc(Loc);
@@ -2366,99 +2323,25 @@ size_t SourceManager::getDataStructureSizes() const {
 
 SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
-  // This is referenced by `FileMgr` and will be released by `FileMgr` when it
-  // is deleted.
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFileSystem->addFile(
       FileName, 0,
       llvm::MemoryBuffer::getMemBuffer(Content, FileName,
                                        /*RequiresNullTerminator=*/false));
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // in `Environment` so that `FileMgr` can out-live this function scope.
-  FileMgr =
-      std::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  FileMgr = std::make_unique<FileManager>(FileSystemOptions(),
+                                          std::move(InMemoryFileSystem));
   DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
-  Diagnostics = std::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), *DiagOpts);
+  Diagnostics =
+      std::make_unique<DiagnosticsEngine>(DiagnosticIDs::create(), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =
       SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
-}
-
-StringRef
-SourceManager::getNameForDiagnostic(StringRef Filename,
-                                    const DiagnosticOptions &Opts) const {
-  OptionalFileEntryRef File = getFileManager().getOptionalFileRef(Filename);
-  if (!File)
-    return Filename;
-
-  bool SimplifyPath = [&] {
-    if (Opts.AbsolutePath)
-      return true;
-
-    // Try to simplify paths that contain '..' in any case since paths to
-    // standard library headers especially tend to get quite long otherwise.
-    // Only do that for local filesystems though to avoid slowing down
-    // compilation too much.
-    if (!File->getName().contains(".."))
-      return false;
-
-    // If we're not on Windows, check if we're on a network file system and
-    // avoid simplifying the path in that case since that can be slow. On
-    // Windows, the check for a local filesystem is already slow, so skip it.
-#ifndef _WIN32
-    if (!llvm::sys::fs::is_local(File->getName()))
-      return false;
-#endif
-
-    return true;
-  }();
-
-  if (!SimplifyPath)
-    return Filename;
-
-  // This may involve computing canonical names, so cache the result.
-  StringRef &CacheEntry = DiagNames[Filename];
-  if (!CacheEntry.empty())
-    return CacheEntry;
-
-  // We want to print a simplified absolute path, i. e. without "dots".
-  //
-  // The hardest part here are the paths like "<part1>/<link>/../<part2>".
-  // On Unix-like systems, we cannot just collapse "<link>/..", because
-  // paths are resolved sequentially, and, thereby, the path
-  // "<part1>/<part2>" may point to a different location. That is why
-  // we use FileManager::getCanonicalName(), which expands all indirections
-  // with llvm::sys::fs::real_path() and caches the result.
-  //
-  // On the other hand, it would be better to preserve as much of the
-  // original path as possible, because that helps a user to recognize it.
-  // real_path() expands all links, which sometimes too much. Luckily,
-  // on Windows we can just use llvm::sys::path::remove_dots(), because,
-  // on that system, both aforementioned paths point to the same place.
-  SmallString<256> TempBuf;
-#ifdef _WIN32
-  TempBuf = File->getName();
-  llvm::sys::fs::make_absolute(TempBuf);
-  llvm::sys::path::native(TempBuf);
-  llvm::sys::path::remove_dots(TempBuf, /* remove_dot_dot */ true);
-#else
-  TempBuf = getFileManager().getCanonicalName(*File);
-#endif
-
-  // In some cases, the resolved path may actually end up being longer (e.g.
-  // if it was originally a relative path), so just retain whichever one
-  // ends up being shorter.
-  if (!Opts.AbsolutePath && TempBuf.size() > Filename.size())
-    CacheEntry = Filename;
-  else
-    CacheEntry = TempBuf.str().copy(DiagNameAlloc);
-
-  return CacheEntry;
 }

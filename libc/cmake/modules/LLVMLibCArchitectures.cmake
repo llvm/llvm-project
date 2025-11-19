@@ -94,17 +94,6 @@ if(NOT libc_compiler_target_info)
 endif()
 string(STRIP ${libc_compiler_target_info} libc_compiler_target_info)
 string(SUBSTRING ${libc_compiler_target_info} 8 -1 libc_compiler_triple)
-get_arch_and_system_from_triple(${libc_compiler_triple}
-                                compiler_arch compiler_sys)
-if(NOT compiler_arch)
-  message(FATAL_ERROR
-          "libc build: Invalid or unknown libc compiler target triple: "
-          "${libc_compiler_triple}")
-endif()
-
-set(LIBC_TARGET_ARCHITECTURE ${compiler_arch})
-set(LIBC_TARGET_OS ${compiler_sys})
-set(LIBC_CROSSBUILD FALSE)
 
 # One should not set LLVM_RUNTIMES_TARGET and LIBC_TARGET_TRIPLE
 if(LLVM_RUNTIMES_TARGET AND LIBC_TARGET_TRIPLE)
@@ -128,12 +117,40 @@ endif()
 # architecture.
 if(explicit_target_triple)
   get_arch_and_system_from_triple(${explicit_target_triple} libc_arch libc_sys)
-  if(NOT libc_arch)
+  if(NOT libc_arch OR NOT libc_sys)
     message(FATAL_ERROR
             "libc build: Invalid or unknown triple: ${explicit_target_triple}")
   endif()
   set(LIBC_TARGET_ARCHITECTURE ${libc_arch})
   set(LIBC_TARGET_OS ${libc_sys})
+  # If the compiler target triple is not the same as the triple specified by
+  # LIBC_TARGET_TRIPLE or LLVM_RUNTIMES_TARGET, we will add a --target option
+  # if the compiler is clang. If the compiler is GCC we just error out as there
+  # is no equivalent of an option like --target.
+  if(NOT libc_compiler_triple STREQUAL explicit_target_triple)
+    set(LIBC_CROSSBUILD TRUE)
+    if(CMAKE_COMPILER_IS_GNUCXX)
+      message(FATAL_ERROR
+              "GCC target triple (${libc_compiler_triple}) and the explicity "
+              "specified target triple (${explicit_target_triple}) do not match.")
+    else()
+      list(APPEND
+           LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")
+    endif()
+  else()
+    set(LIBC_CROSSBUILD FALSE)
+  endif()
+else()
+  get_arch_and_system_from_triple(${libc_compiler_triple}
+                                  compiler_arch compiler_sys)
+  if(NOT compiler_arch OR NOT compiler_sys)
+    message(FATAL_ERROR
+            "libc build: Unknown compiler default target triple: "
+            "${libc_compiler_triple}")
+  endif()
+  set(LIBC_TARGET_ARCHITECTURE ${compiler_arch})
+  set(LIBC_TARGET_OS ${compiler_sys})
+  set(LIBC_CROSSBUILD FALSE)
 endif()
 
 if((LIBC_TARGET_OS STREQUAL "unknown") OR (LIBC_TARGET_OS STREQUAL "none"))
@@ -153,9 +170,11 @@ elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "i386")
   set(LIBC_TARGET_ARCHITECTURE_IS_X86 TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv64")
+  set(LIBC_TARGET_ARCHITECTURE_IS_ANY_RISCV TRUE)
   set(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 TRUE)
   set(LIBC_TARGET_ARCHITECTURE "riscv")
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv32")
+  set(LIBC_TARGET_ARCHITECTURE_IS_ANY_RISCV TRUE)
   set(LIBC_TARGET_ARCHITECTURE_IS_RISCV32 TRUE)
   set(LIBC_TARGET_ARCHITECTURE "riscv")
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "amdgpu")
@@ -196,31 +215,11 @@ else()
           "Unsupported libc target operating system ${LIBC_TARGET_OS}")
 endif()
 
-
-# If the compiler target triple is not the same as the triple specified by
-# LIBC_TARGET_TRIPLE or LLVM_RUNTIMES_TARGET, we will add a --target option
-# if the compiler is clang. If the compiler is GCC we just error out as there
-# is no equivalent of an option like --target.
-if(explicit_target_triple AND
-   (NOT (libc_compiler_triple STREQUAL explicit_target_triple)))
-  set(LIBC_CROSSBUILD TRUE)
-  if(CMAKE_COMPILER_IS_GNUCXX)
-    message(FATAL_ERROR
-            "GCC target triple (${libc_compiler_triple}) and the explicity "
-            "specified target triple (${explicit_target_triple}) do not match.")
-  else()
-    list(APPEND
-         LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")
-  endif()
-endif()
-
-
 # Windows does not support full mode build.
 if (LIBC_TARGET_OS_IS_WINDOWS AND LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "Windows does not support full mode build.")
 endif ()
 
-
 message(STATUS
-        "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS} with
-        LIBC_COMPILE_OPTIONS_DEFAULT: ${LIBC_COMPILE_OPTIONS_DEFAULT}")
+        "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS} with "
+        "LIBC_COMPILE_OPTIONS_DEFAULT: ${LIBC_COMPILE_OPTIONS_DEFAULT}")

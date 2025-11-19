@@ -23,7 +23,7 @@ TEST_F(LlvmLibcSetvbufTest, SetNBFBuffer) {
   // then set a NBF buffer to the write handle. Since it is NBF, the data
   // written using the write handle should be immediately readable by the read
   // handle.
-  constexpr char FILENAME[] = "testdata/setvbuf_nbf.test";
+  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/setvbuf_nbf.test");
 
   ::FILE *fw = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(fw == nullptr);
@@ -59,7 +59,7 @@ TEST_F(LlvmLibcSetvbufTest, SetLBFBuffer) {
   // then set a LBF buffer to the write handle. Since it is LBF, the data
   // written using the write handle should be available right after a '\n' is
   // written.
-  constexpr char FILENAME[] = "testdata/setvbuf_lbf.test";
+  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/setvbuf_lbf.test");
 
   ::FILE *fw = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(fw == nullptr);
@@ -96,7 +96,8 @@ TEST_F(LlvmLibcSetvbufTest, SetLBFBuffer) {
 }
 
 TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
-  constexpr char FILENAME[] = "testdata/setvbuf_invalid_bufmode.test";
+  constexpr char FILENAME[] =
+      APPEND_LIBC_TEST("testdata/setvbuf_invalid_bufmode.test");
   ::FILE *f = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(f == nullptr);
   char buf[BUFSIZ];

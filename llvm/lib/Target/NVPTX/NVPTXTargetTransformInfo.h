@@ -87,6 +87,13 @@ public:
   }
   unsigned getMinVectorRegisterBitWidth() const override { return 32; }
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const override {
+    // Turn off ExpandReductions pass for NVPTX, which doesn't have advanced
+    // swizzling operations. Our backend/Selection DAG can expand these
+    // reductions with less movs.
+    return false;
+  }
+
   // We don't want to prevent inlining because of target-cpu and -features
   // attributes that were added to newer versions of LLVM/Clang: There are
   // no incompatible functions in PTX, ptxas will throw errors in such cases.
@@ -129,8 +136,9 @@ public:
         Insert = false;
       }
     }
-    if (Insert && Isv2x16VT(VT)) {
-      // Can be built in a single mov
+    if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
+      // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
+      // with 2x 32-bit regs)
       Cost += 1;
       Insert = false;
     }
@@ -182,6 +190,11 @@ public:
   void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override;
+
+  bool shouldBuildRelLookupTables() const override {
+    // Self-referential globals are not supported.
+    return false;
+  }
 };
 
 } // end namespace llvm

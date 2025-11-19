@@ -23,18 +23,16 @@ define i16 @test(ptr %arg, i64 %N) {
 ; CHECK-NEXT:    [[C_3:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_3_PREHEADER:%.*]], label [[INNER_LATCH:%.*]]
 ; CHECK:       loop.3.preheader:
-; CHECK-NEXT:    [[L_1_LCSSA:%.*]] = phi ptr [ [[L_1]], [[INNER_BB]] ]
-; CHECK-NEXT:    [[L_2_LCSSA:%.*]] = phi ptr [ [[L_2]], [[INNER_BB]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[L_2_LCSSA]], i64 2
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[L_1_LCSSA]], i64 2
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[L_2]], i64 2
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[L_1]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[L_1_LCSSA]], i64 [[TMP2]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[L_2_LCSSA]], [[SCEVGEP6]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[L_1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[L_2]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP5]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -46,8 +44,7 @@ define i16 @test(ptr %arg, i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[L_1]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP6]], align 2, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP5]], align 2, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i16> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP8]], ptr [[L_2]], align 2, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -68,19 +65,17 @@ define i16 @test(ptr %arg, i64 %N) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_3]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, ptr [[L_1_LCSSA]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, ptr [[L_1]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[LOOP_L_1:%.*]] = load i16, ptr [[GEP_1]], align 2
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, ptr [[L_2_LCSSA]], i64 0
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, ptr [[L_2]], i64 0
 ; CHECK-NEXT:    store i16 [[LOOP_L_1]], ptr [[GEP_2]], align 2
 ; CHECK-NEXT:    br i1 [[C_5]], label [[LOOP_3]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit.loopexit1:
-; CHECK-NEXT:    [[L_1_LCSSA3:%.*]] = phi ptr [ [[L_1]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[L_14:%.*]] = phi ptr [ [[L_1_LCSSA3]], [[EXIT_LOOPEXIT1]] ], [ [[L_1_LCSSA]], [[EXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    [[L_3:%.*]] = load i16, ptr [[L_14]], align 2
+; CHECK-NEXT:    [[L_3:%.*]] = load i16, ptr [[L_1]], align 2
 ; CHECK-NEXT:    ret i16 [[L_3]]
 ;
 entry:

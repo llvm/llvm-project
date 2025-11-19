@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "openmp-utils.h"
+#include "flang/Semantics/openmp-utils.h"
 
+#include "flang/Common/Fortran-consts.h"
+#include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
@@ -21,9 +23,12 @@
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Evaluate/variable.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -37,6 +42,65 @@
 #include <vector>
 
 namespace Fortran::semantics::omp {
+using namespace Fortran::parser::omp;
+
+const Scope &GetScopingUnit(const Scope &scope) {
+  const Scope *iter{&scope};
+  for (; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockConstruct:
+    case Scope::Kind::BlockData:
+    case Scope::Kind::DerivedType:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+    case Scope::Kind::Subprogram:
+      return *iter;
+    default:
+      break;
+    }
+  }
+  return *iter;
+}
+
+const Scope &GetProgramUnit(const Scope &scope) {
+  const Scope *unit{nullptr};
+  for (const Scope *iter{&scope}; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockData:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+      return *iter;
+    case Scope::Kind::Subprogram:
+      // Ignore subprograms that are nested.
+      unit = iter;
+      break;
+    default:
+      break;
+    }
+  }
+  assert(unit && "Scope not in a program unit");
+  return *unit;
+}
+
+SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
+  if (x == nullptr) {
+    return SourcedActionStmt{};
+  }
+  if (auto *exec{std::get_if<parser::ExecutableConstruct>(&x->u)}) {
+    using ActionStmt = parser::Statement<parser::ActionStmt>;
+    if (auto *stmt{std::get_if<ActionStmt>(&exec->u)}) {
+      return SourcedActionStmt{&stmt->statement, stmt->source};
+    }
+  }
+  return SourcedActionStmt{};
+}
+
+SourcedActionStmt GetActionStmt(const parser::Block &block) {
+  if (block.size() == 1) {
+    return GetActionStmt(&block.front());
+  }
+  return SourcedActionStmt{};
+}
 
 std::string ThisVersion(unsigned version) {
   std::string tv{
@@ -83,6 +147,16 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
   return nullptr;
 }
 
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object) {
+  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+    return name->source;
+  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
+    return GetLastName(*desg).source;
+  }
+  return std::nullopt;
+}
+
 const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
     if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
@@ -92,14 +166,12 @@ const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   return nullptr;
 }
 
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object) {
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
-    return name->source;
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
-    return GetLastName(*desg).source;
+const parser::OmpObject *GetArgumentObject(
+    const parser::OmpArgument &argument) {
+  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
+    return std::get_if<parser::OmpObject>(&locator->u);
   }
-  return std::nullopt;
+  return nullptr;
 }
 
 bool IsCommonBlock(const Symbol &sym) {
@@ -114,6 +186,23 @@ bool IsExtendedListItem(const Symbol &sym) {
   return IsVariableListItem(sym) || sym.IsSubprogram();
 }
 
+bool IsTypeParamInquiry(const Symbol &sym) {
+  return common::visit( //
+      common::visitors{
+          [&](const MiscDetails &d) {
+            return d.kind() == MiscDetails::Kind::KindParamInquiry ||
+                d.kind() == MiscDetails::Kind::LenParamInquiry;
+          },
+          [&](const TypeParamDetails &s) { return true; },
+          [&](auto &&) { return false; },
+      },
+      sym.details());
+}
+
+bool IsStructureComponent(const Symbol &sym) {
+  return sym.owner().kind() == Scope::Kind::DerivedType;
+}
+
 bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   if (expr) {
     return evaluate::UnwrapProcedureRef(*expr) != nullptr ||
@@ -123,12 +212,37 @@ bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   }
 }
 
-std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
+bool IsMapEnteringType(parser::OmpMapType::Value type) {
+  switch (type) {
+  case parser::OmpMapType::Value::Alloc:
+  case parser::OmpMapType::Value::Storage:
+  case parser::OmpMapType::Value::To:
+  case parser::OmpMapType::Value::Tofrom:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool IsMapExitingType(parser::OmpMapType::Value type) {
+  switch (type) {
+  case parser::OmpMapType::Value::Delete:
+  case parser::OmpMapType::Value::From:
+  case parser::OmpMapType::Value::Release:
+  case parser::OmpMapType::Value::Storage:
+  case parser::OmpMapType::Value::Tofrom:
+    return true;
+  default:
+    return false;
+  }
+}
+
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {
   const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()
   //    `- std::optional<Expr>      ^->v
-  return typedExpr.get()->v;
+  return DEREF(typedExpr.get()).v;
 }
 
 std::optional<evaluate::DynamicType> GetDynamicType(
@@ -138,6 +252,46 @@ std::optional<evaluate::DynamicType> GetDynamicType(
   } else {
     return std::nullopt;
   }
+}
+
+namespace {
+struct LogicalConstantVistor : public evaluate::Traverse<LogicalConstantVistor,
+                                   std::optional<bool>, false> {
+  using Result = std::optional<bool>;
+  using Base = evaluate::Traverse<LogicalConstantVistor, Result, false>;
+  LogicalConstantVistor() : Base(*this) {}
+
+  Result Default() const { return std::nullopt; }
+
+  using Base::operator();
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    if constexpr (T::category == common::TypeCategory::Logical) {
+      return llvm::transformOptional(
+          x.GetScalarValue(), [](auto &&v) { return v.IsTrue(); });
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    if constexpr (sizeof...(results) == 0) {
+      return result;
+    } else {
+      if (result.has_value()) {
+        return result;
+      } else {
+        return Combine(std::move(results)...);
+      }
+    }
+  }
+};
+} // namespace
+
+std::optional<bool> GetLogicalValue(const SomeExpr &expr) {
+  return LogicalConstantVistor{}(expr);
 }
 
 namespace {
@@ -178,7 +332,7 @@ private:
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object) {
   return common::visit( //
-      common::visitors{
+      common::visitors{//
           [&](const parser::Name &x) {
             // Any member of a common block must be contiguous.
             return std::optional<bool>{true};
@@ -190,7 +344,9 @@ std::optional<bool> IsContiguous(
             }
             return std::optional<bool>{};
           },
-      },
+          [&](const parser::OmpObject::Invalid &) {
+            return std::optional<bool>{};
+          }},
       object.u);
 }
 
@@ -223,28 +379,6 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
     (moveAppend(v, std::move(results)), ...);
     return v;
   }
-};
-
-struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
-  using Base = evaluate::AnyTraverse<VariableFinder>;
-  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
-
-  using Base::operator();
-
-  template <typename T>
-  bool operator()(const evaluate::Designator<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-  template <typename T>
-  bool operator()(const evaluate::FunctionRef<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-private:
-  const SomeExpr &var;
 };
 
 std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr) {
@@ -335,10 +469,6 @@ const SomeExpr *HasStorageOverlap(
   return nullptr;
 }
 
-bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super) {
-  return VariableFinder{sub}(super);
-}
-
 // Check if the ActionStmt is actually a [Pointer]AssignmentStmt. This is
 // to separate cases where the source has something that looks like an
 // assignment, but is semantically wrong (diagnosed by general semantic
@@ -366,28 +496,4 @@ bool IsPointerAssignment(const evaluate::Assignment &x) {
   return std::holds_alternative<evaluate::Assignment::BoundsSpec>(x.u) ||
       std::holds_alternative<evaluate::Assignment::BoundsRemapping>(x.u);
 }
-
-/// parser::Block is a list of executable constructs, parser::BlockConstruct
-/// is Fortran's BLOCK/ENDBLOCK construct.
-/// Strip the outermost BlockConstructs, return the reference to the Block
-/// in the executable part of the innermost of the stripped constructs.
-/// Specifically, if the given `block` has a single entry (it's a list), and
-/// the entry is a BlockConstruct, get the Block contained within. Repeat
-/// this step as many times as possible.
-const parser::Block &GetInnermostExecPart(const parser::Block &block) {
-  const parser::Block *iter{&block};
-  while (iter->size() == 1) {
-    const parser::ExecutionPartConstruct &ep{iter->front()};
-    if (auto *exec{std::get_if<parser::ExecutableConstruct>(&ep.u)}) {
-      using BlockConstruct = common::Indirection<parser::BlockConstruct>;
-      if (auto *bc{std::get_if<BlockConstruct>(&exec->u)}) {
-        iter = &std::get<parser::Block>(bc->value().t);
-        continue;
-      }
-    }
-    break;
-  }
-  return *iter;
-}
-
 } // namespace Fortran::semantics::omp

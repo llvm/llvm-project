@@ -318,7 +318,7 @@ public:
   /// take O(N) where N is the number of operations within the parent block.
   bool isBeforeInBlock(Operation *other);
 
-  void print(raw_ostream &os, const OpPrintingFlags &flags = std::nullopt);
+  void print(raw_ostream &os, const OpPrintingFlags &flags = {});
   void print(raw_ostream &os, AsmState &state);
   void dump();
 
@@ -1099,6 +1099,52 @@ private:
 
 inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
   const_cast<Operation &>(op).print(os, OpPrintingFlags().useLocalScope());
+  return os;
+}
+
+/// A wrapper class that allows for printing an operation with a set of flags,
+/// useful to act as a "stream modifier" to customize printing an operation
+/// with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithFlags(op, OpPrintingFlags().skipRegions());
+/// This always prints the operation with the local scope, to avoid introducing
+/// spurious newlines in the stream.
+class OpWithFlags {
+public:
+  OpWithFlags(Operation *op, OpPrintingFlags flags = {})
+      : op(op), theFlags(flags) {}
+  OpPrintingFlags &flags() { return theFlags; }
+  const OpPrintingFlags &flags() const { return theFlags; }
+  Operation *getOperation() const { return op; }
+
+private:
+  Operation *op;
+  OpPrintingFlags theFlags;
+  friend raw_ostream &operator<<(raw_ostream &os, OpWithFlags op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os, OpWithFlags opWithFlags) {
+  opWithFlags.flags().useLocalScope();
+  opWithFlags.op->print(os, opWithFlags.flags());
+  return os;
+}
+
+/// A wrapper class that allows for printing an operation with a custom
+/// AsmState, useful to act as a "stream modifier" to customize printing an
+/// operation with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithState(op, OpPrintingFlags().skipRegions());
+class OpWithState {
+public:
+  OpWithState(Operation *op, AsmState &state) : op(op), theState(state) {}
+
+private:
+  Operation *op;
+  AsmState &theState;
+  friend raw_ostream &operator<<(raw_ostream &os, const OpWithState &op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const OpWithState &opWithState) {
+  opWithState.op->print(os, const_cast<OpWithState &>(opWithState).theState);
   return os;
 }
 

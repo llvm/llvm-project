@@ -44,6 +44,9 @@
 // should be preferred. Any other parameters required for SFINAE should have
 // default values provided.
 namespace {
+
+using namespace Fortran;
+
 // Types for the dummy parameter indicating the priority of a given overload.
 // We will invoke our helper with an integer literal argument, so the overload
 // with the highest priority should have the type int.
@@ -276,13 +279,13 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
     char *zone, std::size_t zoneChars,
     const Fortran::runtime::Descriptor *values) {
   if (date) {
-    std::memset(date, static_cast<int>(' '), dateChars);
+    runtime::memset(date, static_cast<int>(' '), dateChars);
   }
   if (time) {
-    std::memset(time, static_cast<int>(' '), timeChars);
+    runtime::memset(time, static_cast<int>(' '), timeChars);
   }
   if (zone) {
-    std::memset(zone, static_cast<int>(' '), zoneChars);
+    runtime::memset(zone, static_cast<int>(' '), zoneChars);
   }
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
@@ -420,7 +423,7 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
   auto copyBufferAndPad{
       [&](char *dest, std::size_t destChars, std::size_t len) {
         auto copyLen{std::min(len, destChars)};
-        std::memcpy(dest, buffer, copyLen);
+        runtime::memcpy(dest, buffer, copyLen);
         for (auto i{copyLen}; i < destChars; ++i) {
           dest[i] = ' ';
         }
@@ -525,8 +528,8 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
     ULARGE_INTEGER userSystemTime;
     ULARGE_INTEGER kernelSystemTime;
 
-    memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
-    memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
+    runtime::memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
+    runtime::memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
 
     usrTime = ((double)(userSystemTime.QuadPart)) / 10000000.0;
     sysTime = ((double)(kernelSystemTime.QuadPart)) / 10000000.0;

@@ -38,6 +38,13 @@ static cl::opt<bool>
     EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
                    cl::desc("Enable reciprocal sqrt optimization"));
 
+// FIXME: This is a WAR to recover lost performance from #155024.
+// We still need to investigate the regression and find a more permanent
+// solution.
+static cl::opt<bool> EnableMADWide("nvptx-mad-wide-opt", cl::init(false),
+                                   cl::Hidden,
+                                   cl::desc("Enable MAD wide optimization"));
+
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
@@ -56,9 +63,7 @@ INITIALIZE_PASS(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOptLevel OptLevel)
-    : SelectionDAGISel(tm, OptLevel), TM(tm) {
-  doMulWide = (OptLevel > CodeGenOptLevel::None);
-}
+    : SelectionDAGISel(tm, OptLevel), TM(tm) {}
 
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<NVPTXSubtarget>();
@@ -72,7 +77,7 @@ NVPTXDAGToDAGISel::getDivF32Level(const SDNode *N) const {
 }
 
 bool NVPTXDAGToDAGISel::usePrecSqrtF32(const SDNode *N) const {
-  return Subtarget->getTargetLowering()->usePrecSqrtF32(*MF, N);
+  return Subtarget->getTargetLowering()->usePrecSqrtF32(N);
 }
 
 bool NVPTXDAGToDAGISel::useF32FTZ() const {
@@ -84,12 +89,9 @@ bool NVPTXDAGToDAGISel::allowFMA() const {
   return TL->allowFMA(*MF, OptLevel);
 }
 
-bool NVPTXDAGToDAGISel::allowUnsafeFPMath() const {
-  const NVPTXTargetLowering *TL = Subtarget->getTargetLowering();
-  return TL->allowUnsafeFPMath(*MF);
-}
-
 bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
+
+bool NVPTXDAGToDAGISel::doMADWideOpt() const { return EnableMADWide; }
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
@@ -145,18 +147,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryStoreVector(N))
       return;
     break;
-  case NVPTXISD::LoadParam:
-  case NVPTXISD::LoadParamV2:
-  case NVPTXISD::LoadParamV4:
-    if (tryLoadParam(N))
-      return;
-    break;
-  case NVPTXISD::StoreParam:
-  case NVPTXISD::StoreParamV2:
-  case NVPTXISD::StoreParamV4:
-    if (tryStoreParam(N))
-      return;
-    break;
   case ISD::INTRINSIC_W_CHAIN:
     if (tryIntrinsicChain(N))
       return;
@@ -189,6 +179,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     }
     break;
   }
+  case NVPTXISD::ATOMIC_CMP_SWAP_B128:
+  case NVPTXISD::ATOMIC_SWAP_B128:
+    selectAtomicSwap128(N);
+    return;
   case ISD::FADD:
   case ISD::FMUL:
   case ISD::FSUB:
@@ -286,6 +280,10 @@ static unsigned getTcgen05LdOpcode(unsigned IID, bool enablePack) {
 }
 
 void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
+  if (!Subtarget->hasTcgen05InstSupport())
+    report_fatal_error(
+        "tcgen05.ld is not supported on this architecture variant");
+
   SDLoc DL(N);
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 
@@ -446,11 +444,18 @@ bool NVPTXDAGToDAGISel::tryUNPACK_VECTOR(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   SDValue Vector = N->getOperand(0);
 
-  // We only care about 16x2 as it's the only real vector type we
-  // need to deal with.
   MVT VT = Vector.getSimpleValueType();
-  if (!Isv2x16VT(VT))
+  if (!(NVPTX::isPackedVectorTy(VT) && VT.getVectorNumElements() == 2))
     return false;
+
+  unsigned Opcode;
+  if (VT.is32BitVector())
+    Opcode = NVPTX::I32toV2I16;
+  else if (VT.is64BitVector())
+    Opcode = NVPTX::I64toV2I32;
+  else
+    llvm_unreachable("Unhandled packed type");
+
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
   for (auto *U : Vector.getNode()->users()) {
@@ -474,11 +479,11 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   if (E0.empty() || E1.empty())
     return false;
 
-  // Merge (f16 extractelt(V, 0), f16 extractelt(V,1))
-  // into f16,f16 SplitF16x2(V)
+  // Merge (EltTy extractelt(V, 0), EltTy extractelt(V,1))
+  // into EltTy,EltTy Split[EltTy]x2(V)
   MVT EltVT = VT.getVectorElementType();
   SDNode *ScatterOp =
-      CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N), EltVT, EltVT, Vector);
+      CurDAG->getMachineNode(Opcode, SDLoc(N), EltVT, EltVT, Vector);
   for (auto *Node : E0)
     ReplaceUses(SDValue(Node, 0), SDValue(ScatterOp, 0));
   for (auto *Node : E1)
@@ -487,7 +492,7 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   return true;
 }
 
-static std::optional<unsigned> convertAS(unsigned AS) {
+static std::optional<NVPTX::AddressSpace> convertAS(unsigned AS) {
   switch (AS) {
   case llvm::ADDRESS_SPACE_LOCAL:
     return NVPTX::AddressSpace::Local;
@@ -508,9 +513,40 @@ static std::optional<unsigned> convertAS(unsigned AS) {
   }
 }
 
-static unsigned int getCodeAddrSpace(const MemSDNode *N) {
+NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
   return convertAS(N->getMemOperand()->getAddrSpace())
       .value_or(NVPTX::AddressSpace::Generic);
+}
+
+NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
+  // No "sem" orderings for SM/PTX versions which do not support memory ordering
+  if (!Subtarget->hasMemoryOrdering())
+    return NVPTX::Ordering::NotAtomic;
+  auto Ordering = N->getMergedOrdering();
+  switch (Ordering) {
+  case AtomicOrdering::NotAtomic:
+    return NVPTX::Ordering::NotAtomic;
+  case AtomicOrdering::Unordered:
+  case AtomicOrdering::Monotonic:
+    return NVPTX::Ordering::Relaxed;
+  case AtomicOrdering::Acquire:
+    return NVPTX::Ordering::Acquire;
+  case AtomicOrdering::Release:
+    return NVPTX::Ordering::Release;
+  case AtomicOrdering::AcquireRelease:
+    return NVPTX::Ordering::AcquireRelease;
+  case AtomicOrdering::SequentiallyConsistent:
+    return NVPTX::Ordering::SequentiallyConsistent;
+  }
+  llvm_unreachable("Invalid atomic ordering");
+}
+
+NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
+  // No "scope" modifier for SM/PTX versions which do not support scoped atomics
+  // Functionally, these atomics are at device scope
+  if (!Subtarget->hasAtomScope())
+    return NVPTX::Scope::DefaultDevice;
+  return Scopes[N->getSyncScopeID()];
 }
 
 namespace {
@@ -525,7 +561,7 @@ struct OperationOrderings {
 static OperationOrderings
 getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   AtomicOrdering Ordering = N->getSuccessOrdering();
-  auto CodeAddrSpace = getCodeAddrSpace(N);
+  auto CodeAddrSpace = NVPTXDAGToDAGISel::getAddrSpace(N);
 
   bool HasMemoryOrdering = Subtarget->hasMemoryOrdering();
   bool HasRelaxedMMIO = Subtarget->hasRelaxedMMIO();
@@ -749,7 +785,7 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
 }
 
 static bool canLowerToLDG(const MemSDNode &N, const NVPTXSubtarget &Subtarget,
-                          unsigned CodeAddrSpace) {
+                          NVPTX::AddressSpace CodeAddrSpace) {
   // We use ldg (i.e. ld.global.nc) for invariant loads from the global address
   // space.
   return Subtarget.hasLDG() && CodeAddrSpace == NVPTX::AddressSpace::Global &&
@@ -781,6 +817,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -800,6 +837,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -819,6 +857,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acq_rel_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -839,6 +878,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_seq_cst_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(formatv("Unsupported scope \"{}\" for seq_cst fence.",
                                  ScopeToString(S)));
     }
@@ -975,14 +1015,10 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
 // Helper function template to reduce amount of boilerplate code for
 // opcode selection.
 static std::optional<unsigned>
-pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i8,
-                std::optional<unsigned> Opcode_i16,
+pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i16,
                 std::optional<unsigned> Opcode_i32,
                 std::optional<unsigned> Opcode_i64) {
   switch (VT) {
-  case MVT::i1:
-  case MVT::i8:
-    return Opcode_i8;
   case MVT::f16:
   case MVT::i16:
   case MVT::bf16:
@@ -994,12 +1030,80 @@ pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i8,
   case MVT::i32:
   case MVT::f32:
     return Opcode_i32;
+  case MVT::v2f32:
+  case MVT::v2i32:
   case MVT::i64:
   case MVT::f64:
     return Opcode_i64;
   default:
     return std::nullopt;
   }
+}
+
+static inline bool isAddLike(const SDValue V) {
+  return V.getOpcode() == ISD::ADD ||
+         (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
+}
+
+static SDValue stripAssertAlign(SDValue N) {
+  if (N.getOpcode() == ISD::AssertAlign)
+    N = N.getOperand(0);
+  return N;
+}
+
+// selectBaseADDR - Match a dag node which will serve as the base address for an
+// ADDR operand pair.
+static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
+  N = stripAssertAlign(N);
+  if (const auto *GA = dyn_cast<GlobalAddressSDNode>(N))
+    return DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(N),
+                                       GA->getValueType(0), GA->getOffset(),
+                                       GA->getTargetFlags());
+  if (const auto *ES = dyn_cast<ExternalSymbolSDNode>(N))
+    return DAG->getTargetExternalSymbol(ES->getSymbol(), ES->getValueType(0),
+                                        ES->getTargetFlags());
+  if (const auto *FIN = dyn_cast<FrameIndexSDNode>(N))
+    return DAG->getTargetFrameIndex(FIN->getIndex(), FIN->getValueType(0));
+
+  return N;
+}
+
+static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
+  Addr = stripAssertAlign(Addr);
+  APInt AccumulatedOffset(64u, 0);
+  while (isAddLike(Addr)) {
+    const auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
+    if (!CN)
+      break;
+
+    const APInt CI = CN->getAPIntValue().sext(64);
+    if (!(CI + AccumulatedOffset).isSignedIntN(32))
+      break;
+
+    AccumulatedOffset += CI;
+    Addr = stripAssertAlign(Addr->getOperand(0));
+  }
+  return DAG->getSignedTargetConstant(AccumulatedOffset.getSExtValue(), DL,
+                                      MVT::i32);
+}
+
+static std::pair<SDValue, SDValue> selectADDR(SDValue Addr, SelectionDAG *DAG) {
+  SDValue Offset = accumulateOffset(Addr, SDLoc(Addr), DAG);
+  SDValue Base = selectBaseADDR(Addr, DAG);
+  return {Base, Offset};
+}
+
+// Select a pair of operands which represent a valid PTX address, this could be
+// one of the following things:
+//  - [var] - Offset is simply set to 0
+//  - [reg] - Offset is simply set to 0
+//  - [reg+immOff]
+//  - [var+immOff]
+// Note that immOff must fit into a 32-bit signed integer.
+bool NVPTXDAGToDAGISel::SelectADDR(SDValue Addr, SDValue &Base,
+                                   SDValue &Offset) {
+  std::tie(Base, Offset) = selectADDR(Addr, CurDAG);
+  return true;
 }
 
 bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
@@ -1011,13 +1115,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   if (PlainLoad && PlainLoad->isIndexed())
     return false;
 
-  const EVT LoadedEVT = LD->getMemoryVT();
-  if (!LoadedEVT.isSimple())
-    return false;
-  const MVT LoadedVT = LoadedEVT.getSimpleVT();
-
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(LD);
+  const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDG(LD);
 
@@ -1025,7 +1124,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
 
-  const unsigned FromTypeWidth = LoadedVT.getSizeInBits();
+  const unsigned FromTypeWidth = LD->getMemoryVT().getSizeInBits();
 
   // Vector Setting
   const unsigned FromType =
@@ -1037,8 +1136,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
          FromTypeWidth <= 128 && "Invalid width for load");
 
   // Create the machine instruction DAG
-  SDValue Offset, Base;
-  SelectADDR(N->getOperand(1), Base, Offset);
+  const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
                    getI32Imm(CodeAddrSpace, DL),
@@ -1049,8 +1147,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                    Chain};
 
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
-  const std::optional<unsigned> Opcode = pickOpcodeForVT(
-      TargetVT, NVPTX::LD_i8, NVPTX::LD_i16, NVPTX::LD_i32, NVPTX::LD_i64);
+  const std::optional<unsigned> Opcode =
+      pickOpcodeForVT(TargetVT, NVPTX::LD_i16, NVPTX::LD_i32, NVPTX::LD_i64);
   if (!Opcode)
     return false;
 
@@ -1065,15 +1163,12 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   return true;
 }
 
-static unsigned getLoadStoreVectorNumElts(SDNode *N) {
+static unsigned getStoreVectorNumElts(SDNode *N) {
   switch (N->getOpcode()) {
-  case NVPTXISD::LoadV2:
   case NVPTXISD::StoreV2:
     return 2;
-  case NVPTXISD::LoadV4:
   case NVPTXISD::StoreV4:
     return 4;
-  case NVPTXISD::LoadV8:
   case NVPTXISD::StoreV8:
     return 8;
   default:
@@ -1083,13 +1178,9 @@ static unsigned getLoadStoreVectorNumElts(SDNode *N) {
 
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   MemSDNode *LD = cast<MemSDNode>(N);
-  const EVT MemEVT = LD->getMemoryVT();
-  if (!MemEVT.isSimple())
-    return false;
-  const MVT MemVT = MemEVT.getSimpleVT();
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(LD);
+  const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDG(LD);
 
@@ -1106,21 +1197,17 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   // Float  : ISD::NON_EXTLOAD or ISD::EXTLOAD and the type is float
   // Read at least 8 bits (predicates are stored as 8-bit values)
   // The last operand holds the original LoadSDNode::getExtensionType() value
-  const unsigned TotalWidth = MemVT.getSizeInBits();
   const unsigned ExtensionType =
       N->getConstantOperandVal(N->getNumOperands() - 1);
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
                                 : NVPTX::PTXLdStInstCode::Untyped;
 
-  const unsigned FromTypeWidth = TotalWidth / getLoadStoreVectorNumElts(N);
+  const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
-  assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
-         FromTypeWidth <= 128 && TotalWidth <= 256 && "Invalid width for load");
 
-  SDValue Offset, Base;
-  SelectADDR(N->getOperand(1), Base, Offset);
+  const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
                    getI32Imm(CodeAddrSpace, DL),
@@ -1135,17 +1222,15 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   default:
     llvm_unreachable("Unexpected opcode");
   case NVPTXISD::LoadV2:
-    Opcode =
-        pickOpcodeForVT(EltVT.SimpleTy, NVPTX::LDV_i8_v2, NVPTX::LDV_i16_v2,
-                        NVPTX::LDV_i32_v2, NVPTX::LDV_i64_v2);
+    Opcode = pickOpcodeForVT(EltVT.SimpleTy, NVPTX::LDV_i16_v2,
+                             NVPTX::LDV_i32_v2, NVPTX::LDV_i64_v2);
     break;
   case NVPTXISD::LoadV4:
-    Opcode =
-        pickOpcodeForVT(EltVT.SimpleTy, NVPTX::LDV_i8_v4, NVPTX::LDV_i16_v4,
-                        NVPTX::LDV_i32_v4, NVPTX::LDV_i64_v4);
+    Opcode = pickOpcodeForVT(EltVT.SimpleTy, NVPTX::LDV_i16_v4,
+                             NVPTX::LDV_i32_v4, NVPTX::LDV_i64_v4);
     break;
   case NVPTXISD::LoadV8:
-    Opcode = pickOpcodeForVT(EltVT.SimpleTy, {/* no v8i8 */}, {/* no v8i16 */},
+    Opcode = pickOpcodeForVT(EltVT.SimpleTy, {/* no v8i16 */},
                              NVPTX::LDV_i32_v8, {/* no v8i64 */});
     break;
   }
@@ -1162,36 +1247,24 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
-  const EVT LoadedEVT = LD->getMemoryVT();
-  if (!LoadedEVT.isSimple())
-    return false;
-  const MVT LoadedVT = LoadedEVT.getSimpleVT();
-
   SDLoc DL(LD);
 
-  const unsigned TotalWidth = LoadedVT.getSizeInBits();
   unsigned ExtensionType;
-  unsigned NumElts;
   if (const auto *Load = dyn_cast<LoadSDNode>(LD)) {
     ExtensionType = Load->getExtensionType();
-    NumElts = 1;
   } else {
     ExtensionType = LD->getConstantOperandVal(LD->getNumOperands() - 1);
-    NumElts = getLoadStoreVectorNumElts(LD);
   }
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
                                 : NVPTX::PTXLdStInstCode::Untyped;
 
-  const unsigned FromTypeWidth = TotalWidth / NumElts;
+  const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
 
   assert(!(LD->getSimpleValueType(0).isVector() &&
            ExtensionType != ISD::NON_EXTLOAD));
-  assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
-         FromTypeWidth <= 128 && TotalWidth <= 256 && "Invalid width for load");
 
-  SDValue Base, Offset;
-  SelectADDR(LD->getOperand(1), Base, Offset);
+  const auto [Base, Offset] = selectADDR(LD->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(FromType, DL), getI32Imm(FromTypeWidth, DL), Base,
                    Offset, LD->getChain()};
 
@@ -1201,22 +1274,21 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   default:
     llvm_unreachable("Unexpected opcode");
   case ISD::LOAD:
-    Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_GLOBAL_NC_i8,
-                             NVPTX::LD_GLOBAL_NC_i16, NVPTX::LD_GLOBAL_NC_i32,
-                             NVPTX::LD_GLOBAL_NC_i64);
+    Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_GLOBAL_NC_i16,
+                             NVPTX::LD_GLOBAL_NC_i32, NVPTX::LD_GLOBAL_NC_i64);
     break;
   case NVPTXISD::LoadV2:
-    Opcode = pickOpcodeForVT(
-        TargetVT, NVPTX::LD_GLOBAL_NC_v2i8, NVPTX::LD_GLOBAL_NC_v2i16,
-        NVPTX::LD_GLOBAL_NC_v2i32, NVPTX::LD_GLOBAL_NC_v2i64);
+    Opcode =
+        pickOpcodeForVT(TargetVT, NVPTX::LD_GLOBAL_NC_v2i16,
+                        NVPTX::LD_GLOBAL_NC_v2i32, NVPTX::LD_GLOBAL_NC_v2i64);
     break;
   case NVPTXISD::LoadV4:
-    Opcode = pickOpcodeForVT(
-        TargetVT, NVPTX::LD_GLOBAL_NC_v4i8, NVPTX::LD_GLOBAL_NC_v4i16,
-        NVPTX::LD_GLOBAL_NC_v4i32, NVPTX::LD_GLOBAL_NC_v4i64);
+    Opcode =
+        pickOpcodeForVT(TargetVT, NVPTX::LD_GLOBAL_NC_v4i16,
+                        NVPTX::LD_GLOBAL_NC_v4i32, NVPTX::LD_GLOBAL_NC_v4i64);
     break;
   case NVPTXISD::LoadV8:
-    Opcode = pickOpcodeForVT(TargetVT, {/* no v8i8 */}, {/* no v8i16 */},
+    Opcode = pickOpcodeForVT(TargetVT, {/* no v8i16 */},
                              NVPTX::LD_GLOBAL_NC_v8i32, {/* no v8i64 */});
     break;
   }
@@ -1229,60 +1301,51 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   return true;
 }
 
+unsigned NVPTXDAGToDAGISel::getFromTypeWidthForLoad(const MemSDNode *Mem) {
+  auto TotalWidth = Mem->getMemoryVT().getSizeInBits();
+  auto NumElts = Mem->getNumValues() - 1;
+  auto ElementBitWidth = TotalWidth / NumElts;
+  assert(isPowerOf2_32(ElementBitWidth) && ElementBitWidth >= 8 &&
+         ElementBitWidth <= 128 && TotalWidth <= 256 &&
+         "Invalid width for load");
+  return ElementBitWidth;
+}
+
 bool NVPTXDAGToDAGISel::tryLDU(SDNode *N) {
   auto *LD = cast<MemSDNode>(N);
 
-  unsigned NumElts;
-  switch (N->getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case ISD::INTRINSIC_W_CHAIN:
-    NumElts = 1;
-    break;
-  case NVPTXISD::LDUV2:
-    NumElts = 2;
-    break;
-  case NVPTXISD::LDUV4:
-    NumElts = 4;
-    break;
-  }
-
-  const MVT::SimpleValueType SelectVT =
-      MVT::getIntegerVT(LD->getMemoryVT().getSizeInBits() / NumElts).SimpleTy;
+  SDLoc DL(N);
+  const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
+  const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
 
   // If this is an LDU intrinsic, the address is the third operand. If its an
   // LDU SD node (from custom vector handling), then its the second operand
   SDValue Addr =
       LD->getOperand(LD->getOpcode() == ISD::INTRINSIC_W_CHAIN ? 2 : 1);
 
-  SDValue Base, Offset;
-  SelectADDR(Addr, Base, Offset);
-  SDValue Ops[] = {Base, Offset, LD->getChain()};
+  const auto [Base, Offset] = selectADDR(Addr, CurDAG);
+  SDValue Ops[] = {getI32Imm(FromTypeWidth, DL), Base, Offset, LD->getChain()};
 
   std::optional<unsigned> Opcode;
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
   case ISD::INTRINSIC_W_CHAIN:
-    Opcode =
-        pickOpcodeForVT(SelectVT, NVPTX::LDU_GLOBAL_i8, NVPTX::LDU_GLOBAL_i16,
-                        NVPTX::LDU_GLOBAL_i32, NVPTX::LDU_GLOBAL_i64);
+    Opcode = pickOpcodeForVT(TargetVT, NVPTX::LDU_GLOBAL_i16,
+                             NVPTX::LDU_GLOBAL_i32, NVPTX::LDU_GLOBAL_i64);
     break;
   case NVPTXISD::LDUV2:
-    Opcode = pickOpcodeForVT(SelectVT, NVPTX::LDU_GLOBAL_v2i8,
-                             NVPTX::LDU_GLOBAL_v2i16, NVPTX::LDU_GLOBAL_v2i32,
-                             NVPTX::LDU_GLOBAL_v2i64);
+    Opcode = pickOpcodeForVT(TargetVT, NVPTX::LDU_GLOBAL_v2i16,
+                             NVPTX::LDU_GLOBAL_v2i32, NVPTX::LDU_GLOBAL_v2i64);
     break;
   case NVPTXISD::LDUV4:
-    Opcode = pickOpcodeForVT(SelectVT, NVPTX::LDU_GLOBAL_v4i8,
-                             NVPTX::LDU_GLOBAL_v4i16, NVPTX::LDU_GLOBAL_v4i32,
-                             {/* no v4i64 */});
+    Opcode = pickOpcodeForVT(TargetVT, NVPTX::LDU_GLOBAL_v4i16,
+                             NVPTX::LDU_GLOBAL_v4i32, {/* no v4i64 */});
     break;
   }
   if (!Opcode)
     return false;
 
-  SDLoc DL(N);
   SDNode *NVPTXLDU = CurDAG->getMachineNode(*Opcode, DL, LD->getVTList(), Ops);
 
   ReplaceNode(LD, NVPTXLDU);
@@ -1300,19 +1363,15 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   if (PlainStore && PlainStore->isIndexed())
     return false;
 
-  const EVT StoreVT = ST->getMemoryVT();
-  if (!StoreVT.isSimple())
-    return false;
-
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(ST);
+  const auto CodeAddrSpace = getAddrSpace(ST);
 
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
 
   // Vector Setting
-  const unsigned ToTypeWidth = StoreVT.getSimpleVT().getSizeInBits();
+  const unsigned ToTypeWidth = ST->getMemoryVT().getSizeInBits();
 
   // Create the machine instruction DAG
   SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
@@ -1320,9 +1379,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
          "Invalid width for store");
 
-  SDValue Offset, Base;
-  SelectADDR(ST->getBasePtr(), Base, Offset);
-
+  const auto [Base, Offset] = selectADDR(ST->getBasePtr(), CurDAG);
   SDValue Ops[] = {selectPossiblyImm(Value),
                    getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
@@ -1333,8 +1390,8 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                    Chain};
 
   const std::optional<unsigned> Opcode =
-      pickOpcodeForVT(Value.getSimpleValueType().SimpleTy, NVPTX::ST_i8,
-                      NVPTX::ST_i16, NVPTX::ST_i32, NVPTX::ST_i64);
+      pickOpcodeForVT(Value.getSimpleValueType().SimpleTy, NVPTX::ST_i16,
+                      NVPTX::ST_i32, NVPTX::ST_i64);
   if (!Opcode)
     return false;
 
@@ -1351,11 +1408,10 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 
 bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   MemSDNode *ST = cast<MemSDNode>(N);
-  const EVT StoreVT = ST->getMemoryVT();
-  assert(StoreVT.isSimple() && "Store value is not simple");
+  const unsigned TotalWidth = ST->getMemoryVT().getSizeInBits();
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(ST);
+  const auto CodeAddrSpace = getAddrSpace(ST);
   if (CodeAddrSpace == NVPTX::AddressSpace::Const) {
     report_fatal_error("Cannot store to pointer that points to constant "
                        "memory space");
@@ -1365,11 +1421,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   SDValue Chain = ST->getChain();
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
 
-  // Type Setting: toType + toTypeWidth
-  // - for integer type, always use 'u'
-  const unsigned TotalWidth = StoreVT.getSimpleVT().getSizeInBits();
-
-  const unsigned NumElts = getLoadStoreVectorNumElts(ST);
+  const unsigned NumElts = getStoreVectorNumElts(ST);
 
   SmallVector<SDValue, 16> Ops;
   for (auto &V : ST->ops().slice(1, NumElts))
@@ -1380,9 +1432,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
          TotalWidth <= 256 && "Invalid width for store");
 
-  SDValue Offset, Base;
-  SelectADDR(Addr, Base, Offset);
-
+  const auto [Base, Offset] = selectADDR(Addr, CurDAG);
   Ops.append({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
               getI32Imm(CodeAddrSpace, DL), getI32Imm(ToTypeWidth, DL), Base,
               Offset, Chain});
@@ -1394,16 +1444,16 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   default:
     return false;
   case NVPTXISD::StoreV2:
-    Opcode = pickOpcodeForVT(EltVT, NVPTX::STV_i8_v2, NVPTX::STV_i16_v2,
-                             NVPTX::STV_i32_v2, NVPTX::STV_i64_v2);
+    Opcode = pickOpcodeForVT(EltVT, NVPTX::STV_i16_v2, NVPTX::STV_i32_v2,
+                             NVPTX::STV_i64_v2);
     break;
   case NVPTXISD::StoreV4:
-    Opcode = pickOpcodeForVT(EltVT, NVPTX::STV_i8_v4, NVPTX::STV_i16_v4,
-                             NVPTX::STV_i32_v4, NVPTX::STV_i64_v4);
+    Opcode = pickOpcodeForVT(EltVT, NVPTX::STV_i16_v4, NVPTX::STV_i32_v4,
+                             NVPTX::STV_i64_v4);
     break;
   case NVPTXISD::StoreV8:
-    Opcode = pickOpcodeForVT(EltVT, {/* no v8i8 */}, {/* no v8i16 */},
-                             NVPTX::STV_i32_v8, {/* no v8i64 */});
+    Opcode = pickOpcodeForVT(EltVT, {/* no v8i16 */}, NVPTX::STV_i32_v8,
+                             {/* no v8i64 */});
     break;
   }
 
@@ -1416,267 +1466,6 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(NVPTXST), {MemRef});
 
   ReplaceNode(ST, NVPTXST);
-  return true;
-}
-
-bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
-  SDValue Chain = Node->getOperand(0);
-  SDValue Offset = Node->getOperand(2);
-  SDValue Glue = Node->getOperand(3);
-  SDLoc DL(Node);
-  MemSDNode *Mem = cast<MemSDNode>(Node);
-
-  unsigned VecSize;
-  switch (Node->getOpcode()) {
-  default:
-    return false;
-  case NVPTXISD::LoadParam:
-    VecSize = 1;
-    break;
-  case NVPTXISD::LoadParamV2:
-    VecSize = 2;
-    break;
-  case NVPTXISD::LoadParamV4:
-    VecSize = 4;
-    break;
-  }
-
-  EVT EltVT = Node->getValueType(0);
-  EVT MemVT = Mem->getMemoryVT();
-
-  std::optional<unsigned> Opcode;
-
-  switch (VecSize) {
-  default:
-    return false;
-  case 1:
-    Opcode = pickOpcodeForVT(MemVT.getSimpleVT().SimpleTy,
-                             NVPTX::LoadParamMemI8, NVPTX::LoadParamMemI16,
-                             NVPTX::LoadParamMemI32, NVPTX::LoadParamMemI64);
-    break;
-  case 2:
-    Opcode =
-        pickOpcodeForVT(MemVT.getSimpleVT().SimpleTy, NVPTX::LoadParamMemV2I8,
-                        NVPTX::LoadParamMemV2I16, NVPTX::LoadParamMemV2I32,
-                        NVPTX::LoadParamMemV2I64);
-    break;
-  case 4:
-    Opcode = pickOpcodeForVT(MemVT.getSimpleVT().SimpleTy,
-                             NVPTX::LoadParamMemV4I8, NVPTX::LoadParamMemV4I16,
-                             NVPTX::LoadParamMemV4I32, {/* no v4i64 */});
-    break;
-  }
-  if (!Opcode)
-    return false;
-
-  SDVTList VTs;
-  if (VecSize == 1) {
-    VTs = CurDAG->getVTList(EltVT, MVT::Other, MVT::Glue);
-  } else if (VecSize == 2) {
-    VTs = CurDAG->getVTList(EltVT, EltVT, MVT::Other, MVT::Glue);
-  } else {
-    EVT EVTs[] = { EltVT, EltVT, EltVT, EltVT, MVT::Other, MVT::Glue };
-    VTs = CurDAG->getVTList(EVTs);
-  }
-
-  unsigned OffsetVal = Offset->getAsZExtVal();
-
-  SmallVector<SDValue, 2> Ops(
-      {CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain, Glue});
-
-  ReplaceNode(Node, CurDAG->getMachineNode(*Opcode, DL, VTs, Ops));
-  return true;
-}
-
-// Helpers for constructing opcode (ex: NVPTX::StoreParamV4F32_iiri)
-#define getOpcV2H(ty, opKind0, opKind1)                                        \
-  NVPTX::StoreParamV2##ty##_##opKind0##opKind1
-
-#define getOpcV2H1(ty, opKind0, isImm1)                                        \
-  (isImm1) ? getOpcV2H(ty, opKind0, i) : getOpcV2H(ty, opKind0, r)
-
-#define getOpcodeForVectorStParamV2(ty, isimm)                                 \
-  (isimm[0]) ? getOpcV2H1(ty, i, isimm[1]) : getOpcV2H1(ty, r, isimm[1])
-
-#define getOpcV4H(ty, opKind0, opKind1, opKind2, opKind3)                      \
-  NVPTX::StoreParamV4##ty##_##opKind0##opKind1##opKind2##opKind3
-
-#define getOpcV4H3(ty, opKind0, opKind1, opKind2, isImm3)                      \
-  (isImm3) ? getOpcV4H(ty, opKind0, opKind1, opKind2, i)                       \
-           : getOpcV4H(ty, opKind0, opKind1, opKind2, r)
-
-#define getOpcV4H2(ty, opKind0, opKind1, isImm2, isImm3)                       \
-  (isImm2) ? getOpcV4H3(ty, opKind0, opKind1, i, isImm3)                       \
-           : getOpcV4H3(ty, opKind0, opKind1, r, isImm3)
-
-#define getOpcV4H1(ty, opKind0, isImm1, isImm2, isImm3)                        \
-  (isImm1) ? getOpcV4H2(ty, opKind0, i, isImm2, isImm3)                        \
-           : getOpcV4H2(ty, opKind0, r, isImm2, isImm3)
-
-#define getOpcodeForVectorStParamV4(ty, isimm)                                 \
-  (isimm[0]) ? getOpcV4H1(ty, i, isimm[1], isimm[2], isimm[3])                 \
-             : getOpcV4H1(ty, r, isimm[1], isimm[2], isimm[3])
-
-#define getOpcodeForVectorStParam(n, ty, isimm)                                \
-  (n == 2) ? getOpcodeForVectorStParamV2(ty, isimm)                            \
-           : getOpcodeForVectorStParamV4(ty, isimm)
-
-static unsigned pickOpcodeForVectorStParam(SmallVector<SDValue, 8> &Ops,
-                                           unsigned NumElts,
-                                           MVT::SimpleValueType MemTy,
-                                           SelectionDAG *CurDAG, SDLoc DL) {
-  // Determine which inputs are registers and immediates make new operators
-  // with constant values
-  SmallVector<bool, 4> IsImm(NumElts, false);
-  for (unsigned i = 0; i < NumElts; i++) {
-    IsImm[i] = (isa<ConstantSDNode>(Ops[i]) || isa<ConstantFPSDNode>(Ops[i]));
-    if (IsImm[i]) {
-      SDValue Imm = Ops[i];
-      if (MemTy == MVT::f32 || MemTy == MVT::f64) {
-        const ConstantFPSDNode *ConstImm = cast<ConstantFPSDNode>(Imm);
-        const ConstantFP *CF = ConstImm->getConstantFPValue();
-        Imm = CurDAG->getTargetConstantFP(*CF, DL, Imm->getValueType(0));
-      } else {
-        const ConstantSDNode *ConstImm = cast<ConstantSDNode>(Imm);
-        const ConstantInt *CI = ConstImm->getConstantIntValue();
-        Imm = CurDAG->getTargetConstant(*CI, DL, Imm->getValueType(0));
-      }
-      Ops[i] = Imm;
-    }
-  }
-
-  // Get opcode for MemTy, size, and register/immediate operand ordering
-  switch (MemTy) {
-  case MVT::i8:
-    return getOpcodeForVectorStParam(NumElts, I8, IsImm);
-  case MVT::i16:
-    return getOpcodeForVectorStParam(NumElts, I16, IsImm);
-  case MVT::i32:
-    return getOpcodeForVectorStParam(NumElts, I32, IsImm);
-  case MVT::i64:
-    assert(NumElts == 2 && "MVT too large for NumElts > 2");
-    return getOpcodeForVectorStParamV2(I64, IsImm);
-  case MVT::f32:
-    return getOpcodeForVectorStParam(NumElts, F32, IsImm);
-  case MVT::f64:
-    assert(NumElts == 2 && "MVT too large for NumElts > 2");
-    return getOpcodeForVectorStParamV2(F64, IsImm);
-
-  // These cases don't support immediates, just use the all register version
-  // and generate moves.
-  case MVT::i1:
-    return (NumElts == 2) ? NVPTX::StoreParamV2I8_rr
-                          : NVPTX::StoreParamV4I8_rrrr;
-  case MVT::f16:
-  case MVT::bf16:
-    return (NumElts == 2) ? NVPTX::StoreParamV2I16_rr
-                          : NVPTX::StoreParamV4I16_rrrr;
-  case MVT::v2f16:
-  case MVT::v2bf16:
-  case MVT::v2i16:
-  case MVT::v4i8:
-    return (NumElts == 2) ? NVPTX::StoreParamV2I32_rr
-                          : NVPTX::StoreParamV4I32_rrrr;
-  default:
-    llvm_unreachable("Cannot select st.param for unknown MemTy");
-  }
-}
-
-bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
-  SDLoc DL(N);
-  SDValue Chain = N->getOperand(0);
-  SDValue Param = N->getOperand(1);
-  unsigned ParamVal = Param->getAsZExtVal();
-  SDValue Offset = N->getOperand(2);
-  unsigned OffsetVal = Offset->getAsZExtVal();
-  MemSDNode *Mem = cast<MemSDNode>(N);
-  SDValue Glue = N->getOperand(N->getNumOperands() - 1);
-
-  // How many elements do we have?
-  unsigned NumElts;
-  switch (N->getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case NVPTXISD::StoreParam:
-    NumElts = 1;
-    break;
-  case NVPTXISD::StoreParamV2:
-    NumElts = 2;
-    break;
-  case NVPTXISD::StoreParamV4:
-    NumElts = 4;
-    break;
-  }
-
-  // Build vector of operands
-  SmallVector<SDValue, 8> Ops;
-  for (unsigned i = 0; i < NumElts; ++i)
-    Ops.push_back(N->getOperand(i + 3));
-  Ops.append({CurDAG->getTargetConstant(ParamVal, DL, MVT::i32),
-              CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain, Glue});
-
-  // Determine target opcode
-  // If we have an i1, use an 8-bit store. The lowering code in
-  // NVPTXISelLowering will have already emitted an upcast.
-  std::optional<unsigned> Opcode;
-  switch (NumElts) {
-  default:
-    llvm_unreachable("Unexpected NumElts");
-  case 1: {
-    MVT::SimpleValueType MemTy = Mem->getMemoryVT().getSimpleVT().SimpleTy;
-    SDValue Imm = Ops[0];
-    if (MemTy != MVT::f16 && MemTy != MVT::bf16 &&
-        (isa<ConstantSDNode>(Imm) || isa<ConstantFPSDNode>(Imm))) {
-      // Convert immediate to target constant
-      if (MemTy == MVT::f32 || MemTy == MVT::f64) {
-        const ConstantFPSDNode *ConstImm = cast<ConstantFPSDNode>(Imm);
-        const ConstantFP *CF = ConstImm->getConstantFPValue();
-        Imm = CurDAG->getTargetConstantFP(*CF, DL, Imm->getValueType(0));
-      } else {
-        const ConstantSDNode *ConstImm = cast<ConstantSDNode>(Imm);
-        const ConstantInt *CI = ConstImm->getConstantIntValue();
-        Imm = CurDAG->getTargetConstant(*CI, DL, Imm->getValueType(0));
-      }
-      Ops[0] = Imm;
-      // Use immediate version of store param
-      Opcode =
-          pickOpcodeForVT(MemTy, NVPTX::StoreParamI8_i, NVPTX::StoreParamI16_i,
-                          NVPTX::StoreParamI32_i, NVPTX::StoreParamI64_i);
-    } else
-      Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                               NVPTX::StoreParamI8_r, NVPTX::StoreParamI16_r,
-                               NVPTX::StoreParamI32_r, NVPTX::StoreParamI64_r);
-    if (Opcode == NVPTX::StoreParamI8_r) {
-      // Fine tune the opcode depending on the size of the operand.
-      // This helps to avoid creating redundant COPY instructions in
-      // InstrEmitter::AddRegisterOperand().
-      switch (Ops[0].getSimpleValueType().SimpleTy) {
-      default:
-        break;
-      case MVT::i32:
-        Opcode = NVPTX::StoreParamI8TruncI32_r;
-        break;
-      case MVT::i64:
-        Opcode = NVPTX::StoreParamI8TruncI64_r;
-        break;
-      }
-    }
-    break;
-  }
-  case 2:
-  case 4: {
-    MVT::SimpleValueType MemTy = Mem->getMemoryVT().getSimpleVT().SimpleTy;
-    Opcode = pickOpcodeForVectorStParam(Ops, NumElts, MemTy, CurDAG, DL);
-    break;
-  }
-  }
-
-  SDVTList RetVTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
-  SDNode *Ret = CurDAG->getMachineNode(*Opcode, DL, RetVTs, Ops);
-  MachineMemOperand *MemRef = cast<MemSDNode>(N)->getMemOperand();
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ret), {MemRef});
-
-  ReplaceNode(N, Ret);
   return true;
 }
 
@@ -1919,10 +1708,11 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
       auto API = APF.bitcastToAPInt();
       API = API.concat(API);
       auto Const = CurDAG->getTargetConstant(API, DL, MVT::i32);
-      return SDValue(CurDAG->getMachineNode(NVPTX::IMOV32i, DL, VT, Const), 0);
+      return SDValue(CurDAG->getMachineNode(NVPTX::MOV_B32_i, DL, VT, Const),
+                     0);
     }
     auto Const = CurDAG->getTargetConstantFP(APF, DL, VT);
-    return SDValue(CurDAG->getMachineNode(NVPTX::BFMOV16i, DL, VT, Const), 0);
+    return SDValue(CurDAG->getMachineNode(NVPTX::MOV_BF16_i, DL, VT, Const), 0);
   };
 
   switch (N->getOpcode()) {
@@ -1949,59 +1739,6 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
   return true;
 }
 
-static inline bool isAddLike(const SDValue V) {
-  return V.getOpcode() == ISD::ADD ||
-         (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
-}
-
-// selectBaseADDR - Match a dag node which will serve as the base address for an
-// ADDR operand pair.
-static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
-  if (const auto *GA = dyn_cast<GlobalAddressSDNode>(N))
-    return DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(N),
-                                       GA->getValueType(0), GA->getOffset(),
-                                       GA->getTargetFlags());
-  if (const auto *ES = dyn_cast<ExternalSymbolSDNode>(N))
-    return DAG->getTargetExternalSymbol(ES->getSymbol(), ES->getValueType(0),
-                                        ES->getTargetFlags());
-  if (const auto *FIN = dyn_cast<FrameIndexSDNode>(N))
-    return DAG->getTargetFrameIndex(FIN->getIndex(), FIN->getValueType(0));
-
-  return N;
-}
-
-static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
-  APInt AccumulatedOffset(64u, 0);
-  while (isAddLike(Addr)) {
-    const auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
-    if (!CN)
-      break;
-
-    const APInt CI = CN->getAPIntValue().sext(64);
-    if (!(CI + AccumulatedOffset).isSignedIntN(32))
-      break;
-
-    AccumulatedOffset += CI;
-    Addr = Addr->getOperand(0);
-  }
-  return DAG->getSignedTargetConstant(AccumulatedOffset.getSExtValue(), DL,
-                                      MVT::i32);
-}
-
-// Select a pair of operands which represent a valid PTX address, this could be
-// one of the following things:
-//  - [var] - Offset is simply set to 0
-//  - [reg] - Offset is simply set to 0
-//  - [reg+immOff]
-//  - [var+immOff]
-// Note that immOff must fit into a 32-bit signed integer.
-bool NVPTXDAGToDAGISel::SelectADDR(SDValue Addr, SDValue &Base,
-                                   SDValue &Offset) {
-  Offset = accumulateOffset(Addr, SDLoc(Addr), CurDAG);
-  Base = selectBaseADDR(Addr, CurDAG);
-  return true;
-}
-
 SDValue NVPTXDAGToDAGISel::selectPossiblyImm(SDValue V) {
   if (V.getOpcode() == ISD::BITCAST)
     V = V.getOperand(0);
@@ -2015,37 +1752,20 @@ SDValue NVPTXDAGToDAGISel::selectPossiblyImm(SDValue V) {
   return V;
 }
 
-bool NVPTXDAGToDAGISel::ChkMemSDNodeAddressSpace(SDNode *N,
-                                                 unsigned int spN) const {
-  const Value *Src = nullptr;
-  if (MemSDNode *mN = dyn_cast<MemSDNode>(N)) {
-    if (spN == 0 && mN->getMemOperand()->getPseudoValue())
-      return true;
-    Src = mN->getMemOperand()->getValue();
-  }
-  if (!Src)
-    return false;
-  if (auto *PT = dyn_cast<PointerType>(Src->getType()))
-    return (PT->getAddressSpace() == spN);
-  return false;
-}
-
 /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
 /// inline asm expressions.
 bool NVPTXDAGToDAGISel::SelectInlineAsmMemoryOperand(
     const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
     std::vector<SDValue> &OutOps) {
-  SDValue Op0, Op1;
   switch (ConstraintID) {
   default:
     return true;
-  case InlineAsm::ConstraintCode::m: // memory
-    if (SelectADDR(Op, Op0, Op1)) {
-      OutOps.push_back(Op0);
-      OutOps.push_back(Op1);
-      return false;
-    }
-    break;
+  case InlineAsm::ConstraintCode::m: { // memory
+    const auto [Base, Offset] = selectADDR(Op, CurDAG);
+    OutOps.push_back(Base);
+    OutOps.push_back(Offset);
+    return false;
+  }
   }
   return true;
 }
@@ -2116,7 +1836,7 @@ bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
   return true;
 }
 
-NVPTXScopes::NVPTXScopes(LLVMContext &C) {
+NVPTXScopes::NVPTXScopes(LLVMContext &C) : Context(&C) {
   Scopes[C.getOrInsertSyncScopeID("singlethread")] = NVPTX::Scope::Thread;
   Scopes[C.getOrInsertSyncScopeID("")] = NVPTX::Scope::System;
   Scopes[C.getOrInsertSyncScopeID("block")] = NVPTX::Scope::Block;
@@ -2131,11 +1851,21 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
 
   auto S = Scopes.find(ID);
   if (S == Scopes.end()) {
-    // TODO:
-    // - Add API to LLVMContext to get the name of a single scope.
-    // - Use that API here to print an error containing the name
-    //   of this Unknown ID.
-    report_fatal_error(formatv("Could not find scope ID={}.", int(ID)));
+    auto scopeName = Context->getSyncScopeName(ID);
+    assert(scopeName.has_value() && "Scope name must exist.");
+
+    // Build list of supported syncscopes programmatically
+    SmallVector<StringRef> supportedScopes;
+    for (const auto &Entry : Scopes) {
+      if (auto name = Context->getSyncScopeName(Entry.first))
+        supportedScopes.push_back(name->empty() ? "<empty string>" : *name);
+    }
+
+    reportFatalUsageError(
+        formatv("NVPTX backend does not support syncscope \"{0}\" (ID={1}).\n"
+                "Supported syncscopes are: {2}.",
+                scopeName.value(), int(ID),
+                make_range(supportedScopes.begin(), supportedScopes.end())));
   }
   return S->second;
 }
@@ -2147,257 +1877,51 @@ bool NVPTXScopes::empty() const { return Scopes.size() == 0; }
        ? NVPTX::CP_ASYNC_BULK_TENSOR_##dir##_##dim##_SHARED32_##mode##suffix   \
        : NVPTX::CP_ASYNC_BULK_TENSOR_##dir##_##dim##_##mode##suffix)
 
-#define CP_ASYNC_BULK_TENSOR_OPCODE_S2G_IMPL(op, dim, mode, is_ch, is_s32)     \
-  (is_ch ? (CP_ASYNC_BULK_TENSOR_OPCODE(op, dim, mode, is_s32, _CH))           \
-         : (CP_ASYNC_BULK_TENSOR_OPCODE(op, dim, mode, is_s32, )))
+#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(dim, mode, is_ch, is_s32)      \
+  (is_ch ? (CP_ASYNC_BULK_TENSOR_OPCODE(RED, dim, mode, is_s32, _CH))          \
+         : (CP_ASYNC_BULK_TENSOR_OPCODE(RED, dim, mode, is_s32, )))
 
-#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(dim, mode, is_reduce, is_ch,       \
-                                            is_s32)                            \
-  (is_reduce                                                                   \
-       ? (CP_ASYNC_BULK_TENSOR_OPCODE_S2G_IMPL(RED, dim, mode, is_ch, is_s32)) \
-       : (CP_ASYNC_BULK_TENSOR_OPCODE_S2G_IMPL(S2G, dim, mode, is_ch,          \
-                                               is_s32)))
-
-#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(dim, mode, is_mc, is_ch, is_s32)   \
-  [&]() -> auto {                                                              \
-    if (is_mc && is_ch)                                                        \
-      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, _MC_CH);      \
-    if (is_ch)                                                                 \
-      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, _CH);         \
-    if (is_mc)                                                                 \
-      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, _MC);         \
-    return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, );              \
-  }()
-
-#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(dim, mode, is_ch)             \
-  (is_ch ? NVPTX::CP_ASYNC_BULK_TENSOR_PREFETCH_##dim##_##mode##_CH            \
-         : NVPTX::CP_ASYNC_BULK_TENSOR_PREFETCH_##dim##_##mode)
-
-static unsigned GetCpAsyncBulkTensorS2GOpcode(size_t Dim, bool IsShared32,
-                                              bool IsCacheHint, bool IsIm2Col,
-                                              bool IsReduce = false) {
+static unsigned GetCpAsyncBulkTensorS2GReductionOpcode(size_t Dim,
+                                                       bool IsShared32,
+                                                       bool IsCacheHint,
+                                                       bool IsIm2Col) {
   if (IsIm2Col) {
     switch (Dim) {
     case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(3D, IM2COL, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(3D, IM2COL, IsCacheHint,
+                                                     IsShared32);
     case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(4D, IM2COL, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(4D, IM2COL, IsCacheHint,
+                                                     IsShared32);
     case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(5D, IM2COL, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(5D, IM2COL, IsCacheHint,
+                                                     IsShared32);
     default:
       llvm_unreachable("Invalid Dimension in im2col mode for "
-                       "GetCpAsyncBulkTensorS2GOpcode.");
+                       "GetCpAsyncBulkTensorS2GReductionOpcode.");
     }
   } else {
     switch (Dim) {
     case 1:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(1D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(1D, TILE, IsCacheHint,
+                                                     IsShared32);
     case 2:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(2D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(2D, TILE, IsCacheHint,
+                                                     IsShared32);
     case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(3D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(3D, TILE, IsCacheHint,
+                                                     IsShared32);
     case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(4D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(4D, TILE, IsCacheHint,
+                                                     IsShared32);
     case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(5D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
-    default:
-      llvm_unreachable(
-          "Invalid Dimension in tile mode for GetCpAsyncBulkTensorS2GOpcode.");
-    }
-  }
-}
-
-static unsigned GetCpAsyncBulkTensorG2SOpcode(size_t Dim, bool IsShared32,
-                                              bool IsMultiCast,
-                                              bool IsCacheHint, bool IsIm2Col) {
-  if (IsIm2Col) {
-    switch (Dim) {
-    case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(3D, IM2COL, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(4D, IM2COL, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(5D, IM2COL, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    default:
-      llvm_unreachable("Invalid Dimension in im2col mode for "
-                       "GetCpAsyncBulkTensorG2SOpcode.");
-    }
-  } else {
-    switch (Dim) {
-    case 1:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(1D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 2:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(2D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(3D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(4D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(5D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    default:
-      llvm_unreachable(
-          "Invalid Dimension in tile mode for GetCpAsyncBulkTensorG2SOpcode.");
-    }
-  }
-}
-
-static unsigned GetCpAsyncBulkTensorPrefetchOpcode(size_t Dim, bool IsCacheHint,
-                                                   bool IsIm2Col) {
-  if (IsIm2Col) {
-    switch (Dim) {
-    case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(3D, IM2COL, IsCacheHint);
-    case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(4D, IM2COL, IsCacheHint);
-    case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(5D, IM2COL, IsCacheHint);
-    default:
-      llvm_unreachable("Invalid Dimension in im2col mode for "
-                       "GetCpAsyncBulkTensorPrefetchOpcode.");
-    }
-  } else {
-    switch (Dim) {
-    case 1:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(1D, TILE, IsCacheHint);
-    case 2:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(2D, TILE, IsCacheHint);
-    case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(3D, TILE, IsCacheHint);
-    case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(4D, TILE, IsCacheHint);
-    case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(5D, TILE, IsCacheHint);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(5D, TILE, IsCacheHint,
+                                                     IsShared32);
     default:
       llvm_unreachable("Invalid Dimension in tile mode for "
-                       "GetCpAsyncBulkTensorPrefetchOpcode.");
+                       "GetCpAsyncBulkTensorS2GReductionOpcode.");
     }
   }
-}
-
-static size_t GetDimsFromIntrinsic(unsigned IID) {
-  switch (IID) {
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d:
-    return 3;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d:
-    return 4;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d:
-    return 5;
-  default:
-    llvm_unreachable("Invalid im2col intrinsic in GetDimsFromIntrinsic.");
-  }
-}
-
-void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2SCommon(SDNode *N,
-                                                         bool IsIm2Col) {
-  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
-  // {dst, mbar, src, dims{d0...dN}, im2col_offsets{dims-2}
-  // multicast, cache_hint,
-  // multicast_flag, cache_hint_flag, cta_group_flag}
-  // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {8 + dims + im2col_offsets}
-  size_t NumOps = N->getNumOperands();
-  size_t NumDims = IsIm2Col ? GetDimsFromIntrinsic(N->getConstantOperandVal(1))
-                            : (NumOps - 10);
-  // Offsets is always 'NumDims - 2' and only for im2col mode
-  size_t NumOffsets = IsIm2Col ? (NumDims - 2) : 0;
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 2) == 1;
-  bool IsMultiCast = N->getConstantOperandVal(NumOps - 3) == 1;
-  size_t NumBaseArgs = NumDims + NumOffsets + 3; // for {dst, mbar, src}
-  size_t MultiCastIdx = NumBaseArgs + 2;         // for Chain and IID
-
-  unsigned CTAGroupVal = N->getConstantOperandVal(NumOps - 1);
-  if ((CTAGroupVal > 0) && !Subtarget->hasCpAsyncBulkTensorCTAGroupSupport())
-    report_fatal_error(
-        formatv("CpAsyncBulkTensorG2S cta_group::1/2 is not supported on sm_{}",
-                Subtarget->getSmVersion()));
-
-  SDLoc DL(N);
-  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumBaseArgs));
-
-  // Push MultiCast operand, if available
-  if (IsMultiCast)
-    Ops.push_back(N->getOperand(MultiCastIdx));
-
-  // Push CacheHint operand, if available
-  if (IsCacheHint)
-    Ops.push_back(N->getOperand(MultiCastIdx + 1));
-
-  // Flag for CTA Group
-  Ops.push_back(getI32Imm(CTAGroupVal, DL));
-
-  // Finally, the chain operand
-  Ops.push_back(N->getOperand(0));
-
-  bool IsShared32 =
-      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
-  unsigned Opcode = GetCpAsyncBulkTensorG2SOpcode(
-      NumDims, IsShared32, IsMultiCast, IsCacheHint, IsIm2Col);
-  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
-}
-
-void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorS2GCommon(SDNode *N,
-                                                         bool IsIm2Col) {
-  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
-  // src, dst, dims{d0...dN}, cache_hint, cache_hint_flag
-  // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {4 + dims}
-  size_t NumOps = N->getNumOperands();
-  size_t NumDims = NumOps - 6;
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
-  size_t NumArgs = NumDims + (IsCacheHint ? 3 : 2); // src, dst, cache_hint
-
-  SDLoc DL(N);
-  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumArgs));
-  Ops.push_back(N->getOperand(0)); // Chain operand
-
-  bool IsShared32 =
-      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
-  unsigned Opcode =
-      GetCpAsyncBulkTensorS2GOpcode(NumDims, IsShared32, IsCacheHint, IsIm2Col);
-  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
-}
-
-void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N,
-                                                              bool IsIm2Col) {
-  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
-  // {src, dims{d0...dN}, im2col_offsets{dims-2}
-  // cache_hint, cache_hint_flag}
-  // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {3 + dims + im2col_offsets}
-  size_t NumOps = N->getNumOperands();
-  size_t NumDims = IsIm2Col ? GetDimsFromIntrinsic(N->getConstantOperandVal(1))
-                            : (NumOps - 5);
-  // Offsets is always 'NumDims - 2' and only for im2col mode
-  size_t NumOffsets = IsIm2Col ? (NumDims - 2) : 0;
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
-  size_t NumArgs = NumDims + NumOffsets + (IsCacheHint ? 2 : 1);
-
-  SDLoc DL(N);
-  SmallVector<SDValue, 12> Ops(N->ops().slice(2, NumArgs));
-  Ops.push_back(N->getOperand(0)); // Chain operand
-
-  unsigned Opcode =
-      GetCpAsyncBulkTensorPrefetchOpcode(NumDims, IsCacheHint, IsIm2Col);
-  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
 void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorReduceCommon(SDNode *N,
@@ -2419,8 +1943,8 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorReduceCommon(SDNode *N,
 
   bool IsShared32 =
       CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
-  unsigned Opcode = GetCpAsyncBulkTensorS2GOpcode(
-      NumDims, IsShared32, IsCacheHint, IsIm2Col, /*IsReduce=*/true);
+  unsigned Opcode = GetCpAsyncBulkTensorS2GReductionOpcode(
+      NumDims, IsShared32, IsCacheHint, IsIm2Col);
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
@@ -2509,6 +2033,10 @@ static unsigned getTcgen05StOpcode(unsigned IID, bool enableUnpack) {
 }
 
 void NVPTXDAGToDAGISel::SelectTcgen05St(SDNode *N, bool hasOffset) {
+  if (!Subtarget->hasTcgen05InstSupport())
+    report_fatal_error(
+        "tcgen05.st is not supported on this architecture variant");
+
   SDLoc DL(N);
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 
@@ -2540,42 +2068,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   switch (IID) {
   default:
     return false;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d:
-    SelectCpAsyncBulkTensorS2GCommon(N);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d:
-    SelectCpAsyncBulkTensorS2GCommon(N, /*IsIm2Col=*/true);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d:
-    SelectCpAsyncBulkTensorG2SCommon(N);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
-    SelectCpAsyncBulkTensorG2SCommon(N, /*IsIm2Col=*/true);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d:
-    SelectCpAsyncBulkTensorPrefetchCommon(N);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d:
-    SelectCpAsyncBulkTensorPrefetchCommon(N, /*IsIm2Col=*/true);
-    return true;
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_2d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_3d:
@@ -2726,4 +2218,31 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     return true;
   }
   }
+}
+
+void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
+  MemSDNode *AN = cast<MemSDNode>(N);
+  SDLoc dl(N);
+
+  const SDValue Chain = N->getOperand(0);
+  const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
+  SmallVector<SDValue, 5> Ops{Base, Offset};
+  Ops.append(N->op_begin() + 2, N->op_end());
+  Ops.append({
+      getI32Imm(getMemOrder(AN), dl),
+      getI32Imm(getAtomicScope(AN), dl),
+      getI32Imm(getAddrSpace(AN), dl),
+      Chain,
+  });
+
+  assert(N->getOpcode() == NVPTXISD::ATOMIC_CMP_SWAP_B128 ||
+         N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128);
+  unsigned Opcode = N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128
+                        ? NVPTX::ATOM_EXCH_B128
+                        : NVPTX::ATOM_CAS_B128;
+
+  auto *ATOM = CurDAG->getMachineNode(Opcode, dl, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(ATOM, AN->getMemOperand());
+
+  ReplaceNode(N, ATOM);
 }

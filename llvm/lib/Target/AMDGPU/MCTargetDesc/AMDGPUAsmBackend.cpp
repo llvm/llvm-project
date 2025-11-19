@@ -33,8 +33,7 @@ public:
   AMDGPUAsmBackend(const Target &T) : MCAsmBackend(llvm::endianness::little) {}
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
 
@@ -108,7 +107,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext *Ctx) {
   int64_t SignedValue = static_cast<int64_t>(Value);
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case AMDGPU::fixup_si_sopp_br: {
     int64_t BrImm = (SignedValue - 4) / 4;
 
@@ -129,9 +128,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 }
 
 void AMDGPUAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                  const MCValue &Target,
-                                  MutableArrayRef<char> Data, uint64_t Value,
-                                  bool IsResolved) {
+                                  const MCValue &Target, uint8_t *Data,
+                                  uint64_t Value, bool IsResolved) {
   if (Target.getSpecifier())
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
@@ -148,13 +146,13 @@ void AMDGPUAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   Value <<= Info.TargetOffset;
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  uint32_t Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the bits from
   // the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i)
-    Data[Offset + i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
+    Data[i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
 }
 
 std::optional<MCFixupKind>

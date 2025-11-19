@@ -246,3 +246,19 @@ svfloat64_t test_svext_f64(svfloat64_t op1, svfloat64_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svext,_f64,,)(op1, op2, 31);
 }
+
+// CHECK-LABEL: @test_svext_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ext.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]], i32 127)
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z15test_svext_bf16u14__SVBfloat16_tS_(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ext.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]], i32 127)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+//
+svbfloat16_t test_svext_bf16(svbfloat16_t op1, svbfloat16_t op2) MODE_ATTR
+{
+  // expected-warning@+1 {{implicit declaration of function 'svext_bf16'}}
+  return SVE_ACLE_FUNC(svext,_bf16,,)(op1, op2, 127);
+}

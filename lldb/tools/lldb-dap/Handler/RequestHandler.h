@@ -243,14 +243,17 @@ public:
                                  uint32_t end_line) const;
 };
 
-class CompletionsRequestHandler : public LegacyRequestHandler {
+class CompletionsRequestHandler
+    : public RequestHandler<protocol::CompletionsArguments,
+                            llvm::Expected<protocol::CompletionsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "completions"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureCompletionsRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::CompletionsResponseBody>
+  Run(const protocol::CompletionsArguments &args) const override;
 };
 
 class ContinueRequestHandler
@@ -289,24 +292,31 @@ public:
   Run(const std::optional<protocol::DisconnectArguments> &args) const override;
 };
 
-class EvaluateRequestHandler : public LegacyRequestHandler {
+class EvaluateRequestHandler
+    : public RequestHandler<protocol::EvaluateArguments,
+                            llvm::Expected<protocol::EvaluateResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "evaluate"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::EvaluateResponseBody>
+  Run(const protocol::EvaluateArguments &) const override;
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureEvaluateForHovers};
   }
 };
 
-class ExceptionInfoRequestHandler : public LegacyRequestHandler {
+class ExceptionInfoRequestHandler final
+    : public RequestHandler<
+          protocol::ExceptionInfoArguments,
+          llvm::Expected<protocol::ExceptionInfoResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "exceptionInfo"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureExceptionInfoRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::ExceptionInfoResponseBody>
+  Run(const protocol::ExceptionInfoArguments &args) const override;
 };
 
 class InitializeRequestHandler
@@ -540,11 +550,14 @@ public:
   Run(const protocol::ThreadsArguments &) const override;
 };
 
-class VariablesRequestHandler : public LegacyRequestHandler {
+class VariablesRequestHandler
+    : public RequestHandler<protocol::VariablesArguments,
+                            llvm::Expected<protocol::VariablesResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "variables"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::VariablesResponseBody>
+  Run(const protocol::VariablesArguments &) const override;
 };
 
 class LocationsRequestHandler : public LegacyRequestHandler {
@@ -589,6 +602,20 @@ public:
     return {protocol::eAdapterFeatureCancelRequest};
   }
   llvm::Error Run(const protocol::CancelArguments &args) const override;
+};
+
+class ModuleSymbolsRequestHandler
+    : public RequestHandler<
+          protocol::ModuleSymbolsArguments,
+          llvm::Expected<protocol::ModuleSymbolsResponseBody>> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "__lldb_moduleSymbols"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureSupportsModuleSymbolsRequest};
+  }
+  llvm::Expected<protocol::ModuleSymbolsResponseBody>
+  Run(const protocol::ModuleSymbolsArguments &args) const override;
 };
 
 /// A request used in testing to get the details on all breakpoints that are

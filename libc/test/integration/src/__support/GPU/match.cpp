@@ -21,7 +21,9 @@ static void test_match() {
             gpu::match_any(mask, gpu::get_lane_id()));
   EXPECT_EQ(mask, gpu::match_any(mask, 1));
 
-  uint64_t expected = gpu::get_lane_id() < 16 ? 0xffff : 0xffff0000;
+  uint64_t full_mask =
+      gpu::get_lane_size() > 32 ? 0xffffffffffffffff : 0xffffffff;
+  uint64_t expected = gpu::get_lane_id() < 16 ? 0xffff : full_mask & ~0xffff;
   EXPECT_EQ(expected, gpu::match_any(mask, gpu::get_lane_id() < 16));
   EXPECT_EQ(mask, gpu::match_all(mask, 1));
   EXPECT_EQ(0ull, gpu::match_all(mask, gpu::get_lane_id()));

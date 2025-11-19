@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "EventHelper.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolEvents.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
+
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
@@ -19,11 +23,9 @@ namespace lldb_dap {
 //
 // Clients should only call this request if the corresponding capability
 //  supportsWriteMemoryRequest is true.
-llvm::Expected<protocol::WriteMemoryResponseBody>
-WriteMemoryRequestHandler::Run(
-    const protocol::WriteMemoryArguments &args) const {
-  const lldb::addr_t address = args.memoryReference + args.offset.value_or(0);
-  ;
+llvm::Expected<WriteMemoryResponseBody>
+WriteMemoryRequestHandler::Run(const WriteMemoryArguments &args) const {
+  const lldb::addr_t address = args.memoryReference + args.offset;
 
   lldb::SBProcess process = dap.target.GetProcess();
   if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
@@ -54,7 +56,7 @@ WriteMemoryRequestHandler::Run(
     // If 'allowPartial' is false or missing, a debug adapter should attempt to
     // verify the region is writable before writing, and fail the response if it
     // is not.
-    if (!args.allowPartial.value_or(false)) {
+    if (!args.allowPartial) {
       // Start checking from the initial write address.
       lldb::addr_t start_address = address;
       // Compute the end of the write range.
@@ -74,7 +76,7 @@ WriteMemoryRequestHandler::Run(
               "Memory 0x" + llvm::utohexstr(args.memoryReference) +
               " region is not writable");
         }
-        // If the current region covers the full requested range, stop futher
+        // If the current region covers the full requested range, stop further
         // iterations.
         if (end_address <= region_info.GetRegionEnd()) {
           break;
@@ -92,8 +94,13 @@ WriteMemoryRequestHandler::Run(
   if (bytes_written == 0) {
     return llvm::make_error<DAPError>(write_error.GetCString());
   }
-  protocol::WriteMemoryResponseBody response;
+  WriteMemoryResponseBody response;
   response.bytesWritten = bytes_written;
+
+  // Also send invalidated event to signal client that some things
+  // (e.g. variables) can be changed.
+  SendInvalidatedEvent(dap, {InvalidatedEventBody::eAreaAll});
+
   return response;
 }
 

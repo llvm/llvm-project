@@ -112,7 +112,7 @@ def fir_ReduceOperationEnum : I32BitEnumAttr<"ReduceOperationEnum",
       I32BitEnumAttrCaseBit<"MIN", 7, "min">,
       I32BitEnumAttrCaseBit<"IAND", 8, "iand">,
       I32BitEnumAttrCaseBit<"IOR", 9, "ior">,
-      I32BitEnumAttrCaseBit<"EIOR", 10, "eior">
+      I32BitEnumAttrCaseBit<"IEOR", 10, "ieor">
     ]> {
   let separator = ", ";
   let cppNamespace = "::fir";
@@ -219,4 +219,24 @@ def LocalitySpecifierTypeAttr : EnumAttr<FIROpsDialect, LocalitySpecifierType,
   let assemblyFormat = "`{` `type` `=` $value `}`";
 }
 
+/// Fortran inline attribute
+def FIRinlineNone : I32BitEnumAttrCaseNone<"none">;
+def FIRinlineNo : I32BitEnumAttrCaseBit<"no_inline", 0>;
+def FIRinlineAlways : I32BitEnumAttrCaseBit<"always_inline", 1>;
+def FIRinlineHint : I32BitEnumAttrCaseBit<"inline_hint", 2>;
+
+def fir_FortranInlineEnum
+    : I32BitEnumAttr<"FortranInlineEnum", "Fortran inline attributes",
+                     [FIRinlineNone, FIRinlineNo, FIRinlineAlways,
+                      FIRinlineHint]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def fir_FortranInlineAttr
+    : EnumAttr<FIROpsDialect, fir_FortranInlineEnum, "inline_attrs"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 #endif // FIR_DIALECT_FIR_ATTRS

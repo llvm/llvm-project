@@ -33,6 +33,7 @@ int main(int, char**)
 {
     assert(error_range_thrown("([\\w-a])"));
     assert(error_range_thrown("([a-\\w])"));
+    assert(error_range_thrown("([w-a])"));
 
-  return 0;
+    return 0;
 }

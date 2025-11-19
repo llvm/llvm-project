@@ -52,6 +52,7 @@ class RemarkStreamer final {
 public:
   RemarkStreamer(std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
                  std::optional<StringRef> Filename = std::nullopt);
+  ~RemarkStreamer();
 
   /// Return the filename that the remark diagnostics are emitted to.
   std::optional<StringRef> getFilename() const {
@@ -61,6 +62,14 @@ public:
   raw_ostream &getStream() { return RemarkSerializer->OS; }
   /// Return the serializer used for this stream.
   remarks::RemarkSerializer &getSerializer() { return *RemarkSerializer; }
+
+  /// Release the underlying RemarkSerializer. Destructing the RemarkStreamer
+  /// will assert that the RemarkStreamer has been released, to ensure that the
+  /// remarks were properly finalized.
+  std::unique_ptr<remarks::RemarkSerializer> releaseSerializer() {
+    return std::move(RemarkSerializer);
+  }
+
   /// Set a pass filter based on a regex \p Filter.
   /// Returns an error if the regex is invalid.
   Error setFilter(StringRef Filter);

@@ -35,38 +35,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   initializeVEDAGToDAGISelLegacyPass(PR);
 }
 
-static std::string computeDataLayout(const Triple &T) {
-  // Aurora VE is little endian
-  std::string Ret = "e";
-
-  // Use ELF mangling
-  Ret += "-m:e";
-
-  // Alignments for 64 bit integers.
-  Ret += "-i64:64";
-
-  // VE supports 32 bit and 64 bits integer on registers
-  Ret += "-n32:64";
-
-  // Stack alignment is 128 bits
-  Ret += "-S128";
-
-  // Vector alignments are 64 bits
-  // Need to define all of them.  Otherwise, each alignment becomes
-  // the size of each data by default.
-  Ret += "-v64:64:64"; // for v2f32
-  Ret += "-v128:64:64";
-  Ret += "-v256:64:64";
-  Ret += "-v512:64:64";
-  Ret += "-v1024:64:64";
-  Ret += "-v2048:64:64";
-  Ret += "-v4096:64:64";
-  Ret += "-v8192:64:64";
-  Ret += "-v16384:64:64"; // for v256f64
-
-  return Ret;
-}
-
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
@@ -91,7 +59,7 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
                                  std::optional<Reloc::Model> RM,
                                  std::optional<CodeModel::Model> CM,
                                  CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF()),

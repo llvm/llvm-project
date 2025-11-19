@@ -90,11 +90,6 @@ public:
   /// spilling is needed.
   MCRegister reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
 
-  /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
-  /// of waves per execution unit required for the function \p MF.
-  std::pair<unsigned, unsigned>
-  getMaxNumVectorRegs(const MachineFunction &MF) const;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
@@ -159,8 +154,8 @@ public:
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
-  const TargetRegisterClass *getPointerRegClass(
-    const MachineFunction &MF, unsigned Kind = 0) const override;
+  const TargetRegisterClass *
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using
@@ -205,12 +200,13 @@ public:
   StringRef getRegAsmName(MCRegister Reg) const override;
 
   // Pseudo regs are not allowed
-  unsigned getHWRegIndex(MCRegister Reg) const {
-    return getEncodingValue(Reg) & 0xff;
-  }
+  unsigned getHWRegIndex(MCRegister Reg) const;
 
   LLVM_READONLY
   const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY const TargetRegisterClass *
+  getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
   const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;
@@ -218,6 +214,10 @@ public:
   LLVM_READONLY
   const TargetRegisterClass *
   getVectorSuperClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
+  const TargetRegisterClass *
+  getDefaultVectorSuperClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
   static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
@@ -288,6 +288,10 @@ public:
   /// \returns An AGPR reg class with the same width as \p SRC
   const TargetRegisterClass *
   getEquivalentAGPRClass(const TargetRegisterClass *SRC) const;
+
+  /// \returns An AGPR+VGPR super reg class with the same width as \p SRC
+  const TargetRegisterClass *
+  getEquivalentAVClass(const TargetRegisterClass *SRC) const;
 
   /// \returns A SGPR reg class with the same width as \p SRC
   const TargetRegisterClass *
@@ -361,7 +365,7 @@ public:
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override;
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
@@ -394,8 +398,6 @@ public:
   MCRegister getVCC() const;
 
   MCRegister getExec() const;
-
-  const TargetRegisterClass *getRegClass(unsigned RCID) const;
 
   // Find reaching register definition
   MachineInstr *findReachingDef(Register Reg, unsigned SubReg,
@@ -436,11 +438,6 @@ public:
   // Returns true if a given register class is properly aligned for
   // the subtarget.
   bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;
-
-  // Given \p RC returns corresponding aligned register class if required
-  // by the subtarget.
-  const TargetRegisterClass *
-  getProperlyAlignedRC(const TargetRegisterClass *RC) const;
 
   /// Return all SGPR128 which satisfy the waves per execution unit requirement
   /// of the subtarget.
@@ -486,9 +483,11 @@ public:
                                      unsigned SubReg) const;
 
   // \returns a number of registers of a given \p RC used in a function.
-  // Does not go inside function calls.
+  // Does not go inside function calls. If \p IncludeCalls is true, it will
+  // include registers that may be clobbered by calls.
   unsigned getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
-                              const TargetRegisterClass &RC) const;
+                              const TargetRegisterClass &RC,
+                              bool IncludeCalls = true) const;
 
   std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
     return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG

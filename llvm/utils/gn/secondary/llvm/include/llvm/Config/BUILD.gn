@@ -296,6 +296,7 @@ write_cmake_config("llvm-config") {
   input = "llvm-config.h.cmake"
   output = "$target_gen_dir/llvm-config.h"
   values = [
+    "LLVM_ENABLE_PROFCHECK=",
     "LLVM_BUILD_LLVM_DYLIB=",
     "LLVM_BUILD_SHARED_LIBS=",
     "LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS=",
@@ -363,6 +364,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
+  }
+
+  if (llvm_enable_ondisk_cas) {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=" ]
   }
 
   if (llvm_enable_threads) {

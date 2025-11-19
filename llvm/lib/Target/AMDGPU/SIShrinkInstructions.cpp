@@ -463,6 +463,10 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
     case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
       NewOpcode = AMDGPU::V_FMAAK_F16_fake16;
       break;
+    case AMDGPU::V_FMA_F64_e64:
+      if (ST->hasFmaakFmamkF64Insts())
+        NewOpcode = AMDGPU::V_FMAAK_F64;
+      break;
     }
   }
 
@@ -496,6 +500,10 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
       NewOpcode = AMDGPU::V_FMAMK_F16_fake16;
+      break;
+    case AMDGPU::V_FMA_F64_e64:
+      if (ST->hasFmaakFmamkF64Insts())
+        NewOpcode = AMDGPU::V_FMAMK_F64;
       break;
     }
   }
@@ -542,7 +550,8 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
   uint32_t NewImm = 0;
 
   if (Opc == AMDGPU::S_AND_B32) {
-    if (isPowerOf2_32(~Imm)) {
+    if (isPowerOf2_32(~Imm) &&
+        MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr)->isDead()) {
       NewImm = llvm::countr_one(Imm);
       Opc = AMDGPU::S_BITSET0_B32;
     } else if (AMDGPU::isInlinableLiteral32(~Imm, ST->hasInv2PiInlineImm())) {
@@ -550,7 +559,8 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
       Opc = AMDGPU::S_ANDN2_B32;
     }
   } else if (Opc == AMDGPU::S_OR_B32) {
-    if (isPowerOf2_32(Imm)) {
+    if (isPowerOf2_32(Imm) &&
+        MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr)->isDead()) {
       NewImm = llvm::countr_zero(Imm);
       Opc = AMDGPU::S_BITSET1_B32;
     } else if (AMDGPU::isInlinableLiteral32(~Imm, ST->hasInv2PiInlineImm())) {
@@ -576,7 +586,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
     if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
       const bool IsUndef = SrcReg->isUndef();
       const bool IsKill = SrcReg->isKill();
-      MI.setDesc(TII->get(Opc));
+      TII->mutateAndCleanupImplicit(MI, TII->get(Opc));
       if (Opc == AMDGPU::S_BITSET0_B32 ||
           Opc == AMDGPU::S_BITSET1_B32) {
         Src0->ChangeToImmediate(NewImm);
@@ -704,10 +714,13 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   bool KilledT = false;
   for (auto Iter = std::next(MovT.getIterator()),
             E = MovT.getParent()->instr_end();
-       Iter != E && Count < SearchLimit && !KilledT; ++Iter, ++Count) {
+       Iter != E && Count < SearchLimit && !KilledT; ++Iter) {
 
     MachineInstr *MovY = &*Iter;
     KilledT = MovY->killsRegister(T, TRI);
+    if (MovY->isDebugInstr())
+      continue;
+    ++Count;
 
     if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
          MovY->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
@@ -725,6 +738,8 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     MachineInstr *MovX = nullptr;
     for (auto IY = MovY->getIterator(), I = std::next(MovT.getIterator());
          I != IY; ++I) {
+      if (I->isDebugInstr())
+        continue;
       if (instReadsReg(&*I, X, Xsub) || instModifiesReg(&*I, Y, Ysub) ||
           instModifiesReg(&*I, T, Tsub) ||
           (MovX && instModifiesReg(&*I, X, Xsub))) {
@@ -961,7 +976,9 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_t16_e64 ||
-          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64) {
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64 ||
+          (MI.getOpcode() == AMDGPU::V_FMA_F64_e64 &&
+           ST->hasFmaakFmamkF64Insts())) {
         shrinkMadFma(MI);
         continue;
       }
@@ -1058,7 +1075,11 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       // fold an immediate into the shrunk instruction as a literal operand. In
       // GFX10 VOP3 instructions can take a literal operand anyway, so there is
       // no advantage to doing this.
-      if (ST->hasVOP3Literal() && !IsPostRA)
+      // However, if 64-bit literals are allowed we still need to shrink it
+      // for such literal to be able to fold.
+      if (ST->hasVOP3Literal() &&
+          (!ST->has64BitLiterals() || AMDGPU::isTrue16Inst(MI.getOpcode())) &&
+          !IsPostRA)
         continue;
 
       if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&

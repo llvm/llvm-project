@@ -13,7 +13,8 @@ define void @foo() {
 ; CHECK-NEXT:    [[ARRAYIDX372:%.*]] = getelementptr inbounds [4 x [4 x i32]], ptr @dct_luma, i64 0, i64 3, i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([4 x [4 x i32]], ptr @bar, i64 0, i64 3, i64 2), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 poison, i32 undef, i32 poison, i32 poison>, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP2]], <2 x i32> [[TMP1]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 undef, i32 poison, i32 undef, i32 undef>, i32 [[ADD277]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr <4 x i32> [[TMP5]], splat (i32 6)

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Debug/BreakpointManagers/FileLineColLocBreakpointManager.h"
-#include "mlir/IR/Diagnostics.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::tracing;

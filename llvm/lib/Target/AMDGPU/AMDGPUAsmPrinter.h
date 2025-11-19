@@ -21,7 +21,7 @@
 namespace llvm {
 
 class AMDGPUMachineFunction;
-struct AMDGPUResourceUsageAnalysis;
+class AMDGPUResourceUsageAnalysis;
 class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;
@@ -53,6 +53,9 @@ private:
   std::unique_ptr<AMDGPU::HSAMD::MetadataStreamer> HSAMetadataStream;
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
+
+  // When appropriate, add a _dvgpr$ symbol.
+  void emitDVgprSymbol(MachineFunction &MF);
 
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(AMDGPU::AMDGPUMCKernelCodeT &Out,

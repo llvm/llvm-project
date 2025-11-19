@@ -261,10 +261,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     for (size_t I = Range.first; I < Range.second; ++I, JI += JIAdj) {
       MCSymbol *Entry = JT->Entries[I];
       const BinaryBasicBlock *ToBB = BF.getBasicBlockForLabel(Entry);
-      assert(ToBB || Entry == BF.getFunctionEndLabel() ||
-             Entry == BF.getFunctionEndLabel(FragmentNum::cold()));
-      if (Entry == BF.getFunctionEndLabel() ||
-          Entry == BF.getFunctionEndLabel(FragmentNum::cold()))
+      if (!ToBB)
         continue;
       const Location To(Entry);
       const BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(*ToBB);

@@ -133,7 +133,7 @@ std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   if (!WorkingDir)
     return WorkingDir.getError();
 
-  llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  sys::path::make_absolute(WorkingDir.get(), Path);
   return {};
 }
 
@@ -300,7 +300,7 @@ private:
     if (!WD || !*WD)
       return Path;
     Path.toVector(Storage);
-    sys::fs::make_absolute(WD->get().Resolved, Storage);
+    sys::path::make_absolute(WD->get().Resolved, Storage);
     return Storage;
   }
 
@@ -397,7 +397,8 @@ void RealFileSystem::printImpl(raw_ostream &OS, PrintType Type,
 }
 
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
-  static IntrusiveRefCntPtr<FileSystem> FS(new RealFileSystem(true));
+  static IntrusiveRefCntPtr<FileSystem> FS =
+      makeIntrusiveRefCnt<RealFileSystem>(true);
   return FS;
 }
 
@@ -1907,7 +1908,12 @@ private:
           FullPath = FS->getOverlayFileDir();
           assert(!FullPath.empty() &&
                  "External contents prefix directory must exist");
-          llvm::sys::path::append(FullPath, Value);
+          SmallString<256> AbsFullPath = Value;
+          if (FS->makeAbsolute(FullPath, AbsFullPath)) {
+            error(N, "failed to make 'external-contents' absolute");
+            return nullptr;
+          }
+          FullPath = AbsFullPath;
         } else {
           FullPath = Value;
         }
@@ -1972,7 +1978,7 @@ private:
           EC = FS->makeAbsolute(FullPath, Name);
           Name = canonicalize(Name);
         } else {
-          EC = sys::fs::make_absolute(Name);
+          EC = FS->makeAbsolute(Name);
         }
         if (EC) {
           assert(NameValueNode && "Name presence should be checked earlier");
@@ -2203,7 +2209,7 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
     //  FS->OverlayFileDir => /<absolute_path_to>/dummy.cache/vfs
     //
     SmallString<256> OverlayAbsDir = sys::path::parent_path(YAMLFilePath);
-    std::error_code EC = llvm::sys::fs::make_absolute(OverlayAbsDir);
+    std::error_code EC = FS->makeAbsolute(OverlayAbsDir);
     assert(!EC && "Overlay dir final path must be absolute");
     (void)EC;
     FS->setOverlayFileDir(OverlayAbsDir);
@@ -2217,9 +2223,9 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
 
 std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
-    bool UseExternalNames, FileSystem &ExternalFS) {
+    bool UseExternalNames, llvm::IntrusiveRefCntPtr<FileSystem> ExternalFS) {
   std::unique_ptr<RedirectingFileSystem> FS(
-      new RedirectingFileSystem(&ExternalFS));
+      new RedirectingFileSystem(ExternalFS));
   FS->UseExternalNames = UseExternalNames;
 
   StringMap<RedirectingFileSystem::Entry *> Entries;
@@ -2228,7 +2234,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     SmallString<128> From = StringRef(Mapping.first);
     SmallString<128> To = StringRef(Mapping.second);
     {
-      auto EC = ExternalFS.makeAbsolute(From);
+      auto EC = ExternalFS->makeAbsolute(From);
       (void)EC;
       assert(!EC && "Could not make absolute path");
     }
@@ -2250,7 +2256,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     }
     assert(Parent && "File without a directory?");
     {
-      auto EC = ExternalFS.makeAbsolute(To);
+      auto EC = ExternalFS->makeAbsolute(To);
       (void)EC;
       assert(!EC && "Could not make absolute path");
     }
@@ -2706,19 +2712,9 @@ static void getVFSEntries(RedirectingFileSystem::Entry *SrcE,
   Entries.push_back(YAMLVFSEntry(VPath.c_str(), FE->getExternalContentsPath()));
 }
 
-void vfs::collectVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
-                             SourceMgr::DiagHandlerTy DiagHandler,
-                             StringRef YAMLFilePath,
-                             SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-                             void *DiagContext,
-                             IntrusiveRefCntPtr<FileSystem> ExternalFS) {
-  std::unique_ptr<RedirectingFileSystem> VFS = RedirectingFileSystem::create(
-      std::move(Buffer), DiagHandler, YAMLFilePath, DiagContext,
-      std::move(ExternalFS));
-  if (!VFS)
-    return;
-  ErrorOr<RedirectingFileSystem::LookupResult> RootResult =
-      VFS->lookupPath("/");
+void vfs::collectVFSEntries(RedirectingFileSystem &VFS,
+                            SmallVectorImpl<YAMLVFSEntry> &CollectedEntries) {
+  ErrorOr<RedirectingFileSystem::LookupResult> RootResult = VFS.lookupPath("/");
   if (!RootResult)
     return;
   SmallVector<StringRef, 8> Components;

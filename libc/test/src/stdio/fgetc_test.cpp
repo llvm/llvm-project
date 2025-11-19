@@ -56,9 +56,10 @@ public:
 };
 
 TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithFgetc) {
-  test_with_func(&LIBC_NAMESPACE::fgetc, "testdata/fgetc.test");
+  test_with_func(&LIBC_NAMESPACE::fgetc,
+                 APPEND_LIBC_TEST("testdata/fgetc.test"));
 }
 
 TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithGetc) {
-  test_with_func(&LIBC_NAMESPACE::getc, "testdata/getc.test");
+  test_with_func(&LIBC_NAMESPACE::getc, APPEND_LIBC_TEST("testdata/getc.test"));
 }

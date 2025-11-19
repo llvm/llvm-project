@@ -128,7 +128,7 @@ private:
   CUOffsetMap finalizeTypeSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
                                    GDBIndex &GDBIndexSection);
 
-  /// Process and write out CUs that are passsed in.
+  /// Process and write out CUs that are passed in.
   void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
                             CUOffsetMap &CUMap,
                             const std::list<DWARFUnit *> &CUs,

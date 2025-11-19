@@ -45,7 +45,7 @@ define i1 @fold_memchr_a_c_n_eq_a(i32 %c, i64 %n) {
 
 define i1 @call_memchr_api_c_n_eq_a(i64 %i, i32 %c, i64 %n) {
 ; CHECK-LABEL: @call_memchr_api_c_n_eq_a(
-; CHECK-NEXT:    [[P:%.*]] = getelementptr [5 x i8], ptr @a5, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr @a5, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[Q:%.*]] = call ptr @memchr(ptr [[P]], i32 [[C:%.*]], i64 [[N:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[Q]], [[P]]
 ; CHECK-NEXT:    ret i1 [[CMP]]

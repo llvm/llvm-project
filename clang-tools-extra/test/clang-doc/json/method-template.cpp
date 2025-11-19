@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/GlobalNamespace/MyClass.json
+// RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
 
 struct MyClass {
   template<class T> T methodTemplate(T param) {
@@ -9,6 +9,7 @@ struct MyClass {
 
 // CHECK:           "PublicFunctions": [
 // CHECK-NEXT:        {
+// CHECK-NEXT:          "InfoType": "function",
 // CHECK-NEXT:          "IsStatic": false,
 // CHECK-NEXT:          "Location": {
 // CHECK-NEXT:            "Filename": "{{.*}}method-template.cpp",
@@ -21,6 +22,7 @@ struct MyClass {
 // CHECK-NEXT:          ],
 // CHECK-NEXT:          "Params": [
 // CHECK-NEXT:            {
+// CHECK-NEXT:              "End": true,
 // CHECK-NEXT:              "Name": "param",
 // CHECK-NEXT:              "Type": "T"
 // CHECK-NEXT:            }

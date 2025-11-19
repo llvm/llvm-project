@@ -27,26 +27,23 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; SC_SVE-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; SC_SVE-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SC_SVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @a, i64 0, i64 [[INDEX]]
-; SC_SVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP2]], i32 0
-; SC_SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP3]], align 2
+; SC_SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
 ; SC_SVE-NEXT:    [[TMP4:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i32>
 ; SC_SVE-NEXT:    [[TMP5:%.*]] = ashr <4 x i32> [[TMP4]], [[VEC_IND]]
 ; SC_SVE-NEXT:    [[TMP6:%.*]] = add nsw i64 [[INDEX]], [[TMP0]]
 ; SC_SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [32 x i16], ptr @b, i64 0, i64 [[TMP6]]
-; SC_SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[TMP7]], i32 0
-; SC_SVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, ptr [[TMP8]], align 2
+; SC_SVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, ptr [[TMP7]], align 2
 ; SC_SVE-NEXT:    [[TMP9:%.*]] = sext <4 x i16> [[WIDE_LOAD1]] to <4 x i32>
 ; SC_SVE-NEXT:    [[TMP10:%.*]] = shl <4 x i32> [[TMP9]], [[VEC_IND]]
 ; SC_SVE-NEXT:    [[TMP11:%.*]] = mul nsw <4 x i32> [[TMP10]], [[TMP5]]
 ; SC_SVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i16], ptr @c, i64 0, i64 [[INDEX]]
-; SC_SVE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[TMP12]], i32 0
-; SC_SVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP13]], align 2
+; SC_SVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP12]], align 2
 ; SC_SVE-NEXT:    [[TMP14:%.*]] = sext <4 x i16> [[WIDE_LOAD2]] to <4 x i32>
 ; SC_SVE-NEXT:    [[TMP15:%.*]] = add nsw <4 x i32> [[TMP11]], [[TMP14]]
 ; SC_SVE-NEXT:    [[TMP16:%.*]] = shl <4 x i32> [[TMP15]], [[BROADCAST_SPLAT]]
 ; SC_SVE-NEXT:    [[TMP17]] = add <4 x i32> [[TMP16]], [[VEC_PHI]]
 ; SC_SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; SC_SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SC_SVE-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SC_SVE:       middle.block:
@@ -101,26 +98,23 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; NO_SC_SVE-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; NO_SC_SVE-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO_SC_SVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @a, i64 0, i64 [[INDEX]]
-; NO_SC_SVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP2]], i32 0
-; NO_SC_SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP3]], align 2
+; NO_SC_SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP2]], align 2
 ; NO_SC_SVE-NEXT:    [[TMP4:%.*]] = sext <8 x i16> [[WIDE_LOAD]] to <8 x i32>
 ; NO_SC_SVE-NEXT:    [[TMP5:%.*]] = ashr <8 x i32> [[TMP4]], [[VEC_IND]]
 ; NO_SC_SVE-NEXT:    [[TMP6:%.*]] = add nsw i64 [[INDEX]], [[TMP0]]
 ; NO_SC_SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [32 x i16], ptr @b, i64 0, i64 [[TMP6]]
-; NO_SC_SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[TMP7]], i32 0
-; NO_SC_SVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i16>, ptr [[TMP8]], align 2
+; NO_SC_SVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i16>, ptr [[TMP7]], align 2
 ; NO_SC_SVE-NEXT:    [[TMP9:%.*]] = sext <8 x i16> [[WIDE_LOAD1]] to <8 x i32>
 ; NO_SC_SVE-NEXT:    [[TMP10:%.*]] = shl <8 x i32> [[TMP9]], [[VEC_IND]]
 ; NO_SC_SVE-NEXT:    [[TMP11:%.*]] = mul nsw <8 x i32> [[TMP10]], [[TMP5]]
 ; NO_SC_SVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i16], ptr @c, i64 0, i64 [[INDEX]]
-; NO_SC_SVE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[TMP12]], i32 0
-; NO_SC_SVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP13]], align 2
+; NO_SC_SVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP12]], align 2
 ; NO_SC_SVE-NEXT:    [[TMP14:%.*]] = sext <8 x i16> [[WIDE_LOAD2]] to <8 x i32>
 ; NO_SC_SVE-NEXT:    [[TMP15:%.*]] = add nsw <8 x i32> [[TMP11]], [[TMP14]]
 ; NO_SC_SVE-NEXT:    [[TMP16:%.*]] = shl <8 x i32> [[TMP15]], [[BROADCAST_SPLAT]]
 ; NO_SC_SVE-NEXT:    [[TMP17]] = add <8 x i32> [[TMP16]], [[VEC_PHI]]
 ; NO_SC_SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; NO_SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; NO_SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; NO_SC_SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO_SC_SVE-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO_SC_SVE:       middle.block:

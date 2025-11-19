@@ -44,8 +44,7 @@ public:
   Register getFrameRegister(const MachineFunction &MF) const override;
 
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Splits a 16-bit `DREGS` register into the lo/hi register pair.
   /// \param Reg A 16-bit register to split.

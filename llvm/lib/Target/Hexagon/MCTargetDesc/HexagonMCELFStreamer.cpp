@@ -32,7 +32,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributes.h"
@@ -96,7 +95,7 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
   getAssembler().registerSymbol(*Symbol);
   StringRef sbss[4] = {".sbss.1", ".sbss.2", ".sbss.4", ".sbss.8"};
 
-  auto ELFSymbol = cast<MCSymbolELF>(Symbol);
+  auto ELFSymbol = static_cast<MCSymbolELF *>(Symbol);
   if (!ELFSymbol->isBindingSet())
     ELFSymbol->setBinding(ELF::STB_GLOBAL);
 
@@ -143,9 +142,8 @@ void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol,
                                                           Align ByteAlignment,
                                                           unsigned AccessSize) {
   getAssembler().registerSymbol(*Symbol);
-  auto ELFSymbol = cast<MCSymbolELF>(Symbol);
+  auto ELFSymbol = static_cast<const MCSymbolELF *>(Symbol);
   ELFSymbol->setBinding(ELF::STB_LOCAL);
-  ELFSymbol->setExternal(false);
   HexagonMCEmitCommonSymbol(Symbol, Size, ByteAlignment, AccessSize);
 }
 
@@ -188,6 +186,9 @@ static unsigned featureToArchVersion(unsigned Feature) {
   case Hexagon::ArchV79:
   case Hexagon::ExtensionHVXV79:
     return 79;
+  case Hexagon::ArchV81:
+  case Hexagon::ExtensionHVXV81:
+    return 81;
   }
   llvm_unreachable("Expected valid arch feature");
   return 0;

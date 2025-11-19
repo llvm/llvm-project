@@ -48,11 +48,11 @@ for.end6:
   ret void
 }
 
-declare void @llvm.lifetime.start(i64, ptr nocapture)
+declare void @llvm.lifetime.start(ptr nocapture)
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
 
 declare i32 @memcmp(ptr, ptr, i64)
 declare i32 @bcmp(ptr, ptr, i64)
 
-declare void @llvm.lifetime.end(i64, ptr nocapture)
+declare void @llvm.lifetime.end(ptr nocapture)

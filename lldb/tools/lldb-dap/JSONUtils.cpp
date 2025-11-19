@@ -10,6 +10,8 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
@@ -118,6 +120,42 @@ DecodeMemoryReference(llvm::StringRef memoryReference) {
     return std::nullopt;
 
   return addr;
+}
+
+bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
+                           lldb::addr_t &out, llvm::json::Path path,
+                           bool required) {
+  const llvm::json::Object *v_obj = v.getAsObject();
+  if (!v_obj) {
+    path.report("expected object");
+    return false;
+  }
+
+  const llvm::json::Value *mem_ref_value = v_obj->get(key);
+  if (!mem_ref_value) {
+    if (!required)
+      return true;
+
+    path.field(key).report("missing value");
+    return false;
+  }
+
+  const std::optional<llvm::StringRef> mem_ref_str =
+      mem_ref_value->getAsString();
+  if (!mem_ref_str) {
+    path.field(key).report("expected string");
+    return false;
+  }
+
+  const std::optional<lldb::addr_t> addr_opt =
+      DecodeMemoryReference(*mem_ref_str);
+  if (!addr_opt) {
+    path.field(key).report("malformed memory reference");
+    return false;
+  }
+
+  out = *addr_opt;
+  return true;
 }
 
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,
@@ -248,7 +286,7 @@ void FillResponse(const llvm::json::Object &request,
   // Fill in all of the needed response fields to a "request" and set "success"
   // to true by default.
   response.try_emplace("type", "response");
-  response.try_emplace("seq", (int64_t)0);
+  response.try_emplace("seq", protocol::kCalculateSeq);
   EmplaceSafeString(response, "command",
                     GetString(request, "command").value_or(""));
   const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
@@ -381,7 +419,7 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 // }
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   llvm::json::Object event;
-  event.try_emplace("seq", 0);
+  event.try_emplace("seq", protocol::kCalculateSeq);
   event.try_emplace("type", "event");
   EmplaceSafeString(event, "event", event_name);
   return event;
@@ -514,6 +552,13 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
   if (frame.IsArtificial() || frame.IsHidden())
     object.try_emplace("presentationHint", "subtle");
 
+  lldb::SBModule module = frame.GetModule();
+  if (module.IsValid()) {
+    std::string uuid = module.GetUUIDString();
+    if (!uuid.empty())
+      object.try_emplace("moduleId", uuid);
+  }
+
   return llvm::json::Value(std::move(object));
 }
 
@@ -618,12 +663,17 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       } else {
         body.try_emplace("reason", "breakpoint");
       }
-      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
-      lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
-      std::string desc_str =
-          llvm::formatv("breakpoint {0}.{1}", bp_id, bp_loc_id);
-      body.try_emplace("hitBreakpointIds",
-                       llvm::json::Array{llvm::json::Value(bp_id)});
+      std::vector<lldb::break_id_t> bp_ids;
+      std::ostringstream desc_sstream;
+      desc_sstream << "breakpoint";
+      for (size_t idx = 0; idx < thread.GetStopReasonDataCount(); idx += 2) {
+        lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(idx);
+        lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(idx + 1);
+        bp_ids.push_back(bp_id);
+        desc_sstream << " " << bp_id << "." << bp_loc_id;
+      }
+      std::string desc_str = desc_sstream.str();
+      body.try_emplace("hitBreakpointIds", llvm::json::Array(bp_ids));
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
@@ -662,7 +712,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     break;
   }
   if (stop_id == 0)
-    body.try_emplace("reason", "entry");
+    body["reason"] = "entry";
   const lldb::tid_t tid = thread.GetThreadID();
   body.try_emplace("threadId", (int64_t)tid);
   // If no description has been set, then set it to the default thread stopped
@@ -768,42 +818,10 @@ VariableDescription::VariableDescription(lldb::SBValue v,
   evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
 }
 
-llvm::json::Object VariableDescription::GetVariableExtensionsJSON() {
-  llvm::json::Object extensions;
-  if (error)
-    EmplaceSafeString(extensions, "error", *error);
-  if (!value.empty())
-    EmplaceSafeString(extensions, "value", value);
-  if (!summary.empty())
-    EmplaceSafeString(extensions, "summary", summary);
-  if (auto_summary)
-    EmplaceSafeString(extensions, "autoSummary", *auto_summary);
-
-  if (lldb::SBDeclaration decl = v.GetDeclaration(); decl.IsValid()) {
-    llvm::json::Object decl_obj;
-    if (lldb::SBFileSpec file = decl.GetFileSpec(); file.IsValid()) {
-      char path[PATH_MAX] = "";
-      if (file.GetPath(path, sizeof(path)) &&
-          lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
-        decl_obj.try_emplace("path", std::string(path));
-      }
-    }
-
-    if (int line = decl.GetLine())
-      decl_obj.try_emplace("line", line);
-    if (int column = decl.GetColumn())
-      decl_obj.try_emplace("column", column);
-
-    if (!decl_obj.empty())
-      extensions.try_emplace("declaration", std::move(decl_obj));
-  }
-  return extensions;
-}
-
-std::string VariableDescription::GetResult(llvm::StringRef context) {
+std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   // In repl context, the results can be displayed as multiple lines so more
   // detailed descriptions can be returned.
-  if (context != "repl")
+  if (context != protocol::eEvaluateContextRepl)
     return display_value;
 
   if (!v.IsValid())
@@ -836,226 +854,6 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
   return std::pair{location_id >> 1, location_id & 1};
 }
 
-// "Variable": {
-//   "type": "object",
-//   "description": "A Variable is a name/value pair. Optionally a variable
-//                   can have a 'type' that is shown if space permits or when
-//                   hovering over the variable's name. An optional 'kind' is
-//                   used to render additional properties of the variable,
-//                   e.g. different icons can be used to indicate that a
-//                   variable is public or private. If the value is
-//                   structured (has children), a handle is provided to
-//                   retrieve the children with the VariablesRequest. If
-//                   the number of named or indexed children is large, the
-//                   numbers should be returned via the optional
-//                   'namedVariables' and 'indexedVariables' attributes. The
-//                   client can use this optional information to present the
-//                   children in a paged UI and fetch them in chunks.",
-//   "properties": {
-//     "name": {
-//       "type": "string",
-//       "description": "The variable's name."
-//     },
-//     "value": {
-//       "type": "string",
-//       "description": "The variable's value. This can be a multi-line text,
-//                       e.g. for a function the body of a function."
-//     },
-//     "type": {
-//       "type": "string",
-//       "description": "The type of the variable's value. Typically shown in
-//                       the UI when hovering over the value."
-//     },
-//     "presentationHint": {
-//       "$ref": "#/definitions/VariablePresentationHint",
-//       "description": "Properties of a variable that can be used to determine
-//                       how to render the variable in the UI."
-//     },
-//     "evaluateName": {
-//       "type": "string",
-//       "description": "Optional evaluatable name of this variable which can
-//                       be passed to the 'EvaluateRequest' to fetch the
-//                       variable's value."
-//     },
-//     "variablesReference": {
-//       "type": "integer",
-//       "description": "If variablesReference is > 0, the variable is
-//                       structured and its children can be retrieved by
-//                       passing variablesReference to the VariablesRequest."
-//     },
-//     "namedVariables": {
-//       "type": "integer",
-//       "description": "The number of named child variables. The client can
-//                       use this optional information to present the children
-//                       in a paged UI and fetch them in chunks."
-//     },
-//     "indexedVariables": {
-//       "type": "integer",
-//       "description": "The number of indexed child variables. The client
-//                       can use this optional information to present the
-//                       children in a paged UI and fetch them in chunks."
-//     },
-//     "memoryReference": {
-//        "type": "string",
-//        "description": "A memory reference associated with this variable.
-//                        For pointer type variables, this is generally a
-//                        reference to the memory address contained in the
-//                        pointer. For executable data, this reference may later
-//                        be used in a `disassemble` request. This attribute may
-//                        be returned by a debug adapter if corresponding
-//                        capability `supportsMemoryReferences` is true."
-//     },
-//     "declarationLocationReference": {
-//       "type": "integer",
-//       "description": "A reference that allows the client to request the
-//                       location where the variable is declared. This should be
-//                       present only if the adapter is likely to be able to
-//                       resolve the location.\n\nThis reference shares the same
-//                       lifetime as the `variablesReference`. See 'Lifetime of
-//                       Object References' in the Overview section for
-//                       details."
-//     },
-//     "valueLocationReference": {
-//       "type": "integer",
-//       "description": "A reference that allows the client to request the
-//                       location where the variable's value is declared. For
-//                       example, if the variable contains a function pointer,
-//                       the adapter may be able to look up the function's
-//                       location. This should be present only if the adapter
-//                       is likely to be able to resolve the location.\n\nThis
-//                       reference shares the same lifetime as the
-//                       `variablesReference`. See 'Lifetime of Object
-//                       References' in the Overview section for details."
-//     },
-//
-//     "$__lldb_extensions": {
-//       "description": "Unofficial extensions to the protocol",
-//       "properties": {
-//         "declaration": {
-//           "type": "object",
-//           "description": "The source location where the variable was
-//                           declared. This value won't be present if no
-//                           declaration is available.
-//                           Superseded by `declarationLocationReference`",
-//           "properties": {
-//             "path": {
-//               "type": "string",
-//               "description": "The source file path where the variable was
-//                              declared."
-//             },
-//             "line": {
-//               "type": "number",
-//               "description": "The 1-indexed source line where the variable
-//                               was declared."
-//             },
-//             "column": {
-//               "type": "number",
-//               "description": "The 1-indexed source column where the variable
-//                               was declared."
-//             }
-//           }
-//         },
-//         "value": {
-//           "type": "string",
-//           "description": "The internal value of the variable as returned by
-//                            This is effectively SBValue.GetValue(). The other
-//                            `value` entry in the top-level variable response
-//                            is, on the other hand, just a display string for
-//                            the variable."
-//         },
-//         "summary": {
-//           "type": "string",
-//           "description": "The summary string of the variable. This is
-//                           effectively SBValue.GetSummary()."
-//         },
-//         "autoSummary": {
-//           "type": "string",
-//           "description": "The auto generated summary if using
-//                           `enableAutoVariableSummaries`."
-//         },
-//         "error": {
-//           "type": "string",
-//           "description": "An error message generated if LLDB couldn't inspect
-//                           the variable."
-//         }
-//       }
-//     }
-//   },
-//   "required": [ "name", "value", "variablesReference" ]
-// }
-llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
-                                 bool format_hex, bool auto_variable_summaries,
-                                 bool synthetic_child_debugging,
-                                 bool is_name_duplicated,
-                                 std::optional<std::string> custom_name) {
-  VariableDescription desc(v, auto_variable_summaries, format_hex,
-                           is_name_duplicated, custom_name);
-  llvm::json::Object object;
-  EmplaceSafeString(object, "name", desc.name);
-  EmplaceSafeString(object, "value", desc.display_value);
-
-  if (!desc.evaluate_name.empty())
-    EmplaceSafeString(object, "evaluateName", desc.evaluate_name);
-
-  // If we have a type with many children, we would like to be able to
-  // give a hint to the IDE that the type has indexed children so that the
-  // request can be broken up in grabbing only a few children at a time. We
-  // want to be careful and only call "v.GetNumChildren()" if we have an array
-  // type or if we have a synthetic child provider producing indexed children.
-  // We don't want to call "v.GetNumChildren()" on all objects as class, struct
-  // and union types don't need to be completed if they are never expanded. So
-  // we want to avoid calling this to only cases where we it makes sense to keep
-  // performance high during normal debugging.
-
-  // If we have an array type, say that it is indexed and provide the number
-  // of children in case we have a huge array. If we don't do this, then we
-  // might take a while to produce all children at onces which can delay your
-  // debug session.
-  if (desc.type_obj.IsArrayType()) {
-    object.try_emplace("indexedVariables", v.GetNumChildren());
-  } else if (v.IsSynthetic()) {
-    // For a type with a synthetic child provider, the SBType of "v" won't tell
-    // us anything about what might be displayed. Instead, we check if the first
-    // child's name is "[0]" and then say it is indexed. We call
-    // GetNumChildren() only if the child name matches to avoid a potentially
-    // expensive operation.
-    if (lldb::SBValue first_child = v.GetChildAtIndex(0)) {
-      llvm::StringRef first_child_name = first_child.GetName();
-      if (first_child_name == "[0]") {
-        size_t num_children = v.GetNumChildren();
-        // If we are creating a "[raw]" fake child for each synthetic type, we
-        // have to account for it when returning indexed variables.
-        if (synthetic_child_debugging)
-          ++num_children;
-        object.try_emplace("indexedVariables", num_children);
-      }
-    }
-  }
-  EmplaceSafeString(object, "type", desc.display_type_name);
-
-  // A unique variable identifier to help in properly identifying variables with
-  // the same name. This is an extension to the VS protocol.
-  object.try_emplace("id", var_ref);
-
-  if (v.MightHaveChildren())
-    object.try_emplace("variablesReference", var_ref);
-  else
-    object.try_emplace("variablesReference", 0);
-
-  if (v.GetDeclaration().IsValid())
-    object.try_emplace("declarationLocationReference",
-                       PackLocation(var_ref, false));
-
-  if (ValuePointsToCode(v))
-    object.try_emplace("valueLocationReference", PackLocation(var_ref, true));
-
-  if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
-    object.try_emplace("memoryReference", EncodeMemoryReference(addr));
-
-  object.try_emplace("$__lldb_extensions", desc.GetVariableExtensionsJSON());
-  return llvm::json::Value(std::move(object));
-}
-
 llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
   llvm::json::Object object;
   char unit_path_arr[PATH_MAX];
@@ -1070,12 +868,17 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
-    llvm::StringRef comm_file, lldb::pid_t debugger_pid) {
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid,
+    const std::vector<std::optional<std::string>> &stdio, bool external) {
   llvm::json::Object run_in_terminal_args;
-  // This indicates the IDE to open an embedded terminal, instead of opening
-  // the terminal in a new window.
-  run_in_terminal_args.try_emplace("kind", "integrated");
-
+  if (external) {
+    // This indicates the IDE to open an external terminal window.
+    run_in_terminal_args.try_emplace("kind", "external");
+  } else {
+    // This indicates the IDE to open an embedded terminal, instead of opening
+    // the terminal in a new window.
+    run_in_terminal_args.try_emplace("kind", "integrated");
+  }
   // The program path must be the first entry in the "args" field
   std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
                                        "--comm-file", comm_file.str()};
@@ -1085,6 +888,18 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   }
   req_args.push_back("--launch-target");
   req_args.push_back(program.str());
+  if (!stdio.empty()) {
+    req_args.push_back("--stdio");
+    std::stringstream ss;
+    for (const std::optional<std::string> &file : stdio) {
+      if (file)
+        ss << *file;
+      ss << ":";
+    }
+    std::string files = ss.str();
+    files.pop_back();
+    req_args.push_back(std::move(files));
+  }
   req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", req_args);
 

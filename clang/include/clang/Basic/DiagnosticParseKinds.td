@@ -116,6 +116,9 @@ def err_enumerator_unnamed_no_def : Error<
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
+def ext_ms_c_empty_enum_type : Extension<
+  "empty enumeration types are a Microsoft extension">,
+  InGroup<MicrosoftEmptyEnum>;
 def ext_c23_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a C23 extension">,
   InGroup<C23>;
@@ -215,6 +218,8 @@ def warn_c23_compat_case_range : Warning<
   DefaultIgnore, InGroup<CPre2yCompat>;
 def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
+def err_c2y_labeled_break_continue : Error<
+  "named %select{'break'|'continue'}0 is only supported in C2y">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -503,7 +508,7 @@ def err_expected_coloncolon_after_super : Error<
   "expected '::' after '__super'">;
 
 def ext_decomp_decl_empty : ExtWarn<
-  "ISO C++17 does not allow a decomposition group to be empty">,
+  "ISO C++17 does not allow a structured binding group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
 
 def err_function_parameter_limit_exceeded : Error<
@@ -830,6 +835,9 @@ def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
+def ext_invalid_attribute_argument
+    : Extension<"'%0' is not allowed in an attribute argument list">,
+    InGroup<DiagGroup<"attribute-preprocessor-tokens">>;
 
 def err_assume_attr_expects_cond_expr : Error<
   "use of this expression in an %0 attribute requires parentheses">;
@@ -930,6 +938,10 @@ def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
 def warn_missing_dependent_template_keyword : ExtWarn<
   "use 'template' keyword to treat '%0' as a dependent template name">;
+
+def err_cxx26_template_template_params
+    : Error<"%select{variable template|concept}0 template parameter is a C++2c "
+            "extension">;
 
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;
@@ -1132,7 +1144,7 @@ def warn_cxx23_compat_binding_pack : Warning<
 def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
-  "%select{an attribute specifier sequence|%0}1 in this position "
+  "%select{an attribute specifier sequence|%1}0 in this position "
   "is a C++23 extension">, InGroup<CXX23AttrsOnLambda>;
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
@@ -1488,6 +1500,8 @@ def err_omp_multiple_step_or_linear_modifier : Error<
   "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
 def err_omp_deprecate_old_syntax: Error<
   "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
+def err_omp_allocator_comma_separator :
+  Error<"',' not allowed as separator in 'uses_allocators' clause, use ';' instead">;
 def warn_omp_future_directive_spelling: Warning<
   "directive spelling '%0' is introduced in a later OpenMP version">,
   InGroup<OpenMPFuture>;
@@ -1499,8 +1513,8 @@ def err_omp_unexpected_directive : Error<
   "unexpected OpenMP directive %select{|'#pragma omp %1'}0">;
 def err_omp_expected_punc : Error<
   "expected ',' or ')' in '%0' %select{clause|directive}1">;
-def warn_clause_expected_string : Warning<
-  "expected string literal in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
+def warn_clause_expected_string: Warning<
+  "expected string %select{|literal }1in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unexpected_clause : Error<
   "unexpected OpenMP clause '%0' in directive '#pragma omp %1'">;
 def err_omp_unexpected_clause_extension_only : Error<
@@ -1594,6 +1608,9 @@ def err_omp_unknown_adjust_args_op
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
+def err_omp_non_by_ref_need_device_addr_modifier_argument
+    : Error<"expected reference type argument on 'adjust_args' clause with "
+            "'need_device_addr' modifier">;
 def err_omp_declare_variant_duplicate_nested_trait : Error<
   "nested OpenMP context selector contains duplicated trait '%0'"
   " in selector '%1' and set '%2' with different score">;
@@ -1848,9 +1865,8 @@ def note_max_tokens_total_override : Note<"total token limit set here">;
 
 def err_expected_semantic_identifier : Error<
   "expected HLSL Semantic identifier">;
-def err_invalid_declaration_in_hlsl_buffer : Error<
-  "invalid declaration inside %select{tbuffer|cbuffer}0">;
-def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
+def err_invalid_declaration_in_hlsl_buffer
+    : Error<"invalid declaration inside %select{tbuffer|cbuffer}0">;
 def err_hlsl_separate_attr_arg_and_number : Error<"wrong argument format for hlsl attribute, use %0 instead">;
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,
@@ -1863,8 +1879,7 @@ def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
 
 // HLSL Root Signature Parser Diagnostics
-def err_hlsl_unexpected_end_of_params
-    : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
+def err_hlsl_invalid_token : Error<"invalid %select{parameter|value}0 of %1">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
 def err_hlsl_number_literal_overflow : Error<
