@@ -1020,6 +1020,11 @@ public:
         find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print metadata with node IDs.
+  void print(raw_ostream &O, const VPlan *Plan) const;
+#endif
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -4432,6 +4437,11 @@ public:
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
   VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
+
+  /// Return the Module from the scalar header.
+  const Module &getModule() const {
+    return *ScalarHeader->getIRBasicBlock()->getModule();
+  }
 
   /// Return an ArrayRef containing VPIRBasicBlocks wrapping the exit blocks of
   /// the original scalar loop.
