@@ -6,27 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_GLOBAL_OBJECTS
-#define _LIBSYCL_GLOBAL_OBJECTS
+#ifndef _LIBSYCL_COMMON
+#define _LIBSYCL_COMMON
 
-#include <detail/offload/offload_topology.hpp>
 #include <sycl/__impl/detail/config.hpp>
 
-#include <memory>
-#include <mutex>
-#include <vector>
+#include <cstddef>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
-class platform_impl;
 
-// Offload topologies (one per backend) discovered from liboffload.
-std::vector<detail::OffloadTopology> &getOffloadTopologies();
-
-std::vector<std::unique_ptr<platform_impl>> &getPlatformCache();
+// Minimal span-like view
+template <class T> struct range_view {
+  const T *ptr{};
+  size_t len{};
+  const T *begin() const { return ptr; }
+  const T *end() const { return ptr + len; }
+  const T &operator[](size_t i) const { return ptr[i]; }
+  size_t size() const { return len; }
+};
 
 } // namespace detail
+
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_GLOBAL_OBJECTS
+#endif // _LIBSYCL_COMMON

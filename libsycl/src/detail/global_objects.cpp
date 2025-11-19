@@ -29,11 +29,6 @@ std::vector<std::unique_ptr<platform_impl>> &getPlatformCache() {
   return PlatformCache;
 }
 
-std::mutex &getPlatformMapMutex() {
-  static std::mutex PlatformMapMutex{};
-  return PlatformMapMutex;
-}
-
 void shutdown() {
   // No error reporting in shutdown
   std::ignore = olShutDown();
