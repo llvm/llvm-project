@@ -206,8 +206,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs" &&
-      Name != "pauthtest")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
@@ -219,12 +218,6 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     // aapcs-soft is not allowed for targets with an FPU, to avoid there being
     // two incomatible ABIs.
     Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
-    return false;
-  }
-  if (getTriple().getEnvironment() == llvm::Triple::PAuthTest &&
-      getTriple().getOS() != llvm::Triple::Linux) {
-    Diags.Report(diag::err_target_unsupported_abi_for_triple)
-        << getTriple().getEnvironmentName() << getTriple().getTriple();
     return false;
   }
   return true;
@@ -396,6 +389,12 @@ void AArch64TargetInfo::getTargetDefinesARMV96A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Armv9.6-A does not have a v8.* equivalent, but is a superset of v9.5-A.
   getTargetDefinesARMV95A(Opts, Builder);
+}
+
+void AArch64TargetInfo::getTargetDefinesARMV97A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.7-A does not have a v8.* equivalent, but is a superset of v9.6-A.
+  getTargetDefinesARMV96A(Opts, Builder);
 }
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -607,9 +606,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMTE)
     Builder.defineMacro("__ARM_FEATURE_MEMORY_TAGGING", "1");
 
-  if (HasTME)
-    Builder.defineMacro("__ARM_FEATURE_TME", "1");
-
   if (HasMatMul)
     Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
 
@@ -714,6 +710,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV95A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_6A)
     getTargetDefinesARMV96A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_7A)
+    getTargetDefinesARMV97A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -810,10 +808,10 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Cases("aarch64", "arm64", "arm", true)
+      .Cases({"aarch64", "arm64", "arm"}, true)
       .Case("fmv", HasFMV)
       .Case("fp", FPU & FPUMode)
-      .Cases("neon", "simd", FPU & NeonMode)
+      .Cases({"neon", "simd"}, FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)
@@ -828,8 +826,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("cssc", HasCSSC)
       .Case("sha2", HasSHA2)
       .Case("sha3", HasSHA3)
-      .Cases("aes", "pmull", HasAES)
-      .Cases("fp16", "fullfp16", HasFullFP16)
+      .Cases({"aes", "pmull"}, HasAES)
+      .Cases({"fp16", "fullfp16"}, HasFullFP16)
       .Case("dit", HasDIT)
       .Case("dpb", HasCCPP)
       .Case("dpb2", HasCCDP)
@@ -858,9 +856,9 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("memtag", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
-      .Cases("ssbs", "ssbs2", HasSSBS)
+      .Cases({"ssbs", "ssbs2"}, HasSSBS)
       .Case("bti", HasBTI)
-      .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
+      .Cases({"ls64", "ls64_v", "ls64_accdata"}, HasLS64)
       .Case("wfxt", HasWFxT)
       .Case("rcpc3", HasRCPC3)
       .Case("fp8", HasFP8)
@@ -1152,6 +1150,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.6a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_6A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_6A;
+    if (Feature == "+v9.7a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_7A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_7A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1169,8 +1170,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+mte")
       HasMTE = true;
-    if (Feature == "+tme")
-      HasTME = true;
     if (Feature == "+pauth")
       HasPAuth = true;
     if (Feature == "+i8mm")
@@ -1568,6 +1567,7 @@ bool AArch64TargetInfo::validateAsmConstraint(
     if (const unsigned Len = matchAsmCCConstraint(Name)) {
       Name += Len - 1;
       Info.setAllowsRegister();
+      Info.setOutputOperandBounds(0, 2);
       return true;
     }
   }

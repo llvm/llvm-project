@@ -17,17 +17,15 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/ELFDebugObjectPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/GetDylibInterface.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
@@ -40,6 +38,7 @@
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
@@ -312,10 +311,19 @@ static cl::opt<bool>
                                cl::desc("Show FailedToMaterialize errors"),
                                cl::init(false), cl::cat(JITLinkCategory));
 
-static cl::opt<bool> UseSharedMemory(
-    "use-shared-memory",
-    cl::desc("Use shared memory to transfer generated code and data"),
-    cl::init(false), cl::cat(JITLinkCategory));
+enum class MemMgr { Default, Generic, SimpleRemote, Shared };
+
+static cl::opt<MemMgr> UseMemMgr(
+    "use-memmgr", cl::desc("Choose memory manager"), cl::init(MemMgr::Generic),
+    cl::values(clEnumValN(MemMgr::Default, "default",
+                          "Use setup default (InProcess or EPCGeneric)"),
+               clEnumValN(MemMgr::Generic, "generic",
+                          "Generic remote memory manager"),
+               clEnumValN(MemMgr::SimpleRemote, "simple-remote",
+                          "Mapper memory manager with simple-remote backend"),
+               clEnumValN(MemMgr::Shared, "shared",
+                          "Mapper memory manager with shared-memory manager")),
+    cl::cat(JITLinkCategory));
 
 static cl::opt<std::string>
     OverrideTriple("triple", cl::desc("Override target triple detection"),
@@ -338,7 +346,6 @@ static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
          << (void *)&llvm_orc_registerEHFrameSectionAllocAction << '\n'
          << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction << '\n'
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
@@ -623,8 +630,9 @@ public:
         });
   }
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override {
-    return InProcessMemoryMapper::prepare(Addr - DeltaAddr, ContentSize);
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override {
+    return InProcessMemoryMapper::prepare(G, Addr - DeltaAddr, ContentSize);
   }
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override {
@@ -717,6 +725,27 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
+  SimpleRemoteMemoryMapper::SymbolAddrs SAs;
+  if (auto Err = SREPC.getBootstrapSymbols(
+          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
+           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
+           {SAs.Initialize,
+            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
+           {SAs.Deinitialize,
+            rt::SimpleExecutorMemoryManagerDeinitializeWrapperName},
+           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
+    return std::move(Err);
+#ifdef _WIN32
+  size_t SlabSize = 1024 * 1024;
+#else
+  size_t SlabSize = 1024 * 1024 * 1024;
+#endif
+  return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
+      SlabSize, SREPC, SAs);
+}
+
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = SREPC.getBootstrapSymbols(
@@ -744,6 +773,21 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
       SlabSize, SREPC, SAs);
 }
 
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
+static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
+  switch (UseMemMgr) {
+  case MemMgr::Default:
+  case MemMgr::Generic:
+    break;
+  case MemMgr::SimpleRemote:
+    S.CreateMemoryManager = createSimpleRemoteMemoryManager;
+    break;
+  case MemMgr::Shared:
+    S.CreateMemoryManager = createSharedMemoryManager;
+    break;
+  }
+}
+#endif
 
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
@@ -903,8 +947,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   close(FromExecutor[WriteEnd]);
 
   auto S = SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager = createSharedMemoryManager;
+  setupEPCRemoteMemoryManager(S);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
@@ -993,8 +1036,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
     return SockFD.takeError();
 
   auto S = SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager = createSharedMemoryManager;
+  setupEPCRemoteMemoryManager(S);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
@@ -1252,9 +1294,16 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
       ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
-    if (DebuggerSupport)
-      ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
+    if (DebuggerSupport) {
+      Error TargetSymErr = Error::success();
+      auto Plugin =
+          std::make_unique<ELFDebugObjectPlugin>(ES, true, true, TargetSymErr);
+      if (!TargetSymErr)
+        ObjLayer.addPlugin(std::move(Plugin));
+      else
+        logAllUnhandledErrors(std::move(TargetSymErr), errs(),
+                              "Debugger support not available: ");
+    }
   }
 
   if (auto MainJDOrErr = ES.createJITDylib("main"))

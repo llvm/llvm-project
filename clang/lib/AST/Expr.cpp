@@ -71,6 +71,9 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
   if (const PointerType *PTy = DerivedType->getAs<PointerType>())
     DerivedType = PTy->getPointeeType();
 
+  while (const ArrayType *ATy = DerivedType->getAsArrayTypeUnsafe())
+    DerivedType = ATy->getElementType();
+
   if (DerivedType->isDependentType())
     return nullptr;
 
@@ -4126,9 +4129,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
 
   if (const RecordType *UT = getType()->getAsUnionType())
     if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
-        UT->getOriginalDecl()
-            ->getMostRecentDecl()
-            ->hasAttr<TransparentUnionAttr>())
+        UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))
@@ -5288,6 +5289,33 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
       return {};
   }
   return OriginalTy;
+}
+
+QualType ArraySectionExpr::getElementType() const {
+  QualType BaseTy = getBase()->IgnoreParenImpCasts()->getType();
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    BaseTy = ASE->getElementType();
+
+  if (BaseTy->isAnyPointerType())
+    return BaseTy->getPointeeType();
+  if (BaseTy->isArrayType())
+    return BaseTy->castAsArrayTypeUnsafe()->getElementType();
+
+  // If this isn't a pointer or array, the base is a dependent expression, so
+  // just return the BaseTy anyway.
+  assert(BaseTy->isInstantiationDependentType());
+  return BaseTy;
+}
+
+QualType ArraySectionExpr::getBaseType() const {
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    return ASE->getElementType();
+
+  return getBase()->IgnoreParenImpCasts()->getType();
 }
 
 RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,

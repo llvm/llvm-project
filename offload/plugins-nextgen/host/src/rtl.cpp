@@ -344,12 +344,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "initAsyncInfoImpl not supported");
   }
 
-  /// This plugin does not support interoperability
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "initDeviceInfoImpl not supported");
-  }
-
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
                             AsyncInfoWrapperTy &AsyncInfo) override {
     Callback(UserData);
@@ -386,9 +380,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Info;
   }
 
-  /// This plugin should not setup the device environment or memory pool.
-  virtual bool shouldSetupDeviceMemoryPool() const override { return false; };
-
   /// Getters and setters for stack size and heap size not relevant.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = 0;
@@ -397,11 +388,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return Plugin::success();
   }
-  Error getDeviceHeapSize(uint64_t &Value) override {
-    Value = 0;
-    return Plugin::success();
-  }
-  Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
 
 private:
   /// Grid values for Generic ELF64 plugins.

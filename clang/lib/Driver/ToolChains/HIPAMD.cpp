@@ -15,8 +15,8 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -168,9 +168,12 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
   assert(!Inputs.empty() && "Must have at least one input.");
 
-  constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+  std::string LinkedBCFilePrefix(
+      Twine(llvm::sys::path::stem(Output.getFilename()), "-linked").str());
+  const char *LinkedBCFilePath = HIP::getTempFile(C, LinkedBCFilePrefix, "bc");
+  InputInfo LinkedBCFile(&JA, LinkedBCFilePath, Output.getBaseInput());
 
-  // Linked BC is now in Output
+  constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
   // Emit SPIR-V binary.
   llvm::opt::ArgStringList TrArgs{
@@ -180,7 +183,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
       "--spirv-lower-const-expr",
       "--spirv-preserve-auxdata",
       "--spirv-debug-info-version=nonsemantic-shader-200"};
-  SPIRV::constructTranslateCommand(C, *this, JA, Output, Output, TrArgs);
+  SPIRV::constructTranslateCommand(C, *this, JA, Output, LinkedBCFile, TrArgs);
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is
@@ -216,8 +219,6 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
-  // Diagnose unsupported sanitizer options only once.
-  diagnoseUnsupportedSanitizers(Args);
 }
 
 void HIPAMDToolChain::addClangTargetOptions(
@@ -289,7 +290,8 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A))
+    // Filter unsupported sanitizers passed from the HostTC.
+    if (!handleSanitizeOption(*this, *DAL, Args, BoundArch, A))
       DAL->append(A);
   }
 
@@ -345,9 +347,8 @@ void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 SanitizerMask HIPAMDToolChain::getSupportedSanitizers() const {
   // The HIPAMDToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host
-  // toolchain. The HIPAMDToolChain will actually ignore any command line
-  // arguments for any of these "supported" sanitizers. That means that no
-  // sanitization of device code is actually supported at this time.
+  // toolchain. The HIPAMDToolChain will later filter unsupported sanitizers
+  // from the command line arguments.
   //
   // This behavior is necessary because the host and device toolchains
   // invocations often share the command line, so the device toolchain must

@@ -122,6 +122,11 @@ void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
 /// clause.
 uint64_t getLoopCountForCollapseAndTile(const Fortran::parser::AccClauseList &);
 
+/// Parse collapse clause and return {size, force}. If absent, returns
+/// {1,false}.
+std::pair<uint64_t, bool>
+getCollapseSizeAndForce(const Fortran::parser::AccClauseList &);
+
 /// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);
 

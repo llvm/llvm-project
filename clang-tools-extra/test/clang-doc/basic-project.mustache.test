@@ -2,17 +2,17 @@
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
 
 // RUN: clang-doc --format=mustache --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
-// RUN: FileCheck %s -input-file=%t/docs/html/_ZTV5Shape.html -check-prefix=HTML-SHAPE
-// RUN: FileCheck %s -input-file=%t/docs/html/_ZTV10Calculator.html -check-prefix=HTML-CALC
-// RUN: FileCheck %s -input-file=%t/docs/html/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
-// RUN: FileCheck %s -input-file=%t/docs/html/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
+// RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV5Shape.html -check-prefix=HTML-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV10Calculator.html -check-prefix=HTML-CALC
+// RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
 
 HTML-SHAPE: <html lang="en-US">
 HTML-SHAPE: <head>
 HTML-SHAPE:     <meta charset="utf-8"/>
 HTML-SHAPE:     <title>Shape</title>
-HTML-SHAPE:         <link rel="stylesheet" type="text/css" href="./clang-doc-mustache.css"/>
-HTML-SHAPE:         <script src="./mustache-index.js"></script>
+HTML-SHAPE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
+HTML-SHAPE:         <script src="../mustache-index.js"></script>
 HTML-SHAPE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 HTML-SHAPE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-SHAPE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
@@ -151,8 +151,8 @@ HTML-CALC: <html lang="en-US">
 HTML-CALC: <head>
 HTML-CALC:     <meta charset="utf-8"/>
 HTML-CALC:     <title>Calculator</title>
-HTML-CALC:         <link rel="stylesheet" type="text/css" href="./clang-doc-mustache.css"/>
-HTML-CALC:         <script src="./mustache-index.js"></script>
+HTML-CALC:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
+HTML-CALC:         <script src="../mustache-index.js"></script>
 HTML-CALC:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 HTML-CALC:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-CALC:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
@@ -384,7 +384,10 @@ HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Returns</h3>
 HTML-CALC:                        <p> double The result of a / b.</p>
 HTML-CALC:                        <p></p>
-HTML-CALC:                        </div>
+HTML-CALC:                    <h3>Throws</h3>
+HTML-CALC:                    <div>
+HTML-CALC:                        <b>std::invalid_argument</b> if b is zero.
+HTML-CALC:                    </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
 HTML-CALC: <div class="delimiter-container">
@@ -440,8 +443,8 @@ HTML-RECTANGLE: <html lang="en-US">
 HTML-RECTANGLE: <head>
 HTML-RECTANGLE:     <meta charset="utf-8"/>
 HTML-RECTANGLE:     <title>Rectangle</title>
-HTML-RECTANGLE:         <link rel="stylesheet" type="text/css" href="./clang-doc-mustache.css"/>
-HTML-RECTANGLE:         <script src="./mustache-index.js"></script>
+HTML-RECTANGLE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
+HTML-RECTANGLE:         <script src="../mustache-index.js"></script>
 HTML-RECTANGLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 HTML-RECTANGLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-RECTANGLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
@@ -597,8 +600,8 @@ HTML-CIRCLE: <html lang="en-US">
 HTML-CIRCLE: <head>
 HTML-CIRCLE:     <meta charset="utf-8"/>
 HTML-CIRCLE:     <title>Circle</title>
-HTML-CIRCLE:         <link rel="stylesheet" type="text/css" href="./clang-doc-mustache.css"/>
-HTML-CIRCLE:         <script src="./mustache-index.js"></script>
+HTML-CIRCLE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
+HTML-CIRCLE:         <script src="../mustache-index.js"></script>
 HTML-CIRCLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 HTML-CIRCLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-CIRCLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>

@@ -75,6 +75,22 @@ unsigned OmpModifierDescriptor::since(llvm::omp::Clause id) const {
 // generated in the future.
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAccessGroup>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"access-group",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61, {Clause::OMPC_dyn_groupprivate}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlignment>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"alignment",
@@ -151,6 +167,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlwaysModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAttachModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"attach-modifier",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61, {Clause::OMPC_map}},
       },
   };
   return desc;
@@ -300,6 +332,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpExpectation>() {
       /*clauses=*/
       {
           {51, {Clause::OMPC_from, Clause::OMPC_to}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpFallbackModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"fallback-modifier",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61, {Clause::OMPC_dyn_groupprivate}},
       },
   };
   return desc;

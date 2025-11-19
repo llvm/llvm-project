@@ -865,33 +865,6 @@ entry:
   ret float %r
 }
 
-; Note that the `unsafe-fp-math` from the function attributes should be moved to
-; individual instructions, with the shadow instructions NOT getting the attribute.
-define float @param_add_return_float_unsafe_fp_math(float %a) #0 {
-; CHECK-LABEL: @param_add_return_float_unsafe_fp_math(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], ptrtoint (ptr @param_add_return_float_unsafe_fp_math to i64)
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @__nsan_shadow_args_ptr, align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext float [[A:%.*]] to double
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], double [[TMP2]], double [[TMP3]]
-; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[B:%.*]] = fadd fast float [[A]], 1.000000e+00
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd double [[TMP4]], 1.000000e+00
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__nsan_internal_check_float_d(float [[B]], double [[TMP5]], i32 1, i64 0)
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fpext float [[B]] to double
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], double [[TMP8]], double [[TMP5]]
-; CHECK-NEXT:    store i64 ptrtoint (ptr @param_add_return_float_unsafe_fp_math to i64), ptr @__nsan_shadow_ret_tag, align 8
-; CHECK-NEXT:    store double [[TMP9]], ptr @__nsan_shadow_ret_ptr, align 8
-; CHECK-NEXT:    ret float [[B]]
-;
-entry:
-  %b = fadd float %a, 1.0
-  ret float %b
-}
-
-
 define void @truncate(<2 x double> %0) sanitize_numerical_stability {
 ; DQQ-LABEL: @truncate(
 ; DQQ-NEXT:  entry:
@@ -941,4 +914,4 @@ entry:
 }
 
 
-attributes #0 = { nounwind readonly uwtable sanitize_numerical_stability "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind readonly uwtable sanitize_numerical_stability "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }

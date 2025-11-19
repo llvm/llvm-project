@@ -127,42 +127,6 @@ define i64 @umul_fix_sat(i64 %arg0, i64 %arg1, i32 %arg2) {
   ret i64 %ret
 }
 
-declare <2 x double> @llvm.masked.load.v2f64.p0(ptr, i32, <2 x i1>, <2 x double>)
-define <2 x double> @masked_load(<2 x i1> %mask, ptr %addr, <2 x double> %dst, i32 %align) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %align
-  ; CHECK-NEXT: %res = call <2 x double> @llvm.masked.load.v2f64.p0(ptr %addr, i32 %align, <2 x i1> %mask, <2 x double> %dst)
-  %res = call <2 x double> @llvm.masked.load.v2f64.p0(ptr %addr, i32 %align, <2 x i1> %mask, <2 x double> %dst)
-  ret <2 x double> %res
-}
-
-declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)
-define void @masked_store(<4 x i1> %mask, ptr %addr, <4 x i32> %val, i32 %align) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %align
-  ; CHECK-NEXT: call void @llvm.masked.store.v4i32.p0(<4 x i32> %val, ptr %addr, i32 %align, <4 x i1> %mask)
-  call void @llvm.masked.store.v4i32.p0(<4 x i32> %val, ptr %addr, i32 %align, <4 x i1> %mask)
-  ret void
-}
-
-declare <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x double>)
-define <2 x double> @test_gather(<2 x ptr> %ptrs, <2 x i1> %mask, <2 x double> %src0, i32 %align)  {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK: i32 %align
-  ; CHECK: %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 %align, <2 x i1> %mask, <2 x double> %src0)
-  %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 %align, <2 x i1> %mask, <2 x double> %src0)
-  ret <2 x double> %res
-}
-
-declare void @llvm.masked.scatter.v8i32.v8p0(<8 x i32>, <8 x ptr>, i32, <8 x i1>)
-define void @test_scatter_8i32(<8 x i32> %a1, <8 x ptr> %ptr, <8 x i1> %mask, i32 %align) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %align
-  ; CHECK-NEXT: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %a1, <8 x ptr> %ptr, i32 %align, <8 x i1> %mask)
-  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %a1, <8 x ptr> %ptr, i32 %align, <8 x i1> %mask)
-  ret void
-}
-
 declare ptr @llvm.invariant.start.p0(i64, ptr)
 define void @test_invariant_start(i64 %arg0, ptr %ptr) {
   ; CHECK: immarg operand has non-immediate parameter

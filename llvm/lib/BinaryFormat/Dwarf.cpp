@@ -893,6 +893,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return DefaultedMemberString(Val);
   case DW_AT_APPLE_enum_kind:
     return EnumKindString(Val);
+  case DW_AT_language_name:
+    return SourceLanguageNameString(static_cast<SourceLanguageName>(Val));
   }
 
   return StringRef();
@@ -1074,10 +1076,3 @@ StringRef (*const llvm::dwarf::EnumTraits<LineNumberOps>::StringFn)(unsigned) =
     LNStandardString;
 StringRef (*const llvm::dwarf::EnumTraits<Index>::StringFn)(unsigned) =
     IndexString;
-
-constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Index>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Tag>::Type[];
-constexpr char llvm::dwarf::EnumTraits<LineNumberOps>::Type[];
-constexpr char llvm::dwarf::EnumTraits<LocationAtom>::Type[];

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Analyses/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Testing/TestAST.h"
@@ -20,6 +20,7 @@ namespace clang::lifetimes::internal {
 namespace {
 
 using namespace ast_matchers;
+using ::testing::Not;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
 
@@ -63,7 +64,7 @@ public:
     Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr);
     Analysis->run();
 
-    AnnotationToPointMap = Analysis->getTestPoints();
+    AnnotationToPointMap = Analysis->getFactManager().getTestPoints();
   }
 
   LifetimeSafetyAnalysis &getAnalysis() { return *Analysis; }
@@ -98,10 +99,11 @@ public:
     auto *VD = findDecl<ValueDecl>(VarName);
     if (!VD)
       return std::nullopt;
-    auto OID = Analysis.getOriginIDForDecl(VD);
-    if (!OID)
-      ADD_FAILURE() << "Origin for '" << VarName << "' not found.";
-    return OID;
+    // This assumes the OriginManager's `get` can find an existing origin.
+    // We might need a `find` method on OriginManager to avoid `getOrCreate`
+    // logic in a const-query context if that becomes an issue.
+    return const_cast<OriginManager &>(Analysis.getFactManager().getOriginMgr())
+        .get(*VD);
   }
 
   std::vector<LoanID> getLoansForVar(llvm::StringRef VarName) {
@@ -110,7 +112,10 @@ public:
       ADD_FAILURE() << "Failed to find VarDecl for '" << VarName << "'";
       return {};
     }
-    std::vector<LoanID> LID = Analysis.getLoanIDForVar(VD);
+    std::vector<LoanID> LID;
+    for (const Loan &L : Analysis.getFactManager().getLoanMgr().getLoans())
+      if (L.Path.D == VD)
+        LID.push_back(L.ID);
     if (LID.empty()) {
       ADD_FAILURE() << "Loan for '" << VarName << "' not found.";
       return {};
@@ -118,12 +123,46 @@ public:
     return LID;
   }
 
+  // Gets the set of loans that are live at the given program point. A loan is
+  // considered live at point P if there is a live origin which contains this
+  // loan.
+  std::optional<LoanSet> getLiveLoansAtPoint(ProgramPoint P) const {
+    const auto &LiveOriginsAnalysis = Runner.getAnalysis().getLiveOrigins();
+    const auto &LoanPropagation = Runner.getAnalysis().getLoanPropagation();
+
+    LivenessMap LiveOriginsMap = LiveOriginsAnalysis.getLiveOriginsAt(P);
+
+    LoanSet::Factory F;
+    LoanSet Result = F.getEmptySet();
+
+    for (const auto &[OID, LI] : LiveOriginsMap) {
+      LoanSet Loans = LoanPropagation.getLoans(OID, P);
+      Result = clang::lifetimes::internal::utils::join(Result, Loans, F);
+    }
+
+    if (Result.isEmpty())
+      return std::nullopt;
+
+    return Result;
+  }
+
+  const ExpireFact *
+  getExpireFactFromAllFacts(const llvm::ArrayRef<const Fact *> &FactsInBlock,
+                            const LoanID &loanID) {
+    for (const Fact *F : FactsInBlock) {
+      if (auto const *CurrentEF = F->getAs<ExpireFact>())
+        if (CurrentEF->getLoanID() == loanID)
+          return CurrentEF;
+    }
+    return nullptr;
+  }
+
   std::optional<LoanSet> getLoansAtPoint(OriginID OID,
                                          llvm::StringRef Annotation) {
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    return Analysis.getLoansAtPoint(OID, PP);
+    return Analysis.getLoanPropagation().getLoans(OID, PP);
   }
 
   std::optional<std::vector<std::pair<OriginID, LivenessKind>>>
@@ -131,7 +170,18 @@ public:
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    return Analysis.getLiveOriginsAtPoint(PP);
+    std::vector<std::pair<OriginID, LivenessKind>> Result;
+    for (auto &[OID, Info] : Analysis.getLiveOrigins().getLiveOriginsAt(PP))
+      Result.push_back({OID, Info.Kind});
+    return Result;
+  }
+
+  ProgramPoint getProgramPoint(llvm::StringRef Annotation) {
+    return Runner.getProgramPoint(Annotation);
+  }
+
+  llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) {
+    return Runner.getAnalysis().getFactManager().getBlockContaining(P);
   }
 
 private:
@@ -297,6 +347,43 @@ MATCHER_P2(AreLiveAtImpl, Annotation, ConfFilter, "") {
   return true;
 }
 
+MATCHER_P2(HasLiveLoanAtExpiryImpl, HelperPtr, Annotation, "") {
+  llvm::StringRef VarName = arg;
+  LifetimeTestHelper &Helper = *HelperPtr;
+
+  std::vector<LoanID> Loans = Helper.getLoansForVar(VarName);
+  if (Loans.empty()) {
+    *result_listener << "No loans found for variable" << VarName.str();
+    return false;
+  }
+
+  ProgramPoint PP = Helper.getProgramPoint(Annotation);
+  llvm::ArrayRef<const Fact *> AllFactsInBlock = Helper.getBlockContaining(PP);
+
+  bool NoExpireFactLive = false;
+  for (const LoanID CurrentLoanID : Loans) {
+    const ExpireFact *EF =
+        Helper.getExpireFactFromAllFacts(AllFactsInBlock, CurrentLoanID);
+    if (!EF) {
+      NoExpireFactLive = true;
+      continue;
+    }
+    std::optional<LoanSet> LiveLoans = Helper.getLiveLoansAtPoint(EF);
+    if (!LiveLoans.has_value()) {
+      *result_listener << "No Live Loans At Expiry Location.";
+      continue;
+    }
+    if (LiveLoans->contains({CurrentLoanID}))
+      return true;
+  }
+  if (NoExpireFactLive) {
+    *result_listener << "No Expire Fact for loan of " << VarName.str();
+    return false;
+  }
+  *result_listener << "No loans of " << VarName.str() << " are live";
+  return false;
+}
+
 MATCHER_P(MustBeLiveAt, Annotation, "") {
   return ExplainMatchResult(AreLiveAtImpl(Annotation, LivenessKindFilter::Must),
                             arg, result_listener);
@@ -344,6 +431,10 @@ protected:
   auto HasLoansTo(std::initializer_list<std::string> LoanVars,
                   const char *Annotation) {
     return HasLoansToImpl(std::vector<std::string>(LoanVars), Annotation);
+  }
+
+  auto HasLiveLoanAtExpiry(const char *Annotation) {
+    return HasLiveLoanAtExpiryImpl(Helper.get(), Annotation);
   }
 
   std::unique_ptr<LifetimeTestRunner> Runner;
@@ -523,6 +614,7 @@ TEST_F(LifetimeAnalysisTest, PointersInACycle) {
         p1 = p2;
         p2 = p3;
         p3 = temp;
+        POINT(in_loop);
       }
       POINT(after_loop);
     }
@@ -536,7 +628,11 @@ TEST_F(LifetimeAnalysisTest, PointersInACycle) {
   EXPECT_THAT(Origin("p1"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
   EXPECT_THAT(Origin("p2"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
   EXPECT_THAT(Origin("p3"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
-  EXPECT_THAT(Origin("temp"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
+
+  EXPECT_THAT(Origin("temp"), HasLoansTo({"v1", "v2", "v3"}, "in_loop"));
+  // 'temp' is a block-local origin and it's loans are not tracked outside the
+  // block.
+  EXPECT_THAT(Origin("temp"), HasLoansTo({}, "after_loop"));
 }
 
 TEST_F(LifetimeAnalysisTest, PointersAndExpirationInACycle) {
@@ -677,7 +773,6 @@ TEST_F(LifetimeAnalysisTest, GslPointerConstructFromView) {
   EXPECT_THAT(Origin("q"), HasLoansTo({"a"}, "p1"));
 }
 
-// FIXME: Handle loans in ternary operator!
 TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
   SetupTest(R"(
     void target(bool cond) {
@@ -686,7 +781,24 @@ TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
       POINT(p1);
     }
   )");
-  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"a", "b"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, ExtraParenthesis) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = ((View((((a))))));
+      View y = ((View{(((x)))}));
+      View z = ((View(((y)))));
+      View p = ((View{((x))}));
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"a"}, "p1"));
 }
 
 // FIXME: Handle temporaries.
@@ -1193,6 +1305,205 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
   )");
   EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
   EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, SimpleReturnStackAddress) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      return p;
+    }
+  )");
+  EXPECT_THAT("s", HasLiveLoanAtExpiry("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, DirectReturn) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s;
+      POINT(P);
+      return &s;
+    }
+  )");
+  EXPECT_THAT("s", HasLiveLoanAtExpiry("P"));
+}
+
+TEST_F(LifetimeAnalysisTest, ConditionalAssignUnconditionalReturn) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj s1;
+      MyObj* p = nullptr;
+      if (c) {
+        p = &s1;
+      }
+      POINT(P);
+      return p;
+    }
+  )");
+  EXPECT_THAT("s1", HasLiveLoanAtExpiry("P"));
+}
+
+TEST_F(LifetimeAnalysisTest, MultipleAssignments) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s;
+      MyObj* p1 = &s;
+      MyObj* p2 = &s;
+      POINT(P);
+      return p2;
+    }
+  )");
+  // Test if atleast one loan to "s" is live;
+  EXPECT_THAT("s", HasLiveLoanAtExpiry("P"));
+}
+
+TEST_F(LifetimeAnalysisTest, ConditionalAssignBothBranches) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj s1;
+      static MyObj s2;
+      MyObj* p = nullptr;
+      if (c) {
+        p = &s1;
+      } else {
+       p = &s2;
+      }
+      POINT(P);
+      return p;
+    }
+  )");
+  EXPECT_THAT("s1", HasLiveLoanAtExpiry("P"));
+}
+
+TEST_F(LifetimeAnalysisTest, ReassignFromSafeToLocalThenReturn) {
+  SetupTest(R"(
+    MyObj* target() {
+      static MyObj safe_obj;
+      MyObj local_obj;
+      MyObj* p = &safe_obj;
+
+      p = &local_obj;
+      POINT(P); 
+      return p;
+    }
+  )");
+  EXPECT_THAT("local_obj", HasLiveLoanAtExpiry("P"));
+}
+
+TEST_F(LifetimeAnalysisTest, PointerChainToLocal) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj local_obj;
+      MyObj* p1 = &local_obj;
+      MyObj* p2 = p1;
+      POINT(P);
+      return p2;
+    }
+  )");
+  EXPECT_THAT("local_obj", HasLiveLoanAtExpiry("P"));
+}
+
+TEST_F(LifetimeAnalysisTest, MultipleAssignmentMultipleReturn) {
+  SetupTest(R"(
+    MyObj* target(bool c1, bool c2) {
+      static MyObj global_obj;
+      MyObj local_obj1;
+      MyObj local_obj2;
+      MyObj* p = nullptr;
+      if(c1){
+        p = &local_obj1;
+        POINT(C1);
+        return p;
+      }
+      else if(c2){
+        p = &local_obj2;
+        POINT(C2);
+        return p;
+      }
+      p = &global_obj;
+      POINT(C3);
+      return p;
+    }
+  )");
+
+  EXPECT_THAT("local_obj1", HasLiveLoanAtExpiry("C1"));
+  EXPECT_THAT("local_obj2", HasLiveLoanAtExpiry("C2"));
+
+  EXPECT_THAT("local_obj1", Not(HasLiveLoanAtExpiry("C3")));
+  EXPECT_THAT("local_obj2", Not(HasLiveLoanAtExpiry("C3")));
+}
+
+TEST_F(LifetimeAnalysisTest, MultipleAssignmentsSingleReturn) {
+  SetupTest(R"(
+    MyObj* target(bool c1, bool c2) {
+    static MyObj global_obj;
+      MyObj local_obj1;
+      MyObj local_obj2;
+      MyObj* p = nullptr;
+      if(c1){
+        p = &local_obj1;
+      }
+      else if(c2){
+        p = &local_obj2;
+      }
+      else{
+      p = &global_obj;
+      }
+      POINT(P);
+      return p;
+    }
+  )");
+  EXPECT_THAT("local_obj1", HasLiveLoanAtExpiry("P"));
+  EXPECT_THAT("local_obj2", HasLiveLoanAtExpiry("P"));
+}
+
+TEST_F(LifetimeAnalysisTest, UseAfterScopeThenReturn) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj* p;
+      {
+        MyObj local_obj;
+        p = &local_obj;
+        POINT(p1);
+      }
+      POINT(p2);
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p2"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p1"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+
+  EXPECT_THAT("local_obj", HasLiveLoanAtExpiry("p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, ReturnBeforeUseAfterScope) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj* p;
+      static MyObj global_obj;
+      {
+        MyObj local_obj;
+        p = &local_obj;
+        if(c){
+          POINT(p1);
+          return p;
+        }
+      }
+      POINT(p2);
+      return &global_obj;
+    }
+  )");
+  EXPECT_THAT("local_obj", HasLiveLoanAtExpiry("p1"));
+
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p1"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
 }
 
 } // anonymous namespace
