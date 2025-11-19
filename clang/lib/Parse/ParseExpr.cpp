@@ -333,9 +333,10 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     Token OpToken = Tok;
     ConsumeToken();
 
-    // the reflection operator can't be in a binary expression
-    // so if reflection and blocks are enabled, we need to
-    // split caretcaret into two caret's
+    // The reflection operator is not valid here (i.e., in the place of the
+    // operator token in a binary expression), so if reflection and blocks are
+    // enabled, we split caretcaret into two carets: the first being the binary
+    // operator and the second being the introducer for the block.
     if (OpToken.is(tok::caretcaret)) {
       assert(getLangOpts().Reflection &&
              "reflection support disabled - compile with -freflection");
