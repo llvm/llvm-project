@@ -6622,10 +6622,10 @@ inline unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
 }
 
 /// Return true for zip1 or zip2 masks of the form:
-///  <0,  8, 1,  9, 2, 10, 3, 11> or
-///  <4, 12, 5, 13, 6, 14, 7, 15> or
-///  <8,  0, 9,  1, 10, 2, 11, 3> or
-///  <12, 4, 13, 5, 14, 6, 15, 7>
+///  <0,  8, 1,  9, 2, 10, 3, 11> (WhichResultOut = 0, OperandOrderOut = 0) or
+///  <4, 12, 5, 13, 6, 14, 7, 15> (WhichResultOut = 1, OperandOrderOut = 0) or
+///  <8,  0, 9,  1, 10, 2, 11, 3> (WhichResultOut = 0, OperandOrderOut = 1) or
+///  <12, 4, 13, 5, 14, 6, 15, 7> (WhichResultOut = 1, OperandOrderOut = 1)
 inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
                       unsigned &WhichResultOut, unsigned &OperandOrderOut) {
   if (NumElts % 2 != 0)
@@ -6633,10 +6633,10 @@ inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
 
   // "Variant" refers to the distinction bwetween zip1 and zip2, while
   // "Order" refers to sequence of input registers (matching vs flipped).
-  bool Variant0Order0 = true;
-  bool Variant1Order0 = true;
-  bool Variant0Order1 = true;
-  bool Variant1Order1 = true;
+  bool Variant0Order0 = true; // WhichResultOut = 0, OperandOrderOut = 0
+  bool Variant1Order0 = true; // WhichResultOut = 1, OperandOrderOut = 0
+  bool Variant0Order1 = true; // WhichResultOut = 0, OperandOrderOut = 1
+  bool Variant1Order1 = true; // WhichResultOut = 1, OperandOrderOut = 1
   // Check all elements match.
   for (unsigned i = 0; i != NumElts; i += 2) {
     if (M[i] >= 0) {
