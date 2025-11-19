@@ -1283,81 +1283,81 @@ llvm.func @rocdl.wmma.scale(%arg0: i32, %arg1: vector<4xf32>, %arg2: vector<8xi3
   // Test with default attributes (all zeros/false)
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v16i32(i32 0, <16 x i32> %{{.*}}, i32 0, <16 x i32> %{{.*}}, i16 0, <4 x float> %{{.*}}, i32 0, i32 0, i32 %{{.*}}, i32 0, i32 0, i32 %{{.*}}, i1 false, i1 false)
   %r00 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %arg5, %arg5, %arg1, %arg0, %arg0
-    {matrix_a_fmt = 0 : i32, matrix_b_fmt = 0 : i32, modC = 0 : i16,
-     matrix_a_scale = 0 : i32, matrix_a_scale_fmt = 0 : i32,
-     matrix_b_scale = 0 : i32, matrix_b_scale_fmt = 0 : i32,
+    {fmtA = 0 : i32, fmtB = 0 : i32, modC = 0 : i16,
+     scaleAType = 0 : i32, fmtScaleA = 0 : i32,
+     scaleBType = 0 : i32, fmtScaleB = 0 : i32,
      reuseA = false, reuseB = false} :
     (vector<16xi32>, vector<16xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   
   // Test with different matrix formats (FP8 x BF8)
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v16i32(i32 0, <16 x i32> %{{.*}}, i32 1, <16 x i32> %{{.*}}, i16 0, <4 x float> %{{.*}}, i32 1, i32 1, i32 %{{.*}}, i32 1, i32 1, i32 %{{.*}}, i1 false, i1 false)
   %r01 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %arg5, %arg5, %arg1, %arg0, %arg0
-    {matrix_a_fmt = 0 : i32, matrix_b_fmt = 1 : i32, modC = 0 : i16,
-     matrix_a_scale = 1 : i32, matrix_a_scale_fmt = 1 : i32,
-     matrix_b_scale = 1 : i32, matrix_b_scale_fmt = 1 : i32,
+    {fmtA = 0 : i32, fmtB = 1 : i32, modC = 0 : i16,
+     scaleAType = 1 : i32, fmtScaleA = 1 : i32,
+     scaleBType = 1 : i32, fmtScaleB = 1 : i32,
      reuseA = false, reuseB = false} :
     (vector<16xi32>, vector<16xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   
   // Test with FP8 x FP6 (different vector sizes) and modC = 1 (negate)
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v12i32(i32 0, <16 x i32> %{{.*}}, i32 2, <12 x i32> %{{.*}}, i16 1, <4 x float> %{{.*}}, i32 2, i32 2, i32 %{{.*}}, i32 2, i32 2, i32 %{{.*}}, i1 false, i1 false)
   %r02 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %arg5, %arg3, %arg1, %arg0, %arg0
-    {matrix_a_fmt = 0 : i32, matrix_b_fmt = 2 : i32, modC = 1 : i16,
-     matrix_a_scale = 2 : i32, matrix_a_scale_fmt = 2 : i32,
-     matrix_b_scale = 2 : i32, matrix_b_scale_fmt = 2 : i32,
+    {fmtA = 0 : i32, fmtB = 2 : i32, modC = 1 : i16,
+     scaleAType = 2 : i32, fmtScaleA = 2 : i32,
+     scaleBType = 2 : i32, fmtScaleB = 2 : i32,
      reuseA = false, reuseB = false} :
     (vector<16xi32>, vector<12xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   
   // Test with BF8 x BF6 and modC = 2 (abs)
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v12i32(i32 1, <16 x i32> %{{.*}}, i32 3, <12 x i32> %{{.*}}, i16 2, <4 x float> %{{.*}}, i32 0, i32 0, i32 %{{.*}}, i32 0, i32 0, i32 %{{.*}}, i1 false, i1 false)
   %r03 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %arg5, %arg3, %arg1, %arg0, %arg0
-    {matrix_a_fmt = 1 : i32, matrix_b_fmt = 3 : i32, modC = 2 : i16,
-     matrix_a_scale = 0 : i32, matrix_a_scale_fmt = 0 : i32,
-     matrix_b_scale = 0 : i32, matrix_b_scale_fmt = 0 : i32,
+    {fmtA = 1 : i32, fmtB = 3 : i32, modC = 2 : i16,
+     scaleAType = 0 : i32, fmtScaleA = 0 : i32,
+     scaleBType = 0 : i32, fmtScaleB = 0 : i32,
      reuseA = false, reuseB = false} :
     (vector<16xi32>, vector<12xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   
   // Test with FP8 x FP4 and modC = 3 (negate(abs))
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v8i32(i32 0, <16 x i32> %{{.*}}, i32 4, <8 x i32> %{{.*}}, i16 3, <4 x float> %{{.*}}, i32 3, i32 3, i32 %{{.*}}, i32 3, i32 3, i32 %{{.*}}, i1 false, i1 false)
   %r04 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %arg5, %arg2, %arg1, %arg0, %arg0
-    {matrix_a_fmt = 0 : i32, matrix_b_fmt = 4 : i32, modC = 3 : i16,
-     matrix_a_scale = 3 : i32, matrix_a_scale_fmt = 3 : i32,
-     matrix_b_scale = 3 : i32, matrix_b_scale_fmt = 3 : i32,
+    {fmtA = 0 : i32, fmtB = 4 : i32, modC = 3 : i16,
+     scaleAType = 3 : i32, fmtScaleA = 3 : i32,
+     scaleBType = 3 : i32, fmtScaleB = 3 : i32,
      reuseA = false, reuseB = false} :
     (vector<16xi32>, vector<8xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   
   // Test with reuseA = true
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v16i32(i32 2, <16 x i32> %{{.*}}, i32 2, <16 x i32> %{{.*}}, i16 0, <4 x float> %{{.*}}, i32 0, i32 0, i32 %{{.*}}, i32 0, i32 0, i32 %{{.*}}, i1 true, i1 false)
   %r10 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %arg5, %arg5, %arg1, %arg0, %arg0
-    {matrix_a_fmt = 2 : i32, matrix_b_fmt = 2 : i32, modC = 0 : i16,
-     matrix_a_scale = 0 : i32, matrix_a_scale_fmt = 0 : i32,
-     matrix_b_scale = 0 : i32, matrix_b_scale_fmt = 0 : i32,
+    {fmtA = 2 : i32, fmtB = 2 : i32, modC = 0 : i16,
+     scaleAType = 0 : i32, fmtScaleA = 0 : i32,
+     scaleBType = 0 : i32, fmtScaleB = 0 : i32,
      reuseA = true, reuseB = false} :
     (vector<16xi32>, vector<16xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   
   // Test with reuseB = true
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v16i32(i32 3, <16 x i32> %{{.*}}, i32 3, <16 x i32> %{{.*}}, i16 0, <4 x float> %{{.*}}, i32 0, i32 0, i32 %{{.*}}, i32 0, i32 0, i32 %{{.*}}, i1 false, i1 true)
   %r11 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %arg5, %arg5, %arg1, %arg0, %arg0
-    {matrix_a_fmt = 3 : i32, matrix_b_fmt = 3 : i32, modC = 0 : i16,
-     matrix_a_scale = 0 : i32, matrix_a_scale_fmt = 0 : i32,
-     matrix_b_scale = 0 : i32, matrix_b_scale_fmt = 0 : i32,
+    {fmtA = 3 : i32, fmtB = 3 : i32, modC = 0 : i16,
+     scaleAType = 0 : i32, fmtScaleA = 0 : i32,
+     scaleBType = 0 : i32, fmtScaleB = 0 : i32,
      reuseA = false, reuseB = true} :
     (vector<16xi32>, vector<16xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   
   // Test with both reuseA and reuseB = true
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v16i32(i32 4, <16 x i32> %{{.*}}, i32 4, <16 x i32> %{{.*}}, i16 1, <4 x float> %{{.*}}, i32 1, i32 1, i32 %{{.*}}, i32 1, i32 1, i32 %{{.*}}, i1 true, i1 true)
   %r12 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %arg5, %arg5, %arg1, %arg0, %arg0
-    {matrix_a_fmt = 4 : i32, matrix_b_fmt = 4 : i32, modC = 1 : i16,
-     matrix_a_scale = 1 : i32, matrix_a_scale_fmt = 1 : i32,
-     matrix_b_scale = 1 : i32, matrix_b_scale_fmt = 1 : i32,
+    {fmtA = 4 : i32, fmtB = 4 : i32, modC = 1 : i16,
+     scaleAType = 1 : i32, fmtScaleA = 1 : i32,
+     scaleBType = 1 : i32, fmtScaleB = 1 : i32,
      reuseA = true, reuseB = true} :
     (vector<16xi32>, vector<16xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   
   // Test scale16 variant with i64 scale exponents
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v4f32.v16i32.v16i32(i32 0, <16 x i32> %{{.*}}, i32 1, <16 x i32> %{{.*}}, i16 2, <4 x float> %{{.*}}, i32 2, i32 2, i64 %{{.*}}, i32 2, i32 2, i64 %{{.*}}, i1 false, i1 false)
   %r_scale16 = rocdl.wmma.scale16.f32.16x16x128.f8f6f4 %arg5, %arg5, %arg1, %arg8, %arg8
-    {matrix_a_fmt = 0 : i32, matrix_b_fmt = 1 : i32, modC = 2 : i16,
-     matrix_a_scale = 2 : i32, matrix_a_scale_fmt = 2 : i32,
-     matrix_b_scale = 2 : i32, matrix_b_scale_fmt = 2 : i32,
+    {fmtA = 0 : i32, fmtB = 1 : i32, modC = 2 : i16,
+     scaleAType = 2 : i32, fmtScaleA = 2 : i32,
+     scaleBType = 2 : i32, fmtScaleB = 2 : i32,
      reuseA = false, reuseB = false} :
     (vector<16xi32>, vector<16xi32>, vector<4xf32>, i64, i64) -> vector<4xf32>
   
@@ -1365,8 +1365,8 @@ llvm.func @rocdl.wmma.scale(%arg0: i32, %arg1: vector<4xf32>, %arg2: vector<8xi3
   // CHECK: call <8 x float> @llvm.amdgcn.wmma.scale.f32.32x16x128.f4.v8f32.v16i32.v8i32(<16 x i32> %{{.*}}, <8 x i32> %{{.*}}, i16 0, <8 x float> %{{.*}}, i32 1, i32 1, i32 %{{.*}}, i32 1, i32 1, i32 %{{.*}}, i1 false, i1 false)
   %r_f4 = rocdl.wmma.scale.f32.32x16x128.f4 %arg5, %arg2, %arg9, %arg0, %arg0
     {modC = 0 : i16,
-     matrix_a_scale = 1 : i32, matrix_a_scale_fmt = 1 : i32,
-     matrix_b_scale = 1 : i32, matrix_b_scale_fmt = 1 : i32,
+     scaleAType = 1 : i32, fmtScaleA = 1 : i32,
+     scaleBType = 1 : i32, fmtScaleB = 1 : i32,
      reuseA = false, reuseB = false} :
     (vector<16xi32>, vector<8xi32>, vector<8xf32>, i32, i32) -> vector<8xf32>
   
@@ -1374,8 +1374,8 @@ llvm.func @rocdl.wmma.scale(%arg0: i32, %arg1: vector<4xf32>, %arg2: vector<8xi3
   // CHECK: call <8 x float> @llvm.amdgcn.wmma.scale16.f32.32x16x128.f4.v8f32.v16i32.v8i32(<16 x i32> %{{.*}}, <8 x i32> %{{.*}}, i16 3, <8 x float> %{{.*}}, i32 2, i32 3, i64 %{{.*}}, i32 3, i32 2, i64 %{{.*}}, i1 true, i1 true)
   %r_f4_scale16 = rocdl.wmma.scale16.f32.32x16x128.f4 %arg5, %arg2, %arg9, %arg8, %arg8
     {modC = 3 : i16,
-     matrix_a_scale = 2 : i32, matrix_a_scale_fmt = 3 : i32,
-     matrix_b_scale = 3 : i32, matrix_b_scale_fmt = 2 : i32,
+     scaleAType = 2 : i32, fmtScaleA = 3 : i32,
+     scaleBType = 3 : i32, fmtScaleB = 2 : i32,
      reuseA = true, reuseB = true} :
     (vector<16xi32>, vector<8xi32>, vector<8xf32>, i64, i64) -> vector<8xf32>
   

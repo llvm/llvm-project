@@ -705,49 +705,49 @@ class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp
 // A is at position 1 and B is at position 3 (after format parameters).
 class ROCDL_WMMA_Scale_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy> : ROCDL_IntrOp<mnemonic,
     [0], [1, 3], [], 1, 0, 0, 0, [0, 2, 4, 6, 7, 9, 10, 12, 13], 
-    ["matrix_a_fmt", "matrix_b_fmt", "modC", "matrix_a_scale", "matrix_a_scale_fmt", 
-     "matrix_b_scale", "matrix_b_scale_fmt", "reuseA", "reuseB"]>,
+    ["fmtA", "fmtB", "modC", "scaleAType", "fmtScaleA", 
+     "scaleBType", "fmtScaleB", "reuseA", "reuseB"]>,
   Arguments<(ins 
-             DefaultValuedAttr<I32Attr, "0">:$matrix_a_fmt,
+             DefaultValuedAttr<I32Attr, "0">:$fmtA,
              LLVM_ScalarOrVectorOf<AB>:$A, 
-             DefaultValuedAttr<I32Attr, "0">:$matrix_b_fmt,
+             DefaultValuedAttr<I32Attr, "0">:$fmtB,
              LLVM_ScalarOrVectorOf<AB>:$B,
              DefaultValuedAttr<I16Attr, "0">:$modC, 
              LLVM_ScalarOrVectorOf<CD>:$C,
-             DefaultValuedAttr<I32Attr, "0">:$matrix_a_scale,
-             DefaultValuedAttr<I32Attr, "0">:$matrix_a_scale_fmt,
-             ScaleExpTy:$matrix_a_scale_exp,
-             DefaultValuedAttr<I32Attr, "0">:$matrix_b_scale,
-             DefaultValuedAttr<I32Attr, "0">:$matrix_b_scale_fmt,
-             ScaleExpTy:$matrix_b_scale_exp,
+             DefaultValuedAttr<I32Attr, "0">:$scaleAType,
+             DefaultValuedAttr<I32Attr, "0">:$fmtScaleA,
+             ScaleExpTy:$scaleA,
+             DefaultValuedAttr<I32Attr, "0">:$scaleBType,
+             DefaultValuedAttr<I32Attr, "0">:$fmtScaleB,
+             ScaleExpTy:$scaleB,
              DefaultValuedAttr<I1Attr, "0">:$reuseA,
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C `,` $matrix_a_scale_exp `,` $matrix_b_scale_exp attr-dict `:` functional-type(operands, $res)
+    $A `,` $B `,` $C `,` $scaleA `,` $scaleB attr-dict `:` functional-type(operands, $res)
   }];
 }
 
 class ROCDL_WMMA_Scale_F4_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy> : ROCDL_IntrOp<mnemonic,
     [0], [0, 1], [], 1, 0, 0, 0, [2, 4, 5, 7, 8, 10, 11], 
-    ["modC", "matrix_a_scale", "matrix_a_scale_fmt", 
-     "matrix_b_scale", "matrix_b_scale_fmt", "reuseA", "reuseB"]>,
+    ["modC", "scaleAType", "fmtScaleA", 
+     "scaleBType", "fmtScaleB", "reuseA", "reuseB"]>,
   Arguments<(ins 
              LLVM_ScalarOrVectorOf<AB>:$A, 
              LLVM_ScalarOrVectorOf<AB>:$B,
              DefaultValuedAttr<I16Attr, "0">:$modC, 
              LLVM_ScalarOrVectorOf<CD>:$C,
-             DefaultValuedAttr<I32Attr, "0">:$matrix_a_scale,
-             DefaultValuedAttr<I32Attr, "0">:$matrix_a_scale_fmt,
-             ScaleExpTy:$matrix_a_scale_exp,
-             DefaultValuedAttr<I32Attr, "0">:$matrix_b_scale,
-             DefaultValuedAttr<I32Attr, "0">:$matrix_b_scale_fmt,
-             ScaleExpTy:$matrix_b_scale_exp,
+             DefaultValuedAttr<I32Attr, "0">:$scaleAType,
+             DefaultValuedAttr<I32Attr, "0">:$fmtScaleA,
+             ScaleExpTy:$scaleA,
+             DefaultValuedAttr<I32Attr, "0">:$scaleBType,
+             DefaultValuedAttr<I32Attr, "0">:$fmtScaleB,
+             ScaleExpTy:$scaleB,
              DefaultValuedAttr<I1Attr, "0">:$reuseA,
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C `,` $matrix_a_scale_exp `,` $matrix_b_scale_exp attr-dict `:` functional-type(operands, $res)
+    $A `,` $B `,` $C `,` $scaleA `,` $scaleB attr-dict `:` functional-type(operands, $res)
   }];
 }
 
