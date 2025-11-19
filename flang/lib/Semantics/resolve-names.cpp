@@ -3967,22 +3967,6 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     useProcedure = &useUltimate;
   }
 
-  // Creates a UseErrorDetails symbol in the current scope for a
-  // current UseDetails symbol, but leaves the UseDetails in the
-  // scope's name map.
-  auto CreateLocalUseError{[&]() {
-    EraseSymbol(*localSymbol);
-    CHECK(localSymbol->has<UseDetails>());
-    UseErrorDetails details{localSymbol->get<UseDetails>()};
-    details.add_occurrence(location, useSymbol);
-    Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
-    // Restore *localSymbol in currScope
-    auto iter{currScope().find(localName)};
-    CHECK(iter != currScope().end() && &*iter->second == newSymbol);
-    iter->second = MutableSymbolRef{*localSymbol};
-    return newSymbol;
-  }};
-
   // When two derived types arrived, try to combine them.
   const Symbol *combinedDerivedType{nullptr};
   if (!useDerivedType) {
@@ -4008,8 +3992,19 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       combinedDerivedType = localDerivedType;
     } else {
       // Create a local UseErrorDetails for the ambiguous derived type
-      if (localGeneric) {
-        combinedDerivedType = CreateLocalUseError();
+      if (localSymbol->has<UseDetails>() && localGeneric) {
+        // Creates a UseErrorDetails symbol in the current scope for a
+        // current UseDetails symbol, but leaves the UseDetails in the
+        // scope's name map.
+        UseErrorDetails details{localSymbol->get<UseDetails>()};
+        EraseSymbol(*localSymbol);
+        details.add_occurrence(location, useSymbol);
+        Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
+        // Restore *localSymbol in currScope
+        auto iter{currScope().find(localName)};
+        CHECK(iter != currScope().end() && &*iter->second == newSymbol);
+        iter->second = MutableSymbolRef{*localSymbol};
+        combinedDerivedType = newSymbol;
       } else {
         ConvertToUseError(*localSymbol, location, useSymbol);
         localDerivedType = nullptr;
@@ -10088,7 +10083,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u)) {
     return;
   }
   if (const auto *tkr{

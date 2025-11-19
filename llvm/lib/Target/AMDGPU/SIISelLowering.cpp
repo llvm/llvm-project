@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -86,7 +87,7 @@ static unsigned findFirstFreeSGPR(CCState &CCInfo) {
 
 SITargetLowering::SITargetLowering(const TargetMachine &TM,
                                    const GCNSubtarget &STI)
-    : AMDGPUTargetLowering(TM, STI), Subtarget(&STI) {
+    : AMDGPUTargetLowering(TM, STI, STI), Subtarget(&STI) {
   addRegisterClass(MVT::i1, &AMDGPU::VReg_1RegClass);
   addRegisterClass(MVT::i64, &AMDGPU::SReg_64RegClass);
 
@@ -4062,7 +4063,7 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   if (!CI->isTailCall())
     return false;
 
-  const Function *ParentFn = CI->getParent()->getParent();
+  const Function *ParentFn = CI->getFunction();
   if (AMDGPU::isEntryFunctionCC(ParentFn->getCallingConv()))
     return false;
   return true;
@@ -17432,7 +17433,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                      SDNode *Node) const {
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
   if (TII->isVOP3(MI.getOpcode())) {

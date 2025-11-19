@@ -31,7 +31,7 @@ private:
   friend AnalysisInfoMixin<RuntimeLibraryAnalysis>;
   LLVM_ABI static AnalysisKey Key;
 
-  RTLIB::RuntimeLibcallsInfo LibcallsInfo;
+  std::optional<RTLIB::RuntimeLibcallsInfo> LibcallsInfo;
 };
 
 class LLVM_ABI RuntimeLibraryInfoWrapper : public ImmutablePass {
