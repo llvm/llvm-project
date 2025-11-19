@@ -80,6 +80,8 @@ function usage(){
            fails when not enough memory available on these nodes.
       -l   use numactl localalloc to CPUs in same NUMA domain. Note: If
            memory cannot be allocated, alloc falls back to other nodes.
+      -nr  use numactl ROCR_VISIBLE_DEVICES
+      -nm  use numactl OMPI_COMM_WORLD_LOCAL_RANK
       --version Print version of gpurun and exit
 
    Optional Input environment variables:
@@ -161,6 +163,8 @@ while [ "$_end_gpurun_opts" == "0"  ] ; do
       -vv)         GPURUN_VERBOSE=2;;
       -m)          _use_numactl_membind=1;;
       -md)         shift; _devices_per_mdset=$1; _uses_multi_device=1;;
+      -nr)          _use_numactl_rocr=1;;
+      -nm)          _use_numactl_ompi=1;;
       -l)          _use_numactl_localalloc=1;;
       -nomask)     GPURUN_MASK_POLICY="nomask";;
       *)           _end_gpurun_opts=1; break;;
@@ -198,6 +202,14 @@ fi
 if [ -z "$_num_local_ranks" ] && [ ! -z $SLURM_CPUS_ON_NODE ] ; then
    _num_local_ranks=$SLURM_CPUS_ON_NODE
    _local_rank_num=$SLURM_LOCALID
+fi
+if [ "$_use_numactl_rocr"  == "1" ] ; then
+   numactl --cpunodebind $ROCR_VISIBLE_DEVICES  --membind $ROCR_VISIBLE_DEVICES $*
+   exit $?
+fi
+if [ "$_use_numactl_ompi" == "1" ] ; then
+   numactl --cpunodebind $OMPI_COMM_WORLD_LOCAL_RANK  --membind $OMPI_COMM_WORLD_LOCAL_RANK $*
+   exit $?
 fi
 # If none of the above MPIs, assume gpurun is wrapper for single process on single GPU
 if [ -z "$_num_local_ranks" ] ; then
