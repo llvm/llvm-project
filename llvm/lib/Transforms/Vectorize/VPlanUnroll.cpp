@@ -352,6 +352,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
+        match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
@@ -364,17 +365,21 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractLane>(
-                      m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_ExtractLane(m_VPValue(Op0), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
     if (match(&R, m_ExtractLastElement(m_VPValue(Op0))) ||
-        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                      m_VPValue(Op0)))) {
+        match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
+      if (isa<VPFirstOrderRecurrencePHIRecipe>(Op0)) {
+        assert(match(&R, m_ExtractLastElement(m_VPValue())) &&
+               "can only extract last element of FOR");
+        continue;
+      }
+
       if (Plan.hasScalarVFOnly()) {
         auto *I = cast<VPInstruction>(&R);
         // Extracting from end with VF = 1 implies retrieving the last or
