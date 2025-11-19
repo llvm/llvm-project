@@ -4282,10 +4282,11 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
   }
 
   for (unsigned Idx = 0; Idx != WideMember0->getNumOperands(); ++Idx) {
-    SmallVector<VPValue *> Ops0;
+    SmallVector<VPValue *> OpsI;
     for (VPValue *Op : Ops)
-      Ops0.push_back(Op->getDefiningRecipe()->getOperand(Idx));
-    if (any_of(enumerate(Ops0), [WideMember0, Idx](const auto &P) {
+      OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
+
+    if (any_of(enumerate(OpsI), [WideMember0, Idx](const auto &P) {
           const auto &[OpIdx, OpV] = P;
           return !canNarrowLoad(WideMember0, Idx, OpV, OpIdx);
         }))
