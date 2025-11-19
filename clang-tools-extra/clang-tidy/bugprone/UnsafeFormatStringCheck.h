@@ -25,7 +25,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  bool hasUnboundedStringSpecifier(StringRef FormatString, bool IsScanfFamily);
+  bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily);
   std::string getSafeAlternative(StringRef FunctionName);
 };
 
