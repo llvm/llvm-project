@@ -236,6 +236,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__scoped_atomic_uinc_wrap`` and ``__scoped_atomic_udec_wrap``.
+
 - Added ``__builtin_elementwise_ldexp``.
 
 - Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.

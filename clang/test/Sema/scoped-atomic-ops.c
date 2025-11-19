@@ -40,6 +40,8 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
   *f = __scoped_atomic_fetch_nand(f, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
   *g = __scoped_atomic_fetch_min(g, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
   *h = __scoped_atomic_fetch_max(h, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *h = __scoped_atomic_uinc_wrap(h, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *g = __scoped_atomic_udec_wrap(g, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }
 
 void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
@@ -51,6 +53,8 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
   *f = __scoped_atomic_fetch_nand(1, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
   *g = __scoped_atomic_fetch_min(1, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
   *h = __scoped_atomic_fetch_max(1, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
+  *h = __scoped_atomic_uinc_wrap(1, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
+  *g = __scoped_atomic_udec_wrap(1, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
 }
 
 void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
@@ -62,6 +66,8 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
   *f = __scoped_atomic_fetch_nand(f, 1, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
   *g = __scoped_atomic_fetch_min(g, 1, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
   *h = __scoped_atomic_fetch_max(h, 1, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
+  *h = __scoped_atomic_uinc_wrap(h, 1, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
+  *g = __scoped_atomic_udec_wrap(g, 1, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
 }
 
 void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
@@ -73,6 +79,17 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
   *f = __scoped_atomic_fetch_nand(f, 1, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
   *g = __scoped_atomic_fetch_min(g, 1, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
   *h = __scoped_atomic_fetch_max(h, 1, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *h = __scoped_atomic_uinc_wrap(h, 1, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *g = __scoped_atomic_udec_wrap(g, 1, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+}
+
+void fi3e(float *a, float *b, float *c, float *d, float *e, float *f) {
+  *a = __scoped_atomic_fetch_and(a, 1, __ATOMIC_RELAXED, 42); // expected-error {{address argument to atomic operation must be a pointer to integer ('float *' invalid)}}
+  *b = __scoped_atomic_fetch_or(b, 1, __ATOMIC_RELAXED, 42); // expected-error {{address argument to atomic operation must be a pointer to integer ('float *' invalid)}}
+  *c = __scoped_atomic_fetch_xor(c, 1, __ATOMIC_RELAXED, 42); // expected-error {{address argument to atomic operation must be a pointer to integer ('float *' invalid)}}
+  *d = __scoped_atomic_fetch_nand(d, 1, __ATOMIC_RELAXED, 42); // expected-error {{address argument to atomic operation must be a pointer to integer ('float *' invalid)}}
+  *f = __scoped_atomic_uinc_wrap(f, 1, __ATOMIC_RELAXED, 42); // expected-error {{address argument to atomic operation must be a pointer to integer ('float *' invalid)}}
+  *e = __scoped_atomic_udec_wrap(e, 1, __ATOMIC_RELAXED, 42); // expected-error {{address argument to atomic operation must be a pointer to integer ('float *' invalid)}}
 }
 
 int fi4a(int *i) {

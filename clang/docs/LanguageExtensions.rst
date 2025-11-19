@@ -4854,6 +4854,14 @@ memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
 
+Clang privides two additional __scoped_atomic builtins:
+
+* ``__scoped_atomic_uinc_wrap``
+* ``__scoped_atomic_udec_wrap``
+
+See LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
+instruction for the semantics of uinc_wrap and udec_wrap.
+
 Atomic memory scopes are designed to assist optimizations for systems with
 several levels of memory hierarchy like GPUs. The following memory scopes are
 currently supported:
