@@ -55,3 +55,14 @@ The default is 72.
 Set `NO_STOP_MESSAGE=1` to disable the extra information about
 IEEE floating-point exception flags that the Fortran language
 standard requires for `STOP` and `ERROR STOP` statements.
+
+## `FORT_TRUNCATE_STREAM`
+
+Set `FORT_TRUNCATE_STREAM=1` to make output to a formatted unit
+with `ACCESS="STREAM"` truncate the file when the unit has been
+repositioned via `POS=` to an earlier point in the file.
+This behavior is analogous to the implicit writing of an ENDFILE record
+when output takes place to a sequential unit after
+executing a `BACKSPACE` or `REWIND` statement.
+Truncation of a stream-access unit is common to several other
+compilers, but it is not mentioned in the standard.
