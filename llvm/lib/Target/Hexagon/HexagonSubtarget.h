@@ -294,8 +294,6 @@ public:
   bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;
 
-  bool enableTerminalRule() const override { return true; }
-
   // Always use the TargetLowering default scheduler.
   // FIXME: This will use the vliw scheduler which is probably just hurting
   // compiler time and will be removed eventually anyway.

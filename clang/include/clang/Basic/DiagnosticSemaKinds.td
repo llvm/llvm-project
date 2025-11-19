@@ -10754,8 +10754,19 @@ def warn_lifetime_safety_loan_expires_permissive : Warning<
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
    InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+
+def warn_lifetime_safety_return_stack_addr_permissive
+    : Warning<"address of stack memory is returned later">,
+      InGroup<LifetimeSafetyPermissive>,
+      DefaultIgnore;
+def warn_lifetime_safety_return_stack_addr_strict
+    : Warning<"address of stack memory may be returned later">,
+      InGroup<LifetimeSafetyStrict>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
+def note_lifetime_safety_returned_here : Note<"returned here">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -12976,6 +12987,9 @@ def err_builtin_invalid_arg_type: Error<
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
+
+def err_bswapg_invalid_bit_width : Error<
+  "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;
 
 def err_builtin_trivially_relocate_invalid_arg_type: Error <
   "first%select{||| and second}0 argument%select{|||s}0 to "

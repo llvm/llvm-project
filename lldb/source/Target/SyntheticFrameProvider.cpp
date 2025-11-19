@@ -8,12 +8,10 @@
 
 #include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -23,16 +21,11 @@ SyntheticFrameProvider::SyntheticFrameProvider(StackFrameListSP input_frames)
 
 SyntheticFrameProvider::~SyntheticFrameProvider() = default;
 
-void ScriptedFrameProviderDescriptor::Dump(Stream *s) const {
+void SyntheticFrameProviderDescriptor::Dump(Stream *s) const {
   if (!s)
     return;
 
-  s->Format("  ID: {0:x}\n", GetID());
   s->Printf("  Name: %s\n", GetName().str().c_str());
-
-  std::string description = GetDescription();
-  if (!description.empty())
-    s->Printf("  Description: %s\n", description.c_str());
 
   // Show thread filter information.
   if (thread_specs.empty()) {
@@ -48,23 +41,9 @@ void ScriptedFrameProviderDescriptor::Dump(Stream *s) const {
   }
 }
 
-uint32_t ScriptedFrameProviderDescriptor::GetID() const {
-  if (!scripted_metadata_sp)
-    return 0;
-
-  return scripted_metadata_sp->GetID();
-}
-
-std::string ScriptedFrameProviderDescriptor::GetDescription() const {
-  // If we have an interface, call get_description() to fetch it.
-  if (interface_sp && scripted_metadata_sp)
-    return interface_sp->GetDescription(scripted_metadata_sp->GetClassName());
-  return {};
-}
-
 llvm::Expected<SyntheticFrameProviderSP> SyntheticFrameProvider::CreateInstance(
     StackFrameListSP input_frames,
-    const ScriptedFrameProviderDescriptor &descriptor) {
+    const SyntheticFrameProviderDescriptor &descriptor) {
   if (!input_frames)
     return llvm::createStringError(
         "cannot create synthetic frame provider: invalid input frames");

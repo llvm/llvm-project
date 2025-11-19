@@ -126,10 +126,6 @@ module std_core [system] {
       header "__type_traits/is_base_of.h"
       export std_core.type_traits.integral_constant
     }
-    module is_bounded_array {
-      header "__type_traits/is_bounded_array.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_callable {
       header "__type_traits/is_callable.h"
       export std_core.type_traits.integral_constant
@@ -321,10 +317,6 @@ module std_core [system] {
     }
     module is_trivially_relocatable {
       header "__type_traits/is_trivially_relocatable.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_unbounded_array {
-      header "__type_traits/is_unbounded_array.h"
       export std_core.type_traits.integral_constant
     }
     module is_union {
@@ -2361,7 +2353,10 @@ module std [system] {
   module hash_table           { header "__hash_table" }
   module node_handle          { header "__node_handle" }
   module split_buffer         { header "__split_buffer" }
-  module tree                 { header "__tree" }
+  module tree                 {
+    header "__tree"
+    export std.memory.unique_ptr
+  }
   module std_mbstate_t {
     header "__std_mbstate_t.h"
     export *
@@ -2436,10 +2431,6 @@ module std_math_h [system] {
 module std_stdatomic_h [system] {
   header "stdatomic.h"
   export *
-}
-module std_stdbool_h [system] {
-  // <stdbool.h>'s __bool_true_false_are_defined macro requires textual inclusion.
-  textual header "stdbool.h"
 }
 module std_stddef_h [system] {
   // <stddef.h> supports being included multiple times with different pre-defined macros

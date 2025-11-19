@@ -3355,6 +3355,11 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   if (!foundAny) New->dropAttrs();
 }
 
+void Sema::CheckAttributesOnDeducedType(Decl *D) {
+  for (const Attr *A : D->attrs())
+    checkAttrIsTypeDependent(D, A);
+}
+
 // Returns the number of added attributes.
 template <class T>
 static unsigned propagateAttribute(ParmVarDecl *To, const ParmVarDecl *From,
@@ -13834,6 +13839,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       return;
   }
 
+  this->CheckAttributesOnDeducedType(RealDecl);
+
   // dllimport cannot be used on variable definitions.
   if (VDecl->hasAttr<DLLImportAttr>() && !VDecl->isStaticDataMember()) {
     Diag(VDecl->getLocation(), diag::err_attribute_dllimport_data_definition);
@@ -14324,6 +14331,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (Type->isUndeducedType() &&
         DeduceVariableDeclarationType(Var, false, nullptr))
       return;
+
+    this->CheckAttributesOnDeducedType(RealDecl);
 
     // C++11 [class.static.data]p3: A static data member can be declared with
     // the constexpr specifier; if so, its declaration shall specify
