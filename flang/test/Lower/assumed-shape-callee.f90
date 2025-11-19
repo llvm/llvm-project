@@ -8,7 +8,7 @@
 ! of making a new fir.box and this would break all these tests. In fact, for non
 ! contiguous arrays, this is the case. Find a better way to tests symbol lowering/mapping.
 
-! CHECK-LABEL: func @_QPtest_assumed_shape_1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x", fir.contiguous}) 
+! CHECK-LABEL: func @_QPtest_assumed_shape_1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x", fir.contiguous})
 subroutine test_assumed_shape_1(x)
   integer, contiguous :: x(:)
   ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
