@@ -31,10 +31,11 @@ void check_string_literal1( const char* s, ... ) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
 }
 
-void check_string_literal2( const char* s, ... ) {
+void check_string_literal2( const char* s, ... ) { // #check_string_literal2
   va_list ap;
   va_start(ap,s);
-  vprintf(s,ap); // expected-warning {{format string is not a string literal}}
+  vprintf(s,ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'check_string_literal2'}}
+  // expected-note@#check_string_literal2 {{'check_string_literal2' declared here}}
 }
 
 void check_string_literal3( FILE* fp, const char* s, ... ) {
@@ -44,10 +45,11 @@ void check_string_literal3( FILE* fp, const char* s, ... ) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
 }
 
-void check_string_literal4( FILE* fp, const char* s, ... ) {
+void check_string_literal4( FILE* fp, const char* s, ... ) { // #check_string_literal4
   va_list ap;
   va_start(ap,s);
-  vfprintf(fp,s,ap); // expected-warning {{format string is not a string literal}}
+  vfprintf(fp,s,ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 2, 3)' attribute to the declaration of 'check_string_literal4'}}
+  // expected-note@#check_string_literal4 {{'check_string_literal4' declared here}}
 }
 
 void check_string_literal5( const char* s, ... ) {
@@ -58,11 +60,12 @@ void check_string_literal5( const char* s, ... ) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
 }
 
-void check_string_literal6( const char* s, ... ) {
+void check_string_literal6( const char* s, ... ) { // #check_string_literal6
   char * b;
   va_list ap;
   va_start(ap,s);
-  vasprintf(&b,s,ap); // expected-warning {{format string is not a string literal}}
+  vasprintf(&b,s,ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'check_string_literal6'}}
+  // expected-note@#check_string_literal6 {{'check_string_literal6' declared here}}
 }
 
 void check_string_literal7( const char* s, char *buf ) {
@@ -89,16 +92,18 @@ void check_string_literal10( const char* s, char *buf, ... ) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
 }
 
-void check_string_literal11( const char* s, char *buf, ... ) {
+void check_string_literal11( const char* s, char *buf, ... ) { // #check_string_literal11
   va_list ap;
   va_start(ap,buf);
-  vsprintf(buf,s,ap); // expected-warning {{format string is not a string lit}}
+  vsprintf(buf,s,ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 3)' attribute to the declaration of 'check_string_literal11'}}
+  // expected-note@#check_string_literal11 {{'check_string_literal11' declared here}}
 }
 
-void check_string_literal12( const char* s, char *buf, ... ) {
+void check_string_literal12( const char* s, char *buf, ... ) { // #check_string_literal12
   va_list ap;
   va_start(ap,buf);
-  vsnprintf(buf,2,s,ap); // expected-warning {{format string is not a string lit}}
+  vsnprintf(buf,2,s,ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 3)' attribute to the declaration of 'check_string_literal12'}}
+  // expected-note@#check_string_literal12 {{'check_string_literal12' declared here}}
 }
 
 void check_string_literal13( char *buf, ... ) {
@@ -107,10 +112,11 @@ void check_string_literal13( char *buf, ... ) {
   vsnprintf(buf,2,global_fmt,ap); // expected-warning {{format string is not a string literal}}
 }
 
-void check_string_literal14( FILE* fp, const char* s, char *buf, ... ) {
+void check_string_literal14( FILE* fp, const char* s, char *buf, ... ) { // #check_string_literal14
   va_list ap;
   va_start(ap,buf);
-  __builtin___vsnprintf_chk(buf,2,0,-1,s,ap); // expected-warning {{format string is not a string lit}}
+  __builtin___vsnprintf_chk(buf,2,0,-1,s,ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 2, 4)' attribute to the declaration of 'check_string_literal14'}}
+  // expected-note@#check_string_literal14 {{'check_string_literal14' declared here}}
 }
 
 void check_string_literal15( FILE* fp, const char* s, char *buf, ... ) {
@@ -119,10 +125,11 @@ void check_string_literal15( FILE* fp, const char* s, char *buf, ... ) {
   __builtin___vsnprintf_chk(buf,2,0,-1,global_fmt,ap); // expected-warning {{format string is not a string literal}}
 }
 
-void check_string_literal16(const char* s, ... ) {
+void check_string_literal16(const char* s, ... ) { // #check_string_literal16
   va_list ap;
   va_start(ap,s);
-  vscanf(s, ap); // expected-warning {{format string is not a string literal}}
+  vscanf(s, ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(scanf, 1, 2)' attribute to the declaration of 'check_string_literal16'}}
+  // expected-note@#check_string_literal16 {{'check_string_literal16' declared here}}
 }
 
 void check_string_literal17() {
@@ -911,12 +918,13 @@ void test_block(void) {
 
   void __attribute__((__format__(__printf__, 2, 3))) (^printf_arg2)(
       const char *, const char *, ...) =
-      ^(const char *not_fmt, const char *fmt, ...)
+      ^(const char *not_fmt, const char *fmt, ...) // #printf_arg2
           __attribute__((__format__(__printf__, 2, 3))) {
     va_list ap;
     va_start(ap, fmt);
     vprintf(fmt, ap);
-    vprintf(not_fmt, ap); // expected-warning{{format string is not a string literal}}
+    vprintf(not_fmt, ap); // expected-warning{{diagnostic behavior may be improved by adding the 'format(printf, 1, 3)' attribute to the declaration of block}}
+    // expected-note@#printf_arg2 {{block declared here}}
     va_end(ap);
   };
 

@@ -7026,15 +7026,19 @@ std::string escapeFormatString(StringRef Input) {
   return Result;
 }
 
-static void CheckMissingFormatAttributes(
+static bool CheckMissingFormatAttribute(
     Sema *S, ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
     StringLiteral *ReferenceFormatString, unsigned FormatIdx,
     unsigned FirstDataArg, FormatStringType FormatType, unsigned CallerParamIdx,
     SourceLocation Loc) {
-  NamedDecl *Caller = S->getCurFunctionOrMethodDecl();
-  if (!Caller)
-    return;
-  Caller = dyn_cast<NamedDecl>(Caller->getCanonicalDecl());
+  if (S->getDiagnostics().isIgnored(diag::warn_missing_format_attribute,
+                                    SourceLocation()))
+    return false;
+
+  DeclContext *DC = S->CurContext;
+  if (!isa<ObjCMethodDecl>(DC) && !isa<FunctionDecl>(DC) && !isa<BlockDecl>(DC))
+    return false;
+  Decl *Caller = cast<Decl>(DC)->getCanonicalDecl();
 
   unsigned NumCallerParams = getFunctionOrMethodNumParams(Caller);
 
@@ -7055,17 +7059,17 @@ static void CheckMissingFormatAttributes(
     unsigned NumCalleeArgs = Args.size() - FirstDataArg;
     if (NumCalleeArgs == 0 || NumCallerParams < NumCalleeArgs) {
       // There aren't enough arguments in the caller to pass to callee.
-      return;
+      return false;
     }
     for (unsigned CalleeIdx = Args.size() - 1, CallerIdx = NumCallerParams - 1;
          CalleeIdx >= FirstDataArg; --CalleeIdx, --CallerIdx) {
       const auto *Arg =
           dyn_cast<DeclRefExpr>(Args[CalleeIdx]->IgnoreParenCasts());
       if (!Arg)
-        return;
+        return false;
       const auto *Param = dyn_cast<ParmVarDecl>(Arg->getDecl());
       if (!Param || Param->getFunctionScopeIndex() != CallerIdx)
-        return;
+        return false;
     }
     FirstArgumentIndex =
         NumCallerParams + CallerArgumentIndexOffset - NumCalleeArgs;
@@ -7080,13 +7084,14 @@ static void CheckMissingFormatAttributes(
   case Sema::FormatArgumentPassingKind::FAPK_Elsewhere:
     // The callee has a format_matches attribute. We will emit that instead.
     if (!ReferenceFormatString)
-      return;
+      return false;
     break;
   }
 
   // Emit the diagnostic and fixit.
   unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
   StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
+  NamedDecl *ND = dyn_cast<NamedDecl>(Caller);
   do {
     std::string Attr, Fixit;
     if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere)
@@ -7098,8 +7103,15 @@ static void CheckMissingFormatAttributes(
           << "format_matches(" << FormatTypeName << ", " << FormatStringIndex
           << ", \"" << escapeFormatString(ReferenceFormatString->getString())
           << "\")";
-    auto DB = S->Diag(Loc, diag::warn_missing_format_attribute)
-              << Attr << Caller;
+    auto DB = S->Diag(Loc, diag::warn_missing_format_attribute) << Attr;
+    if (ND)
+      DB << ND;
+    else
+      DB << "block";
+
+    // Blocks don't provide a correct end loc, so skip emitting a fixit.
+    if (isa<BlockDecl>(Caller))
+      break;
 
     SourceLocation SL;
     llvm::raw_string_ostream IS(Fixit);
@@ -7124,8 +7136,8 @@ static void CheckMissingFormatAttributes(
 
     DB << FixItHint::CreateInsertion(SL, Fixit);
   } while (false);
-  S->Diag(Caller->getLocation(), diag::note_entity_declared_at) << Caller;
 
+  // Add implicit format or format_matches attribute.
   if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere) {
     Caller->addAttr(FormatAttr::CreateImplicit(
         S->getASTContext(), &S->getASTContext().Idents.get(FormatTypeName),
@@ -7135,6 +7147,15 @@ static void CheckMissingFormatAttributes(
         S->getASTContext(), &S->getASTContext().Idents.get(FormatTypeName),
         FormatStringIndex, ReferenceFormatString));
   }
+
+  {
+    auto DB = S->Diag(Caller->getLocation(), diag::note_entity_declared_at);
+    if (ND)
+      DB << ND;
+    else
+      DB << "block";
+  }
+  return true;
 }
 
 bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
@@ -7193,11 +7214,10 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
       SourceMgr.isInSystemMacro(FormatLoc))
     return false;
 
-  const LangOptions &LO = getLangOpts();
-  if (CallerParamIdx && (LO.GNUMode || LO.C23 || LO.CPlusPlus11))
-    CheckMissingFormatAttributes(this, Args, APK, ReferenceFormatString,
-                                 format_idx, firstDataArg, Type,
-                                 *CallerParamIdx, Loc);
+  if (CallerParamIdx && CheckMissingFormatAttribute(
+                            this, Args, APK, ReferenceFormatString, format_idx,
+                            firstDataArg, Type, *CallerParamIdx, Loc))
+    return false;
 
   // Strftime is particular as it always uses a single 'time' argument,
   // so it is safe to pass a non-literal string.

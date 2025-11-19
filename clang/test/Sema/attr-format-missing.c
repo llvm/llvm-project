@@ -177,10 +177,10 @@ void f15(char *ch, const char *out, ... /* args */) // #f15
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(printf, 1, 2)]] "
 void f16(const char *a, ...) // #f16
 {
-	va_list ap;
+	va_list args;
 	const char *const b = a;
-	vprintf(b, ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f16'}}
-                  // expected-note@#f16 {{'f16' declared here}}
+	vprintf(b, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f16'}}
+                    // expected-note@#f16 {{'f16' declared here}}
 }
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(printf, 1, 2)]] "
