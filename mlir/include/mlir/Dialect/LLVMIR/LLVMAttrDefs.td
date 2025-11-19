@@ -931,11 +931,9 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
 //===----------------------------------------------------------------------===//
 
 def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
-  let parameters = (ins
-    "ModRefInfo":$other,
-    "ModRefInfo":$argMem,
-    "ModRefInfo":$inaccessibleMem
-  );
+  let parameters = (ins "ModRefInfo":$other, "ModRefInfo":$argMem,
+      "ModRefInfo":$inaccessibleMem, "ModRefInfo":$errnoMem,
+      "ModRefInfo":$targetMem0, "ModRefInfo":$targetMem1);
   let extraClassDeclaration = [{
     bool isReadWrite();
   }];

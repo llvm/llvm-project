@@ -23,7 +23,7 @@ module {
 // CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                              %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                              %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginBackspace(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginBackspace(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginBackspace(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -34,7 +34,7 @@ module {
 // CHECK-SAME:                                          %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                          %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginClose(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginClose(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginClose(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -45,7 +45,7 @@ module {
 // CHECK-SAME:                                            %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                            %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                            %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginEndfile(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginEndfile(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginEndfile(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -84,7 +84,7 @@ module {
 // CHECK-SAME:                                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                                      %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                      %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginExternalListInput(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginExternalListInput(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginExternalListInput(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -95,7 +95,7 @@ module {
 // CHECK-SAME:                                                       %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                                       %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                       %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginExternalListOutput(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -106,7 +106,7 @@ module {
 // CHECK-SAME:                                          %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                          %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginFlush(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginFlush(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginFlush(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -118,7 +118,7 @@ module {
 // CHECK-SAME:                                                %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64,
 // CHECK-SAME:                                                %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                %[[VAL_3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAioBeginInquireFile(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAioBeginInquireFile(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_4]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginInquireFile(%arg0: !fir.ref<i8>, %arg1: i64, %arg2: !fir.ref<i8>, %arg3: i32) -> !fir.ref<i8> {
@@ -128,7 +128,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioBeginInquireIoLength(
 // CHECK-SAME:                                                    %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                    %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioBeginInquireIoLength(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioBeginInquireIoLength(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_2]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginInquireIoLength(%arg0: !fir.ref<i8>, %arg1: i32) -> !fir.ref<i8> {
@@ -139,7 +139,7 @@ module {
 // CHECK-SAME:                                                %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                                %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginInquireUnit(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginInquireUnit(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginInquireUnit(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -269,7 +269,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioBeginOpenNewUnit(
 // CHECK-SAME:                                                %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioBeginOpenNewUnit(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioBeginOpenNewUnit(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_2]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginOpenNewUnit(%arg0: !fir.ref<i8>, %arg1: i32) -> !fir.ref<i8> {
@@ -280,7 +280,7 @@ module {
 // CHECK-SAME:                                             %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                             %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                             %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginOpenUnit(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginOpenUnit(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginOpenUnit(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -291,7 +291,7 @@ module {
 // CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginRewind(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginRewind(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginRewind(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -302,7 +302,7 @@ module {
 // CHECK-SAME:                                                     %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                                     %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                     %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginUnformattedInput(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginUnformattedInput(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginUnformattedInput(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -313,7 +313,7 @@ module {
 // CHECK-SAME:                                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                                      %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                      %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginUnformattedOutput(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginUnformattedOutput(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginUnformattedOutput(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -325,7 +325,7 @@ module {
 // CHECK-SAME:                                         %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                         %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                         %[[VAL_3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAioBeginWait(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAioBeginWait(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_4]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginWait(%arg0: i32, %arg1: i32, %arg2: !fir.ref<i8>, %arg3: i32) -> !fir.ref<i8> {
@@ -336,7 +336,7 @@ module {
 // CHECK-SAME:                                            %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                            %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                            %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !fir.ref<i8> {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginWaitAll(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioBeginWaitAll(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:           return %[[VAL_3]] : !fir.ref<i8>
 // CHECK:         }
   func.func @test__FortranAioBeginWaitAll(%arg0: i32, %arg1: !fir.ref<i8>, %arg2: i32) -> !fir.ref<i8> {
@@ -350,7 +350,7 @@ module {
 // CHECK-SAME:                                                         %[[VAL_3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64,
 // CHECK-SAME:                                                         %[[VAL_4:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                         %[[VAL_5:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> i32 {
-// CHECK:           %[[VAL_6:.*]] = fir.call @_FortranAioCheckUnitNumberInRange128(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i128, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_6:.*]] = fir.call @_FortranAioCheckUnitNumberInRange128(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i128, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 // CHECK:           return %[[VAL_6]] : i32
 // CHECK:         }
   func.func @test__FortranAioCheckUnitNumberInRange128(%arg0: i128, %arg1: i1, %arg2: !fir.ref<i8>, %arg3: i64, %arg4: !fir.ref<i8>, %arg5: i32) -> i32 {
@@ -364,7 +364,7 @@ module {
 // CHECK-SAME:                                                        %[[VAL_3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64,
 // CHECK-SAME:                                                        %[[VAL_4:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                        %[[VAL_5:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> i32 {
-// CHECK:           %[[VAL_6:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_6:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 // CHECK:           return %[[VAL_6]] : i32
 // CHECK:         }
   func.func @test__FortranAioCheckUnitNumberInRange64(%arg0: i64, %arg1: i1, %arg2: !fir.ref<i8>, %arg3: i64, %arg4: !fir.ref<i8>, %arg5: i32) -> i32 {
@@ -378,7 +378,7 @@ module {
 // CHECK-SAME:                                              %[[VAL_3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i1,
 // CHECK-SAME:                                              %[[VAL_4:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i1,
 // CHECK-SAME:                                              %[[VAL_5:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i1) {
-// CHECK:           fir.call @_FortranAioEnableHandlers(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
+// CHECK:           fir.call @_FortranAioEnableHandlers(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
 // CHECK:           return
 // CHECK:         }
   func.func @test__FortranAioEnableHandlers(%arg0: !fir.ref<i8>, %arg1: i1, %arg2: i1, %arg3: i1, %arg4: i1, %arg5: i1) {
@@ -387,7 +387,7 @@ module {
   }
 // CHECK-LABEL:   func.func @test__FortranAioEndIoStatement(
 // CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>) -> i32 {
-// CHECK:           %[[VAL_1:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_0]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>) -> i32
+// CHECK:           %[[VAL_1:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_0]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>) -> i32
 // CHECK:           return %[[VAL_1]] : i32
 // CHECK:         }
   func.func @test__FortranAioEndIoStatement(%arg0: !fir.ref<i8>) -> i32 {
@@ -396,7 +396,7 @@ module {
   }
 // CHECK-LABEL:   func.func @test__FortranAioGetAsynchronousId(
 // CHECK-SAME:                                                 %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>) -> i32 {
-// CHECK:           %[[VAL_1:.*]] = fir.call @_FortranAioGetAsynchronousId(%[[VAL_0]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>) -> i32
+// CHECK:           %[[VAL_1:.*]] = fir.call @_FortranAioGetAsynchronousId(%[[VAL_0]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>) -> i32
 // CHECK:           return %[[VAL_1]] : i32
 // CHECK:         }
   func.func @test__FortranAioGetAsynchronousId(%arg0: !fir.ref<i8>) -> i32 {
@@ -405,7 +405,7 @@ module {
   }
 // CHECK-LABEL:   func.func @test__FortranAioGetIoLength(
 // CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>) -> i64 {
-// CHECK:           %[[VAL_1:.*]] = fir.call @_FortranAioGetIoLength(%[[VAL_0]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>) -> i64
+// CHECK:           %[[VAL_1:.*]] = fir.call @_FortranAioGetIoLength(%[[VAL_0]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>) -> i64
 // CHECK:           return %[[VAL_1]] : i64
 // CHECK:         }
   func.func @test__FortranAioGetIoLength(%arg0: !fir.ref<i8>) -> i64 {
@@ -416,7 +416,7 @@ module {
 // CHECK-SAME:                                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                        %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                        %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) {
-// CHECK:           fir.call @_FortranAioGetIoMsg(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> ()
+// CHECK:           fir.call @_FortranAioGetIoMsg(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> ()
 // CHECK:           return
 // CHECK:         }
   func.func @test__FortranAioGetIoMsg(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) {
@@ -427,7 +427,7 @@ module {
 // CHECK-SAME:                                          %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32>,
 // CHECK-SAME:                                          %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioGetNewUnit(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i32>, i32) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioGetNewUnit(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i32>, i32) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioGetNewUnit(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i32>, %arg2: i32) -> i1 {
@@ -436,7 +436,7 @@ module {
   }
 // CHECK-LABEL:   func.func @test__FortranAioGetSize(
 // CHECK-SAME:                                       %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>) -> i64 {
-// CHECK:           %[[VAL_1:.*]] = fir.call @_FortranAioGetSize(%[[VAL_0]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>) -> i64
+// CHECK:           %[[VAL_1:.*]] = fir.call @_FortranAioGetSize(%[[VAL_0]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>) -> i64
 // CHECK:           return %[[VAL_1]] : i64
 // CHECK:         }
   func.func @test__FortranAioGetSize(%arg0: !fir.ref<i8>) -> i64 {
@@ -447,7 +447,7 @@ module {
 // CHECK-SAME:                                          %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioInputAscii(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioInputAscii(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioInputAscii(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -457,7 +457,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioInputComplex32(
 // CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                              %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<f32>) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputComplex32(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<f32>) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputComplex32(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<f32>) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioInputComplex32(%arg0: !fir.ref<i8>, %arg1: !fir.ref<f32>) -> i1 {
@@ -467,7 +467,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioInputComplex64(
 // CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                              %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<f64>) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputComplex64(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<f64>) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputComplex64(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<f64>) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioInputComplex64(%arg0: !fir.ref<i8>, %arg1: !fir.ref<f64>) -> i1 {
@@ -499,7 +499,7 @@ module {
 // CHECK-SAME:                                            %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                            %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i64>,
 // CHECK-SAME:                                            %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioInputInteger(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i64>, i32) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioInputInteger(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i64>, i32) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioInputInteger(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i64>, %arg2: i32) -> i1 {
@@ -509,7 +509,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioInputLogical(
 // CHECK-SAME:                                            %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                            %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i1>) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputLogical(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i1>) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputLogical(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i1>) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioInputLogical(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i1>) -> i1 {
@@ -529,7 +529,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioInputReal32(
 // CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<f32>) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputReal32(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<f32>) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputReal32(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<f32>) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioInputReal32(%arg0: !fir.ref<i8>, %arg1: !fir.ref<f32>) -> i1 {
@@ -539,7 +539,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioInputReal64(
 // CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<f64>) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputReal64(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<f64>) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioInputReal64(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<f64>) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioInputReal64(%arg0: !fir.ref<i8>, %arg1: !fir.ref<f64>) -> i1 {
@@ -551,7 +551,7 @@ module {
 // CHECK-SAME:                                                %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64,
 // CHECK-SAME:                                                %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                %[[VAL_3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAioInquireCharacter(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAioInquireCharacter(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_4]] : i1
 // CHECK:         }
   func.func @test__FortranAioInquireCharacter(%arg0: !fir.ref<i8>, %arg1: i64, %arg2: !fir.ref<i8>, %arg3: i64) -> i1 {
@@ -563,7 +563,7 @@ module {
 // CHECK-SAME:                                                %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64,
 // CHECK-SAME:                                                %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i64>,
 // CHECK-SAME:                                                %[[VAL_3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> i1 {
-// CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAioInquireInteger64(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64, !fir.ref<i64>, i32) -> i1
+// CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAioInquireInteger64(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64, !fir.ref<i64>, i32) -> i1
 // CHECK:           return %[[VAL_4]] : i1
 // CHECK:         }
   func.func @test__FortranAioInquireInteger64(%arg0: !fir.ref<i8>, %arg1: i64, %arg2: !fir.ref<i64>, %arg3: i32) -> i1 {
@@ -574,7 +574,7 @@ module {
 // CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                              %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64,
 // CHECK-SAME:                                              %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i1>) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioInquireLogical(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioInquireLogical(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioInquireLogical(%arg0: !fir.ref<i8>, %arg1: i64, %arg2: !fir.ref<i1>) -> i1 {
@@ -585,7 +585,7 @@ module {
 // CHECK-SAME:                                                %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32,
 // CHECK-SAME:                                                %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i1>) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioInquirePendingId(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i32, !fir.ref<i1>) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioInquirePendingId(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i32, !fir.ref<i1>) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioInquirePendingId(%arg0: !fir.ref<i8>, %arg1: i32, %arg2: !fir.ref<i1>) -> i1 {
@@ -596,7 +596,7 @@ module {
 // CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputAscii(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -607,7 +607,7 @@ module {
 // CHECK-SAME:                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                               %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: f32,
 // CHECK-SAME:                                               %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: f32) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioOutputComplex32(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, f32, f32) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioOutputComplex32(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, f32, f32) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputComplex32(%arg0: !fir.ref<i8>, %arg1: f32, %arg2: f32) -> i1 {
@@ -618,7 +618,7 @@ module {
 // CHECK-SAME:                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                               %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: f64,
 // CHECK-SAME:                                               %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: f64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioOutputComplex64(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, f64, f64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioOutputComplex64(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, f64, f64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputComplex64(%arg0: !fir.ref<i8>, %arg1: f64, %arg2: f64) -> i1 {
@@ -649,7 +649,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioOutputInteger128(
 // CHECK-SAME:                                                %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i128) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger128(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i128) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger128(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i128) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputInteger128(%arg0: !fir.ref<i8>, %arg1: i128) -> i1 {
@@ -659,7 +659,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioOutputInteger16(
 // CHECK-SAME:                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                               %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i16) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger16(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i16) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger16(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i16) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputInteger16(%arg0: !fir.ref<i8>, %arg1: i16) -> i1 {
@@ -669,7 +669,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioOutputInteger32(
 // CHECK-SAME:                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                               %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i32) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i32) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputInteger32(%arg0: !fir.ref<i8>, %arg1: i32) -> i1 {
@@ -679,7 +679,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioOutputInteger64(
 // CHECK-SAME:                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                               %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger64(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger64(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputInteger64(%arg0: !fir.ref<i8>, %arg1: i64) -> i1 {
@@ -689,7 +689,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioOutputInteger8(
 // CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                              %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i8) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger8(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i8) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputInteger8(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i8) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputInteger8(%arg0: !fir.ref<i8>, %arg1: i8) -> i1 {
@@ -699,7 +699,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioOutputLogical(
 // CHECK-SAME:                                             %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                             %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i1) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputLogical(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i1) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputLogical(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i1) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputLogical(%arg0: !fir.ref<i8>, %arg1: i1) -> i1 {
@@ -719,7 +719,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioOutputReal32(
 // CHECK-SAME:                                            %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                            %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: f32) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputReal32(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, f32) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputReal32(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, f32) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputReal32(%arg0: !fir.ref<i8>, %arg1: f32) -> i1 {
@@ -729,7 +729,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioOutputReal64(
 // CHECK-SAME:                                            %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                            %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: f64) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputReal64(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, f64) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioOutputReal64(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, f64) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioOutputReal64(%arg0: !fir.ref<i8>, %arg1: f64) -> i1 {
@@ -740,7 +740,7 @@ module {
 // CHECK-SAME:                                         %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                         %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                         %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetAccess(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetAccess(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetAccess(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -751,7 +751,7 @@ module {
 // CHECK-SAME:                                         %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                         %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                         %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetAction(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetAction(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetAction(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -762,7 +762,7 @@ module {
 // CHECK-SAME:                                          %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetAdvance(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetAdvance(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetAdvance(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -773,7 +773,7 @@ module {
 // CHECK-SAME:                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                               %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                               %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetAsynchronous(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetAsynchronous(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetAsynchronous(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -784,7 +784,7 @@ module {
 // CHECK-SAME:                                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                        %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                        %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetBlank(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetBlank(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetBlank(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -795,7 +795,7 @@ module {
 // CHECK-SAME:                                                  %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                  %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                                  %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetCarriagecontrol(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetCarriagecontrol(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetCarriagecontrol(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -806,7 +806,7 @@ module {
 // CHECK-SAME:                                          %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetConvert(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetConvert(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetConvert(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -817,7 +817,7 @@ module {
 // CHECK-SAME:                                          %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                          %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetDecimal(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetDecimal(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetDecimal(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -828,7 +828,7 @@ module {
 // CHECK-SAME:                                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                        %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                        %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetDelim(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetDelim(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetDelim(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -839,7 +839,7 @@ module {
 // CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetEncoding(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetEncoding(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetEncoding(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -850,7 +850,7 @@ module {
 // CHECK-SAME:                                       %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                       %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                       %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetFile(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetFile(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetFile(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -861,7 +861,7 @@ module {
 // CHECK-SAME:                                       %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                       %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                       %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetForm(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetForm(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetForm(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -872,7 +872,7 @@ module {
 // CHECK-SAME:                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                      %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                      %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetPad(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetPad(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetPad(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -882,7 +882,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioSetPos(
 // CHECK-SAME:                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                      %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioSetPos(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioSetPos(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetPos(%arg0: !fir.ref<i8>, %arg1: i64) -> i1 {
@@ -893,7 +893,7 @@ module {
 // CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                           %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetPosition(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetPosition(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetPosition(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -903,7 +903,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioSetRec(
 // CHECK-SAME:                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                      %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioSetRec(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioSetRec(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetRec(%arg0: !fir.ref<i8>, %arg1: i64) -> i1 {
@@ -913,7 +913,7 @@ module {
 // CHECK-LABEL:   func.func @test__FortranAioSetRecl(
 // CHECK-SAME:                                       %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                       %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioSetRecl(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAioSetRecl(%[[VAL_0]], %[[VAL_1]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetRecl(%arg0: !fir.ref<i8>, %arg1: i64) -> i1 {
@@ -924,7 +924,7 @@ module {
 // CHECK-SAME:                                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                        %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                        %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetRound(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetRound(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetRound(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -935,7 +935,7 @@ module {
 // CHECK-SAME:                                       %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                       %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                       %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetSign(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetSign(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetSign(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {
@@ -946,7 +946,7 @@ module {
 // CHECK-SAME:                                         %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                         %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i8>,
 // CHECK-SAME:                                         %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i64) -> i1 {
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetStatus(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAioSetStatus(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {fir.llvm_memory = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>, llvm.nocallback, llvm.nosync} : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
   func.func @test__FortranAioSetStatus(%arg0: !fir.ref<i8>, %arg1: !fir.ref<i8>, %arg2: i64) -> i1 {

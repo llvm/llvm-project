@@ -2597,8 +2597,15 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
       memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
   auto inaccessibleMem = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
-  auto memAttr = MemoryEffectsAttr::get(funcOp.getContext(), othermem, argMem,
-                                        inaccessibleMem);
+  auto errnoMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::ErrnoMem));
+  auto targetMem0 = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::TargetMem0));
+  auto targetMem1 = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::TargetMem1));
+  auto memAttr =
+      MemoryEffectsAttr::get(funcOp.getContext(), othermem, argMem,
+                             inaccessibleMem, errnoMem, targetMem0, targetMem1);
   // Only set the attr when it does not match the default value.
   if (memAttr.isReadWrite())
     return;
@@ -2903,8 +2910,15 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
       memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
   ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
-  auto memAttr = MemoryEffectsAttr::get(op.getContext(), othermem, argMem,
-                                        inaccessibleMem);
+  ModRefInfo errnoMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::ErrnoMem));
+  ModRefInfo targetMem0 = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::TargetMem0));
+  ModRefInfo targetMem1 = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::TargetMem1));
+  auto memAttr =
+      MemoryEffectsAttr::get(op.getContext(), othermem, argMem, inaccessibleMem,
+                             errnoMem, targetMem0, targetMem1);
   // Only set the attribute when it does not match the default value.
   if (!memAttr.isReadWrite())
     op.setMemoryEffectsAttr(memAttr);
