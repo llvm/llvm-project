@@ -4377,25 +4377,6 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // Special case for moving GPR16 to xmm registers
-  if (X86::VR128XRegClass.contains(DestReg) &&
-      X86::GR16RegClass.contains(SrcReg)) {
-
-    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
-
-    // Zero extend GPR16 register to GPR32
-    Register Src32 =
-        TRI->getMatchingSuperReg(SrcReg, X86::sub_16bit, &X86::GR32RegClass);
-
-    BuildMI(MBB, MI, DL, get(X86::MOVZX32rr16), Src32)
-        .addReg(SrcReg, getKillRegState(KillSrc));
-
-    unsigned Opc = CopyToFromAsymmetricReg(DestReg, Src32, Subtarget);
-    BuildMI(MBB, MI, DL, get(Opc), DestReg).addReg(Src32, RegState::Kill);
-
-    return;
-  }
-
   if (SrcReg == X86::EFLAGS || DestReg == X86::EFLAGS) {
     // FIXME: We use a fatal error here because historically LLVM has tried
     // lower some of these physreg copies and we want to ensure we get

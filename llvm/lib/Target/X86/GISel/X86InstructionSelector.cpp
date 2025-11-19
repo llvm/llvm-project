@@ -310,52 +310,52 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
 
         I.getOperand(1).setReg(ExtSrc);
       }
+    }
 
-      const int RegBankSize = 16;
+    const int RegBankSize = 16;
 
-      // Special case GPR16 -> XMM
-      if (SrcSize == RegBankSize && SrcRegBank.getID() == X86::GPRRegBankID &&
-          (SrcRegBank.getID() == X86::VECRRegBankID)) {
+    // Special case GPR16 -> XMM
+    if (SrcSize == RegBankSize && SrcRegBank.getID() == X86::GPRRegBankID &&
+        (DstRegBank.getID() == X86::VECRRegBankID)) {
 
-        const DebugLoc &DL = I.getDebugLoc();
+      const DebugLoc &DL = I.getDebugLoc();
 
-        // Zero extend GP16 -> GP32
-        Register ExtReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-        BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), ExtReg)
-            .addReg(SrcReg);
+      // Zero extend GPR16 -> GPR32
+      Register ExtReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*I.getParent(), I, DL, TII.get(X86::MOVZX32rr16), ExtReg)
+          .addReg(SrcReg);
 
-        // Copy GPR32 -> XMM
+      // Copy to GPR32 -> XMM
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
+          .addReg(ExtReg);
+
+      I.eraseFromParent();
+    }
+
+    // Special case XMM -> GPR16
+    if (DstSize == RegBankSize && DstRegBank.getID() == X86::GPRRegBankID &&
+        (SrcRegBank.getID() == X86::VECRRegBankID)) {
+
+      const DebugLoc &DL = I.getDebugLoc();
+
+      // Move XMM to GPR32 register.
+      Register Temp32 = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Temp32)
+          .addReg(SrcReg);
+
+      // Extract the lower 16 bits
+      if (Register Dst32 = TRI.getMatchingSuperReg(DstReg, X86::sub_16bit,
+                                                   &X86::GR32RegClass)) {
+        // Optimization for Physical Dst (e.g. AX): Copy to EAX directly.
+        BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Dst32)
+            .addReg(Temp32);
+      } else {
+        // Handle if there is no super.
         BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
-            .addReg(ExtReg);
-
-        I.eraseFromParent();
+            .addReg(Temp32, 0, X86::sub_16bit);
       }
 
-      // Special case XMM -> GPR16
-      if (DstSize == RegBankSize && DstRegBank.getID() == X86::GPRRegBankID &&
-          (SrcRegBank.getID() == X86::VECRRegBankID)) {
-
-        const DebugLoc &DL = I.getDebugLoc();
-
-        // Move XMM to GPR32 register.
-        Register Temp32 = MRI.createVirtualRegister(&X86::GR32RegClass);
-        BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Temp32)
-            .addReg(SrcReg);
-
-        // Extract the lower 16 bits
-        if (Register Dst32 = TRI.getMatchingSuperReg(DstReg, X86::sub_16bit,
-                                                     &X86::GR32RegClass)) {
-          // Optimization for Physical Dst (e.g. AX): Copy to EAX directly.
-          BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Dst32)
-              .addReg(Temp32);
-        } else {
-          // Handle if there is no super.
-          BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
-              .addReg(Temp32, 0, X86::sub_16bit);
-        }
-
-        I.eraseFromParent();
-      }
+      I.eraseFromParent();
     }
 
     return true;
