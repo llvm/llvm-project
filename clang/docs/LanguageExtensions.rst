@@ -4854,7 +4854,7 @@ memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
 
-Clang privides two additional __scoped_atomic builtins:
+Clang provides two additional __scoped_atomic builtins:
 
 * ``__scoped_atomic_uinc_wrap``
 * ``__scoped_atomic_udec_wrap``
