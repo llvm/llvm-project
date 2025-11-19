@@ -306,7 +306,7 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
     const IntEqClasses &Classes,
     const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
     const SmallVectorImpl<LiveInterval*> &Intervals) const {
-  const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
   BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
   const SlotIndexes &Indexes = *LIS->getSlotIndexes();
   for (size_t I = 0, E = Intervals.size(); I < E; ++I) {
@@ -318,21 +318,21 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
     // Try to establish a single subregister which covers all uses.
     // Note: this is assuming the selected subregister will only be
     // used for fixing up live intervals issues created by this pass.
-    LaneBitmask RegMask = MRI->getMaxLaneMaskForVReg(Reg);
-    LaneBitmask UsedMask = LaneBitmask::getNone();
+    LaneBitmask UsedMask, UnusedMask;
     for (LiveInterval::SubRange &SR : LI.subranges())
       UsedMask |= SR.LaneMask;
     SmallVector<unsigned> SubRegIdxs;
     unsigned Flags = 0;
     unsigned SubReg = 0;
+    // TODO: Handle SubRegIdxs.size() > 1
     if (TRI.getCoveringSubRegIndexes(MRI->getRegClass(Reg), UsedMask,
                                      SubRegIdxs) &&
         SubRegIdxs.size() == 1) {
       SubReg = SubRegIdxs.front();
-      RegMask = UsedMask;
       Flags = RegState::Undef;
+    } else {
+      UnusedMask = MRI->getMaxLaneMaskForVReg(Reg) & ~UsedMask;
     }
-    LaneBitmask UnusedMask = RegMask & ~UsedMask;
 
     // There must be a def (or live-in) before every use. Splitting vregs may
     // violate this principle as the splitted vreg may not have a definition on
