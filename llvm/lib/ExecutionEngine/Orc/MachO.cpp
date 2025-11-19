@@ -282,15 +282,48 @@ Expected<bool> ForceLoadMachOArchiveMembers::operator()(
   return true;
 }
 
-Expected<SymbolNameSet> getDylibInterfaceFromDylib(ExecutionSession &ES,
-                                                   Twine Path) {
-  auto CPUType = MachO::getCPUType(ES.getTargetTriple());
-  if (!CPUType)
-    return CPUType.takeError();
+SmallVector<std::pair<uint32_t, uint32_t>>
+noFallbackArchs(uint32_t CPUType, uint32_t CPUSubType) {
+  SmallVector<std::pair<uint32_t, uint32_t>> Result;
+  Result.push_back({CPUType, CPUSubType});
+  return Result;
+}
 
-  auto CPUSubType = MachO::getCPUSubType(ES.getTargetTriple());
-  if (!CPUSubType)
-    return CPUSubType.takeError();
+SmallVector<std::pair<uint32_t, uint32_t>>
+standardMachOFallbackArchs(uint32_t CPUType, uint32_t CPUSubType) {
+  SmallVector<std::pair<uint32_t, uint32_t>> Archs;
+
+  // Match given CPU type/subtype first.
+  Archs.push_back({CPUType, CPUSubType});
+
+  switch (CPUType) {
+  case MachO::CPU_TYPE_ARM64:
+    // Handle arm64 variants.
+    switch (CPUSubType) {
+    case MachO::CPU_SUBTYPE_ARM64_ALL:
+      Archs.push_back({CPUType, MachO::CPU_SUBTYPE_ARM64E});
+      break;
+    default:
+      break;
+    }
+    break;
+  default:
+    break;
+  }
+
+  return Archs;
+}
+
+Expected<SymbolNameSet>
+getDylibInterfaceFromDylib(ExecutionSession &ES, Twine Path,
+                           GetFallbackArchsFn GetFallbackArchs) {
+  auto InitCPUType = MachO::getCPUType(ES.getTargetTriple());
+  if (!InitCPUType)
+    return InitCPUType.takeError();
+
+  auto InitCPUSubType = MachO::getCPUSubType(ES.getTargetTriple());
+  if (!InitCPUSubType)
+    return InitCPUSubType.takeError();
 
   auto Buf = MemoryBuffer::getFile(Path);
   if (!Buf)
@@ -301,25 +334,38 @@ Expected<SymbolNameSet> getDylibInterfaceFromDylib(ExecutionSession &ES,
     return BinFile.takeError();
 
   std::unique_ptr<object::MachOObjectFile> MachOFile;
-  if (isa<object::MachOObjectFile>(**BinFile))
+  if (isa<object::MachOObjectFile>(**BinFile)) {
     MachOFile.reset(dyn_cast<object::MachOObjectFile>(BinFile->release()));
-  else if (auto *MachOUni =
-               dyn_cast<object::MachOUniversalBinary>(BinFile->get())) {
-    for (auto &O : MachOUni->objects()) {
-      if (O.getCPUType() == *CPUType &&
-          (O.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) == *CPUSubType) {
-        if (auto Obj = O.getAsObjectFile())
-          MachOFile = std::move(*Obj);
-        else
-          return Obj.takeError();
-        break;
+
+    // TODO: Check that dylib arch is compatible.
+  } else if (auto *MachOUni =
+                 dyn_cast<object::MachOUniversalBinary>(BinFile->get())) {
+    SmallVector<std::pair<uint32_t, uint32_t>> ArchsToTry;
+    if (GetFallbackArchs)
+      ArchsToTry = GetFallbackArchs(*InitCPUType, *InitCPUSubType);
+    else
+      ArchsToTry.push_back({*InitCPUType, *InitCPUSubType});
+
+    for (auto &[CPUType, CPUSubType] : ArchsToTry) {
+      for (auto &O : MachOUni->objects()) {
+        if (O.getCPUType() == CPUType &&
+            (O.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) == CPUSubType) {
+          if (auto Obj = O.getAsObjectFile())
+            MachOFile = std::move(*Obj);
+          else
+            return Obj.takeError();
+          break;
+        }
       }
+      if (MachOFile) // If found, break out.
+        break;
     }
     if (!MachOFile)
-      return make_error<StringError>("MachO universal binary at " + Path +
-                                         " does not contain a slice for " +
-                                         ES.getTargetTriple().str(),
-                                     inconvertibleErrorCode());
+      return make_error<StringError>(
+          "MachO universal binary at " + Path +
+              " does not contain a compatible slice for " +
+              ES.getTargetTriple().str(),
+          inconvertibleErrorCode());
   } else
     return make_error<StringError>("File at " + Path + " is not a MachO",
                                    inconvertibleErrorCode());
@@ -339,8 +385,9 @@ Expected<SymbolNameSet> getDylibInterfaceFromDylib(ExecutionSession &ES,
   return std::move(Symbols);
 }
 
-Expected<SymbolNameSet> getDylibInterfaceFromTapiFile(ExecutionSession &ES,
-                                                      Twine Path) {
+Expected<SymbolNameSet>
+getDylibInterfaceFromTapiFile(ExecutionSession &ES, Twine Path,
+                              GetFallbackArchsFn GetFallbackArchs) {
   SymbolNameSet Symbols;
 
   auto TapiFileBuffer = MemoryBuffer::getFile(Path);
@@ -352,27 +399,44 @@ Expected<SymbolNameSet> getDylibInterfaceFromTapiFile(ExecutionSession &ES,
   if (!Tapi)
     return Tapi.takeError();
 
-  auto CPUType = MachO::getCPUType(ES.getTargetTriple());
-  if (!CPUType)
-    return CPUType.takeError();
+  auto InitCPUType = MachO::getCPUType(ES.getTargetTriple());
+  if (!InitCPUType)
+    return InitCPUType.takeError();
 
-  auto CPUSubType = MachO::getCPUSubType(ES.getTargetTriple());
-  if (!CPUSubType)
-    return CPUSubType.takeError();
+  auto InitCPUSubType = MachO::getCPUSubType(ES.getTargetTriple());
+  if (!InitCPUSubType)
+    return InitCPUSubType.takeError();
+
+  SmallVector<std::pair<uint32_t, uint32_t>> ArchsToTry;
+  if (GetFallbackArchs)
+    ArchsToTry = GetFallbackArchs(*InitCPUType, *InitCPUSubType);
+  else
+    ArchsToTry.push_back({*InitCPUType, *InitCPUSubType});
 
   auto &IF = (*Tapi)->getInterfaceFile();
-  auto Interface =
-      IF.extract(MachO::getArchitectureFromCpuType(*CPUType, *CPUSubType));
-  if (!Interface)
-    return Interface.takeError();
 
-  for (auto *Sym : (*Interface)->exports())
-    Symbols.insert(ES.intern(Sym->getName()));
+  auto ArchSet = IF.getArchitectures();
+  for (auto [CPUType, CPUSubType] : ArchsToTry) {
+    auto A = MachO::getArchitectureFromCpuType(CPUType, CPUSubType);
+    if (ArchSet.has(A)) {
+      if (auto Interface = IF.extract(A)) {
+        for (auto *Sym : (*Interface)->exports())
+          Symbols.insert(ES.intern(Sym->getName()));
+        return Symbols;
+      } else
+        return Interface.takeError();
+    }
+  }
 
-  return Symbols;
+  return make_error<StringError>(
+      "MachO interface file at " + Path +
+          " does not contain a compatible slice for " +
+          ES.getTargetTriple().str(),
+      inconvertibleErrorCode());
 }
 
-Expected<SymbolNameSet> getDylibInterface(ExecutionSession &ES, Twine Path) {
+Expected<SymbolNameSet> getDylibInterface(ExecutionSession &ES, Twine Path,
+                                          GetFallbackArchsFn GetFallbackArchs) {
   file_magic Magic;
   if (auto EC = identify_magic(Path, Magic))
     return createFileError(Path, EC);
@@ -380,9 +444,9 @@ Expected<SymbolNameSet> getDylibInterface(ExecutionSession &ES, Twine Path) {
   switch (Magic) {
   case file_magic::macho_universal_binary:
   case file_magic::macho_dynamically_linked_shared_lib:
-    return getDylibInterfaceFromDylib(ES, Path);
+    return getDylibInterfaceFromDylib(ES, Path, std::move(GetFallbackArchs));
   case file_magic::tapi_file:
-    return getDylibInterfaceFromTapiFile(ES, Path);
+    return getDylibInterfaceFromTapiFile(ES, Path, std::move(GetFallbackArchs));
   default:
     return make_error<StringError>("Cannot get interface for " + Path +
                                        " unrecognized file type",

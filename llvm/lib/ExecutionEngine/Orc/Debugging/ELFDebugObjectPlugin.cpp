@@ -1,4 +1,4 @@
-//===------- DebugObjectManagerPlugin.cpp - JITLink debug objects ---------===//
+//===--------- ELFDebugObjectPlugin.cpp - JITLink debug objects -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/ELFDebugObjectPlugin.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
@@ -406,10 +406,9 @@ createDebugObjectFromBuffer(ExecutionSession &ES, LinkGraph &G,
   }
 }
 
-DebugObjectManagerPlugin::DebugObjectManagerPlugin(ExecutionSession &ES,
-                                                   bool RequireDebugSections,
-                                                   bool AutoRegisterCode,
-                                                   Error &Err)
+ELFDebugObjectPlugin::ELFDebugObjectPlugin(ExecutionSession &ES,
+                                           bool RequireDebugSections,
+                                           bool AutoRegisterCode, Error &Err)
     : ES(ES), RequireDebugSections(RequireDebugSections),
       AutoRegisterCode(AutoRegisterCode) {
   // Pass bootstrap symbol for registration function to enable debugging
@@ -418,9 +417,9 @@ DebugObjectManagerPlugin::DebugObjectManagerPlugin(ExecutionSession &ES,
       {{RegistrationAction, rt::RegisterJITLoaderGDBAllocActionName}});
 }
 
-DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
+ELFDebugObjectPlugin::~ELFDebugObjectPlugin() = default;
 
-void DebugObjectManagerPlugin::notifyMaterializing(
+void ELFDebugObjectPlugin::notifyMaterializing(
     MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
     MemoryBufferRef ObjBuffer) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
@@ -443,9 +442,9 @@ void DebugObjectManagerPlugin::notifyMaterializing(
   }
 }
 
-void DebugObjectManagerPlugin::modifyPassConfig(
-    MaterializationResponsibility &MR, LinkGraph &G,
-    PassConfiguration &PassConfig) {
+void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
+                                            LinkGraph &G,
+                                            PassConfiguration &PassConfig) {
   // Not all link artifacts have associated debug objects.
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
   auto It = PendingObjs.find(&MR);
@@ -507,16 +506,15 @@ void DebugObjectManagerPlugin::modifyPassConfig(
   }
 }
 
-Error DebugObjectManagerPlugin::notifyFailed(
-    MaterializationResponsibility &MR) {
+Error ELFDebugObjectPlugin::notifyFailed(MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
   PendingObjs.erase(&MR);
   return Error::success();
 }
 
-void DebugObjectManagerPlugin::notifyTransferringResources(JITDylib &JD,
-                                                           ResourceKey DstKey,
-                                                           ResourceKey SrcKey) {
+void ELFDebugObjectPlugin::notifyTransferringResources(JITDylib &JD,
+                                                       ResourceKey DstKey,
+                                                       ResourceKey SrcKey) {
   // Debug objects are stored by ResourceKey only after registration.
   // Thus, pending objects don't need to be updated here.
   std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
@@ -530,8 +528,8 @@ void DebugObjectManagerPlugin::notifyTransferringResources(JITDylib &JD,
   }
 }
 
-Error DebugObjectManagerPlugin::notifyRemovingResources(JITDylib &JD,
-                                                        ResourceKey Key) {
+Error ELFDebugObjectPlugin::notifyRemovingResources(JITDylib &JD,
+                                                    ResourceKey Key) {
   // Removing the resource for a pending object fails materialization, so they
   // get cleaned up in the notifyFailed() handler.
   std::lock_guard<std::mutex> Lock(RegisteredObjsLock);

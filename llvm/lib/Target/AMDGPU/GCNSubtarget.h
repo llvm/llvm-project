@@ -1441,6 +1441,13 @@ public:
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
 
+  /// \returns true if the target has packed f32 instructions that only read 32
+  /// bits from a scalar operand (SGPR or literal) and replicates the bits to
+  /// both channels.
+  bool hasPKF32InstsReplicatingLow32BitsOfScalarInput() const {
+    return getGeneration() == GFX12 && GFX1250Insts;
+  }
+
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }

@@ -97,7 +97,14 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
            "mlir::acc::DeviceType::None",
            "Target device type for implicit routine generation. "
            "Ensures that `acc routine` device_type clauses are "
-           "properly considered not just default clauses.">
+           "properly considered not just default clauses.",
+           [{::llvm::cl::values(
+              clEnumValN(mlir::acc::DeviceType::None, "none", "none"),
+              clEnumValN(mlir::acc::DeviceType::Host, "host", "host"),
+              clEnumValN(mlir::acc::DeviceType::Multicore, "multicore", "multicore"),
+              clEnumValN(mlir::acc::DeviceType::Nvidia, "nvidia", "nvidia"),
+              clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
+           }]>
   ];
 }
 
