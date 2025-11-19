@@ -20,6 +20,47 @@ MSF:
   DirectoryBlocks: [ 17 ]
   NumStreams:      15
   FileSize:        73728
+IpiStream:
+  Records:
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    0x1002 # this points to the wrong type (LF_POINTER)
+        Name:            foo
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    4100
+        Name:            main
+    - Kind:            LF_BUILDINFO
+      BuildInfo:
+        ArgIndices:      [ 4098, 4101, 4099, 4100, 4102 ]
+TpiStream:
+  Records:
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 116 ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      3
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  1
+        ArgumentList:    4096
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    1648
+        Attrs:           65548
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 116, 4098 ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  2
+        ArgumentList:    4099
 DbiStream:
   BuildNumber:     36363
   Flags:           0
@@ -243,47 +284,6 @@ DbiStream:
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
       Characteristics: 1073741888
-TpiStream:
-  Records:
-    - Kind:            LF_ARGLIST
-      ArgList:
-        ArgIndices:      [ 116 ]
-    - Kind:            LF_PROCEDURE
-      Procedure:
-        ReturnType:      3
-        CallConv:        NearC
-        Options:         [ None ]
-        ParameterCount:  1
-        ArgumentList:    4096
-    - Kind:            LF_POINTER
-      Pointer:
-        ReferentType:    1648
-        Attrs:           65548
-    - Kind:            LF_ARGLIST
-      ArgList:
-        ArgIndices:      [ 116, 4098 ]
-    - Kind:            LF_PROCEDURE
-      Procedure:
-        ReturnType:      116
-        CallConv:        NearC
-        Options:         [ None ]
-        ParameterCount:  2
-        ArgumentList:    4099
-IpiStream:
-  Records:
-    - Kind:            LF_FUNC_ID
-      FuncId:
-        ParentScope:     0
-        FunctionType:    0x1002 # this points to the wrong type (LF_POINTER)
-        Name:            foo
-    - Kind:            LF_FUNC_ID
-      FuncId:
-        ParentScope:     0
-        FunctionType:    4100
-        Name:            main
-    - Kind:            LF_BUILDINFO
-      BuildInfo:
-        ArgIndices:      [ 4098, 4101, 4099, 4100, 4102 ]
 PublicsStream:
   Records:
     - Kind:            S_PUB32
