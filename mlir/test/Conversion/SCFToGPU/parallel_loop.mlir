@@ -695,9 +695,10 @@ func.func @scf2gpu_index_creation_2d() {
   return
 }
 
-// CHECK-LABEL: func.func @scf2gpu_index_creation_2d
+// CHECK-LABEL: func{{(\.func)?}} @scf2gpu_index_creation_2d
 // CHECK:       gpu.launch
-// CHECK:       affine.apply
+// CHECK:       %[[IDX:.*]] = affine.apply
+// CHECK:       arith.addi %[[IDX]],
 
 // -----
 
@@ -716,8 +717,7 @@ func.func @scf2gpu_index_creation_1d() {
   return
 }
 
-// CHECK-LABEL: func.func @scf2gpu_index_creation_1d
+// CHECK-LABEL: func{{(\.func)?}} @scf2gpu_index_creation_1d
 // CHECK:       gpu.launch
-// CHECK:       affine.apply
-
-
+// CHECK:       %[[IDX:.*]] = affine.apply
+// CHECK:       arith.addi %[[IDX]],
