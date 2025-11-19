@@ -95,31 +95,6 @@ MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
 INSTALL_DIR="${BUILD_DIR}/install"
 
-function step() {
-  endstep
-  set +x
-  if [[ ! -z ${GITHUB_ACTIONS+x} ]]; then
-    echo "::group::$1"
-    export IN_GROUP=1
-  else
-    echo "--- $1"
-  fi
-  set -x
-}
-
-function endstep() {
-  set +x
-  if [[ ! -z ${GITHUB_ACTIONS+x} ]] && [[ ! -z ${IN_GROUP+x} ]]; then
-    echo "::endgroup::"
-    unset IN_GROUP
-  fi
-  set -x
-}
-
-function error() {
-    echo "::error::$1"
-}
-
 if [ -z ${CC+x} ]; then
     error "Environment variable CC must be defined"
     exit 1
