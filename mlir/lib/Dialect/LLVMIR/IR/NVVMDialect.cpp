@@ -956,7 +956,7 @@ MMATypes MmaSpOp::resultPtxType() {
 
 mlir::NVVM::IDArgPair
 MmaSpOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                                llvm::IRBuilderBase &builder) {
+                               llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MmaSpOp>(op);
 
   // Get operands
@@ -966,14 +966,11 @@ MmaSpOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
 
   // Get intrinsic ID using the existing getIntrinsicID method
   auto intId = MmaSpOp::getIntrinsicID(
-      thisOp.getShape().getM(), thisOp.getShape().getN(), thisOp.getShape().getK(),
-      thisOp.getIntOverflowBehavior(),
-      thisOp.getMetadataType(),
-      thisOp.getKind(),
-      *thisOp.getMultiplicandAPtxType(),
-      *thisOp.getMultiplicandBPtxType(),
-      thisOp.accumPtxType(),
-      thisOp.resultPtxType());
+      thisOp.getShape().getM(), thisOp.getShape().getN(),
+      thisOp.getShape().getK(), thisOp.getIntOverflowBehavior(),
+      thisOp.getMetadataType(), thisOp.getKind(),
+      *thisOp.getMultiplicandAPtxType(), *thisOp.getMultiplicandBPtxType(),
+      thisOp.accumPtxType(), thisOp.resultPtxType());
 
   return {intId, args};
 }
@@ -991,8 +988,7 @@ void MmaSpOp::print(OpAsmPrinter &p) {
   std::array<OperandFragment, 5> frags{
       OperandFragment("A", getMultiplicandAPtxTypeAttrName()),
       OperandFragment("B", getMultiplicandBPtxTypeAttrName()),
-      OperandFragment("C", ""),
-      OperandFragment("sparseMetadata", ""),
+      OperandFragment("C", ""), OperandFragment("sparseMetadata", ""),
       OperandFragment("selector", "")};
   SmallVector<StringRef, 4> ignoreAttrNames{
       mlir::NVVM::MmaSpOp::getOperandSegmentSizeAttr()};
@@ -1009,8 +1005,8 @@ void MmaSpOp::print(OpAsmPrinter &p) {
         regTypes.push_back(this->getOperand(operandIdx).getType());
       }
     }
-    std::optional<MMATypes> inferredType =
-        MmaOp::inferOperandMMAType(regTypes.back(), /*isAccumulator=*/fragIdx >= 2);
+    std::optional<MMATypes> inferredType = MmaOp::inferOperandMMAType(
+        regTypes.back(), /*isAccumulator=*/fragIdx >= 2);
     if (inferredType)
       ignoreAttrNames.push_back(frag.ptxTypeAttr);
   }
@@ -1034,17 +1030,19 @@ void MmaSpOp::print(OpAsmPrinter &p) {
   p << "(";
   for (int i = 0; i < 3; ++i) {
     p << regTypes[i];
-    if (i < 2) p << ", ";
+    if (i < 2)
+      p << ", ";
   }
   p << ") -> " << getResult().getType();
 }
 
-void MmaSpOp::build(OpBuilder &builder, OperationState &result,
-                Type resultType, ValueRange operandA, ValueRange operandB,
-                ValueRange operandC, Value sparseMetadata, Value sparsitySelector,
-                ArrayRef<int64_t> shape,
-                std::optional<MMAIntOverflow> intOverflow,
-                std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes) {
+void MmaSpOp::build(
+    OpBuilder &builder, OperationState &result,
+    Type resultType, ValueRange operandA, ValueRange operandB,
+    ValueRange operandC, Value sparseMetadata, Value sparsitySelector,
+    ArrayRef<int64_t> shape,
+    std::optional<MMAIntOverflow> intOverflow,
+    std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes) {
 
   assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
   MLIRContext *ctx = builder.getContext();
@@ -1078,8 +1076,8 @@ void MmaSpOp::build(OpBuilder &builder, OperationState &result,
       MmaSpOp::getOperandSegmentSizeAttr(),
       builder.getDenseI32ArrayAttr({static_cast<int32_t>(operandA.size()),
                                     static_cast<int32_t>(operandB.size()),
-                                    static_cast<int32_t>(operandC.size()),
-                                    1, 1})); // sparseMetadata and sparsitySelector
+                                    static_cast<int32_t>(operandC.size()), 1,
+                                    1})); // sparseMetadata and sparsitySelector
 }
 
 ParseResult MmaSpOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1142,23 +1140,27 @@ ParseResult MmaSpOp::parse(OpAsmParser &parser, OperationState &result) {
     if (failed(parser.resolveOperands(frag.regs, frag.regTypes,
                                       parser.getNameLoc(), result.operands)))
       return failure();
-    frag.elemtype = MmaOp::inferOperandMMAType(frag.regTypes[0],
-                                               /*isAccumulator*/ iter.index() >= 2);
+    frag.elemtype =
+        MmaOp::inferOperandMMAType(frag.regTypes[0],
+                                   /*isAccumulator*/ iter.index() >= 2);
   }
 
   Type resultType;
   if (parser.parseArrow() || parser.parseType(resultType))
     return failure();
-  frags[5].elemtype = MmaOp::inferOperandMMAType(resultType, /*isAccumulator*/ true);
+  frags[5].elemtype =
+      MmaOp::inferOperandMMAType(resultType, /*isAccumulator*/ true);
 
   // Resolve sparse metadata and selector (assume i32 type)
   Type i32Type = builder.getIntegerType(32);
-  if (parser.resolveOperands(frags[3].regs, i32Type,
-                             parser.getCurrentLocation(), result.operands)
+  if (parser
+          .resolveOperands(frags[3].regs, i32Type, parser.getCurrentLocation(),
+                           result.operands)
           .failed())
     return failure();
-  if (parser.resolveOperands(frags[4].regs, i32Type,
-                             parser.getCurrentLocation(), result.operands)
+  if (parser
+          .resolveOperands(frags[4].regs, i32Type, parser.getCurrentLocation(),
+                           result.operands)
           .failed())
     return failure();
 
@@ -1303,7 +1305,8 @@ LogicalResult MmaSpOp::verify() {
       expectedC.emplace_back(4, f32Ty);
     }
 
-    // For sparse MMA, A operand is compressed (2:4 sparsity means half the elements)
+    // For sparse MMA, A operand is compressed (2:4 sparsity means half the
+    // elements)
     int64_t unitA = (mmaShape[0] / 8) * (mmaShape[2] / kFactor) / 2;
     int64_t unitB = (mmaShape[1] / 8) * (mmaShape[2] / kFactor);
     expectedA.emplace_back(unitA, multiplicandFragType);
