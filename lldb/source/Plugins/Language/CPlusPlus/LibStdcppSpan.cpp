@@ -81,21 +81,22 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_start)
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+      return llvm::createStringError(
+          llvm::formatv("Type has no child named {0}", name.AsCString()));
+
     auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
     if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+      return llvm::createStringError(
+          llvm::formatv("Type has no child named {0}", name.AsCString()));
     }
     return *optional_idx;
   }
 
 private:
-  ValueObject *m_start = nullptr; /// First element of span. Held, not owned.
-  CompilerType m_element_type;    /// Type of span elements.
-  size_t m_num_elements = 0;      /// Number of elements in span.
-  uint32_t m_element_size = 0;    /// Size in bytes of each span element.
+  ValueObject *m_start = nullptr; ///< First element of span. Held, not owned.
+  CompilerType m_element_type;    ///< Type of span elements.
+  size_t m_num_elements = 0;      ///< Number of elements in span.
+  uint32_t m_element_size = 0;    ///< Size in bytes of each span element.
 };
 
 SyntheticChildrenFrontEnd *
