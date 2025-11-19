@@ -229,7 +229,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%llvm_repos_extension": {
       "general": {
-        "bzlTransitiveDigest": "3NCQtHwwkFzbdvEprZ+u9gQlcf+2PKpoinmAHZTL35o=",
+        "bzlTransitiveDigest": "5Uc5D84crjXhrcQgNCOOeRsxLkibVlz4ACrhXJCSO2Q=",
         "usagesDigest": "X0yUkkWyxQ2Y5oZVDkRSE/K4YkDWo1IjhHsL+1weKyU=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -264,7 +264,7 @@
               ]
             }
           },
-          "vulkan_sdk_setup": {
+          "vulkan_sdk": {
             "repoRuleId": "@@//:vulkan_sdk.bzl%vulkan_sdk_setup",
             "attributes": {}
           },
