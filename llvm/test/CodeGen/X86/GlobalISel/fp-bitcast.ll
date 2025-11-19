@@ -6,20 +6,17 @@
 define half @test_i16_to_half(i16 %0) {
 ; SSE2-LABEL: test_i16_to_half:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movzwl %di, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_i16_to_half:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_i16_to_half:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    movzwl %di, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vmovd %edi, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %2 = bitcast i16 %0 to half

@@ -320,25 +320,28 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
 
       const DebugLoc &DL = I.getDebugLoc();
 
-      // Zero extend GPR16 -> GPR32
+      // Any extend GPR16 -> GPR32
       Register ExtReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-      BuildMI(*I.getParent(), I, DL, TII.get(X86::MOVZX32rr16), ExtReg)
-          .addReg(SrcReg);
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::SUBREG_TO_REG),
+              ExtReg)
+          .addImm(0)
+          .addReg(SrcReg)
+          .addImm(X86::sub_16bit);
 
-      // Copy to GPR32 -> XMM
+      // Copy GR32 -> XMM
       BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
           .addReg(ExtReg);
 
       I.eraseFromParent();
     }
 
-    // Special case XMM -> GPR16
+    // Special case XMM -> GR16
     if (DstSize == RegBankSize && DstRegBank.getID() == X86::GPRRegBankID &&
         (SrcRegBank.getID() == X86::VECRRegBankID)) {
 
       const DebugLoc &DL = I.getDebugLoc();
 
-      // Move XMM to GPR32 register.
+      // Move XMM to GR32 register.
       Register Temp32 = MRI.createVirtualRegister(&X86::GR32RegClass);
       BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Temp32)
           .addReg(SrcReg);
