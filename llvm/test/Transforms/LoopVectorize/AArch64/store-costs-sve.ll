@@ -165,11 +165,11 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; DEFAULT:       vec.epilog.vector.body:
 ; DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX6]]
-; DEFAULT-NEXT:    store <8 x i8> [[TMP10]], ptr [[TMP11]], align 1, !alias.scope [[META9]], !noalias [[META6]]
+; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX6]]
+; DEFAULT-NEXT:    store <8 x i8> [[TMP10]], ptr [[TMP13]], align 1, !alias.scope [[META9]], !noalias [[META6]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 8
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT9]], 1000
-; DEFAULT-NEXT:    br i1 [[TMP12]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP12]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; DEFAULT:       vec.epilog.middle.block:
 ; DEFAULT-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; DEFAULT:       vec.epilog.scalar.ph:
