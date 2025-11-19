@@ -460,7 +460,7 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
       return info.getFloat128Format();
     }
 
-    assert(false && "Unsupported float type semantics");
+    llvm_unreachable("Unsupported float type semantics");
   };
 
   const mlir::Type higherElementType = getHigherPrecisionFPType(elementType);

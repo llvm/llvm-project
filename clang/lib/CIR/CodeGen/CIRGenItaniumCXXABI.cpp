@@ -459,7 +459,7 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
                  "emitVTableDefinitions: __fundamental_type_info");
   }
 
-  auto vtableAsGlobalValue = dyn_cast<cir::CIRGlobalValueInterface>(*vtable);
+  [[maybe_unused]] auto vtableAsGlobalValue = dyn_cast<cir::CIRGlobalValueInterface>(*vtable);
   assert(vtableAsGlobalValue && "VTable must support CIRGlobalValueInterface");
   // Always emit type metadata on non-available_externally definitions, and on
   // available_externally definitions if we are performing whole program
