@@ -324,12 +324,32 @@ uint32_t SymbolContext::GetResolvedMask() const {
 
 bool lldb_private::operator==(const SymbolContext &lhs,
                               const SymbolContext &rhs) {
-  return lhs.function == rhs.function && lhs.symbol == rhs.symbol &&
+  return SymbolContext::CompareWithoutSymbol(lhs, rhs) &&
+         lhs.symbol == rhs.symbol;
+}
+
+bool SymbolContext::CompareConsideringPossiblyNullSymbol(
+    const SymbolContext &lhs, const SymbolContext &rhs) {
+  if (!CompareWithoutSymbol(lhs, rhs))
+    return false;
+
+  // If one (or both) of the symbol context's symbol is empty, consider them
+  // equal.
+  if (!lhs.symbol || !rhs.symbol)
+    return true;
+
+  // If both symbols are present, make sure they're the same.
+  return lhs.symbol == rhs.symbol;
+}
+
+bool SymbolContext::CompareWithoutSymbol(const SymbolContext &lhs,
+                                         const SymbolContext &rhs) {
+  return lhs.function == rhs.function &&
          lhs.module_sp.get() == rhs.module_sp.get() &&
          lhs.comp_unit == rhs.comp_unit &&
          lhs.target_sp.get() == rhs.target_sp.get() &&
          LineEntry::Compare(lhs.line_entry, rhs.line_entry) == 0 &&
-         lhs.variable == rhs.variable;
+         lhs.variable == rhs.variable && lhs.block == rhs.block;
 }
 
 bool lldb_private::operator!=(const SymbolContext &lhs,
@@ -1200,7 +1220,10 @@ bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
                                        bool merge_symbol_into_function) {
   collection::iterator pos, end = m_symbol_contexts.end();
   for (pos = m_symbol_contexts.begin(); pos != end; ++pos) {
-    if (*pos == sc)
+    // Because symbol contexts might first be built without the symbol,
+    // which is then appended later on, compare the symbol contexts taking into
+    // accout that one (or either) of them might not have a symbol yet.
+    if (SymbolContext::CompareConsideringPossiblyNullSymbol(*pos, sc))
       return false;
   }
   if (merge_symbol_into_function && sc.symbol != nullptr &&
