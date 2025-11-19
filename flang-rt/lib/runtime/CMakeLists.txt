@@ -12,6 +12,13 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
+# Module sources that are required by other modules
+set(intrinsics_sources
+  __fortran_builtins.f90
+  __cuda_builtins.f90
+)
+
+
 # List of files that are buildable for all devices.
 set(supported_sources
   ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
@@ -97,12 +104,10 @@ set(host_sources
   temporary-stack.cpp
   time-intrinsic.cpp
   unit-map.cpp
-)
 
-# Module sources that are required by other modules
-set(intrinsics_sources
-  __fortran_builtins.f90
-  __cuda_builtins.f90
+  __cuda_device.f90
+  cooperative_groups.f90
+  cudadevice.f90
 )
 
 if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
@@ -113,22 +118,15 @@ if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
   )
 endif ()
 
-if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
-  list(APPEND host_sources
+# Compile as CUDA-Fortran, not directly supported by CMake
+set_property(SOURCE
     __cuda_device.f90
     cooperative_groups.f90
     cudadevice.f90
-  )
+  APPEND PROPERTY
+    COMPILE_OPTIONS --offload-host-only -xcuda
+)
 
-  # Compile as CUDA-Fortran, not directly supported by CMake
-  set_property(SOURCE
-      __cuda_device.f90
-      cooperative_groups.f90
-      cudadevice.f90
-    APPEND PROPERTY
-      COMPILE_OPTIONS --offload-host-only -xcuda
-  )
-endif ()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
