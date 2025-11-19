@@ -19,11 +19,11 @@ TEST(DependencyScanningFilesystem, OpenFileAndGetBufferRepeatedly) {
   InMemoryFS->addFile("/foo", 0, llvm::MemoryBuffer::getMemBuffer("content"));
 
   DependencyScanningService Service(
-    ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-    clang::CASOptions(), nullptr, nullptr,
-    ScanningOptimizations::Default, /*EagerLoadModules=*/false,
-    /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
-    /*CacheNegativeStats=*/true);
+      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
+      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
+      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*CacheNegativeStats=*/true);
 
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
