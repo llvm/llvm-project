@@ -9792,7 +9792,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
   LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE,
-                                &Requirements, &Hints, DB, AC, OptForSize, AA);
+                                &Requirements, &Hints, DB, AC,
+                                /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
     Hints.emitRemarkWithHints();

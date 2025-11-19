@@ -461,7 +461,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
     LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
-                            !OptForSize, false)
+                            AllowRuntimeSCEVChecks, false)
                    .value_or(0);
   if (Stride == 1 || Stride == -1)
     return Stride;
