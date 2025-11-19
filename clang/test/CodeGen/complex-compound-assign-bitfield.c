@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c23 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -std=c23 -emit-llvm -o - | FileCheck %s
 
 struct Bits {
     int pad1: 30;
