@@ -1,5 +1,5 @@
-// RUN: mlir-translate -mlir-to-llvmir %s  -split-input-file --verify-diagnostics | FileCheck %s --check-prefix=LLVM
-// RUN: mlir-opt %s -split-input-file | mlir-opt | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s --check-prefix=LLVM
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 // LLVM-LABEL: @llvm_nvvm_barrier(
 // LLVM-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]], i32 %[[redOperand:.*]])

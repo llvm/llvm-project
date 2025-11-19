@@ -17,6 +17,7 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -669,8 +670,15 @@ optMain(int argc, char **argv,
       M->addModuleFlag(Module::Error, "UnifiedLTO", 1);
   }
 
+  VectorLibrary VecLib = codegen::getVectorLibrary();
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(ModuleTriple);
+  TargetLibraryInfoImpl TLII(ModuleTriple, VecLib);
+
+  RTLIB::RuntimeLibcallsInfo RTLCI(ModuleTriple, codegen::getExceptionModel(),
+                                   codegen::getFloatABIForCalls(),
+                                   codegen::getEABIVersion(),
+                                   "", // FIXME: Get ABI name from MCOptions
+                                   VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -746,7 +754,7 @@ optMain(int argc, char **argv,
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
     if (!runPassPipeline(
-            argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
+            argv[0], *M, TM.get(), &TLII, RTLCI, Out.get(), ThinLinkOut.get(),
             RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK,
             VK, /* ShouldPreserveAssemblyUseListOrder */ false,
             /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,

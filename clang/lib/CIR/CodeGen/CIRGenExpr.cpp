@@ -669,9 +669,18 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
     return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
   }
 
-  cgm.errorNYI(
-      loc, "emitLoadOfExtVectorElementLValue: Result of expr is vector type");
-  return {};
+  // Always use shuffle vector to try to retain the original program structure
+  SmallVector<int64_t> mask;
+  for (auto i : llvm::seq<unsigned>(0, exprVecTy->getNumElements()))
+    mask.push_back(getAccessedFieldNo(i, elts));
+
+  cir::VecShuffleOp resultVec = builder.createVecShuffle(loc, vec, mask);
+  if (lv.getType()->isExtVectorBoolType()) {
+    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: ExtVectorBoolType");
+    return {};
+  }
+
+  return RValue::get(resultVec);
 }
 
 static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
@@ -1165,9 +1174,14 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
 
   // ExtVectorElementExpr's base can either be a vector or pointer to vector.
   if (e->isArrow()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitExtVectorElementExpr: pointer to vector");
-    return {};
+    // If it is a pointer to a vector, emit the address and form an lvalue with
+    // it.
+    LValueBaseInfo baseInfo;
+    Address ptr = emitPointerWithAlignment(e->getBase(), &baseInfo);
+    const auto *clangPtrTy =
+        e->getBase()->getType()->castAs<clang::PointerType>();
+    base = makeAddrLValue(ptr, clangPtrTy->getPointeeType(), baseInfo);
+    base.getQuals().removeObjCGCAttr();
   } else if (e->getBase()->isGLValue()) {
     // Otherwise, if the base is an lvalue ( as in the case of foo.x.x),
     // emit the base as an lvalue.
@@ -1287,7 +1301,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
   case CK_ToUnion:
-  case CK_BaseToDerived:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -1322,6 +1335,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
                                   lv.getAddress().getAlignment()),
                           e->getType(), lv.getBaseInfo());
   }
+
   case CK_LValueBitCast: {
     // This must be a reinterpret_cast (or c-style equivalent).
     const auto *ce = cast<ExplicitCastExpr>(e);
@@ -1371,6 +1385,22 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     // type.
     assert(!cir::MissingFeatures::opTBAA());
     return makeAddrLValue(baseAddr, e->getType(), lv.getBaseInfo());
+  }
+
+  case CK_BaseToDerived: {
+    const auto *derivedClassDecl = e->getType()->castAsCXXRecordDecl();
+    LValue lv = emitLValue(e->getSubExpr());
+
+    // Perform the base-to-derived conversion
+    Address derived = getAddressOfDerivedClass(
+        getLoc(e->getSourceRange()), lv.getAddress(), derivedClassDecl,
+        e->path(), /*NullCheckValue=*/false);
+    // C++11 [expr.static.cast]p2: Behavior is undefined if a downcast is
+    // performed and the object is not of the derived type.
+    assert(!cir::MissingFeatures::sanitizers());
+
+    assert(!cir::MissingFeatures::opTBAA());
+    return makeAddrLValue(derived, e->getType(), lv.getBaseInfo());
   }
 
   case CK_ZeroToOCLOpaqueType:
@@ -1768,11 +1798,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
   if (unsigned builtinID = fd->getBuiltinID()) {
-    if (fd->getAttr<AsmLabelAttr>()) {
-      cgm.errorNYI("AsmLabelAttr");
-    }
-
-    StringRef ident = fd->getName();
+    StringRef ident = cgm.getMangledName(gd);
     std::string fdInlineName = (ident + ".inline").str();
 
     bool isPredefinedLibFunction =
