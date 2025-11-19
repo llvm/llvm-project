@@ -277,7 +277,6 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
   QualType t = e->getType();
 
   // If it's thread_local, emit a call to its wrapper function instead.
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
   if (vd->getTLSKind() == VarDecl::TLS_Dynamic)
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "emitGlobalVarDeclLValue: thread_local variable");
@@ -312,7 +311,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
                                        bool isInit, bool isNontemporal) {
-  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
+  // Traditional LLVM codegen handles thread local separately, CIR handles
+  // as part of getAddrOfGlobalVar (GetGlobalOp).
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
     // Boolean vectors use `iN` as storage type.
@@ -556,7 +556,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              QualType ty, SourceLocation loc,
                                              LValueBaseInfo baseInfo) {
-  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
+  // Traditional LLVM codegen handles thread local separately, CIR handles
+  // as part of getAddrOfGlobalVar (GetGlobalOp).
   mlir::Type eltTy = addr.getElementType();
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
