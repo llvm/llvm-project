@@ -29,7 +29,6 @@ struct MissingFeatures {
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
-  static bool opGlobalConstant() { return false; }
   static bool opGlobalWeakRef() { return false; }
   static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalSection() { return false; }
