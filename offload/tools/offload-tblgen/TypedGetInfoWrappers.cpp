@@ -68,7 +68,9 @@ void EmitTypedGetInfoWrappers(const llvm::RecordKeeper &Records,
         } else {
           OS << TAB_1
              << formatv("assert(ResultSize % sizeof({}) == 0);\n", ElementType);
-          OS << TAB_1 << formatv("Result.resize(ResultSize / sizeof({}));\n", ElementType);
+          OS << TAB_1
+             << formatv("Result.resize(ResultSize / sizeof({}));\n",
+                        ElementType);
         }
         OS << TAB_1
            << formatv("if (auto Err = {}({}, {}, ResultSize, Result.data()))\n",
