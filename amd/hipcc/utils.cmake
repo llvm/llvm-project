@@ -8,13 +8,14 @@ function( configure_pkg PACKAGE_NAME_T COMPONENT_NAME_T PACKAGE_VERSION_T MAINTA
                                   ${MAINTAINER_NM_T} ${MAINTAINER_EMAIL_T} )
 
       set(DEB_SOURCE_DIR "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/DEBIAN")
+      set(DEB_BUILD_DIR "${CMAKE_BINARY_DIR}/DEBIAN")
       # Create debian directory in build tree
-      file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/DEBIAN")
+      file(MAKE_DIRECTORY "${DEB_BUILD_DIR}")
 
       # Configure the copyright file
       configure_file(
-        "${CMAKE_BINARY_DIR}/DEBIAN/copyright"
 	"${DEB_SOURCE_DIR}/copyright.in"
+	"${DEB_BUILD_DIR}/copyright"
         @ONLY
       )
 
@@ -25,17 +26,17 @@ function( configure_pkg PACKAGE_NAME_T COMPONENT_NAME_T PACKAGE_VERSION_T MAINTA
 
       # Configure the changelog file
       configure_file(
-        "${CMAKE_BINARY_DIR}/DEBIAN/changelog.Debian"
 	"${DEB_SOURCE_DIR}/changelog.in"
+	"${DEB_BUILD_DIR}/changelog.Debian"
         @ONLY
       )
 
       # Install Change Log 
       find_program ( DEB_GZIP_EXEC gzip )
-      if(EXISTS "${CMAKE_BINARY_DIR}/DEBIAN/changelog.Debian" )
+      if(EXISTS "${DEB_BUILD_DIR}/changelog.Debian" )
         execute_process(
-          COMMAND ${DEB_GZIP_EXEC} -f -n -9 "${CMAKE_BINARY_DIR}/DEBIAN/changelog.Debian"
-          WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/DEBIAN"
+          COMMAND ${DEB_GZIP_EXEC} -f -n -9 "${DEB_BUILD_DIR}/changelog.Debian"
+	  WORKING_DIRECTORY "${DEB_BUILD_DIR}"
           RESULT_VARIABLE result
           OUTPUT_VARIABLE output
           ERROR_VARIABLE error
@@ -43,7 +44,7 @@ function( configure_pkg PACKAGE_NAME_T COMPONENT_NAME_T PACKAGE_VERSION_T MAINTA
         if(NOT ${result} EQUAL 0)
           message(FATAL_ERROR "Failed to compress: ${error}")
         endif()
-        install ( FILES "${CMAKE_BINARY_DIR}/DEBIAN/${DEB_CHANGELOG_INSTALL_FILENM}"
+	install ( FILES "${DEB_BUILD_DIR}/${DEB_CHANGELOG_INSTALL_FILENM}"
                   DESTINATION ${CMAKE_INSTALL_DOCDIR}
                   COMPONENT ${COMPONENT_NAME_T})
       endif()
