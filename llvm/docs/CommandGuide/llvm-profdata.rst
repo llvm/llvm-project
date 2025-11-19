@@ -338,7 +338,7 @@ OPTIONS
 
  Instruct the profile dumper to show profile counts in the text format of the
  instrumentation-based profile data representation. By default, the profile
- information is dumped in a more human readable form (also in text) with
+ information is dumped in a more human-readable form (also in text) with
  annotations.
 
 .. option:: --topn=<n>

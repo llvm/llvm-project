@@ -71,6 +71,9 @@ public:
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
+  /// Customize the preferred legalization strategy for certain types.
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
+
   bool softPromoteHalfType() const override { return true; }
 
   /// Return the register type for a given MVT, ensuring vectors are treated
@@ -245,6 +248,7 @@ public:
   }
 
   ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
+  ISD::NodeType getExtendForAtomicRMWArg(unsigned Op) const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override;
@@ -429,25 +433,21 @@ public:
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
-  bool lowerInterleavedLoad(LoadInst *LI,
+  bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
-                            ArrayRef<unsigned> Indices,
-                            unsigned Factor) const override;
+                            ArrayRef<unsigned> Indices, unsigned Factor,
+                            const APInt &GapMask) const override;
 
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
-                             unsigned Factor) const override;
+  bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                             ShuffleVectorInst *SVI, unsigned Factor,
+                             const APInt &GapMask) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(
-      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                        IntrinsicInst *DI) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
-
-  bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                              ArrayRef<Value *> DeinterleaveRes) const override;
-
-  bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
-                               ArrayRef<Value *> InterleaveOps) const override;
+      Instruction *Store, Value *Mask,
+      ArrayRef<Value *> InterleaveValues) const override;
 
   bool supportKCFIBundles() const override { return true; }
 
@@ -467,6 +467,8 @@ public:
                                             MachineBasicBlock *MBB) const;
 
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
+  bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
   /// Match a mask which "spreads" the leading elements of a vector evenly
   /// across the result.  Factor is the spread amount, and Index is the
@@ -530,6 +532,7 @@ private:
   SDValue lowerVECTOR_SPLICE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerABS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedLoad(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerLoadFF(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorCompress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
@@ -538,9 +541,6 @@ private:
   SDValue lowerMaskedScatter(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorSelectToRVV(SDValue Op,
-                                            SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG) const;
@@ -555,13 +555,14 @@ private:
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPCttzElements(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorExtendToRVV(SDValue Op, SelectionDAG &DAG,
-                                            unsigned ExtendOpc) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
@@ -575,9 +576,15 @@ private:
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue expandUnalignedVPLoad(SDValue Op, SelectionDAG &DAG) const;
+  SDValue expandUnalignedVPStore(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue lowerXAndesBfHCvtBFloat16Load(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerXAndesBfHCvtBFloat16Store(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
@@ -644,6 +651,7 @@ struct RISCVVIntrinsicInfo {
   unsigned IntrinsicID;
   uint8_t ScalarOperand;
   uint8_t VLOperand;
+  bool IsFPIntrinsic;
   bool hasScalarOperand() const {
     // 0xF is not valid. See NoScalarOperand in IntrinsicsRISCV.td.
     return ScalarOperand != 0xF;

@@ -170,7 +170,7 @@ let arguments = (ins
   OptionalAttr<DictArrayAttr>:$arg_attrs,
   OptionalAttr<DictArrayAttr>:$res_attrs
 );
-
+```
 
 We have already provided the definition in the `extraClassDeclaration`
 field of the `FuncOp` class:
@@ -300,7 +300,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   Operation *materializeCallConversion(OpBuilder &builder, Value input,
                                        Type resultType,
                                        Location conversionLoc) const final {
-    return builder.create<CastOp>(conversionLoc, resultType, input);
+    return CastOp::create(builder, conversionLoc, resultType, input);
   }
 };
 ```
@@ -445,7 +445,7 @@ When processing an operation like described, we query if it registered the
 
 ```c++
   // Ask the operation to infer its output shapes.
-  LLVM_DEBUG(llvm::dbgs() << "Inferring shape for: " << *op << "\n");
+  LDBG() << "Inferring shape for: " << *op;
 
   /// We check if an operation has a particular interface by casting.
   if (ShapeInference shapeOp = dyn_cast<ShapeInference>(op)) {

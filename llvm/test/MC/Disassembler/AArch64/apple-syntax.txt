@@ -1,0 +1,34 @@
+# RUN: llvm-mc < %s --triple=aarch64 -mattr=+dotprod,+fp16fml,+bf16,+i8mm,+f8f32mm,+f8f16mm --disassemble --output-asm-variant=0 | FileCheck %s --check-prefix=GENERIC
+# RUN: llvm-mc < %s --triple=aarch64 -mattr=+dotprod,+fp16fml,+bf16,+i8mm,+f8f32mm,+f8f16mm --disassemble --output-asm-variant=1 | FileCheck %s --check-prefix=APPLE
+
+[0xd3,0x94,0x92,0x4e]
+# GENERIC: sdot v19.4s, v6.16b, v18.16b
+# APPLE: sdot.4s v19, v6, v18
+
+[0xd3,0xec,0x32,0x4e]
+# GENERIC: fmlal v19.4s, v6.4h, v18.4h
+# APPLE: fmlal.4s v19, v6, v18
+
+[0xd3,0xfc,0x52,0x6e]
+# GENERIC: bfdot v19.4s, v6.8h, v18.8h
+# APPLE: bfdot.4s v19, v6, v18
+
+[0xd3,0xfc,0xd2,0x2e]
+# GENERIC: bfmlalb v19.4s, v6.8h, v18.8h
+# APPLE: bfmlalb.4s v19, v6, v18
+
+[0xd3,0xec,0x52,0x6e]
+# GENERIC: bfmmla v19.4s, v6.8h, v18.8h
+# APPLE: bfmmla.4s v19, v6, v18
+
+[0xd3,0xa4,0x92,0x4e]
+# GENERIC: smmla v19.4s, v6.16b, v18.16b
+# APPLE: smmla.4s v19, v6, v18
+
+[0xd3,0xec,0x92,0x6e]
+# GENERIC: fmmla v19.4s, v6.16b, v18.16b
+# APPLE: fmmla.4s v19, v6, v18
+
+[0xd3,0xec,0x12,0x6e]
+# GENERIC: fmmla v19.8h, v6.16b, v18.16b
+# APPLE: fmmla.8h v19, v6, v18

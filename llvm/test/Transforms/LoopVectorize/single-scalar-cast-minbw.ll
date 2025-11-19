@@ -19,10 +19,10 @@ define void @minbw_cast(ptr %dst, i64 %n, i1 %bool1, i1 %bool2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT2]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i1> [[BROADCAST_SPLAT]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i8> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -58,6 +58,75 @@ loop:
   %iv.next = add i64 %iv, 1
   %cmp = icmp ult i64 %iv.next, %n
   br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Test case for https://github.com/llvm/llvm-project/issues/151392.
+define void @single_scalar_cast_stored(ptr %src, ptr %dst, i32 %n) {
+; CHECK-LABEL: define void @single_scalar_cast_stored(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 2
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 2
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC]], align 2, !alias.scope [[META4:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i16 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP0]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP4]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    store i16 [[TMP5]], ptr [[DST]], align 2, !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[SRC]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[L]], 0
+; CHECK-NEXT:    [[L_EXT:%.*]] = zext i16 [[L]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[L_EXT]], 15
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 0, i32 [[AND]]
+; CHECK-NEXT:    [[SEL_TRUNC:%.*]] = trunc i32 [[SEL]] to i16
+; CHECK-NEXT:    store i16 [[SEL_TRUNC]], ptr [[DST]], align 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %l = load i16, ptr %src, align 2
+  %cmp = icmp eq i16 %l, 0
+  %l.ext = zext i16 %l to i32
+  %and = and i32 %l.ext, 15
+  %sel = select i1 %cmp, i32 0, i32 %and
+  %sel.trunc = trunc i32 %sel to i16
+  store i16 %sel.trunc, ptr %dst, align 2
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp ne i32 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
 
 exit:
   ret void

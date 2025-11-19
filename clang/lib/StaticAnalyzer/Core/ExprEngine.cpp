@@ -1079,6 +1079,11 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   getCheckerManager().runCheckersForDeadSymbols(CheckedSet, Pred, SymReaper,
                                                 DiagnosticStmt, *this, K);
 
+  // Extend lifetime of symbols used for dynamic extent while the parent region
+  // is live. In this way size information about memory allocations is not lost
+  // if the region remains live.
+  markAllDynamicExtentLive(CleanedState, SymReaper);
+
   // For each node in CheckedSet, generate CleanedNodes that have the
   // environment, the store, and the constraints cleaned up but have the
   // user-supplied states as the predecessors.
@@ -1814,6 +1819,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPStripeDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
     case Stmt::OMPInterchangeDirectiveClass:
+    case Stmt::OMPFuseDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
     case Stmt::OMPDispatchDirectiveClass:
     case Stmt::OMPMaskedDirectiveClass:
@@ -1941,7 +1947,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ConceptSpecializationExprClass:
     case Stmt::CXXRewrittenBinaryOperatorClass:
     case Stmt::RequiresExprClass:
-    case Expr::CXXParenListInitExprClass:
     case Stmt::EmbedExprClass:
       // Fall through.
 
@@ -2315,11 +2320,22 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Stmt::InitListExprClass:
+    case Stmt::InitListExprClass: {
+      const InitListExpr *E = cast<InitListExpr>(S);
       Bldr.takeNodes(Pred);
-      VisitInitListExpr(cast<InitListExpr>(S), Pred, Dst);
+      ConstructInitList(E, E->inits(), E->isTransparent(), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
+    }
+
+    case Expr::CXXParenListInitExprClass: {
+      const CXXParenListInitExpr *E = cast<CXXParenListInitExpr>(S);
+      Bldr.takeNodes(Pred);
+      ConstructInitList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred,
+                        Dst);
+      Bldr.addNodes(Dst);
+      break;
+    }
 
     case Stmt::MemberExprClass:
       Bldr.takeNodes(Pred);
@@ -3155,7 +3171,7 @@ void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
   // feasible then it shouldn't be considered for making 'default:' reachable.
   const SwitchStmt *SS = builder.getSwitch();
   const Expr *CondExpr = SS->getCond()->IgnoreParenImpCasts();
-  if (CondExpr->getType()->getAs<EnumType>()) {
+  if (CondExpr->getType()->isEnumeralType()) {
     if (SS->isAllEnumCasesCovered())
       return;
   }
@@ -3704,9 +3720,8 @@ ExprEngine::notifyCheckersOfPointerEscape(ProgramStateRef State,
 /// evalBind - Handle the semantics of binding a value to a specific location.
 ///  This method is used by evalStore and (soon) VisitDeclStmt, and others.
 void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
-                          ExplodedNode *Pred,
-                          SVal location, SVal Val,
-                          bool atDeclInit, const ProgramPoint *PP) {
+                          ExplodedNode *Pred, SVal location, SVal Val,
+                          bool AtDeclInit, const ProgramPoint *PP) {
   const LocationContext *LC = Pred->getLocationContext();
   PostStmt PS(StoreE, LC);
   if (!PP)
@@ -3715,7 +3730,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   // Do a previsit of the bind.
   ExplodedNodeSet CheckedSet;
   getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
-                                         StoreE, *this, *PP);
+                                         StoreE, AtDeclInit, *this, *PP);
 
   StmtNodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
 
@@ -3738,8 +3753,8 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
     // When binding the value, pass on the hint that this is a initialization.
     // For initializations, we do not need to inform clients of region
     // changes.
-    state = state->bindLoc(location.castAs<Loc>(),
-                           Val, LC, /* notifyChanges = */ !atDeclInit);
+    state = state->bindLoc(location.castAs<Loc>(), Val, LC,
+                           /* notifyChanges = */ !AtDeclInit);
 
     const MemRegion *LocReg = nullptr;
     if (std::optional<loc::MemRegionVal> LocRegVal =
@@ -4114,3 +4129,33 @@ void *ProgramStateTrait<ReplayWithoutInlining>::GDMIndex() {
 }
 
 void ExprEngine::anchor() { }
+
+void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
+                                   bool IsTransparent, ExplodedNode *Pred,
+                                   ExplodedNodeSet &Dst) {
+  assert((isa<InitListExpr, CXXParenListInitExpr>(E)));
+
+  const LocationContext *LC = Pred->getLocationContext();
+
+  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
+  ProgramStateRef S = Pred->getState();
+  QualType T = E->getType().getCanonicalType();
+
+  bool IsCompound = T->isArrayType() || T->isRecordType() ||
+                    T->isAnyComplexType() || T->isVectorType();
+
+  if (Args.size() > 1 || (E->isPRValue() && IsCompound && !IsTransparent)) {
+    llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
+    for (Expr *E : llvm::reverse(Args))
+      ArgList = getBasicVals().prependSVal(S->getSVal(E, LC), ArgList);
+
+    B.generateNode(E, Pred,
+                   S->BindExpr(E, LC, svalBuilder.makeCompoundVal(T, ArgList)));
+  } else {
+    B.generateNode(E, Pred,
+                   S->BindExpr(E, LC,
+                               Args.size() == 0
+                                   ? getSValBuilder().makeZeroVal(T)
+                                   : S->getSVal(Args.front(), LC)));
+  }
+}

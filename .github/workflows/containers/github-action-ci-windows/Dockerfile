@@ -1,6 +1,6 @@
 # Agent image for LLVM org cluster.
 # .net 4.8 is required by chocolately package manager.
-FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019
+FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022
 
 # Restore the default Windows shell for correct batch processing.
 SHELL ["cmd", "/S", "/C"]
@@ -39,11 +39,16 @@ RUN regsvr32 /S "C:\BuildTools\DIA SDK\bin\amd64\msdia140.dll" & \
 
 # install tools as described in https://llvm.org/docs/GettingStartedVS.html
 # and a few more that were not documented...
-RUN choco install -y ninja git sccache
 # Pin an older version of Python; the current Python 3.10 fails when
 # doing "pip install" for the other dependencies, as it fails to find libxml
 # while compiling some package.
-RUN choco install -y python3 --version 3.9.7
+# We version pin the other packages as well to ensure the container build is as
+# reproducible as possible to prevent issues when upgrading only part of the
+# container.
+RUN choco install -y ninja --version 1.13.1 && \
+    choco install -y git --version 2.50.1 && \
+    choco install -y sccache --version 0.10.0 && \
+    choco install -y python3 --version 3.9.7
 
 # Testing requires psutil
 RUN pip install psutil
@@ -85,7 +90,7 @@ RUN powershell -Command \
 RUN git config --system core.longpaths true & \
     git config --global core.autocrlf false
 
-ARG RUNNER_VERSION=2.326.0
+ARG RUNNER_VERSION=2.329.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \
@@ -93,3 +98,45 @@ RUN powershell -Command \
     Add-Type -AssemblyName System.IO.Compression.FileSystem ; \
     [System.IO.Compression.ZipFile]::ExtractToDirectory('actions-runner-win.zip', $PWD) ;\
     rm actions-runner-win.zip
+
+# Set the LLVM_VERSION environment variable
+ENV LLVM_VERSION=21.1.2
+
+# Download and extract Clang compiler.
+# Create directories, download, extract, and clean up all in one layer
+RUN powershell -Command \
+    # --- Setup directories --- \
+    Write-Host "Creating directories..."; \
+    New-Item -Path "C:\temp-download" -ItemType "Directory" -Force ; \
+    New-Item -Path "C:\xz-utils" -ItemType "Directory" -Force ; \
+    New-Item -Path "C:\clang" -ItemType "Directory" -Force ; \
+    # --- 1. Download and extract xz --- \
+    Set-Location C:\temp-download ; \
+    Invoke-WebRequest -Uri "http://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip" -OutFile "xz.zip"; \
+    (Get-FileHash -Path "C:\temp-download\xz.zip" -Algorithm MD5).Hash -eq 'c3c69fdce3e825cc0b76123b36b0bcc2' ; \
+    Add-Type -AssemblyName "System.IO.Compression.FileSystem"; \
+    [System.IO.Compression.ZipFile]::ExtractToDirectory('C:\temp-download\xz.zip', 'C:\xz-utils'); \ 
+    # --- 2. Download and decompress Clang --- \
+    Invoke-WebRequest -Uri "http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" ; \
+    (Get-FileHash -Path "C:\temp-download\clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" -Algorithm MD5).Hash -eq '0ae1d3effd9ab9d323f7fa595777f0a2' ; \
+    C:\xz-utils\bin_x86-64\xz.exe -d -qq clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz ; \
+    # --- 3. Extract clang --- \
+    C:\Windows\System32\tar.exe -xf clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar -C C:\clang ; \
+    # --- 4. Clean up --- \
+    Set-Location C:\ ; \
+    Remove-Item C:\temp-download -Recurse -Force; \
+    Remove-Item C:\xz-utils -Recurse -Force; \
+    # -- 5. Shorten path to clang files & remove unnecessary files -- \
+    Set-Location C:\clang ; \
+    Rename-Item -Path "C:\clang\clang+llvm-21.1.2-x86_64-pc-windows-msvc" -NewName "C:\clang\clang-msvc" ; \
+    Set-Location C:\clang\clang-msvc ; \
+    Remove-Item -Path C:\clang\clang-msvc\libexec -Recurse -Force ; \
+    Remove-Item -Path C:\clang\clang-msvc\share -Recurse -Force ; \
+    Rename-Item -Path "C:\clang\clang-msvc\bin" -NewName "C:\clang\clang-msvc\bin-full" ; \
+    New-Item -Path "C:\clang\clang-msvc\bin" -ItemType Directory -Force ; \
+    Set-Location C:\clang\clang-msvc\bin ; \
+    Copy-Item -Path C:\clang\clang-msvc\bin-full\*.dll -Destination C:\clang\clang-msvc\bin\. ; \
+    Copy-Item -Path C:\clang\clang-msvc\bin-full\clang-cl.exe -Destination C:\clang\clang-msvc\bin\. ; \
+    Copy-Item -Path C:\clang\clang-msvc\bin-full\lld-link.exe -Destination C:\clang\clang-msvc\bin\. ; \
+    Set-Location C:\clang\clang-msvc ; \
+    Remove-Item -Path C:\clang\clang-msvc\bin-full -Recurse -Force ;

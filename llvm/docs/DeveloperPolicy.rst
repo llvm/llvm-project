@@ -51,7 +51,7 @@ respected.
 
 We accept code contributions as :ref:`GitHub Pull Requests <github-reviews>`.
 Our project is generally too large to subscribe to all github notifications, so
-if you want to be notified of pull requests affecting a specific parts of the
+if you want to be notified of pull requests affecting specific parts of the
 code, you can join
 one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscribers>`_
 GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_
@@ -296,54 +296,53 @@ Quality
 The minimum quality standards that any change must satisfy before being
 committed to the main development branch are:
 
-#. Code must adhere to the `LLVM Coding Standards <CodingStandards.html>`_.
+#. Code must adhere to the :doc:`LLVM Coding Standards <CodingStandards>`.
 
 #. Code must compile cleanly (no errors, no warnings) on at least one platform.
 
 #. Bug fixes and new features should `include a testcase`_ so we know if the
    fix/feature ever regresses in the future.
 
-#. Code must pass the ``llvm/test`` test suite.
-
-#. The code must not cause regressions on a reasonable subset of llvm-test,
-   where "reasonable" depends on the contributor's judgement and the scope of
-   the change (more invasive changes require more testing). A reasonable subset
-   might be something like "``llvm-test/MultiSource/Benchmarks``".
+#. Pull requests should build and pass premerge checks. For first-time
+   contributors, this will require an initial cursory review to run the checks.
 
 #. Ensure that links in source code and test files point to publicly available
-   resources and are used primarily to add additional information rather than
-   to supply critical context. The surrounding comments should be sufficient
-   to provide the context behind such links.
+   resources and are used primarily to add additional information rather than to
+   supply critical context. The surrounding comments should be sufficient to
+   provide the context behind such links.
 
 Additionally, the committer is responsible for addressing any problems found in
 the future that the change is responsible for.  For example:
 
-* The code should compile cleanly on all supported platforms.
+* The code needs to compile cleanly and pass tests on all stable `LLVM
+  buildbots <https://lab.llvm.org/buildbot/>`_.
 
-* The changes should not cause any correctness regressions in the ``llvm-test``
-  suite and must not cause any major performance regressions.
+* The changes should not cause any correctness regressions in the
+  `llvm-test-suite <https://github.com/llvm/llvm-test-suite>`_
+  and must not cause any major performance regressions.
 
 * The change set should not cause performance or correctness regressions for the
-  LLVM tools.
+  LLVM tools. See `llvm-compile-time-tracker.com <https://llvm-compile-time-tracker.com>`_
 
 * The changes should not cause performance or correctness regressions in code
   compiled by LLVM on all applicable targets.
 
-* You are expected to address any `GitHub Issues <https://github.com/llvm/llvm-project/issues>`_ that
-  result from your change.
+* You are expected to address any `GitHub Issues
+  <https://github.com/llvm/llvm-project/issues>`_ that result from your change.
 
-We prefer for this to be handled before submission but understand that it isn't
-possible to test all of this for every submission.  Our build bots and nightly
-testing infrastructure normally finds these problems.  A good rule of thumb is
-to check the nightly testers for regressions the day after your change.  Build
-bots will directly email you if a group of commits that included yours caused a
+Our build bots and `nightly testing infrastructure
+<https://llvm.org/docs/lnt/intro.html>`_ find many of these issues. Build bots
+will directly email you if a group of commits that included yours caused a
 failure.  You are expected to check the build bot messages to see if they are
-your fault and, if so, fix the breakage.
+your fault and, if so, fix the breakage. However, keep in mind that if you
+receive such an email, it is highly likely that your change is not at fault.
+Changes are batched together precisely because these tests are generally too
+expensive to run continuously for every change.
 
-Commits that violate these quality standards (e.g. are very broken) may be
-reverted. This is necessary when the change blocks other developers from making
-progress. The developer is welcome to re-commit the change after the problem has
-been fixed.
+Commits that violate these quality standards may be reverted (see below). This
+is necessary when the change blocks other developers from making progress. The
+developer is welcome to re-commit the change after the problem has been fixed.
+
 
 .. _commit messages:
 
@@ -389,7 +388,7 @@ Below are some guidelines about the format of the message itself:
   reviews.
 
 * The body should be concise, but explanatory, including a complete
-  reasoning.  Unless it is required to understand the change, examples,
+  rationale.  Unless it is required to understand the change, examples,
   code snippets and gory details should be left to bug comments, web
   review or the mailing list.
 
@@ -413,6 +412,10 @@ Below are some guidelines about the format of the message itself:
   such links and/or metadata should not be used in place of making the commit
   message self-explanatory. Note that such non-public links should not be
   included in the submitted code.
+
+* Avoid 'tagging' someone's username in your commits and PR descriptions
+  (e.g., `@<someUser>`), doing so results in that account receiving a notification
+  every time the commit is cherry-picked and/or pushed to a fork.
 
 LLVM uses a squash workflow for pull requests, so as the pull request evolves
 during review, it's important to update the pull request description over the
@@ -475,7 +478,7 @@ What are the expectations around a revert?
   the commit thread asking for assistance.  We aren't trying to enumerate
   every case, but rather give a set of guidelines.
 * You should be sure that reverting the change improves the stability of tip
-  of tree.  Sometimes reverting one change in a series can worsen things
+  of tree.  Sometimes, reverting one change in a series can worsen things
   instead of improving them.  We expect reasonable judgment to ensure that
   the proper patch or set of patches is being reverted.
 * The commit message for the reverting commit should explain why patch
@@ -592,7 +595,7 @@ Proposing Major Changes (RFCs)
 
 LLVM is a large community with many stakeholders, and before landing any major
 change, it is important to discuss the design of a change publicly with the
-community. This is done by posting an Request For Comments (RFC) on the `LLVM
+community. This is done by posting a Request For Comments (RFC) on the `LLVM
 Discourse forums`_.
 
 The design of LLVM is carefully controlled to ensure that all the pieces fit
@@ -629,7 +632,7 @@ confirming that we can all live with the tradeoffs embodied in the proposal.
 
 The LLVM Area Teams (defined in `LP0004
 <https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_)
-are responsible for facilitating project decision making. In cases were there
+are responsible for facilitating project decision making. In cases where there
 isn't obvious agreement, area teams should step in to restate their perceived
 consensus. In cases of deeper disagreement, area teams should try to identify
 the next steps for the proposal, such as gathering more data, changing the
@@ -1185,6 +1188,55 @@ Suggested disclaimer for the project README and the main project web page:
    not part of any official LLVM release.  While incubation status is not
    necessarily a reflection of the completeness or stability of the code, it
    does indicate that the project is not yet endorsed as a component of LLVM.
+
+Adding or enabling a new LLVM pass
+----------------------------------
+
+The guidelines here are primarily targeted at the enablement of new major
+passes in the target-independent optimization pipeline. Small additions, or
+backend-specific passes, require a lesser degree of care. Before creating a new
+pass, consider whether the functionality can be integrated into an existing
+pass first. This is often both faster and more powerful.
+
+When adding a new pass, the goal should be to enable it as part of the default
+optimization pipeline as early as possible and then continue development
+incrementally. (This does not apply to passes that are only relevant for
+specific uses of LLVM, such as GC support passes.)
+
+The recommended workflow is:
+
+1. Implement a basic version of the pass and add it to the pass pipeline behind
+   a flag that is disabled by default. The initial version should focus on
+   handling simple cases correctly and efficiently.
+2. Enable the pass by default. Separating this step allows easily disabling the
+   pass if issues are encountered, without having to revert the entire
+   implementation.
+3. Incrementally extend the pass with new functionality. As the pass is already
+   enabled, it becomes easier to identify the specific change that has caused a
+   regression in correctness, optimization quality or compile-time.
+
+When enabling a pass, certain requirements must be met (in no particular order):
+
+ * **Maintenance:** The pass (and any analyses it depends on) must have at
+   least one maintainer.
+ * **Usefulness:** There should be evidence that the pass improves performance
+   (or whatever metric it optimizes for) on real-world workloads. Improvements
+   seen only on synthetic benchmarks may be insufficient.
+ * **Compile-Time:** The pass should not have a large impact on compile-time,
+   where the evaluation of what "large" means is up to reviewer discretion, and
+   may differ based on the value the pass provides. In any case, it is expected
+   that a concerted effort has been made to mitigate the compile-time impact,
+   both for the average case, and for pathological cases.
+ * **Correctness:** The pass should have no known correctness issues (except
+   global correctness issues that affect all of LLVM). If an old pass is being
+   enabled (rather than implementing a new one incrementally), additional due
+   diligence is required. The pass should be fully reviewed to ensure that it
+   still complies with current quality standards. Fuzzing with disabled
+   profitability checks may help gain additional confidence in the
+   implementation.
+
+If non-trivial issues are found in a newly enabled pass, it may be temporarily
+disabled again, until the issues have been resolved.
 
 .. _copyright-license-patents:
 

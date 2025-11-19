@@ -71,6 +71,10 @@ public:
   StringRef getName() const { return name; }
   /// Returns true if the parameter has a default value.
   bool hasDefaultValue() const { return !defaultValue.empty(); }
+  /// Get the default value.
+  StringRef getDefaultValue() const { return defaultValue; }
+  /// Returns true if the parameter is optional.
+  bool isOptional() const { return optional; }
 
 private:
   /// The C++ type.
@@ -783,6 +787,10 @@ public:
     return addMethod<Properties | Method::StaticDeclaration>(
         std::forward<RetTypeT>(retType), std::forward<NameT>(name),
         std::forward<Args>(args)...);
+  }
+
+  const std::vector<std::unique_ptr<Method>> &getMethods() const {
+    return methods;
   }
 
   /// Add a new field to the class. Class fields added this way are always

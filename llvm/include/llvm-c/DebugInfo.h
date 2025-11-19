@@ -204,6 +204,11 @@ enum {
 typedef unsigned LLVMMetadataKind;
 
 /**
+ * The kind of checksum to emit.
+ */
+typedef enum { CSK_MD5, CSK_SHA1, CSK_SHA256 } LLVMChecksumKind;
+
+/**
  * An LLVM DWARF type encoding.
  */
 typedef unsigned LLVMDWARFTypeEncoding;
@@ -325,6 +330,25 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder,
                                                    size_t FilenameLen,
                                                    const char *Directory,
                                                    size_t DirectoryLen);
+
+/**
+ * Create a file descriptor to hold debugging information for a file.
+ * \param Builder      The \c DIBuilder.
+ * \param Filename     File name.
+ * \param FilenameLen  The length of the C string passed to \c Filename.
+ * \param Directory    Directory.
+ * \param DirectoryLen The length of the C string passed to \c Directory.
+ * \param ChecksumKind The kind of checksum. eg MD5, SHA256
+ * \param Checksum     The checksum.
+ * \param ChecksumLen  The length of the checksum.
+ * \param Souce        The embedded source.
+ * \param SourceLen    The length of the source.
+ */
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateFileWithChecksum(
+    LLVMDIBuilderRef Builder, const char *Filename, size_t FilenameLen,
+    const char *Directory, size_t DirectoryLen, LLVMChecksumKind ChecksumKind,
+    const char *Checksum, size_t ChecksumLen, const char *Source,
+    size_t SourceLen);
 
 /**
  * Creates a new descriptor for a module with the specified parent scope.
@@ -700,7 +724,7 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateArrayType(
  * \param AlignInBits    Set alignment.
  * \param BaseTy         The base type of the set.
  */
-LLVMMetadataRef LLVMDIBuilderCreateSetType(
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateSetType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, LLVMMetadataRef BaseTy);
@@ -722,7 +746,7 @@ LLVMMetadataRef LLVMDIBuilderCreateSetType(
  * \param Stride     Stride of the subrange.
  * \param Bias       Bias of the subrange.
  */
-LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t SizeInBits,
     uint32_t AlignInBits, LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
@@ -743,7 +767,7 @@ LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
  * \param Rank         Rank. (DIVariable, DIExpression or NULL)
  * \param BitStride    BitStride.
  */
-LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t Size,
     uint32_t AlignInBits, LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts,
@@ -756,8 +780,9 @@ LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
  *
  * @see DIBuilder::replaceArrays()
  */
-void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
-                       LLVMMetadataRef *Elements, unsigned NumElements);
+LLVM_C_ABI void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
+                                  LLVMMetadataRef *Elements,
+                                  unsigned NumElements);
 
 /**
  * Create debugging information entry for a vector type.

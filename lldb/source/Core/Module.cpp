@@ -52,9 +52,6 @@
 #include "lldb/Host/windows/PosixApi.h"
 #endif
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
@@ -130,8 +127,10 @@ Module *Module::GetAllocatedModuleAtIndex(size_t idx) {
   return nullptr;
 }
 
+static std::atomic<lldb::user_id_t> g_unique_id = 1;
+
 Module::Module(const ModuleSpec &module_spec)
-    : m_unwind_table(*this), m_file_has_changed(false),
+    : UserID(g_unique_id++), m_unwind_table(*this), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   // Scope for locker below...
   {
@@ -236,7 +235,8 @@ Module::Module(const ModuleSpec &module_spec)
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
                ConstString object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
-    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
+    : UserID(g_unique_id++),
+      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
       m_arch(arch), m_file(file_spec), m_object_name(object_name),
       m_object_offset(object_offset), m_object_mod_time(object_mod_time),
       m_unwind_table(*this), m_file_has_changed(false),
@@ -257,7 +257,7 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
 }
 
 Module::Module()
-    : m_unwind_table(*this), m_file_has_changed(false),
+    : UserID(g_unique_id++), m_unwind_table(*this), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   std::lock_guard<std::recursive_mutex> guard(
       GetAllocationModuleCollectionMutex());

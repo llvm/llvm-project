@@ -1,5 +1,5 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %T/hwmode-non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK -input-file=%T/hwmode-non-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %t.hwmode-non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK -input-file=%t.hwmode-non-optimized.cpp
 
 include "llvm/Target/Target.td"
 
@@ -13,8 +13,8 @@ class MyTargetGenericInstruction : GenericInstruction {
 //def Has32 : Predicate<"Subtarget->has32()">;
 def Has64 : Predicate<"Subtarget->has64()">;
 
-//def Mode32 : HwMode<"+a", [Has32]>;
-def Mode64 : HwMode<"+b", [Has64]>;
+//def Mode32 : HwMode<[Has32]>;
+def Mode64 : HwMode<[Has64]>;
 
 def ModeVT : ValueTypeByHwMode<[DefaultMode, Mode64],
                                [i32,  i64]>;

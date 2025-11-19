@@ -128,7 +128,7 @@ void test2(Foo2 f) {
   // CHECK-NEXT:   | `-DeclRefExpr {{.*}} 'f'
   // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
   f.func(1);
-  // CHECK:      RecoveryExpr {{.*}} 'ForwardClass':'Foo2::ForwardClass'
+  // CHECK:      RecoveryExpr {{.*}} 'ForwardClass'
   // CHECK-NEXT: `-MemberExpr {{.*}} '<bound member function type>' .createFwd
   // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'f'
   f.createFwd();
@@ -292,8 +292,8 @@ union U {
 // CHECK: FunctionDecl {{.*}} foo 'void ()'
 // CHECK-NEXT:    `-CompoundStmt {{.*}}
 // CHECK-NEXT:      `-DeclStmt {{.*}}
-// CHECK-NEXT:        `-VarDecl {{.*}} g 'U':'GH112560::U' listinit
-// CHECK-NEXT:          `-InitListExpr {{.*}} 'U':'GH112560::U' contains-errors field Field {{.*}} 'f' 'int'
+// CHECK-NEXT:        `-VarDecl {{.*}} g 'U' listinit
+// CHECK-NEXT:          `-InitListExpr {{.*}} 'U' contains-errors field Field {{.*}} 'f' 'int'
 // CHECK-NEXT:            `-CXXDefaultInitExpr {{.*}} 'int' contains-errors has rewritten init
 // CHECK-NEXT:              `-RecoveryExpr {{.*}} 'int' contains-errors
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors

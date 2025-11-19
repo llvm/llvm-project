@@ -78,7 +78,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <set>
 #include <string>
 #include <system_error>
@@ -502,13 +501,9 @@ class LowerTypeTestsModule {
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
   void importTypeTest(CallInst *CI);
-  void importFunction(Function *F, bool isJumpTableCanonical,
-                      std::vector<GlobalAlias *> &AliasesToErase);
+  void importFunction(Function *F, bool isJumpTableCanonical);
 
-  BitSetInfo
-  buildBitSet(Metadata *TypeId,
-              const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout);
-  ByteArrayInfo *createByteArray(BitSetInfo &BSI);
+  ByteArrayInfo *createByteArray(const BitSetInfo &BSI);
   void allocateByteArrays();
   Value *createBitSetTest(IRBuilder<> &B, const TypeIdLowering &TIL,
                           Value *BitOffset);
@@ -577,28 +572,11 @@ public:
 };
 } // end anonymous namespace
 
-/// Build a bit set for TypeId using the object layouts in
-/// GlobalLayout.
-BitSetInfo LowerTypeTestsModule::buildBitSet(
-    Metadata *TypeId,
-    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
-  BitSetBuilder BSB;
-
+/// Build a bit set for list of offsets.
+static BitSetInfo buildBitSet(ArrayRef<uint64_t> Offsets) {
   // Compute the byte offset of each address associated with this type
   // identifier.
-  for (const auto &GlobalAndOffset : GlobalLayout) {
-    for (MDNode *Type : GlobalAndOffset.first->types()) {
-      if (Type->getOperand(1) != TypeId)
-        continue;
-      uint64_t Offset =
-          cast<ConstantInt>(
-              cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
-              ->getZExtValue();
-      BSB.addOffset(GlobalAndOffset.second + Offset);
-    }
-  }
-
-  return BSB.build();
+  return BitSetBuilder(Offsets).build();
 }
 
 /// Build a test that bit BitOffset mod sizeof(Bits)*8 is set in
@@ -616,7 +594,7 @@ static Value *createMaskedBitTest(IRBuilder<> &B, Value *Bits,
   return B.CreateICmpNE(MaskedBits, ConstantInt::get(BitsType, 0));
 }
 
-ByteArrayInfo *LowerTypeTestsModule::createByteArray(BitSetInfo &BSI) {
+ByteArrayInfo *LowerTypeTestsModule::createByteArray(const BitSetInfo &BSI) {
   // Create globals to stand in for byte arrays and masks. These never actually
   // get initialized, we RAUW and erase them later in allocateByteArrays() once
   // we know the offset and mask to use.
@@ -1103,9 +1081,8 @@ void LowerTypeTestsModule::maybeReplaceComdat(Function *F,
 
 // ThinLTO backend: the function F has a jump table entry; update this module
 // accordingly. isJumpTableCanonical describes the type of the jump table entry.
-void LowerTypeTestsModule::importFunction(
-    Function *F, bool isJumpTableCanonical,
-    std::vector<GlobalAlias *> &AliasesToErase) {
+void LowerTypeTestsModule::importFunction(Function *F,
+                                          bool isJumpTableCanonical) {
   assert(F->getType()->getAddressSpace() == 0);
 
   GlobalValue::VisibilityTypes Visibility = F->getVisibility();
@@ -1135,23 +1112,23 @@ void LowerTypeTestsModule::importFunction(
   } else {
     F->setName(Name + ".cfi");
     maybeReplaceComdat(F, Name);
-    F->setLinkage(GlobalValue::ExternalLinkage);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
     FDecl->setVisibility(Visibility);
     Visibility = GlobalValue::HiddenVisibility;
 
-    // Delete aliases pointing to this function, they'll be re-created in the
-    // merged output. Don't do it yet though because ScopedSaveAliaseesAndUsed
-    // will want to reset the aliasees first.
+    // Update aliases pointing to this function to also include the ".cfi" suffix,
+    // We expect the jump table entry to either point to the real function or an
+    // alias. Redirect all other users to the jump table entry.
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
+        std::string AliasName = A->getName().str() + ".cfi";
         Function *AliasDecl = Function::Create(
             F->getFunctionType(), GlobalValue::ExternalLinkage,
             F->getAddressSpace(), "", &M);
         AliasDecl->takeName(A);
         A->replaceAllUsesWith(AliasDecl);
-        AliasesToErase.push_back(A);
+        A->setName(AliasName);
       }
     }
   }
@@ -1166,21 +1143,47 @@ void LowerTypeTestsModule::importFunction(
   F->setVisibility(Visibility);
 }
 
-void LowerTypeTestsModule::lowerTypeTestCalls(
-    ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
-    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
-  // For each type identifier in this disjoint set...
+static auto
+buildBitSets(ArrayRef<Metadata *> TypeIds,
+             const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
+  DenseMap<Metadata *, SmallVector<uint64_t, 16>> OffsetsByTypeID;
+  // Pre-populate the map with interesting type identifiers.
+  for (Metadata *TypeId : TypeIds)
+    OffsetsByTypeID[TypeId];
+  for (const auto &[Mem, MemOff] : GlobalLayout) {
+    for (MDNode *Type : Mem->types()) {
+      auto It = OffsetsByTypeID.find(Type->getOperand(1));
+      if (It == OffsetsByTypeID.end())
+        continue;
+      uint64_t Offset =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
+              ->getZExtValue();
+      It->second.push_back(MemOff + Offset);
+    }
+  }
+
+  SmallVector<std::pair<Metadata *, BitSetInfo>> BitSets;
+  BitSets.reserve(TypeIds.size());
   for (Metadata *TypeId : TypeIds) {
-    // Build the bitset.
-    BitSetInfo BSI = buildBitSet(TypeId, GlobalLayout);
+    BitSets.emplace_back(TypeId, buildBitSet(OffsetsByTypeID[TypeId]));
     LLVM_DEBUG({
       if (auto MDS = dyn_cast<MDString>(TypeId))
         dbgs() << MDS->getString() << ": ";
       else
         dbgs() << "<unnamed>: ";
-      BSI.print(dbgs());
+      BitSets.back().second.print(dbgs());
     });
+  }
 
+  return BitSets;
+}
+
+void LowerTypeTestsModule::lowerTypeTestCalls(
+    ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
+    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
+  // For each type identifier in this disjoint set...
+  for (const auto &[TypeId, BSI] : buildBitSets(TypeIds, GlobalLayout)) {
     ByteArrayInfo *BAI = nullptr;
     TypeIdLowering TIL;
 
@@ -1267,7 +1270,7 @@ bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
     // the module flags.
     if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement")))
-      HasBranchTargetEnforcement = (BTE->getZExtValue() != 0);
+      HasBranchTargetEnforcement = !BTE->isZero();
     else
       HasBranchTargetEnforcement = 0;
   }
@@ -1466,6 +1469,9 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
                                      Constant::getNullValue(F->getType()));
     Value *Select = Builder.CreateSelect(ICmp, JT,
                                          Constant::getNullValue(F->getType()));
+
+    if (auto *SI = dyn_cast<SelectInst>(Select))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     // For phi nodes, we need to update the incoming value for all operands
     // with the same predecessor.
     if (PN)
@@ -2077,16 +2083,13 @@ bool LowerTypeTestsModule::lower() {
         Decls.push_back(&F);
     }
 
-    std::vector<GlobalAlias *> AliasesToErase;
     {
       ScopedSaveAliaseesAndUsed S(M);
       for (auto *F : Defs)
-        importFunction(F, /*isJumpTableCanonical*/ true, AliasesToErase);
+        importFunction(F, /*isJumpTableCanonical*/ true);
       for (auto *F : Decls)
-        importFunction(F, /*isJumpTableCanonical*/ false, AliasesToErase);
+        importFunction(F, /*isJumpTableCanonical*/ false);
     }
-    for (GlobalAlias *GA : AliasesToErase)
-      GA->eraseFromParent();
 
     return true;
   }
@@ -2129,7 +2132,7 @@ bool LowerTypeTestsModule::lower() {
       // A set of all functions that are address taken by a live global object.
       DenseSet<GlobalValue::GUID> AddressTaken;
       for (auto &I : *ExportSummary)
-        for (auto &GVS : I.second.SummaryList)
+        for (auto &GVS : I.second.getSummaryList())
           if (GVS->isLive())
             for (const auto &Ref : GVS->refs()) {
               AddressTaken.insert(Ref.getGUID());
@@ -2137,6 +2140,18 @@ bool LowerTypeTestsModule::lower() {
                 if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
                   AddressTaken.insert(Alias->getAliaseeGUID());
             }
+      auto IsAddressTaken = [&](GlobalValue::GUID GUID) {
+        if (AddressTaken.count(GUID))
+          return true;
+        auto VI = ExportSummary->getValueInfo(GUID);
+        if (!VI)
+          return false;
+        for (auto &I : VI.getSummaryList())
+          if (auto Alias = dyn_cast<AliasSummary>(I.get()))
+            if (AddressTaken.count(Alias->getAliaseeGUID()))
+              return true;
+        return false;
+      };
       for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
@@ -2153,7 +2168,7 @@ bool LowerTypeTestsModule::lower() {
         // have no live references (and are not exported with cross-DSO CFI.)
         if (!ExportSummary->isGUIDLive(GUID))
           continue;
-        if (!AddressTaken.count(GUID)) {
+        if (!IsAddressTaken(GUID)) {
           if (!CrossDsoCfi || Linkage != CFL_Definition)
             continue;
 
@@ -2222,6 +2237,43 @@ bool LowerTypeTestsModule::lower() {
           for (unsigned I = 2; I < FuncMD->getNumOperands(); ++I)
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
+        }
+      }
+    }
+  }
+
+  struct AliasToCreate {
+    Function *Alias;
+    std::string TargetName;
+  };
+  std::vector<AliasToCreate> AliasesToCreate;
+
+  // Parse alias data to replace stand-in function declarations for aliases
+  // with an alias to the intended target.
+  if (ExportSummary) {
+    if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
+      for (auto *AliasMD : AliasesMD->operands()) {
+        SmallVector<Function *> Aliases;
+        for (Metadata *MD : AliasMD->operands()) {
+          auto *MDS = dyn_cast<MDString>(MD);
+          if (!MDS)
+            continue;
+          StringRef AliasName = MDS->getString();
+          if (!ExportedFunctions.count(AliasName))
+            continue;
+          auto *AliasF = M.getFunction(AliasName);
+          if (AliasF)
+            Aliases.push_back(AliasF);
+        }
+
+        if (Aliases.empty())
+          continue;
+
+        for (unsigned I = 1; I != Aliases.size(); ++I) {
+          auto *AliasF = Aliases[I];
+          ExportedFunctions.erase(AliasF->getName());
+          AliasesToCreate.push_back(
+              {AliasF, std::string(Aliases[0]->getName())});
         }
       }
     }
@@ -2359,7 +2411,7 @@ bool LowerTypeTestsModule::lower() {
     }
 
     for (auto &P : *ExportSummary) {
-      for (auto &S : P.second.SummaryList) {
+      for (auto &S : P.second.getSummaryList()) {
         if (!ExportSummary->isGlobalValueLive(S.get()))
           continue;
         if (auto *FS = dyn_cast<FunctionSummary>(S->getBaseObject()))
@@ -2414,47 +2466,16 @@ bool LowerTypeTestsModule::lower() {
 
   allocateByteArrays();
 
-  // Parse alias data to replace stand-in function declarations for aliases
-  // with an alias to the intended target.
-  if (ExportSummary) {
-    if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
-      for (auto *AliasMD : AliasesMD->operands()) {
-        assert(AliasMD->getNumOperands() >= 4);
-        StringRef AliasName =
-            cast<MDString>(AliasMD->getOperand(0))->getString();
-        StringRef Aliasee = cast<MDString>(AliasMD->getOperand(1))->getString();
-
-        if (auto It = ExportedFunctions.find(Aliasee);
-            It == ExportedFunctions.end() ||
-            It->second.Linkage != CFL_Definition || !M.getNamedAlias(Aliasee))
-          continue;
-
-        GlobalValue::VisibilityTypes Visibility =
-            static_cast<GlobalValue::VisibilityTypes>(
-                cast<ConstantAsMetadata>(AliasMD->getOperand(2))
-                    ->getValue()
-                    ->getUniqueInteger()
-                    .getZExtValue());
-        bool Weak =
-            static_cast<bool>(cast<ConstantAsMetadata>(AliasMD->getOperand(3))
-                                  ->getValue()
-                                  ->getUniqueInteger()
-                                  .getZExtValue());
-
-        auto *Alias = GlobalAlias::create("", M.getNamedAlias(Aliasee));
-        Alias->setVisibility(Visibility);
-        if (Weak)
-          Alias->setLinkage(GlobalValue::WeakAnyLinkage);
-
-        if (auto *F = M.getFunction(AliasName)) {
-          Alias->takeName(F);
-          F->replaceAllUsesWith(Alias);
-          F->eraseFromParent();
-        } else {
-          Alias->setName(AliasName);
-        }
-      }
-    }
+  for (auto A : AliasesToCreate) {
+    auto *Target = M.getNamedValue(A.TargetName);
+    if (!isa<GlobalAlias>(Target))
+      continue;
+    auto *AliasGA = GlobalAlias::create("", Target);
+    AliasGA->setVisibility(A.Alias->getVisibility());
+    AliasGA->setLinkage(A.Alias->getLinkage());
+    AliasGA->takeName(A.Alias);
+    A.Alias->replaceAllUsesWith(AliasGA);
+    A.Alias->eraseFromParent();
   }
 
   // Emit .symver directives for exported functions, if they exist.

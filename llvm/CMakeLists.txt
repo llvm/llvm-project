@@ -110,7 +110,7 @@ endif()
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
 set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly")
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
   # LLVM_ENABLE_RUNTIMES.
   list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
@@ -149,7 +149,7 @@ endforeach()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -179,29 +179,37 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif ()
 endif()
 
+if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling clang as a dependency of lldb")
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
+  endif()
+endif ()
+
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated.  Please use "
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
+    "become a fatal error in a future release. Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
     "https://libc.llvm.org/ for building the runtimes.")
 endif()
 
 if ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=compiler-rt is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=compiler-rt or see the instructions at "
     "https://compiler-rt.llvm.org/ for building the runtimes.")
 endif()
 
 if ("offload" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=offload is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=offload or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
 
 if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=openmp is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=openmp or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
@@ -214,7 +222,7 @@ endif ()
 
 if ("libclc" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=libclc is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libclc or see the instructions at "
     "https://libclc.llvm.org/ for building the runtimes.")
 endif()
@@ -580,9 +588,6 @@ set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
   "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, COVERAGE, or COVERAGE_AND_ORIGIN.")
 set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE COVERAGE_AND_ORIGIN)
 
-option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
-  "Add additional fields to DILocations to support Key Instructions" ON)
-
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
   # Cygwin doesn't identify itself as Windows, and thus gets path::Style::posix
@@ -661,7 +666,7 @@ if(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD STREQUAL "all")
   set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${LLVM_ALL_EXPERIMENTAL_TARGETS})
 endif()
 
-if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND 
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND
    "AArch64" IN_LIST LLVM_TARGETS_TO_BUILD AND
    NOT ("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS))
   message(STATUS "Enabling compiler-rt as a dependency of Flang")
@@ -677,7 +682,7 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
   option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
 endif()
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." ON)
 else()
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." OFF)
@@ -700,18 +705,6 @@ else()
 endif()
 
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
-
-# While adding scalable vector support to LLVM, we temporarily want to
-# allow an implicit conversion of TypeSize to uint64_t, and to allow
-# code to get the fixed number of elements from a possibly scalable vector.
-# This CMake flag enables a more strict mode where it asserts that the type
-# is not a scalable vector type.
-#
-# Enabling this flag makes it easier to find cases where the compiler makes
-# assumptions on the size being 'fixed size', when building tests for
-# SVE/SVE2 or other scalable vector architectures.
-option(LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS
-       "Enable assertions that type is not scalable in implicit conversion from TypeSize to uint64_t and calls to getNumElements" OFF)
 
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
@@ -781,7 +774,7 @@ option(LLVM_USE_SPLIT_DWARF
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
-if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
+if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT (WIN32 OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
   # TODO: support other platforms and toolchains.
   option(LLVM_BUILD_32_BITS "Build 32 bits executables and libraries." OFF)
 endif()
@@ -951,7 +944,8 @@ if (LLVM_LINK_LLVM_DYLIB AND BUILD_SHARED_LIBS)
 endif()
 
 option(LLVM_OPTIMIZED_TABLEGEN "Force TableGen to be built with optimization" OFF)
-if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS OR CMAKE_CONFIGURATION_TYPES)))
+if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS
+  OR CMAKE_CONFIGURATION_TYPES OR LLVM_USE_SANITIZER)))
   set(LLVM_USE_HOST_TOOLS ON)
 endif()
 
@@ -1016,6 +1010,9 @@ set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_defa
 
 set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
   "Profiling data file to use when compiling in order to improve runtime performance.")
+
+set(LLVM_SPROFDATA_FILE "" CACHE FILEPATH
+  "Sampling profiling data file to use when compiling in order to improve runtime performance.")
 
 if(LLVM_INCLUDE_TESTS)
   # All LLVM Python files should be compatible down to this minimum version.
@@ -1183,6 +1180,8 @@ if (LLVM_HAVE_TFLITE)
   find_package(tensorflow-lite REQUIRED)
 endif()
 
+set(LLVM_ENABLE_PROFCHECK OFF CACHE BOOL "Enable profile checking in test tools")
+
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 # Specifically, assuming python3 is installed:
@@ -1249,7 +1248,7 @@ endif()
 
 # Build with _XOPEN_SOURCE on AIX, as stray macros in _ALL_SOURCE mode tend to
 # break things. In this case we need to enable the large-file API as well.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
           add_compile_definitions(_XOPEN_SOURCE=700)
           add_compile_definitions(_LARGE_FILE_API)
           add_compile_options(-pthread)
@@ -1265,10 +1264,10 @@ endif()
 # Build with _XOPEN_SOURCE on z/OS.
 if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
+  add_compile_definitions(_XPLATFORM_SOURCE) # Needed e.g. for O_CLOEXEC.
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
   add_compile_definitions(_OPEN_SYS_FILE_EXT) # Needed for EBCDIC I/O.
   add_compile_definitions(_EXT) # Needed for file data.
-  add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
   # Need to build LLVM as ASCII application.
   # This can't be a global setting because other projects may
   # need to be built in EBCDIC mode.
@@ -1277,7 +1276,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
 endif()
 
 # Build with _FILE_OFFSET_BITS=64 on Solaris to match g++ >= 9.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
           add_compile_definitions(_FILE_OFFSET_BITS=64)
 endif()
 
@@ -1295,10 +1294,15 @@ if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 # (this is a variable that CrossCompile sets on recursive invocations)
 endif()
 
-if( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
+# Special hack for z/OS for missing POSIX functions
+if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+  include_directories(SYSTEM "${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/SystemZ/zos_wrappers" )
+endif()
+
+if( "${CMAKE_SYSTEM_NAME}" MATCHES SunOS )
    # special hack for Solaris to handle crazy system sys/regset.h
    include_directories("${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/Solaris")
-endif( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
+endif( "${CMAKE_SYSTEM_NAME}" MATCHES SunOS )
 
 # Make sure we don't get -rdynamic in every binary. For those that need it,
 # use EXPORT_SYMBOLS argument.
@@ -1341,9 +1345,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/mlgo-utils)
   add_subdirectory(utils/llvm-test-mustache-spec)
   if( LLVM_INCLUDE_TESTS )
-    set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-    set(LLVM_SUBPROJECT_TITLE)
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )
@@ -1369,6 +1371,17 @@ if( LLVM_INCLUDE_TOOLS )
   add_subdirectory(tools)
 endif()
 
+# We need to setup KillTheDoctor before setting up the runtimes build because
+# the runtimes build needs to add a KillTheDoctor dep for compiler-rt on
+# Windows.
+if (LLVM_INCLUDE_TESTS)
+  if (WIN32)
+    # This utility is used to prevent crashing tests from calling Dr. Watson on
+    # Windows.
+    add_subdirectory(utils/KillTheDoctor)
+  endif()
+endif()
+
 if( LLVM_INCLUDE_RUNTIMES )
   add_subdirectory(runtimes)
 endif()
@@ -1392,12 +1405,6 @@ if( LLVM_INCLUDE_TESTS )
   add_subdirectory(utils/lit)
   add_subdirectory(test)
   add_subdirectory(unittests)
-
-  if (WIN32)
-    # This utility is used to prevent crashing tests from calling Dr. Watson on
-    # Windows.
-    add_subdirectory(utils/KillTheDoctor)
-  endif()
 
   umbrella_lit_testsuite_end(check-all)
   get_property(LLVM_ALL_LIT_DEPENDS GLOBAL PROPERTY LLVM_ALL_LIT_DEPENDS)

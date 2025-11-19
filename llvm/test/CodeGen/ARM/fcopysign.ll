@@ -85,6 +85,7 @@ define float @test4() nounwind {
 ; SOFT-NEXT:    vadd.f32 d0, d0, d16
 ; SOFT-NEXT:    vmov r0, s0
 ; SOFT-NEXT:    pop {lr}
+; SOFT-NEXT:    bx lr
 ;
 ; HARD-LABEL: test4:
 ; HARD:       @ %bb.0: @ %entry

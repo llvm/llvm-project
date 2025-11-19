@@ -81,6 +81,10 @@ void DiagnosticInfoInlineAsm::print(DiagnosticPrinter &DP) const {
     DP << " at line " << getLocCookie();
 }
 
+void DiagnosticInfoLegalizationFailure::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": " << getMsgStr();
+}
+
 DiagnosticInfoRegAllocFailure::DiagnosticInfoRegAllocFailure(
     const Twine &MsgStr, const Function &Fn, const DiagnosticLocation &DL,
     DiagnosticSeverity Severity)
@@ -267,6 +271,13 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
     : Key(std::string(Key)) {
   raw_string_ostream OS(Val);
   C.print(OS);
+}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   BranchProbability P)
+    : Key(std::string(Key)) {
+  raw_string_ostream OS(Val);
+  P.print(OS);
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)

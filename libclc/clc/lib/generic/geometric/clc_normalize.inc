@@ -10,15 +10,8 @@
 #if (__CLC_VECSIZE_OR_1 == 1 || __CLC_VECSIZE_OR_1 == 2 ||                     \
      __CLC_VECSIZE_OR_1 == 3 || __CLC_VECSIZE_OR_1 == 4)
 
-// Until we have a native FP16 implementation, go via FP32
-#if __CLC_FPSIZE == 16
-
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_normalize(__CLC_GENTYPE p) {
-  return __CLC_CONVERT_GENTYPE(__clc_normalize(__CLC_CONVERT_FLOATN(p)));
-}
-
 // Scalar normalize
-#elif defined(__CLC_SCALAR)
+#if defined(__CLC_SCALAR)
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_normalize(__CLC_GENTYPE p) {
   return __clc_sign(p);
@@ -27,7 +20,13 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_normalize(__CLC_GENTYPE p) {
 // Vector normalize
 #else
 
-#if __CLC_FPSIZE == 32
+#if __CLC_FPSIZE == 16
+
+#define MIN_VAL HALF_MIN
+#define MAX_SQRT 0x1.0p+8h
+#define MIN_SQRT 0x1.0p-8h
+
+#elif __CLC_FPSIZE == 32
 
 #define MIN_VAL FLT_MIN
 #define MAX_SQRT 0x1.0p+86F

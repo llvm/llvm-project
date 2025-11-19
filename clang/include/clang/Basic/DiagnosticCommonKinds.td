@@ -433,6 +433,12 @@ def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
 def err_omp_required_clause : Error<
   "directive '#pragma omp %0' requires the '%1' clause">;
+def warn_omp_gpu_unsupported_clause: Warning<
+  "clause '%0' is currently not supported on a GPU; clause ignored">,
+  InGroup<OpenMPClauses>;
+def warn_omp_gpu_unsupported_modifier_for_clause: Warning<
+  "modifier '%0' is currently not supported on a GPU for the '%1' clause; modifier ignored">,
+  InGroup<OpenMPClauses>;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<

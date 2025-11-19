@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestDataFormatterStdTuple(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         TestBase.setUp(self)
         self.line = line_number("main.cpp", "// break here")
@@ -73,4 +75,10 @@ class TestDataFormatterStdTuple(TestBase):
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
         self.do_test()

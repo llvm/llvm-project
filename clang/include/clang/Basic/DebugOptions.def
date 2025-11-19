@@ -28,9 +28,9 @@ VALUE_CODEGENOPT(Name, Bits, Default, Compatibility)
 ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)
 #endif
 
-ENUM_DEBUGOPT(CompressDebugSections, llvm::DebugCompressionType, 2,
-                     llvm::DebugCompressionType::None, Benign)
-DEBUGOPT(Dwarf64, 1, 0, Affecting) ///< -gdwarf64.
+ENUM_DEBUGOPT(CompressDebugSections, DebugCompressionType, 2,
+                     DebugCompressionType::None, Benign)
+DEBUGOPT(Dwarf64, 1, 0, Compatible) ///< -gdwarf64.
 DEBUGOPT(EnableDIPreservationVerify, 1, 0, Benign) ///< Enable di preservation
                                                    ///< verify each (it means
                                                    ///< check the original debug
@@ -40,17 +40,19 @@ DEBUGOPT(ForceDwarfFrameSection , 1, 0, Benign) ///< Set when -fforce-dwarf-fram
                                                 ///< is enabled.
 
 ///< Set when -femit-dwarf-unwind is passed.
-ENUM_DEBUGOPT(EmitDwarfUnwind, llvm::EmitDwarfUnwindType, 2,
-              llvm::EmitDwarfUnwindType::Default, Benign)
+ENUM_DEBUGOPT(EmitDwarfUnwind, EmitDwarfUnwindType, 2,
+              EmitDwarfUnwindType::Default, Benign)
 
 DEBUGOPT(NoDwarfDirectoryAsm , 1, 0, Benign) ///< Set when -fno-dwarf-directory-asm
                                              ///< is enabled.
 
+DEBUGOPT(Dwarf2CFIAsm, 1, 0, NotCompatible) ///< Set when -fdwarf2-cfi-asm is enabled.
+
 DEBUGOPT(NoInlineLineTables, 1, 0, Benign) ///< Whether debug info should contain
                                            ///< inline line tables.
 
-DEBUGOPT(DebugStrictDwarf, 1, 1, Affecting) ///< Whether or not to use strict DWARF info.
-DEBUGOPT(DebugOmitUnreferencedMethods, 1, 0, Affecting) ///< Omit unreferenced member
+DEBUGOPT(DebugStrictDwarf, 1, 1, Compatible) ///< Whether or not to use strict DWARF info.
+DEBUGOPT(DebugOmitUnreferencedMethods, 1, 0, Compatible) ///< Omit unreferenced member
                                                         ///< functions in type debug info.
 
 /// Control the Assignment Tracking debug info feature.
@@ -60,73 +62,79 @@ ENUM_DEBUGOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2,
 /// Whether or not to use Key Instructions to determine breakpoint locations.
 DEBUGOPT(DebugKeyInstructions, 1, 0, Benign)
 
-DEBUGOPT(DebugColumnInfo, 1, 0, Affecting) ///< Whether or not to use column information
+DEBUGOPT(DebugColumnInfo, 1, 0, Compatible) ///< Whether or not to use column information
                                            ///< in debug info.
 
-DEBUGOPT(DebugTypeExtRefs, 1, 0, Affecting) ///< Whether or not debug info should contain
+DEBUGOPT(DebugTypeExtRefs, 1, 0, Compatible) ///< Whether or not debug info should contain
                                             ///< external references to a PCH or module.
 
-DEBUGOPT(DebugExplicitImport, 1, 0, Affecting)  ///< Whether or not debug info should
+DEBUGOPT(DebugExplicitImport, 1, 0, Compatible)  ///< Whether or not debug info should
                                                 ///< contain explicit imports for
                                                 ///< anonymous namespaces
 
 /// Set debug info source file hashing algorithm.
-ENUM_DEBUGOPT(DebugSrcHash, DebugSrcHashKind, 2, DSH_MD5, Affecting)
+ENUM_DEBUGOPT(DebugSrcHash, DebugSrcHashKind, 2, DSH_MD5, Compatible)
 
-DEBUGOPT(SplitDwarfInlining, 1, 1, Affecting) ///< Whether to include inlining info in the
+DEBUGOPT(SplitDwarfInlining, 1, 1, Compatible) ///< Whether to include inlining info in the
                                               ///< skeleton CU to allow for symbolication
                                               ///< of inline stack frames without .dwo files.
-DEBUGOPT(DebugFwdTemplateParams, 1, 0, Affecting) ///< Whether to emit complete
+DEBUGOPT(DebugFwdTemplateParams, 1, 0, Compatible) ///< Whether to emit complete
                                                   ///< template parameter descriptions in
                                                   ///< forward declarations (versus just
                                                   ///< including them in the name).
 ENUM_DEBUGOPT(DebugSimpleTemplateNames,
-              llvm::codegenoptions::DebugTemplateNamesKind, 2,
-              llvm::codegenoptions::DebugTemplateNamesKind::Full, Affecting)
+              DebugTemplateNamesKind, 2,
+              DebugTemplateNamesKind::Full, Compatible)
               ///< Whether to emit template parameters in the textual names of
               ///< template specializations.
               ///< Implies DebugFwdTemplateNames to allow decorated names to be
               ///< reconstructed when needed.
 
 /// The kind of generated debug info.
-ENUM_DEBUGOPT(DebugInfo, llvm::codegenoptions::DebugInfoKind, 4,
-              llvm::codegenoptions::NoDebugInfo, Affecting)
+ENUM_DEBUGOPT(DebugInfo, DebugInfoKind, 4,
+              DebugInfoKind::NoDebugInfo, Compatible)
 
 /// Whether to generate macro debug info.
-DEBUGOPT(MacroDebugInfo, 1, 0, Affecting)
+DEBUGOPT(MacroDebugInfo, 1, 0, Compatible)
 
 /// Tune the debug info for this debugger.
-ENUM_DEBUGOPT(DebuggerTuning, llvm::DebuggerKind, 3,
-              llvm::DebuggerKind::Default, Affecting)
+ENUM_DEBUGOPT(DebuggerTuning, DebuggerKind, 3,
+              DebuggerKind::Default, Compatible)
 
 /// Dwarf version. Version zero indicates to LLVM that no DWARF should be
 /// emitted.
-VALUE_DEBUGOPT(DwarfVersion, 3, 0, Affecting)
+VALUE_DEBUGOPT(DwarfVersion, 3, 0, Compatible)
 
 /// Whether we should emit CodeView debug information. It's possible to emit
 /// CodeView and DWARF into the same object.
-DEBUGOPT(EmitCodeView, 1, 0, Affecting)
+DEBUGOPT(EmitCodeView, 1, 0, Compatible)
 
 /// Whether to emit the .debug$H section containing hashes of CodeView types.
-DEBUGOPT(CodeViewGHash, 1, 0, Affecting)
+DEBUGOPT(CodeViewGHash, 1, 0, Compatible)
 
 /// Whether to emit the compiler path and command line into the CodeView debug information.
-DEBUGOPT(CodeViewCommandLine, 1, 0, Affecting)
+DEBUGOPT(CodeViewCommandLine, 1, 0, Compatible)
 
 /// Whether emit extra debug info for sample pgo profile collection.
-DEBUGOPT(DebugInfoForProfiling, 1, 0, Affecting)
+DEBUGOPT(DebugInfoForProfiling, 1, 0, Compatible)
 
 /// Whether to emit DW_TAG_template_alias for template aliases.
-DEBUGOPT(DebugTemplateAlias, 1, 0, Affecting)
+DEBUGOPT(DebugTemplateAlias, 1, 0, Compatible)
 
 /// Whether to emit .debug_gnu_pubnames section instead of .debug_pubnames.
-DEBUGOPT(DebugNameTable, 2, 0, Affecting)
+DEBUGOPT(DebugNameTable, 2, 0, Compatible)
 
 /// Whether to use DWARF base address specifiers in .debug_ranges.
-DEBUGOPT(DebugRangesBaseAddress, 1, 0, Affecting)
+DEBUGOPT(DebugRangesBaseAddress, 1, 0, Compatible)
+
+/// Whether to add linkage names to constructor/destructor declarations.
+/// This is an escape hatch for cases where attaching the additional linkage
+/// names would increase debug-info size (particularly the .debug_str section)
+/// too much.
+DEBUGOPT(DebugStructorDeclLinkageNames, 1, 0, Benign)
 
 /// Whether to embed source in DWARF debug line section.
-DEBUGOPT(EmbedSource, 1, 0, Affecting)
+DEBUGOPT(EmbedSource, 1, 0, Compatible)
 
 #undef DEBUGOPT
 #undef ENUM_DEBUGOPT

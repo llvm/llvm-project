@@ -715,7 +715,7 @@ body:             |
   ; CHECK-NEXT:   %ptr2:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD %ptr1(p0) :: (load (<2 x s64>), align 32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr1, [[C]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr1, [[C]](s64)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[PTR_ADD]](p0) :: (load (<2 x s64>) from unknown-address + 16)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -728,7 +728,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(<2 x s64>) = G_LOAD %ptr2(p0) :: (load (<2 x s64>), align 32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr2, [[C2]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr2, [[C2]](s64)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[PTR_ADD1]](p0) :: (load (<2 x s64>) from unknown-address + 16)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -903,7 +903,7 @@ body:             |
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD %ptr1(p0) :: (load (<2 x s64>), align 32)
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[LOAD]](<2 x s64>)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr1, [[C]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr1, [[C]](s64)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[PTR_ADD]](p0) :: (load (<2 x s64>) from unknown-address + 16)
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[LOAD1]](<2 x s64>)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
@@ -918,7 +918,7 @@ body:             |
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(<2 x s64>) = G_LOAD %ptr2(p0) :: (load (<2 x s64>), align 32)
   ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[LOAD2]](<2 x s64>)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr2, [[C2]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr2, [[C2]](s64)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[PTR_ADD1]](p0) :: (load (<2 x s64>) from unknown-address + 16)
   ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[LOAD3]](<2 x s64>)
   ; CHECK-NEXT: {{  $}}

@@ -17,6 +17,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
+#include "CIRGenVTables.h"
 #include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
@@ -86,9 +87,14 @@ private:
 
   CIRGenTypes genTypes;
 
+  /// Holds information about C++ vtables.
+  CIRGenVTables vtables;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
+
+  llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -96,6 +102,7 @@ public:
   clang::ASTContext &getASTContext() const { return astContext; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
+  clang::DiagnosticsEngine &getDiags() const { return diags; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
@@ -113,6 +120,15 @@ public:
   /// -------
 
   mlir::Operation *lastGlobalOp = nullptr;
+
+  /// Keep a map between lambda fields and names, this needs to be per module
+  /// since lambdas might get generated later as part of defered work, and since
+  /// the pointers are supposed to be uniqued, should be fine. Revisit this if
+  /// it ends up taking too much memory.
+  llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
+
+  /// Tell the consumer that this variable has been instantiated.
+  void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
 
@@ -140,7 +156,65 @@ public:
 
   static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
                                       llvm::StringRef name, mlir::Type t,
+                                      bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
+
+  /// Add a global constructor or destructor to the module.
+  /// The priority is optional, if not specified, the default priority is used.
+  void addGlobalCtor(cir::FuncOp ctor,
+                     std::optional<int> priority = std::nullopt);
+  void addGlobalDtor(cir::FuncOp dtor,
+                     std::optional<int> priority = std::nullopt);
+
+  bool shouldZeroInitPadding() const {
+    // In C23 (N3096) $6.7.10:
+    // """
+    // If any object is initialized with an empty initializer, then it is
+    // subject to default initialization:
+    //  - if it is an aggregate, every member is initialized (recursively)
+    //  according to these rules, and any padding is initialized to zero bits;
+    //  - if it is a union, the first named member is initialized (recursively)
+    //  according to these rules, and any padding is initialized to zero bits.
+    //
+    // If the aggregate or union contains elements or members that are
+    // aggregates or unions, these rules apply recursively to the subaggregates
+    // or contained unions.
+    //
+    // If there are fewer initializers in a brace-enclosed list than there are
+    // elements or members of an aggregate, or fewer characters in a string
+    // literal used to initialize an array of known size than there are elements
+    // in the array, the remainder of the aggregate is subject to default
+    // initialization.
+    // """
+    //
+    // The standard seems ambiguous in the following two areas:
+    // 1. For a union type with empty initializer, if the first named member is
+    // not the largest member, then the bytes comes after the first named member
+    // but before padding are left unspecified. An example is:
+    //    union U { int a; long long b;};
+    //    union U u = {};  // The first 4 bytes are 0, but 4-8 bytes are left
+    //    unspecified.
+    //
+    // 2. It only mentions padding for empty initializer, but doesn't mention
+    // padding for a non empty initialization list. And if the aggregation or
+    // union contains elements or members that are aggregates or unions, and
+    // some are non empty initializers, while others are empty initializers,
+    // the padding initialization is unclear. An example is:
+    //    struct S1 { int a; long long b; };
+    //    struct S2 { char c; struct S1 s1; };
+    //    // The values for paddings between s2.c and s2.s1.a, between s2.s1.a
+    //    and s2.s1.b are unclear.
+    //    struct S2 s2 = { 'c' };
+    //
+    // Here we choose to zero initiailize left bytes of a union type because
+    // projects like the Linux kernel are relying on this behavior. If we don't
+    // explicitly zero initialize them, the undef values can be optimized to
+    // return garbage data. We also choose to zero initialize paddings for
+    // aggregates and unions, no matter they are initialized by empty
+    // initializers or non empty initializers. This can provide a consistent
+    // behavior. So projects like the Linux kernel can rely on it.
+    return !getLangOpts().CPlusPlus;
+  }
 
   llvm::StringMap<unsigned> cgGlobalNames;
   std::string getUniqueGlobalName(const std::string &baseName);
@@ -155,6 +229,9 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Return the mlir::GlobalViewAttr for the address of the given global.
+  cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
+
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
       llvm::iterator_range<CastExpr::path_const_iterator> path);
@@ -168,6 +245,44 @@ public:
   void constructAttributeList(CIRGenCalleeInfo calleeInfo,
                               mlir::NamedAttrList &attrs);
 
+  /// Will return a global variable of the given type. If a variable with a
+  /// different type already exists then a new variable with the right type
+  /// will be created and all uses of the old variable will be replaced with a
+  /// bitcast to the new variable.
+  cir::GlobalOp createOrReplaceCXXRuntimeVariable(
+      mlir::Location loc, llvm::StringRef name, mlir::Type ty,
+      cir::GlobalLinkageKind linkage, clang::CharUnits alignment);
+
+  void emitVTable(const CXXRecordDecl *rd);
+
+  /// Return the appropriate linkage for the vtable, VTT, and type information
+  /// of the given class.
+  cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *rd);
+
+  /// Get the address of the RTTI descriptor for the given type.
+  mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
+                                          bool forEH = false);
+
+  static mlir::SymbolTable::Visibility getMLIRVisibility(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return mlir::SymbolTable::Visibility::Public;
+    case HiddenVisibility:
+      return mlir::SymbolTable::Visibility::Private;
+    case ProtectedVisibility:
+      // The distinction between ProtectedVisibility and DefaultVisibility is
+      // that symbols with ProtectedVisibility, while visible to the dynamic
+      // linker like DefaultVisibility, are guaranteed to always dynamically
+      // resolve to a symbol in the current shared object. There is currently no
+      // equivalent MLIR visibility, so we fall back on the fact that the symbol
+      // is visible.
+      return mlir::SymbolTable::Visibility::Public;
+    }
+    llvm_unreachable("unknown visibility!");
+  }
+
+  llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -175,6 +290,18 @@ public:
   /// literal.
   cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
                                           llvm::StringRef name = ".str");
+
+  /// Return a global symbol reference to a constant array for the given string
+  /// literal.
+  cir::GlobalViewAttr
+  getAddrOfConstantStringFromLiteral(const StringLiteral *s,
+                                     llvm::StringRef name = ".str");
+
+  /// Returns the address space for temporary allocations in the language. This
+  /// ensures that the allocated variable's address space matches the
+  /// expectations of the AST, rather than using the target's allocation address
+  /// space, which may lead to type mismatches in other parts of the IR.
+  LangAS getLangTempAllocaAddressSpace() const;
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -198,6 +325,16 @@ public:
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo);
 
+  /// TODO: Add TBAAAccessInfo
+  CharUnits getDynamicOffsetAlignment(CharUnits actualBaseAlign,
+                                      const CXXRecordDecl *baseDecl,
+                                      CharUnits expectedTargetAlign);
+
+  /// Returns the assumed alignment of a virtual base of a class.
+  CharUnits getVBaseAlignment(CharUnits derivedAlign,
+                              const CXXRecordDecl *derived,
+                              const CXXRecordDecl *vbase);
+
   cir::FuncOp
   getAddrOfCXXStructor(clang::GlobalDecl gd,
                        const CIRGenFunctionInfo *fnInfo = nullptr,
@@ -212,6 +349,16 @@ public:
       clang::GlobalDecl gd, const CIRGenFunctionInfo *fnInfo = nullptr,
       cir::FuncType fnType = nullptr, bool dontDefer = false,
       ForDefinition_t isForDefinition = NotForDefinition);
+
+  mlir::Type getVTableComponentType();
+  CIRGenVTables &getVTables() { return vtables; }
+
+  ItaniumVTableContext &getItaniumVTableContext() {
+    return vtables.getItaniumVTableContext();
+  }
+  const ItaniumVTableContext &getItaniumVTableContext() const {
+    return vtables.getItaniumVTableContext();
+  }
 
   /// This contains all the decls which have definitions but which are deferred
   /// for emission and therefore should only be output if they are actually
@@ -252,6 +399,18 @@ public:
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
 
+  // Return whether RTTI information should be emitted for this target.
+  bool shouldEmitRTTI(bool forEH = false) {
+    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
+           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
+             getTriple().isNVPTX());
+  }
+
+  /// Emit type info if type of an expression is a variably modified
+  /// type. Also emit proper debug info for cast types.
+  void emitExplicitCastExprType(const ExplicitCastExpr *e,
+                                CIRGenFunction *cgf = nullptr);
+
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
@@ -276,11 +435,22 @@ public:
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
 
+  /// Set extra attributes (inline, etc.) for a function.
+  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+                                             cir::FuncOp f);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
+
+  /// Emit the function that initializes the specified global
+  void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                bool performInit);
+
+  void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
+                                    bool performInit);
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
 
@@ -308,6 +478,9 @@ public:
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
+  void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
+                                                 cir::FuncOp newFn);
+
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
                          clang::GlobalDecl gd, bool forVTable,
@@ -318,6 +491,19 @@ public:
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
+
+  /// Create a CIR function with builtin attribute set.
+  cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd);
+
+  cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
+                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    bool assumeConvergent = false);
+
+  static constexpr const char *builtinCoroId = "__builtin_coro_id";
+  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
+  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
@@ -347,8 +533,8 @@ public:
   static cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
       clang::VisibilityAttr::VisibilityType visibility);
   cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
-  static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
+  static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                                     GVALinkage linkage,
                                                     bool isConstantVariable);
@@ -415,6 +601,9 @@ private:
   void replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF);
 
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
+
+  /// Map source language used to a CIR attribute.
+  std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
 };
 } // namespace CIRGen
 

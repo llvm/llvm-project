@@ -287,6 +287,13 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "hypotf16",
+    hdrs = [
+        "HypotTest.h",
+    ],
+)
+
+math_mpfr_test(
     name = "llrint",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -524,6 +531,14 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "sinpif",
+    hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
+)
+
+math_mpfr_test(
+    name = "tanpif",
     hdrs = ["sdcomp26094.h"],
     deps = [
         "//libc:__support_cpp_array",

@@ -458,7 +458,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const { return __table_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __table_.end(); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__emplace_unique(__x); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__emplace_multi(__x); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) { return insert(__x); }
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last);
@@ -534,16 +534,13 @@ hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(const hash_multiset& __u) : __table_(__u.__table_) {
-  __table_.__rehash_multi(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
+hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(const hash_multiset& __u) : __table_(__u.__table_) {}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void hash_multiset<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
-    __table_.__emplace_unique(*__first);
+    __table_.__emplace_multi(*__first);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>

@@ -28,16 +28,23 @@ void SparcSubtarget::anchor() { }
 
 SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
     StringRef CPU, StringRef TuneCPU, StringRef FS) {
+  const Triple &TT = getTargetTriple();
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty())
-    CPUName = (Is64Bit) ? "v9" : "v8";
+    CPUName = TT.isSPARC64() ? "v9" : "v8";
 
   if (TuneCPU.empty())
     TuneCPU = CPUName;
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, TuneCPU, FS);
+
+  if (!Is64Bit && TT.isSPARC64()) {
+    FeatureBitset Features = getFeatureBits();
+    setFeatureBits(Features.set(Sparc::Feature64Bit));
+    Is64Bit = true;
+  }
 
   // Popc is a v9-only instruction.
   if (!IsV9)
@@ -47,11 +54,9 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
 }
 
 SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
-                               const StringRef &FS, const TargetMachine &TM,
-                               bool is64Bit)
+                               const StringRef &FS, const TargetMachine &TM)
     : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
       ReserveRegister(TM.getMCRegisterInfo()->getNumRegs()),
-      TargetTriple(TM.getTargetTriple()), Is64Bit(is64Bit),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this) {
   TSInfo = std::make_unique<SparcSelectionDAGInfo>();

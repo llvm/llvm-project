@@ -99,7 +99,7 @@ Member *AddField(Member *member, StringRef name, uint64_t byte_offset,
       std::make_unique<Member>(name, byte_offset * 8, byte_size * 8,
                                clang::QualType(), lldb::eAccessPublic, 0);
   field->kind = kind;
-  field->base_offset = base_offset;
+  field->base_offset = base_offset * 8;
   member->fields.push_back(std::move(field));
   return member->fields.back().get();
 }
@@ -111,6 +111,9 @@ TEST_F(UdtRecordCompleterRecordTests, TestAnonymousUnionInStruct) {
   CollectMember("m2", 0, 4);
   CollectMember("m3", 0, 1);
   CollectMember("m4", 0, 8);
+  CollectMember("m5", 8, 8);
+  CollectMember("m6", 16, 4);
+  CollectMember("m7", 16, 8);
   ConstructRecord();
 
   // struct {
@@ -120,6 +123,11 @@ TEST_F(UdtRecordCompleterRecordTests, TestAnonymousUnionInStruct) {
   //       m3;
   //       m4;
   //   };
+  //   m5;
+  //   union {
+  //       m6;
+  //       m7;
+  //   };
   // };
   Record record;
   record.start_offset = 0;
@@ -128,6 +136,10 @@ TEST_F(UdtRecordCompleterRecordTests, TestAnonymousUnionInStruct) {
   AddField(u, "m2", 0, 4, Member::Field);
   AddField(u, "m3", 0, 1, Member::Field);
   AddField(u, "m4", 0, 8, Member::Field);
+  AddField(&record.record, "m5", 8, 8, Member::Field);
+  Member *u2 = AddField(&record.record, "", 16, 0, Member::Union);
+  AddField(u2, "m6", 16, 4, Member::Field);
+  AddField(u2, "m7", 16, 8, Member::Field);
   EXPECT_EQ(WrappedRecord(this->record), WrappedRecord(record));
 }
 
@@ -241,5 +253,43 @@ TEST_F(UdtRecordCompleterRecordTests, TestNestedUnionStructInUnion) {
   AddField(s1, "m5", 3, 2, Member::Field);
   AddField(s2, "m3", 0, 2, Member::Field);
   AddField(s2, "m4", 2, 4, Member::Field);
+  EXPECT_EQ(WrappedRecord(this->record), WrappedRecord(record));
+}
+
+TEST_F(UdtRecordCompleterRecordTests, TestNestedStructInUnionInStructInUnion) {
+  SetKind(Member::Kind::Union);
+  CollectMember("m1", 0, 4);
+  CollectMember("m2", 0, 2);
+  CollectMember("m3", 0, 2);
+  CollectMember("m4", 2, 4);
+  CollectMember("m5", 6, 2);
+  CollectMember("m6", 6, 2);
+  CollectMember("m7", 8, 2);
+  ConstructRecord();
+
+  // union {
+  //   m1;
+  //   m2;
+  //   struct {
+  //       m3;
+  //       m4;
+  //       union {
+  //           m5;
+  //           m6;
+  //       };
+  //       m7;
+  //   };
+  // };
+  Record record;
+  record.start_offset = 0;
+  AddField(&record.record, "m1", 0, 4, Member::Field);
+  AddField(&record.record, "m2", 0, 2, Member::Field);
+  Member *s = AddField(&record.record, "", 0, 0, Member::Struct);
+  AddField(s, "m3", 0, 2, Member::Field);
+  AddField(s, "m4", 2, 4, Member::Field);
+  Member *u = AddField(s, "", 6, 0, Member::Union);
+  AddField(u, "m5", 6, 2, Member::Field);
+  AddField(u, "m6", 6, 2, Member::Field);
+  AddField(s, "m7", 8, 2, Member::Field);
   EXPECT_EQ(WrappedRecord(this->record), WrappedRecord(record));
 }

@@ -3,7 +3,6 @@
 ## The option specifies the type of object file llvm-ar will operate on.
 
 # RUN: rm -rf %t && mkdir %t && cd %t
-# RUN: unset OBJECT_MODE
 # RUN: yaml2obj --docnum=1 -DCLASS=ELFCLASS32 %s -o elf32.o
 # RUN: yaml2obj --docnum=1 -DCLASS=ELFCLASS64 %s -o elf64.o
 
@@ -11,7 +10,7 @@
 # RUN: yaml2obj --docnum=2 -DFLAG=0x1F7 %s -o xcoff64.o
 
 ## Test default -X option when creating a new archive.
-# RUN: llvm-ar -q -c archive-default.a xcoff32.o elf32.o xcoff64.o elf64.o  2>&1 | \
+# RUN: env -u OBJECT_MODE llvm-ar -q -c archive-default.a xcoff32.o elf32.o xcoff64.o elf64.o  2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=WARN-XCOFF64,WARN-ELF64
 # RUN: llvm-ar -t -Xany archive-default.a | \
 # RUN:   FileCheck %s --check-prefixes=OBJ32
@@ -74,7 +73,7 @@
 # RUN:   FileCheck %s --check-prefixes=OBJ32_64
 
 ## Test -X option for print operation.
-# RUN: llvm-ar -t archive-any.a | \
+# RUN: env -u OBJECT_MODE llvm-ar -t archive-any.a | \
 # RUN:   FileCheck %s --check-prefixes=OBJ32
 
 # RUN: llvm-ar -t -X32 archive-any.a | \
@@ -115,7 +114,7 @@
 # RUN: cmp elf64.o any/elf64.o
 
 ## Extract a 64-bit object file with option -X32 (or default object mode).
-# RUN: not llvm-ar --output=err64 -x archive-any.a xcoff64.o 2>&1 | \
+# RUN: env -u OBJECT_MODE not llvm-ar --output=err64 -x archive-any.a xcoff64.o 2>&1 | \
 # RUN:   FileCheck %s -DFILE=xcoff64.o --check-prefixes=ERR64
 # RUN: not llvm-ar --output=err64 -x -X32 archive-any.a xcoff64.o 2>&1 | \
 # RUN:   FileCheck %s -DFILE=xcoff64.o --check-prefixes=ERR64
@@ -156,7 +155,7 @@
 ## Without -X64, -X32_64 or -Xany, nothing changed here,
 ## since xcoff.o is a 64-bit object file in command line, but
 ## the xcoff.o member in archive-rep.a is a 32-bit object file.
-# RUN: llvm-ar -r archive-rep.a xcoff.o
+# RUN: env -u OBJECT_MODE llvm-ar -r archive-rep.a xcoff.o
 # RUN: llvm-ar -t -Xany archive-rep.a | \
 # RUN:   FileCheck %s --check-prefixes=REP
 # RUN: llvm-nm -Xany --print-armap archive-rep.a | \
@@ -178,7 +177,7 @@
 ## Test move member.
 # RUN: cp archive-any.a archive.a
 ## Do not move 64-bit object without options -X64, -X32_64, Xany.
-# RUN: llvm-ar -ma elf32.o archive.a xcoff64.o 2>&1 | \
+# RUN: env -u OBJECT_MODE llvm-ar -ma elf32.o archive.a xcoff64.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=WARN-XCOFF64
 
 # RUN: llvm-ar -t -Xany archive.a | \
@@ -240,7 +239,7 @@
 # MOVE32-EMPTY:
 
 ## Move after a file with a bitness that doesn't match the object mode.
-# RUN: not llvm-ar -ma xcoff64.o archive-any.a xcoff32.o 2>&1 | \
+# RUN: env -u OBJECT_MODE not llvm-ar -ma xcoff64.o archive-any.a xcoff32.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=ERR-INSERT-POINT
 
 # RUN: not llvm-ar -X32 -ma xcoff64.o archive-any.a xcoff32.o 2>&1 | \
@@ -308,7 +307,7 @@
 # RUN: yaml2obj --docnum=5 %s -o wasm.o
 # RUN: yaml2obj --docnum=6 %s -o coff.o
 
-# RUN: llvm-ar -q -c archive-other32.a coff.o 32.bc 64.bc wasm.o macho32.o macho64.o 2>&1 | \
+# RUN: env -u OBJECT_MODE llvm-ar -q -c archive-other32.a coff.o 32.bc 64.bc wasm.o macho32.o macho64.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=WARN-64
 # RUN: llvm-ar -t -Xany archive-other32.a | \
 # RUN:   FileCheck %s --check-prefixes=OTHER32

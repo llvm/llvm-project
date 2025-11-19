@@ -1,4 +1,4 @@
-; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_vocab.json %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_opc_vocab.json %s 2>&1 | FileCheck %s
 
 define dso_local i32 @abc(i32 noundef %a, i32 noundef %b) #0 {
 entry:
@@ -30,13 +30,17 @@ return:                                           ; preds = %if.else, %if.then
   %4 = load i32, ptr %retval, align 4
   ret i32 %4
 }
-
-; CHECK: Basic block vectors:
+; We'll get individual basic block embeddings for all blocks in the function.
+; But unreachable blocks are not counted for computing the function embedding.
+; CHECK: Function vector:  [ 1301.20  1318.20  1335.20 ]
+; CHECK-NEXT: Basic block vectors:
 ; CHECK-NEXT: Basic block: entry:
-; CHECK-NEXT:  [ 25.00 32.00 39.00 ]
+; CHECK-NEXT: [ 816.20  825.20  834.20 ]
 ; CHECK-NEXT: Basic block: if.then:
-; CHECK-NEXT:  [ 11.00 13.00 15.00 ]
+; CHECK-NEXT: [ 195.00  198.00  201.00 ]
 ; CHECK-NEXT: Basic block: if.else:
-; CHECK-NEXT:  [ 11.00 13.00 15.00 ]
+; CHECK-NEXT: [ 195.00  198.00  201.00 ]
+; CHECK-NEXT: Basic block: unreachable:
+; CHECK-NEXT:  [ 101.00  103.00  105.00 ]
 ; CHECK-NEXT: Basic block: return:
-; CHECK-NEXT:  [ 4.00 5.00 6.00 ]
+; CHECK-NEXT: [ 95.00  97.00  99.00 ]

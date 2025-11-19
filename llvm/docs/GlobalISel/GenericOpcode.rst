@@ -504,7 +504,7 @@ undefined.
 G_ABDS, G_ABDU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Compute the absolute difference (signed and unsigned), e.g. abs(x-y).
+Compute the absolute difference (signed and unsigned), e.g. trunc(abs(ext(x)-ext(y)).
 
 .. code-block:: none
 
@@ -1105,7 +1105,7 @@ G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
-and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target-dependent
 trap instructions.
 
 .. code-block:: none
@@ -1149,6 +1149,15 @@ An alignment value of `0` or `1` means no specific alignment.
 .. code-block:: none
 
   %8:_(p0) = G_DYN_STACKALLOC %7(s64), 32
+
+G_FREEZE
+^^^^^^^^
+
+G_FREEZE is used to stop propagation of undef and poison values.
+
+.. code-block:: none
+
+  %1:_(s32) = G_FREEZE %0(s32)
 
 Optimization Hints
 ------------------

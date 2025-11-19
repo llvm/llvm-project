@@ -69,6 +69,7 @@ public:
     Dict.handle("Hover", [&](Node &N) { parse(F.Hover, N); });
     Dict.handle("InlayHints", [&](Node &N) { parse(F.InlayHints, N); });
     Dict.handle("SemanticTokens", [&](Node &N) { parse(F.SemanticTokens, N); });
+    Dict.handle("Documentation", [&](Node &N) { parse(F.Documentation, N); });
     Dict.parse(N);
     return !(N.failed() || HadError);
   }
@@ -263,6 +264,10 @@ private:
       if (auto ShowAKA = boolValue(N, "ShowAKA"))
         F.ShowAKA = *ShowAKA;
     });
+    Dict.handle("MacroContentsLimit", [&](Node &N) {
+      if (auto MacroContentsLimit = uint32Value(N, "MacroContentsLimit"))
+        F.MacroContentsLimit = *MacroContentsLimit;
+    });
     Dict.parse(N);
   }
 
@@ -308,6 +313,15 @@ private:
     Dict.handle("DisabledModifiers", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.DisabledModifiers = std::move(*Values);
+    });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::DocumentationBlock &F, Node &N) {
+    DictParser Dict("Documentation", this);
+    Dict.handle("CommentFormat", [&](Node &N) {
+      if (auto Value = scalarValue(N, "CommentFormat"))
+        F.CommentFormat = *Value;
     });
     Dict.parse(N);
   }

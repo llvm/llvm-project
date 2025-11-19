@@ -38,10 +38,10 @@ static void print(const Deque& d) {
       " : __back_spare() == %zu"
       " : __capacity() == %zu"
       " : bytes allocated == %zu\n",
-      d.size(),
-      d.__front_spare(),
-      d.__back_spare(),
-      d.__capacity(),
+      std::size_t(d.size()),
+      std::size_t(d.__front_spare()),
+      std::size_t(d.__back_spare()),
+      std::size_t(d.__capacity()),
       malloc_allocator_base::outstanding_bytes);
 }
 

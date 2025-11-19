@@ -1,5 +1,5 @@
 """
-Test lldb-dap completions request
+Test lldb-dap evaluate request
 """
 
 import re
@@ -7,16 +7,67 @@ import re
 import lldbdap_testcase
 from lldbsuite.test.decorators import skipIfWindows
 from lldbsuite.test.lldbtest import line_number
+from typing import TypedDict, Optional
+
+
+class EvaluateResponseBody(TypedDict, total=False):
+    result: str
+    variablesReference: int
+    type: Optional[str]
+    memoryReference: Optional[str]
+    valueLocationReference: Optional[int]
 
 
 class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
-    def assertEvaluate(self, expression, regex):
-        self.assertRegex(
-            self.dap_server.request_evaluate(expression, context=self.context)["body"][
-                "result"
-            ],
-            regex,
+    def assertEvaluate(
+        self,
+        expression,
+        result: str,
+        want_type="",
+        want_varref=False,
+        want_memref=True,
+        want_locref=False,
+    ):
+        resp = self.dap_server.request_evaluate(expression, context=self.context)
+        self.assertTrue(
+            resp["success"], f"Failed to evaluate expression {expression!r}"
         )
+        body: EvaluateResponseBody = resp["body"]
+        self.assertRegex(
+            body["result"],
+            result,
+            f"Unexpected 'result' for expression {expression!r} in response body {body}",
+        )
+        if want_varref:
+            self.assertNotEqual(
+                body["variablesReference"],
+                0,
+                f"Unexpected 'variablesReference' for expression {expression!r} in response body {body}",
+            )
+        else:
+            self.assertEqual(
+                body["variablesReference"],
+                0,
+                f"Unexpected 'variablesReference' for expression {expression!r} in response body {body}",
+            )
+        if want_type:
+            self.assertEqual(
+                body["type"],
+                want_type,
+                f"Unexpected 'type' for expression {expression!r} in response body {body}",
+            )
+        if want_memref:
+            self.assertIn(
+                "memoryReference",
+                body,
+                f"Unexpected 'memoryReference' for expression {expression!r} in response body {body}",
+            )
+        if want_locref:
+            self.assertIn(
+                "valueLocationReference",
+                body,
+                f"Unexpected 'valueLocationReference' for expression {expression!r} in response body {body}",
+            )
 
     def assertEvaluateFailure(self, expression):
         self.assertNotIn(
@@ -71,29 +122,39 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoint(breakpoint_1)
 
         # Expressions at breakpoint 1, which is in main
-        self.assertEvaluate("var1", "20")
+        self.assertEvaluate("var1", "20", want_type="int")
         # Empty expression should equate to the previous expression.
         if context == "repl":
             self.assertEvaluate("", "20")
         else:
             self.assertEvaluateFailure("")
-        self.assertEvaluate("var2", "21")
+        self.assertEvaluate("var2", "21", want_type="int")
         if context == "repl":
-            self.assertEvaluate("", "21")
-            self.assertEvaluate("", "21")
-        self.assertEvaluate("static_int", "42")
-        self.assertEvaluate("non_static_int", "43")
-        self.assertEvaluate("struct1.foo", "15")
-        self.assertEvaluate("struct2->foo", "16")
+            self.assertEvaluate("", "21", want_type="int")
+            self.assertEvaluate("", "21", want_type="int")
+        self.assertEvaluate("static_int", "42", want_type="int")
+        self.assertEvaluate("non_static_int", "43", want_type="int")
+        self.assertEvaluate("struct1.foo", "15", want_type="int")
+        self.assertEvaluate("struct2->foo", "16", want_type="int")
 
         if self.isResultExpandedDescription():
             self.assertEvaluate(
                 "struct1",
                 r"\(my_struct\) (struct1|\$\d+) = \(foo = 15\)",
+                want_type="my_struct",
+                want_varref=True,
             )
-            self.assertEvaluate("struct2", r"\(my_struct \*\) (struct2|\$\d+) = 0x.*")
             self.assertEvaluate(
-                "struct3", r"\(my_struct \*\) (struct3|\$\d+) = nullptr"
+                "struct2",
+                r"\(my_struct \*\) (struct2|\$\d+) = 0x.*",
+                want_type="my_struct *",
+                want_varref=True,
+            )
+            self.assertEvaluate(
+                "struct3",
+                r"\(my_struct \*\) (struct3|\$\d+) = nullptr",
+                want_type="my_struct *",
+                want_varref=True,
             )
         else:
             self.assertEvaluate(
@@ -103,16 +164,22 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                     if enableAutoVariableSummaries
                     else "my_struct @ 0x"
                 ),
+                want_varref=True,
             )
             self.assertEvaluate(
-                "struct2", "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*"
+                "struct2",
+                "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*",
+                want_varref=True,
+                want_type="my_struct *",
             )
-            self.assertEvaluate("struct3", "0x.*0")
+            self.assertEvaluate(
+                "struct3", "0x.*0", want_varref=True, want_type="my_struct *"
+            )
 
         if context == "repl":
             # In the repl context expressions may be interpreted as lldb
             # commands since no variables have the same name as the command.
-            self.assertEvaluate("list", r".*")
+            self.assertEvaluate("list", r".*", want_memref=False)
         else:
             self.assertEvaluateFailure("list")  # local variable of a_function
 
@@ -121,17 +188,33 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluateFailure("foo")  # member of my_struct
 
         if self.isExpressionParsedExpected():
-            self.assertEvaluate("a_function", "0x.*a.out`a_function.*")
-            self.assertEvaluate("a_function(1)", "1")
-            self.assertEvaluate("var2 + struct1.foo", "36")
-            self.assertEvaluate("foo_func", "0x.*a.out`foo_func.*")
+            self.assertEvaluate(
+                "a_function",
+                "0x.*a.out`a_function.*",
+                want_type="int (*)(int)",
+                want_varref=True,
+                want_memref=False,
+                want_locref=True,
+            )
+            self.assertEvaluate(
+                "a_function(1)", "1", want_memref=False, want_type="int"
+            )
+            self.assertEvaluate("var2 + struct1.foo", "36", want_memref=False)
+            self.assertEvaluate(
+                "foo_func",
+                "0x.*a.out`foo_func.*",
+                want_type="int (*)()",
+                want_varref=True,
+                want_memref=False,
+                want_locref=True,
+            )
             self.assertEvaluate("foo_var", "44")
         else:
             self.assertEvaluateFailure("a_function")
             self.assertEvaluateFailure("a_function(1)")
             self.assertEvaluateFailure("var2 + struct1.foo")
             self.assertEvaluateFailure("foo_func")
-            self.assertEvaluateFailure("foo_var")
+            self.assertEvaluate("foo_var", "44")
 
         # Expressions at breakpoint 2, which is an anonymous block
         self.continue_to_breakpoint(breakpoint_2)
@@ -145,6 +228,8 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluate(
                 "struct1",
                 r"\(my_struct\) (struct1|\$\d+) = \(foo = 15\)",
+                want_type="my_struct",
+                want_varref=True,
             )
         else:
             self.assertEvaluate(
@@ -154,22 +239,33 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                     if enableAutoVariableSummaries
                     else "my_struct @ 0x"
                 ),
+                want_type="my_struct",
+                want_varref=True,
             )
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
         if self.isExpressionParsedExpected():
-            self.assertEvaluate("a_function", "0x.*a.out`a_function.*")
-            self.assertEvaluate("a_function(1)", "1")
-            self.assertEvaluate("var2 + struct1.foo", "17")
-            self.assertEvaluate("foo_func", "0x.*a.out`foo_func.*")
+            self.assertEvaluate(
+                "a_function",
+                "0x.*a.out`a_function.*",
+                want_type="int (*)(int)",
+                want_varref=True,
+                want_memref=False,
+                want_locref=True,
+            )
+            self.assertEvaluate("a_function(1)", "1", want_memref=False)
+            self.assertEvaluate("var2 + struct1.foo", "17", want_memref=False)
+            self.assertEvaluate(
+                "foo_func", "0x.*a.out`foo_func.*", want_varref=True, want_memref=False
+            )
             self.assertEvaluate("foo_var", "44")
         else:
             self.assertEvaluateFailure("a_function")
             self.assertEvaluateFailure("a_function(1)")
             self.assertEvaluateFailure("var2 + struct1.foo")
             self.assertEvaluateFailure("foo_func")
-            self.assertEvaluateFailure("foo_var")
+            self.assertEvaluate("foo_var", "44")
 
         # Expressions at breakpoint 3, which is inside a_function
         self.continue_to_breakpoint(breakpoint_3)
@@ -185,40 +281,50 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluateFailure("var2 + struct1.foo")
 
         if self.isExpressionParsedExpected():
-            self.assertEvaluate("a_function", "0x.*a.out`a_function.*")
-            self.assertEvaluate("a_function(1)", "1")
-            self.assertEvaluate("list + 1", "43")
-            self.assertEvaluate("foo_func", "0x.*a.out`foo_func.*")
+            self.assertEvaluate(
+                "a_function",
+                "0x.*a.out`a_function.*",
+                want_varref=True,
+                want_memref=False,
+                want_locref=True,
+            )
+            self.assertEvaluate("a_function(1)", "1", want_memref=False)
+            self.assertEvaluate("list + 1", "43", want_memref=False)
+            self.assertEvaluate(
+                "foo_func", "0x.*a.out`foo_func.*", want_varref=True, want_memref=False
+            )
             self.assertEvaluate("foo_var", "44")
         else:
             self.assertEvaluateFailure("a_function")
             self.assertEvaluateFailure("a_function(1)")
             self.assertEvaluateFailure("list + 1")
             self.assertEvaluateFailure("foo_func")
-            self.assertEvaluateFailure("foo_var")
+            self.assertEvaluate("foo_var", "44")
 
         # Now we check that values are updated after stepping
         self.continue_to_breakpoint(breakpoint_4)
-        self.assertEvaluate("my_vec", "size=2")
+        self.assertEvaluate("my_vec", "size=2", want_varref=True)
         self.continue_to_breakpoint(breakpoint_5)
-        self.assertEvaluate("my_vec", "size=3")
+        self.assertEvaluate("my_vec", "size=3", want_varref=True)
 
-        self.assertEvaluate("my_map", "size=2")
+        self.assertEvaluate("my_map", "size=2", want_varref=True)
         self.continue_to_breakpoint(breakpoint_6)
-        self.assertEvaluate("my_map", "size=3")
+        self.assertEvaluate("my_map", "size=3", want_varref=True)
 
-        self.assertEvaluate("my_bool_vec", "size=1")
+        self.assertEvaluate("my_bool_vec", "size=1", want_varref=True)
         self.continue_to_breakpoint(breakpoint_7)
-        self.assertEvaluate("my_bool_vec", "size=2")
+        self.assertEvaluate("my_bool_vec", "size=2", want_varref=True)
 
         self.continue_to_breakpoint(breakpoint_8)
         # Test memory read, especially with 'empty' repeat commands.
         if context == "repl":
-            self.assertEvaluate("memory read -c 1 &my_ints", ".* 05 .*\n")
-            self.assertEvaluate("", ".* 0a .*\n")
-            self.assertEvaluate("", ".* 0f .*\n")
-            self.assertEvaluate("", ".* 14 .*\n")
-            self.assertEvaluate("", ".* 19 .*\n")
+            self.assertEvaluate(
+                "memory read -c 1 &my_ints", ".* 05 .*\n", want_memref=False
+            )
+            self.assertEvaluate("", ".* 0a .*\n", want_memref=False)
+            self.assertEvaluate("", ".* 0f .*\n", want_memref=False)
+            self.assertEvaluate("", ".* 14 .*\n", want_memref=False)
+            self.assertEvaluate("", ".* 19 .*\n", want_memref=False)
 
         self.continue_to_exit()
 
@@ -245,4 +351,6 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_variable_evaluate_expressions(self):
         # Tests expression evaluations that are triggered in the variable explorer
-        self.run_test_evaluate_expressions("variable", enableAutoVariableSummaries=True)
+        self.run_test_evaluate_expressions(
+            "variables", enableAutoVariableSummaries=True
+        )

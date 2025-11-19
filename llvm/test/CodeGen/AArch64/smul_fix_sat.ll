@@ -63,7 +63,7 @@ define i32 @func4(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    eor w10, w0, w1
 ; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    cinv w8, w8, ge
+; CHECK-NEXT:    cinv w8, w8, pl
 ; CHECK-NEXT:    cmp x9, w9, sxtw
 ; CHECK-NEXT:    csel w0, w8, w9, ne
 ; CHECK-NEXT:    ret
@@ -79,7 +79,7 @@ define i64 @func5(i64 %x, i64 %y) {
 ; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    cmp x11, #0
 ; CHECK-NEXT:    smulh x10, x0, x1
-; CHECK-NEXT:    cinv x8, x8, ge
+; CHECK-NEXT:    cinv x8, x8, pl
 ; CHECK-NEXT:    cmp x10, x9, asr #63
 ; CHECK-NEXT:    csel x0, x8, x9, ne
 ; CHECK-NEXT:    ret
@@ -96,7 +96,7 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ; CHECK-NEXT:    smull x11, w10, w9
 ; CHECK-NEXT:    eor w9, w10, w9
 ; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    cinv w8, w8, ge
+; CHECK-NEXT:    cinv w8, w8, pl
 ; CHECK-NEXT:    cmp x11, w11, sxtw
 ; CHECK-NEXT:    csel w8, w8, w11, ne
 ; CHECK-NEXT:    asr w0, w8, #28
@@ -158,11 +158,11 @@ define <2 x i32> @vec(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; CHECK-NEXT:    cmp w9, #0
 ; CHECK-NEXT:    smull x9, w12, w10
 ; CHECK-NEXT:    eor w10, w12, w10
-; CHECK-NEXT:    cinv w12, w8, ge
+; CHECK-NEXT:    cinv w12, w8, pl
 ; CHECK-NEXT:    cmp x11, w11, sxtw
 ; CHECK-NEXT:    csel w11, w12, w11, ne
 ; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    cinv w8, w8, ge
+; CHECK-NEXT:    cinv w8, w8, pl
 ; CHECK-NEXT:    cmp x9, w9, sxtw
 ; CHECK-NEXT:    csel w8, w8, w9, ne
 ; CHECK-NEXT:    fmov s0, w8
@@ -188,12 +188,12 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-NEXT:    cmp w11, #0
 ; CHECK-NEXT:    smull x11, w13, w12
 ; CHECK-NEXT:    eor w12, w13, w12
-; CHECK-NEXT:    cinv w13, w8, ge
+; CHECK-NEXT:    cinv w13, w8, pl
 ; CHECK-NEXT:    cmp x9, w9, sxtw
 ; CHECK-NEXT:    csel w9, w13, w9, ne
 ; CHECK-NEXT:    cmp w12, #0
 ; CHECK-NEXT:    mov w13, v1.s[3]
-; CHECK-NEXT:    cinv w12, w8, ge
+; CHECK-NEXT:    cinv w12, w8, pl
 ; CHECK-NEXT:    cmp x11, w11, sxtw
 ; CHECK-NEXT:    csel w11, w12, w11, ne
 ; CHECK-NEXT:    mov w12, v0.s[3]
@@ -203,13 +203,13 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-NEXT:    eor w9, w14, w10
 ; CHECK-NEXT:    smull x10, w12, w13
 ; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    cinv w9, w8, ge
+; CHECK-NEXT:    cinv w9, w8, pl
 ; CHECK-NEXT:    cmp x11, w11, sxtw
 ; CHECK-NEXT:    csel w9, w9, w11, ne
 ; CHECK-NEXT:    mov v0.s[2], w9
 ; CHECK-NEXT:    eor w9, w12, w13
 ; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    cinv w8, w8, ge
+; CHECK-NEXT:    cinv w8, w8, pl
 ; CHECK-NEXT:    cmp x10, w10, sxtw
 ; CHECK-NEXT:    csel w8, w8, w10, ne
 ; CHECK-NEXT:    mov v0.s[3], w8

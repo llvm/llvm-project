@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 #include <omp.h>
 #include "callback.h"
 
@@ -12,10 +14,11 @@ int main() {
     { print_frame(0); }
   }
 
+  // clang-format off
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
-  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]]
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]
   // CHECK-SAME: thread_num=[[OUTER_THREAD_NUM1:[0-9]+]]
@@ -57,6 +60,7 @@ int main() {
   // CHECK-SAME: thread_num=[[INNER_THREAD_NUM4:[0-9]+]]
   // CHECK: {{^}}[[WORKER_ID3]]: ompt_event_implicit_task_end
   // CHECK-SAME: thread_num=[[INNER_THREAD_NUM4]]
+  // clang-format on
 
   return 0;
 }

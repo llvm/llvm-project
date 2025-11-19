@@ -114,6 +114,21 @@ public:
                     AffineMap tagMap, ValueRange tagIndices, Value numElements,
                     Value stride = nullptr, Value elementsPerStride = nullptr);
 
+  static AffineDmaStartOp
+  create(OpBuilder &builder, Location location, Value srcMemRef,
+         AffineMap srcMap, ValueRange srcIndices, Value destMemRef,
+         AffineMap dstMap, ValueRange destIndices, Value tagMemRef,
+         AffineMap tagMap, ValueRange tagIndices, Value numElements,
+         Value stride = nullptr, Value elementsPerStride = nullptr);
+
+  static AffineDmaStartOp create(ImplicitLocOpBuilder &builder, Value srcMemRef,
+                                 AffineMap srcMap, ValueRange srcIndices,
+                                 Value destMemRef, AffineMap dstMap,
+                                 ValueRange destIndices, Value tagMemRef,
+                                 AffineMap tagMap, ValueRange tagIndices,
+                                 Value numElements, Value stride = nullptr,
+                                 Value elementsPerStride = nullptr);
+
   /// Returns the operand index of the source memref.
   unsigned getSrcMemRefOperandIndex() { return 0; }
 
@@ -319,6 +334,12 @@ public:
 
   static void build(OpBuilder &builder, OperationState &result, Value tagMemRef,
                     AffineMap tagMap, ValueRange tagIndices, Value numElements);
+  static AffineDmaWaitOp create(OpBuilder &builder, Location location,
+                                Value tagMemRef, AffineMap tagMap,
+                                ValueRange tagIndices, Value numElements);
+  static AffineDmaWaitOp create(ImplicitLocOpBuilder &builder, Value tagMemRef,
+                                AffineMap tagMap, ValueRange tagIndices,
+                                Value numElements);
 
   static StringRef getOperationName() { return "affine.dma_wait"; }
 

@@ -22,37 +22,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // NOTE: Relaxed and acq/rel atomics (for increment and decrement respectively)
 // should be sufficient for thread safety.
 // See https://llvm.org/PR22803
-#if (defined(__clang__) && __has_builtin(__atomic_add_fetch) && defined(__ATOMIC_RELAXED) &&                           \
-     defined(__ATOMIC_ACQ_REL)) ||                                                                                     \
-    defined(_LIBCPP_COMPILER_GCC)
-#  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT 1
-#else
-#  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT 0
-#endif
-
-template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_relaxed_load(_ValueType const* __value) {
-#if _LIBCPP_HAS_THREADS && defined(__ATOMIC_RELAXED) &&                                                                \
-    (__has_builtin(__atomic_load_n) || defined(_LIBCPP_COMPILER_GCC))
-  return __atomic_load_n(__value, __ATOMIC_RELAXED);
-#else
-  return *__value;
-#endif
-}
-
-template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* __value) {
-#if _LIBCPP_HAS_THREADS && defined(__ATOMIC_ACQUIRE) &&                                                                \
-    (__has_builtin(__atomic_load_n) || defined(_LIBCPP_COMPILER_GCC))
-  return __atomic_load_n(__value, __ATOMIC_ACQUIRE);
-#else
-  return *__value;
-#endif
-}
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_increment(_Tp& __t) _NOEXCEPT {
-#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && _LIBCPP_HAS_THREADS
+#if _LIBCPP_HAS_THREADS
   return __atomic_add_fetch(std::addressof(__t), 1, __ATOMIC_RELAXED);
 #else
   return __t += 1;
@@ -61,7 +34,7 @@ inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_increment(_Tp& __t) _N
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_decrement(_Tp& __t) _NOEXCEPT {
-#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && _LIBCPP_HAS_THREADS
+#if _LIBCPP_HAS_THREADS
   return __atomic_add_fetch(std::addressof(__t), -1, __ATOMIC_ACQ_REL);
 #else
   return __t -= 1;
@@ -95,7 +68,13 @@ public:
     return false;
   }
 #endif
-  _LIBCPP_HIDE_FROM_ABI long use_count() const _NOEXCEPT { return __libcpp_relaxed_load(&__shared_owners_) + 1; }
+  _LIBCPP_HIDE_FROM_ABI long use_count() const _NOEXCEPT {
+#if _LIBCPP_HAS_THREADS
+    return __atomic_load_n(&__shared_owners_, __ATOMIC_RELAXED) + 1;
+#else
+    return __shared_owners_ + 1;
+#endif
+  }
 };
 
 class _LIBCPP_EXPORTED_FROM_ABI __shared_weak_count : private __shared_count {

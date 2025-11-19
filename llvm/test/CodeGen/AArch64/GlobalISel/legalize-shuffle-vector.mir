@@ -119,33 +119,6 @@ body:             |
 
 ...
 ---
-name:            shuffle_1elt_mask
-alignment:       4
-tracksRegLiveness: true
-body:             |
-  bb.1:
-    liveins: $d0, $d1
-
-    ; CHECK-LABEL: name: shuffle_1elt_mask
-    ; CHECK: liveins: $d0, $d1
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $d1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
-    ; CHECK-NEXT: $d0 = COPY [[COPY2]](s64)
-    ; CHECK-NEXT: $d1 = COPY [[COPY3]](s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
-    %0:_(s64) = COPY $d0
-    %1:_(s64) = COPY $d1
-    %3:_(s64) = G_SHUFFLE_VECTOR %0:_(s64), %1:_, shufflemask(0)
-    %4:_(s64) = G_SHUFFLE_VECTOR %0:_(s64), %1:_, shufflemask(1)
-    $d0 = COPY %3(s64)
-    $d1 = COPY %4(s64)
-    RET_ReallyLR implicit $d0, implicit $d1
-
-...
----
 name:            oversize_shuffle_v4i64
 alignment:       4
 tracksRegLiveness: true
@@ -165,7 +138,7 @@ body:             |
     ; CHECK-NEXT: [[SHUF1:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[COPY3]](<2 x s64>), [[COPY]], shufflemask(1, 2)
     ; CHECK-NEXT: G_STORE [[SHUF]](<2 x s64>), [[COPY4]](p0) :: (store (<2 x s64>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY4]], [[C]](s64)
     ; CHECK-NEXT: G_STORE [[SHUF1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     ; CHECK-NEXT: RET_ReallyLR
     %3:_(<2 x s64>) = COPY $q0
@@ -208,7 +181,7 @@ body:             |
     ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[COPY1]](<4 x s32>), [[COPY]], shufflemask(2, 6, 5, 3)
     ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](p0) :: (store (<4 x s32>), align 32)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C4]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY4]], [[C4]](s64)
     ; CHECK-NEXT: G_STORE [[SHUF]](<4 x s32>), [[PTR_ADD]](p0) :: (store (<4 x s32>) into unknown-address + 16)
     ; CHECK-NEXT: RET_ReallyLR
     %3:_(<4 x s32>) = COPY $q0
@@ -271,10 +244,10 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR7:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[EVEC2]](s64), [[EVEC3]](s64)
     ; CHECK-NEXT: G_STORE [[BUILD_VECTOR6]](<2 x s64>), [[COPY8]](p0) :: (store (<2 x s64>), align 64)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C2]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY8]], [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[BUILD_VECTOR7]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C3]](s64)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY8]], [[C3]](s64)
     ; CHECK-NEXT: G_STORE [[SHUF]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into unknown-address + 32, align 32)
     ; CHECK-NEXT: RET_ReallyLR
     %3:_(s64) = COPY $d0
@@ -315,10 +288,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[UV]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[UV]](s32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[DEF]](s32)
     ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR]](<4 x s32>), [[BUILD_VECTOR1]], shufflemask(0, 1, 5, 6)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF]](<4 x s32>), [[C]](s64)
@@ -458,7 +430,7 @@ body:             |
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[BUILD_VECTOR2]](<2 x s32>), [[BUILD_VECTOR3]](<2 x s32>)
     ; CHECK-NEXT: G_STORE [[CONCAT_VECTORS]](<4 x s32>), [[COPY8]](p0) :: (store (<4 x s32>), align 32)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C4]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY8]], [[C4]](s64)
     ; CHECK-NEXT: G_STORE [[BUILD_VECTOR4]](<2 x s32>), [[PTR_ADD]](p0) :: (store (<2 x s32>) into unknown-address + 16, align 16)
     ; CHECK-NEXT: RET_ReallyLR
     %3:_(s32) = COPY $s0
@@ -641,7 +613,8 @@ body:             |
     %0:_(<8 x s1>) = G_TRUNC %2:_(<8 x s8>)
     %3:_(<8 x s8>) = COPY $d1
     %1:_(<8 x s1>) = G_TRUNC %3:_(<8 x s8>)
-    %4:_(s1) = G_SHUFFLE_VECTOR %0:_(<8 x s1>), %1:_, shufflemask(12)
+    %7:_(s64) = G_CONSTANT i64 4
+    %4:_(s1) = G_EXTRACT_VECTOR_ELT %1:_(<8 x s1>), %7(s64)
     %5:_(s8) = G_ZEXT %4:_(s1)
     %6:_(s32) = G_ANYEXT %5:_(s8)
     $w0 = COPY %6:_(s32)

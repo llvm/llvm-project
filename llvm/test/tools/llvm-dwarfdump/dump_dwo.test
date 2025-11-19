@@ -1,9 +1,10 @@
 ## Check that llvm-dwarfdump works when dumping .o files with .dwo files.
 
-# RUN: yaml2obj %p/Inputs/dump_dwo.o.yaml -o %T/dump_dwo.o
-# RUN: yaml2obj %p/Inputs/dump_dwo.dwo.yaml -o %T/dump_dwo.dwo
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %p/Inputs/dump_dwo.o.yaml -o %t.dir/dump_dwo.o
+# RUN: yaml2obj %p/Inputs/dump_dwo.dwo.yaml -o %t.dir/dump_dwo.dwo
 ## We need to be in the same directory so we can find .dwo file
-# RUN: cd %T
+# RUN: cd %t.dir
 # RUN: llvm-dwarfdump --dwo dump_dwo.o | FileCheck %s
 # RUN: llvm-dwarfdump --dwo --name int --name char dump_dwo.o | FileCheck %s --check-prefix=NAMES
 # RUN: llvm-dwarfdump --name int --name char dump_dwo.o | FileCheck %s --check-prefix=NAMES_NO_DWO

@@ -3,13 +3,13 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
-// RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks %s \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
 // RUN:   -verify=expected,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
@@ -19,13 +19,13 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
-// RUN: %clang_analyze_cc1 -DLEAKS -std=c++17 -fblocks %s \
+// RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++17 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
 // RUN:   -verify=expected,leak,inspection \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
@@ -155,52 +155,52 @@ void g(SomeClass &c, ...);
 void testUseFirstArgAfterDelete() {
   int *p = new int;
   delete p;
-  f(p); // newdelete-warning{{Use of memory after it is freed}}
+  f(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseMiddleArgAfterDelete(int *p) {
   delete p;
-  f(0, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseLastArgAfterDelete(int *p) {
   delete p;
-  f(0, 0, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(0, 0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseSeveralArgsAfterDelete(int *p) {
   delete p;
-  f(p, p, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(p, p, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseRefArgAfterDelete(SomeClass &c) {
   delete &c;
-  g(c); // newdelete-warning{{Use of memory after it is freed}}
+  g(c); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testVariadicArgAfterDelete() {
   SomeClass c;
   int *p = new int;
   delete p;
-  g(c, 0, p); // newdelete-warning{{Use of memory after it is freed}}
+  g(c, 0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseMethodArgAfterDelete(int *p) {
   SomeClass *c = new SomeClass;
   delete p;
-  c->f(p); // newdelete-warning{{Use of memory after it is freed}}
+  c->f(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseThisAfterDelete() {
   SomeClass *c = new SomeClass;
   delete c;
-  c->f(0); // newdelete-warning{{Use of memory after it is freed}}
+  c->f(0); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testDoubleDelete() {
   int *p = new int;
   delete p;
-  delete p; // newdelete-warning{{Attempt to free released memory}}
+  delete p; // newdelete-warning{{Attempt to release already released memory}}
 }
 
 void testExprDeleteArg() {
@@ -412,7 +412,7 @@ public:
 void testDoubleDeleteClassInstance() {
   DerefClass *foo = new DerefClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to free released memory}}
+  delete foo; // newdelete-warning {{Attempt to release already released memory}}
 }
 
 class EmptyClass{
@@ -424,7 +424,7 @@ public:
 void testDoubleDeleteEmptyClass() {
   EmptyClass *foo = new EmptyClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to free released memory}}
+  delete foo; // newdelete-warning {{Attempt to release already released memory}}
 }
 
 struct Base {
@@ -503,3 +503,75 @@ namespace optional_union {
     custom_union_t a;
   } // leak-warning{{Potential leak of memory pointed to by 'a.present.q'}}
 }
+
+namespace gh153782 {
+
+// Ensure we do not regress on the following use case.
+
+namespace mutually_exclusive_test_case_1 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+void test_non_trivial_struct_assignment() {
+  StorageWrapper* object = new StorageWrapper[]{StorageWrapper()};
+  object[0] = StorageWrapper(); // This assignment leads to the double-free.
+}
+} // mutually_exclusive_test_case_1
+
+namespace mutually_exclusive_test_case_2 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; }
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+void test_non_trivial_struct_assignment() {
+  StorageWrapper* object = new StorageWrapper[]{StorageWrapper()};
+  // object[0] = StorageWrapper(); // Remove the source of double free to make the potential leak appear.
+} // leak-warning{{Potential leak of memory pointed to by 'object'}}
+} // mutually_exclusive_test_case_2
+
+namespace mutually_exclusive_test_case_3 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+struct TestDoubleFreeWithInitializerList {
+  StorageWrapper* Object;
+  TestDoubleFreeWithInitializerList()
+  : Object(new StorageWrapper[]{StorageWrapper()}) {
+    Object[0] = StorageWrapper(); // This assignment leads to the double-free.
+  }
+};
+} // mutually_exclusive_test_case_3
+
+} // namespace gh153782

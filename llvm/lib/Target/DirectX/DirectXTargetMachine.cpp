@@ -14,6 +14,7 @@
 #include "DirectXTargetMachine.h"
 #include "DXILCBufferAccess.h"
 #include "DXILDataScalarization.h"
+#include "DXILFinalizeLinkage.h"
 #include "DXILFlattenArrays.h"
 #include "DXILForwardHandleAccesses.h"
 #include "DXILIntrinsicExpansion.h"
@@ -45,12 +46,15 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Transforms/IPO/GlobalDCE.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include <optional>
 
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeDXILIntrinsicExpansionLegacyPass(*PR);
@@ -62,6 +66,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
+  initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILResourceAccessLegacyPass(*PR);
   initializeDXILResourceImplicitBindingLegacyPass(*PR);
@@ -72,6 +77,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXILFinalizeLinkageLegacyPass(*PR);
   initializeDXILPrettyPrinterLegacyPass(*PR);
   initializeDXILForwardHandleAccessesLegacyPass(*PR);
+  initializeDSELegacyPassPass(*PR);
   initializeDXILCBufferAccessLegacyPass(*PR);
 }
 
@@ -103,15 +109,17 @@ public:
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
     addPass(createDXILFinalizeLinkageLegacyPass());
+    addPass(createGlobalDCEPass());
+    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
-    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
-    addPass(createDXILFlattenArraysLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
     addPass(createScalarizerPass(DxilScalarOptions));
+    addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILForwardHandleAccessesLegacyPass());
+    addPass(createDeadStoreEliminationPass());
     addPass(createDXILLegalizeLegacyPass());
     addPass(createDXILResourceImplicitBindingLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());
@@ -127,11 +135,8 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(
-          T,
-          "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
-          "f32:32-f64:64-n8:16:32:64",
-          TT, CPU, FS, Options, Reloc::Static, CodeModel::Small, OL),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               Reloc::Static, CodeModel::Small, OL),
       TLOF(std::make_unique<DXILTargetObjectFile>()),
       Subtarget(std::make_unique<DirectXSubtarget>(TT, CPU, FS, *this)) {
   initAsmInfo();

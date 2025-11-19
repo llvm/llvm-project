@@ -62,7 +62,7 @@ elseif( CMAKE_HOST_UNIX )
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
   endif()
-  if( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS" )
+  if( UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" )
     set(system_libs ${system_libs} kstat socket)
   endif()
   if( FUCHSIA )
@@ -130,11 +130,12 @@ endif()
 # unistd.h and it is guarded by _ALL_SOURCE, so we remove the _XOPEN_SOURCE
 # guard here. We should remove the guards all together once AIX cleans up
 # the system headers.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
 add_subdirectory(BLAKE3)
+add_subdirectory(LSP)
 
 add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
@@ -148,6 +149,7 @@ add_llvm_component_library(LLVMSupport
   AArch64BuildAttributes.cpp
   ARMAttributeParser.cpp
   ARMWinEH.cpp
+  AllocToken.cpp
   Allocator.cpp
   AutoConvert.cpp
   Base64.cpp
@@ -182,6 +184,7 @@ add_llvm_component_library(LLVMSupport
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
+  DXILABI.cpp
   DynamicAPInt.cpp
   ELFAttributes.cpp
   ELFAttrParserCompact.cpp
@@ -205,6 +208,7 @@ add_llvm_component_library(LLVMSupport
   InstructionCost.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
+  Jobserver.cpp
   JSON.cpp
   KnownBits.cpp
   KnownFPClass.cpp
@@ -264,18 +268,23 @@ add_llvm_component_library(LLVMSupport
   ToolOutputFile.cpp
   TrieRawHashMap.cpp
   Twine.cpp
-  TypeSize.cpp
   Unicode.cpp
   UnicodeCaseFold.cpp
   UnicodeNameToCodepoint.cpp
   UnicodeNameToCodepointGenerated.cpp
   VersionTuple.cpp
   VirtualFileSystem.cpp
+  VirtualOutputBackend.cpp
+  VirtualOutputBackends.cpp
+  VirtualOutputConfig.cpp
+  VirtualOutputError.cpp
+  VirtualOutputFile.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
   raw_os_ostream.cpp
   raw_ostream.cpp
+  raw_ostream_proxy.cpp
   raw_socket_stream.cpp
   regcomp.c
   regerror.c
@@ -302,6 +311,7 @@ add_llvm_component_library(LLVMSupport
   Threading.cpp
   Valgrind.cpp
   Watchdog.cpp
+  zOSLibFunctions.cpp
 
   ADDITIONAL_HEADER_DIRS
   Unix
@@ -380,7 +390,7 @@ if(LLVM_WITH_Z3)
     )
 endif()
 
-target_include_directories(LLVMSupport SYSTEM
+target_include_directories(LLVMSupport
   PRIVATE
   ${LLVM_THIRD_PARTY_DIR}/siphash/include
-  )
+)

@@ -15,11 +15,11 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -337,6 +337,10 @@ private:
   /// "clang" as it's first argument.
   const char *PrependArg;
 
+  /// The default value of -fuse-ld= option. An empty string means the default
+  /// system linker.
+  std::string PreferredLinker;
+
   /// Whether to check that input files exist when constructing compilation
   /// jobs.
   LLVM_PREFERRED_TYPE(bool)
@@ -355,6 +359,9 @@ public:
   phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
                            llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  executeProgram(llvm::ArrayRef<llvm::StringRef> Args) const;
+
 private:
   /// Certain options suppress the 'no input files' warning.
   LLVM_PREFERRED_TYPE(bool)
@@ -366,10 +373,6 @@ private:
   /// created targeting that triple. The driver owns all the ToolChain objects
   /// stored in it, and will clean them up when torn down.
   mutable llvm::StringMap<std::unique_ptr<ToolChain>> ToolChains;
-
-  /// The associated offloading architectures with each toolchain.
-  llvm::DenseMap<const ToolChain *, llvm::SmallVector<llvm::StringRef>>
-      OffloadArchs;
 
 private:
   /// TranslateInputArgs - Create a new derived argument list from the input
@@ -450,6 +453,11 @@ public:
     return ClangExecutable.c_str();
   }
 
+  StringRef getPreferredLinker() const { return PreferredLinker; }
+  void setPreferredLinker(std::string Value) {
+    PreferredLinker = std::move(Value);
+  }
+
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }
 
@@ -504,6 +512,9 @@ public:
 
   /// BuildActions - Construct the list of actions to perform for the
   /// given arguments, which are only done for a single architecture.
+  /// If the compilation is an explicit module build, delegates to
+  /// BuildDriverManagedModuleBuildActions. Otherwise, BuildDefaultActions is
+  /// used.
   ///
   /// \param C - The compilation that is being built.
   /// \param Args - The input arguments.
@@ -537,8 +548,7 @@ public:
   /// empty string.
   llvm::SmallVector<StringRef>
   getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
-                  Action::OffloadKind Kind, const ToolChain *TC,
-                  bool SpecificToolchain = true) const;
+                  Action::OffloadKind Kind, const ToolChain &TC) const;
 
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.
@@ -788,6 +798,35 @@ private:
   /// Parse the \p Args list for LTO options and record the type of LTO
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);
+
+  /// BuildDefaultActions - Constructs the list of actions to perform
+  /// for the provided arguments, which are only done for a single architecture.
+  ///
+  /// \param C - The compilation that is being built.
+  /// \param Args - The input arguments.
+  /// \param Actions - The list to store the resulting actions onto.
+  void BuildDefaultActions(Compilation &C, llvm::opt::DerivedArgList &Args,
+                           const InputList &Inputs, ActionList &Actions) const;
+
+  /// BuildDriverManagedModuleBuildActions - Performs a dependency
+  /// scan and constructs the list of actions to perform for dependency order
+  /// and the provided arguments. This is only done for a single a architecture.
+  ///
+  /// \param C - The compilation that is being built.
+  /// \param Args - The input arguments.
+  /// \param Actions - The list to store the resulting actions onto.
+  void BuildDriverManagedModuleBuildActions(Compilation &C,
+                                            llvm::opt::DerivedArgList &Args,
+                                            const InputList &Inputs,
+                                            ActionList &Actions) const;
+
+  /// Scans the leading lines of the C++ source inputs to detect C++20 module
+  /// usage.
+  ///
+  /// \returns True if module usage is detected, false otherwise, or an error on
+  /// read failure.
+  llvm::ErrorOr<bool>
+  ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const;
 
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///

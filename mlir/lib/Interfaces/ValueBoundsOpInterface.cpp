@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -14,6 +16,7 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "value-bounds-op-interface"
 
@@ -151,7 +154,7 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
                                         [](Value v) { return Variable(v); })) {}
 
 ValueBoundsConstraintSet::ValueBoundsConstraintSet(
-    MLIRContext *ctx, StopConditionFn stopCondition,
+    MLIRContext *ctx, const StopConditionFn &stopCondition,
     bool addConservativeSemiAffineBounds)
     : builder(ctx), stopCondition(stopCondition),
       addConservativeSemiAffineBounds(addConservativeSemiAffineBounds) {
@@ -193,7 +196,7 @@ void ValueBoundsConstraintSet::addBound(BoundType type, int64_t pos,
     // Even without this bound, there may be enough information in the
     // constraint system to compute the requested bound. In case this bound is
     // actually needed, `computeBound` will return `failure`.
-    LLVM_DEBUG(llvm::dbgs() << "Failed to add bound: " << expr << "\n");
+    LDBG() << "Failed to add bound: " << expr << "\n";
   }
 }
 
@@ -269,11 +272,9 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
   assert(!valueDimToPosition.contains(valueDim) && "already mapped");
   int64_t pos = isSymbol ? cstr.appendVar(VarKind::Symbol)
                          : cstr.appendVar(VarKind::SetDim);
-  LLVM_DEBUG(llvm::dbgs() << "Inserting constraint set column " << pos
-                          << " for: " << value
-                          << " (dim: " << dim.value_or(kIndexValue)
-                          << ", owner: " << getOwnerOfValue(value)->getName()
-                          << ")\n");
+  LDBG() << "Inserting constraint set column " << pos << " for: " << value
+         << " (dim: " << dim.value_or(kIndexValue)
+         << ", owner: " << getOwnerOfValue(value)->getName() << ")";
   positionToValueDim.insert(positionToValueDim.begin() + pos, valueDim);
   // Update reverse mapping.
   for (int64_t i = pos, e = positionToValueDim.size(); i < e; ++i)
@@ -281,8 +282,8 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
       valueDimToPosition[*positionToValueDim[i]] = i;
 
   if (addToWorklist) {
-    LLVM_DEBUG(llvm::dbgs() << "Push to worklist: " << value
-                            << " (dim: " << dim.value_or(kIndexValue) << ")\n");
+    LDBG() << "Push to worklist: " << value
+           << " (dim: " << dim.value_or(kIndexValue) << ")";
     worklist.push(pos);
   }
 
@@ -292,8 +293,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
 int64_t ValueBoundsConstraintSet::insert(bool isSymbol) {
   int64_t pos = isSymbol ? cstr.appendVar(VarKind::Symbol)
                          : cstr.appendVar(VarKind::SetDim);
-  LLVM_DEBUG(llvm::dbgs() << "Inserting anonymous constraint set column " << pos
-                          << "\n");
+  LDBG() << "Inserting anonymous constraint set column " << pos;
   positionToValueDim.insert(positionToValueDim.begin() + pos, std::nullopt);
   // Update reverse mapping.
   for (int64_t i = pos, e = positionToValueDim.size(); i < e; ++i)
@@ -302,7 +302,8 @@ int64_t ValueBoundsConstraintSet::insert(bool isSymbol) {
   return pos;
 }
 
-int64_t ValueBoundsConstraintSet::insert(AffineMap map, ValueDimList operands,
+int64_t ValueBoundsConstraintSet::insert(AffineMap map,
+                                         const ValueDimList &operands,
                                          bool isSymbol) {
   assert(map.getNumResults() == 1 && "expected affine map with one result");
   int64_t pos = insert(isSymbol);
@@ -336,10 +337,9 @@ int64_t ValueBoundsConstraintSet::getPos(Value value,
           cast<BlockArgument>(value).getOwner()->isEntryBlock()) &&
          "unstructured control flow is not supported");
 #endif // NDEBUG
-  LLVM_DEBUG(llvm::dbgs() << "Getting pos for: " << value
-                          << " (dim: " << dim.value_or(kIndexValue)
-                          << ", owner: " << getOwnerOfValue(value)->getName()
-                          << ")\n");
+  LDBG() << "Getting pos for: " << value
+         << " (dim: " << dim.value_or(kIndexValue)
+         << ", owner: " << getOwnerOfValue(value)->getName() << ")";
   auto it =
       valueDimToPosition.find(std::make_pair(value, dim.value_or(kIndexValue)));
   assert(it != valueDimToPosition.end() && "expected mapped entry");
@@ -361,7 +361,7 @@ bool ValueBoundsConstraintSet::isMapped(Value value,
 }
 
 void ValueBoundsConstraintSet::processWorklist() {
-  LLVM_DEBUG(llvm::dbgs() << "Processing value bounds worklist...\n");
+  LDBG() << "Processing value bounds worklist...";
   while (!worklist.empty()) {
     int64_t pos = worklist.front();
     worklist.pop();
@@ -383,8 +383,8 @@ void ValueBoundsConstraintSet::processWorklist() {
     // Do not process any further if the stop condition is met.
     auto maybeDim = dim == kIndexValue ? std::nullopt : std::make_optional(dim);
     if (stopCondition(value, maybeDim, *this)) {
-      LLVM_DEBUG(llvm::dbgs() << "Stop condition met for: " << value
-                              << " (dim: " << maybeDim << ")\n");
+      LDBG() << "Stop condition met for: " << value << " (dim: " << maybeDim
+             << ")";
       continue;
     }
 
@@ -392,9 +392,8 @@ void ValueBoundsConstraintSet::processWorklist() {
     // the worklist.
     auto valueBoundsOp =
         dyn_cast<ValueBoundsOpInterface>(getOwnerOfValue(value));
-    LLVM_DEBUG(llvm::dbgs()
-               << "Query value bounds for: " << value
-               << " (owner: " << getOwnerOfValue(value)->getName() << ")\n");
+    LDBG() << "Query value bounds for: " << value
+           << " (owner: " << getOwnerOfValue(value)->getName() << ")";
     if (valueBoundsOp) {
       if (dim == kIndexValue) {
         valueBoundsOp.populateBoundsForIndexValue(value, *this);
@@ -403,7 +402,7 @@ void ValueBoundsConstraintSet::processWorklist() {
       }
       continue;
     }
-    LLVM_DEBUG(llvm::dbgs() << "--> ValueBoundsOpInterface not implemented\n");
+    LDBG() << "--> ValueBoundsOpInterface not implemented";
 
     // If the op does not implement `ValueBoundsOpInterface`, check if it
     // implements the `DestinationStyleOpInterface`. OpResults of such ops are
@@ -629,7 +628,7 @@ LogicalResult ValueBoundsConstraintSet::computeIndependentBound(
 
 FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
     presburger::BoundType type, const Variable &var,
-    StopConditionFn stopCondition, bool closedUB) {
+    const StopConditionFn &stopCondition, bool closedUB) {
   // Default stop condition if none was specified: Keep adding constraints until
   // a bound could be computed.
   int64_t pos = 0;
@@ -666,7 +665,7 @@ void ValueBoundsConstraintSet::populateConstraints(Value value,
 
 int64_t ValueBoundsConstraintSet::populateConstraints(AffineMap map,
                                                       ValueDimList operands) {
-  int64_t pos = insert(map, operands, /*isSymbol=*/false);
+  int64_t pos = insert(map, std::move(operands), /*isSymbol=*/false);
   // Process the backward slice of `operands` (i.e., reverse use-def chain)
   // until `stopCondition` is met.
   processWorklist();
@@ -702,9 +701,7 @@ bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
 
   // We cannot prove anything if the constraint set is already empty.
   if (cstr.isEmpty()) {
-    LLVM_DEBUG(
-        llvm::dbgs()
-        << "cannot compare value/dims: constraint system is already empty");
+    LDBG() << "cannot compare value/dims: constraint system is already empty";
     return false;
   }
 
@@ -813,7 +810,7 @@ FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,
       return false;
     // Keep processing as long as the strong relation cannot be proven.
     FailureOr<bool> ordered = cstr.strongComparePos(lhsPos, cmp, rhsPos);
-    return failed(ordered) ? true : false;
+    return failed(ordered);
   };
   ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
   lhsPos = cstr.populateConstraints(lhs.map, lhs.mapOperands);
@@ -826,10 +823,9 @@ FailureOr<bool> ValueBoundsConstraintSet::areEqual(const Variable &var1,
   return strongCompare(var1, ComparisonOperator::EQ, var2);
 }
 
-FailureOr<bool>
-ValueBoundsConstraintSet::areOverlappingSlices(MLIRContext *ctx,
-                                               HyperrectangularSlice slice1,
-                                               HyperrectangularSlice slice2) {
+FailureOr<bool> ValueBoundsConstraintSet::areOverlappingSlices(
+    MLIRContext *ctx, const HyperrectangularSlice &slice1,
+    const HyperrectangularSlice &slice2) {
   assert(slice1.getMixedOffsets().size() == slice2.getMixedOffsets().size() &&
          "expected slices of same rank");
   assert(slice1.getMixedSizes().size() == slice2.getMixedSizes().size() &&
@@ -891,10 +887,9 @@ ValueBoundsConstraintSet::areOverlappingSlices(MLIRContext *ctx,
   return true;
 }
 
-FailureOr<bool>
-ValueBoundsConstraintSet::areEquivalentSlices(MLIRContext *ctx,
-                                              HyperrectangularSlice slice1,
-                                              HyperrectangularSlice slice2) {
+FailureOr<bool> ValueBoundsConstraintSet::areEquivalentSlices(
+    MLIRContext *ctx, const HyperrectangularSlice &slice1,
+    const HyperrectangularSlice &slice2) {
   assert(slice1.getMixedOffsets().size() == slice2.getMixedOffsets().size() &&
          "expected slices of same rank");
   assert(slice1.getMixedSizes().size() == slice2.getMixedSizes().size() &&

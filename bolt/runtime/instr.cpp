@@ -214,7 +214,7 @@ private:
 /// __bolt_instr_setup, our initialization routine.
 BumpPtrAllocator *GlobalAlloc;
 
-// Base address which we substract from recorded PC values when searching for
+// Base address which we subtract from recorded PC values when searching for
 // indirect call description entries. Needed because indCall descriptions are
 // mapped read-only and contain static addresses. Initialized in
 // __bolt_instr_setup.
@@ -261,7 +261,7 @@ struct SimpleHashTableEntryBase {
     // Currently we have to do it the ugly way because
     // we want every message to be printed atomically via a single call to
     // __write. If we use reportNumber() and others nultiple times, we'll get
-    // garbage in mulithreaded environment
+    // garbage in multithreaded environment
     char Buf[BufSize];
     char *Ptr = Buf;
     Ptr = intToStr(Ptr, __getpid(), 10);
@@ -672,14 +672,15 @@ bool parseAddressRange(const char *Str, uint64_t &StartAddress,
   return true;
 }
 
+static constexpr uint32_t NameMax = 4096;
+static char TargetPath[NameMax] = {};
+
 /// Get full path to the real binary by getting current virtual address
 /// and searching for the appropriate link in address range in
 /// /proc/self/map_files
 static char *getBinaryPath() {
   const uint32_t BufSize = 1024;
-  const uint32_t NameMax = 4096;
   const char DirPath[] = "/proc/self/map_files/";
-  static char TargetPath[NameMax] = {};
   char Buf[BufSize];
 
   if (__bolt_instr_binpath[0] != '\0')
@@ -713,28 +714,39 @@ static char *getBinaryPath() {
       uint32_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
       assert(Ret != -1 && Ret != BufSize, "readlink error");
       TargetPath[Ret] = '\0';
+      __close(FDdir);
       return TargetPath;
     }
   }
+  __close(FDdir);
   return nullptr;
 }
 
-ProfileWriterContext readDescriptions() {
+ProfileWriterContext readDescriptions(const uint8_t *BinContents,
+                                      uint64_t Size) {
   ProfileWriterContext Result;
-  const char *BinPath = getBinaryPath();
-  assert(BinPath && BinPath[0] != '\0', "failed to find binary path");
 
-  uint64_t FD = __open(BinPath, O_RDONLY,
-                       /*mode=*/0666);
-  assert(static_cast<int64_t>(FD) >= 0, "failed to open binary path");
+  assert((BinContents == nullptr) == (Size == 0),
+         "either empty or valid library content buffer");
 
-  Result.FileDesc = FD;
+  if (BinContents) {
+    Result.FileDesc = -1;
+  } else {
+    const char *BinPath = getBinaryPath();
+    assert(BinPath && BinPath[0] != '\0', "failed to find binary path");
 
-  // mmap our binary to memory
-  uint64_t Size = __lseek(FD, 0, SEEK_END);
-  const uint8_t *BinContents = reinterpret_cast<uint8_t *>(
-      __mmap(0, Size, PROT_READ, MAP_PRIVATE, FD, 0));
-  assert(BinContents != MAP_FAILED, "readDescriptions: Failed to mmap self!");
+    uint64_t FD = __open(BinPath, O_RDONLY,
+                         /*mode=*/0666);
+    assert(static_cast<int64_t>(FD) >= 0, "failed to open binary path");
+
+    Result.FileDesc = FD;
+
+    // mmap our binary to memory
+    Size = __lseek(FD, 0, SEEK_END);
+    BinContents = reinterpret_cast<uint8_t *>(
+        __mmap(0, Size, PROT_READ, MAP_PRIVATE, FD, 0));
+    assert(BinContents != MAP_FAILED, "readDescriptions: Failed to mmap self!");
+  }
   Result.MMapPtr = BinContents;
   Result.MMapSize = Size;
   const Elf64_Ehdr *Hdr = reinterpret_cast<const Elf64_Ehdr *>(BinContents);
@@ -1509,7 +1521,7 @@ extern "C" void __bolt_instr_clear_counters() {
 }
 
 /// This is the entry point for profile writing.
-/// There are three ways of getting here:
+/// There are four ways of getting here:
 ///
 ///  * Program execution ended, finalization methods are running and BOLT
 ///    hooked into FINI from your binary dynamic section;
@@ -1518,9 +1530,18 @@ extern "C" void __bolt_instr_clear_counters() {
 ///  * BOLT prints this function address so you can attach a debugger and
 ///    call this function directly to get your profile written to disk
 ///    on demand.
+///  * Application can, at interesting runtime point, iterate through all
+///    the loaded native libraries and for each call dlopen() and dlsym()
+///    to get a pointer to this function and call through the acquired
+///    function pointer to dump profile data.
 ///
 extern "C" void __attribute((force_align_arg_pointer))
-__bolt_instr_data_dump(int FD) {
+__bolt_instr_data_dump(int FD, const char *LibPath = nullptr,
+                       const uint8_t *LibContents = nullptr,
+                       uint64_t LibSize = 0) {
+  if (LibPath)
+    strCopy(TargetPath, LibPath, NameMax);
+
   // Already dumping
   if (!GlobalWriteProfileMutex->acquire())
     return;
@@ -1531,7 +1552,7 @@ __bolt_instr_data_dump(int FD) {
   assert(ret == 0, "Failed to ftruncate!");
   BumpPtrAllocator HashAlloc;
   HashAlloc.setMaxSize(0x6400000);
-  ProfileWriterContext Ctx = readDescriptions();
+  ProfileWriterContext Ctx = readDescriptions(LibContents, LibSize);
   Ctx.CallFlowTable = new (HashAlloc, 0) CallFlowHashTable(HashAlloc);
 
   DEBUG(printStats(Ctx));
@@ -1551,8 +1572,10 @@ __bolt_instr_data_dump(int FD) {
   Ctx.CallFlowTable->forEachElement(visitCallFlowEntry, FD, &Ctx);
 
   __fsync(FD);
-  __munmap((void *)Ctx.MMapPtr, Ctx.MMapSize);
-  __close(Ctx.FileDesc);
+  if (Ctx.FileDesc != -1) {
+    __munmap((void *)Ctx.MMapPtr, Ctx.MMapSize);
+    __close(Ctx.FileDesc);
+  }
   HashAlloc.destroy();
   GlobalWriteProfileMutex->release();
   DEBUG(report("Finished writing profile.\n"));
@@ -1562,7 +1585,7 @@ __bolt_instr_data_dump(int FD) {
 /// at user-specified intervals
 void watchProcess() {
   timespec ts, rem;
-  uint64_t Ellapsed = 0ull;
+  uint64_t Elapsed = 0ull;
   int FD = openProfile();
   uint64_t ppid;
   if (__bolt_instr_wait_forks) {
@@ -1592,10 +1615,10 @@ void watchProcess() {
       break;
     }
 
-    if (++Ellapsed < __bolt_instr_sleep_time)
+    if (++Elapsed < __bolt_instr_sleep_time)
       continue;
 
-    Ellapsed = 0;
+    Elapsed = 0;
     __bolt_instr_data_dump(FD);
     if (__bolt_instr_no_counters_clear == false)
       __bolt_instr_clear_counters();

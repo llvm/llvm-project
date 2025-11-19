@@ -603,8 +603,8 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
     bool SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
         StreamingBuiltinGuard, CallerFeatures);
 
-    if ((SatisfiesSVE && SatisfiesSME) ||
-        (SatisfiesSVE && FnType == SemaARM::ArmStreamingCompatible))
+    if (SatisfiesSVE && SatisfiesSME)
+      // Function type is irrelevant for streaming-agnostic builtins.
       return false;
     else if (SatisfiesSVE)
       BuiltinType = SemaARM::ArmNonStreaming;
@@ -846,12 +846,14 @@ bool SemaARM::CheckARMCoprocessorImmediate(const TargetInfo &TI,
   return false;
 }
 
-bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
-                                           CallExpr *TheCall,
-                                           unsigned MaxWidth) {
+bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
+                                           unsigned BuiltinID,
+                                           CallExpr *TheCall) {
   assert((BuiltinID == ARM::BI__builtin_arm_ldrex ||
+          BuiltinID == ARM::BI__builtin_arm_ldrexd ||
           BuiltinID == ARM::BI__builtin_arm_ldaex ||
           BuiltinID == ARM::BI__builtin_arm_strex ||
+          BuiltinID == ARM::BI__builtin_arm_strexd ||
           BuiltinID == ARM::BI__builtin_arm_stlex ||
           BuiltinID == AArch64::BI__builtin_arm_ldrex ||
           BuiltinID == AArch64::BI__builtin_arm_ldaex ||
@@ -859,9 +861,12 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
           BuiltinID == AArch64::BI__builtin_arm_stlex) &&
          "unexpected ARM builtin");
   bool IsLdrex = BuiltinID == ARM::BI__builtin_arm_ldrex ||
+                 BuiltinID == ARM::BI__builtin_arm_ldrexd ||
                  BuiltinID == ARM::BI__builtin_arm_ldaex ||
                  BuiltinID == AArch64::BI__builtin_arm_ldrex ||
                  BuiltinID == AArch64::BI__builtin_arm_ldaex;
+  bool IsDoubleWord = BuiltinID == ARM::BI__builtin_arm_ldrexd ||
+                      BuiltinID == ARM::BI__builtin_arm_strexd;
 
   ASTContext &Context = getASTContext();
   DeclRefExpr *DRE =
@@ -923,12 +928,64 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
     return true;
   }
 
-  // But ARM doesn't have instructions to deal with 128-bit versions.
-  if (Context.getTypeSize(ValType) > MaxWidth) {
-    assert(MaxWidth == 64 && "Diagnostic unexpectedly inaccurate");
-    Diag(DRE->getBeginLoc(), diag::err_atomic_exclusive_builtin_pointer_size)
-        << PointerArg->getType() << PointerArg->getSourceRange();
-    return true;
+  // Check whether the size of the type can be handled atomically on this
+  // target.
+  if (!TI.getTriple().isAArch64()) {
+    unsigned Mask = TI.getARMLDREXMask();
+    unsigned Bits = Context.getTypeSize(ValType);
+    if (IsDoubleWord) {
+      // Explicit request for ldrexd/strexd means only double word sizes
+      // supported if the target supports them.
+      Mask &= TargetInfo::ARM_LDREX_D;
+    }
+    bool Supported =
+        (llvm::isPowerOf2_64(Bits)) && Bits >= 8 && (Mask & (Bits / 8));
+
+    if (!Supported) {
+      // Emit a diagnostic saying that this size isn't available. If _no_ size
+      // of exclusive access is supported on this target, we emit a diagnostic
+      // with special wording for that case, but otherwise, we emit
+      // err_atomic_exclusive_builtin_pointer_size and loop over `Mask` to
+      // control what subset of sizes it lists as legal.
+      if (Mask) {
+        auto D = Diag(DRE->getBeginLoc(),
+                      diag::err_atomic_exclusive_builtin_pointer_size)
+                 << PointerArg->getType();
+        bool Started = false;
+        for (unsigned Size = 1; Size <= 8; Size <<= 1) {
+          // For each of the sizes 1,2,4,8, pass two integers into the
+          // diagnostic. The first selects a separator from the previous
+          // number: 0 for no separator at all, 1 for a comma, 2 for " or "
+          // which appears before the final number in a list of more than one.
+          // The second integer just indicates whether we print this size in
+          // the message at all.
+          if (!(Mask & Size)) {
+            // This size isn't one of the supported ones, so emit no separator
+            // text and don't print the size itself.
+            D << 0 << 0;
+          } else {
+            // This size is supported, so print it, and an appropriate
+            // separator.
+            Mask &= ~Size;
+            if (!Started)
+              D << 0; // No separator if this is the first size we've printed
+            else if (Mask)
+              D << 1; // "," if there's still another size to come
+            else
+              D << 2; // " or " if the size we're about to print is the last
+            D << 1;   // print the size itself
+            Started = true;
+          }
+        }
+      } else {
+        bool EmitDoubleWordDiagnostic =
+            IsDoubleWord && !Mask && TI.getARMLDREXMask();
+        Diag(DRE->getBeginLoc(),
+             diag::err_atomic_exclusive_builtin_pointer_size_none)
+            << (EmitDoubleWordDiagnostic ? 1 : 0)
+            << PointerArg->getSourceRange();
+      }
+    }
   }
 
   switch (ValType.getObjCLifetime()) {
@@ -969,10 +1026,12 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
                                           unsigned BuiltinID,
                                           CallExpr *TheCall) {
   if (BuiltinID == ARM::BI__builtin_arm_ldrex ||
+      BuiltinID == ARM::BI__builtin_arm_ldrexd ||
       BuiltinID == ARM::BI__builtin_arm_ldaex ||
       BuiltinID == ARM::BI__builtin_arm_strex ||
+      BuiltinID == ARM::BI__builtin_arm_strexd ||
       BuiltinID == ARM::BI__builtin_arm_stlex) {
-    return CheckARMBuiltinExclusiveCall(BuiltinID, TheCall, 64);
+    return CheckARMBuiltinExclusiveCall(TI, BuiltinID, TheCall);
   }
 
   if (BuiltinID == ARM::BI__builtin_arm_prefetch) {
@@ -1053,7 +1112,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
       BuiltinID == AArch64::BI__builtin_arm_ldaex ||
       BuiltinID == AArch64::BI__builtin_arm_strex ||
       BuiltinID == AArch64::BI__builtin_arm_stlex) {
-    return CheckARMBuiltinExclusiveCall(BuiltinID, TheCall, 128);
+    return CheckARMBuiltinExclusiveCall(TI, BuiltinID, TheCall);
   }
 
   if (BuiltinID == AArch64::BI__builtin_arm_prefetch) {
@@ -1124,7 +1183,6 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
     l = 0;
     u = 15;
     break;
-  case AArch64::BI__builtin_arm_tcancel: l = 0; u = 65535; break;
   }
 
   return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
@@ -1533,6 +1591,97 @@ bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
 
   return IsLaxCompatible(FirstType, SecondType) ||
          IsLaxCompatible(SecondType, FirstType);
+}
+
+bool SemaARM::checkTargetVersionAttr(const StringRef Param,
+                                     const SourceLocation Loc) {
+  using namespace DiagAttrParams;
+
+  llvm::SmallVector<StringRef, 8> Features;
+  Param.split(Features, '+');
+  for (StringRef Feat : Features) {
+    Feat = Feat.trim();
+    if (Feat == "default")
+      continue;
+    if (!getASTContext().getTargetInfo().validateCpuSupports(Feat))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << Feat << TargetVersion;
+  }
+  return false;
+}
+
+bool SemaARM::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
+  if (!getASTContext().getTargetInfo().hasFeature("fmv"))
+    return true;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  bool HasDefault = false;
+  bool HasNonDefault = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    if (Param.empty())
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Param == "default") {
+      if (HasDefault)
+        Diag(Loc, diag::warn_target_clone_duplicate_options);
+      else {
+        NewParams.push_back(Param);
+        HasDefault = true;
+      }
+      continue;
+    }
+
+    bool HasCodeGenImpact = false;
+    llvm::SmallVector<StringRef, 8> Features;
+    llvm::SmallVector<StringRef, 8> ValidFeatures;
+    Param.split(Features, '+');
+    for (StringRef Feat : Features) {
+      Feat = Feat.trim();
+      if (!getASTContext().getTargetInfo().validateCpuSupports(Feat)) {
+        Diag(Loc, diag::warn_unsupported_target_attribute)
+            << Unsupported << None << Feat << TargetClones;
+        continue;
+      }
+      if (getASTContext().getTargetInfo().doesFeatureAffectCodeGen(Feat))
+        HasCodeGenImpact = true;
+      ValidFeatures.push_back(Feat);
+    }
+
+    // Ignore features that don't impact code generation.
+    if (!HasCodeGenImpact) {
+      Diag(Loc, diag::warn_target_clone_no_impact_options);
+      continue;
+    }
+
+    if (ValidFeatures.empty())
+      continue;
+
+    // Canonicalize attribute parameter.
+    llvm::sort(ValidFeatures);
+    SmallString<64> NewParam(llvm::join(ValidFeatures, "+"));
+    if (llvm::is_contained(NewParams, NewParam)) {
+      Diag(Loc, diag::warn_target_clone_duplicate_options);
+      continue;
+    }
+
+    // Valid non-default argument.
+    NewParams.push_back(NewParam);
+    HasNonDefault = true;
+  }
+  if (!HasNonDefault)
+    return true;
+
+  return false;
 }
 
 } // namespace clang

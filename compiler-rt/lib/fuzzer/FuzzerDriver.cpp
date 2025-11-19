@@ -163,13 +163,13 @@ static bool ParseOneFlag(const char *Param) {
         auto Val = MyStol(Str);
         *FlagDescriptions[F].IntFlag = static_cast<int>(Val);
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %d\n", Name, Val);
+          Printf("Flag: %s %d\n", Name, (int)Val);
         return true;
       } else if (FlagDescriptions[F].UIntFlag) {
         auto Val = std::stoul(Str);
         *FlagDescriptions[F].UIntFlag = static_cast<unsigned int>(Val);
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %u\n", Name, Val);
+          Printf("Flag: %s %u\n", Name, (uint32_t)Val);
         return true;
       } else if (FlagDescriptions[F].StrFlag) {
         *FlagDescriptions[F].StrFlag = Str;
@@ -306,6 +306,11 @@ static int RunInMultipleProcesses(const std::vector<std::string> &Args,
   return HasErrors ? 1 : 0;
 }
 
+void StartRssThread(Fuzzer *F, size_t RssLimitMb);
+
+// Fuchsia needs to do some book checking before starting the RssThread,
+// so it has its own implementation.
+#if !LIBFUZZER_FUCHSIA
 static void RssThread(Fuzzer *F, size_t RssLimitMb) {
   while (true) {
     SleepSeconds(1);
@@ -315,12 +320,13 @@ static void RssThread(Fuzzer *F, size_t RssLimitMb) {
   }
 }
 
-static void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
+void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
   if (!RssLimitMb)
     return;
   std::thread T(RssThread, F, RssLimitMb);
   T.detach();
 }
+#endif
 
 int RunOneTest(Fuzzer *F, const char *InputFilePath, size_t MaxLen) {
   Unit U = FileToVector(InputFilePath);
@@ -603,7 +609,7 @@ int AnalyzeDictionary(Fuzzer *F, const std::vector<Unit> &Dict,
   return 0;
 }
 
-std::vector<std::string> ParseSeedInuts(const char *seed_inputs) {
+std::vector<std::string> ParseSeedInputs(const char *seed_inputs) {
   // Parse -seed_inputs=file1,file2,... or -seed_inputs=@seed_inputs_file
   std::vector<std::string> Files;
   if (!seed_inputs) return Files;
@@ -834,6 +840,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.HandleInt = Flags.handle_int;
   Options.HandleSegv = Flags.handle_segv;
   Options.HandleTerm = Flags.handle_term;
+  Options.HandleTrap = Flags.handle_trap;
   Options.HandleXfsz = Flags.handle_xfsz;
   Options.HandleUsr1 = Flags.handle_usr1;
   Options.HandleUsr2 = Flags.handle_usr2;
@@ -912,7 +919,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  auto CorporaFiles = ReadCorpora(*Inputs, ParseSeedInuts(Flags.seed_inputs));
+  auto CorporaFiles = ReadCorpora(*Inputs, ParseSeedInputs(Flags.seed_inputs));
   F->Loop(CorporaFiles);
 
   if (Flags.verbosity)

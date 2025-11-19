@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
+#include <array>
 
 namespace llvm {
 
@@ -29,43 +30,68 @@ class raw_ostream;
 class SlotIndex;
 
 struct GCNRegPressure {
-  enum RegKind { SGPR, VGPR, AGPR, TOTAL_KINDS };
+  enum RegKind { SGPR, VGPR, AGPR, AVGPR, TOTAL_KINDS };
+
+  static constexpr const char *getName(RegKind Kind) {
+    const char *Names[] = {"SGPR", "VGPR", "AGPR", "AVGPR"};
+    assert(Kind < TOTAL_KINDS);
+    return Names[Kind];
+  }
 
   GCNRegPressure() {
     clear();
   }
 
-  bool empty() const { return !Value[SGPR] && !Value[VGPR] && !Value[AGPR]; }
+  bool empty() const {
+    return !Value[SGPR] && !Value[VGPR] && !Value[AGPR] && !Value[AVGPR];
+  }
 
-  void clear() { std::fill(&Value[0], &Value[ValueArraySize], 0); }
+  void clear() { Value.fill(0); }
+
+  unsigned getNumRegs(RegKind Kind) const {
+    assert(Kind < TOTAL_KINDS);
+    return Value[Kind];
+  }
 
   /// \returns the SGPR32 pressure
   unsigned getSGPRNum() const { return Value[SGPR]; }
-  /// \returns the aggregated ArchVGPR32, AccVGPR32 pressure dependent upon \p
-  /// UnifiedVGPRFile
+  /// \returns the aggregated ArchVGPR32, AccVGPR32, and Pseudo AVGPR pressure
+  /// dependent upon \p UnifiedVGPRFile
   unsigned getVGPRNum(bool UnifiedVGPRFile) const {
     if (UnifiedVGPRFile) {
-      return Value[AGPR] ? getUnifiedVGPRNum(Value[VGPR], Value[AGPR])
-                         : Value[VGPR];
+      return Value[AGPR]
+                 ? getUnifiedVGPRNum(Value[VGPR], Value[AGPR], Value[AVGPR])
+                 : Value[VGPR] + Value[AVGPR];
     }
-    return std::max(Value[VGPR], Value[AGPR]);
+    // AVGPR assignment priority is based on the width of the register. Account
+    // AVGPR pressure as VGPR.
+    return std::max(Value[VGPR] + Value[AVGPR], Value[AGPR]);
   }
 
   /// Returns the aggregated VGPR pressure, assuming \p NumArchVGPRs ArchVGPRs
-  /// and \p NumAGPRs AGPRS, for a target with a unified VGPR file.
+  /// \p NumAGPRs AGPRS, and \p NumAVGPRs AVGPRs for a target with a unified
+  /// VGPR file.
   inline static unsigned getUnifiedVGPRNum(unsigned NumArchVGPRs,
-                                           unsigned NumAGPRs) {
-    return alignTo(NumArchVGPRs, AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
+                                           unsigned NumAGPRs,
+                                           unsigned NumAVGPRs) {
+
+    // Assume AVGPRs will be assigned as VGPRs.
+    return alignTo(NumArchVGPRs + NumAVGPRs,
+                   AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
            NumAGPRs;
   }
 
-  /// \returns the ArchVGPR32 pressure
-  unsigned getArchVGPRNum() const { return Value[VGPR]; }
+  /// \returns the ArchVGPR32 pressure, plus the AVGPRS which we assume will be
+  /// allocated as VGPR
+  unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR]; }
+  /// \returns the AVGPR32 pressure
+  unsigned getAVGPRNum() const { return Value[AVGPR]; }
 
   unsigned getVGPRTuplesWeight() const {
-    return std::max(Value[TOTAL_KINDS + VGPR], Value[TOTAL_KINDS + AGPR]);
+    return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
+                    Value[TOTAL_KINDS + AGPR]);
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
 
@@ -102,9 +128,7 @@ struct GCNRegPressure {
   bool less(const MachineFunction &MF, const GCNRegPressure &O,
             unsigned MaxOccupancy = std::numeric_limits<unsigned>::max()) const;
 
-  bool operator==(const GCNRegPressure &O) const {
-    return std::equal(&Value[0], &Value[ValueArraySize], O.Value);
-  }
+  bool operator==(const GCNRegPressure &O) const { return Value == O.Value; }
 
   bool operator!=(const GCNRegPressure &O) const {
     return !(*this == O);
@@ -124,12 +148,18 @@ struct GCNRegPressure {
 
   void dump() const;
 
+  static RegKind getRegKind(unsigned Reg, const MachineRegisterInfo &MRI) {
+    const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+    const SIRegisterInfo *STI = static_cast<const SIRegisterInfo *>(TRI);
+    return (RegKind)getRegKind(MRI.getRegClass(Reg), STI);
+  }
+
 private:
   static constexpr unsigned ValueArraySize = TOTAL_KINDS * 2;
 
   /// Pressure for all register kinds (first all regular registers kinds, then
   /// all tuple register kinds).
-  unsigned Value[ValueArraySize];
+  std::array<unsigned, ValueArraySize> Value;
 
   static unsigned getRegKind(const TargetRegisterClass *RC,
                              const SIRegisterInfo *STI);
@@ -172,20 +202,22 @@ public:
   /// Sets up the target such that the register pressure starting at \p RP does
   /// not show register spilling on function \p MF (w.r.t. the function's
   /// mininum target occupancy).
-  GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP,
-              bool CombineVGPRSavings = false);
+  GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP);
 
   /// Sets up the target such that the register pressure starting at \p RP does
   /// not use more than \p NumSGPRs SGPRs and \p NumVGPRs VGPRs on function \p
   /// MF.
   GCNRPTarget(unsigned NumSGPRs, unsigned NumVGPRs, const MachineFunction &MF,
-              const GCNRegPressure &RP, bool CombineVGPRSavings = false);
+              const GCNRegPressure &RP);
 
   /// Sets up the target such that the register pressure starting at \p RP does
   /// not prevent achieving an occupancy of at least \p Occupancy on function
   /// \p MF.
   GCNRPTarget(unsigned Occupancy, const MachineFunction &MF,
-              const GCNRegPressure &RP, bool CombineVGPRSavings = false);
+              const GCNRegPressure &RP);
+
+  /// Changes the target (same semantics as constructor).
+  void setTarget(unsigned NumSGPRs, unsigned NumVGPRs);
 
   const GCNRegPressure &getCurrentRP() const { return RP; }
 
@@ -193,7 +225,7 @@ public:
 
   /// Determines whether saving virtual register \p Reg will be beneficial
   /// towards achieving the RP target.
-  bool isSaveBeneficial(Register Reg, const MachineRegisterInfo &MRI) const;
+  bool isSaveBeneficial(Register Reg) const;
 
   /// Saves virtual register \p Reg with lanemask \p Mask.
   void saveReg(Register Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI) {
@@ -213,15 +245,15 @@ public:
     if (Target.MaxUnifiedVGPRs) {
       OS << ", " << Target.RP.getVGPRNum(true) << '/' << Target.MaxUnifiedVGPRs
          << " VGPRs (unified)";
-    } else if (Target.CombineVGPRSavings) {
-      OS << ", " << Target.RP.getArchVGPRNum() + Target.RP.getAGPRNum() << '/'
-         << 2 * Target.MaxVGPRs << " VGPRs (combined target)";
     }
     return OS;
   }
 #endif
 
 private:
+  const MachineFunction &MF;
+  const bool UnifiedRF;
+
   /// Current register pressure.
   GCNRegPressure RP;
 
@@ -232,29 +264,10 @@ private:
   /// Target number of overall VGPRs for subtargets with unified RFs. Always 0
   /// for subtargets with non-unified RFs.
   unsigned MaxUnifiedVGPRs;
-  /// Whether we consider that the register allocator will be able to swap
-  /// between ArchVGPRs and AGPRs by copying them to a super register class.
-  /// Concretely, this allows savings in one of the VGPR banks to help toward
-  /// savings in the other VGPR bank.
-  bool CombineVGPRSavings;
 
-  inline bool satisifiesVGPRBanksTarget() const {
-    assert(CombineVGPRSavings && "only makes sense with combined savings");
-    return RP.getArchVGPRNum() + RP.getAGPRNum() <= 2 * MaxVGPRs;
-  }
-
-  /// Always satisified when the subtarget doesn't have a unified RF.
-  inline bool satisfiesUnifiedTarget() const {
-    return !MaxUnifiedVGPRs || RP.getVGPRNum(true) <= MaxUnifiedVGPRs;
-  }
-
-  inline bool isVGPRBankSaveBeneficial(unsigned NumVGPRs) const {
-    return NumVGPRs > MaxVGPRs || !satisfiesUnifiedTarget() ||
-           (CombineVGPRSavings && !satisifiesVGPRBanksTarget());
-  }
-
-  void setRegLimits(unsigned MaxSGPRs, unsigned MaxVGPRs,
-                    const MachineFunction &MF);
+  GCNRPTarget(const GCNRegPressure &RP, const MachineFunction &MF)
+      : MF(MF), UnifiedRF(MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()),
+        RP(RP) {}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -279,7 +292,7 @@ protected:
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
   void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
 
-  LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
+  LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
   // reset tracker and set live register set to the specified value.
@@ -297,8 +310,10 @@ public:
   }
 };
 
-GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
-                                     const MachineRegisterInfo &MRI);
+GCNRPTracker::LiveRegSet
+getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
+            const MachineRegisterInfo &MRI,
+            GCNRegPressure::RegKind RegKind = GCNRegPressure::TOTAL_KINDS);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
@@ -316,8 +331,8 @@ public:
 
   /// reset tracker to the end of the \p MBB.
   void reset(const MachineBasicBlock &MBB) {
-    reset(MBB.getParent()->getRegInfo(),
-          LIS.getSlotIndexes()->getMBBEndIdx(&MBB));
+    SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
+    reset(MBB.getParent()->getRegInfo(), MBBLastSlot);
   }
 
   /// reset tracker to the point just after \p MI (in program order).
@@ -431,9 +446,6 @@ LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
                             const MachineRegisterInfo &MRI,
                             LaneBitmask LaneMaskFilter = LaneBitmask::getAll());
 
-GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
-                                     const MachineRegisterInfo &MRI);
-
 /// creates a map MachineInstr -> LiveRegSet
 /// R - range of iterators on instructions
 /// After - upon entry or exit of every instruction
@@ -451,7 +463,7 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   }
   llvm::sort(Indexes);
 
-  auto &MRI = (*R.begin())->getParent()->getParent()->getRegInfo();
+  auto &MRI = (*R.begin())->getMF()->getRegInfo();
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> LiveRegMap;
   SmallVector<SlotIndex, 32> LiveIdxs, SRLiveIdxs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
@@ -481,13 +493,13 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
 inline GCNRPTracker::LiveRegSet getLiveRegsAfter(const MachineInstr &MI,
                                                  const LiveIntervals &LIS) {
   return getLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
-                     MI.getParent()->getParent()->getRegInfo());
+                     MI.getMF()->getRegInfo());
 }
 
 inline GCNRPTracker::LiveRegSet getLiveRegsBefore(const MachineInstr &MI,
                                                   const LiveIntervals &LIS) {
   return getLiveRegs(LIS.getInstructionIndex(MI).getBaseIndex(), LIS,
-                     MI.getParent()->getParent()->getRegInfo());
+                     MI.getMF()->getRegInfo());
 }
 
 template <typename Range>
@@ -526,6 +538,11 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
+
+LLVM_ABI void dumpMaxRegPressure(MachineFunction &MF,
+                                 GCNRegPressure::RegKind Kind,
+                                 LiveIntervals &LIS,
+                                 const MachineLoopInfo *MLI);
 
 } // end namespace llvm
 

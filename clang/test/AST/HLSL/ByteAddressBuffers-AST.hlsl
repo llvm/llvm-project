@@ -34,7 +34,7 @@ RESOURCE Buffer;
 
 #endif
 
-// CHECK: CXXRecordDecl {{.*}} implicit referenced <undeserialized declarations> class [[RESOURCE]] definition
+// CHECK: CXXRecordDecl {{.*}} implicit referenced class [[RESOURCE]] definition
 // CHECK: FinalAttr {{.*}}  Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
@@ -56,53 +56,105 @@ RESOURCE Buffer;
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-NEXT: AlwaysInlineAttr
 
-// Constructor from binding
+// Copy constructor
 
-// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]] 'void (unsigned int, unsigned int, int, unsigned int, const char *)' inline
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]] 'void (const hlsl::[[RESOURCE]] &)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::[[RESOURCE]] &'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]' ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]] &'
+// CHECK-NEXT: AlwaysInlineAttr
+
+// operator=
+
+// CHECK: CXXMethodDecl {{.*}} operator= 'hlsl::[[RESOURCE]] &(const hlsl::[[RESOURCE]] &)'
+// CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::[[RESOURCE]] &'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]' ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]] &'
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: AlwaysInlineAttr
+
+// Static __createFromBinding method
+
+// CHECK: CXXMethodDecl {{.*}} __createFromBinding 'hlsl::[[RESOURCE]] (unsigned int, unsigned int, int, unsigned int, const char *)' static
 // CHECK-NEXT: ParmVarDecl {{.*}} registerNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
 // CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} name 'const char *'
-// CHECK-NEXT: CompoundStmt {{.*}}
-// CHECK-NEXT: BinaryOperator {{.*}} '='
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} tmp 'hlsl::[[RESOURCE]]'
+// CHECK-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
+// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'registerNo' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
-// CHECK-NEXT: AlwaysInlineAttr
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::[[RESOURCE]]' 'void (const hlsl::[[RESOURCE]] &)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::[[RESOURCE]]' xvalue <NoOp>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
+// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// Constructor from implicit binding
+// Static __createFromImplicitBinding method
 
-// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]] 'void (unsigned int, int, unsigned int, unsigned int, const char *)' inline
+// CHECK: CXXMethodDecl {{.*}} __createFromImplicitBinding 'hlsl::[[RESOURCE]] (unsigned int, unsigned int, int, unsigned int, const char *)' static
+// CHECK-NEXT: ParmVarDecl {{.*}} orderId 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
 // CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} orderId 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} name 'const char *'
 // CHECK-NEXT: CompoundStmt {{.*}}
-// CHECK-NEXT: BinaryOperator {{.*}} '='
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: DeclStmt {{.*}}
+// CHECK-NEXT: VarDecl {{.*}} tmp 'hlsl::[[RESOURCE]]'
+// CHECK-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t {{.*}}]]' '='
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
+// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
-// CHECK-NEXT: AlwaysInlineAttr
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::[[RESOURCE]]' 'void (const hlsl::[[RESOURCE]] &)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::[[RESOURCE]]' xvalue <NoOp>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
+// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
-// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'element_type &(unsigned int)'
+// GetDimensions method
+
+// CHECK-NEXT: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
+// CHECK-NEXT: ParmVarDecl {{.*}} dim 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: CallExpr {{.*}} 'void'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_x' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle {{.*}}
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'dim' 'unsigned int &__restrict'
+// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
+// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'const char8_t &(unsigned int) const'
+// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'char8_t &(unsigned int)'

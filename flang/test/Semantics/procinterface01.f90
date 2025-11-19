@@ -159,35 +159,35 @@ character*1 function tan(x)
  tan = "?"
 end function tan
 
-!DEF: /main MainProgram
-program main
+!DEF: /MAIN MainProgram
+program MAIN
  !REF: /module1
  use :: module1
- !DEF: /main/derived1 Use
- !DEF: /main/instance ObjectEntity TYPE(derived1)
+ !DEF: /MAIN/derived1 Use
+ !DEF: /MAIN/instance ObjectEntity TYPE(derived1)
  type(derived1) :: instance
- !REF: /main/instance
+ !REF: /MAIN/instance
  !REF: /module1/derived1/p1
  if (instance%p1(1.)/=2.) print *, "p1 failed"
- !REF: /main/instance
+ !REF: /MAIN/instance
  !REF: /module1/derived1/p2
  if (instance%p2(1.)/=2.) print *, "p2 failed"
- !REF: /main/instance
+ !REF: /MAIN/instance
  !REF: /module1/derived1/p3
  if (.not.instance%p3(1.)) print *, "p3 failed"
- !REF: /main/instance
+ !REF: /MAIN/instance
  !REF: /module1/derived1/p4
  if (.not.instance%p4(1.)) print *, "p4 failed"
- !REF: /main/instance
+ !REF: /MAIN/instance
  !REF: /module1/derived1/p5
  if (instance%p5(1.)/=(5.,6.)) print *, "p5 failed"
- !REF: /main/instance
+ !REF: /MAIN/instance
  !REF: /module1/derived1/p6
  if (instance%p6(1.)/=2.) print *, "p6 failed"
- !REF: /main/instance
+ !REF: /MAIN/instance
  !REF: /module1/derived1/p7
  if (instance%p7(0.)/=1.) print *, "p7 failed"
- !REF: /main/instance
+ !REF: /MAIN/instance
  !REF: /module1/derived1/p8
  if (instance%p8(1.)/="a") print *, "p8 failed"
-end program main
+end program MAIN

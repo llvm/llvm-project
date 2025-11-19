@@ -1165,12 +1165,15 @@ void DXILBitcodeWriter::writeValueSymbolTableForwardDecl() {}
 /// Returns the bit offset to backpatch with the location of the real VST.
 void DXILBitcodeWriter::writeModuleInfo() {
   // Emit various pieces of data attached to a module.
-  if (!M.getTargetTriple().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE,
-                      M.getTargetTriple().str(), 0 /*TODO*/);
-  const std::string &DL = M.getDataLayoutStr();
-  if (!DL.empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
+
+  // We need to hardcode a triple and datalayout that's compatible with the
+  // historical DXIL triple and datalayout from DXC.
+  StringRef Triple = "dxil-ms-dx";
+  StringRef DL = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-"
+                 "f16:16-f32:32-f64:64-n8:16:32:64";
+  writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE, Triple, 0 /*TODO*/);
+  writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
+
   if (!M.getModuleInlineAsm().empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_ASM, M.getModuleInlineAsm(),
                       0 /*TODO*/);
@@ -1507,7 +1510,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                            SmallVectorImpl<uint64_t> &Record,
                                            unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  Record.push_back(N->getSourceLanguage());
+  Record.push_back(N->getSourceLanguage().getUnversionedName());
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());
@@ -2113,7 +2116,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         }
         break;
       case Instruction::GetElementPtr: {
-        Code = bitc::CST_CODE_CE_GEP;
+        Code = bitc::CST_CODE_CE_GEP_OLD;
         const auto *GO = cast<GEPOperator>(C);
         if (GO->isInBounds())
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
@@ -2545,25 +2548,6 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
   Vals.clear();
 }
 
-// HLSL Change
-namespace {
-struct ValueNameCreator {
-  MallocAllocator Allocator;
-  SmallVector<ValueName *, 2>
-      ValueNames; // SmallVector N = 2 because we currently only expect this
-                  // to hold ValueNames for Lifetime intrinsics
-  ~ValueNameCreator() {
-    for (auto *VN : ValueNames)
-      VN->Destroy(Allocator);
-  }
-  ValueName *create(StringRef Name, Value *V) {
-    ValueName *VN = ValueName::create(Name, Allocator, V);
-    ValueNames.push_back(VN);
-    return VN;
-  }
-};
-} // anonymous namespace
-
 // Emit names for globals/functions etc.
 void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     const ValueSymbolTable &VST) {
@@ -2578,24 +2562,9 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   // to ensure the binary is the same no matter what values ever existed.
   SmallVector<const ValueName *, 16> SortedTable;
 
-  // HLSL Change
-  ValueNameCreator VNC;
   for (auto &VI : VST) {
-    ValueName *VN = VI.second->getValueName();
-    // Clang mangles lifetime intrinsic names by appending '.p0' to the end,
-    // making them invalid lifetime intrinsics in LLVM 3.7. We can't
-    // demangle in dxil-prepare because it would result in invalid IR.
-    // Therefore we have to do this in the bitcode writer while writing its
-    // name to the symbol table.
-    if (const Function *Fn = dyn_cast<Function>(VI.getValue());
-        Fn && Fn->isIntrinsic()) {
-      Intrinsic::ID IID = Fn->getIntrinsicID();
-      if (IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end)
-        VN = VNC.create(Intrinsic::getBaseName(IID), VI.second);
-    }
-    SortedTable.push_back(VN);
+    SortedTable.push_back(VI.second->getValueName());
   }
-
   // The keys are unique, so there shouldn't be stability issues.
   llvm::sort(SortedTable, [](const ValueName *A, const ValueName *B) {
     return A->first() < B->first();

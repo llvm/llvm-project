@@ -78,7 +78,7 @@ static Value genVectorMask(PatternRewriter &rewriter, Location loc, VL vl,
       matchPattern(step, m_Constant(&stepInt))) {
     if (((hiInt.getInt() - loInt.getInt()) % stepInt.getInt()) == 0) {
       Value trueVal = constantI1(rewriter, loc, true);
-      return rewriter.create<vector::BroadcastOp>(loc, mtp, trueVal);
+      return vector::BroadcastOp::create(rewriter, loc, mtp, trueVal);
     }
   }
   // Otherwise, generate a vector mask that avoids overrunning the upperbound
@@ -92,7 +92,7 @@ static Value genVectorMask(PatternRewriter &rewriter, Location loc, VL vl,
       rewriter.getContext());
   Value end = rewriter.createOrFold<affine::AffineMinOp>(
       loc, min, ValueRange{hi, iv, step});
-  return rewriter.create<vector::CreateMaskOp>(loc, mtp, end);
+  return vector::CreateMaskOp::create(rewriter, loc, mtp, end);
 }
 
 /// Generates a vectorized invariant. Here we rely on subsequent loop
@@ -100,7 +100,7 @@ static Value genVectorMask(PatternRewriter &rewriter, Location loc, VL vl,
 static Value genVectorInvariantValue(PatternRewriter &rewriter, VL vl,
                                      Value val) {
   VectorType vtp = vectorType(vl, val.getType());
-  return rewriter.create<vector::BroadcastOp>(val.getLoc(), vtp, val);
+  return vector::BroadcastOp::create(rewriter, val.getLoc(), vtp, val);
 }
 
 /// Generates a vectorized load lhs = a[ind[lo:hi]] or lhs = a[lo:hi],
@@ -115,11 +115,11 @@ static Value genVectorLoad(PatternRewriter &rewriter, Location loc, VL vl,
     SmallVector<Value> scalarArgs(idxs);
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
-    return rewriter.create<vector::GatherOp>(loc, vtp, mem, scalarArgs,
-                                             indexVec, vmask, pass);
+    return vector::GatherOp::create(rewriter, loc, vtp, mem, scalarArgs,
+                                    indexVec, vmask, pass);
   }
-  return rewriter.create<vector::MaskedLoadOp>(loc, vtp, mem, idxs, vmask,
-                                               pass);
+  return vector::MaskedLoadOp::create(rewriter, loc, vtp, mem, idxs, vmask,
+                                      pass);
 }
 
 /// Generates a vectorized store a[ind[lo:hi]] = rhs or a[lo:hi] = rhs
@@ -132,11 +132,11 @@ static void genVectorStore(PatternRewriter &rewriter, Location loc, Value mem,
     SmallVector<Value> scalarArgs(idxs);
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
-    rewriter.create<vector::ScatterOp>(loc, mem, scalarArgs, indexVec, vmask,
-                                       rhs);
+    vector::ScatterOp::create(rewriter, loc, /*resultType=*/nullptr, mem,
+                              scalarArgs, indexVec, vmask, rhs);
     return;
   }
-  rewriter.create<vector::MaskedStoreOp>(loc, mem, idxs, vmask, rhs);
+  vector::MaskedStoreOp::create(rewriter, loc, mem, idxs, vmask, rhs);
 }
 
 /// Detects a vectorizable reduction operations and returns the
@@ -197,18 +197,18 @@ static Value genVectorReducInit(PatternRewriter &rewriter, Location loc,
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::XOR:
     // Initialize reduction vector to: | 0 | .. | 0 | r |
-    return rewriter.create<vector::InsertOp>(loc, r,
-                                             constantZero(rewriter, loc, vtp),
-                                             constantIndex(rewriter, loc, 0));
+    return vector::InsertOp::create(rewriter, loc, r,
+                                    constantZero(rewriter, loc, vtp),
+                                    constantIndex(rewriter, loc, 0));
   case vector::CombiningKind::MUL:
     // Initialize reduction vector to: | 1 | .. | 1 | r |
-    return rewriter.create<vector::InsertOp>(loc, r,
-                                             constantOne(rewriter, loc, vtp),
-                                             constantIndex(rewriter, loc, 0));
+    return vector::InsertOp::create(rewriter, loc, r,
+                                    constantOne(rewriter, loc, vtp),
+                                    constantIndex(rewriter, loc, 0));
   case vector::CombiningKind::AND:
   case vector::CombiningKind::OR:
     // Initialize reduction vector to: | r | .. | r | r |
-    return rewriter.create<vector::BroadcastOp>(loc, vtp, r);
+    return vector::BroadcastOp::create(rewriter, loc, vtp, r);
   default:
     break;
   }
@@ -300,11 +300,11 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
         Type etp = llvm::cast<VectorType>(vload.getType()).getElementType();
         if (!llvm::isa<IndexType>(etp)) {
           if (etp.getIntOrFloatBitWidth() < 32)
-            vload = rewriter.create<arith::ExtUIOp>(
-                loc, vectorType(vl, rewriter.getI32Type()), vload);
+            vload = arith::ExtUIOp::create(
+                rewriter, loc, vectorType(vl, rewriter.getI32Type()), vload);
           else if (etp.getIntOrFloatBitWidth() < 64 && !vl.enableSIMDIndex32)
-            vload = rewriter.create<arith::ExtUIOp>(
-                loc, vectorType(vl, rewriter.getI64Type()), vload);
+            vload = arith::ExtUIOp::create(
+                rewriter, loc, vectorType(vl, rewriter.getI64Type()), vload);
         }
         idxs.push_back(vload);
       }
@@ -328,7 +328,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
             return false;
           if (codegen)
             idxs.push_back(
-                rewriter.create<arith::AddIOp>(forOp.getLoc(), inv, idx));
+                arith::AddIOp::create(rewriter, forOp.getLoc(), inv, idx));
           continue; // success so far
         }
       }
@@ -341,7 +341,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
 #define UNAOP(xxx)                                                             \
   if (isa<xxx>(def)) {                                                         \
     if (codegen)                                                               \
-      vexp = rewriter.create<xxx>(loc, vx);                                    \
+      vexp = xxx::create(rewriter, loc, vx);                                   \
     return true;                                                               \
   }
 
@@ -349,7 +349,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
   if (auto x = dyn_cast<xxx>(def)) {                                           \
     if (codegen) {                                                             \
       VectorType vtp = vectorType(vl, x.getType());                            \
-      vexp = rewriter.create<xxx>(loc, vtp, vx);                               \
+      vexp = xxx::create(rewriter, loc, vtp, vx);                              \
     }                                                                          \
     return true;                                                               \
   }
@@ -357,7 +357,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
 #define BINOP(xxx)                                                             \
   if (isa<xxx>(def)) {                                                         \
     if (codegen)                                                               \
-      vexp = rewriter.create<xxx>(loc, vx, vy);                                \
+      vexp = xxx::create(rewriter, loc, vx, vy);                               \
     return true;                                                               \
   }
 
@@ -380,9 +380,9 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       // such as a[i] = i, which must convert to [i, i+1, ...].
       if (codegen) {
         VectorType vtp = vectorType(vl, arg.getType());
-        Value veci = rewriter.create<vector::BroadcastOp>(loc, vtp, arg);
-        Value incr = rewriter.create<vector::StepOp>(loc, vtp);
-        vexp = rewriter.create<arith::AddIOp>(loc, veci, incr);
+        Value veci = vector::BroadcastOp::create(rewriter, loc, vtp, arg);
+        Value incr = vector::StepOp::create(rewriter, loc, vtp);
+        vexp = arith::AddIOp::create(rewriter, loc, veci, incr);
       }
       return true;
     }
@@ -525,16 +525,18 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
     Value step = constantIndex(rewriter, loc, vl.vectorLength);
     if (vl.enableVLAVectorization) {
       Value vscale =
-          rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
-      step = rewriter.create<arith::MulIOp>(loc, vscale, step);
+          vector::VectorScaleOp::create(rewriter, loc, rewriter.getIndexType());
+      step = arith::MulIOp::create(rewriter, loc, vscale, step);
     }
     if (!yield.getResults().empty()) {
       Value init = forOp.getInitArgs()[0];
       VectorType vtp = vectorType(vl, init.getType());
       Value vinit = genVectorReducInit(rewriter, loc, yield->getOperand(0),
                                        forOp.getRegionIterArg(0), init, vtp);
-      forOpNew = rewriter.create<scf::ForOp>(
-          loc, forOp.getLowerBound(), forOp.getUpperBound(), step, vinit);
+      forOpNew =
+          scf::ForOp::create(rewriter, loc, forOp.getLowerBound(),
+                             forOp.getUpperBound(), step, vinit,
+                             /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
       forOpNew->setAttr(
           LoopEmitter::getLoopEmitterLoopAttrName(),
           forOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()));
@@ -562,10 +564,10 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       if (codegen) {
         Value partial = forOpNew.getResult(0);
         Value vpass = genVectorInvariantValue(rewriter, vl, iter);
-        Value vred = rewriter.create<arith::SelectOp>(loc, vmask, vrhs, vpass);
-        rewriter.create<scf::YieldOp>(loc, vred);
+        Value vred = arith::SelectOp::create(rewriter, loc, vmask, vrhs, vpass);
+        scf::YieldOp::create(rewriter, loc, vred);
         rewriter.setInsertionPointAfter(forOpNew);
-        Value vres = rewriter.create<vector::ReductionOp>(loc, kind, partial);
+        Value vres = vector::ReductionOp::create(rewriter, loc, kind, partial);
         // Now do some relinking (last one is not completely type safe
         // but all bad ones are removed right away). This also folds away
         // nop broadcast operations.
@@ -605,8 +607,8 @@ public:
 
   ForOpRewriter(MLIRContext *context, unsigned vectorLength,
                 bool enableVLAVectorization, bool enableSIMDIndex32)
-      : OpRewritePattern(context), vl{vectorLength, enableVLAVectorization,
-                                      enableSIMDIndex32} {}
+      : OpRewritePattern(context),
+        vl{vectorLength, enableVLAVectorization, enableSIMDIndex32} {}
 
   LogicalResult matchAndRewrite(scf::ForOp op,
                                 PatternRewriter &rewriter) const override {

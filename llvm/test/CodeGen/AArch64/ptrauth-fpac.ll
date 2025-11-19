@@ -7,97 +7,129 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 define i64 @test_auth_ia(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_auth_ia:
-; ALL:       %bb.0:
-; DARWIN-NEXT: mov x16, x0
-; DARWIN-NEXT: autia x16, x1
-; DARWIN-NEXT: mov x0, x16
+; DARWIN-LABEL: test_auth_ia:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    mov x16, x0
+; DARWIN-NEXT:    autia x16, x1
+; DARWIN-NEXT:    mov x0, x16
+; DARWIN-NEXT:    ret
+;
+; ELF-LABEL: test_auth_ia:
+; ELF:       // %bb.0:
 ; ELF-NEXT:    autia x0, x1
-; ALL-NEXT:    ret
+; ELF-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 0, i64 %arg1)
   ret i64 %tmp
 }
 
 define i64 @test_auth_ia_zero(i64 %arg) {
-; ALL-LABEL: test_auth_ia_zero:
-; ALL:       %bb.0:
-; DARWIN-NEXT: mov x16, x0
-; DARWIN-NEXT: autiza x16
-; DARWIN-NEXT: mov x0, x16
+; DARWIN-LABEL: test_auth_ia_zero:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    mov x16, x0
+; DARWIN-NEXT:    autiza x16
+; DARWIN-NEXT:    mov x0, x16
+; DARWIN-NEXT:    ret
+;
+; ELF-LABEL: test_auth_ia_zero:
+; ELF:       // %bb.0:
 ; ELF-NEXT:    autiza x0
-; ALL-NEXT:    ret
+; ELF-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 0, i64 0)
   ret i64 %tmp
 }
 
 define i64 @test_auth_ib(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_auth_ib:
-; ALL:       %bb.0:
-; DARWIN-NEXT: mov x16, x0
-; DARWIN-NEXT: autib x16, x1
-; DARWIN-NEXT: mov x0, x16
+; DARWIN-LABEL: test_auth_ib:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    mov x16, x0
+; DARWIN-NEXT:    autib x16, x1
+; DARWIN-NEXT:    mov x0, x16
+; DARWIN-NEXT:    ret
+;
+; ELF-LABEL: test_auth_ib:
+; ELF:       // %bb.0:
 ; ELF-NEXT:    autib x0, x1
-; ALL-NEXT:    ret
+; ELF-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 1, i64 %arg1)
   ret i64 %tmp
 }
 
 define i64 @test_auth_ib_zero(i64 %arg) {
-; ALL-LABEL: test_auth_ib_zero:
-; ALL:       %bb.0:
-; DARWIN-NEXT: mov x16, x0
-; DARWIN-NEXT: autizb x16
-; DARWIN-NEXT: mov x0, x16
+; DARWIN-LABEL: test_auth_ib_zero:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    mov x16, x0
+; DARWIN-NEXT:    autizb x16
+; DARWIN-NEXT:    mov x0, x16
+; DARWIN-NEXT:    ret
+;
+; ELF-LABEL: test_auth_ib_zero:
+; ELF:       // %bb.0:
 ; ELF-NEXT:    autizb x0
-; ALL-NEXT:    ret
+; ELF-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 1, i64 0)
   ret i64 %tmp
 }
 
 define i64 @test_auth_da(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_auth_da:
-; ALL:       %bb.0:
-; DARWIN-NEXT: mov x16, x0
-; DARWIN-NEXT: autda x16, x1
-; DARWIN-NEXT: mov x0, x16
+; DARWIN-LABEL: test_auth_da:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    mov x16, x0
+; DARWIN-NEXT:    autda x16, x1
+; DARWIN-NEXT:    mov x0, x16
+; DARWIN-NEXT:    ret
+;
+; ELF-LABEL: test_auth_da:
+; ELF:       // %bb.0:
 ; ELF-NEXT:    autda x0, x1
-; ALL-NEXT:    ret
+; ELF-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 2, i64 %arg1)
   ret i64 %tmp
 }
 
 define i64 @test_auth_da_zero(i64 %arg) {
-; ALL-LABEL: test_auth_da_zero:
-; ALL:       %bb.0:
-; DARWIN-NEXT: mov x16, x0
-; DARWIN-NEXT: autdza x16
-; DARWIN-NEXT: mov x0, x16
+; DARWIN-LABEL: test_auth_da_zero:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    mov x16, x0
+; DARWIN-NEXT:    autdza x16
+; DARWIN-NEXT:    mov x0, x16
+; DARWIN-NEXT:    ret
+;
+; ELF-LABEL: test_auth_da_zero:
+; ELF:       // %bb.0:
 ; ELF-NEXT:    autdza x0
-; ALL-NEXT:    ret
+; ELF-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 2, i64 0)
   ret i64 %tmp
 }
 
 define i64 @test_auth_db(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_auth_db:
-; ALL:       %bb.0:
-; DARWIN-NEXT: mov x16, x0
-; DARWIN-NEXT: autdb x16, x1
-; DARWIN-NEXT: mov x0, x16
+; DARWIN-LABEL: test_auth_db:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    mov x16, x0
+; DARWIN-NEXT:    autdb x16, x1
+; DARWIN-NEXT:    mov x0, x16
+; DARWIN-NEXT:    ret
+;
+; ELF-LABEL: test_auth_db:
+; ELF:       // %bb.0:
 ; ELF-NEXT:    autdb x0, x1
-; ALL-NEXT:    ret
+; ELF-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 3, i64 %arg1)
   ret i64 %tmp
 }
 
 define i64 @test_auth_db_zero(i64 %arg) {
-; ALL-LABEL: test_auth_db_zero:
-; ALL:       %bb.0:
-; DARWIN-NEXT: mov x16, x0
-; DARWIN-NEXT: autdzb x16
-; DARWIN-NEXT: mov x0, x16
+; DARWIN-LABEL: test_auth_db_zero:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    mov x16, x0
+; DARWIN-NEXT:    autdzb x16
+; DARWIN-NEXT:    mov x0, x16
+; DARWIN-NEXT:    ret
+;
+; ELF-LABEL: test_auth_db_zero:
+; ELF:       // %bb.0:
 ; ELF-NEXT:    autdzb x0
-; ALL-NEXT:    ret
+; ELF-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 3, i64 0)
   ret i64 %tmp
 }

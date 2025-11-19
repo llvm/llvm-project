@@ -9,6 +9,7 @@
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
 #include <gtest/gtest.h>
+#include <thread>
 
 #include "Environment.hpp"
 
@@ -25,12 +26,30 @@
   } while (0)
 #endif
 
-// TODO: rework this so the EXPECTED/ACTUAL results are readable
+#ifndef ASSERT_SUCCESS_OR_UNSUPPORTED
+#define ASSERT_SUCCESS_OR_UNSUPPORTED(ACTUAL)                                  \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    if (Res && Res->Code == OL_ERRC_UNSUPPORTED) {                             \
+      GTEST_SKIP() << #ACTUAL " returned unsupported; skipping test";          \
+      return;                                                                  \
+    } else if (Res && Res->Code != OL_ERRC_SUCCESS) {                          \
+      GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
+                   << Res->Details;                                            \
+    }                                                                          \
+  } while (0)
+#endif
+
 #ifndef ASSERT_ERROR
 #define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \
   do {                                                                         \
     ol_result_t Res = ACTUAL;                                                  \
-    ASSERT_TRUE(Res && (Res->Code == EXPECTED));                               \
+    if (!Res)                                                                  \
+      GTEST_FAIL() << #ACTUAL " succeeded when we expected it to fail";        \
+    if (Res->Code != EXPECTED)                                                 \
+      GTEST_FAIL() << #ACTUAL " was expected to return "                       \
+                   << #EXPECTED " but instead returned " << Res->Code << ": "  \
+                   << Res->Details;                                            \
   } while (0)
 #endif
 
@@ -57,6 +76,57 @@ inline std::string SanitizeString(const std::string &Str) {
   return NewStr;
 }
 
+template <typename Fn> inline void threadify(Fn body) {
+  std::vector<std::thread> Threads;
+  for (size_t I = 0; I < 20; I++) {
+    Threads.emplace_back(
+        [&body](size_t I) {
+          std::string ScopeMsg{"Thread #"};
+          ScopeMsg.append(std::to_string(I));
+          SCOPED_TRACE(ScopeMsg);
+          body(I);
+        },
+        I);
+  }
+  for (auto &T : Threads) {
+    T.join();
+  }
+}
+
+/// Enqueues a task to the queue that can be manually resolved.
+// It will block until `trigger` is called.
+struct ManuallyTriggeredTask {
+  std::mutex M;
+  std::condition_variable CV;
+  bool Flag = false;
+  ol_event_handle_t CompleteEvent;
+
+  ol_result_t enqueue(ol_queue_handle_t Queue) {
+    if (auto Err = olLaunchHostFunction(
+            Queue,
+            [](void *That) {
+              static_cast<ManuallyTriggeredTask *>(That)->wait();
+            },
+            this))
+      return Err;
+
+    return olCreateEvent(Queue, &CompleteEvent);
+  }
+
+  void wait() {
+    std::unique_lock<std::mutex> lk(M);
+    CV.wait_for(lk, std::chrono::milliseconds(1000), [&] { return Flag; });
+    EXPECT_TRUE(Flag);
+  }
+
+  ol_result_t trigger() {
+    Flag = true;
+    CV.notify_one();
+
+    return olSyncEvent(CompleteEvent);
+  }
+};
+
 struct OffloadTest : ::testing::Test {
   ol_device_handle_t Host = TestEnvironment::getHostDevice();
 };
@@ -71,6 +141,18 @@ struct OffloadDeviceTest
     Device = DeviceParam.Handle;
     if (Device == nullptr)
       GTEST_SKIP() << "No available devices.";
+  }
+
+  ol_platform_backend_t getPlatformBackend() const {
+    ol_platform_handle_t Platform = nullptr;
+    if (olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM,
+                        sizeof(ol_platform_handle_t), &Platform))
+      return OL_PLATFORM_BACKEND_UNKNOWN;
+    ol_platform_backend_t Backend;
+    if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+                          sizeof(ol_platform_backend_t), &Backend))
+      return OL_PLATFORM_BACKEND_UNKNOWN;
+    return Backend;
   }
 
   ol_device_handle_t Device = nullptr;
@@ -159,17 +241,8 @@ struct OffloadQueueTest : OffloadDeviceTest {
 struct OffloadEventTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-
-    // Get an event from a memcpy. We can still use it in olGetEventInfo etc
-    // after it has been waited on.
-    void *Alloc;
-    uint32_t Value = 42;
-    ASSERT_SUCCESS(
-        olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(Value), &Alloc));
-    ASSERT_SUCCESS(
-        olMemcpy(Queue, Alloc, Device, &Value, Host, sizeof(Value), &Event));
-    ASSERT_SUCCESS(olWaitEvent(Event));
-    ASSERT_SUCCESS(olMemFree(Alloc));
+    ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+    ASSERT_SUCCESS(olSyncQueue(Queue));
   }
 
   void TearDown() override {
@@ -181,9 +254,13 @@ struct OffloadEventTest : OffloadQueueTest {
   ol_event_handle_t Event = nullptr;
 };
 
+// Devices might not be available for offload testing, so allow uninstantiated
+// tests (as the device list will be empty). This means that all tests requiring
+// a device will be silently skipped.
 #define OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(FIXTURE)                      \
   INSTANTIATE_TEST_SUITE_P(                                                    \
       , FIXTURE, ::testing::ValuesIn(TestEnvironment::getDevices()),           \
       [](const ::testing::TestParamInfo<TestEnvironment::Device> &info) {      \
         return SanitizeString(info.param.Name);                                \
-      })
+      });                                                                      \
+  GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(FIXTURE)

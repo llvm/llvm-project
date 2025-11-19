@@ -8,6 +8,7 @@ add_mlir_library(MLIRTargetLLVM
   intrinsics_gen
 
   LINK_COMPONENTS
+  BitWriter
   Core
   IPO
   IRReader
@@ -59,7 +60,7 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
     # See: https://gitlab.kitware.com/cmake/cmake/-/issues/24858
     # TODO: Bump the MLIR CMake version to 3.26.4 and switch to
     # ${CUDAToolkit_LIBRARY_ROOT}
-    if(NOT DEFINED ${CUDAToolkit_LIBRARY_ROOT})
+    if(NOT DEFINED CUDAToolkit_LIBRARY_ROOT)
       get_filename_component(MLIR_CUDAToolkit_ROOT ${CUDAToolkit_BIN_DIR}
                              DIRECTORY ABSOLUTE)
     else()
@@ -209,3 +210,27 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
   )
 endif()
 
+if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(SPIRV_LIBS
+    SPIRVCodeGen
+    SPIRVDesc
+    SPIRVInfo
+  )
+endif()
+
+add_mlir_dialect_library(MLIRXeVMTarget
+  XeVM/Target.cpp
+
+  OBJECT
+
+  LINK_COMPONENTS
+  ${SPIRV_LIBS}
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRExecutionEngineUtils
+  MLIRSupport
+  MLIRGPUDialect
+  MLIRTargetLLVM
+  MLIRXeVMToLLVMIRTranslation
+)

@@ -44,11 +44,11 @@ entry:
   %arrayidx7 = getelementptr inbounds [16 x i8], ptr %buf, i64 0, i64 3
   store float %3, ptr %arrayidx7, align 4
 
-; CHECK:        .param .b64 param0;
-; CHECK-NEXT:   st.param.b64  [param0], %rd[[A_REG]]
-; CHECK-NEXT:   .param .b64 param1;
-; CHECK-NEXT:   st.param.b64  [param1], %rd[[SP_REG]]
-; CHECK-NEXT:   call.uni callee,
+; CHECK-DAG:   .param .b64 param0;
+; CHECK-DAG:   .param .b64 param1;
+; CHECK-DAG:   st.param.b64  [param0], %rd[[A_REG]]
+; CHECK-DAG:   st.param.b64  [param1], %rd[[SP_REG]]
+; CHECK:       call.uni callee,
 
   call void @callee(ptr %a, ptr %buf) #2
   ret void

@@ -474,7 +474,7 @@ def LinalgStructuredInterface
         int64_t resultIndex =
             opOperand->getOperandNumber() - $_op.getNumDpsInputs();
         assert(resultIndex >= 0 &&
-               resultIndex < this->getOperation()->getNumResults());
+               resultIndex < $_op.getNumDpsInits());
         Operation *yieldOp = getBlock()->getTerminator();
         return &yieldOp->getOpOperand(resultIndex);
       }]
