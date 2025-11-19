@@ -802,8 +802,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
-  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "DoWhileOp", "ForOp",
+  "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -2750,6 +2750,100 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
         $_state.addTypes(resType);
     }]>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// AwaitOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
+  I32EnumAttrCase<"Init", 0, "init">,
+  I32EnumAttrCase<"User", 1, "user">,
+  I32EnumAttrCase<"Yield", 2, "yield">,
+  I32EnumAttrCase<"Final", 3, "final">
+]>;
+
+def CIR_AwaitOp : CIR_Op<"await",[
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  RecursivelySpeculatable, NoRegionArguments
+]> {
+  let summary = "Wraps C++ co_await implicit logic";
+  let description = [{
+    The under the hood effect of using C++ `co_await expr` roughly
+    translates to:
+
+    ```c++
+    // co_await expr;
+
+    auto &&x = CommonExpr();
+    if (!x.await_ready()) {
+       ...
+       x.await_suspend(...);
+       ...
+    }
+    x.await_resume();
+    ```
+
+    `cir.await` represents this logic by using 3 regions:
+      - ready: covers veto power from x.await_ready()
+      - suspend: wraps actual x.await_suspend() logic
+      - resume: handles x.await_resume()
+
+    Breaking this up in regions allows individual scrutiny of conditions
+    which might lead to folding some of them out. Lowerings coming out
+    of CIR, e.g. LLVM, should use the `suspend` region to track more
+    lower level codegen (e.g. intrinsic emission for coro.save/coro.suspend).
+
+    There are also 4 flavors of `cir.await` available:
+    - `init`: compiler generated initial suspend via implicit `co_await`.
+    - `user`: also known as normal, representing a user written `co_await`.
+    - `yield`: user written `co_yield` expressions.
+    - `final`: compiler generated final suspend via implicit `co_await`.
+
+    ```mlir
+      cir.scope {
+        ... // auto &&x = CommonExpr();
+        cir.await(user, ready : {
+          ... // x.await_ready()
+        }, suspend : {
+          ... // x.await_suspend()
+        }, resume : {
+          ... // x.await_resume()
+        })
+      }
+    ```
+
+    Note that resulution of the common expression is assumed to happen
+    as part of the enclosing await scope.
+  }];
+
+  let arguments = (ins CIR_AwaitKind:$kind);
+  let regions = (region SizedRegion<1>:$ready,
+                        SizedRegion<1>:$suspend,
+                        SizedRegion<1>:$resume);
+  let assemblyFormat = [{
+    `(` $kind `,`
+    `ready` `:` $ready `,`
+    `suspend` `:` $suspend `,`
+    `resume` `:` $resume `,`
+    `)`
+    attr-dict
+  }];
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+      "cir::AwaitKind":$kind,
+      CArg<"BuilderCallbackRef",
+           "nullptr">:$readyBuilder,
+      CArg<"BuilderCallbackRef",
+           "nullptr">:$suspendBuilder,
+      CArg<"BuilderCallbackRef",
+           "nullptr">:$resumeBuilder
+      )>
+  ];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
