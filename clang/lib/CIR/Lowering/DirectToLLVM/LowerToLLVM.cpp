@@ -2530,7 +2530,7 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
 
   std::string intrinName = getLLVMIntrinName(
       arithKind, encompassedTyInfo.sign, encompassedTyInfo.width);
-  mlir::StringAttr intrinNameAttr =
+  auto intrinNameAttr =
       mlir::StringAttr::get(op.getContext(), intrinName);
 
   mlir::IntegerType overflowLLVMTy = rewriter.getI1Type();
