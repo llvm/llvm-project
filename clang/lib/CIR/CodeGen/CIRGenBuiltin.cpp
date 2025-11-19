@@ -60,8 +60,8 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
 
 namespace {
 struct WidthAndSignedness {
-  unsigned Width;
-  bool Signed;
+  unsigned width;
+  bool signed;
 };
 } // namespace
 
