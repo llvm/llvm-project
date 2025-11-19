@@ -29,7 +29,8 @@ def get_product_version():
 
 
 macos_version_major, macos_version_minor = get_product_version()
-if macos_version_major > 10 and macos_version_minor > 11:
-    config.available_features.add("mac-os-10-11-or-higher")
-else:
-    config.available_features.add("mac-os-10-10-or-lower")
+if config.apple_platform == "osx":
+    if macos_version_major > 10 and macos_version_minor > 11:
+        config.available_features.add("mac-os-10-11-or-higher")
+    else:
+        config.available_features.add("mac-os-10-10-or-lower")
