@@ -32,6 +32,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -608,6 +609,7 @@ public:
 class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
+    FCmp,
     OverflowingBinOp,
     Trunc,
     DisjointOp,
@@ -658,6 +660,12 @@ private:
 
     LLVM_ABI_FOR_TEST FastMathFlagsTy(const FastMathFlags &FMF);
   };
+  /// Holds both the predicate and fast-math flags for floating-point
+  /// comparisons.
+  struct FCmpFlagsTy {
+    CmpInst::Predicate Pred;
+    FastMathFlagsTy FMFs;
+  };
 
   OperationType OpType;
 
@@ -670,6 +678,7 @@ private:
     GEPNoWrapFlags GEPFlags;
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
+    FCmpFlagsTy FCmpFlags;
     unsigned AllFlags;
   };
 
@@ -677,7 +686,11 @@ public:
   VPIRFlags() : OpType(OperationType::Other), AllFlags(0) {}
 
   VPIRFlags(Instruction &I) {
-    if (auto *Op = dyn_cast<CmpInst>(&I)) {
+    if (auto *FCmp = dyn_cast<FCmpInst>(&I)) {
+      OpType = OperationType::FCmp;
+      FCmpFlags.Pred = FCmp->getPredicate();
+      FCmpFlags.FMFs = FCmp->getFastMathFlags();
+    } else if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
       CmpPredicate = Op->getPredicate();
     } else if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I)) {
@@ -709,6 +722,12 @@ public:
 
   VPIRFlags(CmpInst::Predicate Pred)
       : OpType(OperationType::Cmp), CmpPredicate(Pred) {}
+
+  VPIRFlags(CmpInst::Predicate Pred, FastMathFlags FMFs)
+      : OpType(OperationType::FCmp) {
+    FCmpFlags.Pred = Pred;
+    FCmpFlags.FMFs = FMFs;
+  }
 
   VPIRFlags(WrapFlagsTy WrapFlags)
       : OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
@@ -759,8 +778,9 @@ public:
       GEPFlags = GEPNoWrapFlags::none();
       break;
     case OperationType::FPMathOp:
-      FMFs.NoNaNs = false;
-      FMFs.NoInfs = false;
+    case OperationType::FCmp:
+      getFMFsRef().NoNaNs = false;
+      getFMFsRef().NoInfs = false;
       break;
     case OperationType::NonNegOp:
       NonNegFlags.NonNeg = false;
@@ -792,14 +812,17 @@ public:
       cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
-      I.setHasAllowReassoc(FMFs.AllowReassoc);
-      I.setHasNoNaNs(FMFs.NoNaNs);
-      I.setHasNoInfs(FMFs.NoInfs);
-      I.setHasNoSignedZeros(FMFs.NoSignedZeros);
-      I.setHasAllowReciprocal(FMFs.AllowReciprocal);
-      I.setHasAllowContract(FMFs.AllowContract);
-      I.setHasApproxFunc(FMFs.ApproxFunc);
+    case OperationType::FCmp: {
+      const FastMathFlagsTy &F = getFMFsRef();
+      I.setHasAllowReassoc(F.AllowReassoc);
+      I.setHasNoNaNs(F.NoNaNs);
+      I.setHasNoInfs(F.NoInfs);
+      I.setHasNoSignedZeros(F.NoSignedZeros);
+      I.setHasAllowReciprocal(F.AllowReciprocal);
+      I.setHasAllowContract(F.AllowContract);
+      I.setHasApproxFunc(F.ApproxFunc);
       break;
+    }
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
@@ -810,24 +833,31 @@ public:
   }
 
   CmpInst::Predicate getPredicate() const {
-    assert(OpType == OperationType::Cmp &&
+    assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
-    return CmpPredicate;
+    return OpType == OperationType::FCmp ? FCmpFlags.Pred : CmpPredicate;
   }
 
   void setPredicate(CmpInst::Predicate Pred) {
-    assert(OpType == OperationType::Cmp &&
+    assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
-    CmpPredicate = Pred;
+    if (OpType == OperationType::FCmp)
+      FCmpFlags.Pred = Pred;
+    else
+      CmpPredicate = Pred;
   }
 
   GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
 
   /// Returns true if the recipe has a comparison predicate.
-  bool hasPredicate() const { return OpType == OperationType::Cmp; }
+  bool hasPredicate() const {
+    return OpType == OperationType::Cmp || OpType == OperationType::FCmp;
+  }
 
   /// Returns true if the recipe has fast-math flags.
-  bool hasFastMathFlags() const { return OpType == OperationType::FPMathOp; }
+  bool hasFastMathFlags() const {
+    return OpType == OperationType::FPMathOp || OpType == OperationType::FCmp;
+  }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlags() const;
 
@@ -868,6 +898,16 @@ public:
     return DisjointFlags.IsDisjoint;
   }
 
+private:
+  /// Get a reference to the fast-math flags for FPMathOp or FCmp.
+  FastMathFlagsTy &getFMFsRef() {
+    return OpType == OperationType::FCmp ? FCmpFlags.FMFs : FMFs;
+  }
+  const FastMathFlagsTy &getFMFsRef() const {
+    return OpType == OperationType::FCmp ? FCmpFlags.FMFs : FMFs;
+  }
+
+public:
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
   bool flagsValidForOpcode(unsigned Opcode) const;
@@ -881,14 +921,6 @@ public:
 /// A pure-virtual common base class for recipes defining a single VPValue and
 /// using IR flags.
 struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
-  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                      DebugLoc DL = DebugLoc::getUnknown())
-      : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags() {}
-
-  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                      Instruction &I)
-      : VPSingleDefRecipe(SC, Operands, &I, I.getDebugLoc()), VPIRFlags(I) {}
-
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
                       const VPIRFlags &Flags,
                       DebugLoc DL = DebugLoc::getUnknown())
@@ -981,6 +1013,13 @@ public:
   /// Intersect this VPIRMetada object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
+
+  /// Get metadata of kind \p Kind. Returns nullptr if not found.
+  MDNode *getMetadata(unsigned Kind) const {
+    auto It =
+        find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
+    return It != Metadata.end() ? It->second : nullptr;
+  }
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -1466,9 +1505,12 @@ public:
         VPIRMetadata(Metadata), Opcode(Opcode) {}
 
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
-                const VPIRMetadata &Metadata, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I),
-        VPIRMetadata(Metadata), Opcode(I.getOpcode()) {}
+                const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
+                DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
+        VPIRMetadata(Metadata), Opcode(I.getOpcode()) {
+    setUnderlyingValue(&I);
+  }
 
   ~VPWidenRecipe() override = default;
 
@@ -1509,30 +1551,22 @@ class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 
 public:
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst &UI, const VPIRMetadata &Metadata)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI),
-        VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
-    assert(UI.getOpcode() == Opcode &&
-           "opcode of underlying cast doesn't match");
-  }
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    const VPIRFlags &Flags = {},
+                    CastInst *CI = nullptr, const VPIRFlags &Flags = {},
                     const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, Flags, DL),
         VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
+    setUnderlyingValue(CI);
   }
 
   ~VPWidenCastRecipe() override = default;
 
   VPWidenCastRecipe *clone() override {
-    auto *New = new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy, *this,
-                                      *this, getDebugLoc());
-    if (auto *UV = getUnderlyingValue())
-      New->setUnderlyingValue(UV);
-    return New;
+    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
+                                 cast_or_null<CastInst>(getUnderlyingValue()),
+                                 *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
@@ -1577,13 +1611,17 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         const VPIRFlags &Flags = {},
                          const VPIRMetadata &MD = {},
                          DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, Flags,
+                            DL),
         VPIRMetadata(MD), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
         MayReadFromMemory(CI.mayReadFromMemory()),
         MayWriteToMemory(CI.mayWriteToMemory()),
-        MayHaveSideEffects(CI.mayHaveSideEffects()) {}
+        MayHaveSideEffects(CI.mayHaveSideEffects()) {
+    setUnderlyingValue(&CI);
+  }
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
@@ -1609,7 +1647,7 @@ public:
   VPWidenIntrinsicRecipe *clone() override {
     if (Value *CI = getUnderlyingValue())
       return new VPWidenIntrinsicRecipe(*cast<CallInst>(CI), VectorIntrinsicID,
-                                        operands(), ResultTy, *this,
+                                        operands(), ResultTy, *this, *this,
                                         getDebugLoc());
     return new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(), ResultTy,
                                       *this, *this, getDebugLoc());
@@ -1663,10 +1701,11 @@ class LLVM_ABI_FOR_TEST VPWidenCallRecipe : public VPRecipeWithIRFlags,
 public:
   VPWidenCallRecipe(Value *UV, Function *Variant,
                     ArrayRef<VPValue *> CallArguments,
-                    DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
-                            *cast<Instruction>(UV)),
-        VPIRMetadata(*cast<Instruction>(UV)), Variant(Variant) {
+                    const VPIRFlags &Flags = {},
+                    const VPIRMetadata &Metadata = {}, DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments, Flags, DL),
+        VPIRMetadata(Metadata), Variant(Variant) {
+    setUnderlyingValue(UV);
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
@@ -1676,7 +1715,7 @@ public:
 
   VPWidenCallRecipe *clone() override {
     return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
-                                 getDebugLoc());
+                                 *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -1753,16 +1792,19 @@ protected:
 /// instruction.
 struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
                                                public VPIRMetadata {
-  VPWidenSelectRecipe(SelectInst &I, ArrayRef<VPValue *> Operands,
-                      const VPIRMetadata &MD = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I),
-        VPIRMetadata(MD) {}
+  VPWidenSelectRecipe(SelectInst *SI, ArrayRef<VPValue *> Operands,
+                      const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
+                      DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, Flags, DL),
+        VPIRMetadata(MD) {
+    setUnderlyingValue(SI);
+  }
 
   ~VPWidenSelectRecipe() override = default;
 
   VPWidenSelectRecipe *clone() override {
-    return new VPWidenSelectRecipe(*cast<SelectInst>(getUnderlyingInstr()),
-                                   operands(), *this);
+    return new VPWidenSelectRecipe(cast<SelectInst>(getUnderlyingInstr()),
+                                   operands(), *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSelectSC)
@@ -1814,9 +1856,12 @@ class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   }
 
 public:
-  VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP),
+  VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands,
+                   const VPIRFlags &Flags = {},
+                   DebugLoc DL = DebugLoc::getUnknown())
+      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, Flags, DL),
         SourceElementTy(GEP->getSourceElementType()) {
+    setUnderlyingValue(GEP);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
     getMetadataToPropagate(GEP, Metadata);
@@ -1827,7 +1872,7 @@ public:
 
   VPWidenGEPRecipe *clone() override {
     return new VPWidenGEPRecipe(cast<GetElementPtrInst>(getUnderlyingInstr()),
-                                operands());
+                                operands(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
@@ -2020,14 +2065,12 @@ public:
   ~VPHeaderPHIRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *B) {
-    return B->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
-           B->getVPDefID() <= VPDef::VPLastHeaderPHISC;
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
+           R->getVPDefID() <= VPDef::VPLastHeaderPHISC;
   }
   static inline bool classof(const VPValue *V) {
-    auto *B = V->getDefiningRecipe();
-    return B && B->getVPDefID() >= VPRecipeBase::VPFirstHeaderPHISC &&
-           B->getVPDefID() <= VPRecipeBase::VPLastHeaderPHISC;
+    return isa<VPHeaderPHIRecipe>(V->getDefiningRecipe());
   }
 
   /// Generate the phi nodes.
@@ -2921,10 +2964,12 @@ class LLVM_ABI_FOR_TEST VPReplicateRecipe : public VPRecipeWithIRFlags,
 public:
   VPReplicateRecipe(Instruction *I, ArrayRef<VPValue *> Operands,
                     bool IsSingleScalar, VPValue *Mask = nullptr,
-                    VPIRMetadata Metadata = {})
-      : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
+                    const VPIRFlags &Flags = {}, VPIRMetadata Metadata = {},
+                    DebugLoc DL = DebugLoc::getUnknown())
+      : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, Flags, DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
+    setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);
   }
@@ -2932,9 +2977,9 @@ public:
   ~VPReplicateRecipe() override = default;
 
   VPReplicateRecipe *clone() override {
-    auto *Copy =
-        new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsSingleScalar,
-                              isPredicated() ? getMask() : nullptr, *this);
+    auto *Copy = new VPReplicateRecipe(
+        getUnderlyingInstr(), operands(), IsSingleScalar,
+        isPredicated() ? getMask() : nullptr, *this, *this, getDebugLoc());
     Copy->transferFlags(*this);
     return Copy;
   }
@@ -3867,6 +3912,75 @@ struct CastInfo<VPPhiAccessors, VPRecipeBase *>
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
     : CastInfoVPPhiAccessors<const VPRecipeBase *> {};
+
+/// Casting from (const) VPRecipeBase -> (const) VPIRMetadata is supported for
+/// all recipe types implementing VPIRMetadata. Used by isa<> & co.
+namespace detail {
+template <typename DstTy, typename RecipeBasePtrTy>
+static inline auto castToVPIRMetadata(RecipeBasePtrTy R) -> DstTy {
+  switch (R->getVPDefID()) {
+  case VPDef::VPInstructionSC:
+    return cast<VPInstruction>(R);
+  case VPDef::VPWidenSC:
+    return cast<VPWidenRecipe>(R);
+  case VPDef::VPWidenCastSC:
+    return cast<VPWidenCastRecipe>(R);
+  case VPDef::VPWidenIntrinsicSC:
+    return cast<VPWidenIntrinsicRecipe>(R);
+  case VPDef::VPWidenCallSC:
+    return cast<VPWidenCallRecipe>(R);
+  case VPDef::VPWidenSelectSC:
+    return cast<VPWidenSelectRecipe>(R);
+  case VPDef::VPReplicateSC:
+    return cast<VPReplicateRecipe>(R);
+  case VPDef::VPInterleaveSC:
+  case VPDef::VPInterleaveEVLSC:
+    return cast<VPInterleaveBase>(R);
+  case VPDef::VPWidenLoadSC:
+  case VPDef::VPWidenLoadEVLSC:
+  case VPDef::VPWidenStoreSC:
+  case VPDef::VPWidenStoreEVLSC:
+    return cast<VPWidenMemoryRecipe>(R);
+  default:
+    llvm_unreachable("invalid recipe for VPIRMetadata cast");
+  }
+}
+} // namespace detail
+
+/// Support casting from VPRecipeBase -> VPIRMetadata, by down-casting to the
+/// recipe types implementing VPIRMetadata. Used by cast<>, dyn_cast<> & co.
+template <typename DstTy, typename SrcTy>
+struct CastInfoVPIRMetadata : public CastIsPossible<DstTy, SrcTy> {
+  static inline bool isPossible(SrcTy R) {
+    // NOTE: Each recipe inheriting from VPIRMetadata must be listed here and
+    // also handled in castToVPIRMetadata.
+    return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+               VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPWidenSelectRecipe,
+               VPReplicateRecipe, VPInterleaveRecipe, VPInterleaveEVLRecipe,
+               VPWidenLoadRecipe, VPWidenLoadEVLRecipe, VPWidenStoreRecipe,
+               VPWidenStoreEVLRecipe>(R);
+  }
+
+  using RetTy = DstTy *;
+
+  /// doCast is used by cast<>.
+  static inline RetTy doCast(SrcTy R) {
+    return detail::castToVPIRMetadata<RetTy, SrcTy>(R);
+  }
+
+  /// doCastIfPossible is used by dyn_cast<>.
+  static inline RetTy doCastIfPossible(SrcTy R) {
+    if (!isPossible(R))
+      return nullptr;
+    return doCast(R);
+  }
+};
+template <>
+struct CastInfo<VPIRMetadata, VPRecipeBase *>
+    : CastInfoVPIRMetadata<VPIRMetadata, VPRecipeBase *> {};
+template <>
+struct CastInfo<VPIRMetadata, const VPRecipeBase *>
+    : CastInfoVPIRMetadata<const VPIRMetadata, const VPRecipeBase *> {};
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of

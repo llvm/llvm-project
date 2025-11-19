@@ -2673,14 +2673,14 @@ drps
 # CHECK-NEXT:  1      2     0.50                        bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  1      2     0.50                        tst	w3, w7, lsl #31
 # CHECK-NEXT:  1      2     0.50                        tst	x2, x20, asr #2
-# CHECK-NEXT:  1      1     0.25                        mov	x3, x6
-# CHECK-NEXT:  1      1     0.25                        mov	x3, xzr
-# CHECK-NEXT:  1      1     0.25                        mov	wzr, w2
-# CHECK-NEXT:  1      1     0.25                        mov	w3, w5
+# CHECK-NEXT:  1      0     0.13                        mov	x3, x6
+# CHECK-NEXT:  1      0     0.13                        mov	x3, xzr
+# CHECK-NEXT:  1      0     0.13                        mov	wzr, w2
+# CHECK-NEXT:  1      0     0.13                        mov	w3, w5
 # CHECK-NEXT:  1      1     0.25                        movz	w2, #0, lsl #16
 # CHECK-NEXT:  1      1     0.25                        mov	w2, #-1235
 # CHECK-NEXT:  1      1     0.25                        mov	x2, #5299989643264
-# CHECK-NEXT:  1      1     0.25                        mov	x2, #0
+# CHECK-NEXT:  1      0     0.13                        mov	x2, #0
 # CHECK-NEXT:  1      1     0.25                        movk	w3, #0
 # CHECK-NEXT:  1      1     0.25                        movz	x4, #0, lsl #16
 # CHECK-NEXT:  1      1     0.25                        movk	w5, #0, lsl #16
@@ -2731,7 +2731,7 @@ drps
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT: 13.00  13.00  40.50  40.50  48.00  48.00  48.00  96.67  175.17 175.17 322.50 209.50 142.00 142.00 189.00 55.50  65.50  13.00
+# CHECK-NEXT: 13.00  13.00  40.50  40.50  48.00  48.00  48.00  96.67  175.17 175.17 321.25 208.25 140.75 140.75 189.00 55.50  65.50  13.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -3944,14 +3944,14 @@ drps
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     tst	w3, w7, lsl #31
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     tst	x2, x20, asr #2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	x3, x6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	x3, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	wzr, w2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	w3, w5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x3, x6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x3, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	wzr, w2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w3, w5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     movz	w2, #0, lsl #16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	w2, #-1235
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	x2, #5299989643264
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	x2, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x2, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     movk	w3, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     movz	x4, #0, lsl #16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     movk	w5, #0, lsl #16

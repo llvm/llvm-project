@@ -1566,14 +1566,19 @@ let TargetPrefix = "nvvm" in {
 
   foreach rnd = ["rn", "rz"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff2bf16x2_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
+      foreach satfinite = ["", "_satfinite"] in {
+        def int_nvvm_ff2bf16x2_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
 
-      def int_nvvm_ff2f16x2_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
+        def int_nvvm_ff2f16x2_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
 
-      def int_nvvm_f2bf16_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+        def int_nvvm_f2bf16_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+            
+        def int_nvvm_f2f16_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_half_ty], [llvm_float_ty]>;
+      }
     }
   }
 
@@ -1746,32 +1751,64 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_barrier_cluster_wait_aligned : Intrinsic<[]>;
   }
 
-  //
-  // Membar
-  //
-  let IntrProperties = [IntrNoCallback] in {
+//
+// Membar / Fence
+//
+let IntrProperties = [IntrNoCallback] in {
     def int_nvvm_membar_cta : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_membar_gl : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_membar_sys : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_fence_sc_cluster : Intrinsic<[]>;
-  }
 
-  //
-  // Proxy fence (uni-directional)
-  //
+    // Operation fence
+    def int_nvvm_fence_mbarrier_init_release_cluster: Intrinsic<[], [], [],
+            "llvm.nvvm.fence.mbarrier_init.release.cluster">;
+
+    // Thread fence
+    def int_nvvm_fence_acquire_sync_restrict_space_cluster_scope_cluster :
+          Intrinsic<[], [], [],
+            "llvm.nvvm.fence.acquire.sync_restrict.space.cluster.scope.cluster">;
+
+    def int_nvvm_fence_release_sync_restrict_space_cta_scope_cluster :
+          Intrinsic<[], [], [],
+            "llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster">;
+
+//
+// Proxy fence (uni-directional)
+//
+
+  def int_nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster :
+        Intrinsic<[], [], [],
+          "llvm.nvvm.fence.proxy.async_generic.acquire.sync_restrict.space.cluster.scope.cluster">;
+
+  def int_nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster :
+        Intrinsic<[], [], [],
+          "llvm.nvvm.fence.proxy.async_generic.release.sync_restrict.space.cta.scope.cluster">;
+
   foreach scope = ["cta", "cluster", "gpu", "sys"] in {
 
     def int_nvvm_fence_proxy_tensormap_generic_release_ # scope :
-          Intrinsic<[], [], [IntrNoCallback],
+          Intrinsic<[], [], [],
           "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
 
     // The imm-arg 'size' can only be 128.
     def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope :
-          Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
-                    [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>,
-                    Range<ArgIndex<1>, 128, 129>],
-                    "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
+          Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], [],
+                    "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope> {
+      let IntrProperties = [IntrNoCallback, IntrArgMemOnly,
+                            ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 128, 129>];
+    }
   }
+
+//
+// Proxy fence (bi-directional)
+//
+  foreach proxykind = ["alias", "async", "async.global", "async.shared_cta",
+                        "async.shared_cluster"] in {
+    defvar Intr = IntrinsicName<"llvm.nvvm.fence.proxy." # proxykind>;
+    def Intr.record_name: Intrinsic<[], [], [], Intr.intr_name>;
+  }
+}
 
 //
 // Async Copy
