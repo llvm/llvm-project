@@ -46,26 +46,26 @@ static cl::opt<bool> EnableFreestanding(
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"));
 
 static cl::opt<std::string> ThinLTOCacheDir(
-    "thinlto-cache-dir",
+    "legacy-thinlto-cache-dir",
     cl::desc("Experimental option, enable ThinLTO caching. Note: the cache "
              "currently does not take the mcmodel setting into account, so you "
              "might get false hits if different mcmodels are used in different "
              "builds using the same cache directory."));
 
 static cl::opt<int> ThinLTOCachePruningInterval(
-    "thinlto-cache-pruning-interval", cl::init(1200),
+    "legacy-thinlto-cache-pruning-interval", cl::init(1200),
     cl::desc("Set ThinLTO cache pruning interval (seconds)."));
 
 static cl::opt<uint64_t> ThinLTOCacheMaxSizeBytes(
-    "thinlto-cache-max-size-bytes",
+    "legacy-thinlto-cache-max-size-bytes",
     cl::desc("Set ThinLTO cache pruning directory maximum size in bytes."));
 
 static cl::opt<int> ThinLTOCacheMaxSizeFiles(
-    "thinlto-cache-max-size-files", cl::init(1000000),
+    "legacy-thinlto-cache-max-size-files", cl::init(1000000),
     cl::desc("Set ThinLTO cache pruning directory maximum number of files."));
 
 static cl::opt<unsigned> ThinLTOCacheEntryExpiration(
-    "thinlto-cache-entry-expiration", cl::init(604800) /* 1w */,
+    "legacy-thinlto-cache-entry-expiration", cl::init(604800) /* 1w */,
     cl::desc("Set ThinLTO cache entry expiration time (seconds)."));
 
 #ifdef NDEBUG
@@ -568,22 +568,23 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
     CodeGen->setCodeGenOptLevel(*CGOptLevelOrNone);
   }
   if (!ThinLTOCacheDir.empty()) {
-    auto Err = llvm::sys::fs::create_directories(ThinLTOCacheDir.getValue());
+    auto Err = llvm::sys::fs::create_directories(ThinLTOCacheDir);
     if (Err)
       report_fatal_error(Twine("Unable to create thinLTO cache directory: ") +
                          Err.message());
     bool result;
-    Err = llvm::sys::fs::is_directory(ThinLTOCacheDir.getValue(), result);
+    Err = llvm::sys::fs::is_directory(ThinLTOCacheDir, result);
     if (Err || !result)
       report_fatal_error(Twine("Unable to get status of thinLTO cache path or "
                                "path is not a directory: ") +
                          Err.message());
     CodeGen->setCacheDir(ThinLTOCacheDir);
+
+    CodeGen->setCachePruningInterval(ThinLTOCachePruningInterval);
+    CodeGen->setCacheEntryExpiration(ThinLTOCacheEntryExpiration);
+    CodeGen->setCacheMaxSizeFiles(ThinLTOCacheMaxSizeFiles);
+    CodeGen->setCacheMaxSizeBytes(ThinLTOCacheMaxSizeBytes);
   }
-  CodeGen->setCachePruningInterval(ThinLTOCachePruningInterval);
-  CodeGen->setCacheEntryExpiration(ThinLTOCacheEntryExpiration);
-  CodeGen->setCacheMaxSizeFiles(ThinLTOCacheMaxSizeFiles);
-  CodeGen->setCacheMaxSizeBytes(ThinLTOCacheMaxSizeBytes);
 
   return wrap(CodeGen);
 }
