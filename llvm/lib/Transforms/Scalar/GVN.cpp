@@ -1646,6 +1646,56 @@ void GVNPass::eliminatePartiallyRedundantLoad(
   salvageAndRemoveInstruction(Load);
 }
 
+/// Merges splited critical edge blocks that originate from the same
+/// predecessor.
+void GVNPass::mergeSplitedCriticalEdges(
+    SmallVectorImpl<BasicBlock *> &SplitedCriticalEdges,
+    MapVector<BasicBlock *, Value *> &PredLoad) {
+  if (SplitedCriticalEdges.size() <= 1)
+    return;
+
+  MapVector<BasicBlock *, SmallVector<BasicBlock *, 4>> PredEdgeMap;
+  // Group the splited edge blocks based on their predecessor (Pred).
+  // Example: Pred1 -> {Edge1, Edge2}, Pred2 -> {Edge3}
+  for (BasicBlock *Edge : SplitedCriticalEdges) {
+    // A splited edge block must have exactly one predecessor.
+    assert(Edge->getSinglePredecessor() &&
+           "Splited edge block should have a single predecessor");
+    auto *Pred = Edge->getSinglePredecessor();
+    PredEdgeMap[Pred].push_back(Edge);
+  }
+
+  // Iterate over the grouped edge blocks to perform the merge.
+  for (auto &PredEdgeEl : PredEdgeMap) {
+    BasicBlock *Pred = PredEdgeEl.first;
+    SmallVector<BasicBlock *, 4> &BBs = PredEdgeEl.second;
+    if (BBs.size() <= 1)
+      continue;
+
+    // Select the first edge block as the representative block that will
+    // remain after merging.
+    BasicBlock *MergedBlock = BBs[0];
+    for (BasicBlock *BB : llvm::drop_begin(BBs)) {
+      // Redirect all jumps to this block (BB) from its predecessor (which
+      // should only be Pred) to the MergedBlock.
+      Instruction *PredTI = Pred->getTerminator();
+      for (unsigned I = 0, E = PredTI->getNumSuccessors(); I < E; ++I) {
+        if (PredTI->getSuccessor(I) == BB) {
+          PredTI->setSuccessor(I, MergedBlock);
+          LLVM_DEBUG(dbgs() << "  Redirected successor in " << Pred->getName()
+                            << " from " << BB->getName() << " to "
+                            << MergedBlock->getName() << "\n");
+        }
+      }
+      // Remove the block from the SplitedCriticalEdges list as well
+      auto it = find(SplitedCriticalEdges, BB);
+      SplitedCriticalEdges.erase(it);
+      DeleteDeadBlock(BB);
+    }
+    PredLoad[MergedBlock] = nullptr;
+  }
+}
+
 bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
                              UnavailBlkVect &UnavailableBlocks) {
   // Okay, we have *some* definitions of the value.  This means that the value
@@ -1769,9 +1819,10 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   }
 
   // Decide whether PRE is profitable for this load.
-  unsigned NumInsertPreds = PredLoads.size() + CriticalEdgePredSplit.size();
+  unsigned NumInsertPreds = PredLoads.size();
   unsigned NumUnavailablePreds = NumInsertPreds +
-      CriticalEdgePredAndLoad.size();
+                                 CriticalEdgePredAndLoad.size() +
+                                 CriticalEdgePredSplit.size();
   assert(NumUnavailablePreds != 0 &&
          "Fully available value should already be eliminated!");
   (void)NumUnavailablePreds;
@@ -1800,14 +1851,36 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
         return false;
   }
 
-  // Split critical edges, and update the unavailable predecessors accordingly.
+  // Verify that all successors of the predecessor (Pred) are included in the
+  // current group (BBs). If Pred has a successor that is not in BBs, merging
+  // these blocks could make the Pred -> (block not in BBs) edge critical again.
+  // If there is at least one CriticalEdgePredSplit that cannot be merged, it
+  // must be rejected because it would require inserting new loads into multiple
+  // predecessors.
+  if (CriticalEdgePredSplit.size() > 1 - PredLoads.size()) {
+    for (BasicBlock *OrigPred : CriticalEdgePredSplit) {
+      auto *PredTI = OrigPred->getTerminator();
+      for (unsigned i = 0, e = PredTI->getNumSuccessors(); i < e - 1; ++i)
+        if (PredTI->getSuccessor(i) != PredTI->getSuccessor(i + 1))
+          return false;
+    }
+  }
+
+  // The edge from Pred to LoadBB is a critical edge will be splitted.
+  SmallVector<BasicBlock *, 4> SplitedCriticalEdges;
   for (BasicBlock *OrigPred : CriticalEdgePredSplit) {
     BasicBlock *NewPred = splitCriticalEdges(OrigPred, LoadBB);
+    SplitedCriticalEdges.push_back(NewPred);
     assert(!PredLoads.count(OrigPred) && "Split edges shouldn't be in map!");
-    PredLoads[NewPred] = nullptr;
     LLVM_DEBUG(dbgs() << "Split critical edge " << OrigPred->getName() << "->"
                       << LoadBB->getName() << '\n');
   }
+  // Attempts to merge the blocks created by splitting the CriticalEdges. The
+  // merged blocks are removed from SplitedCriticalEdges.
+  mergeSplitedCriticalEdges(SplitedCriticalEdges, PredLoads);
+  // Add the unmerged blocks separately.
+  for (auto BB : SplitedCriticalEdges)
+    PredLoads[BB] = nullptr;
 
   for (auto &CEP : CriticalEdgePredAndLoad)
     PredLoads[CEP.first] = nullptr;

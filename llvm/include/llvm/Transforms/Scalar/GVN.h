@@ -398,6 +398,9 @@ private:
   void verifyRemoved(const Instruction *I) const;
   bool splitCriticalEdges();
   BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);
+  void
+  mergeSplitedCriticalEdges(SmallVectorImpl<BasicBlock *> &SplitedCriticalEdges,
+                            MapVector<BasicBlock *, Value *> &PredLoad);
   bool
   propagateEquality(Value *LHS, Value *RHS,
                     const std::variant<BasicBlockEdge, Instruction *> &Root);

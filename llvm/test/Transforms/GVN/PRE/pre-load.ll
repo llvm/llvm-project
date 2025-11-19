@@ -831,7 +831,7 @@ define void @test12(ptr %p) personality ptr @__CxxFrameHandler3 {
 ; CHECK:       block3:
 ; CHECK-NEXT:    ret void
 ; CHECK:       catch.dispatch:
-; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind label [[CLEANUP2:%.*]]
+; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label [[CATCH:%.*]]] unwind label [[CLEANUP2:%.*]]
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[C:%.*]] = catchpad within [[CS1]] []
 ; CHECK-NEXT:    catchret from [[C]] to label [[BLOCK2]]
@@ -1294,20 +1294,38 @@ lpad:
 ; A predecessor BB has both successors to the same BB, for simplicity we don't
 ; handle it, nothing should be changed.
 define void @test20(i1 %cond, i1 %cond2, ptr %p1, ptr %p2) {
-; CHECK-LABEL: @test20(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[V1:%.*]] = load i16, ptr [[P1:%.*]], align 2
-; CHECK-NEXT:    [[DEC:%.*]] = add i16 [[V1]], -1
-; CHECK-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_END]], label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[V2:%.*]] = load i16, ptr [[P1]], align 2
-; CHECK-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
-; CHECK-NEXT:    ret void
+; MDEP-LABEL: @test20(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; MDEP:       if.then:
+; MDEP-NEXT:    [[V1:%.*]] = load i16, ptr [[P1:%.*]], align 2
+; MDEP-NEXT:    [[DEC:%.*]] = add i16 [[V1]], -1
+; MDEP-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
+; MDEP-NEXT:    br label [[IF_END:%.*]]
+; MDEP:       if.else:
+; MDEP-NEXT:    br i1 [[COND2:%.*]], label [[IF_ELSE_IF_END_CRIT_EDGE:%.*]], label [[IF_ELSE_IF_END_CRIT_EDGE]]
+; MDEP:       if.else.if.end_crit_edge:
+; MDEP-NEXT:    [[V2_PRE:%.*]] = load i16, ptr [[P1]], align 2
+; MDEP-NEXT:    br label [[IF_END]]
+; MDEP:       if.end:
+; MDEP-NEXT:    [[V2:%.*]] = phi i16 [ [[V2_PRE]], [[IF_ELSE_IF_END_CRIT_EDGE]] ], [ [[DEC]], [[IF_THEN]] ]
+; MDEP-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; MDEP-NEXT:    ret void
+;
+; MSSA-LABEL: @test20(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; MSSA:       if.then:
+; MSSA-NEXT:    [[V1:%.*]] = load i16, ptr [[P1:%.*]], align 2
+; MSSA-NEXT:    [[DEC:%.*]] = add i16 [[V1]], -1
+; MSSA-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
+; MSSA-NEXT:    br label [[IF_END:%.*]]
+; MSSA:       if.else:
+; MSSA-NEXT:    br i1 [[COND2:%.*]], label [[IF_END]], label [[IF_END]]
+; MSSA:       if.end:
+; MSSA-NEXT:    [[V2:%.*]] = load i16, ptr [[P1]], align 2
+; MSSA-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; MSSA-NEXT:    ret void
 ;
 entry:
   br i1 %cond, label %if.then, label %if.else
@@ -1329,24 +1347,46 @@ if.end:
 
 ; More edges from the same BB to LoadBB. Don't change anything.
 define void @test21(i1 %cond, i32 %code, ptr %p1, ptr %p2) {
-; CHECK-LABEL: @test21(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[V1:%.*]] = load i16, ptr [[P1:%.*]], align 2
-; CHECK-NEXT:    [[DEC:%.*]] = add i16 [[V1]], -1
-; CHECK-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    switch i32 [[CODE:%.*]], label [[IF_END]] [
-; CHECK-NEXT:      i32 1, label [[IF_END]]
-; CHECK-NEXT:      i32 2, label [[IF_END]]
-; CHECK-NEXT:      i32 3, label [[IF_END]]
-; CHECK-NEXT:    ]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[V2:%.*]] = load i16, ptr [[P1]], align 2
-; CHECK-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
-; CHECK-NEXT:    ret void
+; MDEP-LABEL: @test21(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; MDEP:       if.then:
+; MDEP-NEXT:    [[V1:%.*]] = load i16, ptr [[P1:%.*]], align 2
+; MDEP-NEXT:    [[DEC:%.*]] = add i16 [[V1]], -1
+; MDEP-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
+; MDEP-NEXT:    br label [[IF_END:%.*]]
+; MDEP:       if.else:
+; MDEP-NEXT:    switch i32 [[CODE:%.*]], label [[IF_ELSE_IF_END_CRIT_EDGE:%.*]] [
+; MDEP-NEXT:      i32 1, label [[IF_ELSE_IF_END_CRIT_EDGE]]
+; MDEP-NEXT:      i32 2, label [[IF_ELSE_IF_END_CRIT_EDGE]]
+; MDEP-NEXT:      i32 3, label [[IF_ELSE_IF_END_CRIT_EDGE]]
+; MDEP-NEXT:    ]
+; MDEP:       if.else.if.end_crit_edge:
+; MDEP-NEXT:    [[V2_PRE:%.*]] = load i16, ptr [[P1]], align 2
+; MDEP-NEXT:    br label [[IF_END]]
+; MDEP:       if.end:
+; MDEP-NEXT:    [[V2:%.*]] = phi i16 [ [[V2_PRE]], [[IF_ELSE_IF_END_CRIT_EDGE]] ], [ [[DEC]], [[IF_THEN]] ]
+; MDEP-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; MDEP-NEXT:    ret void
+;
+; MSSA-LABEL: @test21(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; MSSA:       if.then:
+; MSSA-NEXT:    [[V1:%.*]] = load i16, ptr [[P1:%.*]], align 2
+; MSSA-NEXT:    [[DEC:%.*]] = add i16 [[V1]], -1
+; MSSA-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
+; MSSA-NEXT:    br label [[IF_END:%.*]]
+; MSSA:       if.else:
+; MSSA-NEXT:    switch i32 [[CODE:%.*]], label [[IF_END]] [
+; MSSA-NEXT:      i32 1, label [[IF_END]]
+; MSSA-NEXT:      i32 2, label [[IF_END]]
+; MSSA-NEXT:      i32 3, label [[IF_END]]
+; MSSA-NEXT:    ]
+; MSSA:       if.end:
+; MSSA-NEXT:    [[V2:%.*]] = load i16, ptr [[P1]], align 2
+; MSSA-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; MSSA-NEXT:    ret void
 ;
 entry:
   br i1 %cond, label %if.then, label %if.else
