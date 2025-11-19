@@ -408,20 +408,6 @@ public:
                            callee.getFunctionType().getReturnType(), operands);
   }
 
-  struct BinOpOverflowResults {
-    mlir::Value result;
-    mlir::Value overflow;
-  };
-
-  BinOpOverflowResults createBinOpOverflowOp(mlir::Location loc,
-                                             cir::IntType resultTy,
-                                             cir::BinOpOverflowKind kind,
-                                             mlir::Value lhs, mlir::Value rhs) {
-    auto op =
-        cir::BinOpOverflowOp::create(*this, loc, resultTy, kind, lhs, rhs);
-    return {op.getResult(), op.getOverflow()};
-  }
-
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
