@@ -283,15 +283,25 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
   assert(EndOfPredefines == getNumFixedInstructions() &&
          "Missing generic opcode");
 
+  [[maybe_unused]] unsigned SkippedInsts = 0;
+
   for (const auto &[_, CGIUp] : InstMap) {
     const CodeGenInstruction *CGI = CGIUp.get();
     if (CGI->Namespace != "TargetOpcode") {
+
+      if (CGI->TheDef->isSubClassOf(
+              "TargetSpecializedStandardPseudoInstruction")) {
+        ++SkippedInsts;
+        continue;
+      }
+
       InstrsByEnum.push_back(CGI);
       NumPseudoInstructions += CGI->TheDef->getValueAsBit("isPseudo");
     }
   }
 
-  assert(InstrsByEnum.size() == InstMap.size() && "Missing predefined instr");
+  assert(InstrsByEnum.size() + SkippedInsts == InstMap.size() &&
+         "Missing predefined instr");
 
   // All of the instructions are now in random order based on the map iteration.
   llvm::sort(
