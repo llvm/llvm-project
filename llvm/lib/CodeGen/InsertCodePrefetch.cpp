@@ -77,7 +77,7 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
   for (const auto &Target : PrefetchTargets)
     PrefetchTargetsByBBID[Target.BBID].push_back(Target.CallsiteIndex);
   // Sort and uniquify the callsite indices for every block.
-  for (auto &[K, V]: PrefetchTargetsByBBID) {
+  for (auto &[K, V] : PrefetchTargetsByBBID) {
     llvm::sort(V);
     V.erase(llvm::unique(V), V.end());
   }

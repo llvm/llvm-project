@@ -1986,7 +1986,8 @@ void AsmPrinter::emitFunctionBody() {
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
 
-    SmallVector<unsigned> PrefetchTargets = MBB.getPrefetchTargetCallsiteIndexes();
+    SmallVector<unsigned> PrefetchTargets =
+        MBB.getPrefetchTargetCallsiteIndexes();
     auto PrefetchTargetIt = PrefetchTargets.begin();
     unsigned LastCallsiteIndex = 0;
     // Helper to emit a symbol for the prefetch target and proceed to the next
