@@ -304,7 +304,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(ShrinkWrapLegacy, DEBUG_TYPE, "Shrink Wrap Pass", false,
                     false)
->>>>>>> master
 
 bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
                                      bool StackAddressUsed) const {
