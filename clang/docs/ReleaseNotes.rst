@@ -641,6 +641,15 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports C++17 Class Template Argument Deduction (CTAD) in CUDA/HIP
+  device code by treating deduction guides as if they were ``__host__ __device__``.
+
+- Clang avoids ambiguous CTAD in CUDA/HIP by not synthesizing duplicate implicit
+  deduction guides when ``__host__`` and ``__device__`` constructors share a signature.
+
+- Clang diagnoses CUDA/HIP target attributes written on deduction guides as errors,
+  since deduction guides do not participate in code generation.
+
 CUDA Support
 ^^^^^^^^^^^^
 

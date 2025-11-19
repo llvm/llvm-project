@@ -218,9 +218,31 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
       TInfo->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams();
 
   // Build the implicit deduction guide template.
+  QualType GuideType = TInfo->getType();
+
+  // In CUDA/HIP mode, avoid creating duplicate implicit deduction guides with
+  // identical function types. This can happen when there are separate
+  // __host__ and __device__ constructors with the same signature; each would
+  // otherwise synthesize its own implicit deduction guide, leading to
+  // ambiguous CTAD purely due to target attributes. For such cases we keep the
+  // first guide we created and skip building another one.
+  if (IsImplicit && Ctor && SemaRef.getLangOpts().CUDA)
+    for (NamedDecl *Existing : DC->lookup(DeductionGuideName)) {
+      auto *ExistingFT = dyn_cast<FunctionTemplateDecl>(Existing);
+      auto *ExistingGuide =
+          ExistingFT
+              ? dyn_cast<CXXDeductionGuideDecl>(ExistingFT->getTemplatedDecl())
+              : dyn_cast<CXXDeductionGuideDecl>(Existing);
+      if (!ExistingGuide)
+        continue;
+
+      if (SemaRef.Context.hasSameType(ExistingGuide->getType(), GuideType))
+        return Existing;
+    }
+
   auto *Guide = CXXDeductionGuideDecl::Create(
-      SemaRef.Context, DC, LocStart, ES, Name, TInfo->getType(), TInfo, LocEnd,
-      Ctor, DeductionCandidate::Normal, FunctionTrailingRC);
+      SemaRef.Context, DC, LocStart, ES, Name, GuideType, TInfo, LocEnd, Ctor,
+      DeductionCandidate::Normal, FunctionTrailingRC);
   Guide->setImplicit(IsImplicit);
   Guide->setParams(Params);
 
