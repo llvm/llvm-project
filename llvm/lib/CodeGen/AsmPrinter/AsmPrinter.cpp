@@ -1998,7 +1998,7 @@ void AsmPrinter::emitFunctionBody() {
         MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
             Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
             utostr(MBB.getBBID()->BaseID) + Twine("_") +
-            utostr(static_cast<unsigned>(*PrefetchTargetIt + 1)));
+            utostr(static_cast<unsigned>(*PrefetchTargetIt)));
         // If the function is weak-linkage it may be replaced by a strong
         // version, in which case the prefetch targets should also be replaced.
         OutStreamer->emitSymbolAttribute(
