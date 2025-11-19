@@ -1590,6 +1590,10 @@ Error RewriteInstance::updateRtInitReloc() {
   InitArraySection->addPendingRelocation(Relocation{
       /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
       /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
+  BC->outs()
+      << "BOLT-INFO: runtime library initialization was hooked via .init_array "
+         "entry, set to 0x"
+      << Twine::utohexstr(RT->getRuntimeStartAddress()) << "\n";
   return Error::success();
 }
 
@@ -1628,6 +1632,9 @@ Error RewriteInstance::updateRtFiniReloc() {
   FiniArraySection->addPendingRelocation(Relocation{
       /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
       /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+  BC->outs() << "BOLT-INFO: runtime library finalization was hooked via "
+                ".fini_array entry, set to 0x"
+             << Twine::utohexstr(RT->getRuntimeFiniAddress()) << "\n";
   return Error::success();
 }
 
@@ -2325,6 +2332,14 @@ void RewriteInstance::adjustCommandLineOptions() {
                   "segment in instrumented binary if program headers will be "
                   "updated in place\n";
     exit(1);
+  }
+
+  if (opts::Instrument && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT &&
+      !BC->HasInterpHeader) {
+    BC->errs()
+        << "BOLT-WARNING: adjusted runtime-lib-init-hook to 'init' due to "
+           "absence of INTERP header\n";
+    opts::RuntimeLibInitHook = opts::RLIH_INIT;
   }
 
   if (opts::HotText && opts::HotTextMoveSections.getNumOccurrences() == 0) {
@@ -4999,9 +5014,13 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
 
   if (BC->HasRelocations) {
     RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary();
-    if (RtLibrary && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT)
+    if (RtLibrary && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT) {
       NewEhdr.e_entry = RtLibrary->getRuntimeStartAddress();
-    else
+      BC->outs()
+          << "BOLT-INFO: runtime library initialization was hooked via ELF "
+             "Header Entry Point, set to 0x"
+          << Twine::utohexstr(NewEhdr.e_entry) << "\n";
+    } else
       NewEhdr.e_entry = getNewFunctionAddress(NewEhdr.e_entry);
     assert((NewEhdr.e_entry || !Obj.getHeader().e_entry) &&
            "cannot find new address for entry point");
@@ -5842,16 +5861,23 @@ void RewriteInstance::patchELFDynamic(ELFObjectFile<ELFT> *File) {
       }
       RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary();
       if (RtLibrary && Dyn.getTag() == ELF::DT_FINI) {
-        if (uint64_t Addr = RtLibrary->getRuntimeFiniAddress())
+        if (uint64_t Addr = RtLibrary->getRuntimeFiniAddress()) {
           NewDE.d_un.d_ptr = Addr;
+          BC->outs()
+              << "BOLT-INFO: runtime library finalization was hooked via "
+                 "DT_FINI, set to 0x"
+              << Twine::utohexstr(Addr) << "\n";
+        }
       }
       if (RtLibrary && Dyn.getTag() == ELF::DT_INIT &&
           (!BC->HasInterpHeader ||
            opts::RuntimeLibInitHook == opts::RLIH_INIT)) {
         if (auto Addr = RtLibrary->getRuntimeStartAddress()) {
-          LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Set DT_INIT to 0x"
-                            << Twine::utohexstr(Addr) << '\n');
           NewDE.d_un.d_ptr = Addr;
+          BC->outs()
+              << "BOLT-INFO: runtime library initialization was hooked via "
+                 "DT_INIT, set to 0x"
+              << Twine::utohexstr(Addr) << "\n";
         }
       }
       break;
