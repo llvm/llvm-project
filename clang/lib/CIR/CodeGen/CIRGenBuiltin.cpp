@@ -61,40 +61,40 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
 namespace {
 struct WidthAndSignedness {
   unsigned width;
-  bool signed;
+  bool isSigned;
 };
 } // namespace
 
 static WidthAndSignedness
 getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
                              const clang::QualType type) {
-  assert(Type->isIntegerType() && "Given type is not an integer.");
+  assert(type->isIntegerType() && "Given type is not an integer.");
   unsigned width = type->isBooleanType()  ? 1
-                   : Type->isBitIntType() ? astContext.getIntWidth(Type)
-                                          : astContext.getTypeInfo(Type).Width;
-  bool signed = Type->isSignedIntegerType();
-  return {Width, Signed};
+                   : type->isBitIntType() ? astContext.getIntWidth(type)
+                                          : astContext.getTypeInfo(type).Width;
+  bool isSigned = type->isSignedIntegerType();
+  return {width, isSigned};
 }
 
 // Given one or more integer types, this function produces an integer type that
 // encompasses them: any value in one of the given types could be expressed in
 // the encompassing type.
 static struct WidthAndSignedness
-EncompassingIntegerType(ArrayRef<struct WidthAndSignedness> Types) {
-  assert(Types.size() > 0 && "Empty list of types.");
+EncompassingIntegerType(ArrayRef<struct WidthAndSignedness> types) {
+  assert(types.size() > 0 && "Empty list of types.");
 
   // If any of the given types is signed, we must return a signed type.
-bool Signed = llvm::any_of(Types, [](const auto &T) { return T.Signed; });
+  bool isSigned = llvm::any_of(types, [](const auto &t) { return t.isSigned; });
 
   // The encompassing type must have a width greater than or equal to the width
   // of the specified types.  Additionally, if the encompassing type is signed,
   // its width must be strictly greater than the width of any unsigned types
   // given.
-unsigned Width = 0;
-for (const auto &Type : Types)
-  Width = std::max(Width, Type.Width + (Signed && !Type.Signed));
+  unsigned width = 0;
+  for (const auto &type : types)
+    width = std::max(width, type.width + (isSigned && !type.isSigned));
 
-  return {Width, Signed};
+  return {width, isSigned};
 }
 
 RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
@@ -554,7 +554,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         EncompassingIntegerType({LeftInfo, RightInfo, ResultInfo});
 
     auto EncompassingCIRTy = cir::IntType::get(
-        &getMLIRContext(), EncompassingInfo.Width, EncompassingInfo.Signed);
+        &getMLIRContext(), EncompassingInfo.width, EncompassingInfo.isSigned);
     auto ResultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(ResultQTy));
 
     mlir::Value Left = emitScalarExpr(LeftArg);
@@ -586,8 +586,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     }
 
     auto Loc = getLoc(e->getSourceRange());
-    auto ArithResult =
-        builder.createBinOpOverflowOp(Loc, ResultCIRTy, OpKind, Left, Right);
+    cir::BinOpOverflowOp ArithOp =
+        cir::BinOpOverflowOp::create(builder, Loc, ResultCIRTy, OpKind, Left, Right);
 
     // Here is a slight difference from the original clang CodeGen:
     //   - In the original clang CodeGen, the checked arithmetic result is
@@ -601,10 +601,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // Finally, store the result using the pointer.
     bool isVolatile =
         ResultArg->getType()->getPointeeType().isVolatileQualified();
-    builder.createStore(Loc, emitToMemory(ArithResult.result, ResultQTy),
+    builder.createStore(Loc, emitToMemory(ArithOp.getResult(), ResultQTy),
                         ResultPtr, isVolatile);
 
-    return RValue::get(ArithResult.overflow);
+    return RValue::get(ArithOp.getOverflow());
   }
 
   case Builtin::BI__builtin_uadd_overflow:
@@ -668,15 +668,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     auto ResultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(ResultQTy));
 
     auto Loc = getLoc(e->getSourceRange());
-    auto ArithResult =
-        builder.createBinOpOverflowOp(Loc, ResultCIRTy, ArithKind, X, Y);
+    cir::BinOpOverflowOp ArithOp =
+        cir::BinOpOverflowOp::create(builder, Loc, ResultCIRTy, ArithKind, X, Y);
 
     bool isVolatile =
         ResultArg->getType()->getPointeeType().isVolatileQualified();
-    builder.createStore(Loc, emitToMemory(ArithResult.result, ResultQTy),
+    builder.createStore(Loc, emitToMemory(ArithOp.getResult(), ResultQTy),
                         ResultPtr, isVolatile);
 
-    return RValue::get(ArithResult.overflow);
+    return RValue::get(ArithOp.getOverflow());
   }
   }
 
