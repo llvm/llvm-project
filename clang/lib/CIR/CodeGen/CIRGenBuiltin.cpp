@@ -520,6 +520,98 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::PrefetchOp::create(builder, loc, address, locality, isWrite);
     return RValue::get(nullptr);
   }
+  // From https://clang.llvm.org/docs/LanguageExtensions.html#builtin-isfpclass
+  // :
+  //
+  //  The `__builtin_isfpclass()` builtin is a generalization of functions
+  //  isnan, isinf, isfinite and some others defined by the C standard. It tests
+  //  if the floating-point value, specified by the first argument, falls into
+  //  any of data classes, specified by the second argument.
+  case Builtin::BI__builtin_isnan: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    assert(!cir::MissingFeatures::fpConstraints());
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Nan),
+        convertType(e->getType())));
+  }
+
+  case Builtin::BI__builtin_issignaling: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, cir::FPClassTest::SignalingNaN),
+        convertType(e->getType())));
+  }
+
+  case Builtin::BI__builtin_isinf: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    assert(!cir::MissingFeatures::fpConstraints());
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Infinity),
+        convertType(e->getType())));
+  }
+
+  case Builtin::BIfinite:
+  case Builtin::BI__finite:
+  case Builtin::BIfinitef:
+  case Builtin::BI__finitef:
+  case Builtin::BIfinitel:
+  case Builtin::BI__finitel:
+  case Builtin::BI__builtin_isfinite: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    assert(!cir::MissingFeatures::fpConstraints());
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Finite),
+        convertType(e->getType())));
+  }
+
+  case Builtin::BI__builtin_isnormal: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Normal),
+        convertType(e->getType())));
+  }
+
+  case Builtin::BI__builtin_issubnormal: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Subnormal),
+        convertType(e->getType())));
+  }
+
+  case Builtin::BI__builtin_iszero: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Zero),
+        convertType(e->getType())));
+  }
+  case Builtin::BI__builtin_isfpclass: {
+    Expr::EvalResult result;
+    if (!e->getArg(1)->EvaluateAsInt(result, cgm.getASTContext()))
+      break;
+
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    uint64_t test = result.Val.getInt().getLimitedValue();
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    //
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, cir::FPClassTest(test)),
+        convertType(e->getType())));
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

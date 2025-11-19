@@ -289,7 +289,10 @@ void cir::ConditionOp::getSuccessorRegions(
     regions.emplace_back(getOperation(), loopOp->getResults());
   }
 
-  assert(!cir::MissingFeatures::awaitOp());
+  // Parent is an await: condition may branch to resume or suspend regions.
+  auto await = cast<AwaitOp>(getOperation()->getParentOp());
+  regions.emplace_back(&await.getResume(), await.getResume().getArguments());
+  regions.emplace_back(&await.getSuspend(), await.getSuspend().getArguments());
 }
 
 MutableOperandRange
@@ -299,8 +302,7 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
 }
 
 LogicalResult cir::ConditionOp::verify() {
-  assert(!cir::MissingFeatures::awaitOp());
-  if (!isa<LoopOpInterface>(getOperation()->getParentOp()))
+  if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
   return success();
 }
@@ -1910,6 +1912,19 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
 mlir::LogicalResult cir::FuncOp::verify() {
 
+  if (!isDeclaration() && getCoroutine()) {
+    bool foundAwait = false;
+    this->walk([&](Operation *op) {
+      if (auto await = dyn_cast<AwaitOp>(op)) {
+        foundAwait = true;
+        return;
+      }
+    });
+    if (!foundAwait)
+      return emitOpError()
+             << "coroutine body must use at least one cir.await op";
+  }
+
   llvm::SmallSet<llvm::StringRef, 16> labels;
   llvm::SmallSet<llvm::StringRef, 16> gotos;
   llvm::SmallSet<llvm::StringRef, 16> blockAddresses;
@@ -2148,6 +2163,61 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
         return previous.getInput();
 
   return {};
+}
+//===----------------------------------------------------------------------===//
+// AwaitOp
+//===----------------------------------------------------------------------===//
+
+void cir::AwaitOp::build(OpBuilder &builder, OperationState &result,
+                         cir::AwaitKind kind, BuilderCallbackRef readyBuilder,
+                         BuilderCallbackRef suspendBuilder,
+                         BuilderCallbackRef resumeBuilder) {
+  result.addAttribute(getKindAttrName(result.name),
+                      cir::AwaitKindAttr::get(builder.getContext(), kind));
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *readyRegion = result.addRegion();
+    builder.createBlock(readyRegion);
+    readyBuilder(builder, result.location);
+  }
+
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *suspendRegion = result.addRegion();
+    builder.createBlock(suspendRegion);
+    suspendBuilder(builder, result.location);
+  }
+
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *resumeRegion = result.addRegion();
+    builder.createBlock(resumeRegion);
+    resumeBuilder(builder, result.location);
+  }
+}
+
+void cir::AwaitOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // If any index all the underlying regions branch back to the parent
+  // operation.
+  if (!point.isParent()) {
+    regions.push_back(
+        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    return;
+  }
+
+  // TODO: retrieve information from the promise and only push the
+  // necessary ones. Example: `std::suspend_never` on initial or final
+  // await's might allow suspend region to be skipped.
+  regions.push_back(RegionSuccessor(&this->getReady()));
+  regions.push_back(RegionSuccessor(&this->getSuspend()));
+  regions.push_back(RegionSuccessor(&this->getResume()));
+}
+
+LogicalResult cir::AwaitOp::verify() {
+  if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
+    return emitOpError("ready region must end with cir.condition");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

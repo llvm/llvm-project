@@ -266,6 +266,7 @@ struct MissingFeatures {
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
   static bool fastMathFlags() { return false; }
+
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
   static bool globalViewIndices() { return false; }

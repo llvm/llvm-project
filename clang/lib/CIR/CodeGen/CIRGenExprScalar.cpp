@@ -156,6 +156,10 @@ public:
     return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
   }
 
+  mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
+    return cgf.emitCoawaitExpr(*s).getValue();
+  }
+
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
     return cgf.emitLoadOfLValue(lv, loc).getValue();
   }
@@ -711,6 +715,10 @@ public:
     return Visit(e->getSubExpr());
   }
 
+  mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
+    CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
+    return Visit(dae->getExpr());
+  }
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
     return Visit(die->getExpr());
