@@ -2492,31 +2492,41 @@ RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
 
   unsigned BitWidth = Ty->getIntegerBitWidth();
 
-  if (!llvm::isPowerOf2_32(BitWidth) &&
-      E->getArg(1)->getType()->isSignedIntegerType()) {
-    // converting BitWidth to the type of ShiftAmt
-    llvm::Value *BitWidthInShiftTy = ConstantInt::get(ShiftTy, BitWidth);
-
-    // if ShiftAmt is negative, normalize ShiftAmt to [0, BitWidth - 1]
-    llvm::Value *RemResult = Builder.CreateSRem(ShiftAmt, BitWidthInShiftTy);
-    llvm::Value *PositiveShift =
-        Builder.CreateAdd(RemResult, BitWidthInShiftTy);
-
-    llvm::Value *Zero = ConstantInt::get(ShiftTy, 0);
-    llvm::Value *IsRemNegative = Builder.CreateICmpSLT(RemResult, Zero);
-
-    ShiftAmt = Builder.CreateSelect(IsRemNegative, PositiveShift, RemResult);
-  }
-
-  unsigned ShiftAmtBitWidth = ShiftTy->getIntegerBitWidth();
-  if (ShiftAmtBitWidth > BitWidth) {
-    llvm::Value *BitWidthInShiftTy = ConstantInt::get(ShiftTy, BitWidth);
-    ShiftAmt = Builder.CreateURem(ShiftAmt, BitWidthInShiftTy);
-    ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
+  // Normalize shift amount to [0, BitWidth) range to match runtime behavior.
+  // This matches the algorithm in ExprConstant.cpp for constant evaluation.
+  if (BitWidth == 1) {
+    // Rotating a 1-bit value is always a no-op
+    ShiftAmt = ConstantInt::get(ShiftTy, 0);
   } else {
-    llvm::Value *BitWidthInShiftTy = ConstantInt::get(Ty, BitWidth);
-    ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
-    ShiftAmt = Builder.CreateURem(ShiftAmt, BitWidthInShiftTy);
+    unsigned ShiftAmtBitWidth = ShiftTy->getIntegerBitWidth();
+    bool ShiftAmtIsSigned = E->getArg(1)->getType()->isSignedIntegerType();
+
+    // Choose the wider type for the divisor to avoid truncation
+    llvm::Type *DivisorTy = ShiftAmtBitWidth > BitWidth ? ShiftTy : Ty;
+    llvm::Value *Divisor = ConstantInt::get(DivisorTy, BitWidth);
+
+    // Extend ShiftAmt to match Divisor width if needed
+    if (ShiftAmtBitWidth < DivisorTy->getIntegerBitWidth()) {
+      ShiftAmt = Builder.CreateIntCast(ShiftAmt, DivisorTy, ShiftAmtIsSigned);
+    }
+
+    // Normalize to [0, BitWidth)
+    llvm::Value *RemResult;
+    if (ShiftAmtIsSigned) {
+      RemResult = Builder.CreateSRem(ShiftAmt, Divisor);
+      // Signed remainder can be negative, convert to positive equivalent
+      llvm::Value *Zero = ConstantInt::get(DivisorTy, 0);
+      llvm::Value *IsNegative = Builder.CreateICmpSLT(RemResult, Zero);
+      llvm::Value *PositiveShift = Builder.CreateAdd(RemResult, Divisor);
+      ShiftAmt = Builder.CreateSelect(IsNegative, PositiveShift, RemResult);
+    } else {
+      ShiftAmt = Builder.CreateURem(ShiftAmt, Divisor);
+    }
+
+    // Convert to the source type if needed
+    if (ShiftAmt->getType() != Ty) {
+      ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
+    }
   }
 
   // Rotate is a special case of LLVM funnel shift - 1st 2 args are the same.
