@@ -1665,13 +1665,11 @@ struct VectorInsertStridedSliceDistribution
         !llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting unit lane data in source and dest layouts");
-    // Distributed dim sizes must be multiples of subgroup size.
-    if (destDistrDimSize % subgroupSize != 0 ||
-        srcDistrDimSize % subgroupSize != 0)
+    // Source distributed dim size must be multiples of subgroup size.
+    if (srcDistrDimSize % subgroupSize != 0)
       return rewriter.notifyMatchFailure(
-          warpOp,
-          "Distributed dimension size in source or dest is not a multiple of "
-          "subgroup size.");
+          warpOp, "Distributed dimension size in source is not a multiple of "
+                  "subgroup size.");
     // Offsets in the distributed dimension must be multiples of subgroup size.
     int64_t destDistrDimOffset =
         cast<IntegerAttr>(insertOp.getOffsets()[destDistributedDim]).getInt();
