@@ -556,7 +556,7 @@ constexpr FeatureBitset ImpliedFeaturesLVI_CFI = {};
 constexpr FeatureBitset ImpliedFeaturesLVI_LOAD_HARDENING = {};
 constexpr FeatureBitset ImpliedFeaturesX86_64_BASELINE = {};
 constexpr FeatureBitset ImpliedFeaturesX86_64_V2 = {};
-constexpr FeatureBitset ImpliedFeaturesX86_64_V3  = {};
+constexpr FeatureBitset ImpliedFeaturesX86_64_V3 = {};
 constexpr FeatureBitset ImpliedFeaturesX86_64_V4 = {};
 
 // XSAVE features are dependent on basic XSAVE.
@@ -661,7 +661,10 @@ constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
 constexpr FeatureBitset ImpliedFeaturesZU = {};
 
-constexpr FeatureBitset ImpliedFeaturesAPXF = ImpliedFeaturesEGPR | ImpliedFeaturesPush2Pop2 | ImpliedFeaturesPPX | ImpliedFeaturesNDD | ImpliedFeaturesCCMP | ImpliedFeaturesNF | ImpliedFeaturesCF | ImpliedFeaturesZU;
+constexpr FeatureBitset ImpliedFeaturesAPXF =
+    ImpliedFeaturesEGPR | ImpliedFeaturesPush2Pop2 | ImpliedFeaturesPPX |
+    ImpliedFeaturesNDD | ImpliedFeaturesCCMP | ImpliedFeaturesNF |
+    ImpliedFeaturesCF | ImpliedFeaturesZU;
 
 constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
@@ -765,8 +768,7 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   std::array<uint32_t, 4> FeatureMask{};
   for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                                \
-  .Case(STR, ABI_VALUE)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
         ;
     assert(Feature / 32 < FeatureMask.size());
@@ -795,7 +797,7 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #endif
 
   switch (Feat) {
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                                \
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                     \
   case X86::FEATURE_##ENUM:                                                    \
     return PRIORITY;
 #include "llvm/TargetParser/X86TargetParser.def"

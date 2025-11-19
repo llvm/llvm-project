@@ -1087,15 +1087,16 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeafD && ((EAX >> 3) & 1) && HasAVXSave)
     setFeature(FEATURE_XSAVES);
 
-  bool HasLeaf1E = MaxLevel >= 0x1e && !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
+  bool HasLeaf1E = MaxLevel >= 0x1e &&
+                   !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf1E && (EAX & 0x10))
-	  setFeature(FEATURE_AMX_FP8);
+    setFeature(FEATURE_AMX_FP8);
   if (HasLeaf1E && (EAX & 0x40))
-	  setFeature(FEATURE_AMX_TF32);
-  if (HasLeaf1E &&  (EAX & 0x80))
-	  setFeature(FEATURE_AMX_AVX512);
+    setFeature(FEATURE_AMX_TF32);
+  if (HasLeaf1E && (EAX & 0x80))
+    setFeature(FEATURE_AMX_AVX512);
   if (HasLeaf1E && (EAX & 0x100))
-	  setFeature(FEATURE_AMX_MOVRS);
+    setFeature(FEATURE_AMX_MOVRS);
 
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);

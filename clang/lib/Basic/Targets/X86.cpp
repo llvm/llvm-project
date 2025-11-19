@@ -1309,7 +1309,7 @@ bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 
 static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   return llvm::StringSwitch<llvm::X86::ProcessorFeatures>(Name)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                                \
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                     \
   .Case(STR, llvm::X86::FEATURE_##ENUM)
 
 #include "llvm/TargetParser/X86TargetParser.def"
