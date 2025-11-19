@@ -17,7 +17,14 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 backend platform::get_backend() const noexcept { return impl.getBackend(); }
 
 std::vector<platform> platform::get_platforms() {
-  return detail::platform_impl::getPlatforms();
+  auto PlatformsView = detail::platform_impl::getPlatforms();
+  std::vector<platform> Platforms;
+  for (size_t i = 0; i < PlatformsView.len; i++) {
+    platform Platform =
+        detail::createSyclObjFromImpl<platform>(*PlatformsView.ptr[i].get());
+    Platforms.push_back(std::move(Platform));
+  }
+  return Platforms;
 }
 
 template <typename Param>

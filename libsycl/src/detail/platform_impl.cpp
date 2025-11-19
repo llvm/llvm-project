@@ -16,40 +16,32 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-platform_impl *
-platform_impl::getOrMakePlatformImpl(ol_platform_handle_t Platform,
-                                     size_t PlatformIndex) {
-  const std::lock_guard<std::mutex> Guard(getPlatformMapMutex());
-
-  std::vector<std::unique_ptr<platform_impl>> &PlatformCache =
-      getPlatformCache();
-
-  // If we've already seen this platform, return the impl
+platform_impl *platform_impl::getPlatformImpl(ol_platform_handle_t Platform) {
+  auto &PlatformCache = getPlatformCache();
   for (const auto &PlatImpl : PlatformCache) {
     if (PlatImpl->getHandleRef() == Platform)
       return PlatImpl.get();
   }
-
-  // Otherwise make the impl.
-  std::unique_ptr<platform_impl> Result;
-  Result = std::make_unique<platform_impl>(Platform, PlatformIndex);
-  PlatformCache.emplace_back(std::move(Result));
-
-  return PlatformCache.back().get();
+  assert(false && "All platform_impl objects must be created during initial "
+                  "device & platform discovery");
+  return nullptr;
 }
 
-std::vector<platform> platform_impl::getPlatforms() {
-  discoverOffloadDevices();
-  std::vector<platform> Platforms;
-  for (const auto &Topo : getOffloadTopologies()) {
-    size_t PlatformIndex = 0;
-    for (const auto &OffloadPlatform : Topo.platforms()) {
-      platform Platform = detail::createSyclObjFromImpl<platform>(
-          *getOrMakePlatformImpl(OffloadPlatform, PlatformIndex++));
-      Platforms.push_back(std::move(Platform));
+range_view<std::unique_ptr<platform_impl>> platform_impl::getPlatforms() {
+  [[maybe_unused]] static auto InitPlatformsOnce = []() {
+    discoverOffloadDevices();
+    auto &PlatformCache = getPlatformCache();
+    for (const auto &Topo : getOffloadTopologies()) {
+      size_t PlatformIndex = 0;
+      for (const auto &OffloadPlatform : Topo.platforms()) {
+        PlatformCache.emplace_back(
+            std::make_unique<platform_impl>(OffloadPlatform, PlatformIndex++));
+      }
     }
-  }
-  return Platforms;
+    return true;
+  }();
+  auto &PlatformCache = getPlatformCache();
+  return {PlatformCache.data(), PlatformCache.size()};
 }
 
 platform_impl::platform_impl(ol_platform_handle_t Platform,
