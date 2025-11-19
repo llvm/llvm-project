@@ -4,7 +4,8 @@ readability-redundant-control-flow
 ==================================
 
 This check looks for procedures (functions returning no value) with ``return``
-statements at the end of the function. Such ``return`` statements are redundant.
+statements at the end of the function. Such ``return`` statements are
+redundant.
 
 Loop statements (``for``, ``while``, ``do while``) are checked for redundant
 ``continue`` statements at the end of the loop body.
