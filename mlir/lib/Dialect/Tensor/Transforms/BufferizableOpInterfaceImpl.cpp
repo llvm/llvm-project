@@ -1140,11 +1140,11 @@ struct ConcatOpInterface
     SmallVector<OpFoldResult> sizes =
         memref::getMixedSizes(rewriter, loc, dstBuffer);
 
-    AffineExpr d0, d1;
-    bindDims(rewriter.getContext(), d0, d1);
+    AffineExpr s0, s1;
+    bindSymbols(rewriter.getContext(), s0, s1);
     // Add two integers.
     auto sum = [&](OpFoldResult v1, OpFoldResult v2) {
-      return affine::makeComposedFoldedAffineApply(rewriter, loc, d0 + d1,
+      return affine::makeComposedFoldedAffineApply(rewriter, loc, s0 + s1,
                                                    {v1, v2});
     };
 
