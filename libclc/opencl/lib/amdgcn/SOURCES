@@ -1,4 +1,3 @@
-cl_khr_int64_extended_atomics/minmax_helpers.ll
 mem_fence/fence.cl
 synchronization/barrier.cl
 workitem/get_global_offset.cl

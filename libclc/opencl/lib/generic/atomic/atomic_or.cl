@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/atomic/clc_atomic_fetch_or.h>
 #include <clc/opencl/atomic/atomic_or.h>
 
 #define __CLC_IMPL(TYPE, AS)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_or(volatile AS TYPE *p, TYPE val) {       \
-    return __sync_fetch_and_or(p, val);                                        \
+    return __clc_atomic_fetch_or(p, val, __ATOMIC_RELAXED,                     \
+                                 __MEMORY_SCOPE_DEVICE);                       \
   }
 
 __CLC_IMPL(int, global)
