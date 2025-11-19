@@ -125,11 +125,19 @@ struct HardwareLoopInfo {
 
 /// Information for memory intrinsic cost model.
 class MemIntrinsicCostAttributes {
+  /// Optional context instruction, if one exists, e.g. the
+  /// load/store to transform to the intrinsic.
+  const Instruction *I = nullptr;
+
   /// Vector type of the data to be loaded or stored.
   Type *DataTy = nullptr;
 
   /// ID of the memory intrinsic.
   Intrinsic::ID IID;
+
+  /// True when the memory access is predicated with a mask
+  /// that is not a compile-time constant.
+  bool VariableMask = true;
 
   /// Address space of the pointer.
   unsigned AddressSpace = 0;
@@ -143,8 +151,16 @@ public:
       : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
         Alignment(Alignment) {}
 
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      bool VariableMask, Align Alignment,
+                                      const Instruction *I = nullptr)
+      : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
+        Alignment(Alignment) {}
+
   Intrinsic::ID getID() const { return IID; }
+  const Instruction *getInst() const { return I; }
   Type *getDataType() const { return DataTy; }
+  bool getVariableMask() const { return VariableMask; }
   unsigned getAddressSpace() const { return AddressSpace; }
   Align getAlignment() const { return Alignment; }
 };
@@ -1600,17 +1616,9 @@ public:
       const Instruction *I = nullptr) const;
 
   /// \return The cost of Expand Load or Compress Store operation
-  /// \p Opcode - is a type of memory access Load or Store
-  /// \p Src - a vector type of the data to be loaded or stored
-  /// \p VariableMask - true when the memory access is predicated with a mask
-  ///                   that is not a compile-time constant
-  /// \p Alignment - alignment of single element
-  /// \p I - the optional original context instruction, if one exists, e.g. the
-  ///        load/store to transform or the call to the gather/scatter intrinsic
   LLVM_ABI InstructionCost getExpandCompressMemoryOpCost(
-      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
+      const MemIntrinsicCostAttributes &MICA,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \return The cost of strided memory operations.
   /// \p Opcode - is a type of memory access Load or Store
