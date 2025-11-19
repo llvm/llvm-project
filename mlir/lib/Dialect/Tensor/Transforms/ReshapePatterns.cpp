@@ -533,8 +533,8 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
       getMixedSizes(b, loc, sliceOp.getSource());
 
   // Helper variables and function for accumulating the size values.
-  AffineExpr d0, d1, d2;
-  bindDims(b.getContext(), d0, d1, d2);
+  AffineExpr d0, d1;
+  bindDims(b.getContext(), d0, d1);
   // Multiply two integers.
   auto mul = [&](OpFoldResult v1, OpFoldResult v2) {
     auto mulMap = AffineMap::get(2, 0, {d0 * d1});
