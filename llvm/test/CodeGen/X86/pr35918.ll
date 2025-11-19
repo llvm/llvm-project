@@ -13,7 +13,7 @@ define void @fetch_r16g16_snorm_unorm8(ptr, ptr, i32, i32, ptr) nounwind {
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpsrlw $7, %xmm0, %xmm0
-; X86-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u,u]
+; X86-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-NEXT:    vmovd %xmm0, %ecx
 ; X86-NEXT:    orl $-16777216, %ecx # imm = 0xFF000000
 ; X86-NEXT:    movl %ecx, (%eax)
@@ -25,7 +25,7 @@ define void @fetch_r16g16_snorm_unorm8(ptr, ptr, i32, i32, ptr) nounwind {
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpsrlw $7, %xmm0, %xmm0
-; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u,u]
+; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
 ; X64-NEXT:    movl %eax, (%rdi)
