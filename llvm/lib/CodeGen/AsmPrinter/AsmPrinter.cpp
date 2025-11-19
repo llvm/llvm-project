@@ -1986,18 +1986,18 @@ void AsmPrinter::emitFunctionBody() {
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
 
-    SmallVector<int> PrefetchTargets =
-        MBB.getPrefetchTargetCallsiteIndexes();
+    SmallVector<int> PrefetchTargets = MBB.getPrefetchTargetCallsiteIndexes();
     auto PrefetchTargetIt = PrefetchTargets.begin();
     int CurrentCallsiteIndex = -1;
     // Helper to emit a symbol for the prefetch target and proceed to the next
     // one.
     auto EmitPrefetchTargetSymbolIfNeeded = [&]() {
       if (PrefetchTargetIt != PrefetchTargets.end() &&
-             *PrefetchTargetIt == CurrentCallsiteIndex) {
+          *PrefetchTargetIt == CurrentCallsiteIndex) {
         MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
             Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
-                      utostr(MBB.getBBID()->BaseID) + Twine("_") + utostr(static_cast<unsigned>(*PrefetchTargetIt + 1)));
+            utostr(MBB.getBBID()->BaseID) + Twine("_") +
+            utostr(static_cast<unsigned>(*PrefetchTargetIt + 1)));
         // If the function is weak-linkage it may be replaced by a strong
         // version, in which case the prefetch targets should also be replaced.
         OutStreamer->emitSymbolAttribute(

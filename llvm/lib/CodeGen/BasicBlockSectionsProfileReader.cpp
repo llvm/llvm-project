@@ -166,9 +166,10 @@ BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
 // This is the beginning of the basic block for `i = 0` and immediately after
 // the `i`-th call for every `i > 0`.
 //
-// Example: A basic block in function "foo" with BBID 10 and two call instructions (call_A, call_B).
-// This block is conceptually split into subblocks, with the prefetch target
-// symbol emitted at the beginning of each subblock.
+// Example: A basic block in function "foo" with BBID 10 and two call
+// instructions (call_A, call_B). This block is conceptually split into
+// subblocks, with the prefetch target symbol emitted at the beginning of each
+// subblock.
 //
 // +----------------------------------+
 // | __llvm_prefetch_target_foo_10_0: | <- Subblock 0 (before call_A)
@@ -352,8 +353,8 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       SmallVector<StringRef, 2> PrefetchTargetStr;
       Values[0].split(PrefetchTargetStr, ',');
       if (PrefetchTargetStr.size() != 2)
-        return createProfileParseError(
-            Twine("Callsite target expected: ") + Values[0]);
+        return createProfileParseError(Twine("Callsite target expected: ") +
+                                       Values[0]);
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[0]);
       if (!TargetBBID)
         return TargetBBID.takeError();
