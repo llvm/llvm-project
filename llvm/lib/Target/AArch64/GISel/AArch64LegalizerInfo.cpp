@@ -1243,7 +1243,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .bitcastIf(
           [=](const LegalityQuery &Query) {
             return Query.Types[0].getSizeInBits() <= 128 &&
-                   Query.Types[1].getSizeInBits() <= 64;
+                   Query.Types[1].getSizeInBits() <= 64 &&
+                   !Query.Types[0].isScalableVector() &&
+                   !Query.Types[1].isScalableVector();
           },
           [=](const LegalityQuery &Query) {
             const LLT DstTy = Query.Types[0];
