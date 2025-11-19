@@ -35,7 +35,7 @@ struct _Image {
   char name_[__stacktrace::_Entry::__max_file_len]{0};
   bool is_main_prog_{};
 
-  _LIBCPP_HIDE_FROM_ABI bool operator<(_Image const& __rhs) const {
+  bool operator<(_Image const& __rhs) const {
     if (loaded_at_ < __rhs.loaded_at_) {
       return true;
     }
@@ -44,7 +44,7 @@ struct _Image {
     }
     return strcmp(name_, __rhs.name_) < 0;
   }
-  _LIBCPP_HIDE_FROM_ABI operator bool() const { return name_[0]; }
+  operator bool() const { return name_[0]; }
 };
 
 /**
@@ -67,13 +67,13 @@ struct _Images {
   _LIBCPP_EXPORTED_FROM_ABI _Images();
 
   /** Get prog_image by index (0 <= index < count_) */
-  _LIBCPP_HIDE_FROM_ABI _Image& operator[](size_t __index) {
+  _Image& operator[](size_t __index) {
     _LIBCPP_ASSERT(__index < count_, "index out of range");
     return images_.at(__index);
   }
 
   /** Image representing the main program, or nullptr if we couldn't find it */
-  _LIBCPP_HIDE_FROM_ABI _Image* main_prog_image() {
+  _Image* main_prog_image() {
     for (size_t __i = 1; __i < count_ - 1; __i++) {
       auto& __image = images_[__i];
       if (__image.is_main_prog_) {
@@ -84,7 +84,7 @@ struct _Images {
   }
 
   /** Search the sorted images array for one containing this address. */
-  _LIBCPP_HIDE_FROM_ABI void find(size_t* __index, uintptr_t __addr) {
+  void find(size_t* __index, uintptr_t __addr) {
     // `index` slides left/right as we search through images.
     // It's (probably) likely several consecutive entries are from the same image, so
     // each iteration's `find` uses the same starting point, making it (probably) constant-time.
