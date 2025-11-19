@@ -121,3 +121,12 @@ struct ChildSpan : Base {
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
 // expected-note@+1 {{returned type inherits from a base class}}
 __attribute((malloc_span)) ChildSpan return_child_span(void);
+
+class VirtualBaseSpan : public virtual Base {
+  void *p;
+  int n;
+};
+
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{returned type inherits from a base class}}
+__attribute((malloc_span)) VirtualBaseSpan return_virtual_base_span(void);
