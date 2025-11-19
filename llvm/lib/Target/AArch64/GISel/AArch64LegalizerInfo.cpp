@@ -1242,10 +1242,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{v16s8, v8s8}, {v8s16, v4s16}, {v4s32, v2s32}})
       .bitcastIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getSizeInBits() <= 128 &&
-                   Query.Types[1].getSizeInBits() <= 64 &&
-                   !Query.Types[0].isScalableVector() &&
-                   !Query.Types[1].isScalableVector();
+            return Query.Types[0].isFixedVector() &&
+                   Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getSizeInBits() <= 128 &&
+                   Query.Types[1].getSizeInBits() <= 64;
           },
           [=](const LegalityQuery &Query) {
             const LLT DstTy = Query.Types[0];
