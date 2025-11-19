@@ -595,6 +595,7 @@ Transforms/PGOProfile/memop_profile_funclet_wasm.ll
 Transforms/PGOProfile/X86/macho.ll
 Transforms/PhaseOrdering/AArch64/constraint-elimination-placement.ll
 Transforms/PhaseOrdering/AArch64/globals-aa-required-for-vectorization.ll
+Transforms/PhaseOrdering/AArch64/hoist-load-from-vector-loop.ll
 Transforms/PhaseOrdering/X86/merge-functions2.ll
 Transforms/PhaseOrdering/X86/merge-functions3.ll
 Transforms/PhaseOrdering/X86/merge-functions.ll
