@@ -7635,6 +7635,10 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
 void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
   if (PendingExportedNames.empty())
     return;
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(NewD)) {
+    if (getLangOpts().CPlusPlus && !FD->isExternC())
+      return;
+  }
   IdentifierInfo *IdentName = NewD->getIdentifier();
   if (IdentName == nullptr)
     return;
@@ -7642,10 +7646,6 @@ void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
   if (PendingName != PendingExportedNames.end()) {
     auto &Label = PendingName->second;
     if (!Label.Used) {
-      if (FunctionDecl *FD = dyn_cast<FunctionDecl>(NewD)) {
-        if (getLangOpts().CPlusPlus && !FD->isExternC())
-          return;
-      }
       Label.Used = true;
       if (NewD->hasExternalFormalLinkage())
         mergeVisibilityType(NewD, Label.NameLoc, VisibilityAttr::Default);
