@@ -1,4 +1,4 @@
-//===-- aeabi_uwrite4.c - ARM EABI Helper — Unaligned 4-Byte Memory Write ---------------===//
+//===-- aeabi_uwrite4.c - ARM EABI Helper — Unaligned 4-Byte Memory Write--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

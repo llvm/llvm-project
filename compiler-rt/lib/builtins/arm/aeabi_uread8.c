@@ -1,4 +1,4 @@
-//===-- aeabi_uread8.c - ARM EABI Helper — Unaligned 8-Byte Memory Read -----------------===//
+//===-- aeabi_uread8.c - ARM EABI Helper — Unaligned 8-Byte Memory Read----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
