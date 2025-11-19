@@ -224,10 +224,10 @@ set cmake_flags=^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || exit /b 1
+ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
+ninja check-lld || exit /b 1
 REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 cd..
@@ -248,10 +248,10 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build32
 cd build32
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || exit /b 1
+ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
+ninja check-lld || exit /b 1
 REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja package || exit /b 1
@@ -289,15 +289,15 @@ if "%arch%"=="arm64" (
 cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
   %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || exit /b 1
+ninja || exit /b 1
 ninja check-llvm || exit /b 1
-ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
+ninja check-clang || exit /b 1
+ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
-  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+  ninja check-runtimes || exit /b 1
 )
-ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
-ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
+ninja check-clang-tools || exit /b 1
+ninja check-clangd || exit /b 1
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -322,15 +322,15 @@ cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   %common_lldb_flags% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || exit /b 1
+ninja  exit /b 1
 ninja check-llvm || exit /b 1
-ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
+ninja check-clang || exit /b 1
+ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
-  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+  ninja check-runtimes || exit /b 1
 )
-ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
-ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
+ninja check-clang-tools || exit /b 1
+ninja check-clangd || exit /b 1
 REM ninja check-flang || ninja check-flang || ninja check-flang || exit /b 1
 REM ninja check-mlir || ninja check-mlir || ninja check-mlir || exit /b 1
 REM ninja check-lldb || ninja check-lldb || ninja check-lldb || exit /b 1
