@@ -467,7 +467,6 @@ std::string DILParser::ParseUnqualifiedId() {
 CompilerType
 DILParser::ResolveTypeDeclarators(CompilerType type,
                                   const std::vector<Token> &ptr_operators) {
-  CompilerType bad_type;
   // Resolve pointers/references.
   for (Token tk : ptr_operators) {
     uint32_t loc = tk.GetLocation();
@@ -478,17 +477,18 @@ DILParser::ResolveTypeDeclarators(CompilerType type,
                               "reference of type {0}",
                               type.TypeDescription()),
                 loc, CurToken().GetSpelling().length());
-        return bad_type;
+        return {};
       }
       // Get pointer type for the base type: e.g. int* -> int**.
       type = type.GetPointerType();
 
     } else if (tk.GetKind() == Token::amp) {
       // References to references are forbidden.
+      // FIXME: In future we may want to allow rvalue references (i.e. &&).
       if (type.IsReferenceType()) {
         BailOut("type name declared as a reference to a reference", loc,
                 CurToken().GetSpelling().length());
-        return bad_type;
+        return {};
       }
       // Get reference type for the base type: e.g. int -> int&.
       type = type.GetLValueReferenceType();
