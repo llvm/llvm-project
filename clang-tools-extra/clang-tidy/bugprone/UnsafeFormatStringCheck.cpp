@@ -61,11 +61,15 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
   if (!hasUnboundedStringSpecifier(FormatString, IsScanfFamily))
     return;
 
-  auto Diag = diag(Call->getBeginLoc(),
-                   IsScanfFamily
-                     ? "format specifier '%%s' without field width may cause buffer overflow; consider using '%%Ns' where N limits input length"
-                     : "format specifier '%%s' without precision may cause buffer overflow; consider using '%%.Ns' where N limits output length")
-              << Call->getSourceRange();
+  auto Diag =
+      diag(
+          Call->getBeginLoc(),
+          IsScanfFamily
+              ? "format specifier '%%s' without field width may cause buffer "
+                "overflow; consider using '%%Ns' where N limits input length"
+              : "format specifier '%%s' without precision may cause buffer "
+                "overflow; consider using '%%.Ns' where N limits output length")
+      << Call->getSourceRange();
 }
 
 bool UnsafeFormatStringCheck::hasUnboundedStringSpecifier(StringRef Fmt,
