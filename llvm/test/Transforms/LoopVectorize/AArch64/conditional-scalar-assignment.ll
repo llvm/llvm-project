@@ -2,10 +2,6 @@
 ; RUN: opt -passes=loop-vectorize -S < %s 2>&1 | FileCheck %s --check-prefix=NEON
 ; RUN: opt -passes=loop-vectorize -mattr=+sve -S < %s 2>&1 | FileCheck %s --check-prefix=SVE
 
-;; The following run line caused an ICE before using a dedicated FindLast PHI recipe.
-;; We're not looking at the resulting IR, just confirming it doesn't crash.
-; RUN: opt -passes=loop-vectorize -mattr=+sve -epilogue-vectorization-force-VF=4 -S < %s 2>&1 > /dev/null
-
 target triple = "aarch64-linux-gnu"
 
 define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {

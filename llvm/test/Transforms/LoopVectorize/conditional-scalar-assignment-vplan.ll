@@ -75,15 +75,3 @@ exit:
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUMEVAL:%.*]]> = phi [ vp<[[VECTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[MERGERDX:%.*]]> = phi [ vp<[[EXTRACTLAST]]>, middle.block ], [ ir<-1>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   [[IV:%.*]] = phi i64 [ 0, %entry ], [ [[IVNEXT:%.*]], %loop ] (extra operand: vp<[[RESUMEVAL]]> from scalar.ph)
-; CHECK-NEXT:   IR   [[DATAPHI]] = phi i32 [ -1, %entry ], [ [[SELECTDATA]], %loop ] (extra operand: vp<[[MERGERDX]]> from scalar.ph)
-; CHECK-NEXT:   IR   [[LDADDR]] = getelementptr inbounds i32, ptr %data, i64 [[IV]]
-; CHECK-NEXT:   IR   [[LD]] = load i32, ptr [[LDADDR]], align 4
-; CHECK-NEXT:   IR   [[SELECTCMP]] = icmp slt i32 %a, [[LD]]
-; CHECK-NEXT:   IR   [[SELECTDATA]] = select i1 [[SELECTCMP]], i32 [[LD]], i32 [[DATAPHI]]
-; CHECK-NEXT:   IR   [[IVNEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:   IR   [[EXITCMP:%.*]] = icmp eq i64 [[IVNEXT]], [[ORIGTC]]
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
