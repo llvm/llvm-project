@@ -2554,7 +2554,7 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
 
   if (resultTy.getWidth() < encompassedTyInfo.width) {
     mlir::Type resultLLVMTy = getTypeConverter()->convertType(resultTy);
-    mlir::Value truncResult =
+    auto mlir::Value truncResult =
         mlir::LLVM::TruncOp::create(rewriter, loc, resultLLVMTy, result);
 
     // Extend the truncated result back to the encompassing type to check for
