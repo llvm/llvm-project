@@ -101,8 +101,6 @@ jobs:
             ref: ${{ github.sha }}
             repo: ${{ github.repository }}
     steps:
-      - name: Install Ninja
-        uses: llvm/actions/install-ninja@5dd955034a6742a2e21d82bf165fcb1050ae7b49 # main
       - name: Download source code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:

@@ -711,6 +711,10 @@ public:
     return Visit(e->getSubExpr());
   }
 
+  mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
+    CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
+    return Visit(dae->getExpr());
+  }
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
     return Visit(die->getExpr());

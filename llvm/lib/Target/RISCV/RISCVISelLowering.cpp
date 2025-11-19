@@ -18396,8 +18396,7 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
     }
   }
   for (std::pair<SDValue, SDValue> OldNewValues : ValuesToReplace) {
-    DAG.ReplaceAllUsesOfValueWith(OldNewValues.first, OldNewValues.second);
-    DCI.AddToWorklist(OldNewValues.second.getNode());
+    DCI.CombineTo(OldNewValues.first.getNode(), OldNewValues.second);
   }
   return InputRootReplacement;
 }
