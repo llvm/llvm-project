@@ -1,0 +1,19 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+cir.func coroutine @bad_task() { // expected-error {{coroutine body must use at least one cir.await op}}
+  cir.return
+}
+
+// -----
+
+cir.func coroutine @missing_condition() {
+  cir.scope {
+    cir.await(user, ready : { // expected-error {{ready region must end with cir.condition}}
+      cir.yield
+    }, suspend : {
+      cir.yield
+    }, resume : {
+      cir.yield
+    },)
+  }
+  cir.return
+}
