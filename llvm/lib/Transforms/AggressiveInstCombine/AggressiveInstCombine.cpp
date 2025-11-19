@@ -1513,6 +1513,7 @@ static bool foldMulHigh(Instruction &I) {
     Value *Mul = Builder.CreateMul(XExt, YExt);
     Value *High = Builder.CreateLShr(Mul, BW);
     Value *Res = Builder.CreateTrunc(High, Ty);
+    Res->takeName(&I);
     I.replaceAllUsesWith(Res);
     LLVM_DEBUG(dbgs() << "Created long multiply from parts of " << *X << " and "
                       << *Y << "\n");
@@ -1529,20 +1530,20 @@ static bool foldMulHigh(Instruction &I) {
                                m_And(m_Specific(Y), m_SpecificInt(LowMask))));
   };
 
-  auto foldMulHighCarry = [&](Value *X, Value *Y, Instruction *Carry,
+  auto FoldMulHighCarry = [&](Value *X, Value *Y, Instruction *Carry,
                               Instruction *B) {
     // Looking for LowSum >> 32 and carry (select)
     if (Carry->getOpcode() != Instruction::Select)
       std::swap(Carry, B);
 
     // Carry = LowSum < XhYl ? 0x100000000 : 0
-    CmpPredicate Pred;
     Value *LowSum, *XhYl;
     if (!match(Carry,
                m_OneUse(m_Select(
-                   m_OneUse(m_ICmp(Pred, m_Value(LowSum), m_Value(XhYl))),
-                   m_SpecificInt(APInt(BW, 1) << BW / 2), m_SpecificInt(0)))) ||
-        Pred != ICmpInst::ICMP_ULT)
+                   m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(LowSum),
+                                           m_Value(XhYl))),
+                   m_SpecificInt(APInt::getOneBitSet(BW, BW / 2)),
+                   m_SpecificInt(0)))))
       return false;
 
     // XhYl can be Xh*Yl or Xl*Yh
@@ -1583,7 +1584,7 @@ static bool foldMulHigh(Instruction &I) {
     return CreateMulHigh(X, Y);
   };
 
-  auto foldMulHighLadder = [&](Value *X, Value *Y, Instruction *A,
+  auto FoldMulHighLadder = [&](Value *X, Value *Y, Instruction *A,
                                Instruction *B) {
     //  xh*yh + c2>>32 + c3>>32
     //  c2 = xh*yl + (xl*yl >> 32); c3 = c2&0xffffffff + xl*yh
@@ -1622,7 +1623,7 @@ static bool foldMulHigh(Instruction &I) {
     return CreateMulHigh(X, Y);
   };
 
-  auto foldMulHighLadder4 = [&](Value *X, Value *Y, Instruction *A,
+  auto FoldMulHighLadder4 = [&](Value *X, Value *Y, Instruction *A,
                                 Instruction *B, Instruction *C) {
     ///  Ladder4: xh*yh + (xl*yh)>>32 + (xh+yl)>>32 + low>>32;
     ///           low = (xl*yl)>>32 + (xl*yh)&0xffffffff + (xh*yl)&0xffffffff
@@ -1679,7 +1680,7 @@ static bool foldMulHigh(Instruction &I) {
     return CreateMulHigh(X, Y);
   };
 
-  auto foldMulHighCarry4 = [&](Value *X, Value *Y, Instruction *Carry,
+  auto FoldMulHighCarry4 = [&](Value *X, Value *Y, Instruction *Carry,
                                Instruction *B, Instruction *C) {
     //  xh*yh + carry + crosssum>>32 + (xl*yl + crosssum&0xffffffff) >> 32
     //  crosssum = xh*yl+xl*yh
@@ -1690,13 +1691,13 @@ static bool foldMulHigh(Instruction &I) {
       std::swap(Carry, C);
 
     // Carry = CrossSum < XhYl ? 0x100000000 : 0
-    CmpPredicate Pred;
     Value *CrossSum, *XhYl;
     if (!match(Carry,
                m_OneUse(m_Select(
-                   m_OneUse(m_ICmp(Pred, m_Value(CrossSum), m_Value(XhYl))),
-                   m_SpecificInt(APInt(BW, 1) << BW / 2), m_SpecificInt(0)))) ||
-        Pred != ICmpInst::ICMP_ULT)
+                   m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT,
+                                           m_Value(CrossSum), m_Value(XhYl))),
+                   m_SpecificInt(APInt::getOneBitSet(BW, BW / 2)),
+                   m_SpecificInt(0)))))
       return false;
 
     if (!match(B, m_LShr(m_Specific(CrossSum), m_SpecificInt(BW / 2))))
@@ -1741,7 +1742,7 @@ static bool foldMulHigh(Instruction &I) {
        match(&I, m_c_Add(m_Instruction(A),
                          m_OneUse(m_c_Add(HiHi, m_Instruction(B)))))) &&
       A->hasOneUse() && B->hasOneUse())
-    if (foldMulHighCarry(X, Y, A, B) || foldMulHighLadder(X, Y, A, B))
+    if (FoldMulHighCarry(X, Y, A, B) || FoldMulHighLadder(X, Y, A, B))
       return true;
 
   if ((match(&I, m_c_Add(HiHi, m_OneUse(m_c_Add(
@@ -1760,8 +1761,8 @@ static bool foldMulHigh(Instruction &I) {
              m_c_Add(m_OneUse(m_c_Add(HiHi, m_Instruction(A))),
                      m_OneUse(m_Add(m_Instruction(B), m_Instruction(C)))))) &&
       A->hasOneUse() && B->hasOneUse() && C->hasOneUse())
-    return foldMulHighCarry4(X, Y, A, B, C) ||
-           foldMulHighLadder4(X, Y, A, B, C);
+    return FoldMulHighCarry4(X, Y, A, B, C) ||
+           FoldMulHighLadder4(X, Y, A, B, C);
 
   return false;
 }
