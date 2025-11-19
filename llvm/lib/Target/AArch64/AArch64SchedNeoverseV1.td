@@ -94,6 +94,7 @@ def : WriteRes<WriteHint,    []> { let Latency = 1; }
 let Latency = 0, NumMicroOps = 0 in
 def V1Write_0c_0Z : SchedWriteRes<[]>;
 
+def V1Write_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 //===----------------------------------------------------------------------===//
 // Define generic 1 micro-op types
@@ -473,6 +474,17 @@ def V1Write_11c_9L01_9S_9V : SchedWriteRes<[V1UnitL01, V1UnitL01, V1UnitL01,
                                             V1UnitV, V1UnitV, V1UnitV]>;
 
 //===----------------------------------------------------------------------===//
+// Define predicate-controlled types
+
+def V1Write_0or1c_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V1Write_0c]>,
+                      SchedVar<NoSchedPred,      [V1Write_1c_1I]>]>;
+
+def V1Write_0or3c_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V1Write_0c]>,
+                      SchedVar<NoSchedPred,      [V1Write_3c_1M0]>]>;
+
+//===----------------------------------------------------------------------===//
 // Define forwarded types
 
 // NOTE: SOG, p. 20, n. 2: Accumulator forwarding is not supported for
@@ -603,6 +615,7 @@ def : InstRW<[V1Write_1c_1I_1Flg],
                         "^(ADC|SBC)S[WX]r$",
                         "^ANDS[WX]ri$",
                         "^(AND|BIC)S[WX]rr$")>;
+def : InstRW<[V1Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, V1Write_2c_1M>;
@@ -623,7 +636,8 @@ def               : InstRW<[V1WriteISRegS],
                            (instregex "^(ADD|SUB)S(([WX]r[sx])|Xrx64)$")>;
 
 // Logical, shift, no flagset
-def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[V1Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
 def : InstRW<[V1Write_2c_1M_1Flg], (instregex "^(AND|BIC)S[WX]rs$")>;

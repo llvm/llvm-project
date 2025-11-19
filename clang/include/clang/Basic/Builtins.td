@@ -755,6 +755,12 @@ def BSwap : Builtin, Template<["unsigned short", "uint32_t", "uint64_t"],
   let Prototype = "T(T)";
 }
 
+def BSwapg : Builtin {
+  let Spellings = ["__builtin_bswapg"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
+
 def Bitreverse : BitInt8_16_32_64BuiltinsTemplate, Builtin {
   let Spellings = ["__builtin_bitreverse"];
   let Attributes = [NoThrow, Const, Constexpr];
@@ -5243,6 +5249,18 @@ def HLSLGetSpirvSpecConstant : LangBuiltin<"HLSL_LANG">, HLSLScalarTemplate {
 
 def HLSLF16ToF32 : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_f16tof32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdxCoarse : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddx_coarse"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdyCoarse : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddy_coarse"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

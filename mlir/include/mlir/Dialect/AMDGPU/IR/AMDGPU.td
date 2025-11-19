@@ -127,7 +127,7 @@ def AMDGPU_ScaledExtPacked816Op
           FixedVectorOfShapeAndType<[4], F8E8M0FNU>:$scale,
           ConfinedAttr<I32Attr, [IsValidBlockSize]>:$blockSize,
           ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$firstScaleLane,
-          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<2>]>:$firstScaleByte)>,
+          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]>:$firstScaleByte)>,
       Results<(
           outs AnyTypeOf<[FixedVectorOfShapeAndType<[8], F32>,
                           FixedVectorOfShapeAndType<[8], F16>,
@@ -139,17 +139,21 @@ def AMDGPU_ScaledExtPacked816Op
   let summary = "Extend a vector of packed floating point values";
 
   let description = [{
-    The scales applied to the input microfloats are stored in two bytes which
+    The scales applied to the input microfloats are stored in bytes which
     come from the `scales` input provided in a *half* of the wave identified
-    by `firstScaleLane`. The pair of bytes used is selected by
-    `firstScaleByte`. The 16 vectors in consecutive lanes starting from
+    by `firstScaleLane`. The bytes used is selected by `firstScaleByte` and depends
+    on the type of `source`. The 16 vectors in consecutive lanes starting from
     `firstScaleLane` (which we'll call the scale vectors) will be used by both
-    halves of the wave (with lane L reading from L % 16'th scale vector), but
-    each half will use a different byte.
+    halves of the wave (with lane L reading from L % 16'th scale vector).
 
-    When the block size is 32, `firstScaleByte` can be either 0 or 2,
-    selecting halves of the scale vectors. Lanes 0-15 will read from
-    `firstScaleByte` and lanes 16-31 will read from `firstScaleByte` + 1.
+    When `source` is either F4E2M1FN, F6E2M3FN, or F6E3M2FN each half of the
+    wave will use a different byte. The first one being `firstScaleByte` and
+    the second one being `firstScaleByte` + 1. When the block size is 32,
+    `firstScaleByte` can be either 0 or 2, selecting halves of the scale vectors.
+    Lanes 0-15 will read from `firstScaleByte` and lanes 16-31 will read
+    from `firstScaleByte` + 1.
+
+
     For example:
     ```mlir
     // Input: 8-element vector of F8E4M3FN, converting to F32
@@ -165,7 +169,8 @@ def AMDGPU_ScaledExtPacked816Op
       : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
     ```
 
-    However, when the block size is 16, `firstScaleByte` can be 0 or 1.
+    When `source` is either F4E2M1FN, F6E2M3FN, or F6E3M2FN and
+    the block size is 16, `firstScaleByte` can be 0 or 1.
     Lanes 0-15 read from the `firstScaleByte`th element of the scale vectors,
     while lanes 16-31 read from `firstScaleByte` + 2.
     For example:
@@ -186,6 +191,16 @@ def AMDGPU_ScaledExtPacked816Op
     Note: the layout for the scales generally mirrors how the WMMA
     instructions use for matix scales. These selection operands allows
     one to choose portions of the matrix to convert.
+
+    When `source` is either F8E4M3FN or F8E5M2 and `blockSize` is 32,
+    then the same byte will be used by both halves of the wave.
+    In this case, `firstScaleByte` can be any value from 0 to 3.
+
+    When `source` is either F8E4M3FN or F8E5M2 and `blockSize` is 16,
+    following combinations are allowed:
+    * `firstScaleLane(0), firstScaleByte(0)`
+    * `firstScaleLane(1), firstScaleByte(2)`
+    all other combinations are reserved.
 
     Available on gfx1250+.
   }];
