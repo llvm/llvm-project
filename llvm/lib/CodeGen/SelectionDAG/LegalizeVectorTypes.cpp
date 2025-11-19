@@ -2922,7 +2922,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
            Input2->getOpcode() == ISD::BUILD_VECTOR &&
            "Expected build vector node.");
     EVT EltVT = NewVT.getVectorElementType();
-    SmallVector<SDValue> Ops(NewElts, DAG.getUNDEF(EltVT));
+    SmallVector<SDValue> Ops(NewElts, DAG.getPOISON(EltVT));
     for (unsigned I = 0; I < NewElts; ++I) {
       if (Mask[I] == PoisonMaskElem)
         continue;
