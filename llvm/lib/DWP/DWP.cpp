@@ -650,6 +650,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
   uint32_t ContributionOffsets[8] = {};
   uint16_t Version = 0;
   uint32_t IndexVersion = 0;
+  StringRef FirstInput;
   bool AnySectionOverflow = false;
 
   DWPStringPool Strings(Out, StrSection);
@@ -708,10 +709,12 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
     if (Version == 0) {
       Version = Header.Version;
       IndexVersion = Version < 5 ? 2 : 5;
+      FirstInput = Input;
     } else if (Version != Header.Version) {
       return make_error<DWPError>(
-          Input + ": incompatible DWARF compile unit version, found " +
-          utostr(Header.Version) + " and expecting " + utostr(Version));
+          "incompatible DWARF compile unit version: " + Input + " (version " +
+          utostr(Header.Version) + ") and " + FirstInput.str() + " (version " +
+          utostr(Version) + ")");
     }
 
     writeStringsAndOffsets(Out, Strings, StrOffsetSection, CurStrSection,
