@@ -2893,9 +2893,9 @@ unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
   if (CostKind == TTI::TCK_CodeSize)
     return 1;
 
-  uint64_t HeaderFreq =
-      GetBFI()->getBlockFreq(TheLoop->getHeader()).getFrequency();
-  uint64_t BBFreq = GetBFI()->getBlockFreq(BB).getFrequency();
+  BlockFrequencyInfo *BFI = GetBFI();
+  uint64_t HeaderFreq = BFI->getBlockFreq(TheLoop->getHeader()).getFrequency();
+  uint64_t BBFreq = BFI->getBlockFreq(BB).getFrequency();
   assert(HeaderFreq >= BBFreq &&
          "Header has smaller block freq than dominated BB?");
   return HeaderFreq / BBFreq;
