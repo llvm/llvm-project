@@ -642,10 +642,10 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
     // Allow redundancy: partial or full overlap counts as contiguous.
     bool AreContiguous = false;
     if (It->OffsetFromLeader.sle(PrevReadEnd)) {
-      // Check overlap is a multiple of the element size after vectorization.
-      uint64_t Overlap = (PrevReadEnd - It->OffsetFromLeader).getZExtValue();
-      if (8 * Overlap % ChainElemTyBits == 0)
-        AreContiguous = true;
+      assert(8 * (PrevReadEnd - It->OffsetFromLeader).getZExtValue() %
+                 ChainElemTyBits ==
+             0);
+      AreContiguous = true;
     }
 
     LLVM_DEBUG(dbgs() << "LSV: Instruction is "
@@ -951,7 +951,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       Value *V;
       Type *T = getLoadStoreType(I);
       unsigned EOffset =
-          (E.OffsetFromLeader - C[0].OffsetFromLeader).getSExtValue();
+          (E.OffsetFromLeader - C[0].OffsetFromLeader).getZExtValue();
       unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (auto *VT = dyn_cast<FixedVectorType>(T)) {
         auto Mask = llvm::to_vector<8>(
@@ -1004,7 +1004,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     for (const ChainElem &E : C) {
       auto *I = cast<StoreInst>(E.Inst);
       unsigned EOffset =
-          (E.OffsetFromLeader - C[0].OffsetFromLeader).getSExtValue();
+          (E.OffsetFromLeader - C[0].OffsetFromLeader).getZExtValue();
       unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (FixedVectorType *VT =
               dyn_cast<FixedVectorType>(getLoadStoreType(I))) {
