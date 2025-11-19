@@ -1530,15 +1530,15 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
   const CIRGenRecordLayout &layout = cgm.getTypes().getCIRGenRecordLayout(rd);
   mlir::Type ty = (asCompleteObject ? layout.getCIRType()
                                     : layout.getBaseSubobjectCIRType());
-  auto recordTy = cast<cir::RecordType>(ty);
+  auto recordTy = mlir::cast<cir::RecordType>(ty);
 
   unsigned numElements = recordTy.getNumElements();
   SmallVector<mlir::Attribute> elements(numElements);
 
-  auto cxxrd = dyn_cast<CXXRecordDecl>(rd);
+  auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
   // Fill in all the bases.
   if (cxxrd) {
-    for (const auto &base : cxxrd->bases()) {
+    for (const CXXBaseSpecifier &base : cxxrd->bases()) {
       if (base.isVirtual()) {
         // Ignore virtual bases; if we're laying out for a complete
         // object, we'll lay these out later.
@@ -1561,7 +1561,7 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
   }
 
   // Fill in all the fields.
-  for (const auto *field : rd->fields()) {
+  for (const FieldDecl *field : rd->fields()) {
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
     if (!field->isBitField() &&
@@ -1582,7 +1582,7 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
 
   // Fill in the virtual bases, if we're working with the complete object.
   if (cxxrd && asCompleteObject) {
-    for ([[maybe_unused]] const auto &vbase : cxxrd->vbases()) {
+    for ([[maybe_unused]] const CXXBaseSpecifier &vbase : cxxrd->vbases()) {
       cgm.errorNYI(vbase.getSourceRange(), "emitNullConstant: virtual base");
       return {};
     }

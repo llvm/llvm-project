@@ -658,7 +658,6 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       llvm_unreachable("Invalid value for RecordType::getKind()");
     }
     mlir::Type getElementType(size_t idx) {
-      assert(idx < getMembers().size());
       return getMembers()[idx];
     }
     std::string getPrefixedName() {
