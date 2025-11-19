@@ -363,9 +363,13 @@ bool IndexedReference::tryDelinearizeFixedSize(
     return false;
   }
 
-  // Drop the last element of Sizes which is the same as ElementSize.
-  assert(!Sizes.empty() && Sizes.back() == ElementSize &&
-         "Expecting the last one to be the element size");
+  // We expect Sizes and Subscipts have the same number of elements, and the
+  // last element of Sizes is ElementSize. It is for ensuring consistency with
+  // the load/store instruction being analyzed. It is not needed for further
+  // analysis.
+  // TODO: Maybe this property should be enforced in delinearizeFixedSizeArray.
+  assert(!Sizes.empty() && Subscripts.size() == Sizes.size() &&
+         Sizes.back() == ElementSize && "Unexpected delinearization result");
   Sizes.pop_back();
   return true;
 }
