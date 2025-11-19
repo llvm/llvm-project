@@ -382,6 +382,7 @@
 
 #include "llvm/Transforms/Utils/PointerTypeInFunction.h"
 #include "llvm/Transforms/Utils/PointerTypeTransformer.h"
+#include "llvm/Transforms/Utils/GlobalTypeInfo.h"
 
 using namespace llvm;
 

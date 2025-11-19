@@ -67,10 +67,6 @@ add_llvm_component_library(LLVMTransformUtils
   ModuleUtils.cpp
   MoveAutoInit.cpp
   NameAnonGlobals.cpp
-  MyTy.cpp
-  PointerTypeInFunction.cpp
-  PointerTypePrinter.cpp
-  PointerTypeTransformer.cpp
   PredicateInfo.cpp
   ProfileVerify.cpp
   PromoteMemoryToRegister.cpp
@@ -95,6 +91,12 @@ add_llvm_component_library(LLVMTransformUtils
   Utils.cpp
   ValueMapper.cpp
   VNCoercion.cpp
+
+  MyTy.cpp
+  PointerTypeInFunction.cpp
+  PointerTypePrinter.cpp
+  PointerTypeTransformer.cpp
+  GlobalTypeInfo.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms

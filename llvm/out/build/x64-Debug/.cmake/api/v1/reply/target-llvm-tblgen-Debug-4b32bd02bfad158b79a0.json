@@ -1,0 +1,5937 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "bin/llvm-tblgen.exe"
+		},
+		{
+			"path" : "bin/llvm-tblgen.pdb"
+		}
+	],
+	"backtrace" : 4,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"_add_executable",
+			"add_executable",
+			"add_llvm_executable",
+			"add_tablegen",
+			"install",
+			"target_link_libraries",
+			"explicit_llvm_config",
+			"llvm_config",
+			"llvm_add_library",
+			"add_llvm_library",
+			"add_llvm_component_library",
+			"LLVMBuildResolveComponentsLink",
+			"add_dependencies",
+			"add_compile_definitions",
+			"include",
+			"set_property",
+			"llvm_update_compile_flags",
+			"target_compile_definitions",
+			"include_directories",
+			"set_source_files_properties",
+			"llvm_process_sources",
+			"generate_llvm_objects",
+			"set_windows_version_resource_properties"
+		],
+		"files" : 
+		[
+			"C:/Users/30513/vcpkg/scripts/buildsystems/vcpkg.cmake",
+			"cmake/modules/AddLLVM.cmake",
+			"cmake/modules/TableGen.cmake",
+			"utils/TableGen/CMakeLists.txt",
+			"cmake/modules/LLVM-Config.cmake",
+			"lib/Support/CMakeLists.txt",
+			"cmake/modules/LLVM-Build.cmake",
+			"lib/CMakeLists.txt",
+			"cmake/modules/HandleLLVMOptions.cmake",
+			"CMakeLists.txt",
+			"cmake/modules/LLVMProcessSources.cmake"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 3,
+				"line" : 31,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 2,
+				"line" : 176,
+				"parent" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 1070,
+				"parent" : 2
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 598,
+				"parent" : 3
+			},
+			{
+				"command" : 4,
+				"file" : 2,
+				"line" : 234,
+				"parent" : 1
+			},
+			{
+				"command" : 7,
+				"file" : 1,
+				"line" : 1131,
+				"parent" : 2
+			},
+			{
+				"command" : 6,
+				"file" : 4,
+				"line" : 98,
+				"parent" : 6
+			},
+			{
+				"command" : 5,
+				"file" : 4,
+				"line" : 110,
+				"parent" : 7
+			},
+			{
+				"file" : 5
+			},
+			{
+				"command" : 10,
+				"file" : 5,
+				"line" : 139,
+				"parent" : 9
+			},
+			{
+				"command" : 9,
+				"file" : 1,
+				"line" : 917,
+				"parent" : 10
+			},
+			{
+				"command" : 8,
+				"file" : 1,
+				"line" : 944,
+				"parent" : 11
+			},
+			{
+				"command" : 5,
+				"file" : 1,
+				"line" : 800,
+				"parent" : 12
+			},
+			{
+				"file" : 7
+			},
+			{
+				"command" : 11,
+				"file" : 7,
+				"line" : 71,
+				"parent" : 14
+			},
+			{
+				"command" : 5,
+				"file" : 6,
+				"line" : 101,
+				"parent" : 15
+			},
+			{
+				"command" : 12,
+				"file" : 1,
+				"line" : 1133,
+				"parent" : 2
+			},
+			{
+				"file" : 9
+			},
+			{
+				"command" : 14,
+				"file" : 9,
+				"line" : 1092,
+				"parent" : 18
+			},
+			{
+				"file" : 8,
+				"parent" : 19
+			},
+			{
+				"command" : 13,
+				"file" : 8,
+				"line" : 216,
+				"parent" : 20
+			},
+			{
+				"command" : 16,
+				"file" : 1,
+				"line" : 1094,
+				"parent" : 2
+			},
+			{
+				"command" : 15,
+				"file" : 1,
+				"line" : 98,
+				"parent" : 22
+			},
+			{
+				"command" : 17,
+				"file" : 1,
+				"line" : 1162,
+				"parent" : 2
+			},
+			{
+				"command" : 13,
+				"file" : 8,
+				"line" : 581,
+				"parent" : 20
+			},
+			{
+				"command" : 13,
+				"file" : 8,
+				"line" : 570,
+				"parent" : 20
+			},
+			{
+				"command" : 13,
+				"file" : 8,
+				"line" : 137,
+				"parent" : 20
+			},
+			{
+				"command" : 13,
+				"file" : 8,
+				"line" : 1104,
+				"parent" : 20
+			},
+			{
+				"command" : 13,
+				"file" : 8,
+				"line" : 1105,
+				"parent" : 20
+			},
+			{
+				"command" : 13,
+				"file" : 8,
+				"line" : 1106,
+				"parent" : 20
+			},
+			{
+				"command" : 18,
+				"file" : 9,
+				"line" : 1295,
+				"parent" : 18
+			},
+			{
+				"command" : 21,
+				"file" : 1,
+				"line" : 1058,
+				"parent" : 2
+			},
+			{
+				"command" : 20,
+				"file" : 1,
+				"line" : 1003,
+				"parent" : 32
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 19,
+				"file" : 10,
+				"line" : 65,
+				"parent" : 33
+			},
+			{
+				"command" : 22,
+				"file" : 1,
+				"line" : 1089,
+				"parent" : 2
+			},
+			{
+				"command" : 15,
+				"file" : 1,
+				"line" : 479,
+				"parent" : 73
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 34,
+					"define" : "__SHORT_FILE__=\"AsmMatcherEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 35,
+					"define" : "__SHORT_FILE__=\"AsmWriterEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				1
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 36,
+					"define" : "__SHORT_FILE__=\"CallingConvEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				2
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 37,
+					"define" : "__SHORT_FILE__=\"CodeEmitterGen.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				3
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 38,
+					"define" : "__SHORT_FILE__=\"CodeGenMapTable.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				4
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 39,
+					"define" : "__SHORT_FILE__=\"CompressInstEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				5
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 40,
+					"define" : "__SHORT_FILE__=\"CTagsEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				6
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 41,
+					"define" : "__SHORT_FILE__=\"DAGISelEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				7
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 42,
+					"define" : "__SHORT_FILE__=\"DAGISelMatcherEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				8
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 43,
+					"define" : "__SHORT_FILE__=\"DAGISelMatcherGen.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				9
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 44,
+					"define" : "__SHORT_FILE__=\"DAGISelMatcherOpt.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				10
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 45,
+					"define" : "__SHORT_FILE__=\"DecoderEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				11
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 46,
+					"define" : "__SHORT_FILE__=\"DFAEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				12
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 47,
+					"define" : "__SHORT_FILE__=\"DFAPacketizerEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				13
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 48,
+					"define" : "__SHORT_FILE__=\"DisassemblerEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				14
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 49,
+					"define" : "__SHORT_FILE__=\"DXILEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				15
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 50,
+					"define" : "__SHORT_FILE__=\"ExegesisEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				16
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 51,
+					"define" : "__SHORT_FILE__=\"FastISelEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				17
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 52,
+					"define" : "__SHORT_FILE__=\"GlobalISelCombinerEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				18
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 53,
+					"define" : "__SHORT_FILE__=\"GlobalISelEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				19
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 54,
+					"define" : "__SHORT_FILE__=\"InstrDocsEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				20
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 55,
+					"define" : "__SHORT_FILE__=\"InstrInfoEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				21
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 56,
+					"define" : "__SHORT_FILE__=\"llvm-tblgen.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				22
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 57,
+					"define" : "__SHORT_FILE__=\"MacroFusionPredicatorEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				23
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 58,
+					"define" : "__SHORT_FILE__=\"OptionParserEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				24
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 59,
+					"define" : "__SHORT_FILE__=\"OptionRSTEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				25
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 60,
+					"define" : "__SHORT_FILE__=\"PseudoLoweringEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				26
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 61,
+					"define" : "__SHORT_FILE__=\"RegisterBankEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				27
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 62,
+					"define" : "__SHORT_FILE__=\"RegisterInfoEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				28
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 63,
+					"define" : "__SHORT_FILE__=\"SDNodeInfoEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				29
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 64,
+					"define" : "__SHORT_FILE__=\"SearchableTableEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				30
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 65,
+					"define" : "__SHORT_FILE__=\"SubtargetEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				31
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 66,
+					"define" : "__SHORT_FILE__=\"WebAssemblyDisassemblerEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				32
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 67,
+					"define" : "__SHORT_FILE__=\"X86InstrMappingEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				33
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 68,
+					"define" : "__SHORT_FILE__=\"X86DisassemblerTables.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				34
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 69,
+					"define" : "__SHORT_FILE__=\"X86FoldTablesEmitter.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				35
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 70,
+					"define" : "__SHORT_FILE__=\"X86MnemonicTables.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				36
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 71,
+					"define" : "__SHORT_FILE__=\"X86ModRMFilters.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				37
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 72,
+					"define" : "__SHORT_FILE__=\"X86RecognizableInstr.cpp\""
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				38
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-DWIN32 -D_DEBUG"
+				},
+				{
+					"fragment" : "/nologo"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 21,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 24,
+					"define" : "LLVM_BUILD_STATIC"
+				},
+				{
+					"backtrace" : 74,
+					"define" : "RC_FILE_VERSION=\"0\""
+				},
+				{
+					"backtrace" : 74,
+					"define" : "RC_INTERNAL_NAME=\"llvm-tblgen\""
+				},
+				{
+					"backtrace" : 74,
+					"define" : "RC_PRODUCT_NAME=\"LLVM\""
+				},
+				{
+					"backtrace" : 74,
+					"define" : "RC_PRODUCT_VERSION=\"0\""
+				},
+				{
+					"backtrace" : 74,
+					"define" : "RC_VERSION_FIELD_1=22"
+				},
+				{
+					"backtrace" : 74,
+					"define" : "RC_VERSION_FIELD_2=0"
+				},
+				{
+					"backtrace" : 74,
+					"define" : "RC_VERSION_FIELD_3=0"
+				},
+				{
+					"backtrace" : 74,
+					"define" : "RC_VERSION_FIELD_4=0"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 23,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/utils/TableGen"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/utils/TableGen"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 31,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 8,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "RC",
+			"sourceIndexes" : 
+			[
+				80
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 8,
+			"id" : "LLVMDemangle::@3c7ef39cff93a35ba752"
+		},
+		{
+			"backtrace" : 8,
+			"id" : "LLVMSupport::@928d1708d80fe1f55e59"
+		},
+		{
+			"backtrace" : 8,
+			"id" : "LLVMTableGen::@41a560be43d74dc0a888"
+		},
+		{
+			"id" : "obj.LLVMTableGenBasic::@f338039207a1268f4c5f"
+		},
+		{
+			"id" : "obj.LLVMTableGenCommon::@7e810e4fc7214c6f2678"
+		},
+		{
+			"backtrace" : 17,
+			"id" : "intrinsics_gen::@6eda0283a7d1115d7bbd"
+		},
+		{
+			"backtrace" : 8,
+			"id" : "LLVMCodeGenTypes::@495f6fda88c9688a6294"
+		}
+	],
+	"folder" : 
+	{
+		"name" : "LLVM/Executables"
+	},
+	"id" : "llvm-tblgen::@dca47d54282c16282dfc",
+	"install" : 
+	{
+		"destinations" : 
+		[
+			{
+				"backtrace" : 5,
+				"path" : "bin"
+			}
+		],
+		"prefix" : 
+		{
+			"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/install/x64-Debug"
+		}
+	},
+	"link" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -MDd -Zi",
+				"role" : "flags"
+			},
+			{
+				"fragment" : "/machine:x64 /STACK:10000000 /debug /INCREMENTAL /subsystem:console",
+				"role" : "flags"
+			},
+			{
+				"backtrace" : 8,
+				"fragment" : "lib\\LLVMCodeGenTypes.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 8,
+				"fragment" : "lib\\LLVMSupport.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 8,
+				"fragment" : "lib\\LLVMTableGen.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "psapi.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "shell32.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "ole32.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "uuid.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "advapi32.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "ws2_32.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "ntdll.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "C:\\Users\\30513\\vcpkg\\installed\\x64-windows\\debug\\lib\\zlibd.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "delayimp.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "-delayload:shell32.dll",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "-delayload:ole32.dll",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 16,
+				"fragment" : "lib\\LLVMDemangle.lib",
+				"role" : "libraries"
+			},
+			{
+				"fragment" : "kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib",
+				"role" : "libraries"
+			}
+		],
+		"language" : "CXX"
+	},
+	"name" : "llvm-tblgen",
+	"nameOnDisk" : "llvm-tblgen.exe",
+	"paths" : 
+	{
+		"build" : "utils/TableGen",
+		"source" : "utils/TableGen"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38
+			]
+		},
+		{
+			"name" : "Object Libraries",
+			"sourceIndexes" : 
+			[
+				39,
+				40,
+				41,
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				48,
+				49,
+				50,
+				51,
+				52,
+				53,
+				54,
+				55,
+				56,
+				57,
+				58,
+				59,
+				60,
+				61,
+				62,
+				63,
+				64,
+				65,
+				66,
+				67,
+				68,
+				69,
+				70,
+				71,
+				72
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				73,
+				74,
+				75,
+				76,
+				77,
+				78,
+				79
+			]
+		},
+		{
+			"name" : "Resource Files",
+			"sourceIndexes" : 
+			[
+				80
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 0,
+			"path" : "utils/TableGen/AsmMatcherEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 1,
+			"path" : "utils/TableGen/AsmWriterEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 2,
+			"path" : "utils/TableGen/CallingConvEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 3,
+			"path" : "utils/TableGen/CodeEmitterGen.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 4,
+			"path" : "utils/TableGen/CodeGenMapTable.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 5,
+			"path" : "utils/TableGen/CompressInstEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 6,
+			"path" : "utils/TableGen/CTagsEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 7,
+			"path" : "utils/TableGen/DAGISelEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 8,
+			"path" : "utils/TableGen/DAGISelMatcherEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 9,
+			"path" : "utils/TableGen/DAGISelMatcherGen.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 10,
+			"path" : "utils/TableGen/DAGISelMatcherOpt.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 11,
+			"path" : "utils/TableGen/DecoderEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 12,
+			"path" : "utils/TableGen/DFAEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 13,
+			"path" : "utils/TableGen/DFAPacketizerEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 14,
+			"path" : "utils/TableGen/DisassemblerEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 15,
+			"path" : "utils/TableGen/DXILEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 16,
+			"path" : "utils/TableGen/ExegesisEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 17,
+			"path" : "utils/TableGen/FastISelEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 18,
+			"path" : "utils/TableGen/GlobalISelCombinerEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 19,
+			"path" : "utils/TableGen/GlobalISelEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 20,
+			"path" : "utils/TableGen/InstrDocsEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 21,
+			"path" : "utils/TableGen/InstrInfoEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 22,
+			"path" : "utils/TableGen/llvm-tblgen.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 23,
+			"path" : "utils/TableGen/MacroFusionPredicatorEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 24,
+			"path" : "utils/TableGen/OptionParserEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 25,
+			"path" : "utils/TableGen/OptionRSTEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 26,
+			"path" : "utils/TableGen/PseudoLoweringEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 27,
+			"path" : "utils/TableGen/RegisterBankEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 28,
+			"path" : "utils/TableGen/RegisterInfoEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 29,
+			"path" : "utils/TableGen/SDNodeInfoEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 30,
+			"path" : "utils/TableGen/SearchableTableEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 31,
+			"path" : "utils/TableGen/SubtargetEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 32,
+			"path" : "utils/TableGen/WebAssemblyDisassemblerEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 33,
+			"path" : "utils/TableGen/X86InstrMappingEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 34,
+			"path" : "utils/TableGen/X86DisassemblerTables.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 35,
+			"path" : "utils/TableGen/X86FoldTablesEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 36,
+			"path" : "utils/TableGen/X86MnemonicTables.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 37,
+			"path" : "utils/TableGen/X86ModRMFilters.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 38,
+			"path" : "utils/TableGen/X86RecognizableInstr.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/ARMTargetDefEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/Attributes.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/CodeGenIntrinsics.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/DirectiveEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/IntrinsicEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/RISCVTargetDefEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/RuntimeLibcallsEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/SDNodeProperties.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/TableGen.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/TargetFeaturesEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Basic/CMakeFiles/obj.LLVMTableGenBasic.dir/VTEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/GlobalISel/CodeExpander.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/GlobalISel/CombinerUtils.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/GlobalISel/CXXPredicates.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/GlobalISel/GlobalISelMatchTable.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/GlobalISel/PatternParser.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/GlobalISel/Patterns.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/AsmWriterInst.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenDAGPatterns.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenHwModes.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenInstAlias.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenInstruction.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenRegisters.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenSchedule.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenTarget.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/DAGISelMatcher.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/InfoByHwMode.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/OptEmitter.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/PredicateExpander.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/SubtargetFeatureInfo.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/Types.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/Utils.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/VarLenCodeEmitterGen.cpp.obj",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 4,
+			"path" : "utils/TableGen/DFAEmitter.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 4,
+			"path" : "utils/TableGen/TableGenBackends.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 4,
+			"path" : "utils/TableGen/WebAssemblyDisassemblerEmitter.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 4,
+			"path" : "utils/TableGen/X86DisassemblerShared.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 4,
+			"path" : "utils/TableGen/X86DisassemblerTables.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 4,
+			"path" : "utils/TableGen/X86ModRMFilters.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 4,
+			"path" : "utils/TableGen/X86RecognizableInstr.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 39,
+			"path" : "resources/windows_version_resource.rc",
+			"sourceGroupIndex" : 3
+		}
+	],
+	"type" : "EXECUTABLE"
+}

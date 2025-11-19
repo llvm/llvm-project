@@ -20,19 +20,28 @@ namespace llvm {
         bool isVoid();
         bool isArray();
         bool isUnknown();
+        bool isStruct();
         bool compatibleWith(std::shared_ptr<MyTy>);
         static std::shared_ptr<MyTy> from(Type *);
-        static std::shared_ptr<MyTy> leastCompatibleType(std::shared_ptr<MyTy>,
-                                                         std::shared_ptr<MyTy>);
+        static std::shared_ptr<MyTy> leastCompatibleType(
+			std::shared_ptr<MyTy>,
+            std::shared_ptr<MyTy>);
+        static std::shared_ptr<MyTy> getStructLCA(
+			std::shared_ptr<MyTy>,
+            std::shared_ptr<MyTy>);
 		template <typename T, typename U>
         static std::shared_ptr<T> ptr_cast(std::shared_ptr<U>);
 	protected:
 		MyTypeID typeId;
-        static std::shared_ptr<MyTy> basic_with_basic(std::shared_ptr<MyTy>,
-                                                      std::shared_ptr<MyTy>);
-        static std::shared_ptr<MyTy> ptr_with_array(std::shared_ptr<MyTy>,
-														std::shared_ptr<MyTy>);
+        static int floatBitWidth[7];
+        static std::shared_ptr<MyTy> basic_with_basic(
+			std::shared_ptr<MyTy>,
+            std::shared_ptr<MyTy>);
+        static std::shared_ptr<MyTy> ptr_with_array(
+			std::shared_ptr<MyTy>,
+			std::shared_ptr<MyTy>);
         static std::shared_ptr<MyTy> int_with_int(Type *, Type *);
+        static std::shared_ptr<MyTy> float_with_float(Type *, Type *);
 	};
 
 	class MyVoidTy : public MyTy {
@@ -71,9 +80,24 @@ namespace llvm {
         MyArrayTy(Type *array);
         MyArrayTy(std::shared_ptr<MyTy> eTy, int eCnt);
         std::shared_ptr<MyTy> getElementTy();
-		int size();
+		int getElementCnt() const;
 		std::string to_string() override;
         void update(std::shared_ptr<MyTy> inner) override;
+	};
+
+	class MyStructTy : public MyTy {
+    private:
+        SmallVector<std::shared_ptr<MyTy>> elementTy;
+        std::string name;
+
+	public:
+        MyStructTy(Type *stc);
+        std::shared_ptr<MyTy> getElementTy(int index = 0);
+        std::string to_string() override;
+        bool hasName() const;
+        int getElementCnt();
+        void update(std::shared_ptr<MyTy> inner) override;
+        void updateElement(std::shared_ptr<MyTy> ty, int index = 0);
 	};
 }
 #endif

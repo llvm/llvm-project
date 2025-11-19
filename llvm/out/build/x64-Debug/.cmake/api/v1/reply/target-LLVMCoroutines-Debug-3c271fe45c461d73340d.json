@@ -1,0 +1,1875 @@
+{
+	"archive" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "/machine:x64",
+				"role" : "flags"
+			}
+		]
+	},
+	"artifacts" : 
+	[
+		{
+			"path" : "lib/LLVMCoroutines.lib"
+		}
+	],
+	"backtrace" : 5,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"_add_library",
+			"add_library",
+			"llvm_add_library",
+			"add_llvm_library",
+			"add_llvm_component_library",
+			"install",
+			"target_link_libraries",
+			"LLVMBuildResolveComponentsLink",
+			"add_dependencies",
+			"add_compile_definitions",
+			"include",
+			"set_property",
+			"llvm_update_compile_flags",
+			"include_directories",
+			"set_source_files_properties",
+			"llvm_process_sources"
+		],
+		"files" : 
+		[
+			"C:/Users/30513/vcpkg/scripts/buildsystems/vcpkg.cmake",
+			"cmake/modules/AddLLVM.cmake",
+			"lib/Transforms/Coroutines/CMakeLists.txt",
+			"cmake/modules/LLVM-Build.cmake",
+			"lib/CMakeLists.txt",
+			"cmake/modules/HandleLLVMOptions.cmake",
+			"CMakeLists.txt",
+			"cmake/modules/LLVMProcessSources.cmake"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 2
+			},
+			{
+				"command" : 4,
+				"file" : 2,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 917,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 944,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 644,
+				"parent" : 3
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 639,
+				"parent" : 4
+			},
+			{
+				"command" : 5,
+				"file" : 1,
+				"line" : 975,
+				"parent" : 2
+			},
+			{
+				"file" : 4
+			},
+			{
+				"command" : 7,
+				"file" : 4,
+				"line" : 71,
+				"parent" : 7
+			},
+			{
+				"command" : 6,
+				"file" : 3,
+				"line" : 101,
+				"parent" : 8
+			},
+			{
+				"command" : 8,
+				"file" : 1,
+				"line" : 807,
+				"parent" : 3
+			},
+			{
+				"file" : 6
+			},
+			{
+				"command" : 10,
+				"file" : 6,
+				"line" : 1092,
+				"parent" : 11
+			},
+			{
+				"file" : 5,
+				"parent" : 12
+			},
+			{
+				"command" : 9,
+				"file" : 5,
+				"line" : 216,
+				"parent" : 13
+			},
+			{
+				"command" : 12,
+				"file" : 1,
+				"line" : 697,
+				"parent" : 3
+			},
+			{
+				"command" : 11,
+				"file" : 1,
+				"line" : 98,
+				"parent" : 15
+			},
+			{
+				"command" : 9,
+				"file" : 5,
+				"line" : 581,
+				"parent" : 13
+			},
+			{
+				"command" : 9,
+				"file" : 5,
+				"line" : 570,
+				"parent" : 13
+			},
+			{
+				"command" : 9,
+				"file" : 5,
+				"line" : 137,
+				"parent" : 13
+			},
+			{
+				"command" : 9,
+				"file" : 5,
+				"line" : 1104,
+				"parent" : 13
+			},
+			{
+				"command" : 9,
+				"file" : 5,
+				"line" : 1105,
+				"parent" : 13
+			},
+			{
+				"command" : 9,
+				"file" : 5,
+				"line" : 1106,
+				"parent" : 13
+			},
+			{
+				"command" : 13,
+				"file" : 6,
+				"line" : 1295,
+				"parent" : 11
+			},
+			{
+				"command" : 15,
+				"file" : 1,
+				"line" : 538,
+				"parent" : 3
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			},
+			{
+				"command" : 14,
+				"file" : 7,
+				"line" : 65,
+				"parent" : 24
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 25,
+					"define" : "__SHORT_FILE__=\"Coroutines.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 26,
+					"define" : "__SHORT_FILE__=\"CoroAnnotationElide.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				1
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 27,
+					"define" : "__SHORT_FILE__=\"CoroCleanup.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				2
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 28,
+					"define" : "__SHORT_FILE__=\"CoroConditionalWrapper.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				3
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 29,
+					"define" : "__SHORT_FILE__=\"CoroEarly.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				4
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 30,
+					"define" : "__SHORT_FILE__=\"CoroElide.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				5
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 31,
+					"define" : "__SHORT_FILE__=\"CoroFrame.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				6
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 32,
+					"define" : "__SHORT_FILE__=\"CoroSplit.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				7
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 33,
+					"define" : "__SHORT_FILE__=\"SuspendCrossingInfo.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				8
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 34,
+					"define" : "__SHORT_FILE__=\"SpillUtils.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				9
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive- /W4 -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi"
+				},
+				{
+					"fragment" : " /EHs-c- /GR-"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 14,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "GTEST_HAS_RTTI=0"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 35,
+					"define" : "__SHORT_FILE__=\"MaterializationUtils.cpp\""
+				},
+				{
+					"backtrace" : 20,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 21,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/lib/Transforms/Coroutines"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/lib/Transforms/Coroutines"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/30513/vcpkg/installed/x64-windows/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					5
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				10
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 9,
+			"id" : "LLVMDemangle::@3c7ef39cff93a35ba752"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMSupport::@928d1708d80fe1f55e59"
+		},
+		{
+			"backtrace" : 10,
+			"id" : "intrinsics_gen::@6eda0283a7d1115d7bbd"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMCore::@fbfd63cd06ffdf52319f"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMIRReader::@ac4e3735190afd111ee4"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMBinaryFormat::@c9b0ef5de2116d71f170"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMBitReader::@b3ae57fb53631d19cf66"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMBitWriter::@70aee8a8db3c4815feff"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMBitstreamReader::@95731b79b16df93229d4"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMFrontendAtomic::@a24ae8cae07ac13e43be"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMFrontendDirective::@ebfe28ea91848cbf7dfd"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMFrontendOpenMP::@2ab712eb00cebf70ac89"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMFrontendOffloading::@8f7d072c36c0e7a78ea0"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMTransformUtils::@485472be269d97170281"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMInstrumentation::@f6d078940980c0702113"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMAggressiveInstCombine::@1604ec25a19d03fb8401"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMInstCombine::@c211d204041b3cce8885"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMipo::@5d30e4426957e039fa79"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMScalarOpts::@b500fa7488aca5bdc0a7"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMVectorize::@52cafa3d09b69dbbd840"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMLinker::@82b49a9339256152fd37"
+		},
+		{
+			"backtrace" : 10,
+			"id" : "LLVMAnalysis::@a8ea8fd451b56fad3c5d"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMMC::@9597ad869864cf27958c"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMMCParser::@d8f04122018374db0703"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMObject::@642aa1c006d9cde9317d"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMDebugInfoPDB::@7ca5f69457f64a38426e"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMSymbolize::@42ca82b480049393bbf7"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMDebugInfoBTF::@df64ffa47867b559c012"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMObjectYAML::@2941404d0ae30f399c55"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMRemarks::@6a63c042d04b6deafc56"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMDebugInfoDWARF::@d4081b04ea46e64ff5bd"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMDebugInfoGSYM::@30dbc6779cf3336f8062"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMDebugInfoDWARFLowLevel::@e3f74655c8add9990224"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMDebugInfoCodeView::@841a9fddc0a02ad6b960"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMDebugInfoMSF::@bb9873363af6a4074de7"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMSandboxIR::@3199b716350fa440bc3e"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMAsmParser::@bfe21dd4a58a6f8872f3"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMProfileData::@b9974079c57e2c563b37"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMTargetParser::@49fd776d486540152370"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "LLVMTextAPI::@e4706a94ab4f7fb58b7f"
+		}
+	],
+	"folder" : 
+	{
+		"name" : "LLVM/Libraries"
+	},
+	"id" : "LLVMCoroutines::@9bd322b42193a09d6123",
+	"install" : 
+	{
+		"destinations" : 
+		[
+			{
+				"backtrace" : 6,
+				"path" : "lib"
+			}
+		],
+		"prefix" : 
+		{
+			"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/install/x64-Debug"
+		}
+	},
+	"name" : "LLVMCoroutines",
+	"nameOnDisk" : "LLVMCoroutines.lib",
+	"paths" : 
+	{
+		"build" : "lib/Transforms/Coroutines",
+		"source" : "lib/Transforms/Coroutines"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "lib/Transforms/Coroutines/Coroutines.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 1,
+			"path" : "lib/Transforms/Coroutines/CoroAnnotationElide.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 2,
+			"path" : "lib/Transforms/Coroutines/CoroCleanup.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 3,
+			"path" : "lib/Transforms/Coroutines/CoroConditionalWrapper.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 4,
+			"path" : "lib/Transforms/Coroutines/CoroEarly.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 5,
+			"path" : "lib/Transforms/Coroutines/CoroElide.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 6,
+			"path" : "lib/Transforms/Coroutines/CoroFrame.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 7,
+			"path" : "lib/Transforms/Coroutines/CoroSplit.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 8,
+			"path" : "lib/Transforms/Coroutines/SuspendCrossingInfo.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 9,
+			"path" : "lib/Transforms/Coroutines/SpillUtils.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 10,
+			"path" : "lib/Transforms/Coroutines/MaterializationUtils.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"path" : "lib/Transforms/Coroutines/CoroCloner.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "lib/Transforms/Coroutines/CoroInternal.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/ABI.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/CoroAnnotationElide.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/CoroCleanup.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/CoroConditionalWrapper.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/CoroEarly.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/CoroElide.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/CoroInstr.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/CoroShape.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/CoroSplit.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/MaterializationUtils.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/SpillUtils.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/llvm/Transforms/Coroutines/SuspendCrossingInfo.h",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

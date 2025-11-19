@@ -1,0 +1,467 @@
+{
+	"backtrace" : 3,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_custom_target",
+			"add_lit_target",
+			"add_lit_testsuites",
+			"add_dependencies"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"test/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 262,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 2226,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 2104,
+				"parent" : 2
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 2118,
+				"parent" : 2
+			}
+		]
+	},
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 4,
+			"id" : "llvm-tblgen::@dca47d54282c16282dfc"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "LLVMWindowsDriver::@67e0b031e165bff462f4"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "FileCheck::@09bac3cf726c1488c914"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "count::@1848ee2bede5a1584fa8"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-config::@afa2b000db28441ce85a"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-dlltool::@a02a90250a01112d8191"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-lib::@a02a90250a01112d8191"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-ctxprof-util::@d8dc59f46f5c30903e4d"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-lto::@2fda6cc5f4a98f144093"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-profdata::@bb49f6a0934048e71b3d"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "bugpoint::@f1e370f4ef88400614e7"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "BugpointPasses::@380fe6bbc961daa8046c"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "not::@7726f5738bf8037ed68b"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "yaml-bench::@06142ef5857392f719d8"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "split-file::@0adf5237f696346a9620"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "LTO::@3fb5455b32bc8f99179a"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-ranlib::@a02a90250a01112d8191"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-ar::@a02a90250a01112d8191"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "dsymutil::@d49f51e8ab9f6f7fdf63"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llc::@b54ea129dc3e8f94840b"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "lli::@2c1c1711deab6220250d"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "lli-child-target::@f4eed7f402be02f25c07"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-as::@3f5e325e8785346a85b0"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-bcanalyzer::@c40be07b8d45bb5a8a90"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-c-test::@a9c6dda1503c02054e70"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-cat::@06466fed4d82d175ffc4"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-cfi-verify::@0c7f4e331da5e84dc6a1"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-cgdata::@07764266193efc7399ad"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-cov::@d1aec6e4d96adb2837c3"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-cvtres::@af1c6319e2f67c32f127"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-cxxdump::@03fbd5a508c4d1e7a35a"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-cxxfilt::@bcca90acc22e84a8507b"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-dwarfutil::@5eec038d605a95386e8b"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-dwp::@bc14e92b68d0cf274c48"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-exegesis::@b38b9774b0593a411a29"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-cxxmap::@f68f43cdfa649f91bddb"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-debuginfo-analyzer::@79991bf0324f83e45681"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-debuginfod-find::@3967ced3fdbd5ef0db21"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-diff::@fd34261daabde5c6824b"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-dis::@e82ed11c4685fece42d7"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-dwarfdump::@4378988d344ec17d8888"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-extract::@b3d161fd63f7862d829b"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-gsymutil::@a4ab998886cc0a6ad685"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-ifs::@faad29f92db3d5bd6498"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-ir2vec::@bf4e89aa18d16db050c6"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-isel-fuzzer::@b23c290f38024c2f5706"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-jitlink::@da80991aee1d2855c1b5"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-libtool-darwin::@93aba9f184ff2873df32"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-link::@5ef286a2456f2d7c9c68"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-lipo::@101b1cda9b08a8ca9e1c"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-lto2::@b8b968d7aca817467d99"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-mc::@12a84803523344ac5eb4"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-mca::@f636667da65b4ae2875f"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-pdbutil::@4ced02ea63bc958057d1"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-profgen::@75000b78eabf2036ddc0"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-rc::@1ad94799de99ec593d82"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-windres::@1ad94799de99ec593d82"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-readobj::@494ff1f9bdd8b7c92285"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-readelf::@494ff1f9bdd8b7c92285"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-readtapi::@8bfb857997f856860745"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-ml::@10303481ed29d736eef1"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-ml64::@10303481ed29d736eef1"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-modextract::@b56560e6ba4b1f3f5185"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-nm::@3d6bf72ef684413f1fda"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-objcopy::@c5905f69fadc0487d333"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-install-name-tool::@c5905f69fadc0487d333"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-bitcode-strip::@c5905f69fadc0487d333"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-strip::@c5905f69fadc0487d333"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-objdump::@2ec370e9f30813b8b31c"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-otool::@2ec370e9f30813b8b31c"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-opt-fuzzer::@d3b942035fe2fa0f7126"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-opt-report::@53f83fd03e39973a9bdb"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-reduce::@a5517f1adcb622c748f1"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-remarkutil::@bdf9eed483409f646807"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-rtdyld::@8a005c53316fa30b9c43"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-sim::@63eaa4837a470c9aaa04"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-size::@93d4a29e3604b672a128"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-split::@56526a2fde6a01cc3ef7"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-stress::@131949d764968e7ed7d6"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-strings::@7e96d91f5e562e54689c"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-addr2line::@9bd0ecc701ed4e461dcf"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-symbolizer::@9bd0ecc701ed4e461dcf"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-tli-checker::@efb71034ff333d48f065"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-undname::@429dc2c0e7960140b443"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-xray::@b99230e25c663edcf66f"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "obj2yaml::@76a428f7542aff350637"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "opt::@b47735b880bc6d502d77"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "sancov::@4ee969c693d02f5dd93d"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "sanstats::@47b1963b474479c81ab3"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "verify-uselistorder::@93a28c78e3d6d1ed1ef5"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "yaml2obj::@1ace74fd1e5f08965ec9"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "UnitTests::@42060a6318a19e21b55a"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-locstats::@0f648e65957aa2351023"
+		}
+	],
+	"folder" : 
+	{
+		"name" : "Tests/Subdirectories"
+	},
+	"id" : "check-llvm-transforms-expandmemcmp-x86::@36f028580bb02cc8272a",
+	"name" : "check-llvm-transforms-expandmemcmp-x86",
+	"paths" : 
+	{
+		"build" : "test",
+		"source" : "test"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "CMake Rules",
+			"sourceIndexes" : 
+			[
+				1
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 3,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/test/CMakeFiles/check-llvm-transforms-expandmemcmp-x86",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/test/CMakeFiles/check-llvm-transforms-expandmemcmp-x86.rule",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "UTILITY"
+}

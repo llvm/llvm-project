@@ -4767,3 +4767,42 @@ events:
         no such file or directory;is a directory;invalid argument;permission denied
       exitCode: 0
 ...
+
+---
+events:
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "cmake/modules/GetErrcMessages.cmake:32 (try_run)"
+      - "cmake/config-ix.cmake:522 (get_errc_messages)"
+      - "CMakeLists.txt:1043 (include)"
+    directories:
+      source: "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/CMakeFiles/CMakeTmp"
+      binary: "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "D:/CMakeAndLLVM/llvm-project/llvm/cmake;D:/CMakeAndLLVM/llvm-project/llvm/cmake/modules;D:/CMakeAndLLVM/llvm-project/llvm/../cmake/Modules"
+      VCPKG_INSTALLED_DIR: "C:/Users/30513/vcpkg/installed"
+      VCPKG_PREFER_SYSTEM_LIBS: "OFF"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Users/30513/vcpkg"
+    buildResult:
+      variable: "errc_compiled"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): D:\\VISUALSTUDIO\\N\\COMMON7\\IDE\\COMMONEXTENSIONS\\MICROSOFT\\CMAKE\\Ninja\\ninja.exe -v cmTC_989ce
+        [1/2] D:\\VisualStudio\\n\\VC\\Tools\\MSVC\\14.43.34808\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -std:c++17 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_989ce.dir\\getErrc.cpp.obj /FdCMakeFiles\\cmTC_989ce.dir\\ /FS -c D:\\CMakeAndLLVM\\llvm-project\\llvm\\out\\build\\x64-Debug\\CMakeFiles\\CMakeTmp\\getErrc.cpp
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && D:\\VisualStudio\\n\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe -E vs_link_exe --intdir=CMakeFiles\\cmTC_989ce.dir --rc=D:\\WINDOW~2\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=D:\\WINDOW~2\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- D:\\VisualStudio\\n\\VC\\Tools\\MSVC\\14.43.34808\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_989ce.dir\\getErrc.cpp.obj  /out:cmTC_989ce.exe /implib:cmTC_989ce.lib /pdb:cmTC_989ce.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+    runResult:
+      variable: "errc_exit_code"
+      cached: true
+      stdout: |
+        no such file or directory;is a directory;invalid argument;permission denied
+      exitCode: 0
+...

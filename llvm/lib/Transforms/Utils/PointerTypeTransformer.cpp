@@ -3,10 +3,10 @@
 using namespace llvm;
 
 PreservedAnalyses PointerTypeTransformerPass::run(Module& M,
-    ModuleAnalysisManager& AM) {
+    ModuleAnalysisManager& MAM) {
   PointerTypePrinter *printer = new PointerTypePrinter(outs());
 
-  auto &FAMProxy = AM.getResult<FunctionAnalysisManagerModuleProxy>(M);
+  auto &FAMProxy = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M);
   FunctionAnalysisManager &FAM = FAMProxy.getManager();
 
   for (Function &F : M) {

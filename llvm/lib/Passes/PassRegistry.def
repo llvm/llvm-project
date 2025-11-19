@@ -38,6 +38,9 @@ MODULE_ANALYSIS("reg-usage", PhysicalRegisterUsageAnalysis())
 MODULE_ANALYSIS("stack-safety", StackSafetyGlobalAnalysis())
 MODULE_ANALYSIS("verify", VerifierAnalysis())
 
+// MyPass:
+MODULE_ANALYSIS("global-type-info", GlobalTypeInfoPass())
+
 #ifndef MODULE_ALIAS_ANALYSIS
 #define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
   MODULE_ANALYSIS(NAME, CREATE_PASS)
