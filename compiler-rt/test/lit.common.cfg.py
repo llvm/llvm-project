@@ -903,7 +903,7 @@ for postfix in ["2", "1", ""]:
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
-    elif config.host_os == "AIX":
+    elif config.target_os == "AIX":
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
@@ -920,7 +920,7 @@ for postfix in ["2", "1", ""]:
         ("%base_dynamiclib" + postfix, "%xdynamiclib_filename" + postfix)
     )
 
-    if config.host_os == "AIX":
+    if config.target_os == "AIX":
         config.substitutions.append(
             (
                 "%xdynamiclib_filename" + postfix,
