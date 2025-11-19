@@ -113,20 +113,22 @@ if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
   )
 endif ()
 
-list(APPEND host_sources
-  __cuda_device.f90
-  cooperative_groups.f90
-  cudadevice.f90
-)
-
-# Compile as CUDA-Fortran, not directly supported by CMake
-set_property(SOURCE
+if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  list(APPEND host_sources
     __cuda_device.f90
     cooperative_groups.f90
     cudadevice.f90
-  APPEND PROPERTY
-    COMPILE_OPTIONS --offload-host-only -xcuda
-)
+  )
+
+  # Compile as CUDA-Fortran, not directly supported by CMake
+  set_property(SOURCE
+      __cuda_device.f90
+      cooperative_groups.f90
+      cudadevice.f90
+    APPEND PROPERTY
+      COMPILE_OPTIONS --offload-host-only -xcuda
+  )
+endif ()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -215,24 +217,9 @@ endif ()
 
 if (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
-elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
-  set(sources ${supported_sources} ${host_sources})
 else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})
 endif ()
-
-
-if (FORTRAN_SUPPORTS_REAL16)
-  add_compile_definitions(FLANG_SUPPORT_R16=1)
-  add_compile_options("$<$<COMPILE_LANGUAGE:Fortran>:-cpp>")
-endif ()
-
-add_compile_options(
-  "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-mmlir;SHELL:-ignore-missing-type-desc>"
-
-  # Flang bug workaround: Reformating of cooked token buffer causes identifier to be split between lines
-  "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
-)
 
 
 # check-flang depends on this to build intrinsic modules

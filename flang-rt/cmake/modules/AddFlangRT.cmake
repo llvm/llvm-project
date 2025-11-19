@@ -225,11 +225,26 @@ function (add_flangrt_library name)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
 
+    target_compile_options(${tgtname} PRIVATE
+      # Always enable preprocessor regardless of file extention
+      "$<$<COMPILE_LANGUAGE:Fortran>:-cpp>"
+
+      # Missing type descriptors are expected for intrinsic modules 
+      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-mmlir;SHELL:-ignore-missing-type-desc>"
+
+      # Flang bug workaround: Reformating of cooked token buffer causes identifier to be split between lines
+      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
+    )
+
     # When building the flang runtime if LTO is enabled the archive file
     # contains LLVM IR rather than object code. Currently flang is not
     # LTO aware so cannot link this file to compiled Fortran code.
     if (FLANG_RT_HAS_FNO_LTO_FLAG)
       target_compile_options(${tgtname} PRIVATE -fno-lto)
+    endif ()
+
+    if (FORTRAN_SUPPORTS_REAL16)
+      target_compile_definitions(${tgtname} PRIVATE FLANG_SUPPORT_R16=1)
     endif ()
 
     # Use compiler-specific options to disable exceptions and RTTI.
