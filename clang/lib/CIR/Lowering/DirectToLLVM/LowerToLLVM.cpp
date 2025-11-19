@@ -2538,7 +2538,7 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
       mlir::LLVM::LLVMStructType::getLiteral(
           rewriter.getContext(), {encompassedLLVMTy, overflowLLVMTy});
 
-  mlir::LLVM::CallIntrinsicOp callLLVMIntrinOp =
+  auto callLLVMIntrinOp =
       mlir::LLVM::CallIntrinsicOp::create(rewriter, loc, intrinRetTy,
                                           intrinNameAttr, mlir::ValueRange{lhs, rhs});
   mlir::Value intrinRet = callLLVMIntrinOp.getResult(0);
