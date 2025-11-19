@@ -677,7 +677,8 @@ mlir::LogicalResult CIRToLLVMIsFPClassOpLowering::matchAndRewrite(
   cir::FPClassTest flags = adaptor.getFlags();
   mlir::IntegerType retTy = rewriter.getI1Type();
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::IsFPClass>(op, retTy, src, static_cast<uint32_t>(flags));
+  rewriter.replaceOpWithNewOp<mlir::LLVM::IsFPClass>(
+      op, retTy, src, static_cast<uint32_t>(flags));
   return mlir::success();
 }
 

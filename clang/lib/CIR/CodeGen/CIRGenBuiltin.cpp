@@ -609,7 +609,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Location loc = getLoc(e->getBeginLoc());
     //
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, cir::FPClassTest(test)), convertType(e->getType())));
+        builder.createIsFPClass(loc, v, cir::FPClassTest(test)),
+        convertType(e->getType())));
   }
   }
 
