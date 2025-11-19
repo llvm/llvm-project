@@ -2533,7 +2533,9 @@ def CIR_FuncOp : CIR_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        CIR_OptionalPriorityAttr:$global_ctor_priority,
-                       CIR_OptionalPriorityAttr:$global_dtor_priority);
+                       CIR_OptionalPriorityAttr:$global_dtor_priority,
+                       OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+   );
 
   let regions = (region AnyRegion:$body);
 
@@ -2572,7 +2574,32 @@ def CIR_FuncOp : CIR_Op<"func", [
     //===------------------------------------------------------------------===//
 
     bool isDeclaration();
-  }];
+
+    //===------------------------------------------------------------------===//
+    // C++ Special Member Functions
+    //===------------------------------------------------------------------===//
+
+    /// Returns true if this function is a C++ special member function.
+    bool isCXXSpecialMemberFunction();
+
+    bool isCxxConstructor();
+    bool isCxxDestructor();
+
+    /// Returns true if this function is a copy or move assignment operator.
+    bool isCxxSpecialAssignment();
+
+    /// Returns the kind of constructor this function represents, if any.
+    std::optional<CtorKind> getCxxConstructorKind();
+
+    /// Returns the kind of assignment operator (move, copy) this function
+    /// represents, if any.
+    std::optional<AssignKind> getCxxSpecialAssignKind();
+
+    /// Returns true if the function is a trivial C++ member functions such as
+    /// trivial default constructor, copy/move constructor, copy/move assignment,
+    /// or destructor.
+    bool isCxxTrivialMemberFunction();
+}];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -4362,7 +4389,7 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
     When the `min` attribute is present, the operation returns the minimum
     guaranteed accessible size. When absent (max mode), it returns the maximum
     possible object size. Corresponds to `llvm.objectsize`'s `min` argument.
-    
+
     The `dynamic` attribute determines if the value should be evaluated at
     runtime. Corresponds to `llvm.objectsize`'s `dynamic` argument.
 
