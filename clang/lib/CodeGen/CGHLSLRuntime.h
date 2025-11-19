@@ -258,7 +258,7 @@ public:
   emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  CodeGenFunction &CGF);
   bool emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr, CodeGenFunction &CGF);
-  
+
   std::optional<LValue> emitBufferArraySubscriptExpr(
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
       llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase);
