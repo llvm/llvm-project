@@ -348,6 +348,10 @@ Attribute Changes in Clang
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
 
+- New function attribute `malloc_span` is added. It has semantics similar to that of the `malloc`
+  attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning
+  span-like structures (i.e. those that contain a pointer field and a size integer field or two pointers).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -677,6 +681,8 @@ Improvements to Clang's diagnostics
   or continue (#GH166013)
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
+- Clang no longer emits ``-Wmissing-noreturn`` for virtual methods where
+  the function body consists of a `throw` expression (#GH167247).
 
 Improvements to Clang's time-trace
 ----------------------------------

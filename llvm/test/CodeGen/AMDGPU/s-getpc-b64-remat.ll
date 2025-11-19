@@ -20,8 +20,8 @@ define void @test_remat_s_getpc_b64() {
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
-; GFX9-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX9-NEXT:    v_readlane_b32 s31, v2, 1
 ; GFX9-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload

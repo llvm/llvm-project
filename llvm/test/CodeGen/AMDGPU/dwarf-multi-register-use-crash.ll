@@ -1325,8 +1325,8 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    .loc 1 0 9 is_stmt 0 ; dummy:0:9
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_readlane_b32 s30, v41, 14
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2
+; CHECK-NEXT:    v_readlane_b32 s30, v41, 14
 ; CHECK-NEXT:    v_readlane_b32 s31, v41, 15
 ; CHECK-NEXT:    v_readlane_b32 s55, v41, 13
 ; CHECK-NEXT:    v_readlane_b32 s54, v41, 12
