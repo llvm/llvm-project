@@ -2009,7 +2009,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "log10f" || Name == "logb" || Name == "logbf" ||
            Name == "log1p" || Name == "log1pf";
   case 'n':
-    return Name == "nearbyint" || Name == "nearbyintf";
+    return Name == "nearbyint" || Name == "nearbyintf" || Name == "nextafter" ||
+           Name == "nextafterf" || Name == "nexttoward" ||
+           Name == "nexttowardf";
   case 'p':
     return Name == "pow" || Name == "powf";
   case 'r':
@@ -3174,6 +3176,53 @@ static Constant *evaluateCompare(const APFloat &Op1, const APFloat &Op2,
   return nullptr;
 }
 
+/// Returns the first NaN in the operand list if it exists, preserving the NaN
+/// payload if possible. Returns nullptr if no NaNs are in the list.
+static Constant *TryConstantFoldNaN(ArrayRef<APFloat> Operands,
+                                    const Type *RetTy) {
+  assert(RetTy != nullptr);
+  for (const APFloat &Op : Operands) {
+    if (Op.isNaN()) {
+      bool Unused;
+      APFloat Ret(Op);
+      Ret.convert(RetTy->getFltSemantics(), detail::rmNearestTiesToEven,
+                  &Unused);
+      return ConstantFP::get(RetTy->getContext(), Ret);
+    }
+  }
+  return nullptr;
+}
+
+static Constant *ConstantFoldNextToward(const APFloat &Op0, const APFloat &Op1,
+                                        const Type *RetTy,
+                                        bool *WouldSetErrno) {
+  assert(RetTy != nullptr);
+  *WouldSetErrno = false;
+
+  Constant *RetNaN = TryConstantFoldNaN({Op0, Op1}, RetTy);
+  if (RetNaN != nullptr) {
+    return RetNaN;
+  }
+
+  // Recall that the second argument of nexttoward is always a long double,
+  // so we may need to promote the first argument for comparisons to be valid.
+  bool LosesInfo;
+  APFloat PromotedOp0(Op0);
+  PromotedOp0.convert(Op1.getSemantics(), detail::rmNearestTiesToEven,
+                      &LosesInfo);
+  assert(!LosesInfo && "Unexpected lossy promotion");
+
+  if (PromotedOp0 == Op1)
+    return ConstantFP::get(RetTy->getContext(), Op0);
+
+  APFloat Next(Op0);
+  Next.next(/*nextDown=*/PromotedOp0 > Op1);
+  const bool DidOverflow = !Op0.isInfinity() && Next.isInfinity();
+  *WouldSetErrno = Next.isZero() || Next.isDenormal() || DidOverflow;
+
+  return ConstantFP::get(RetTy->getContext(), Next);
+}
+
 static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
                                       ArrayRef<Constant *> Operands,
                                       const TargetLibraryInfo *TLI) {
@@ -3233,6 +3282,14 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     if (TLI->has(Func))
       return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
     break;
+  case LibFunc_nextafter:
+  case LibFunc_nextafterf:
+  case LibFunc_nexttoward:
+  case LibFunc_nexttowardf:
+    if (TLI->has(Func)) {
+      bool Unused;
+      return ConstantFoldNextToward(Op1V, Op2V, Ty, &Unused);
+    }
   }
 
   return nullptr;
@@ -4705,6 +4762,16 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         // may occur, so allow for that possibility.
         return !Op0.isZero() || !Op1.isZero();
 
+      case LibFunc_nextafter:
+      case LibFunc_nextafterf:
+      case LibFunc_nextafterl:
+      case LibFunc_nexttoward:
+      case LibFunc_nexttowardf:
+      case LibFunc_nexttowardl: {
+        bool WouldSetErrno;
+        ConstantFoldNextToward(Op0, Op1, F->getReturnType(), &WouldSetErrno);
+        return !WouldSetErrno;
+      }
       default:
         break;
       }
