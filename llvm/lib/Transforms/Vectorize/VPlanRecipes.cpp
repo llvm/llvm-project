@@ -493,6 +493,10 @@ void VPSingleDefRecipe::dump() const { VPDef::dump(); }
 void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
   printRecipe(O, Indent, SlotTracker);
+  if (auto DL = getDebugLoc()) {
+    O << ", !dbg ";
+    DL.print(O);
+  }
 }
 #endif
 
@@ -1481,11 +1485,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
 
   printFlags(O);
   printOperands(O, SlotTracker);
-
-  if (auto DL = getDebugLoc()) {
-    O << ", !dbg ";
-    DL.print(O);
-  }
 }
 #endif
 
@@ -3592,8 +3591,10 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
   InstructionCost Cost = 0;
   if (IsMasked) {
+    unsigned IID = isa<VPWidenLoadRecipe>(this) ? Intrinsic::masked_load
+                                                : Intrinsic::masked_store;
     Cost +=
-        Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind);
+        Ctx.TTI.getMaskedMemoryOpCost({IID, Ty, Alignment, AS}, Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
         isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
@@ -3711,8 +3712,10 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
+  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
+  // After migrating to getMemIntrinsicInstrCost, switch this to vp_load.
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Instruction::Load, Ty, Alignment, AS, Ctx.CostKind);
+      {Intrinsic::masked_load, Ty, Alignment, AS}, Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
@@ -3820,8 +3823,10 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
+  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
+  // After migrating to getMemIntrinsicInstrCost, switch this to vp_store.
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Instruction::Store, Ty, Alignment, AS, Ctx.CostKind);
+      {Intrinsic::masked_store, Ty, Alignment, AS}, Ctx.CostKind);
   if (!Reverse)
     return Cost;
 

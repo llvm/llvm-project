@@ -703,8 +703,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   SmallVector<unsigned, 4> RowMap;
   SmallVector<SmallVector<const CodeGenSubRegIndex *, 4>, 4> Rows;
 
-  auto SubRegIndicesSize =
-      std::distance(SubRegIndices.begin(), SubRegIndices.end());
+  auto SubRegIndicesSize = llvm::size(SubRegIndices);
   for (const auto &Idx : SubRegIndices) {
     unsigned Found = ~0u;
     for (unsigned r = 0, re = Rows.size(); r != re; ++r) {
@@ -1133,7 +1132,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << RegBank.getNumNativeRegUnits() << ", " << TargetName << "RegDiffLists, "
      << TargetName << "LaneMaskLists, " << TargetName << "RegStrings, "
      << TargetName << "RegClassStrings, " << TargetName << "SubRegIdxLists, "
-     << (std::distance(SubRegIndices.begin(), SubRegIndices.end()) + 1) << ",\n"
+     << (llvm::size(SubRegIndices) + 1) << ",\n"
      << TargetName << "RegEncodingTable);\n\n";
 
   EmitRegMapping(OS, Regs, false);
@@ -1527,8 +1526,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   std::string ClassName = Target.getName().str() + "GenRegisterInfo";
 
-  auto SubRegIndicesSize =
-      std::distance(SubRegIndices.begin(), SubRegIndices.end());
+  auto SubRegIndicesSize = llvm::size(SubRegIndices);
 
   if (!SubRegIndices.empty()) {
     emitComposeSubRegIndices(OS, ClassName);

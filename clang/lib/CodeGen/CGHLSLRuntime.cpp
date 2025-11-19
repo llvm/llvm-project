@@ -599,6 +599,36 @@ CGHLSLRuntime::emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                  VariableName.str());
 }
 
+static void createSPIRVLocationStore(IRBuilder<> &B, llvm::Module &M,
+                                     llvm::Value *Source, unsigned Location,
+                                     StringRef Name) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Source->getType(), /* isConstant= */ false,
+      llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  addLocationDecoration(GV, Location);
+  B.CreateStore(Source, GV);
+}
+
+void CGHLSLRuntime::emitSPIRVUserSemanticStore(
+    llvm::IRBuilder<> &B, llvm::Value *Source,
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+  Twine BaseName = Twine(Semantic->getAttrName()->getName());
+  Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
+  unsigned Location = SPIRVLastAssignedOutputSemanticLocation;
+
+  // DXC completely ignores the semantic/index pair. Location are assigned from
+  // the first semantic to the last.
+  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Source->getType());
+  unsigned ElementCount = AT ? AT->getNumElements() : 1;
+  SPIRVLastAssignedOutputSemanticLocation += ElementCount;
+  createSPIRVLocationStore(B, CGM.getModule(), Source, Location,
+                           VariableName.str());
+}
+
 llvm::Value *
 CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                         HLSLAppliedSemanticAttr *Semantic,
@@ -619,6 +649,23 @@ CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
   return Value;
 }
 
+void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
+                                              llvm::Value *Source,
+                                              HLSLAppliedSemanticAttr *Semantic,
+                                              std::optional<unsigned> Index) {
+  // DXIL packing rules etc shall be handled here.
+  // FIXME: generate proper sigpoint, index, col, row values.
+  SmallVector<Value *> Args{B.getInt32(4),
+                            B.getInt32(0),
+                            B.getInt32(0),
+                            B.getInt8(0),
+                            llvm::PoisonValue::get(B.getInt32Ty()),
+                            Source};
+
+  llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_store_output;
+  B.CreateIntrinsic(/*ReturnType=*/CGM.VoidTy, IntrinsicID, Args, nullptr);
+}
+
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
     IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
@@ -627,6 +674,19 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
 
   if (CGM.getTarget().getTriple().isDXIL())
     return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+
+  llvm_unreachable("Unsupported target for user-semantic load.");
+}
+
+void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
+                                          const clang::DeclaratorDecl *Decl,
+                                          HLSLAppliedSemanticAttr *Semantic,
+                                          std::optional<unsigned> Index) {
+  if (CGM.getTarget().getTriple().isSPIRV())
+    return emitSPIRVUserSemanticStore(B, Source, Semantic, Index);
+
+  if (CGM.getTarget().getTriple().isDXIL())
+    return emitDXILUserSemanticStore(B, Source, Semantic, Index);
 
   llvm_unreachable("Unsupported target for user-semantic load.");
 }
@@ -679,6 +739,34 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
   llvm_unreachable("non-handled system semantic. FIXME.");
 }
 
+static void createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M,
+                                    llvm::Value *Source, const Twine &Name,
+                                    unsigned BuiltInID) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Source->getType(), /* isConstant= */ false,
+      llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
+  addSPIRVBuiltinDecoration(GV, BuiltInID);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  B.CreateStore(Source, GV);
+}
+
+void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
+                                            const clang::DeclaratorDecl *Decl,
+                                            HLSLAppliedSemanticAttr *Semantic,
+                                            std::optional<unsigned> Index) {
+
+  std::string SemanticName = Semantic->getAttrName()->getName().upper();
+  if (SemanticName == "SV_POSITION")
+    createSPIRVBuiltinStore(B, CGM.getModule(), Source,
+                            Semantic->getAttrName()->getName(),
+                            /* BuiltIn::Position */ 0);
+  else
+    llvm_unreachable("non-handled system semantic. FIXME.");
+}
+
 llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic) {
@@ -687,6 +775,16 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
   if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
     return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
   return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
+}
+
+void CGHLSLRuntime::handleScalarSemanticStore(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic) {
+  std::optional<unsigned> Index = Semantic->getSemanticIndex();
+  if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
+    emitSystemSemanticStore(B, Source, Decl, Semantic, Index);
+  else
+    emitUserSemanticStore(B, Source, Decl, Semantic, Index);
 }
 
 std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
@@ -715,6 +813,35 @@ CGHLSLRuntime::handleStructSemanticLoad(
   return std::make_pair(Aggregate, AttrBegin);
 }
 
+specific_attr_iterator<HLSLAppliedSemanticAttr>
+CGHLSLRuntime::handleStructSemanticStore(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+    const clang::DeclaratorDecl *Decl,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd) {
+
+  const llvm::StructType *ST = cast<StructType>(Source->getType());
+
+  const clang::RecordDecl *RD = nullptr;
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(Decl))
+    RD = FD->getDeclaredReturnType()->getAsRecordDecl();
+  else
+    RD = Decl->getType()->getAsRecordDecl();
+  assert(RD);
+
+  assert(std::distance(RD->field_begin(), RD->field_end()) ==
+         ST->getNumElements());
+
+  auto FieldDecl = RD->field_begin();
+  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+    llvm::Value *Extract = B.CreateExtractValue(Source, I);
+    AttrBegin =
+        handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin, AttrEnd);
+  }
+
+  return AttrBegin;
+}
+
 std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
 CGHLSLRuntime::handleSemanticLoad(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
@@ -729,6 +856,22 @@ CGHLSLRuntime::handleSemanticLoad(
   ++AttrBegin;
   return std::make_pair(handleScalarSemanticLoad(B, FD, Type, Decl, Attr),
                         AttrBegin);
+}
+
+specific_attr_iterator<HLSLAppliedSemanticAttr>
+CGHLSLRuntime::handleSemanticStore(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+    const clang::DeclaratorDecl *Decl,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd) {
+  assert(AttrBegin != AttrEnd);
+  if (Source->getType()->isStructTy())
+    return handleStructSemanticStore(B, FD, Source, Decl, AttrBegin, AttrEnd);
+
+  HLSLAppliedSemanticAttr *Attr = *AttrBegin;
+  ++AttrBegin;
+  handleScalarSemanticStore(B, FD, Source, Decl, Attr);
+  return AttrBegin;
 }
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
@@ -762,20 +905,22 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  // FIXME: support struct parameters where semantics are on members.
-  // See: https://github.com/llvm/llvm-project/issues/57874
+  std::unordered_map<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
+
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
     if (Param.hasStructRetAttr()) {
-      // FIXME: support output.
-      // See: https://github.com/llvm/llvm-project/issues/57874
       SRetOffset = 1;
-      Args.emplace_back(PoisonValue::get(Param.getType()));
+      llvm::Type *VarType = Param.getParamStructRetType();
+      llvm::Value *Var = B.CreateAlloca(VarType);
+      OutputSemantic.emplace(FD, Var);
+      Args.push_back(Var);
       continue;
     }
 
     const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
     llvm::Value *SemanticValue = nullptr;
+    // FIXME: support inout/out parameters for semantics.
     if ([[maybe_unused]] HLSLParamModifierAttr *MA =
             PD->getAttr<HLSLParamModifierAttr>()) {
       llvm_unreachable("Not handled yet");
@@ -802,8 +947,20 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args, OB);
   CI->setCallingConv(Fn->getCallingConv());
-  // FIXME: Handle codegen for return type semantics.
-  // See: https://github.com/llvm/llvm-project/issues/57875
+
+  if (Fn->getReturnType() != CGM.VoidTy)
+    OutputSemantic.emplace(FD, CI);
+
+  for (auto &[Decl, Source] : OutputSemantic) {
+    AllocaInst *AI = dyn_cast<AllocaInst>(Source);
+    llvm::Value *SourceValue =
+        AI ? B.CreateLoad(AI->getAllocatedType(), Source) : Source;
+
+    auto AttrBegin = Decl->specific_attr_begin<HLSLAppliedSemanticAttr>();
+    auto AttrEnd = Decl->specific_attr_end<HLSLAppliedSemanticAttr>();
+    handleSemanticStore(B, FD, SourceValue, Decl, AttrBegin, AttrEnd);
+  }
+
   B.CreateRetVoid();
 
   // Add and identify root signature to function, if applicable
