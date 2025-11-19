@@ -73,18 +73,6 @@ public:
 
 } // namespace lldb_private
 
-template <typename T>
-bool operator==(const lldb_private::NonNullSharedPtr<T> &lhs,
-                const lldb_private::NonNullSharedPtr<T> &rhs) {
-  return lhs.get() == rhs.get();
-}
-
-template <typename T>
-bool operator!=(const lldb_private::NonNullSharedPtr<T> &lhs,
-                const lldb_private::NonNullSharedPtr<T> &rhs) {
-  return !(lhs == rhs);
-}
-
 /// Specialized swap function for NonNullSharedPtr to enable argument-dependent
 /// lookup (ADL) and efficient swapping.
 template <typename T>
