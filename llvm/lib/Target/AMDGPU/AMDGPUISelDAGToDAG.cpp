@@ -4437,7 +4437,8 @@ bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
          Ld->getAlign() >=
              Align(std::min(MMO->getSize().getValue().getKnownMinValue(),
                             uint64_t(4))) &&
-         ((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+         (MMO->isInvariant() ||
+          (Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
            Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
           (Subtarget->getScalarizeGlobalBehavior() &&
            Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
