@@ -414,6 +414,9 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
 
+  /// Return true if the constant aggregate contains all null values.
+  inline bool isNullValue() const;
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() >= ConstantAggregateFirstVal &&
@@ -442,6 +445,8 @@ class ConstantArray final : public ConstantAggregate {
 public:
   // ConstantArray accessors
   LLVM_ABI static Constant *get(ArrayType *T, ArrayRef<Constant *> V);
+
+  LLVM_ABI static Constant *getNullValue(ArrayType *T);
 
 private:
   static Constant *getImpl(ArrayType *T, ArrayRef<Constant *> V);
@@ -474,6 +479,8 @@ class ConstantStruct final : public ConstantAggregate {
 public:
   // ConstantStruct accessors
   LLVM_ABI static Constant *get(StructType *T, ArrayRef<Constant *> V);
+
+  LLVM_ABI static Constant *getNullValue(StructType *T);
 
   template <typename... Csts>
   static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
@@ -526,6 +533,8 @@ class ConstantVector final : public ConstantAggregate {
 public:
   // ConstantVector accessors
   LLVM_ABI static Constant *get(ArrayRef<Constant *> V);
+
+  LLVM_ABI static Constant *getNullValue(VectorType *T);
 
 private:
   static Constant *getImpl(ArrayRef<Constant *> V);

@@ -5,8 +5,8 @@
 
 ; CHECK-NOT: bitcast
 ; CHECK-NOT: trunc
-; CHECK: addrspacecast
-; CHECK: addrspacecast
+; CHECK: ptr addrspace(1) null
+; CHECK: ptr null
 
 @A = global ptr null  ; Cast null -> fold
 @B = global ptr @A   ; Cast to same type -> fold

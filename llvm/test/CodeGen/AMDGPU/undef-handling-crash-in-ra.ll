@@ -122,7 +122,8 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, -1
+; CHECK-NEXT:    buffer_store_dword v42, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    s_endpgm
 entry:
   %load.null = load i32, ptr null, align 8

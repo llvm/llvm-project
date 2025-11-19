@@ -25504,8 +25504,8 @@ private:
                  dbgs() << "> of " << VectorizedValue << ". (HorRdx)\n");
       if (NeedShuffle)
         VectorizedValue = Builder.CreateShuffleVector(
-            VectorizedValue,
-            ConstantVector::getNullValue(VectorizedValue->getType()), Mask);
+            VectorizedValue, Constant::getNullValue(VectorizedValue->getType()),
+            Mask);
       return VectorizedValue;
     }
     case RecurKind::FAdd: {

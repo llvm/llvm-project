@@ -61,7 +61,7 @@ define i32 @test_load(ptr %a) sanitize_hwaddress {
 ; FUCHSIA-LABEL: define i32 @test_load
 ; FUCHSIA-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FUCHSIA-NEXT:  entry:
-; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; FUCHSIA-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 2, i64 0)
 ; FUCHSIA-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; FUCHSIA-NEXT:    ret i32 [[X]]
@@ -69,7 +69,7 @@ define i32 @test_load(ptr %a) sanitize_hwaddress {
 ; FUCHSIA-LIBCALL-LABEL: define i32 @test_load
 ; FUCHSIA-LIBCALL-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FUCHSIA-LIBCALL-NEXT:  entry:
-; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; FUCHSIA-LIBCALL-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 2, i64 0)
 ; FUCHSIA-LIBCALL-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; FUCHSIA-LIBCALL-NEXT:    ret i32 [[X]]
@@ -92,7 +92,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 44
@@ -138,7 +138,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP5:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 44
@@ -273,10 +273,10 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-LABEL: define void @test_alloca
 ; FUCHSIA-SAME: () #[[ATTR0]] personality ptr @__hwasan_personality_thunk {
 ; FUCHSIA-NEXT:  entry:
-; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; FUCHSIA-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
 ; FUCHSIA-NEXT:    [[TMP1:%.*]] = ashr i64 [[TMP0]], 3
-; FUCHSIA-NEXT:    [[TMP2:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; FUCHSIA-NEXT:    [[TMP2:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; FUCHSIA-NEXT:    [[TMP3:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; FUCHSIA-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
 ; FUCHSIA-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 44
@@ -318,8 +318,8 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-LIBCALL-LABEL: define void @test_alloca
 ; FUCHSIA-LIBCALL-SAME: () #[[ATTR0]] personality ptr @__hwasan_personality_thunk {
 ; FUCHSIA-LIBCALL-NEXT:  entry:
-; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
-; FUCHSIA-LIBCALL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
+; FUCHSIA-LIBCALL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP1:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 44

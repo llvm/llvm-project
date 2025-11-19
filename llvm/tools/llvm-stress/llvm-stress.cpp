@@ -411,7 +411,7 @@ struct ConstModifier: public Modifier {
                 return PT->push_back(ConstantVector::getAllOnesValue(Ty));
               break;
       case 1: if (Ty->isIntOrIntVectorTy())
-                return PT->push_back(ConstantVector::getNullValue(Ty));
+          return PT->push_back(Constant::getNullValue(Ty));
       }
     }
 

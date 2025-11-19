@@ -15,7 +15,7 @@ define ptr @test_null_base_normal() {
 }
 define ptr @test_inttoptr_base_normal() {
 ; CHECK-LABEL: define ptr @test_inttoptr_base_normal() {
-; CHECK-NEXT:    ret ptr null
+; CHECK-NEXT:    ret ptr zeroinitializer
 ;
   %base = inttoptr i16 -1 to ptr
   %gep = getelementptr i8, ptr %base, i8 1

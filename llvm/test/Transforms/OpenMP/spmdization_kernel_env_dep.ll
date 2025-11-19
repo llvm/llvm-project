@@ -12,7 +12,7 @@ target triple = "amdgcn-amd-amdhsa"
 
 ;.
 ; AMDGPU: @IsSPMDMode = internal addrspace(3) global i32 undef
-; AMDGPU: @__omp_offloading_10302_b20a40e_main_l4_kernel_environment = addrspace(1) constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy.8 { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr addrspacecast (ptr addrspace(1) null to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr) }
+; AMDGPU: @__omp_offloading_10302_b20a40e_main_l4_kernel_environment = addrspace(1) constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy.8 { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
 define i32 @fputs() {
 ; AMDGPU-LABEL: define {{[^@]+}}@fputs

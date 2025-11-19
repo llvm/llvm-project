@@ -5,7 +5,7 @@
 define void @test() gc "statepoint-example" personality ptr @zot {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void (ptr addrspace(1), i64, ptr addrspace(1), i64, i64)) @__llvm_memcpy_element_unordered_atomic_safepoint_4, i32 5, i32 0, ptr addrspace(1) null, i64 undef, ptr addrspace(1) null, i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 16) to i64), i64 undef, i32 0, i32 0) [ "deopt"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void (ptr addrspace(1), i64, ptr addrspace(1), i64, i64)) @__llvm_memcpy_element_unordered_atomic_safepoint_4, i32 5, i32 0, ptr addrspace(1) null, i64 undef, ptr addrspace(1) null, i64 sub (i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 16) to i64), i64 ptrtoint (ptr addrspace(1) null to i64)), i64 undef, i32 0, i32 0) [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

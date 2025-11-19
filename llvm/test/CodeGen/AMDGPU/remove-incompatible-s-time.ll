@@ -33,11 +33,11 @@
 ]
 
 ; REALTIME:    @ConstantExpr0 = internal global i64 ptrtoint (ptr @needs_s_memrealtime to i64)
-; NOREALTIME:  @ConstantExpr0 = internal global i64 0
+; NOREALTIME:  @ConstantExpr0 = internal global i64 ptrtoint (ptr null to i64)
 @ConstantExpr0 = internal global i64 ptrtoint (ptr @needs_s_memrealtime to i64)
 
 ; MEMTIME:     @ConstantExpr1 = internal global i64 ptrtoint (ptr @needs_s_memtime to i64)
-; NOMEMTIME:   @ConstantExpr1 = internal global i64 0
+; NOMEMTIME:   @ConstantExpr1 = internal global i64 ptrtoint (ptr null to i64)
 @ConstantExpr1 = internal global i64 ptrtoint (ptr @needs_s_memtime to i64)
 
 ; REALTIME:         define i64 @needs_s_memrealtime

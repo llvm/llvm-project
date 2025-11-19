@@ -10,7 +10,7 @@ define void @atomicrmw(ptr %ptr) sanitize_hwaddress {
 ; CHECK-LABEL: define void @atomicrmw
 ; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    call void @__hwasan_store8(i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[PTR]], i64 1 seq_cst, align 8
@@ -28,7 +28,7 @@ define void @cmpxchg(ptr %ptr, i64 %compare_to, i64 %new_value) sanitize_hwaddre
 ; CHECK-LABEL: define void @cmpxchg
 ; CHECK-SAME: (ptr [[PTR:%.*]], i64 [[COMPARE_TO:%.*]], i64 [[NEW_VALUE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    call void @__hwasan_store8(i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[PTR]], i64 [[COMPARE_TO]], i64 [[NEW_VALUE]] seq_cst seq_cst, align 8

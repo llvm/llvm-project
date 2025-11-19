@@ -4,29 +4,30 @@
 define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(<1 x i64> %L1) {
 ; GCN-LABEL: test_iglp_opt_rev_mfma_gemm:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    ds_read_b128 v[2:5], v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    ds_read_b128 v[30:33], v1 offset:111
+; GCN-NEXT:    ds_read_b128 v[26:29], v1 offset:95
+; GCN-NEXT:    ds_read_b128 v[22:25], v1 offset:79
+; GCN-NEXT:    ds_read_b128 v[2:5], v1 offset:15
+; GCN-NEXT:    v_mov_b32_e32 v0, -1
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GCN-NEXT:    ds_read_b128 v[30:33], v0 offset:112
-; GCN-NEXT:    ds_read_b128 v[26:29], v0 offset:96
-; GCN-NEXT:    ds_read_b128 v[22:25], v0 offset:80
-; GCN-NEXT:    ds_read_b128 v[18:21], v0 offset:64
-; GCN-NEXT:    ds_read_b128 v[6:9], v0 offset:16
-; GCN-NEXT:    ds_read_b128 v[10:13], v0 offset:32
-; GCN-NEXT:    ds_read_b128 v[14:17], v0 offset:48
+; GCN-NEXT:    ds_read_b128 v[10:13], v1 offset:31
+; GCN-NEXT:    ds_read_b128 v[14:17], v1 offset:47
+; GCN-NEXT:    ds_read_b128 v[18:21], v1 offset:63
+; GCN-NEXT:    ds_read_b128 v[6:9], v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    ds_write_b128 v0, v[2:5]
+; GCN-NEXT:    ds_write_b128 v1, v[2:5] offset:15
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GCN-NEXT:    ; iglp_opt mask(0x00000001)
-; GCN-NEXT:    ds_write_b128 v0, v[30:33] offset:112
-; GCN-NEXT:    ds_write_b128 v0, v[26:29] offset:96
-; GCN-NEXT:    ds_write_b128 v0, v[22:25] offset:80
-; GCN-NEXT:    ds_write_b128 v0, v[18:21] offset:64
-; GCN-NEXT:    ds_write_b128 v0, v[14:17] offset:48
-; GCN-NEXT:    ds_write_b128 v0, v[10:13] offset:32
-; GCN-NEXT:    ds_write_b128 v0, v[6:9] offset:16
+; GCN-NEXT:    ds_write_b128 v1, v[30:33] offset:111
+; GCN-NEXT:    ds_write_b128 v1, v[26:29] offset:95
+; GCN-NEXT:    ds_write_b128 v1, v[22:25] offset:79
+; GCN-NEXT:    ds_write_b128 v1, v[18:21] offset:63
+; GCN-NEXT:    ds_write_b128 v1, v[14:17] offset:47
+; GCN-NEXT:    ds_write_b128 v1, v[10:13] offset:31
+; GCN-NEXT:    ds_write_b128 v0, v[6:9]
 ; GCN-NEXT:    ds_write_b64 v0, v[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:

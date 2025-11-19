@@ -134,7 +134,7 @@ define <2 x i32> @vector_type(<2 x i32> %a, <2 x i32> %b) {
 define ptr @pointer_type(ptr %p, ptr %q) {
 ; CHECK-LABEL: @pointer_type(
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], null
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], zeroinitializer
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], ptr [[Q:%.*]], ptr null
 ; CHECK-NEXT:    [[SEL_INT:%.*]] = ptrtoint ptr [[SEL]] to i64
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 [[A]], [[SEL_INT]]

@@ -4,7 +4,7 @@
 define i32 @addrspacecast_ptr(ptr %p0, ptr addrspace(5) %p5) {
 ; CHECK-LABEL: define i32 @addrspacecast_ptr(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P0:%.*]], ptr addrspace(5) nofree readonly [[P5:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq ptr addrspace(5) [[P5]], addrspacecast (ptr null to ptr addrspace(5))
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq ptr addrspace(5) [[P5]], null
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], ptr [[P0]], ptr null
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SELECT]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
@@ -19,7 +19,7 @@ define i32 @vec_addrspacecast_ptr(ptr %p0, ptr %p1, <2 x ptr addrspace(5)> %ptrv
 ; CHECK-LABEL: define i32 @vec_addrspacecast_ptr(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P0:%.*]], ptr nofree noundef nonnull readonly align 16 captures(none) dereferenceable(8) [[P1:%.*]], <2 x ptr addrspace(5)> [[PTRVEC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[LOADVEC:%.*]] = load <2 x ptr addrspace(5)>, ptr [[P1]], align 16
-; CHECK-NEXT:    [[ICMPVEC:%.*]] = icmp eq <2 x ptr addrspace(5)> [[LOADVEC]], <ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5))>
+; CHECK-NEXT:    [[ICMPVEC:%.*]] = icmp eq <2 x ptr addrspace(5)> [[LOADVEC]], zeroinitializer
 ; CHECK-NEXT:    [[ICMP:%.*]] = extractelement <2 x i1> [[ICMPVEC]], i32 1
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], ptr [[P0]], ptr null
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SELECT]], align 4
@@ -37,7 +37,7 @@ define i32 @addrspacecast_vec_as1_ptr(ptr %p0, ptr %p1, <2 x ptr addrspace(5)> %
 ; CHECK-LABEL: define i32 @addrspacecast_vec_as1_ptr(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P0:%.*]], ptr nofree noundef nonnull readonly align 16 captures(none) dereferenceable(8) [[P1:%.*]], <2 x ptr addrspace(5)> [[PTRVEC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[LOADVEC:%.*]] = load <2 x ptr addrspace(5)>, ptr [[P1]], align 16
-; CHECK-NEXT:    [[ICMPVEC:%.*]] = icmp eq <2 x ptr addrspace(5)> [[LOADVEC]], <ptr addrspace(5) addrspacecast (ptr addrspace(1) null to ptr addrspace(5)), ptr addrspace(5) addrspacecast (ptr addrspace(1) null to ptr addrspace(5))>
+; CHECK-NEXT:    [[ICMPVEC:%.*]] = icmp eq <2 x ptr addrspace(5)> [[LOADVEC]], zeroinitializer
 ; CHECK-NEXT:    [[ICMP:%.*]] = extractelement <2 x i1> [[ICMPVEC]], i32 1
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], ptr [[P0]], ptr null
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SELECT]], align 4
@@ -55,7 +55,7 @@ define i32 @addrspacecast_vec_ptr(ptr %p0, ptr %p1, <2 x ptr addrspace(5)> %ptrv
 ; CHECK-LABEL: define i32 @addrspacecast_vec_ptr(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P0:%.*]], ptr nofree noundef nonnull readonly align 16 captures(none) dereferenceable(8) [[P1:%.*]], <2 x ptr addrspace(5)> [[PTRVEC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[LOADVEC:%.*]] = load <2 x ptr addrspace(5)>, ptr [[P1]], align 16
-; CHECK-NEXT:    [[ICMPVEC:%.*]] = icmp eq <2 x ptr addrspace(5)> [[LOADVEC]], <ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5))>
+; CHECK-NEXT:    [[ICMPVEC:%.*]] = icmp eq <2 x ptr addrspace(5)> [[LOADVEC]], zeroinitializer
 ; CHECK-NEXT:    [[ICMP:%.*]] = extractelement <2 x i1> [[ICMPVEC]], i32 1
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], ptr [[P0]], ptr null
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SELECT]], align 4

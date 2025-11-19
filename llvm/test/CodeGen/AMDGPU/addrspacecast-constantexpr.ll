@@ -18,7 +18,7 @@ declare void @llvm.memcpy.p1.p4.i32(ptr addrspace(1) nocapture, ptr addrspace(4)
 define amdgpu_kernel void @store_cast_0_flat_to_group_addrspacecast() #1 {
 ; HSA-LABEL: define {{[^@]+}}@store_cast_0_flat_to_group_addrspacecast
 ; HSA-SAME: () #[[ATTR1:[0-9]+]] {
-; HSA-NEXT:    store i32 7, ptr addrspace(3) addrspacecast (ptr addrspace(4) null to ptr addrspace(3)), align 4
+; HSA-NEXT:    store i32 7, ptr addrspace(3) null, align 4
 ; HSA-NEXT:    ret void
 ;
   store i32 7, ptr addrspace(3) addrspacecast (ptr addrspace(4) null to ptr addrspace(3))
@@ -27,8 +27,8 @@ define amdgpu_kernel void @store_cast_0_flat_to_group_addrspacecast() #1 {
 
 define amdgpu_kernel void @store_cast_0_group_to_flat_addrspacecast() #1 {
 ; HSA-LABEL: define {{[^@]+}}@store_cast_0_group_to_flat_addrspacecast
-; HSA-SAME: () #[[ATTR2:[0-9]+]] {
-; HSA-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), align 4
+; HSA-SAME: () #[[ATTR1]] {
+; HSA-NEXT:    store i32 7, ptr addrspace(4) null, align 4
 ; HSA-NEXT:    ret void
 ;
   store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4))
@@ -37,7 +37,7 @@ define amdgpu_kernel void @store_cast_0_group_to_flat_addrspacecast() #1 {
 
 define amdgpu_kernel void @store_constant_cast_group_gv_to_flat() #1 {
 ; HSA-LABEL: define {{[^@]+}}@store_constant_cast_group_gv_to_flat
-; HSA-SAME: () #[[ATTR2]] {
+; HSA-SAME: () #[[ATTR2:[0-9]+]] {
 ; HSA-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) @lds.i32 to ptr addrspace(4)), align 4
 ; HSA-NEXT:    ret void
 ;

@@ -7,7 +7,7 @@
 define amdgpu_gs <4 x float> @_amdgpu_gs_main() {
 ; CHECK-LABEL: _amdgpu_gs_main:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    v_mov_b32_e32 v0, 16
+; CHECK-NEXT:    v_mov_b32_e32 v0, 15
 ; CHECK-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_mov_b32 s1, s0

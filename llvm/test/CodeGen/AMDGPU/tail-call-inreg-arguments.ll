@@ -56,7 +56,7 @@ define void @tail_call_i64_inreg_uniform_in_vgpr() {
 ; CHECK-LABEL: tail_call_i64_inreg_uniform_in_vgpr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, -1
 ; CHECK-NEXT:    ds_read_b64 v[0:1], v0
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, void_func_i64_inreg@gotpcrel32@lo+4

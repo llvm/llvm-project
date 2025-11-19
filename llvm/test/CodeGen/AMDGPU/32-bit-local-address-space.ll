@@ -164,7 +164,7 @@ define amdgpu_kernel void @null_32bit_lds_ptr(ptr addrspace(1) %out, ptr addrspa
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX7-NEXT:    s_cmp_lg_u32 s6, -1
 ; GFX7-NEXT:    s_cselect_b32 s4, s4, 0x1c8
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -178,7 +178,7 @@ define amdgpu_kernel void @null_32bit_lds_ptr(ptr addrspace(1) %out, ptr addrspa
 ; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX8-NEXT:    s_cmp_lg_u32 s6, -1
 ; GFX8-NEXT:    s_cselect_b32 s4, s4, 0x1c8
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    buffer_store_dword v0, off, s[0:3], 0

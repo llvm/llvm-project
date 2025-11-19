@@ -7,14 +7,14 @@
 ; address spaces
 define amdgpu_kernel void @constant_from_offset_cast_generic_null() {
 ; GFX9-LABEL: @constant_from_offset_cast_generic_null(
-; GFX9-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) getelementptr (i8, ptr addrspace(4) addrspacecast (ptr null to ptr addrspace(4)), i64 4), align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) getelementptr (i8, ptr addrspace(4) null, i64 4), align 4
 ; GFX9-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
 ; GFX9-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; GFX9-NEXT:    store i8 [[TMP3]], ptr addrspace(1) poison, align 1
 ; GFX9-NEXT:    ret void
 ;
 ; GFX12-LABEL: @constant_from_offset_cast_generic_null(
-; GFX12-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(4) getelementptr inbounds (i8, ptr addrspace(4) addrspacecast (ptr null to ptr addrspace(4)), i64 6), align 1
+; GFX12-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(4) getelementptr inbounds (i8, ptr addrspace(4) null, i64 6), align 1
 ; GFX12-NEXT:    store i8 [[LOAD]], ptr addrspace(1) poison, align 1
 ; GFX12-NEXT:    ret void
 ;
@@ -25,14 +25,14 @@ define amdgpu_kernel void @constant_from_offset_cast_generic_null() {
 
 define amdgpu_kernel void @constant_from_offset_cast_global_null() {
 ; GFX9-LABEL: @constant_from_offset_cast_global_null(
-; GFX9-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) getelementptr (i8, ptr addrspace(4) addrspacecast (ptr addrspace(1) null to ptr addrspace(4)), i64 4), align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) getelementptr (i8, ptr addrspace(4) null, i64 4), align 4
 ; GFX9-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
 ; GFX9-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; GFX9-NEXT:    store i8 [[TMP3]], ptr addrspace(1) poison, align 1
 ; GFX9-NEXT:    ret void
 ;
 ; GFX12-LABEL: @constant_from_offset_cast_global_null(
-; GFX12-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(4) getelementptr inbounds (i8, ptr addrspace(4) addrspacecast (ptr addrspace(1) null to ptr addrspace(4)), i64 6), align 1
+; GFX12-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(4) getelementptr inbounds (i8, ptr addrspace(4) null, i64 6), align 1
 ; GFX12-NEXT:    store i8 [[LOAD]], ptr addrspace(1) poison, align 1
 ; GFX12-NEXT:    ret void
 ;

@@ -7,7 +7,7 @@ declare i64 @may_inf_loop_ro() nounwind readonly
 define void @basecase(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @basecase(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    store ptr null, ptr [[A]], align 8
+; CHECK-NEXT:    store ptr zeroinitializer, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    store <2 x ptr> [[TMP2]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void

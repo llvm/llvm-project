@@ -21,7 +21,7 @@ define void @test_store_to_zeroptr() sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define void @test_store_to_zeroptr
 ; ABORT-ZERO-BASED-SHADOW-SAME: () #[[ATTR0:[0-9]+]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = inttoptr i64 0 to ptr
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i64 42, ptr [[B]], align 8
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void

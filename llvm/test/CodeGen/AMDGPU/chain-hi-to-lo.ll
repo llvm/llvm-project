@@ -13,8 +13,8 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GFX900:       ; %bb.0: ; %bb
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:2
-; GFX900-NEXT:    s_nop 0
-; GFX900-NEXT:    buffer_load_short_d16_hi v0, off, s[0:3], 0
+; GFX900-NEXT:    v_mov_b32_e32 v1, -1
+; GFX900-NEXT:    buffer_load_short_d16_hi v0, v1, s[0:3], 0 offen
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -23,7 +23,7 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s0, 2
 ; FLATSCR-NEXT:    scratch_load_ushort v0, off, s0
-; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    s_mov_b32 s0, -1
 ; FLATSCR-NEXT:    scratch_load_short_d16_hi v0, off, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
@@ -31,9 +31,9 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GFX10_DEFAULT-LABEL: chain_hi_to_lo_private:
 ; GFX10_DEFAULT:       ; %bb.0: ; %bb
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10_DEFAULT-NEXT:    s_clause 0x1
 ; GFX10_DEFAULT-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:2
-; GFX10_DEFAULT-NEXT:    buffer_load_short_d16_hi v0, off, s[0:3], 0
+; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v1, -1
+; GFX10_DEFAULT-NEXT:    buffer_load_short_d16_hi v0, v1, s[0:3], 0 offen
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_DEFAULT-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -43,7 +43,7 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; FLATSCR_GFX10-NEXT:    s_mov_b32 s0, 2
 ; FLATSCR_GFX10-NEXT:    scratch_load_ushort v0, off, s0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_depctr 0xffe3
-; FLATSCR_GFX10-NEXT:    s_mov_b32 s0, 0
+; FLATSCR_GFX10-NEXT:    s_mov_b32 s0, -1
 ; FLATSCR_GFX10-NEXT:    scratch_load_short_d16_hi v0, off, s0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR_GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -53,7 +53,7 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 2
 ; GFX11-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s0
-; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
 ; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v0, off, s0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -63,7 +63,7 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, 2
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v0, off, s0
-; GFX11-FAKE16-NEXT:    s_mov_b32 s0, 0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
 ; GFX11-FAKE16-NEXT:    scratch_load_d16_hi_b16 v0, off, s0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -207,8 +207,9 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GCN-LABEL: chain_hi_to_lo_group:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    ds_read_u16 v0, v1 offset:2
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    ds_read_u16 v0, v0 offset:2
+; GCN-NEXT:    v_mov_b32_e32 v1, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_u16_d16_hi v0, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -217,8 +218,9 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GFX10-LABEL: chain_hi_to_lo_group:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    ds_read_u16 v0, v1 offset:2
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    v_mov_b32_e32 v1, -1
+; GFX10-NEXT:    ds_read_u16 v0, v0 offset:2
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_read_u16_d16_hi v0, v1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -227,8 +229,8 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GFX11-TRUE16-LABEL: chain_hi_to_lo_group:
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v0, v1 offset:2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, -1
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v0, v0 offset:2
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    ds_load_u16_d16_hi v0, v1
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
@@ -237,8 +239,8 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GFX11-FAKE16-LABEL: chain_hi_to_lo_group:
 ; GFX11-FAKE16:       ; %bb.0: ; %bb
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-FAKE16-NEXT:    ds_load_u16 v0, v1 offset:2
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, -1
+; GFX11-FAKE16-NEXT:    ds_load_u16 v0, v0 offset:2
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    ds_load_u16_d16_hi v0, v1
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
