@@ -124,8 +124,7 @@ class RAIIMutexDescriptor {
       if (GuardName == "unique_lock" && C->getNumArgs() >= 2) {
         const Expr *SecondArg = C->getArgExpr(1);
         QualType ArgType = SecondArg->getType().getNonReferenceType();
-        QualType UnqualifiedType = ArgType.getUnqualifiedType();
-        if (const auto *RD = UnqualifiedType->getAsRecordDecl();
+        if (const auto *RD = ArgType->getAsRecordDecl();
             RD && RD->getName() == "defer_lock_t" &&
             RD->getDeclContext()->isStdNamespace()) {
           return false;
