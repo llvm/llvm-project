@@ -1007,6 +1007,16 @@ __device__ void nvvm_cvt_sm80() {
   __nvvm_ff2bf16x2_rz(1, 1);
   // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rz.relu(float 1.000000e+00, float 1.000000e+00)
   __nvvm_ff2bf16x2_rz_relu(1, 1);
+  #if PTX >= 81
+  // CHECK_PTX81_SM80: call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff2bf16x2_rn_satfinite(1, 1);
+  // CHECK_PTX81_SM80: call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff2bf16x2_rn_relu_satfinite(1, 1);
+  // CHECK_PTX81_SM80: call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rz.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff2bf16x2_rz_satfinite(1, 1);
+  // CHECK_PTX81_SM80: call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rz.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff2bf16x2_rz_relu_satfinite(1, 1);
+  #endif
 
   // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.ff2f16x2.rn(float 1.000000e+00, float 1.000000e+00)
   __nvvm_ff2f16x2_rn(1, 1);
@@ -1016,6 +1026,16 @@ __device__ void nvvm_cvt_sm80() {
   __nvvm_ff2f16x2_rz(1, 1);
   // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.ff2f16x2.rz.relu(float 1.000000e+00, float 1.000000e+00)
   __nvvm_ff2f16x2_rz_relu(1, 1);
+  #if PTX >= 81
+  // CHECK_PTX81_SM80: call <2 x half> @llvm.nvvm.ff2f16x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff2f16x2_rn_satfinite(1, 1);
+  // CHECK_PTX81_SM80: call <2 x half> @llvm.nvvm.ff2f16x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff2f16x2_rn_relu_satfinite(1, 1);
+  // CHECK_PTX81_SM80: call <2 x half> @llvm.nvvm.ff2f16x2.rz.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff2f16x2_rz_satfinite(1, 1);
+  // CHECK_PTX81_SM80: call <2 x half> @llvm.nvvm.ff2f16x2.rz.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff2f16x2_rz_relu_satfinite(1, 1);
+  #endif
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.f2bf16.rn(float 1.000000e+00)
   __nvvm_f2bf16_rn(1);
@@ -1025,6 +1045,35 @@ __device__ void nvvm_cvt_sm80() {
   __nvvm_f2bf16_rz(1);
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.f2bf16.rz.relu(float 1.000000e+00)
   __nvvm_f2bf16_rz_relu(1);
+  #if PTX >= 81
+  // CHECK_PTX81_SM80: call bfloat @llvm.nvvm.f2bf16.rn.satfinite(float 1.000000e+00)
+  __nvvm_f2bf16_rn_satfinite(1);
+  // CHECK_PTX81_SM80: call bfloat @llvm.nvvm.f2bf16.rn.relu.satfinite(float 1.000000e+00)
+  __nvvm_f2bf16_rn_relu_satfinite(1);
+  // CHECK_PTX81_SM80: call bfloat @llvm.nvvm.f2bf16.rz.satfinite(float 1.000000e+00)
+  __nvvm_f2bf16_rz_satfinite(1);
+  // CHECK_PTX81_SM80: call bfloat @llvm.nvvm.f2bf16.rz.relu.satfinite(float 1.000000e+00)
+  __nvvm_f2bf16_rz_relu_satfinite(1);
+  #endif
+
+  // CHECK_PTX70_SM80: call half @llvm.nvvm.f2f16.rn(float 1.000000e+00)
+  __nvvm_f2f16_rn(1);
+  // CHECK_PTX70_SM80: call half @llvm.nvvm.f2f16.rn.relu(float 1.000000e+00)
+  __nvvm_f2f16_rn_relu(1);
+  // CHECK_PTX70_SM80: call half @llvm.nvvm.f2f16.rz(float 1.000000e+00)
+  __nvvm_f2f16_rz(1);
+  // CHECK_PTX70_SM80: call half @llvm.nvvm.f2f16.rz.relu(float 1.000000e+00)
+  __nvvm_f2f16_rz_relu(1);
+  #if PTX >= 81
+  // CHECK_PTX81_SM80: call half @llvm.nvvm.f2f16.rn.satfinite(float 1.000000e+00)
+  __nvvm_f2f16_rn_satfinite(1);
+  // CHECK_PTX81_SM80: call half @llvm.nvvm.f2f16.rn.relu.satfinite(float 1.000000e+00)
+  __nvvm_f2f16_rn_relu_satfinite(1);
+  // CHECK_PTX81_SM80: call half @llvm.nvvm.f2f16.rz.satfinite(float 1.000000e+00)
+  __nvvm_f2f16_rz_satfinite(1);
+  // CHECK_PTX81_SM80: call half @llvm.nvvm.f2f16.rz.relu.satfinite(float 1.000000e+00)
+  __nvvm_f2f16_rz_relu_satfinite(1);
+  #endif
 
   // CHECK_PTX70_SM80: call i32 @llvm.nvvm.f2tf32.rna(float 1.000000e+00)
   __nvvm_f2tf32_rna(1);
