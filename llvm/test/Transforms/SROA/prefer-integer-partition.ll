@@ -13,15 +13,15 @@ define void @test_float_array_only_intrinsics() {
 entry:
   %src = alloca [2 x float], align 4
   %dst = alloca [2 x float], align 4
-  
+
   call void @llvm.lifetime.start.p0(i64 8, ptr %src)
   call void @llvm.lifetime.start.p0(i64 8, ptr %dst)
-  
+
   ; Only intrinsic uses - no scalar loads/stores to establish common type
   call void @llvm.memset.p0.i64(ptr %src, i8 42, i64 8, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 8, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %src, ptr %dst, i64 8, i1 false)
-  
+
   call void @llvm.lifetime.end.p0(i64 8, ptr %dst)
   call void @llvm.lifetime.end.p0(i64 8, ptr %src)
   ret void
