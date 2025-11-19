@@ -75,7 +75,7 @@ def : WriteRes<WriteHint,    []> { let Latency = 1; }
 
 def N3Write_0c : SchedWriteRes<[]> {
     let Latency = 0;
-    let NumMicroOps = 0;
+    let NumMicroOps = 1;
 }
 
 def N3Write_4c : SchedWriteRes<[]> {
@@ -553,6 +553,25 @@ def N3Write_16c_16V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
     let NumMicroOps = 16;
 }
 
+
+//===----------------------------------------------------------------------===//
+// Define predicate-controlled types
+
+def N3Write_0or1c_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_1c_1I]>]>;
+
+def N3Write_0or2c_1V : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_2c_1V]>]>;
+
+def N3Write_0or2c_1M : SchedWriteVariant<[
+                      SchedVar<NeoverseAllActivePredicate, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,                [N3Write_2c_1M]>]>;
+
+def N3Write_0or3c_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_3c_1M0]>]>;
 //===----------------------------------------------------------------------===//
 // Define forwarded types
 // NOTE: SOG, p. 19, n. 2: Accumulator forwarding is not supported for
@@ -682,6 +701,7 @@ def : InstRW<[N3Write_1c_1B_1S], (instrs BL, BLR)>;
 // Conditional compare
 // Conditional select
 def : SchedAlias<WriteI, N3Write_1c_1I>;
+def : InstRW<[N3Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, N3Write_2c_1M>;
@@ -711,7 +731,8 @@ def : InstRW<[N3Write_1c_1I], (instrs GMI, SUBP, SUBPS)>;
 
 // Logical, shift, no flagset
 def : InstRW<[N3Write_1c_1I],
-             (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+             (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[N3Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
 def : InstRW<[N3Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
@@ -957,10 +978,11 @@ def : SchedAlias<WriteFCvt, N3Write_3c_1V0>;
 def : SchedAlias<WriteFImm, N3Write_2c_1V>;
 
 // FP move, register
-def : InstRW<[N3Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
+def : InstRW<[N3Write_2c_1V], (instrs FMOVHr)>;
+def : InstRW<[N3Write_0c], (instrs FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
-def : InstRW<[N3Write_3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
+def : InstRW<[N3Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
 // FP transfer, from gen to high half of vec reg
 def : InstRW<[N3Write_5c_1M0_1V], (instrs FMOVXDHighr)>;
@@ -1064,6 +1086,8 @@ def : InstRW<[WriteAdr, N3Write_2c_1L01_1V_1I], (instregex "^STP[SDQ](post|pre)$
 // ASIMD compare
 // ASIMD logical
 // ASIMD max/min, basic and pair-wise
+def : InstRW<[N3Write_0or2c_1V], (instrs ORRv16i8, ORRv8i8)>;
+
 def : SchedAlias<WriteVd, N3Write_2c_1V>;
 def : SchedAlias<WriteVq, N3Write_2c_1V>;
 
@@ -1290,6 +1314,7 @@ def : InstRW<[N3Write_3c_1V0], (instrs BFCVT)>;
 // ASIMD transpose
 // ASIMD unzip/zip
 // Covered by WriteV[dq]
+def : InstRW<[N3Write_0or2c_1V], (instrs MOVID, MOVIv2d_ns)>;
 
 // ASIMD duplicate, gen reg
 def : InstRW<[N3Write_3c_1M0], (instregex "^DUPv.+gpr")>;
@@ -1668,10 +1693,11 @@ def : InstRW<[N3Write_2c_1M], (instregex "^REV_PP_[BHSD]")>;
 def : InstRW<[N3Write_1c_1M], (instrs SEL_PPPP)>;
 
 // Predicate set
-def : InstRW<[N3Write_2c_1M], (instregex "^PFALSE", "^PTRUE_[BHSD]")>;
+def : InstRW<[N3Write_0c], (instrs PFALSE)>;
+def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUE_[BHSD]")>;
 
 // Predicate set/initialize, set flags
-def : InstRW<[N3Write_2c_1M], (instregex "^PTRUES_[BHSD]")>;
+def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUES_[BHSD]")>;
 
 // Predicate find first/next
 def : InstRW<[N3Write_2c_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
@@ -1897,10 +1923,11 @@ def : InstRW<[N3Write_5c_1M0_1V], (instregex "^INDEX_(IR|RI|RR)_D$")>;
 // Logical
 def : InstRW<[N3Write_2c_1V],
              (instregex "^(AND|EOR|ORR)_ZI",
-                        "^(AND|BIC|EOR|ORR)_ZZZ",
+                        "^(AND|BIC|EOR)_ZZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]",
                         "^(AND|BIC|EOR|NOT|ORR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^NOT_ZPmZ_[BHSD]")>;
+def : InstRW<[N3Write_0or2c_1V], (instrs ORR_ZZZ)>;
 
 // Max/min, basic and pairwise
 def : InstRW<[N3Write_2c_1V], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",
