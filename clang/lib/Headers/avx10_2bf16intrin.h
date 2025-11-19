@@ -221,12 +221,12 @@ static __inline__ __m128bh __DEFAULT_FN_ATTRS128 _mm_move_sbh(__m128bh __a,
   return __a;
 }
 
-static __inline__ __m128bh __DEFAULT_FN_ATTRS128
+static __inline__ __m128bh __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_move_sbh(__m128bh __W, __mmask8 __U, __m128bh __A, __m128bh __B) {
   return __builtin_ia32_selectsbf_128(__U, _mm_move_sbh(__A, __B), __W);
 }
 
-static __inline__ __m128bh __DEFAULT_FN_ATTRS128
+static __inline__ __m128bh __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_move_sbh(__mmask8 __U, __m128bh __A, __m128bh __B) {
   return __builtin_ia32_selectsbf_128(__U, _mm_move_sbh(__A, __B),
                                       _mm_setzero_pbh());

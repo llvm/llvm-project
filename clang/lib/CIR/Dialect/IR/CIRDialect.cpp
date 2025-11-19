@@ -1988,22 +1988,45 @@ mlir::LogicalResult cir::FuncOp::verify() {
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
   llvm::SmallSet<llvm::StringRef, 16> gotos;
-
+  llvm::SmallSet<llvm::StringRef, 16> blockAddresses;
+  bool invalidBlockAddress = false;
   getOperation()->walk([&](mlir::Operation *op) {
     if (auto lab = dyn_cast<cir::LabelOp>(op)) {
       labels.insert(lab.getLabel());
     } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
       gotos.insert(goTo.getLabel());
+    } else if (auto blkAdd = dyn_cast<cir::BlockAddressOp>(op)) {
+      if (blkAdd.getBlockAddrInfoAttr().getFunc().getAttr() != getSymName()) {
+        // Stop the walk early, no need to continue
+        invalidBlockAddress = true;
+        return mlir::WalkResult::interrupt();
+      }
+      blockAddresses.insert(blkAdd.getBlockAddrInfoAttr().getLabel());
     }
+    return mlir::WalkResult::advance();
   });
 
+  if (invalidBlockAddress)
+    return emitOpError() << "blockaddress references a different function";
+
+  llvm::SmallSet<llvm::StringRef, 16> mismatched;
   if (!labels.empty() || !gotos.empty()) {
-    llvm::SmallSet<llvm::StringRef, 16> mismatched =
-        llvm::set_difference(gotos, labels);
+    mismatched = llvm::set_difference(gotos, labels);
 
     if (!mismatched.empty())
       return emitOpError() << "goto/label mismatch";
   }
+
+  mismatched.clear();
+
+  if (!labels.empty() || !blockAddresses.empty()) {
+    mismatched = llvm::set_difference(blockAddresses, labels);
+
+    if (!mismatched.empty())
+      return emitOpError()
+             << "expects an existing label target in the referenced function";
+  }
+
   return success();
 }
 

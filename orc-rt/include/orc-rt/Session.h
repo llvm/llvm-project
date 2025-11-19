@@ -15,10 +15,14 @@
 
 #include "orc-rt/Error.h"
 #include "orc-rt/ResourceManager.h"
+#include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/move_only_function.h"
 
 #include "orc-rt-c/CoreTypes.h"
 
+#include <condition_variable>
+#include <memory>
+#include <mutex>
 #include <vector>
 
 namespace orc_rt {
@@ -37,7 +41,10 @@ public:
   ///
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
-  Session(ErrorReporterFn ReportError) : ReportError(std::move(ReportError)) {}
+  Session(std::unique_ptr<TaskDispatcher> Dispatcher,
+          ErrorReporterFn ReportError)
+      : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
+  }
 
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;
@@ -46,6 +53,9 @@ public:
   Session &operator=(Session &&) = delete;
 
   ~Session();
+
+  /// Dispatch a task using the Session's TaskDispatcher.
+  void dispatch(std::unique_ptr<Task> T) { Dispatcher->dispatch(std::move(T)); }
 
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
@@ -65,12 +75,22 @@ public:
   }
 
 private:
-  void shutdownNext(OnShutdownCompleteFn OnShutdownComplete, Error Err,
-                    std::vector<std::unique_ptr<ResourceManager>> RemainingRMs);
+  struct ShutdownInfo {
+    bool Complete = false;
+    std::condition_variable CompleteCV;
+    std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
+    std::vector<OnShutdownCompleteFn> OnCompletes;
+  };
+
+  void shutdownNext(Error Err);
+  void shutdownComplete();
+
+  std::unique_ptr<TaskDispatcher> Dispatcher;
+  ErrorReporterFn ReportError;
 
   std::mutex M;
-  ErrorReporterFn ReportError;
   std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
+  std::unique_ptr<ShutdownInfo> SI;
 };
 
 inline orc_rt_SessionRef wrap(Session *S) noexcept {

@@ -34,7 +34,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -316,18 +315,6 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // function (e.g. mem2reg to rediscover phi nodes).
   F->addFnAttr("polly-optimized");
   return true;
-}
-
-PreservedAnalyses CodeGenerationPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                          ScopStandardAnalysisResults &AR,
-                                          SPMUpdater &U) {
-  auto &AI = SAM.getResult<IslAstAnalysis>(S, AR);
-  if (generateCode(S, AI, AR.LI, AR.DT, AR.SE, AR.RI)) {
-    U.invalidateScop(S);
-    return PreservedAnalyses::none();
-  }
-
-  return PreservedAnalyses::all();
 }
 
 bool polly::runCodeGeneration(Scop &S, RegionInfo &RI, IslAstInfo &AI) {

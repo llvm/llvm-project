@@ -590,7 +590,8 @@ bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
                                           MCRegister FromReg) const {
   auto HasRegUnitInterference = [&](MCRegUnit Unit) {
     // Instantiate a "subquery", not to be confused with the Queries array.
-    LiveIntervalUnion::Query SubQ(VirtReg, Matrix->getLiveUnions()[Unit]);
+    LiveIntervalUnion::Query SubQ(
+        VirtReg, Matrix->getLiveUnions()[static_cast<unsigned>(Unit)]);
     return SubQ.checkInterference();
   };
 
@@ -1681,7 +1682,7 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
     // StartIdx and after StopIdx.
     //
     LiveIntervalUnion::SegmentIter IntI =
-        Matrix->getLiveUnions()[Unit].find(StartIdx);
+        Matrix->getLiveUnions()[static_cast<unsigned>(Unit)].find(StartIdx);
     for (unsigned Gap = 0; IntI.valid() && IntI.start() < StopIdx; ++IntI) {
       // Skip the gaps before IntI.
       while (Uses[Gap+1].getBoundaryIndex() < IntI.start())
