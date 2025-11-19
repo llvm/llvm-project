@@ -84,9 +84,8 @@ define i64 @cntp_nxv16i1_and_elimination(<vscale x 16 x i1> %p) {
 ; CHECK-LABEL: cntp_nxv16i1_and_elimination:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntp x8, p0, p0.b
-; CHECK-NEXT:    and x9, x8, #0x1ff
-; CHECK-NEXT:    and x8, x8, #0x3fffffffc
-; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    and x9, x8, #0x1fc
+; CHECK-NEXT:    add x0, x8, x9
 ; CHECK-NEXT:    ret
   %cntp = tail call i64 @llvm.aarch64.sve.cntp.nxv16i1(<vscale x 16 x i1> %p, <vscale x 16 x i1> %p)
   %and_redundant = and i64 %cntp, 511
@@ -99,9 +98,8 @@ define i64 @cntp_nxv8i1_and_elimination(<vscale x 8 x i1> %p) {
 ; CHECK-LABEL: cntp_nxv8i1_and_elimination:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntp x8, p0, p0.h
-; CHECK-NEXT:    and x9, x8, #0x3ff
-; CHECK-NEXT:    and x8, x8, #0x3fffffffc
-; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    and x9, x8, #0xfc
+; CHECK-NEXT:    add x0, x8, x9
 ; CHECK-NEXT:    ret
   %cntp = tail call i64 @llvm.aarch64.sve.cntp.nxv8i1(<vscale x 8 x i1> %p, <vscale x 8 x i1> %p)
   %and_redundant = and i64 %cntp, 1023
@@ -114,9 +112,8 @@ define i64 @cntp_nxv4i1_and_elimination(<vscale x 4 x i1> %p) {
 ; CHECK-LABEL: cntp_nxv4i1_and_elimination:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntp x8, p0, p0.s
-; CHECK-NEXT:    and x9, x8, #0x7f
-; CHECK-NEXT:    and x8, x8, #0x3fffffffc
-; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    and x9, x8, #0x7c
+; CHECK-NEXT:    add x0, x8, x9
 ; CHECK-NEXT:    ret
   %cntp = tail call i64 @llvm.aarch64.sve.cntp.nxv4i1(<vscale x 4 x i1> %p, <vscale x 4 x i1> %p)
   %and_redundant = and i64 %cntp, 127
@@ -129,9 +126,8 @@ define i64 @cntp_nxv2i1_and_elimination(<vscale x 2 x i1> %p) {
 ; CHECK-LABEL: cntp_nxv2i1_and_elimination:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntp x8, p0, p0.d
-; CHECK-NEXT:    and x9, x8, #0x3f
-; CHECK-NEXT:    and x8, x8, #0x3fffffffc
-; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    and x9, x8, #0x3c
+; CHECK-NEXT:    add x0, x8, x9
 ; CHECK-NEXT:    ret
   %cntp = tail call i64 @llvm.aarch64.sve.cntp.nxv2i1(<vscale x 2 x i1> %p, <vscale x 2 x i1> %p)
   %and_redundant = and i64 %cntp, 63

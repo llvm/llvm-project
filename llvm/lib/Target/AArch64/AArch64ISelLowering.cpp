@@ -19459,6 +19459,32 @@ static std::optional<unsigned> IsSVECntIntrinsic(SDValue S) {
   return {};
 }
 
+// Returns the element size associated with an SVE cnt[bhwdp] intrinsic. For
+// cntp (predicate), the element size corresponds to the legal (packed) SVE
+// vector type associated with the predicate. E.g. nxv4i1 returns 32.
+static std::optional<unsigned> GetSVECntElementSize(SDValue Op) {
+  if (auto ElementSize = IsSVECntIntrinsic(Op))
+    return ElementSize;
+  Intrinsic::ID IID = getIntrinsicID(Op.getNode());
+  if (IID != Intrinsic::aarch64_sve_cntp)
+    return {};
+  EVT PredVT = Op.getOperand(Op.getNumOperands() - 1).getValueType();
+  switch (PredVT.getSimpleVT().SimpleTy) {
+  case MVT::nxv1i1:
+    return 128;
+  case MVT::nxv2i1:
+    return 64;
+  case MVT::nxv4i1:
+    return 32;
+  case MVT::nxv8i1:
+    return 16;
+  case MVT::nxv16i1:
+    return 8;
+  default:
+    llvm_unreachable("unexpected predicate type");
+  }
+}
+
 /// Calculates what the pre-extend type is, based on the extension
 /// operation node provided by \p Extend.
 ///
@@ -31666,7 +31692,7 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
     return false;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    if (auto ElementSize = IsSVECntIntrinsic(Op)) {
+    if (auto ElementSize = GetSVECntElementSize(Op)) {
       unsigned MaxSVEVectorSizeInBits = Subtarget->getMaxSVEVectorSizeInBits();
       if (!MaxSVEVectorSizeInBits)
         MaxSVEVectorSizeInBits = AArch64::SVEMaxBitsPerVector;
