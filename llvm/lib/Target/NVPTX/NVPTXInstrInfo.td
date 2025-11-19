@@ -595,6 +595,15 @@ let hasSideEffects = false in {
   defm CVT_bf16 : CVT_FROM_ALL<"bf16", B16, [hasPTX<78>, hasSM<90>]>;
   defm CVT_f32 : CVT_FROM_ALL<"f32", B32>;
   defm CVT_f64 : CVT_FROM_ALL<"f64", B64>;
+  
+  multiclass CVT_FROM_FLOAT_SATFINITE<string ToName, RegisterClass RC> {
+    def _f32_sf :
+      BasicFlagsNVPTXInst<(outs RC:$dst),
+                (ins B32:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.satfinite." # ToName # ".f32">;
+  }
+  defm CVT_bf16 : CVT_FROM_FLOAT_SATFINITE<"bf16", B16>;
+  defm CVT_f16 : CVT_FROM_FLOAT_SATFINITE<"f16", B16>;
 
   // These cvts are different from those above: The source and dest registers
   // are of the same type.
@@ -611,6 +620,11 @@ let hasSideEffects = false in {
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}." # FromName # ".f32">,
     Requires<[hasPTX<70>, hasSM<80>]>;
+    
+    def _f32_sf :
+      BasicFlagsNVPTXInst<(outs RC:$dst),
+                (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", B32>;
