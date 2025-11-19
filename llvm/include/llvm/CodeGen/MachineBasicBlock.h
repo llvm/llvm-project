@@ -100,12 +100,6 @@ template <> struct DenseMapInfo<MBBSectionID> {
   }
 };
 
-struct PrefetchTarget {
-  StringRef TargetFunction;
-  UniqueBBID TargetBBID;
-  unsigned TargetBBOffset;
-};
-
 template <> struct ilist_traits<MachineInstr> {
 private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.

@@ -120,7 +120,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -179,11 +178,6 @@ static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
-
-static cl::opt<bool> InsertNoopsForPrefetch(
-    "insert-noops-for-prefetch",
-    cl::desc("Whether to insert noops instead of prefetches."), cl::init(false),
-    cl::Hidden);
 
 // This isn't turned on by default, since several of the scheduling models are
 // not completely accurate, and we don't want to be misleading.
@@ -2132,7 +2126,7 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
       default:
-         emitInstruction(&MI);
+        emitInstruction(&MI);
 
         auto CountInstruction = [&](const MachineInstr &MI) {
           // Skip Meta instructions inside bundles.
