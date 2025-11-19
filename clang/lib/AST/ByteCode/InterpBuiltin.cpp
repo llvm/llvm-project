@@ -1317,8 +1317,9 @@ static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
   uint64_t BitWidth = ASTCtx.getTypeSize(ASTCtx.getSizeType());
   auto Mode =
       ASTCtx.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+  auto MaxTokensOpt = ASTCtx.getLangOpts().AllocTokenMax;
   uint64_t MaxTokens =
-      ASTCtx.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+      MaxTokensOpt.value_or(0) ? *MaxTokensOpt : (~0ULL >> (64 - BitWidth));
 
   // We do not read any of the arguments; discard them.
   for (int I = Call->getNumArgs() - 1; I >= 0; --I)
