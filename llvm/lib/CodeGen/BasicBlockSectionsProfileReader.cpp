@@ -162,7 +162,10 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 //                                ....
 // ****************************************************************************
 // This profile can also specify prefetch targets (starting with 't') which
-// instruct the compiler to emit a prefetch symbol for the given target.
+// instruct the compiler to emit a prefetch symbol for the given target and
+// prefetch hints (start with 'i') which instruct the compiler to insert a
+// prefetch hint instruction at the given site for the given target.
+//
 // A prefetch target is specified by a pair "<bbid>,<subblock_index>" where
 // bbid specifies the target basic block and subblock_index is a zero-based
 // index. Callsite 0 refers to the region at the beginning of the block up to
@@ -171,6 +174,11 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // The prefetch target is always emitted at the beginning of the subblock.
 // This is the beginning of the basic block for `i = 0` and immediately after
 // the `i`-th call for every `i > 0`.
+//
+/
+// A prefetch int is specified by a pair "site target", where site is specified
+// as a pair "<bbid>,<callsite_index>" similar to prefetch targets, and target
+// is specified as a triple "<function_name>,<bbid>,<callsite_index>".
 //
 // Example: A basic block in function "foo" with BBID 10 and two call
 // instructions (call_A, call_B). This block is conceptually split into
@@ -190,6 +198,16 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // |                                  |                  before call_C)
 // |  Instruction 4                   |
 // +----------------------------------+
+//
+// A prefetch hint specified in function "bar" as "120,1 foo,10,2" results in a
+// a hint inserted after the first call in block #120 of bar:
+// B
+// +----------------------------------------------------+
+// | Instruction 1                                      |
+// | call_C (Callsite 1)                                |
+// | code_prefetch __llvm_prfetch_target_foo_10         |
+// | Instruction 2                                      |
+// +----------------------------------------------------+
 //
 Error BasicBlockSectionsProfileReader::ReadV1Profile() {
   auto FI = ProgramPathAndClusterInfo.end();
