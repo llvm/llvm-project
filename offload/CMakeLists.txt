@@ -90,18 +90,18 @@ else()
   set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
 
   if (NOT MSVC)
-    set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++)
+    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
+    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
   else()
-    set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
+    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang.exe)
+    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++.exe)
   endif()
 
   # Check for flang
   if (NOT MSVC)
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_TOOLS_BINARY_DIR}/flang)
   else()
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang.exe)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_TOOLS_BINARY_DIR}/flang.exe)
   endif()
 
   # Set fortran test compiler if flang is found

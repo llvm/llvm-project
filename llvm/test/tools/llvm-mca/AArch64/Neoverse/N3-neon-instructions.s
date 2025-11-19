@@ -1445,8 +1445,8 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  2      5     1.00                        mov	v0.h[1], w8
 # CHECK-NEXT:  2      5     1.00                        mov	v0.s[2], w8
 # CHECK-NEXT:  2      5     1.00                        mov	v0.d[1], x8
-# CHECK-NEXT:  1      2     0.50                        mov	v0.16b, v0.16b
-# CHECK-NEXT:  1      2     0.50                        mov	v0.8b, v0.8b
+# CHECK-NEXT:  1      0     0.20                        mov	v0.16b, v0.16b
+# CHECK-NEXT:  1      0     0.20                        mov	v0.8b, v0.8b
 # CHECK-NEXT:  1      2     0.50                        movi	d15, #0xff00ff00ff00ff
 # CHECK-NEXT:  1      2     0.50                        movi	v0.16b, #31
 # CHECK-NEXT:  1      2     0.50                        movi	v0.2d, #0xff0000ff0000ffff
@@ -1467,7 +1467,7 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.50                        mvn	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.50                        mvn	v0.8b, v0.8b
 # CHECK-NEXT:  1      2     0.50                        orn	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  1      2     0.50                        mov	v0.16b, v0.16b
+# CHECK-NEXT:  1      0     0.20                        mov	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.50                        orr	v0.8h, #31
 # CHECK-NEXT:  1      2     1.00                        pmul	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      2     1.00                        pmul	v0.8b, v0.8b, v0.8b
@@ -2163,7 +2163,7 @@ zip2	v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT:  -      -      -      -     33.00  51.50  51.50  18.75  7.75   7.75   7.75   649.00 584.00
+# CHECK-NEXT:  -      -      -      -     33.00  51.50  51.50  18.75  7.75   7.75   7.75   647.50 582.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -2534,8 +2534,8 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	v0.h[1], w8
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	v0.s[2], w8
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   mov	v0.d[1], x8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v0.8b, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   movi	d15, #0xff00ff00ff00ff
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   movi	v0.16b, #31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   movi	v0.2d, #0xff0000ff0000ffff
@@ -2556,7 +2556,7 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mvn	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mvn	v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   orn	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   orr	v0.8h, #31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmul	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmul	v0.8b, v0.8b, v0.8b

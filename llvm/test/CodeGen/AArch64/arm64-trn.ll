@@ -246,7 +246,7 @@ define <4 x float> @vtrnQf(ptr %A, ptr %B) nounwind {
 	ret <4 x float> %tmp5
 }
 
-; Undef shuffle indices should not prevent matching to VTRN:
+; Undef shuffle indices (even at the start of the shuffle mask) should not prevent matching to VTRN:
 
 define <8 x i8> @vtrni8_undef(ptr %A, ptr %B) nounwind {
 ; CHECKLE-LABEL: vtrni8_undef:
@@ -301,4 +301,116 @@ define <8 x i16> @vtrnQi16_undef(ptr %A, ptr %B) nounwind {
 	%tmp4 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 1, i32 undef, i32 3, i32 11, i32 5, i32 13, i32 undef, i32 undef>
         %tmp5 = add <8 x i16> %tmp3, %tmp4
 	ret <8 x i16> %tmp5
+}
+
+define <8 x i16> @vtrnQi16_undef_01(ptr %A, ptr %B) nounwind {
+; CHECKLE-LABEL: vtrnQi16_undef_01:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    ldr q0, [x0]
+; CHECKLE-NEXT:    ldr q1, [x1]
+; CHECKLE-NEXT:    trn1 v2.8h, v0.8h, v1.8h
+; CHECKLE-NEXT:    trn2 v0.8h, v0.8h, v1.8h
+; CHECKLE-NEXT:    add v0.8h, v2.8h, v0.8h
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrnQi16_undef_01:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECKBE-NEXT:    ld1 { v1.8h }, [x1]
+; CHECKBE-NEXT:    trn1 v2.8h, v0.8h, v1.8h
+; CHECKBE-NEXT:    trn2 v0.8h, v0.8h, v1.8h
+; CHECKBE-NEXT:    add v0.8h, v2.8h, v0.8h
+; CHECKBE-NEXT:    rev64 v0.8h, v0.8h
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+	%tmp1 = load <8 x i16>, ptr %A
+	%tmp2 = load <8 x i16>, ptr %B
+	%tmp3 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 poison, i32 poison, i32 2, i32 poison, i32 4, i32 12, i32 6, i32 14>
+	%tmp4 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 poison, i32 poison, i32 3, i32 11, i32 poison, i32 13, i32 poison, i32 poison>
+        %tmp5 = add <8 x i16> %tmp3, %tmp4
+	ret <8 x i16> %tmp5
+}
+
+define <8 x i16> @vtrnQi16_undef_0(ptr %A, ptr %B) nounwind {
+; CHECKLE-LABEL: vtrnQi16_undef_0:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    ldr q0, [x0]
+; CHECKLE-NEXT:    ldr q1, [x1]
+; CHECKLE-NEXT:    trn1 v2.8h, v0.8h, v1.8h
+; CHECKLE-NEXT:    trn2 v0.8h, v0.8h, v1.8h
+; CHECKLE-NEXT:    add v0.8h, v2.8h, v0.8h
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrnQi16_undef_0:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECKBE-NEXT:    ld1 { v1.8h }, [x1]
+; CHECKBE-NEXT:    trn1 v2.8h, v0.8h, v1.8h
+; CHECKBE-NEXT:    trn2 v0.8h, v0.8h, v1.8h
+; CHECKBE-NEXT:    add v0.8h, v2.8h, v0.8h
+; CHECKBE-NEXT:    rev64 v0.8h, v0.8h
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+	%tmp1 = load <8 x i16>, ptr %A
+	%tmp2 = load <8 x i16>, ptr %B
+	%tmp3 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 poison, i32 8, i32 poison, i32 poison, i32 4, i32 12, i32 6, i32 14>
+	%tmp4 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 poison, i32 9, i32 3, i32 11, i32 5, i32 13, i32 poison, i32 poison>
+        %tmp5 = add <8 x i16> %tmp3, %tmp4
+	ret <8 x i16> %tmp5
+}
+
+define <4 x i32> @vtrnQi32_undef_1(ptr %A, ptr %B) nounwind {
+; CHECKLE-LABEL: vtrnQi32_undef_1:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    ldr q0, [x0]
+; CHECKLE-NEXT:    ldr q1, [x1]
+; CHECKLE-NEXT:    trn1 v2.4s, v0.4s, v1.4s
+; CHECKLE-NEXT:    trn2 v0.4s, v0.4s, v1.4s
+; CHECKLE-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrnQi32_undef_1:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECKBE-NEXT:    ld1 { v1.4s }, [x1]
+; CHECKBE-NEXT:    trn1 v2.4s, v0.4s, v1.4s
+; CHECKBE-NEXT:    trn2 v0.4s, v0.4s, v1.4s
+; CHECKBE-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECKBE-NEXT:    rev64 v0.4s, v0.4s
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+	%tmp1 = load <4 x i32>, ptr %A
+	%tmp2 = load <4 x i32>, ptr %B
+	%tmp3 = shufflevector <4 x i32> %tmp1, <4 x i32> %tmp2, <4 x i32> <i32 0, i32 poison, i32 2, i32 6>
+	%tmp4 = shufflevector <4 x i32> %tmp1, <4 x i32> %tmp2, <4 x i32> <i32 1, i32 poison, i32 3, i32 7>
+        %tmp5 = add <4 x i32> %tmp3, %tmp4
+	ret <4 x i32> %tmp5
+}
+
+define <16 x i8> @vtrnQi8_undef_012(ptr %A, ptr %B) nounwind {
+; CHECKLE-LABEL: vtrnQi8_undef_012:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    ldr q0, [x0]
+; CHECKLE-NEXT:    ldr q1, [x1]
+; CHECKLE-NEXT:    trn1 v2.16b, v0.16b, v1.16b
+; CHECKLE-NEXT:    trn2 v0.16b, v0.16b, v1.16b
+; CHECKLE-NEXT:    add v0.16b, v2.16b, v0.16b
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrnQi8_undef_012:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    ld1 { v0.16b }, [x0]
+; CHECKBE-NEXT:    ld1 { v1.16b }, [x1]
+; CHECKBE-NEXT:    trn1 v2.16b, v0.16b, v1.16b
+; CHECKBE-NEXT:    trn2 v0.16b, v0.16b, v1.16b
+; CHECKBE-NEXT:    add v0.16b, v2.16b, v0.16b
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+	%tmp1 = load <16 x i8>, ptr %A
+	%tmp2 = load <16 x i8>, ptr %B
+	%tmp3 = shufflevector <16 x i8> %tmp1, <16 x i8> %tmp2, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 18, i32 4, i32 poison, i32 6, i32 22, i32 poison, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
+	%tmp4 = shufflevector <16 x i8> %tmp1, <16 x i8> %tmp2, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 19, i32 5, i32 21, i32 7, i32 poison, i32 9, i32 25, i32 11, i32 27, i32 poison, i32 29, i32 15, i32 31>
+        %tmp5 = add <16 x i8> %tmp3, %tmp4
+	ret <16 x i8> %tmp5
 }
