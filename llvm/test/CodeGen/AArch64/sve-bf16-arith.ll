@@ -590,10 +590,9 @@ define <vscale x 8 x bfloat> @fmul_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 
 define <vscale x 8 x bfloat> @fmul_nxv8bf16_no_nsz(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; NOB16B16-LABEL: fmul_nxv8bf16_no_nsz:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    mov w8, #-2147483648 // =0x80000000
+; NOB16B16-NEXT:    mov z2.s, #0x80000000
+; NOB16B16-NEXT:    mov z3.s, #0x80000000
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    mov z2.s, w8
-; NOB16B16-NEXT:    mov z3.d, z2.d
 ; NOB16B16-NEXT:    bfmlalb z2.s, z0.h, z1.h
 ; NOB16B16-NEXT:    bfmlalt z3.s, z0.h, z1.h
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z2.s
