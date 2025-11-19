@@ -719,6 +719,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// Positive FileIDs are indexes into this table. Entry 0 indicates an invalid
   /// expansion.
   SmallVector<SrcMgr::SLocEntry, 0> LocalSLocEntryTable;
+  /// An in-parallel offset table, merely used for speeding up FileID lookup.
+  SmallVector<SourceLocation::UIntTy> LocalLocOffsetTable;
 
   /// The table of SLocEntries that are loaded from other modules.
   ///
@@ -767,6 +769,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// LastFileIDLookup records the last FileID looked up or created, because it
   /// is very common to look up many tokens from the same file.
   mutable FileID LastFileIDLookup;
+  mutable SourceLocation::UIntTy LastLookupStartOffset;
+  mutable SourceLocation::UIntTy LastLookupEndOffset; // exclude
 
   /// Holds information for \#line directives.
   ///
@@ -795,7 +799,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   ///
   /// Used to cache results from and speed-up \c getDecomposedIncludedLoc
   /// function.
-  mutable llvm::DenseMap<FileID, std::pair<FileID, unsigned>> IncludedLocMap;
+  mutable llvm::DenseMap<FileID, FileIDAndOffset> IncludedLocMap;
 
   /// The key value into the IsBeforeInTUCache table.
   using IsBeforeInTUCacheKey = std::pair<FileID, FileID>;
@@ -1269,7 +1273,7 @@ public:
   ///
   /// The first element is the FileID, the second is the offset from the
   /// start of the buffer of the location.
-  std::pair<FileID, unsigned> getDecomposedLoc(SourceLocation Loc) const {
+  FileIDAndOffset getDecomposedLoc(SourceLocation Loc) const {
     FileID FID = getFileID(Loc);
     auto *Entry = getSLocEntryOrNull(FID);
     if (!Entry)
@@ -1281,40 +1285,21 @@ public:
   ///
   /// If the location is an expansion record, walk through it until we find
   /// the final location expanded.
-  std::pair<FileID, unsigned>
-  getDecomposedExpansionLoc(SourceLocation Loc) const {
-    FileID FID = getFileID(Loc);
-    auto *E = getSLocEntryOrNull(FID);
-    if (!E)
-      return std::make_pair(FileID(), 0);
-
-    unsigned Offset = Loc.getOffset()-E->getOffset();
-    if (Loc.isFileID())
-      return std::make_pair(FID, Offset);
-
-    return getDecomposedExpansionLocSlowCase(E);
+  FileIDAndOffset getDecomposedExpansionLoc(SourceLocation Loc) const {
+    return getDecomposedLoc(getExpansionLoc(Loc));
   }
 
   /// Decompose the specified location into a raw FileID + Offset pair.
   ///
   /// If the location is an expansion record, walk through it until we find
   /// its spelling record.
-  std::pair<FileID, unsigned>
-  getDecomposedSpellingLoc(SourceLocation Loc) const {
-    FileID FID = getFileID(Loc);
-    auto *E = getSLocEntryOrNull(FID);
-    if (!E)
-      return std::make_pair(FileID(), 0);
-
-    unsigned Offset = Loc.getOffset()-E->getOffset();
-    if (Loc.isFileID())
-      return std::make_pair(FID, Offset);
-    return getDecomposedSpellingLocSlowCase(E, Offset);
+  FileIDAndOffset getDecomposedSpellingLoc(SourceLocation Loc) const {
+    return getDecomposedLoc(getSpellingLoc(Loc));
   }
 
   /// Returns the "included/expanded in" decomposed location of the given
   /// FileID.
-  std::pair<FileID, unsigned> getDecomposedIncludedLoc(FileID FID) const;
+  FileIDAndOffset getDecomposedIncludedLoc(FileID FID) const;
 
   /// Returns the offset from the start of the file that the
   /// specified SourceLocation represents.
@@ -1424,10 +1409,15 @@ public:
   /// before calling this method.
   unsigned getColumnNumber(FileID FID, unsigned FilePos,
                            bool *Invalid = nullptr) const;
+  unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(SourceLocation Loc,
-                                   bool *Invalid = nullptr) const;
+                                   bool *Invalid = nullptr) const {
+    return getColumnNumber(getSpellingLoc(Loc), Invalid);
+  }
   unsigned getExpansionColumnNumber(SourceLocation Loc,
-                                    bool *Invalid = nullptr) const;
+                                    bool *Invalid = nullptr) const {
+    return getColumnNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedColumnNumber(SourceLocation Loc,
                                    bool *Invalid = nullptr) const;
 
@@ -1438,8 +1428,15 @@ public:
   /// MemoryBuffer, so this is not cheap: use only when about to emit a
   /// diagnostic.
   unsigned getLineNumber(FileID FID, unsigned FilePos, bool *Invalid = nullptr) const;
-  unsigned getSpellingLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
-  unsigned getExpansionLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getSpellingLineNumber(SourceLocation Loc,
+                                 bool *Invalid = nullptr) const {
+    return getLineNumber(getSpellingLoc(Loc), Invalid);
+  }
+  unsigned getExpansionLineNumber(SourceLocation Loc,
+                                  bool *Invalid = nullptr) const {
+    return getLineNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
 
   /// Return the filename or buffer identifier of the buffer the
@@ -1527,6 +1524,15 @@ public:
       return false;
     StringRef Filename(Presumed.getFilename());
     return Filename == "<scratch space>";
+  }
+
+  /// Returns whether \p Loc is located in a built-in or command line source.
+  bool isInPredefinedFile(SourceLocation Loc) const {
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
+    return Filename == "<built-in>" || Filename == "<command line>";
   }
 
   /// Returns if a SourceLocation is in a system header.
@@ -1673,8 +1679,8 @@ public:
   ///          are in the same TU. The second bool is true if the first is true
   ///          and \p LOffs is before \p ROffs.
   std::pair<bool, bool>
-  isInTheSameTranslationUnit(std::pair<FileID, unsigned> &LOffs,
-                             std::pair<FileID, unsigned> &ROffs) const;
+  isInTheSameTranslationUnit(FileIDAndOffset &LOffs,
+                             FileIDAndOffset &ROffs) const;
 
   /// \param Loc a source location in a loaded AST (of a PCH/Module file).
   /// \returns a FileID uniquely identifies the AST of a loaded
@@ -1682,9 +1688,8 @@ public:
   FileID getUniqueLoadedASTFileID(SourceLocation Loc) const;
 
   /// Determines whether the two decomposed source location is in the same TU.
-  bool isInTheSameTranslationUnitImpl(
-      const std::pair<FileID, unsigned> &LOffs,
-      const std::pair<FileID, unsigned> &ROffs) const;
+  bool isInTheSameTranslationUnitImpl(const FileIDAndOffset &LOffs,
+                                      const FileIDAndOffset &ROffs) const;
 
   /// Determines the order of 2 source locations in the "source location
   /// address space".
@@ -1895,9 +1900,8 @@ private:
 
   FileID getFileID(SourceLocation::UIntTy SLocOffset) const {
     // If our one-entry cache covers this offset, just return it.
-    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
+    if (SLocOffset >= LastLookupStartOffset && SLocOffset < LastLookupEndOffset)
       return LastFileIDLookup;
-
     return getFileIDSlow(SLocOffset);
   }
 
@@ -1970,11 +1974,6 @@ private:
   SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
   SourceLocation getFileLocSlowCase(SourceLocation Loc) const;
 
-  std::pair<FileID, unsigned>
-  getDecomposedExpansionLocSlowCase(const SrcMgr::SLocEntry *E) const;
-  std::pair<FileID, unsigned>
-  getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
-                                   unsigned Offset) const;
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
   void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,
                                          FileID FID,
@@ -2032,6 +2031,7 @@ private:
   // as they are created in `createSourceManagerForFile` so that they can be
   // deleted in the reverse order as they are created.
   std::unique_ptr<FileManager> FileMgr;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
   std::unique_ptr<DiagnosticsEngine> Diagnostics;
   std::unique_ptr<SourceManager> SourceMgr;
 };

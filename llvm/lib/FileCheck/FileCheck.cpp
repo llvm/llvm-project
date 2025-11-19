@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <list>
@@ -265,7 +264,7 @@ BinaryOperation::getImplicitFormat(const SourceMgr &SM) const {
                                                          : *RightFormat;
 }
 
-Expected<std::string> NumericSubstitution::getResult() const {
+Expected<std::string> NumericSubstitution::getResultRegex() const {
   assert(ExpressionPointer->getAST() != nullptr &&
          "Substituting empty expression");
   Expected<APInt> EvaluatedValue = ExpressionPointer->getAST()->eval();
@@ -275,12 +274,53 @@ Expected<std::string> NumericSubstitution::getResult() const {
   return Format.getMatchingString(*EvaluatedValue);
 }
 
-Expected<std::string> StringSubstitution::getResult() const {
+Expected<std::string> NumericSubstitution::getResultForDiagnostics() const {
+  // The "regex" returned by getResultRegex() is just a numeric value
+  // like '42', '0x2A', '-17', 'DEADBEEF' etc. This is already suitable for use
+  // in diagnostics.
+  Expected<std::string> Literal = getResultRegex();
+  if (!Literal)
+    return Literal;
+
+  return "\"" + std::move(*Literal) + "\"";
+}
+
+Expected<std::string> StringSubstitution::getResultRegex() const {
   // Look up the value and escape it so that we can put it into the regex.
   Expected<StringRef> VarVal = Context->getPatternVarValue(FromStr);
   if (!VarVal)
     return VarVal.takeError();
   return Regex::escape(*VarVal);
+}
+
+Expected<std::string> StringSubstitution::getResultForDiagnostics() const {
+  Expected<StringRef> VarVal = Context->getPatternVarValue(FromStr);
+  if (!VarVal)
+    return VarVal.takeError();
+
+  std::string Result;
+  Result.reserve(VarVal->size() + 2);
+  raw_string_ostream OS(Result);
+
+  OS << '"';
+  // Escape the string if it contains any characters that
+  // make it hard to read, such as non-printable characters (including all
+  // whitespace except space) and double quotes. These are the characters that
+  // are escaped by write_escaped(), except we do not include backslashes,
+  // because they are common in Windows paths and escaping them would make the
+  // output harder to read. However, when we do escape, backslashes are escaped
+  // as well, otherwise the output would be ambiguous.
+  const bool NeedsEscaping =
+      llvm::any_of(*VarVal, [](char C) { return !isPrint(C) || C == '"'; });
+  if (NeedsEscaping)
+    OS.write_escaped(*VarVal);
+  else
+    OS << *VarVal;
+  OS << '"';
+  if (NeedsEscaping)
+    OS << " (escaped value)";
+
+  return Result;
 }
 
 bool Pattern::isValidVarNameStart(char C) { return C == '_' || isAlpha(C); }
@@ -1107,7 +1147,7 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
     Error Errs = Error::success();
     for (const auto &Substitution : Substitutions) {
       // Substitute and check for failure (e.g. use of undefined variable).
-      Expected<std::string> Value = Substitution->getResult();
+      Expected<std::string> Value = Substitution->getResultRegex();
       if (!Value) {
         // Convert to an ErrorDiagnostic to get location information. This is
         // done here rather than printMatch/printNoMatch since now we know which
@@ -1178,6 +1218,14 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
     ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
     APInt Value = Format.valueFromStringRepr(MatchedValue, SM);
+    // Numeric variables are already inserted into GlobalNumericVariableTable
+    // during parsing, but clearLocalVars might remove them, so we must
+    // reinsert them. Numeric-variable resolution does not access
+    // GlobalNumericVariableTable; it directly uses a pointer to the variable.
+    // However, other functions (such as clearLocalVars) may require active
+    // variables to be in the table.
+    Context->GlobalNumericVariableTable.try_emplace(NumericVariableDef.getKey(),
+                                                    DefinedNumericVariable);
     DefinedNumericVariable->setValue(Value, MatchedValue);
   }
 
@@ -1211,7 +1259,8 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       SmallString<256> Msg;
       raw_svector_ostream OS(Msg);
 
-      Expected<std::string> MatchedValue = Substitution->getResult();
+      Expected<std::string> MatchedValue =
+          Substitution->getResultForDiagnostics();
       // Substitution failures are handled in printNoMatch().
       if (!MatchedValue) {
         consumeError(MatchedValue.takeError());
@@ -1219,8 +1268,8 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       }
 
       OS << "with \"";
-      OS.write_escaped(Substitution->getFromString()) << "\" equal to \"";
-      OS.write_escaped(*MatchedValue) << "\"";
+      OS.write_escaped(Substitution->getFromString()) << "\" equal to ";
+      OS << *MatchedValue;
 
       // We report only the start of the match/search range to suggest we are
       // reporting the substitutions as set at the start of the match/search.
@@ -1318,6 +1367,12 @@ void Pattern::printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
   size_t NumLinesForward = 0;
   size_t Best = StringRef::npos;
   double BestQuality = 0;
+
+  // Arbitrarily limit quadratic search behavior stemming from long CHECK lines.
+  if (size_t(4096) * size_t(2048) <
+      std::min(size_t(4096), Buffer.size()) *
+          std::max(FixedStr.size(), RegExStr.size()))
+    return;
 
   // Use an arbitrary 4k limit on how far we will search.
   for (size_t i = 0, e = std::min(size_t(4096), Buffer.size()); i != e; ++i) {

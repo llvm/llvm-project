@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/Interval.cpp
   SandboxVectorizer/Legality.cpp
   SandboxVectorizer/Passes/BottomUpVec.cpp
+  SandboxVectorizer/Passes/PackReuse.cpp
   SandboxVectorizer/Passes/RegionsFromBBs.cpp
   SandboxVectorizer/Passes/RegionsFromMetadata.cpp
   SandboxVectorizer/Passes/SeedCollection.cpp
@@ -24,6 +25,7 @@ add_llvm_component_library(LLVMVectorize
   VPlan.cpp
   VPlanAnalysis.cpp
   VPlanConstruction.cpp
+  VPlanPredicator.cpp
   VPlanRecipes.cpp
   VPlanSLP.cpp
   VPlanTransforms.cpp

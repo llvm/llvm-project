@@ -40,7 +40,7 @@ LogicalResult mlir::scf::forallToParallelLoop(RewriterBase &rewriter,
   SmallVector<Value> steps = forallOp.getStep(rewriter);
 
   // Create empty scf.parallel op.
-  auto parallelOp = rewriter.create<scf::ParallelOp>(loc, lbs, ubs, steps);
+  auto parallelOp = scf::ParallelOp::create(rewriter, loc, lbs, ubs, steps);
   rewriter.eraseBlock(&parallelOp.getRegion().front());
   rewriter.inlineRegionBefore(forallOp.getRegion(), parallelOp.getRegion(),
                               parallelOp.getRegion().begin());

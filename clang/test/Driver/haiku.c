@@ -35,6 +35,7 @@
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers/glibc"
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers/gnu"
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers/posix"
+// CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers/gcc/include"
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers"
 
 // Check x86_64-unknown-haiku, X86_64

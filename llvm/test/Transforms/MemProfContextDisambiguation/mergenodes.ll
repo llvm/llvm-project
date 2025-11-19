@@ -4,6 +4,9 @@
 ;; The code is similar to that of basic.ll, but with a second allocation.
 
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
+;; Disable merge iteration for now as it causes spurious diffs due to different
+;; iteration order (but the same ultimate hinting of the contexts).
+; RUN:  -memprof-merge-iteration=false \
 ; RUN:	-memprof-verify-ccg -memprof-dump-ccg %s -S 2>&1 | FileCheck %s \
 ; RUN:  --check-prefix=IR --check-prefix=DUMP
 

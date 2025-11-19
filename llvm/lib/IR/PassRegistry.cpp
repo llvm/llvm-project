@@ -17,7 +17,6 @@
 #include "llvm/PassInfo.h"
 #include <cassert>
 #include <memory>
-#include <utility>
 
 using namespace llvm;
 

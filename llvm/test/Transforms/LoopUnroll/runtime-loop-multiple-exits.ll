@@ -15,7 +15,7 @@ define void @test1(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %exit2.loopexit.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %loop_header
@@ -29,7 +29,7 @@ define void @test1(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    br i1 false, label %loop_latch, label %exit3.loopexit
 ; EPILOG:       exit3.loopexit:
 ; EPILOG-NEXT:    br label %exit3
-; EPILOG:       exit3.loopexit2:
+; EPILOG:       exit3.loopexit3:
 ; EPILOG-NEXT:    br label %exit3
 ; EPILOG:       exit3:
 ; EPILOG-NEXT:    ret void
@@ -79,30 +79,30 @@ define void @test1(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    %iv_next.7 = add i64 %iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit2.loopexit.unr-lcssa.loopexit
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit2.loopexit.unr-lcssa
 ; EPILOG:       exit1.loopexit:
 ; EPILOG-NEXT:    br label %exit1
-; EPILOG:       exit1.loopexit1:
+; EPILOG:       exit1.loopexit2:
 ; EPILOG-NEXT:    br label %exit1
 ; EPILOG:       exit1:
 ; EPILOG-NEXT:    ret void
-; EPILOG:       exit2.loopexit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br label %exit2.loopexit.unr-lcssa
 ; EPILOG:       exit2.loopexit.unr-lcssa:
-; EPILOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit2.loopexit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %iv.unr = phi i64 [ %iv_next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit2.loopexit
 ; EPILOG:       loop_header.epil.preheader:
+; EPILOG-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit2.loopexit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %loop_header.epil
 ; EPILOG:       loop_header.epil:
-; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.epil.init, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
 ; EPILOG-NEXT:    br i1 %cond, label %loop_latch.epil, label %loop_exiting_bb1.epil
 ; EPILOG:       loop_exiting_bb1.epil:
-; EPILOG-NEXT:    br i1 false, label %loop_exiting_bb2.epil, label %exit1.loopexit1
+; EPILOG-NEXT:    br i1 false, label %loop_exiting_bb2.epil, label %exit1.loopexit2
 ; EPILOG:       loop_exiting_bb2.epil:
-; EPILOG-NEXT:    br i1 false, label %loop_latch.epil, label %exit3.loopexit2
+; EPILOG-NEXT:    br i1 false, label %loop_latch.epil, label %exit3.loopexit3
 ; EPILOG:       loop_latch.epil:
 ; EPILOG-NEXT:    %iv_next.epil = add i64 %iv.epil, 1
 ; EPILOG-NEXT:    %cmp.epil = icmp ne i64 %iv_next.epil, %trip
@@ -120,7 +120,7 @@ define void @test1(i64 %trip, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit2.loopexit.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %loop_header
@@ -146,17 +146,17 @@ define void @test1(i64 %trip, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %iv_next.1 = add i64 %iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit2.loopexit.unr-lcssa.loopexit, !llvm.loop !0
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit2.loopexit.unr-lcssa, !llvm.loop !0
 ; EPILOG-BLOCK:       exit1.loopexit:
 ; EPILOG-BLOCK-NEXT:    br label %exit1
 ; EPILOG-BLOCK:       exit1:
 ; EPILOG-BLOCK-NEXT:    ret void
-; EPILOG-BLOCK:       exit2.loopexit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    br label %exit2.loopexit.unr-lcssa
 ; EPILOG-BLOCK:       exit2.loopexit.unr-lcssa:
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit2.loopexit
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 %cond, label %loop_latch.epil, label %loop_exiting_bb1.epil
@@ -366,7 +366,7 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %for.end.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -448,28 +448,27 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; EPILOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp eq i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %for.end.unr-lcssa.loopexit, label %header
-; EPILOG:       for.end.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %sum.0.lcssa.ph.ph = phi i32 [ %add.7, %for.body.7 ]
-; EPILOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.7, %for.body.7 ]
-; EPILOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.7, %for.body.7 ]
-; EPILOG-NEXT:    br label %for.end.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %for.end.unr-lcssa, label %header
 ; EPILOG:       for.end.unr-lcssa:
-; EPILOG-NEXT:    %sum.0.lcssa.ph = phi i32 [ poison, %entry ], [ %sum.0.lcssa.ph.ph, %for.end.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %for.end.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %for.end.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %sum.0.lcssa.ph = phi i32 [ %add.7, %for.body.7 ]
+; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.7, %for.body.7 ]
+; EPILOG-NEXT:    %sum.02.unr = phi i32 [ %add.7, %for.body.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %for.end
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %for.end.unr-lcssa ]
+; EPILOG-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %for.end.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %for.body.epil ], [ %indvars.iv.unr, %header.epil.preheader ]
-; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %for.body.epil ], [ %sum.02.unr, %header.epil.preheader ]
+; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %for.body.epil ], [ %indvars.iv.epil.init, %header.epil.preheader ]
+; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %for.body.epil ], [ %sum.02.epil.init, %header.epil.preheader ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %header.epil.preheader ], [ %epil.iter.next, %for.body.epil ]
-; EPILOG-NEXT:    br i1 false, label %for.exit2.loopexit2, label %for.exiting_block.epil
+; EPILOG-NEXT:    br i1 false, label %for.exit2.loopexit3, label %for.exiting_block.epil
 ; EPILOG:       for.exiting_block.epil:
 ; EPILOG-NEXT:    %cmp.epil = icmp eq i64 %n, 42
-; EPILOG-NEXT:    br i1 %cmp.epil, label %for.exit2.loopexit2, label %for.body.epil
+; EPILOG-NEXT:    br i1 %cmp.epil, label %for.exit2.loopexit3, label %for.body.epil
 ; EPILOG:       for.body.epil:
 ; EPILOG-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil
 ; EPILOG-NEXT:    %11 = load i32, ptr %arrayidx.epil, align 4
@@ -488,11 +487,11 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; EPILOG:       for.exit2.loopexit:
 ; EPILOG-NEXT:    %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %for.body ], [ 42, %for.exiting_block.1 ], [ %add.1, %for.body.1 ], [ 42, %for.exiting_block.2 ], [ %add.2, %for.body.2 ], [ 42, %for.exiting_block.3 ], [ %add.3, %for.body.3 ], [ 42, %for.exiting_block.4 ], [ %add.4, %for.body.4 ], [ 42, %for.exiting_block.5 ], [ %add.5, %for.body.5 ], [ 42, %for.exiting_block.6 ], [ %add.6, %for.body.6 ], [ 42, %for.exiting_block.7 ]
 ; EPILOG-NEXT:    br label %for.exit2
-; EPILOG:       for.exit2.loopexit2:
-; EPILOG-NEXT:    %retval.ph3 = phi i32 [ 42, %for.exiting_block.epil ], [ %sum.02.epil, %header.epil ]
+; EPILOG:       for.exit2.loopexit3:
+; EPILOG-NEXT:    %retval.ph4 = phi i32 [ 42, %for.exiting_block.epil ], [ %sum.02.epil, %header.epil ]
 ; EPILOG-NEXT:    br label %for.exit2
 ; EPILOG:       for.exit2:
-; EPILOG-NEXT:    %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph3, %for.exit2.loopexit2 ]
+; EPILOG-NEXT:    %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph4, %for.exit2.loopexit3 ]
 ; EPILOG-NEXT:    ret i32 %retval
 ;
 ; EPILOG-BLOCK-LABEL: @test2(
@@ -501,7 +500,7 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %for.end.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -529,19 +528,18 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; EPILOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp eq i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %for.end.unr-lcssa.loopexit, label %header, !llvm.loop !2
-; EPILOG-BLOCK:       for.end.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %sum.0.lcssa.ph.ph = phi i32 [ %add.1, %for.body.1 ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.1, %for.body.1 ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr.ph = phi i32 [ %add.1, %for.body.1 ]
-; EPILOG-BLOCK-NEXT:    br label %for.end.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %for.end.unr-lcssa, label %header, !llvm.loop !2
 ; EPILOG-BLOCK:       for.end.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %sum.0.lcssa.ph = phi i32 [ poison, %entry ], [ %sum.0.lcssa.ph.ph, %for.end.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %for.end.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %for.end.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %sum.0.lcssa.ph = phi i32 [ %add.1, %for.body.1 ]
+; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.1, %for.body.1 ]
+; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ %add.1, %for.body.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %for.end
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %for.end.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %for.end.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 false, label %for.exit2, label %for.exiting_block.epil
@@ -549,9 +547,9 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; EPILOG-BLOCK-NEXT:    %cmp.epil = icmp eq i64 %n, 42
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp.epil, label %for.exit2, label %for.body.epil
 ; EPILOG-BLOCK:       for.body.epil:
-; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.unr
+; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil.init
 ; EPILOG-BLOCK-NEXT:    %5 = load i32, ptr %arrayidx.epil, align 4
-; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.unr
+; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.epil.init
 ; EPILOG-BLOCK-NEXT:    br label %for.end
 ; EPILOG-BLOCK:       for.end:
 ; EPILOG-BLOCK-NEXT:    %sum.0.lcssa = phi i32 [ %sum.0.lcssa.ph, %for.end.unr-lcssa ], [ %add.epil, %for.body.epil ]
@@ -560,7 +558,7 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; EPILOG-BLOCK-NEXT:    %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %for.body ], [ 42, %for.exiting_block.1 ]
 ; EPILOG-BLOCK-NEXT:    br label %for.exit2
 ; EPILOG-BLOCK:       for.exit2:
-; EPILOG-BLOCK-NEXT:    %retval = phi i32 [ %sum.02.unr, %header.epil ], [ 42, %for.exiting_block.epil ], [ %retval.ph, %for.exit2.loopexit ]
+; EPILOG-BLOCK-NEXT:    %retval = phi i32 [ %sum.02.epil.init, %header.epil ], [ 42, %for.exiting_block.epil ], [ %retval.ph, %for.exit2.loopexit ]
 ; EPILOG-BLOCK-NEXT:    ret i32 %retval
 ;
 ; PROLOG-LABEL: @test2(
@@ -796,7 +794,7 @@ define void @test3(i64 %trip, i64 %add, i1 %arg) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %exit2.loopexit.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %loop_header
@@ -812,7 +810,7 @@ define void @test3(i64 %trip, i64 %add, i1 %arg) {
 ; EPILOG-NEXT:    ]
 ; EPILOG:       exit3.loopexit:
 ; EPILOG-NEXT:    br label %exit3
-; EPILOG:       exit3.loopexit2:
+; EPILOG:       exit3.loopexit3:
 ; EPILOG-NEXT:    br label %exit3
 ; EPILOG:       exit3:
 ; EPILOG-NEXT:    ret void
@@ -877,33 +875,33 @@ define void @test3(i64 %trip, i64 %add, i1 %arg) {
 ; EPILOG-NEXT:    %sum.next.7 = add i64 %sum.next.6, %add
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit2.loopexit.unr-lcssa.loopexit
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit2.loopexit.unr-lcssa
 ; EPILOG:       exit1.loopexit:
 ; EPILOG-NEXT:    br label %exit1
-; EPILOG:       exit1.loopexit1:
+; EPILOG:       exit1.loopexit2:
 ; EPILOG-NEXT:    br label %exit1
 ; EPILOG:       exit1:
 ; EPILOG-NEXT:    ret void
-; EPILOG:       exit2.loopexit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    %sum.unr.ph = phi i64 [ %sum.next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br label %exit2.loopexit.unr-lcssa
 ; EPILOG:       exit2.loopexit.unr-lcssa:
-; EPILOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit2.loopexit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %sum.unr = phi i64 [ 0, %entry ], [ %sum.unr.ph, %exit2.loopexit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %iv.unr = phi i64 [ %iv_next.7, %loop_latch.7 ]
+; EPILOG-NEXT:    %sum.unr = phi i64 [ %sum.next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit2.loopexit
 ; EPILOG:       loop_header.epil.preheader:
+; EPILOG-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit2.loopexit.unr-lcssa ]
+; EPILOG-NEXT:    %sum.epil.init = phi i64 [ 0, %entry ], [ %sum.unr, %exit2.loopexit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %loop_header.epil
 ; EPILOG:       loop_header.epil:
-; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
-; EPILOG-NEXT:    %sum.epil = phi i64 [ %sum.unr, %loop_header.epil.preheader ], [ %sum.next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.epil.init, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %sum.epil = phi i64 [ %sum.epil.init, %loop_header.epil.preheader ], [ %sum.next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
 ; EPILOG-NEXT:    br i1 %arg, label %loop_latch.epil, label %loop_exiting_bb1.epil
 ; EPILOG:       loop_exiting_bb1.epil:
 ; EPILOG-NEXT:    switch i64 %sum.epil, label %loop_latch.epil [
-; EPILOG-NEXT:      i64 24, label %exit1.loopexit1
-; EPILOG-NEXT:      i64 42, label %exit3.loopexit2
+; EPILOG-NEXT:      i64 24, label %exit1.loopexit2
+; EPILOG-NEXT:      i64 42, label %exit3.loopexit3
 ; EPILOG-NEXT:    ]
 ; EPILOG:       loop_latch.epil:
 ; EPILOG-NEXT:    %iv_next.epil = add nuw nsw i64 %iv.epil, 1
@@ -923,7 +921,7 @@ define void @test3(i64 %trip, i64 %add, i1 %arg) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit2.loopexit.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %loop_header
@@ -954,24 +952,24 @@ define void @test3(i64 %trip, i64 %add, i1 %arg) {
 ; EPILOG-BLOCK-NEXT:    %sum.next.1 = add i64 %sum.next, %add
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit2.loopexit.unr-lcssa.loopexit, !llvm.loop !3
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit2.loopexit.unr-lcssa, !llvm.loop !3
 ; EPILOG-BLOCK:       exit1.loopexit:
 ; EPILOG-BLOCK-NEXT:    br label %exit1
 ; EPILOG-BLOCK:       exit1:
 ; EPILOG-BLOCK-NEXT:    ret void
-; EPILOG-BLOCK:       exit2.loopexit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %sum.unr.ph = phi i64 [ %sum.next.1, %loop_latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %exit2.loopexit.unr-lcssa
 ; EPILOG-BLOCK:       exit2.loopexit.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %sum.unr = phi i64 [ 0, %entry ], [ %sum.unr.ph, %exit2.loopexit.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %sum.unr = phi i64 [ %sum.next.1, %loop_latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit2.loopexit
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %sum.epil.init = phi i64 [ 0, %entry ], [ %sum.unr, %exit2.loopexit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 %arg, label %loop_latch.epil, label %loop_exiting_bb1.epil
 ; EPILOG-BLOCK:       loop_exiting_bb1.epil:
-; EPILOG-BLOCK-NEXT:    switch i64 %sum.unr, label %loop_latch.epil [
+; EPILOG-BLOCK-NEXT:    switch i64 %sum.epil.init, label %loop_latch.epil [
 ; EPILOG-BLOCK-NEXT:      i64 24, label %exit1
 ; EPILOG-BLOCK-NEXT:      i64 42, label %exit3
 ; EPILOG-BLOCK-NEXT:    ]
@@ -1204,7 +1202,7 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -1286,28 +1284,27 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp eq i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latchExit.unr-lcssa.loopexit, label %header
-; EPILOG:       latchExit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %result.ph.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.7, %latch.7 ]
-; EPILOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latchExit.unr-lcssa, label %header
 ; EPILOG:       latchExit.unr-lcssa:
-; EPILOG-NEXT:    %result.ph = phi i32 [ poison, %entry ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %result.ph = phi i32 [ %add.7, %latch.7 ]
+; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.7, %latch.7 ]
+; EPILOG-NEXT:    %sum.02.unr = phi i32 [ %add.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.unr, %header.epil.preheader ]
-; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.unr, %header.epil.preheader ]
+; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.epil.init, %header.epil.preheader ]
+; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.epil.init, %header.epil.preheader ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %header.epil.preheader ], [ %epil.iter.next, %latch.epil ]
-; EPILOG-NEXT:    br i1 %cond, label %latchExit.epilog-lcssa.loopexit2, label %for.exiting_block.epil
+; EPILOG-NEXT:    br i1 %cond, label %latchExit.epilog-lcssa.loopexit3, label %for.exiting_block.epil
 ; EPILOG:       for.exiting_block.epil:
 ; EPILOG-NEXT:    %cmp.epil = icmp eq i64 %n, 42
-; EPILOG-NEXT:    br i1 %cmp.epil, label %for.exit2.loopexit4, label %latch.epil
+; EPILOG-NEXT:    br i1 %cmp.epil, label %for.exit2.loopexit5, label %latch.epil
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil
 ; EPILOG-NEXT:    %11 = load i32, ptr %arrayidx.epil, align 4
@@ -1316,22 +1313,22 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %exitcond.epil = icmp eq i64 %indvars.iv.next.epil, %n
 ; EPILOG-NEXT:    %epil.iter.next = add i64 %epil.iter, 1
 ; EPILOG-NEXT:    %epil.iter.cmp = icmp ne i64 %epil.iter.next, %xtraiter
-; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit2, !llvm.loop !4
+; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit3, !llvm.loop !4
 ; EPILOG:       latchExit.epilog-lcssa.loopexit:
 ; EPILOG-NEXT:    %result.ph1.ph = phi i32 [ 0, %header ], [ 0, %latch ], [ 0, %latch.1 ], [ 0, %latch.2 ], [ 0, %latch.3 ], [ 0, %latch.4 ], [ 0, %latch.5 ], [ 0, %latch.6 ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
-; EPILOG:       latchExit.epilog-lcssa.loopexit2:
-; EPILOG-NEXT:    %result.ph1.ph3 = phi i32 [ 0, %header.epil ], [ %add.epil, %latch.epil ]
+; EPILOG:       latchExit.epilog-lcssa.loopexit3:
+; EPILOG-NEXT:    %result.ph1.ph4 = phi i32 [ 0, %header.epil ], [ %add.epil, %latch.epil ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG:       latchExit.epilog-lcssa:
-; EPILOG-NEXT:    %result.ph1 = phi i32 [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %result.ph1.ph3, %latchExit.epilog-lcssa.loopexit2 ]
+; EPILOG-NEXT:    %result.ph1 = phi i32 [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %result.ph1.ph4, %latchExit.epilog-lcssa.loopexit3 ]
 ; EPILOG-NEXT:    br label %latchExit
 ; EPILOG:       latchExit:
 ; EPILOG-NEXT:    %result = phi i32 [ %result.ph, %latchExit.unr-lcssa ], [ %result.ph1, %latchExit.epilog-lcssa ]
 ; EPILOG-NEXT:    ret i32 %result
 ; EPILOG:       for.exit2.loopexit:
 ; EPILOG-NEXT:    br label %for.exit2
-; EPILOG:       for.exit2.loopexit4:
+; EPILOG:       for.exit2.loopexit5:
 ; EPILOG-NEXT:    br label %for.exit2
 ; EPILOG:       for.exit2:
 ; EPILOG-NEXT:    ret i32 42
@@ -1342,7 +1339,7 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -1370,19 +1367,18 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp eq i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !4
-; EPILOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latchExit.unr-lcssa, label %header, !llvm.loop !4
 ; EPILOG-BLOCK:       latchExit.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %result.ph = phi i32 [ poison, %entry ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %result.ph = phi i32 [ %add.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ %add.1, %latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 %cond, label %latchExit.epilog-lcssa, label %for.exiting_block.epil
@@ -1390,9 +1386,9 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %cmp.epil = icmp eq i64 %n, 42
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp.epil, label %for.exit2, label %latch.epil
 ; EPILOG-BLOCK:       latch.epil:
-; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.unr
+; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil.init
 ; EPILOG-BLOCK-NEXT:    %5 = load i32, ptr %arrayidx.epil, align 4
-; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.unr
+; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.epil.init
 ; EPILOG-BLOCK-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG-BLOCK:       latchExit.epilog-lcssa.loopexit:
 ; EPILOG-BLOCK-NEXT:    %result.ph1.ph = phi i32 [ 0, %header ], [ 0, %latch ]
@@ -1644,7 +1640,7 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -1726,28 +1722,27 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp eq i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latchExit.unr-lcssa.loopexit, label %header
-; EPILOG:       latchExit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %result.ph.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.7, %latch.7 ]
-; EPILOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latchExit.unr-lcssa, label %header
 ; EPILOG:       latchExit.unr-lcssa:
-; EPILOG-NEXT:    %result.ph = phi i32 [ poison, %entry ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %result.ph = phi i32 [ %add.7, %latch.7 ]
+; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.7, %latch.7 ]
+; EPILOG-NEXT:    %sum.02.unr = phi i32 [ %add.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.unr, %header.epil.preheader ]
-; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.unr, %header.epil.preheader ]
+; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.epil.init, %header.epil.preheader ]
+; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.epil.init, %header.epil.preheader ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %header.epil.preheader ], [ %epil.iter.next, %latch.epil ]
-; EPILOG-NEXT:    br i1 %cond, label %for.exit2.loopexit2, label %for.exiting_block.epil
+; EPILOG-NEXT:    br i1 %cond, label %for.exit2.loopexit3, label %for.exiting_block.epil
 ; EPILOG:       for.exiting_block.epil:
 ; EPILOG-NEXT:    %cmp.epil = icmp eq i64 %n, 42
-; EPILOG-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa.loopexit3, label %latch.epil
+; EPILOG-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa.loopexit4, label %latch.epil
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil
 ; EPILOG-NEXT:    %11 = load i32, ptr %arrayidx.epil, align 4
@@ -1756,22 +1751,22 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %exitcond.epil = icmp eq i64 %indvars.iv.next.epil, %n
 ; EPILOG-NEXT:    %epil.iter.next = add i64 %epil.iter, 1
 ; EPILOG-NEXT:    %epil.iter.cmp = icmp ne i64 %epil.iter.next, %xtraiter
-; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit3, !llvm.loop !5
+; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit4, !llvm.loop !5
 ; EPILOG:       latchExit.epilog-lcssa.loopexit:
 ; EPILOG-NEXT:    %result.ph1.ph = phi i32 [ 2, %for.exiting_block ], [ 2, %for.exiting_block.1 ], [ 2, %for.exiting_block.2 ], [ 2, %for.exiting_block.3 ], [ 2, %for.exiting_block.4 ], [ 2, %for.exiting_block.5 ], [ 2, %for.exiting_block.6 ], [ 2, %for.exiting_block.7 ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
-; EPILOG:       latchExit.epilog-lcssa.loopexit3:
-; EPILOG-NEXT:    %result.ph1.ph4 = phi i32 [ 2, %for.exiting_block.epil ], [ %add.epil, %latch.epil ]
+; EPILOG:       latchExit.epilog-lcssa.loopexit4:
+; EPILOG-NEXT:    %result.ph1.ph5 = phi i32 [ 2, %for.exiting_block.epil ], [ %add.epil, %latch.epil ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG:       latchExit.epilog-lcssa:
-; EPILOG-NEXT:    %result.ph1 = phi i32 [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %result.ph1.ph4, %latchExit.epilog-lcssa.loopexit3 ]
+; EPILOG-NEXT:    %result.ph1 = phi i32 [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %result.ph1.ph5, %latchExit.epilog-lcssa.loopexit4 ]
 ; EPILOG-NEXT:    br label %latchExit
 ; EPILOG:       latchExit:
 ; EPILOG-NEXT:    %result = phi i32 [ %result.ph, %latchExit.unr-lcssa ], [ %result.ph1, %latchExit.epilog-lcssa ]
 ; EPILOG-NEXT:    ret i32 %result
 ; EPILOG:       for.exit2.loopexit:
 ; EPILOG-NEXT:    br label %for.exit2
-; EPILOG:       for.exit2.loopexit2:
+; EPILOG:       for.exit2.loopexit3:
 ; EPILOG-NEXT:    br label %for.exit2
 ; EPILOG:       for.exit2:
 ; EPILOG-NEXT:    ret i32 42
@@ -1782,7 +1777,7 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -1810,19 +1805,18 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp eq i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !5
-; EPILOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latchExit.unr-lcssa, label %header, !llvm.loop !5
 ; EPILOG-BLOCK:       latchExit.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %result.ph = phi i32 [ poison, %entry ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %result.ph = phi i32 [ %add.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ %add.1, %latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.epil
@@ -1830,9 +1824,9 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %cmp.epil = icmp eq i64 %n, 42
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa, label %latch.epil
 ; EPILOG-BLOCK:       latch.epil:
-; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.unr
+; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil.init
 ; EPILOG-BLOCK-NEXT:    %5 = load i32, ptr %arrayidx.epil, align 4
-; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.unr
+; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.epil.init
 ; EPILOG-BLOCK-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG-BLOCK:       latchExit.epilog-lcssa.loopexit:
 ; EPILOG-BLOCK-NEXT:    %result.ph1.ph = phi i32 [ 2, %for.exiting_block ], [ 2, %for.exiting_block.1 ]
@@ -2085,7 +2079,7 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -2167,28 +2161,27 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp eq i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latchExit.unr-lcssa.loopexit, label %header
-; EPILOG:       latchExit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %result.ph.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.7, %latch.7 ]
-; EPILOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latchExit.unr-lcssa, label %header
 ; EPILOG:       latchExit.unr-lcssa:
-; EPILOG-NEXT:    %result.ph = phi i32 [ poison, %entry ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %result.ph = phi i32 [ %add.7, %latch.7 ]
+; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.7, %latch.7 ]
+; EPILOG-NEXT:    %sum.02.unr = phi i32 [ %add.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.unr, %header.epil.preheader ]
-; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.unr, %header.epil.preheader ]
+; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.epil.init, %header.epil.preheader ]
+; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.epil.init, %header.epil.preheader ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %header.epil.preheader ], [ %epil.iter.next, %latch.epil ]
-; EPILOG-NEXT:    br i1 %cond, label %for.exit2.loopexit2, label %for.exiting_block.epil
+; EPILOG-NEXT:    br i1 %cond, label %for.exit2.loopexit3, label %for.exiting_block.epil
 ; EPILOG:       for.exiting_block.epil:
 ; EPILOG-NEXT:    %cmp.epil = icmp eq i64 %n, 42
-; EPILOG-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa.loopexit3, label %latch.epil
+; EPILOG-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa.loopexit4, label %latch.epil
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil
 ; EPILOG-NEXT:    %11 = load i32, ptr %arrayidx.epil, align 4
@@ -2197,22 +2190,22 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %exitcond.epil = icmp eq i64 %indvars.iv.next.epil, %n
 ; EPILOG-NEXT:    %epil.iter.next = add i64 %epil.iter, 1
 ; EPILOG-NEXT:    %epil.iter.cmp = icmp ne i64 %epil.iter.next, %xtraiter
-; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit3, !llvm.loop !6
+; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit4, !llvm.loop !6
 ; EPILOG:       latchExit.epilog-lcssa.loopexit:
 ; EPILOG-NEXT:    %result.ph1.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %for.exiting_block.2 ], [ %add.2, %for.exiting_block.3 ], [ %add.3, %for.exiting_block.4 ], [ %add.4, %for.exiting_block.5 ], [ %add.5, %for.exiting_block.6 ], [ %add.6, %for.exiting_block.7 ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
-; EPILOG:       latchExit.epilog-lcssa.loopexit3:
-; EPILOG-NEXT:    %result.ph1.ph4 = phi i32 [ %sum.02.epil, %for.exiting_block.epil ], [ %add.epil, %latch.epil ]
+; EPILOG:       latchExit.epilog-lcssa.loopexit4:
+; EPILOG-NEXT:    %result.ph1.ph5 = phi i32 [ %sum.02.epil, %for.exiting_block.epil ], [ %add.epil, %latch.epil ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG:       latchExit.epilog-lcssa:
-; EPILOG-NEXT:    %result.ph1 = phi i32 [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %result.ph1.ph4, %latchExit.epilog-lcssa.loopexit3 ]
+; EPILOG-NEXT:    %result.ph1 = phi i32 [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %result.ph1.ph5, %latchExit.epilog-lcssa.loopexit4 ]
 ; EPILOG-NEXT:    br label %latchExit
 ; EPILOG:       latchExit:
 ; EPILOG-NEXT:    %result = phi i32 [ %result.ph, %latchExit.unr-lcssa ], [ %result.ph1, %latchExit.epilog-lcssa ]
 ; EPILOG-NEXT:    ret i32 %result
 ; EPILOG:       for.exit2.loopexit:
 ; EPILOG-NEXT:    br label %for.exit2
-; EPILOG:       for.exit2.loopexit2:
+; EPILOG:       for.exit2.loopexit3:
 ; EPILOG-NEXT:    br label %for.exit2
 ; EPILOG:       for.exit2:
 ; EPILOG-NEXT:    ret i32 42
@@ -2223,7 +2216,7 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -2251,19 +2244,18 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp eq i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !6
-; EPILOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latchExit.unr-lcssa, label %header, !llvm.loop !6
 ; EPILOG-BLOCK:       latchExit.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %result.ph = phi i32 [ poison, %entry ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %result.ph = phi i32 [ %add.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ %add.1, %latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.epil
@@ -2271,15 +2263,15 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %cmp.epil = icmp eq i64 %n, 42
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa, label %latch.epil
 ; EPILOG-BLOCK:       latch.epil:
-; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.unr
+; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil.init
 ; EPILOG-BLOCK-NEXT:    %5 = load i32, ptr %arrayidx.epil, align 4
-; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.unr
+; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.epil.init
 ; EPILOG-BLOCK-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG-BLOCK:       latchExit.epilog-lcssa.loopexit:
 ; EPILOG-BLOCK-NEXT:    %result.ph1.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ]
 ; EPILOG-BLOCK-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG-BLOCK:       latchExit.epilog-lcssa:
-; EPILOG-BLOCK-NEXT:    %result.ph1 = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.unr, %for.exiting_block.epil ], [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %result.ph1 = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.epil.init, %for.exiting_block.epil ], [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ]
 ; EPILOG-BLOCK-NEXT:    br label %latchExit
 ; EPILOG-BLOCK:       latchExit:
 ; EPILOG-BLOCK-NEXT:    %result = phi i32 [ %result.ph, %latchExit.unr-lcssa ], [ %result.ph1, %latchExit.epilog-lcssa ]
@@ -2527,7 +2519,7 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -2609,52 +2601,51 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp eq i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latchExit.unr-lcssa.loopexit, label %header
-; EPILOG:       latchExit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %result.ph.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.7, %latch.7 ]
-; EPILOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latchExit.unr-lcssa, label %header
 ; EPILOG:       latchExit.unr-lcssa:
-; EPILOG-NEXT:    %result.ph = phi i32 [ poison, %entry ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %result.ph = phi i32 [ %add.7, %latch.7 ]
+; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.7, %latch.7 ]
+; EPILOG-NEXT:    %sum.02.unr = phi i32 [ %add.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.unr, %header.epil.preheader ]
-; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.unr, %header.epil.preheader ]
+; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.epil.init, %header.epil.preheader ]
+; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.epil.init, %header.epil.preheader ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %header.epil.preheader ], [ %epil.iter.next, %latch.epil ]
-; EPILOG-NEXT:    br i1 %cond, label %for.exit2.loopexit2, label %for.exiting_block.epil
+; EPILOG-NEXT:    br i1 %cond, label %for.exit2.loopexit3, label %for.exiting_block.epil
 ; EPILOG:       for.exiting_block.epil:
 ; EPILOG-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil
 ; EPILOG-NEXT:    %11 = load i32, ptr %arrayidx.epil, align 4
 ; EPILOG-NEXT:    %add.epil = add nsw i32 %11, %sum.02.epil
 ; EPILOG-NEXT:    %cmp.epil = icmp eq i64 %n, 42
-; EPILOG-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa.loopexit3, label %latch.epil
+; EPILOG-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa.loopexit4, label %latch.epil
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %indvars.iv.next.epil = add i64 %indvars.iv.epil, 1
 ; EPILOG-NEXT:    %exitcond.epil = icmp eq i64 %indvars.iv.next.epil, %n
 ; EPILOG-NEXT:    %epil.iter.next = add i64 %epil.iter, 1
 ; EPILOG-NEXT:    %epil.iter.cmp = icmp ne i64 %epil.iter.next, %xtraiter
-; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit3, !llvm.loop !7
+; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit4, !llvm.loop !7
 ; EPILOG:       latchExit.epilog-lcssa.loopexit:
 ; EPILOG-NEXT:    %result.ph1.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %for.exiting_block.2 ], [ %add.2, %for.exiting_block.3 ], [ %add.3, %for.exiting_block.4 ], [ %add.4, %for.exiting_block.5 ], [ %add.5, %for.exiting_block.6 ], [ %add.6, %for.exiting_block.7 ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
-; EPILOG:       latchExit.epilog-lcssa.loopexit3:
-; EPILOG-NEXT:    %result.ph1.ph4 = phi i32 [ %sum.02.epil, %for.exiting_block.epil ], [ %add.epil, %latch.epil ]
+; EPILOG:       latchExit.epilog-lcssa.loopexit4:
+; EPILOG-NEXT:    %result.ph1.ph5 = phi i32 [ %sum.02.epil, %for.exiting_block.epil ], [ %add.epil, %latch.epil ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG:       latchExit.epilog-lcssa:
-; EPILOG-NEXT:    %result.ph1 = phi i32 [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %result.ph1.ph4, %latchExit.epilog-lcssa.loopexit3 ]
+; EPILOG-NEXT:    %result.ph1 = phi i32 [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %result.ph1.ph5, %latchExit.epilog-lcssa.loopexit4 ]
 ; EPILOG-NEXT:    br label %latchExit
 ; EPILOG:       latchExit:
 ; EPILOG-NEXT:    %result = phi i32 [ %result.ph, %latchExit.unr-lcssa ], [ %result.ph1, %latchExit.epilog-lcssa ]
 ; EPILOG-NEXT:    ret i32 %result
 ; EPILOG:       for.exit2.loopexit:
 ; EPILOG-NEXT:    br label %for.exit2
-; EPILOG:       for.exit2.loopexit2:
+; EPILOG:       for.exit2.loopexit3:
 ; EPILOG-NEXT:    br label %for.exit2
 ; EPILOG:       for.exit2:
 ; EPILOG-NEXT:    ret i32 42
@@ -2665,7 +2656,7 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -2693,26 +2684,25 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp eq i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !7
-; EPILOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latchExit.unr-lcssa, label %header, !llvm.loop !7
 ; EPILOG-BLOCK:       latchExit.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %result.ph = phi i32 [ poison, %entry ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %result.ph = phi i32 [ %add.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ %add.1, %latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.epil
 ; EPILOG-BLOCK:       for.exiting_block.epil:
-; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.unr
+; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil.init
 ; EPILOG-BLOCK-NEXT:    %5 = load i32, ptr %arrayidx.epil, align 4
-; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.unr
+; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %5, %sum.02.epil.init
 ; EPILOG-BLOCK-NEXT:    %cmp.epil = icmp eq i64 %n, 42
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp.epil, label %latchExit.epilog-lcssa, label %latch.epil
 ; EPILOG-BLOCK:       latch.epil:
@@ -2721,7 +2711,7 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %result.ph1.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ]
 ; EPILOG-BLOCK-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG-BLOCK:       latchExit.epilog-lcssa:
-; EPILOG-BLOCK-NEXT:    %result.ph1 = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.unr, %for.exiting_block.epil ], [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %result.ph1 = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.epil.init, %for.exiting_block.epil ], [ %result.ph1.ph, %latchExit.epilog-lcssa.loopexit ]
 ; EPILOG-BLOCK-NEXT:    br label %latchExit
 ; EPILOG-BLOCK:       latchExit:
 ; EPILOG-BLOCK-NEXT:    %result = phi i32 [ %result.ph, %latchExit.unr-lcssa ], [ %result.ph1, %latchExit.epilog-lcssa ]
@@ -3013,7 +3003,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; EPILOG-NEXT:    %1 = add i32 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i32 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i32 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %preheader.new
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %preheader.new
 ; EPILOG:       preheader.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i32 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -3054,37 +3044,36 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; EPILOG:       latch.7:
 ; EPILOG-NEXT:    %niter.next.7 = add nuw i32 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i32 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %header, label %latchExit.unr-lcssa.loopexit
-; EPILOG:       latchExit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %i2.ph.ph.ph = phi i32 [ -1, %latch.7 ]
-; EPILOG-NEXT:    %i4.unr.ph = phi i32 [ %inc.7, %latch.7 ]
-; EPILOG-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %header, label %latchExit.unr-lcssa
 ; EPILOG:       latchExit.unr-lcssa:
-; EPILOG-NEXT:    %i2.ph.ph = phi i32 [ poison, %preheader ], [ %i2.ph.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %i4.unr = phi i32 [ 0, %preheader ], [ %i4.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %i2.ph.ph = phi i32 [ -1, %latch.7 ]
+; EPILOG-NEXT:    %i4.unr = phi i32 [ %inc.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i32 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %i4.epil.init = phi i32 [ 0, %preheader ], [ %i4.unr, %latchExit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod2 = icmp ne i32 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %i4.epil = phi i32 [ %inc.epil, %latch.epil ], [ %i4.unr, %header.epil.preheader ]
+; EPILOG-NEXT:    %i4.epil = phi i32 [ %inc.epil, %latch.epil ], [ %i4.epil.init, %header.epil.preheader ]
 ; EPILOG-NEXT:    %epil.iter = phi i32 [ 0, %header.epil.preheader ], [ %epil.iter.next, %latch.epil ]
 ; EPILOG-NEXT:    %inc.epil = add nuw i32 %i4.epil, 1
 ; EPILOG-NEXT:    %cmp1.epil = icmp ult i32 %inc.epil, %N
-; EPILOG-NEXT:    br i1 %cmp1.epil, label %latch.epil, label %latchExit.epilog-lcssa.loopexit2
+; EPILOG-NEXT:    br i1 %cmp1.epil, label %latch.epil, label %latchExit.epilog-lcssa.loopexit3
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %cmp.epil = icmp ult i32 %inc.epil, %M.shifted
 ; EPILOG-NEXT:    %epil.iter.next = add i32 %epil.iter, 1
 ; EPILOG-NEXT:    %epil.iter.cmp = icmp ne i32 %epil.iter.next, %xtraiter
-; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit2, !llvm.loop !8
+; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %header.epil, label %latchExit.epilog-lcssa.loopexit3, !llvm.loop !8
 ; EPILOG:       latchExit.epilog-lcssa.loopexit:
 ; EPILOG-NEXT:    %i2.ph.ph1.ph = phi i32 [ %i4, %header ], [ %inc, %latch ], [ %inc.1, %latch.1 ], [ %inc.2, %latch.2 ], [ %inc.3, %latch.3 ], [ %inc.4, %latch.4 ], [ %inc.5, %latch.5 ], [ %inc.6, %latch.6 ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
-; EPILOG:       latchExit.epilog-lcssa.loopexit2:
-; EPILOG-NEXT:    %i2.ph.ph1.ph3 = phi i32 [ %i4.epil, %header.epil ], [ -1, %latch.epil ]
+; EPILOG:       latchExit.epilog-lcssa.loopexit3:
+; EPILOG-NEXT:    %i2.ph.ph1.ph4 = phi i32 [ %i4.epil, %header.epil ], [ -1, %latch.epil ]
 ; EPILOG-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG:       latchExit.epilog-lcssa:
-; EPILOG-NEXT:    %i2.ph.ph1 = phi i32 [ %i2.ph.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %i2.ph.ph1.ph3, %latchExit.epilog-lcssa.loopexit2 ]
+; EPILOG-NEXT:    %i2.ph.ph1 = phi i32 [ %i2.ph.ph1.ph, %latchExit.epilog-lcssa.loopexit ], [ %i2.ph.ph1.ph4, %latchExit.epilog-lcssa.loopexit3 ]
 ; EPILOG-NEXT:    br label %latchExit
 ; EPILOG:       latchExit:
 ; EPILOG-NEXT:    %i2.ph = phi i32 [ %i2.ph.ph, %latchExit.unr-lcssa ], [ %i2.ph.ph1, %latchExit.epilog-lcssa ]
@@ -3098,7 +3087,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i32 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i32 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i32 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %latchExit.unr-lcssa, label %preheader.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %preheader.new
 ; EPILOG-BLOCK:       preheader.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i32 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -3115,20 +3104,19 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; EPILOG-BLOCK:       latch.1:
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add nuw i32 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i32 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %header, label %latchExit.unr-lcssa.loopexit, !llvm.loop !8
-; EPILOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %i2.ph.ph.ph = phi i32 [ -1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %i4.unr.ph = phi i32 [ %inc.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %header, label %latchExit.unr-lcssa, !llvm.loop !8
 ; EPILOG-BLOCK:       latchExit.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %i2.ph.ph = phi i32 [ poison, %preheader ], [ %i2.ph.ph.ph, %latchExit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %i4.unr = phi i32 [ 0, %preheader ], [ %i4.unr.ph, %latchExit.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %i2.ph.ph = phi i32 [ -1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %i4.unr = phi i32 [ %inc.1, %latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i32 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchExit
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %i4.epil.init = phi i32 [ 0, %preheader ], [ %i4.unr, %latchExit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod2 = icmp ne i32 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
-; EPILOG-BLOCK-NEXT:    %inc.epil = add nuw i32 %i4.unr, 1
+; EPILOG-BLOCK-NEXT:    %inc.epil = add nuw i32 %i4.epil.init, 1
 ; EPILOG-BLOCK-NEXT:    %cmp1.epil = icmp ult i32 %inc.epil, %N
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp1.epil, label %latch.epil, label %latchExit.epilog-lcssa
 ; EPILOG-BLOCK:       latch.epil:
@@ -3137,7 +3125,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; EPILOG-BLOCK-NEXT:    %i2.ph.ph1.ph = phi i32 [ %i4, %header ], [ %inc, %latch ]
 ; EPILOG-BLOCK-NEXT:    br label %latchExit.epilog-lcssa
 ; EPILOG-BLOCK:       latchExit.epilog-lcssa:
-; EPILOG-BLOCK-NEXT:    %i2.ph.ph1 = phi i32 [ -1, %latch.epil ], [ %i4.unr, %header.epil ], [ %i2.ph.ph1.ph, %latchExit.epilog-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %i2.ph.ph1 = phi i32 [ -1, %latch.epil ], [ %i4.epil.init, %header.epil ], [ %i2.ph.ph1.ph, %latchExit.epilog-lcssa.loopexit ]
 ; EPILOG-BLOCK-NEXT:    br label %latchExit
 ; EPILOG-BLOCK:       latchExit:
 ; EPILOG-BLOCK-NEXT:    %i2.ph = phi i32 [ %i2.ph.ph, %latchExit.unr-lcssa ], [ %i2.ph.ph1, %latchExit.epilog-lcssa ]
@@ -3300,7 +3288,7 @@ define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %latchexit.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %loop_header
@@ -3390,39 +3378,38 @@ define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; EPILOG-NEXT:    %sum.next.7 = add i64 %sum.next.6, %add
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %latchexit.unr-lcssa.loopexit
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %latchexit.unr-lcssa
 ; EPILOG:       exit1.loopexit:
 ; EPILOG-NEXT:    %result.ph = phi i64 [ %ivy, %loop_exiting ], [ %ivy, %loop_exiting ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.2, %loop_exiting.2 ], [ %ivy.2, %loop_exiting.2 ], [ %ivy.3, %loop_exiting.3 ], [ %ivy.3, %loop_exiting.3 ], [ %ivy.4, %loop_exiting.4 ], [ %ivy.4, %loop_exiting.4 ], [ %ivy.5, %loop_exiting.5 ], [ %ivy.5, %loop_exiting.5 ], [ %ivy.6, %loop_exiting.6 ], [ %ivy.6, %loop_exiting.6 ], [ %ivy.7, %loop_exiting.7 ], [ %ivy.7, %loop_exiting.7 ]
 ; EPILOG-NEXT:    br label %exit1
-; EPILOG:       exit1.loopexit2:
-; EPILOG-NEXT:    %result.ph3 = phi i64 [ %ivy.epil, %loop_exiting.epil ], [ %ivy.epil, %loop_exiting.epil ]
+; EPILOG:       exit1.loopexit3:
+; EPILOG-NEXT:    %result.ph4 = phi i64 [ %ivy.epil, %loop_exiting.epil ], [ %ivy.epil, %loop_exiting.epil ]
 ; EPILOG-NEXT:    br label %exit1
 ; EPILOG:       exit1:
-; EPILOG-NEXT:    %result = phi i64 [ %result.ph, %exit1.loopexit ], [ %result.ph3, %exit1.loopexit2 ]
+; EPILOG-NEXT:    %result = phi i64 [ %result.ph, %exit1.loopexit ], [ %result.ph4, %exit1.loopexit3 ]
 ; EPILOG-NEXT:    ret i64 %result
-; EPILOG:       latchexit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %sum.next.lcssa.ph.ph = phi i64 [ %sum.next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    %sum.unr.ph = phi i64 [ %sum.next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br label %latchexit.unr-lcssa
 ; EPILOG:       latchexit.unr-lcssa:
-; EPILOG-NEXT:    %sum.next.lcssa.ph = phi i64 [ poison, %entry ], [ %sum.next.lcssa.ph.ph, %latchexit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %latchexit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %sum.unr = phi i64 [ 0, %entry ], [ %sum.unr.ph, %latchexit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %sum.next.lcssa.ph = phi i64 [ %sum.next.7, %loop_latch.7 ]
+; EPILOG-NEXT:    %iv.unr = phi i64 [ %iv_next.7, %loop_latch.7 ]
+; EPILOG-NEXT:    %sum.unr = phi i64 [ %sum.next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %latchexit
 ; EPILOG:       loop_header.epil.preheader:
+; EPILOG-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %latchexit.unr-lcssa ]
+; EPILOG-NEXT:    %sum.epil.init = phi i64 [ 0, %entry ], [ %sum.unr, %latchexit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-NEXT:    br label %loop_header.epil
 ; EPILOG:       loop_header.epil:
-; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
-; EPILOG-NEXT:    %sum.epil = phi i64 [ %sum.unr, %loop_header.epil.preheader ], [ %sum.next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.epil.init, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %sum.epil = phi i64 [ %sum.epil.init, %loop_header.epil.preheader ], [ %sum.next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
 ; EPILOG-NEXT:    br i1 %cond, label %loop_latch.epil, label %loop_exiting.epil
 ; EPILOG:       loop_exiting.epil:
 ; EPILOG-NEXT:    %ivy.epil = add i64 %iv.epil, %add
 ; EPILOG-NEXT:    switch i64 %sum.epil, label %loop_latch.epil [
-; EPILOG-NEXT:      i64 24, label %exit1.loopexit2
-; EPILOG-NEXT:      i64 42, label %exit1.loopexit2
+; EPILOG-NEXT:      i64 24, label %exit1.loopexit3
+; EPILOG-NEXT:      i64 42, label %exit1.loopexit3
 ; EPILOG-NEXT:    ]
 ; EPILOG:       loop_latch.epil:
 ; EPILOG-NEXT:    %iv_next.epil = add nuw nsw i64 %iv.epil, 1
@@ -3444,7 +3431,7 @@ define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %latchexit.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %loop_header
@@ -3474,36 +3461,35 @@ define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %sum.next.1 = add i64 %sum.next, %add
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %latchexit.unr-lcssa.loopexit, !llvm.loop !9
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %latchexit.unr-lcssa, !llvm.loop !9
 ; EPILOG-BLOCK:       exit1.loopexit:
 ; EPILOG-BLOCK-NEXT:    %result.ph = phi i64 [ %ivy, %loop_exiting ], [ %ivy, %loop_exiting ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.1, %loop_exiting.1 ]
 ; EPILOG-BLOCK-NEXT:    br label %exit1
 ; EPILOG-BLOCK:       exit1:
 ; EPILOG-BLOCK-NEXT:    %result = phi i64 [ %ivy.epil, %loop_exiting.epil ], [ %ivy.epil, %loop_exiting.epil ], [ %result.ph, %exit1.loopexit ]
 ; EPILOG-BLOCK-NEXT:    ret i64 %result
-; EPILOG-BLOCK:       latchexit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %sum.next.lcssa.ph.ph = phi i64 [ %sum.next.1, %loop_latch.1 ]
-; EPILOG-BLOCK-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.1, %loop_latch.1 ]
-; EPILOG-BLOCK-NEXT:    %sum.unr.ph = phi i64 [ %sum.next.1, %loop_latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %latchexit.unr-lcssa
 ; EPILOG-BLOCK:       latchexit.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %sum.next.lcssa.ph = phi i64 [ poison, %entry ], [ %sum.next.lcssa.ph.ph, %latchexit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %latchexit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %sum.unr = phi i64 [ 0, %entry ], [ %sum.unr.ph, %latchexit.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %sum.next.lcssa.ph = phi i64 [ %sum.next.1, %loop_latch.1 ]
+; EPILOG-BLOCK-NEXT:    %iv.unr = phi i64 [ %iv_next.1, %loop_latch.1 ]
+; EPILOG-BLOCK-NEXT:    %sum.unr = phi i64 [ %sum.next.1, %loop_latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %latchexit
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %latchexit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %sum.epil.init = phi i64 [ 0, %entry ], [ %sum.unr, %latchexit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 %cond, label %loop_latch.epil, label %loop_exiting.epil
 ; EPILOG-BLOCK:       loop_exiting.epil:
-; EPILOG-BLOCK-NEXT:    %ivy.epil = add i64 %iv.unr, %add
-; EPILOG-BLOCK-NEXT:    switch i64 %sum.unr, label %loop_latch.epil [
+; EPILOG-BLOCK-NEXT:    %ivy.epil = add i64 %iv.epil.init, %add
+; EPILOG-BLOCK-NEXT:    switch i64 %sum.epil.init, label %loop_latch.epil [
 ; EPILOG-BLOCK-NEXT:      i64 24, label %exit1
 ; EPILOG-BLOCK-NEXT:      i64 42, label %exit1
 ; EPILOG-BLOCK-NEXT:    ]
 ; EPILOG-BLOCK:       loop_latch.epil:
-; EPILOG-BLOCK-NEXT:    %sum.next.epil = add i64 %sum.unr, %add
+; EPILOG-BLOCK-NEXT:    %sum.next.epil = add i64 %sum.epil.init, %add
 ; EPILOG-BLOCK-NEXT:    br label %latchexit
 ; EPILOG-BLOCK:       latchexit:
 ; EPILOG-BLOCK-NEXT:    %sum.next.lcssa = phi i64 [ %sum.next.lcssa.ph, %latchexit.unr-lcssa ], [ %sum.next.epil, %loop_latch.epil ]
@@ -3752,7 +3738,7 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %latch_exit.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -3834,28 +3820,27 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; EPILOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp eq i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latch_exit.unr-lcssa.loopexit, label %header
-; EPILOG:       latch_exit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %sum.0.lcssa.ph.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.7, %latch.7 ]
-; EPILOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    br label %latch_exit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %latch_exit.unr-lcssa, label %header
 ; EPILOG:       latch_exit.unr-lcssa:
-; EPILOG-NEXT:    %sum.0.lcssa.ph = phi i32 [ poison, %entry ], [ %sum.0.lcssa.ph.ph, %latch_exit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latch_exit.unr-lcssa.loopexit ]
-; EPILOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latch_exit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %sum.0.lcssa.ph = phi i32 [ %add.7, %latch.7 ]
+; EPILOG-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.7, %latch.7 ]
+; EPILOG-NEXT:    %sum.02.unr = phi i32 [ %add.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latch_exit
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latch_exit.unr-lcssa ]
+; EPILOG-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latch_exit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.unr, %header.epil.preheader ]
-; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.unr, %header.epil.preheader ]
+; EPILOG-NEXT:    %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %latch.epil ], [ %indvars.iv.epil.init, %header.epil.preheader ]
+; EPILOG-NEXT:    %sum.02.epil = phi i32 [ %add.epil, %latch.epil ], [ %sum.02.epil.init, %header.epil.preheader ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %header.epil.preheader ], [ %epil.iter.next, %latch.epil ]
-; EPILOG-NEXT:    br i1 false, label %for.exit2.loopexit2, label %for.exiting_block.epil
+; EPILOG-NEXT:    br i1 false, label %for.exit2.loopexit3, label %for.exiting_block.epil
 ; EPILOG:       for.exiting_block.epil:
 ; EPILOG-NEXT:    %cmp.epil = icmp eq i64 %n, 42
-; EPILOG-NEXT:    br i1 %cmp.epil, label %for.exit2.loopexit2, label %latch.epil
+; EPILOG-NEXT:    br i1 %cmp.epil, label %for.exit2.loopexit3, label %latch.epil
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil
 ; EPILOG-NEXT:    %load.epil = load i32, ptr %arrayidx.epil, align 4
@@ -3874,11 +3859,11 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; EPILOG:       for.exit2.loopexit:
 ; EPILOG-NEXT:    %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %latch ], [ 42, %for.exiting_block.1 ], [ %add.1, %latch.1 ], [ 42, %for.exiting_block.2 ], [ %add.2, %latch.2 ], [ 42, %for.exiting_block.3 ], [ %add.3, %latch.3 ], [ 42, %for.exiting_block.4 ], [ %add.4, %latch.4 ], [ 42, %for.exiting_block.5 ], [ %add.5, %latch.5 ], [ 42, %for.exiting_block.6 ], [ %add.6, %latch.6 ], [ 42, %for.exiting_block.7 ]
 ; EPILOG-NEXT:    br label %for.exit2
-; EPILOG:       for.exit2.loopexit2:
-; EPILOG-NEXT:    %retval.ph3 = phi i32 [ 42, %for.exiting_block.epil ], [ %sum.02.epil, %header.epil ]
+; EPILOG:       for.exit2.loopexit3:
+; EPILOG-NEXT:    %retval.ph4 = phi i32 [ 42, %for.exiting_block.epil ], [ %sum.02.epil, %header.epil ]
 ; EPILOG-NEXT:    br label %for.exit2
 ; EPILOG:       for.exit2:
-; EPILOG-NEXT:    %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph3, %for.exit2.loopexit2 ]
+; EPILOG-NEXT:    %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph4, %for.exit2.loopexit3 ]
 ; EPILOG-NEXT:    %addx = add i32 %retval, %x
 ; EPILOG-NEXT:    br i1 %cond, label %exit_true, label %exit_false
 ; EPILOG:       exit_true:
@@ -3892,7 +3877,7 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %latch_exit.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -3920,19 +3905,18 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; EPILOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp eq i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latch_exit.unr-lcssa.loopexit, label %header, !llvm.loop !10
-; EPILOG-BLOCK:       latch_exit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %sum.0.lcssa.ph.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr.ph = phi i32 [ %add.1, %latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %latch_exit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %latch_exit.unr-lcssa, label %header, !llvm.loop !10
 ; EPILOG-BLOCK:       latch_exit.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %sum.0.lcssa.ph = phi i32 [ poison, %entry ], [ %sum.0.lcssa.ph.ph, %latch_exit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %latch_exit.unr-lcssa.loopexit ]
-; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %latch_exit.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %sum.0.lcssa.ph = phi i32 [ %add.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ %indvars.iv.next.1, %latch.1 ]
+; EPILOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ %add.1, %latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latch_exit
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %indvars.iv.epil.init = phi i64 [ 0, %entry ], [ %indvars.iv.unr, %latch_exit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %sum.02.epil.init = phi i32 [ 0, %entry ], [ %sum.02.unr, %latch_exit.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod2 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod2)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 false, label %for.exit2, label %for.exiting_block.epil
@@ -3940,9 +3924,9 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; EPILOG-BLOCK-NEXT:    %cmp.epil = icmp eq i64 %n, 42
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp.epil, label %for.exit2, label %latch.epil
 ; EPILOG-BLOCK:       latch.epil:
-; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.unr
+; EPILOG-BLOCK-NEXT:    %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.epil.init
 ; EPILOG-BLOCK-NEXT:    %load.epil = load i32, ptr %arrayidx.epil, align 4
-; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %load.epil, %sum.02.unr
+; EPILOG-BLOCK-NEXT:    %add.epil = add nsw i32 %load.epil, %sum.02.epil.init
 ; EPILOG-BLOCK-NEXT:    br label %latch_exit
 ; EPILOG-BLOCK:       latch_exit:
 ; EPILOG-BLOCK-NEXT:    %sum.0.lcssa = phi i32 [ %sum.0.lcssa.ph, %latch_exit.unr-lcssa ], [ %add.epil, %latch.epil ]
@@ -3951,7 +3935,7 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; EPILOG-BLOCK-NEXT:    %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %latch ], [ 42, %for.exiting_block.1 ]
 ; EPILOG-BLOCK-NEXT:    br label %for.exit2
 ; EPILOG-BLOCK:       for.exit2:
-; EPILOG-BLOCK-NEXT:    %retval = phi i32 [ %sum.02.unr, %header.epil ], [ 42, %for.exiting_block.epil ], [ %retval.ph, %for.exit2.loopexit ]
+; EPILOG-BLOCK-NEXT:    %retval = phi i32 [ %sum.02.epil.init, %header.epil ], [ 42, %for.exiting_block.epil ], [ %retval.ph, %for.exit2.loopexit ]
 ; EPILOG-BLOCK-NEXT:    %addx = add i32 %retval, %x
 ; EPILOG-BLOCK-NEXT:    br i1 %cond, label %exit_true, label %exit_false
 ; EPILOG-BLOCK:       exit_true:
@@ -4213,7 +4197,7 @@ define i32 @test7(i32 %arg, i32 %arg1, i32 %arg2) {
 ; EPILOG-NEXT:    %2 = add i64 %1, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %1, 7
 ; EPILOG-NEXT:    %3 = icmp ult i64 %2, 7
-; EPILOG-NEXT:    br i1 %3, label %latchexit.unr-lcssa, label %preheader.new
+; EPILOG-NEXT:    br i1 %3, label %header.epil.preheader, label %preheader.new
 ; EPILOG:       preheader.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %1, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -4239,20 +4223,20 @@ define i32 @test7(i32 %arg, i32 %arg1, i32 %arg2) {
 ; EPILOG-NEXT:    %add.7 = add nuw nsw i64 %i6, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %header, label %latchexit.unr-lcssa.loopexit
-; EPILOG:       latchexit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %i6.unr.ph = phi i64 [ %add.7, %latch.7 ]
-; EPILOG-NEXT:    br label %latchexit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %header, label %latchexit.unr-lcssa
 ; EPILOG:       latchexit.unr-lcssa:
-; EPILOG-NEXT:    %i6.unr = phi i64 [ 1, %preheader ], [ %i6.unr.ph, %latchexit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %i6.unr = phi i64 [ %add.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchexit
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %i6.epil.init = phi i64 [ 1, %preheader ], [ %i6.unr, %latchexit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %i6.epil = phi i64 [ %i6.unr, %header.epil.preheader ], [ %add.epil, %latch.epil ]
+; EPILOG-NEXT:    %i6.epil = phi i64 [ %i6.epil.init, %header.epil.preheader ], [ %add.epil, %latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %header.epil.preheader ], [ %epil.iter.next, %latch.epil ]
-; EPILOG-NEXT:    br i1 false, label %loopexit1.loopexit1, label %latch.epil
+; EPILOG-NEXT:    br i1 false, label %loopexit1.loopexit2, label %latch.epil
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %add.epil = add nuw nsw i64 %i6.epil, 1
 ; EPILOG-NEXT:    %i9.epil = icmp slt i64 %add.epil, %sext
@@ -4268,11 +4252,11 @@ define i32 @test7(i32 %arg, i32 %arg1, i32 %arg2) {
 ; EPILOG:       loopexit1.loopexit:
 ; EPILOG-NEXT:    %sext3.ph = phi i32 [ %shft, %header ], [ %shft, %latch ], [ %shft, %latch.1 ], [ %shft, %latch.2 ], [ %shft, %latch.3 ], [ %shft, %latch.4 ], [ %shft, %latch.5 ], [ %shft, %latch.6 ]
 ; EPILOG-NEXT:    br label %loopexit1
-; EPILOG:       loopexit1.loopexit1:
-; EPILOG-NEXT:    %sext3.ph2 = phi i32 [ %shft, %header.epil ]
+; EPILOG:       loopexit1.loopexit2:
+; EPILOG-NEXT:    %sext3.ph3 = phi i32 [ %shft, %header.epil ]
 ; EPILOG-NEXT:    br label %loopexit1
 ; EPILOG:       loopexit1:
-; EPILOG-NEXT:    %sext3 = phi i32 [ %sext3.ph, %loopexit1.loopexit ], [ %sext3.ph2, %loopexit1.loopexit1 ]
+; EPILOG-NEXT:    %sext3 = phi i32 [ %sext3.ph, %loopexit1.loopexit ], [ %sext3.ph3, %loopexit1.loopexit2 ]
 ; EPILOG-NEXT:    ret i32 %sext3
 ;
 ; EPILOG-BLOCK-LABEL: @test7(
@@ -4287,7 +4271,7 @@ define i32 @test7(i32 %arg, i32 %arg1, i32 %arg2) {
 ; EPILOG-BLOCK-NEXT:    %2 = add i64 %1, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %1, 1
 ; EPILOG-BLOCK-NEXT:    %3 = icmp ult i64 %2, 1
-; EPILOG-BLOCK-NEXT:    br i1 %3, label %latchexit.unr-lcssa, label %preheader.new
+; EPILOG-BLOCK-NEXT:    br i1 %3, label %header.epil.preheader, label %preheader.new
 ; EPILOG-BLOCK:       preheader.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %1, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -4301,13 +4285,13 @@ define i32 @test7(i32 %arg, i32 %arg1, i32 %arg2) {
 ; EPILOG-BLOCK-NEXT:    %add.1 = add nuw nsw i64 %i6, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %header, label %latchexit.unr-lcssa.loopexit, !llvm.loop !11
-; EPILOG-BLOCK:       latchexit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    br label %latchexit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %header, label %latchexit.unr-lcssa, !llvm.loop !11
 ; EPILOG-BLOCK:       latchexit.unr-lcssa:
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %latchexit
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 false, label %loopexit1, label %latch.epil
@@ -4480,7 +4464,7 @@ define void @test8() {
 ; EPILOG-NEXT:    br label %outerloop
 ; EPILOG:       outerloop.loopexit.loopexit:
 ; EPILOG-NEXT:    br label %outerloop.loopexit
-; EPILOG:       outerloop.loopexit.loopexit1:
+; EPILOG:       outerloop.loopexit.loopexit2:
 ; EPILOG-NEXT:    br label %outerloop.loopexit
 ; EPILOG:       outerloop.loopexit:
 ; EPILOG-NEXT:    br label %outerloop
@@ -4490,7 +4474,7 @@ define void @test8() {
 ; EPILOG-NEXT:    %1 = sub i64 99, %i
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %exit.unr-lcssa, label %outerloop.new
+; EPILOG-NEXT:    br i1 %2, label %innerH.epil.preheader, label %outerloop.new
 ; EPILOG:       outerloop.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %innerH
@@ -4516,21 +4500,21 @@ define void @test8() {
 ; EPILOG:       latch.7:
 ; EPILOG-NEXT:    %niter.next.7 = add nuw nsw i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %innerH, label %exit.unr-lcssa.loopexit
-; EPILOG:       exit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %i3.unr.ph = phi i64 [ %i4.7, %latch.7 ]
-; EPILOG-NEXT:    br label %exit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %innerH, label %exit.unr-lcssa
 ; EPILOG:       exit.unr-lcssa:
-; EPILOG-NEXT:    %i3.unr = phi i64 [ %i, %outerloop ], [ %i3.unr.ph, %exit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %i3.unr = phi i64 [ %i4.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %innerH.epil.preheader, label %exit.loopexit
 ; EPILOG:       innerH.epil.preheader:
+; EPILOG-NEXT:    %i3.epil.init = phi i64 [ %i, %outerloop ], [ %i3.unr, %exit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %innerH.epil
 ; EPILOG:       innerH.epil:
-; EPILOG-NEXT:    %i3.epil = phi i64 [ %i4.epil, %latch.epil ], [ %i3.unr, %innerH.epil.preheader ]
+; EPILOG-NEXT:    %i3.epil = phi i64 [ %i4.epil, %latch.epil ], [ %i3.epil.init, %innerH.epil.preheader ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %innerH.epil.preheader ], [ %epil.iter.next, %latch.epil ]
 ; EPILOG-NEXT:    %i4.epil = add nuw nsw i64 %i3.epil, 1
-; EPILOG-NEXT:    br i1 false, label %outerloop.loopexit.loopexit1, label %latch.epil
+; EPILOG-NEXT:    br i1 false, label %outerloop.loopexit.loopexit2, label %latch.epil
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %i6.epil = icmp ult i64 %i4.epil, 100
 ; EPILOG-NEXT:    %epil.iter.next = add i64 %epil.iter, 1
@@ -4549,27 +4533,26 @@ define void @test8() {
 ; EPILOG-BLOCK:       outerloop.loopexit.loopexit:
 ; EPILOG-BLOCK-NEXT:    br label %outerloop.loopexit
 ; EPILOG-BLOCK:       outerloop.loopexit:
-; EPILOG-BLOCK-NEXT:    br i1 false, label %exit.unr-lcssa.1, label %outerloop.new.1
+; EPILOG-BLOCK-NEXT:    br i1 false, label %innerH.epil.preheader.1, label %outerloop.new.1
 ; EPILOG-BLOCK:       outerloop.new.1:
 ; EPILOG-BLOCK-NEXT:    br label %innerH.1
 ; EPILOG-BLOCK:       innerH.1:
 ; EPILOG-BLOCK-NEXT:    %i3.1 = phi i64 [ 0, %outerloop.new.1 ], [ %i4.1.1, %latch.1.1 ]
 ; EPILOG-BLOCK-NEXT:    %niter.1 = phi i64 [ 0, %outerloop.new.1 ], [ %niter.next.1.1, %latch.1.1 ]
-; EPILOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit.loopexit.1, label %latch.12
-; EPILOG-BLOCK:       latch.12:
+; EPILOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit.loopexit.1, label %latch.13
+; EPILOG-BLOCK:       latch.13:
 ; EPILOG-BLOCK-NEXT:    %i4.1.1 = add nuw nsw i64 %i3.1, 2
 ; EPILOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit.loopexit.1, label %latch.1.1
 ; EPILOG-BLOCK:       latch.1.1:
 ; EPILOG-BLOCK-NEXT:    %niter.next.1.1 = add i64 %niter.1, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1.1 = icmp ne i64 %niter.next.1.1, 100
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1.1, label %innerH.1, label %exit.unr-lcssa.loopexit.1, !llvm.loop !12
-; EPILOG-BLOCK:       exit.unr-lcssa.loopexit.1:
-; EPILOG-BLOCK-NEXT:    br label %exit.unr-lcssa.1
-; EPILOG-BLOCK:       outerloop.loopexit.loopexit.1:
-; EPILOG-BLOCK-NEXT:    br label %outerloop.loopexit.1
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1.1, label %innerH.1, label %exit.unr-lcssa.1, !llvm.loop !12
 ; EPILOG-BLOCK:       exit.unr-lcssa.1:
 ; EPILOG-BLOCK-NEXT:    br i1 false, label %innerH.epil.preheader.1, label %exit.loopexit
+; EPILOG-BLOCK:       outerloop.loopexit.loopexit.1:
+; EPILOG-BLOCK-NEXT:    br label %outerloop.loopexit.1
 ; EPILOG-BLOCK:       innerH.epil.preheader.1:
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 false)
 ; EPILOG-BLOCK-NEXT:    br label %innerH.epil.1
 ; EPILOG-BLOCK:       innerH.epil.1:
 ; EPILOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit.1, label %latch.epil
@@ -4581,7 +4564,7 @@ define void @test8() {
 ; EPILOG-BLOCK-NEXT:    %1 = sub i64 99, %i
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit.unr-lcssa, label %outerloop.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %innerH.epil.preheader, label %outerloop.new
 ; EPILOG-BLOCK:       outerloop.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %innerH
@@ -4595,13 +4578,13 @@ define void @test8() {
 ; EPILOG-BLOCK:       latch.1:
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %innerH, label %exit.unr-lcssa.loopexit, !llvm.loop !12
-; EPILOG-BLOCK:       exit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    br label %exit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %innerH, label %exit.unr-lcssa, !llvm.loop !12
 ; EPILOG-BLOCK:       exit.unr-lcssa:
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %innerH.epil.preheader, label %exit.loopexit
 ; EPILOG-BLOCK:       innerH.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %innerH.epil
 ; EPILOG-BLOCK:       innerH.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit, label %latch.epil
@@ -4788,7 +4771,7 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-NEXT:    %2 = add i32 %1, -1
 ; EPILOG-NEXT:    %xtraiter = and i32 %1, 7
 ; EPILOG-NEXT:    %3 = icmp ult i32 %2, 7
-; EPILOG-NEXT:    br i1 %3, label %outerLatch.loopexit.unr-lcssa, label %preheader.new
+; EPILOG-NEXT:    br i1 %3, label %header.epil.preheader, label %preheader.new
 ; EPILOG:       preheader.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i32 %1, %xtraiter
 ; EPILOG-NEXT:    br label %header
@@ -4799,11 +4782,11 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG:       innerexit.loopexit:
 ; EPILOG-NEXT:    %trip.lcssa.ph = phi i32 [ %trip, %header ], [ %trip, %latch ], [ %trip, %latch.1 ], [ %trip, %latch.2 ], [ %trip, %latch.3 ], [ %trip, %latch.4 ], [ %trip, %latch.5 ], [ %trip, %latch.6 ]
 ; EPILOG-NEXT:    br label %innerexit
-; EPILOG:       innerexit.loopexit1:
-; EPILOG-NEXT:    %trip.lcssa.ph2 = phi i32 [ %trip, %header.epil ]
+; EPILOG:       innerexit.loopexit2:
+; EPILOG-NEXT:    %trip.lcssa.ph3 = phi i32 [ %trip, %header.epil ]
 ; EPILOG-NEXT:    br label %innerexit
 ; EPILOG:       innerexit:
-; EPILOG-NEXT:    %trip.lcssa = phi i32 [ %trip.lcssa.ph, %innerexit.loopexit ], [ %trip.lcssa.ph2, %innerexit.loopexit1 ]
+; EPILOG-NEXT:    %trip.lcssa = phi i32 [ %trip.lcssa.ph, %innerexit.loopexit ], [ %trip.lcssa.ph3, %innerexit.loopexit2 ]
 ; EPILOG-NEXT:    %i9 = call ptr addrspace(1) @foo(i32 %trip.lcssa)
 ; EPILOG-NEXT:    ret ptr addrspace(1) %i9
 ; EPILOG:       latch:
@@ -4824,21 +4807,21 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-NEXT:    %iv.next.7 = add nuw nsw i64 %phi, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i32 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i32 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %header, label %outerLatch.loopexit.unr-lcssa.loopexit
-; EPILOG:       outerLatch.loopexit.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %phi.unr.ph = phi i64 [ %iv.next.7, %latch.7 ]
-; EPILOG-NEXT:    br label %outerLatch.loopexit.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %header, label %outerLatch.loopexit.unr-lcssa
 ; EPILOG:       outerLatch.loopexit.unr-lcssa:
-; EPILOG-NEXT:    %phi.unr = phi i64 [ %i4, %preheader ], [ %phi.unr.ph, %outerLatch.loopexit.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %phi.unr = phi i64 [ %iv.next.7, %latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i32 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %outerLatch.loopexit
 ; EPILOG:       header.epil.preheader:
+; EPILOG-NEXT:    %phi.epil.init = phi i64 [ %i4, %preheader ], [ %phi.unr, %outerLatch.loopexit.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i32 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %header.epil
 ; EPILOG:       header.epil:
-; EPILOG-NEXT:    %phi.epil = phi i64 [ %phi.unr, %header.epil.preheader ], [ %iv.next.epil, %latch.epil ]
+; EPILOG-NEXT:    %phi.epil = phi i64 [ %phi.epil.init, %header.epil.preheader ], [ %iv.next.epil, %latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i32 [ 0, %header.epil.preheader ], [ %epil.iter.next, %latch.epil ]
 ; EPILOG-NEXT:    %i7.epil = trunc i64 %phi.epil to i32
-; EPILOG-NEXT:    br i1 true, label %latch.epil, label %innerexit.loopexit1
+; EPILOG-NEXT:    br i1 true, label %latch.epil, label %innerexit.loopexit2
 ; EPILOG:       latch.epil:
 ; EPILOG-NEXT:    %i11.epil = add nsw i32 %i7.epil, 1
 ; EPILOG-NEXT:    %innercnd.epil = icmp slt i32 %i11.epil, %trip
@@ -4866,7 +4849,7 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-BLOCK-NEXT:    %2 = add i32 %1, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i32 %1, 1
 ; EPILOG-BLOCK-NEXT:    %3 = icmp ult i32 %2, 1
-; EPILOG-BLOCK-NEXT:    br i1 %3, label %outerLatch.loopexit.unr-lcssa, label %preheader.new
+; EPILOG-BLOCK-NEXT:    br i1 %3, label %header.epil.preheader, label %preheader.new
 ; EPILOG-BLOCK:       preheader.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i32 %1, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
@@ -4877,17 +4860,17 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-BLOCK:       innerexit.loopexit.loopexit:
 ; EPILOG-BLOCK-NEXT:    %trip.lcssa.ph.ph = phi i32 [ %trip, %latch ], [ %trip, %header ]
 ; EPILOG-BLOCK-NEXT:    br label %innerexit.loopexit
-; EPILOG-BLOCK:       innerexit.loopexit.loopexit4:
-; EPILOG-BLOCK-NEXT:    %trip.lcssa.ph.ph5 = phi i32 [ %trip.1, %latch.13 ], [ %trip.1, %header.1 ]
+; EPILOG-BLOCK:       innerexit.loopexit.loopexit5:
+; EPILOG-BLOCK-NEXT:    %trip.lcssa.ph.ph6 = phi i32 [ %trip.1, %latch.14 ], [ %trip.1, %header.1 ]
 ; EPILOG-BLOCK-NEXT:    br label %innerexit.loopexit
 ; EPILOG-BLOCK:       innerexit.loopexit:
-; EPILOG-BLOCK-NEXT:    %trip.lcssa.ph = phi i32 [ %trip.lcssa.ph.ph, %innerexit.loopexit.loopexit ], [ %trip.lcssa.ph.ph5, %innerexit.loopexit.loopexit4 ]
+; EPILOG-BLOCK-NEXT:    %trip.lcssa.ph = phi i32 [ %trip.lcssa.ph.ph, %innerexit.loopexit.loopexit ], [ %trip.lcssa.ph.ph6, %innerexit.loopexit.loopexit5 ]
 ; EPILOG-BLOCK-NEXT:    br label %innerexit
-; EPILOG-BLOCK:       innerexit.loopexit1:
-; EPILOG-BLOCK-NEXT:    %trip.lcssa.ph2 = phi i32 [ %trip, %header.epil ], [ %trip.1, %header.epil.1 ]
+; EPILOG-BLOCK:       innerexit.loopexit2:
+; EPILOG-BLOCK-NEXT:    %trip.lcssa.ph3 = phi i32 [ %trip, %header.epil ], [ %trip.1, %header.epil.1 ]
 ; EPILOG-BLOCK-NEXT:    br label %innerexit
 ; EPILOG-BLOCK:       innerexit:
-; EPILOG-BLOCK-NEXT:    %trip.lcssa = phi i32 [ %trip.lcssa.ph, %innerexit.loopexit ], [ %trip.lcssa.ph2, %innerexit.loopexit1 ]
+; EPILOG-BLOCK-NEXT:    %trip.lcssa = phi i32 [ %trip.lcssa.ph, %innerexit.loopexit ], [ %trip.lcssa.ph3, %innerexit.loopexit2 ]
 ; EPILOG-BLOCK-NEXT:    %i9 = call ptr addrspace(1) @foo(i32 %trip.lcssa)
 ; EPILOG-BLOCK-NEXT:    ret ptr addrspace(1) %i9
 ; EPILOG-BLOCK:       latch:
@@ -4896,16 +4879,16 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-BLOCK-NEXT:    %iv.next.1 = add nuw nsw i64 %phi, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i32 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i32 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %header, label %outerLatch.loopexit.unr-lcssa.loopexit, !llvm.loop !14
-; EPILOG-BLOCK:       outerLatch.loopexit.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    br label %outerLatch.loopexit.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %header, label %outerLatch.loopexit.unr-lcssa, !llvm.loop !14
 ; EPILOG-BLOCK:       outerLatch.loopexit.unr-lcssa:
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i32 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.epil.preheader, label %outerLatch.loopexit
 ; EPILOG-BLOCK:       header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i32 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil
 ; EPILOG-BLOCK:       header.epil:
-; EPILOG-BLOCK-NEXT:    br i1 true, label %latch.epil, label %innerexit.loopexit1
+; EPILOG-BLOCK-NEXT:    br i1 true, label %latch.epil, label %innerexit.loopexit2
 ; EPILOG-BLOCK:       latch.epil:
 ; EPILOG-BLOCK-NEXT:    br label %outerLatch.loopexit
 ; EPILOG-BLOCK:       outerLatch.loopexit:
@@ -4919,30 +4902,30 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-BLOCK-NEXT:    %5 = add i32 %4, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %4, 1
 ; EPILOG-BLOCK-NEXT:    %6 = icmp ult i32 %5, 1
-; EPILOG-BLOCK-NEXT:    br i1 %6, label %outerLatch.loopexit.unr-lcssa.1, label %preheader.new.1
+; EPILOG-BLOCK-NEXT:    br i1 %6, label %header.epil.preheader.1, label %preheader.new.1
 ; EPILOG-BLOCK:       preheader.new.1:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter.1 = sub i32 %4, %xtraiter.1
 ; EPILOG-BLOCK-NEXT:    br label %header.1
 ; EPILOG-BLOCK:       header.1:
 ; EPILOG-BLOCK-NEXT:    %phi.1 = phi i64 [ 0, %preheader.new.1 ], [ %iv.next.1.1, %latch.1.1 ]
 ; EPILOG-BLOCK-NEXT:    %niter.1 = phi i32 [ 0, %preheader.new.1 ], [ %niter.next.1.1, %latch.1.1 ]
-; EPILOG-BLOCK-NEXT:    br i1 true, label %latch.13, label %innerexit.loopexit.loopexit4
-; EPILOG-BLOCK:       latch.13:
-; EPILOG-BLOCK-NEXT:    br i1 true, label %latch.1.1, label %innerexit.loopexit.loopexit4
+; EPILOG-BLOCK-NEXT:    br i1 true, label %latch.14, label %innerexit.loopexit.loopexit5
+; EPILOG-BLOCK:       latch.14:
+; EPILOG-BLOCK-NEXT:    br i1 true, label %latch.1.1, label %innerexit.loopexit.loopexit5
 ; EPILOG-BLOCK:       latch.1.1:
 ; EPILOG-BLOCK-NEXT:    %iv.next.1.1 = add nuw nsw i64 %phi.1, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1.1 = add i32 %niter.1, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1.1 = icmp ne i32 %niter.next.1.1, %unroll_iter.1
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1.1, label %header.1, label %outerLatch.loopexit.unr-lcssa.loopexit.1, !llvm.loop !14
-; EPILOG-BLOCK:       outerLatch.loopexit.unr-lcssa.loopexit.1:
-; EPILOG-BLOCK-NEXT:    br label %outerLatch.loopexit.unr-lcssa.1
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1.1, label %header.1, label %outerLatch.loopexit.unr-lcssa.1, !llvm.loop !14
 ; EPILOG-BLOCK:       outerLatch.loopexit.unr-lcssa.1:
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod.1 = icmp ne i32 %xtraiter.1, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod.1, label %header.epil.preheader.1, label %outerLatch.loopexit.1
 ; EPILOG-BLOCK:       header.epil.preheader.1:
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1.1 = icmp ne i32 %xtraiter.1, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1.1)
 ; EPILOG-BLOCK-NEXT:    br label %header.epil.1
 ; EPILOG-BLOCK:       header.epil.1:
-; EPILOG-BLOCK-NEXT:    br i1 true, label %latch.epil.1, label %innerexit.loopexit1
+; EPILOG-BLOCK-NEXT:    br i1 true, label %latch.epil.1, label %innerexit.loopexit2
 ; EPILOG-BLOCK:       latch.epil.1:
 ; EPILOG-BLOCK-NEXT:    br label %outerLatch.loopexit.1
 ; EPILOG-BLOCK:       outerLatch.loopexit.1:
@@ -5171,7 +5154,7 @@ define void @test10(i64 %trip, i64 %trip2) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %exit2.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %loop_header
@@ -5220,28 +5203,28 @@ define void @test10(i64 %trip, i64 %trip2) {
 ; EPILOG-NEXT:    %iv_next.7 = add i64 %iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit2.unr-lcssa.loopexit
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit2.unr-lcssa
 ; EPILOG:       exit1.loopexit:
 ; EPILOG-NEXT:    br label %exit1
-; EPILOG:       exit1.loopexit1:
+; EPILOG:       exit1.loopexit2:
 ; EPILOG-NEXT:    br label %exit1
 ; EPILOG:       exit1:
 ; EPILOG-NEXT:    ret void
-; EPILOG:       exit2.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br label %exit2.unr-lcssa
 ; EPILOG:       exit2.unr-lcssa:
-; EPILOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit2.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %iv.unr = phi i64 [ %iv_next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit2
 ; EPILOG:       loop_header.epil.preheader:
+; EPILOG-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit2.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %loop_header.epil
 ; EPILOG:       loop_header.epil:
-; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.epil.init, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
 ; EPILOG-NEXT:    call void @bar()
 ; EPILOG-NEXT:    %cmp_early.epil = icmp ne i64 %iv.epil, %trip2
-; EPILOG-NEXT:    br i1 %cmp_early.epil, label %loop_latch.epil, label %exit1.loopexit1
+; EPILOG-NEXT:    br i1 %cmp_early.epil, label %loop_latch.epil, label %exit1.loopexit2
 ; EPILOG:       loop_latch.epil:
 ; EPILOG-NEXT:    %iv_next.epil = add i64 %iv.epil, 1
 ; EPILOG-NEXT:    %cmp.epil = icmp ne i64 %iv_next.epil, %trip
@@ -5259,7 +5242,7 @@ define void @test10(i64 %trip, i64 %trip2) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit2.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %loop_header
@@ -5278,23 +5261,23 @@ define void @test10(i64 %trip, i64 %trip2) {
 ; EPILOG-BLOCK-NEXT:    %iv_next.1 = add i64 %iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit2.unr-lcssa.loopexit, !llvm.loop !16
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit2.unr-lcssa, !llvm.loop !16
 ; EPILOG-BLOCK:       exit1.loopexit:
 ; EPILOG-BLOCK-NEXT:    br label %exit1
 ; EPILOG-BLOCK:       exit1:
 ; EPILOG-BLOCK-NEXT:    ret void
-; EPILOG-BLOCK:       exit2.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.1, %loop_latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %exit2.unr-lcssa
 ; EPILOG-BLOCK:       exit2.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit2.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %iv.unr = phi i64 [ %iv_next.1, %loop_latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit2
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit2.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
 ; EPILOG-BLOCK-NEXT:    call void @bar()
-; EPILOG-BLOCK-NEXT:    %cmp_early.epil = icmp ne i64 %iv.unr, %trip2
+; EPILOG-BLOCK-NEXT:    %cmp_early.epil = icmp ne i64 %iv.epil.init, %trip2
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp_early.epil, label %loop_latch.epil, label %exit1
 ; EPILOG-BLOCK:       loop_latch.epil:
 ; EPILOG-BLOCK-NEXT:    br label %exit2
@@ -5460,7 +5443,7 @@ define void @test11(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %exit2.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %loop_header
@@ -5494,27 +5477,27 @@ define void @test11(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    %iv_next.7 = add i64 %iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit2.unr-lcssa.loopexit
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit2.unr-lcssa
 ; EPILOG:       exit1.loopexit:
 ; EPILOG-NEXT:    br label %exit1
-; EPILOG:       exit1.loopexit1:
+; EPILOG:       exit1.loopexit2:
 ; EPILOG-NEXT:    br label %exit1
 ; EPILOG:       exit1:
 ; EPILOG-NEXT:    ret void
-; EPILOG:       exit2.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br label %exit2.unr-lcssa
 ; EPILOG:       exit2.unr-lcssa:
-; EPILOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit2.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %iv.unr = phi i64 [ %iv_next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit2
 ; EPILOG:       loop_header.epil.preheader:
+; EPILOG-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit2.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %loop_header.epil
 ; EPILOG:       loop_header.epil:
-; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.epil.init, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
 ; EPILOG-NEXT:    call void @bar()
-; EPILOG-NEXT:    br i1 %cond, label %loop_latch.epil, label %exit1.loopexit1
+; EPILOG-NEXT:    br i1 %cond, label %loop_latch.epil, label %exit1.loopexit2
 ; EPILOG:       loop_latch.epil:
 ; EPILOG-NEXT:    %iv_next.epil = add i64 %iv.epil, 1
 ; EPILOG-NEXT:    %cmp.epil = icmp ne i64 %iv_next.epil, %trip
@@ -5532,7 +5515,7 @@ define void @test11(i64 %trip, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit2.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %loop_header
@@ -5548,17 +5531,17 @@ define void @test11(i64 %trip, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %iv_next.1 = add i64 %iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit2.unr-lcssa.loopexit, !llvm.loop !17
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit2.unr-lcssa, !llvm.loop !17
 ; EPILOG-BLOCK:       exit1.loopexit:
 ; EPILOG-BLOCK-NEXT:    br label %exit1
 ; EPILOG-BLOCK:       exit1:
 ; EPILOG-BLOCK-NEXT:    ret void
-; EPILOG-BLOCK:       exit2.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    br label %exit2.unr-lcssa
 ; EPILOG-BLOCK:       exit2.unr-lcssa:
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit2
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
 ; EPILOG-BLOCK-NEXT:    call void @bar()
@@ -5706,7 +5689,7 @@ define void @test12(i64 %trip, i64 %trip2, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %exit1.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %loop_header
@@ -5771,33 +5754,33 @@ define void @test12(i64 %trip, i64 %trip2, i1 %cond) {
 ; EPILOG-NEXT:    %iv_next.7 = add i64 %iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit1.unr-lcssa.loopexit
-; EPILOG:       exit1.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br label %exit1.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit1.unr-lcssa
 ; EPILOG:       exit1.unr-lcssa:
-; EPILOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit1.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %iv.unr = phi i64 [ %iv_next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit1
 ; EPILOG:       loop_header.epil.preheader:
+; EPILOG-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit1.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %loop_header.epil
 ; EPILOG:       loop_header.epil:
-; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.epil.init, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
 ; EPILOG-NEXT:    call void @bar()
 ; EPILOG-NEXT:    %cmp_early.epil = icmp ne i64 %iv.epil, %trip2
-; EPILOG-NEXT:    br i1 %cmp_early.epil, label %loop_exiting_bb2.epil, label %exit1.epilog-lcssa.loopexit1
+; EPILOG-NEXT:    br i1 %cmp_early.epil, label %loop_exiting_bb2.epil, label %exit1.epilog-lcssa.loopexit2
 ; EPILOG:       loop_exiting_bb2.epil:
-; EPILOG-NEXT:    br i1 %cond, label %loop_latch.epil, label %exit1.epilog-lcssa.loopexit1
+; EPILOG-NEXT:    br i1 %cond, label %loop_latch.epil, label %exit1.epilog-lcssa.loopexit2
 ; EPILOG:       loop_latch.epil:
 ; EPILOG-NEXT:    %iv_next.epil = add i64 %iv.epil, 1
 ; EPILOG-NEXT:    %cmp.epil = icmp ne i64 %iv_next.epil, %trip
 ; EPILOG-NEXT:    %epil.iter.next = add i64 %epil.iter, 1
 ; EPILOG-NEXT:    %epil.iter.cmp = icmp ne i64 %epil.iter.next, %xtraiter
-; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %loop_header.epil, label %exit1.epilog-lcssa.loopexit1, !llvm.loop !16
+; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %loop_header.epil, label %exit1.epilog-lcssa.loopexit2, !llvm.loop !16
 ; EPILOG:       exit1.epilog-lcssa.loopexit:
 ; EPILOG-NEXT:    br label %exit1.epilog-lcssa
-; EPILOG:       exit1.epilog-lcssa.loopexit1:
+; EPILOG:       exit1.epilog-lcssa.loopexit2:
 ; EPILOG-NEXT:    br label %exit1.epilog-lcssa
 ; EPILOG:       exit1.epilog-lcssa:
 ; EPILOG-NEXT:    br label %exit1
@@ -5810,7 +5793,7 @@ define void @test12(i64 %trip, i64 %trip2, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit1.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %loop_header
@@ -5833,19 +5816,19 @@ define void @test12(i64 %trip, i64 %trip2, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %iv_next.1 = add i64 %iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit1.unr-lcssa.loopexit, !llvm.loop !18
-; EPILOG-BLOCK:       exit1.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.1, %loop_latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %exit1.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit1.unr-lcssa, !llvm.loop !18
 ; EPILOG-BLOCK:       exit1.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit1.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %iv.unr = phi i64 [ %iv_next.1, %loop_latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit1
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit1.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
 ; EPILOG-BLOCK-NEXT:    call void @bar()
-; EPILOG-BLOCK-NEXT:    %cmp_early.epil = icmp ne i64 %iv.unr, %trip2
+; EPILOG-BLOCK-NEXT:    %cmp_early.epil = icmp ne i64 %iv.epil.init, %trip2
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp_early.epil, label %loop_exiting_bb2.epil, label %exit1.epilog-lcssa
 ; EPILOG-BLOCK:       loop_exiting_bb2.epil:
 ; EPILOG-BLOCK-NEXT:    br i1 %cond, label %loop_latch.epil, label %exit1.epilog-lcssa
@@ -6038,7 +6021,7 @@ define void @test13(i64 %trip, i64 %trip2) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %exit1.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %loop_header
@@ -6111,34 +6094,34 @@ define void @test13(i64 %trip, i64 %trip2) {
 ; EPILOG-NEXT:    %iv_next.7 = add i64 %iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit1.unr-lcssa.loopexit
-; EPILOG:       exit1.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br label %exit1.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit1.unr-lcssa
 ; EPILOG:       exit1.unr-lcssa:
-; EPILOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit1.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %iv.unr = phi i64 [ %iv_next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit1
 ; EPILOG:       loop_header.epil.preheader:
+; EPILOG-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit1.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %loop_header.epil
 ; EPILOG:       loop_header.epil:
-; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.epil.init, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
 ; EPILOG-NEXT:    call void @bar()
 ; EPILOG-NEXT:    %cmp_early.epil = icmp ne i64 %iv.epil, %trip2
-; EPILOG-NEXT:    br i1 %cmp_early.epil, label %loop_exiting_bb2.epil, label %exit1.epilog-lcssa.loopexit1
+; EPILOG-NEXT:    br i1 %cmp_early.epil, label %loop_exiting_bb2.epil, label %exit1.epilog-lcssa.loopexit2
 ; EPILOG:       loop_exiting_bb2.epil:
 ; EPILOG-NEXT:    %unknown.epil = call i1 @unknown_cond()
-; EPILOG-NEXT:    br i1 %unknown.epil, label %loop_latch.epil, label %exit1.epilog-lcssa.loopexit1
+; EPILOG-NEXT:    br i1 %unknown.epil, label %loop_latch.epil, label %exit1.epilog-lcssa.loopexit2
 ; EPILOG:       loop_latch.epil:
 ; EPILOG-NEXT:    %iv_next.epil = add i64 %iv.epil, 1
 ; EPILOG-NEXT:    %cmp.epil = icmp ne i64 %iv_next.epil, %trip
 ; EPILOG-NEXT:    %epil.iter.next = add i64 %epil.iter, 1
 ; EPILOG-NEXT:    %epil.iter.cmp = icmp ne i64 %epil.iter.next, %xtraiter
-; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %loop_header.epil, label %exit1.epilog-lcssa.loopexit1, !llvm.loop !17
+; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %loop_header.epil, label %exit1.epilog-lcssa.loopexit2, !llvm.loop !17
 ; EPILOG:       exit1.epilog-lcssa.loopexit:
 ; EPILOG-NEXT:    br label %exit1.epilog-lcssa
-; EPILOG:       exit1.epilog-lcssa.loopexit1:
+; EPILOG:       exit1.epilog-lcssa.loopexit2:
 ; EPILOG-NEXT:    br label %exit1.epilog-lcssa
 ; EPILOG:       exit1.epilog-lcssa:
 ; EPILOG-NEXT:    br label %exit1
@@ -6151,7 +6134,7 @@ define void @test13(i64 %trip, i64 %trip2) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit1.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %loop_header
@@ -6176,19 +6159,19 @@ define void @test13(i64 %trip, i64 %trip2) {
 ; EPILOG-BLOCK-NEXT:    %iv_next.1 = add i64 %iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit1.unr-lcssa.loopexit, !llvm.loop !19
-; EPILOG-BLOCK:       exit1.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.1, %loop_latch.1 ]
-; EPILOG-BLOCK-NEXT:    br label %exit1.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit1.unr-lcssa, !llvm.loop !19
 ; EPILOG-BLOCK:       exit1.unr-lcssa:
-; EPILOG-BLOCK-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit1.unr-lcssa.loopexit ]
+; EPILOG-BLOCK-NEXT:    %iv.unr = phi i64 [ %iv_next.1, %loop_latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit1
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit1.unr-lcssa ]
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
 ; EPILOG-BLOCK-NEXT:    call void @bar()
-; EPILOG-BLOCK-NEXT:    %cmp_early.epil = icmp ne i64 %iv.unr, %trip2
+; EPILOG-BLOCK-NEXT:    %cmp_early.epil = icmp ne i64 %iv.epil.init, %trip2
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp_early.epil, label %loop_exiting_bb2.epil, label %exit1.epilog-lcssa
 ; EPILOG-BLOCK:       loop_exiting_bb2.epil:
 ; EPILOG-BLOCK-NEXT:    %unknown.epil = call i1 @unknown_cond()
@@ -6393,7 +6376,7 @@ define void @test14(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-NEXT:    %xtraiter = and i64 %0, 7
 ; EPILOG-NEXT:    %2 = icmp ult i64 %1, 7
-; EPILOG-NEXT:    br i1 %2, label %exit1.unr-lcssa, label %entry.new
+; EPILOG-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-NEXT:    br label %loop_header
@@ -6451,33 +6434,33 @@ define void @test14(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    %iv_next.7 = add i64 %iv, 8
 ; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
-; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit1.unr-lcssa.loopexit
-; EPILOG:       exit1.unr-lcssa.loopexit:
-; EPILOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br label %exit1.unr-lcssa
+; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %loop_header, label %exit1.unr-lcssa
 ; EPILOG:       exit1.unr-lcssa:
-; EPILOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %exit1.unr-lcssa.loopexit ]
+; EPILOG-NEXT:    %iv.unr = phi i64 [ %iv_next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit1
 ; EPILOG:       loop_header.epil.preheader:
+; EPILOG-NEXT:    %iv.epil.init = phi i64 [ 0, %entry ], [ %iv.unr, %exit1.unr-lcssa ]
+; EPILOG-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-NEXT:    br label %loop_header.epil
 ; EPILOG:       loop_header.epil:
-; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
+; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.epil.init, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
 ; EPILOG-NEXT:    call void @bar()
-; EPILOG-NEXT:    br i1 %cond, label %loop_exiting_bb2.epil, label %exit1.epilog-lcssa.loopexit1
+; EPILOG-NEXT:    br i1 %cond, label %loop_exiting_bb2.epil, label %exit1.epilog-lcssa.loopexit2
 ; EPILOG:       loop_exiting_bb2.epil:
 ; EPILOG-NEXT:    %unknown.epil = call i1 @unknown_cond()
-; EPILOG-NEXT:    br i1 %unknown.epil, label %loop_latch.epil, label %exit1.epilog-lcssa.loopexit1
+; EPILOG-NEXT:    br i1 %unknown.epil, label %loop_latch.epil, label %exit1.epilog-lcssa.loopexit2
 ; EPILOG:       loop_latch.epil:
 ; EPILOG-NEXT:    %iv_next.epil = add i64 %iv.epil, 1
 ; EPILOG-NEXT:    %cmp.epil = icmp ne i64 %iv_next.epil, %trip
 ; EPILOG-NEXT:    %epil.iter.next = add i64 %epil.iter, 1
 ; EPILOG-NEXT:    %epil.iter.cmp = icmp ne i64 %epil.iter.next, %xtraiter
-; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %loop_header.epil, label %exit1.epilog-lcssa.loopexit1, !llvm.loop !18
+; EPILOG-NEXT:    br i1 %epil.iter.cmp, label %loop_header.epil, label %exit1.epilog-lcssa.loopexit2, !llvm.loop !18
 ; EPILOG:       exit1.epilog-lcssa.loopexit:
 ; EPILOG-NEXT:    br label %exit1.epilog-lcssa
-; EPILOG:       exit1.epilog-lcssa.loopexit1:
+; EPILOG:       exit1.epilog-lcssa.loopexit2:
 ; EPILOG-NEXT:    br label %exit1.epilog-lcssa
 ; EPILOG:       exit1.epilog-lcssa:
 ; EPILOG-NEXT:    br label %exit1
@@ -6490,7 +6473,7 @@ define void @test14(i64 %trip, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %1 = add i64 %0, -1
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit1.unr-lcssa, label %entry.new
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %loop_header.epil.preheader, label %entry.new
 ; EPILOG-BLOCK:       entry.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %loop_header
@@ -6512,13 +6495,13 @@ define void @test14(i64 %trip, i1 %cond) {
 ; EPILOG-BLOCK-NEXT:    %iv_next.1 = add i64 %iv, 2
 ; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i64 %niter, 2
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i64 %niter.next.1, %unroll_iter
-; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit1.unr-lcssa.loopexit, !llvm.loop !20
-; EPILOG-BLOCK:       exit1.unr-lcssa.loopexit:
-; EPILOG-BLOCK-NEXT:    br label %exit1.unr-lcssa
+; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %loop_header, label %exit1.unr-lcssa, !llvm.loop !20
 ; EPILOG-BLOCK:       exit1.unr-lcssa:
 ; EPILOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; EPILOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %loop_header.epil.preheader, label %exit1
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
+; EPILOG-BLOCK-NEXT:    %lcmp.mod1 = icmp ne i64 %xtraiter, 0
+; EPILOG-BLOCK-NEXT:    call void @llvm.assume(i1 %lcmp.mod1)
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
 ; EPILOG-BLOCK-NEXT:    call void @bar()

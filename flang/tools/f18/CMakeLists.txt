@@ -4,16 +4,9 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-# Define the list of Fortran module files that need to be compiled
-# to produce an object file for inclusion into the flang_rt.runtime
-# library.
-set(MODULES_WITH_IMPLEMENTATION
-  "iso_fortran_env_impl"
-)
-
 # Define the list of Fortran module files for which it is
 # sufficient to generate the module file via -fsyntax-only.
-set(MODULES_WITHOUT_IMPLEMENTATION
+set(MODULES
   "__fortran_builtins"
   "__fortran_ieee_exceptions"
   "__fortran_type_info"
@@ -22,15 +15,15 @@ set(MODULES_WITHOUT_IMPLEMENTATION
   "mma"
   "__cuda_builtins"
   "__cuda_device"
+  "cooperative_groups"
   "cudadevice"
   "ieee_arithmetic"
   "ieee_exceptions"
   "ieee_features"
   "iso_c_binding"
   "iso_fortran_env"
+  "iso_fortran_env_impl"
 )
-
-set(MODULES ${MODULES_WITH_IMPLEMENTATION} ${MODULES_WITHOUT_IMPLEMENTATION})
 
 # Check if 128-bit float computations can be done via long double.
 check_cxx_source_compiles(
@@ -68,12 +61,17 @@ if (NOT CMAKE_CROSSCOMPILING)
     elseif(${filename} STREQUAL "__ppc_intrinsics" OR
            ${filename} STREQUAL "mma")
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__ppc_types.mod)
-    elseif(${filename} STREQUAL "__cuda_device")
+    elseif(${filename} STREQUAL "__cuda_device" OR
+           ${filename} STREQUAL "cudadevice" OR
+           ${filename} STREQUAL "cooperative_groups")
       set(opts -fc1 -xcuda)
-      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_builtins.mod)
-    elseif(${filename} STREQUAL "cudadevice")
-      set(opts -fc1 -xcuda)
-      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_device.mod)
+      if(${filename} STREQUAL "__cuda_device")
+        set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_builtins.mod)
+      elseif(${filename} STREQUAL "cudadevice")
+        set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_device.mod)
+      elseif(${filename} STREQUAL "cooperative_groups")
+        set(depends ${FLANG_INTRINSIC_MODULES_DIR}/cudadevice.mod)
+      endif()
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
       if(${filename} STREQUAL "iso_fortran_env")
@@ -109,11 +107,6 @@ if (NOT CMAKE_CROSSCOMPILING)
     set(compile_with "-fsyntax-only")
     set(object_output "")
     set(include_in_link FALSE)
-    if(${filename} IN_LIST MODULES_WITH_IMPLEMENTATION AND FLANG_INCLUDE_RUNTIME)
-      set(object_output "${CMAKE_CURRENT_BINARY_DIR}/${filename}${CMAKE_CXX_OUTPUT_EXTENSION}")
-      set(compile_with -c -o ${object_output})
-      set(include_in_link TRUE)
-    endif()
 
     set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
@@ -124,7 +117,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       DEPENDS flang ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
     list(APPEND MODULE_FILES ${base}.mod)
-    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang" COMPONENT flang-module-interfaces)
 
     # If a module has been compiled into an object file, add the file to
     # the link line for the flang_rt.runtime library.
@@ -150,19 +143,15 @@ if (NOT CMAKE_CROSSCOMPILING)
         ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90
       DEPENDS flang ${FLANG_INTRINSIC_MODULES_DIR}/iso_c_binding.mod ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90 ${depends}
     )
-    add_custom_command(OUTPUT ${base}.f18.mod
-      DEPENDS ${base}.mod
-      COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
-      add_custom_command(OUTPUT ${base}_kinds.f18.mod
-        DEPENDS ${base}.mod
-        COMMAND ${CMAKE_COMMAND} -E copy ${base}_kinds.mod ${base}_kinds.f18.mod)
-    list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod)
-    install(FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+    list(APPEND MODULE_FILES ${base}.mod ${base}_kinds.mod)
+    install(FILES ${base}.mod ${base}_kinds.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang" COMPONENT flang-module-interfaces)
   elseif ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_RUNTIMES, assuming omp_lib.mod is built there")
   else()
     message(WARNING "Not building omp_lib.mod, no OpenMP runtime in either LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
   endif()
+  add_llvm_install_targets(install-flang-module-interfaces
+    COMPONENT flang-module-interfaces)
 endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})

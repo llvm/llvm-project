@@ -8,7 +8,6 @@
 
 #include "mlir/Transforms/ViewOpGraph.h"
 
-#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
@@ -159,7 +158,8 @@ private:
 
   /// Emit a cluster (subgraph). The specified builder generates the body of the
   /// cluster. Return the anchor node of the cluster.
-  Node emitClusterStmt(function_ref<void()> builder, std::string label = "") {
+  Node emitClusterStmt(function_ref<void()> builder,
+                       const std::string &label = "") {
     int clusterId = ++counter;
     os << "subgraph cluster_" << clusterId << " {\n";
     os.indent();
@@ -270,7 +270,7 @@ private:
   }
 
   /// Emit a node statement.
-  Node emitNodeStmt(std::string label, StringRef shape = kShapeNode,
+  Node emitNodeStmt(const std::string &label, StringRef shape = kShapeNode,
                     StringRef background = "") {
     int nodeId = ++counter;
     AttributeMap attrs;
@@ -292,8 +292,8 @@ private:
       operand.printAsOperand(os, OpPrintingFlags());
     });
     // Replace % and # with _
-    std::replace(str.begin(), str.end(), '%', '_');
-    std::replace(str.begin(), str.end(), '#', '_');
+    llvm::replace(str, '%', '_');
+    llvm::replace(str, '#', '_');
     return str;
   }
 

@@ -33,7 +33,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
@@ -55,7 +54,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -91,7 +89,7 @@ static bool isCallback(QualType T) {
     T = T->getPointeeType();
 
   if (const RecordType *RT = T->getAsStructureType()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     for (const auto *I : RD->fields()) {
       QualType FieldT = I->getType();
       if (FieldT->isBlockPointerType() || FieldT->isFunctionPointerType())
@@ -232,13 +230,11 @@ static void findPtrToConstParams(llvm::SmallSet<unsigned, 4> &PreserveArgs,
 }
 
 ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
-                                             ProgramStateRef Orig) const {
-  ProgramStateRef Result = (Orig ? Orig : getState());
-
+                                             ProgramStateRef State) const {
   // Don't invalidate anything if the callee is marked pure/const.
-  if (const Decl *callee = getDecl())
-    if (callee->hasAttr<PureAttr>() || callee->hasAttr<ConstAttr>())
-      return Result;
+  if (const Decl *Callee = getDecl())
+    if (Callee->hasAttr<PureAttr>() || Callee->hasAttr<ConstAttr>())
+      return State;
 
   SmallVector<SVal, 8> ValuesToInvalidate;
   RegionAndSymbolInvalidationTraits ETraits;
@@ -280,10 +276,10 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
-  return Result->invalidateRegions(ValuesToInvalidate, getOriginExpr(),
-                                   BlockCount, getLocationContext(),
-                                   /*CausedByPointerEscape*/ true,
-                                   /*Symbols=*/nullptr, this, &ETraits);
+  return State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
+                                  BlockCount, getLocationContext(),
+                                  /*CausedByPointerEscape*/ true,
+                                  /*Symbols=*/nullptr, this, &ETraits);
 }
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
@@ -393,7 +389,8 @@ bool CallEvent::isVariadic(const Decl *D) {
 
 static bool isTransparentUnion(QualType T) {
   const RecordType *UT = T->getAsUnionType();
-  return UT && UT->getDecl()->hasAttr<TransparentUnionAttr>();
+  return UT &&
+         UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>();
 }
 
 // In some cases, symbolic cases should be transformed before we associate
@@ -690,6 +687,18 @@ const FunctionDecl *SimpleFunctionCall::getDecl() const {
   return getSVal(getOriginExpr()->getCallee()).getAsFunctionDecl();
 }
 
+RuntimeDefinition SimpleFunctionCall::getRuntimeDefinition() const {
+  // Clang converts lambdas to function pointers using an implicit conversion
+  // operator, which returns the lambda's '__invoke' method. However, Sema
+  // leaves the body of '__invoke' empty (it is generated later in CodeGen), so
+  // we need to skip '__invoke' and access the lambda's operator() directly.
+  if (const auto *CMD = dyn_cast_if_present<CXXMethodDecl>(getDecl());
+      CMD && CMD->isLambdaStaticInvoker())
+    return RuntimeDefinition{CMD->getParent()->getLambdaCallOperator()};
+
+  return AnyFunctionCall::getRuntimeDefinition();
+}
+
 const FunctionDecl *CXXInstanceCall::getDecl() const {
   const auto *CE = cast_or_null<CallExpr>(getOriginExpr());
   if (!CE)
@@ -833,7 +842,7 @@ void CXXInstanceCall::getInitialStackFrameContents(
     if (MD->getCanonicalDecl() != getDecl()->getCanonicalDecl()) {
       ASTContext &Ctx = SVB.getContext();
       const CXXRecordDecl *Class = MD->getParent();
-      QualType Ty = Ctx.getPointerType(Ctx.getRecordType(Class));
+      CanQualType Ty = Ctx.getPointerType(Ctx.getCanonicalTagType(Class));
 
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
       std::optional<SVal> V =
@@ -844,7 +853,8 @@ void CXXInstanceCall::getInitialStackFrameContents(
         // Fall back to a generic pointer cast for this-value.
         const CXXMethodDecl *StaticMD = cast<CXXMethodDecl>(getDecl());
         const CXXRecordDecl *StaticClass = StaticMD->getParent();
-        QualType StaticTy = Ctx.getPointerType(Ctx.getRecordType(StaticClass));
+        CanQualType StaticTy =
+            Ctx.getPointerType(Ctx.getCanonicalTagType(StaticClass));
         ThisVal = SVB.evalCast(ThisVal, Ty, StaticTy);
       } else
         ThisVal = *V;
@@ -1241,6 +1251,15 @@ template <> struct DenseMapInfo<PrivateMethodKey> {
 };
 } // end namespace llvm
 
+// NOTE: This cache is a "global" variable, and it is cleared by
+// CallEventManager's constructor so we do not keep old entries when
+// loading/unloading ASTs. If we are worried about concurrency, we may  need to
+// revisit this someday. In terms of memory, this table stays around until clang
+// quits, which also may be bad if we need to release memory.
+using PrivateMethodCacheTy =
+    llvm::DenseMap<PrivateMethodKey, std::optional<const ObjCMethodDecl *>>;
+static PrivateMethodCacheTy PrivateMethodCache;
+
 static const ObjCMethodDecl *
 lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
                         Selector LookupSelector, bool InstanceMethod) {
@@ -1249,21 +1268,8 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
   // that repeated queries on the same ObjCIntefaceDecl and Selector
   // don't incur the same cost.  On some test cases, we can see the
   // same query being issued thousands of times.
-  //
-  // NOTE: This cache is essentially a "global" variable, but it
-  // only gets lazily created when we get here.  The value of the
-  // cache probably comes from it being global across ExprEngines,
-  // where the same queries may get issued.  If we are worried about
-  // concurrency, or possibly loading/unloading ASTs, etc., we may
-  // need to revisit this someday.  In terms of memory, this table
-  // stays around until clang quits, which also may be bad if we
-  // need to release memory.
-  using PrivateMethodCache =
-      llvm::DenseMap<PrivateMethodKey, std::optional<const ObjCMethodDecl *>>;
-
-  static PrivateMethodCache PMC;
   std::optional<const ObjCMethodDecl *> &Val =
-      PMC[{Interface, LookupSelector, InstanceMethod}];
+      PrivateMethodCache[{Interface, LookupSelector, InstanceMethod}];
 
   // Query lookupPrivateMethod() if the cache does not hit.
   if (!Val) {
@@ -1407,6 +1413,13 @@ void ObjCMethodCall::getInitialStackFrameContents(
     Loc SelfLoc = SVB.makeLoc(MRMgr.getVarRegion(SelfD, CalleeCtx));
     Bindings.push_back(std::make_pair(SelfLoc, SelfVal));
   }
+}
+
+CallEventManager::CallEventManager(llvm::BumpPtrAllocator &alloc)
+    : Alloc(alloc) {
+  // Clear the method cache to avoid hits when multiple AST are loaded/unloaded
+  // within a single process. This can happen with unit tests, for instance.
+  PrivateMethodCache.clear();
 }
 
 CallEventRef<>

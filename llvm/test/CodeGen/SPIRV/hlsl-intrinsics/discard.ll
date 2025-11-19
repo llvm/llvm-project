@@ -1,9 +1,9 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.5-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV15
-; RUN: llc -verify-machineinstrs -spirv-ext=+SPV_EXT_demote_to_helper_invocation -O0 -mtriple=spirv1.5-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-EXTENSION,WITH-CAPABILITY
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-CAPABILITY
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -spirv-ext=+SPV_EXT_demote_to_helper_invocation -mtriple=spirv1.5-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.5-unknown-vulkan %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV15
+; RUN: llc -verify-machineinstrs -spirv-ext=+SPV_EXT_demote_to_helper_invocation -O0 -mtriple=spirv1.5-unknown-vulkan %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-EXTENSION,WITH-CAPABILITY
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-unknown-vulkan %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-CAPABILITY
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -spirv-ext=+SPV_EXT_demote_to_helper_invocation -mtriple=spirv1.5-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 
 ; Make sure lowering is correctly generating spirv code.

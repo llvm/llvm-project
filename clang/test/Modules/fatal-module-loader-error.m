@@ -8,13 +8,13 @@
 
 #ifdef IMPLICIT
 
-// expected-error@+1{{Module.pcm' is not a valid precompiled module file}}
+// expected-error@+1{{Module.pcm' is not a valid module file}}
 #import <Module/Module.h>
 #pragma clang __debug crash;
 
 #else
 
-// expected-error@+1{{Module.pcm' is not a valid precompiled module file}}
+// expected-error@+1{{Module.pcm' is not a valid module file}}
 @import Module;
 #pragma clang __debug crash;
 

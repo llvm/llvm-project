@@ -39,6 +39,19 @@
     "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC"
   },
   {
+    "name": "__cpp_lib_clamp",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
     "name": "__cpp_lib_format",
     "values": {
       "c++20": {
@@ -121,6 +134,19 @@
     ]
   },
   {
+    "name": "__cpp_lib_to_chars",
+    "values": {
+      "c++17": {
+        "201611": [
+          {
+           "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["charconv"]
+  },
+  {
     "name": "__cpp_lib_variant",
     "values": {
       "c++17": {
@@ -155,7 +181,7 @@
     ]
   },
   {
-    "name": "__cpp_lib_missing_FTM_in_older_standard",
+    "name": "__cpp_lib_zz_missing_FTM_in_older_standard",
     "values": {
       "c++17": {
         "2017": [

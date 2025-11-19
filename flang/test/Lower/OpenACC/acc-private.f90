@@ -21,10 +21,13 @@
 ! CHECK:   acc.yield %[[DECL]]#0 : !fir.box<!fir.array<?x?x2xi32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?x?x2xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?x?x2xi32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.shape<3>
-! CHECK:   %[[DES_SRC:.*]] = hlfir.designate %[[ARG0]] shape %[[SHAPE]] : (!fir.box<!fir.array<?x?x2xi32>>, !fir.shape<3>) -> !fir.box<!fir.array<?x?x2xi32>>
-! CHECK:   %[[DES_DST:.*]] = hlfir.designate %[[ARG1]] shape %[[SHAPE]] : (!fir.box<!fir.array<?x?x2xi32>>, !fir.shape<3>) -> !fir.box<!fir.array<?x?x2xi32>>
-! CHECK:   hlfir.assign %[[DES_SRC]] to %[[DES_DST]] : !fir.box<!fir.array<?x?x2xi32>>, !fir.box<!fir.array<?x?x2xi32>>
+! CHECK:   hlfir.assign %[[ARG0]] to %[[ARG1]] temporary_lhs : !fir.box<!fir.array<?x?x2xi32>>, !fir.box<!fir.array<?x?x2xi32>>
+! CHECK:   acc.terminator
+! CHECK: } destroy {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?x?x2xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?x?x2xi32>>):
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[ARG1]] : (!fir.box<!fir.array<?x?x2xi32>>) -> !fir.ref<!fir.array<?x?x2xi32>>
+! CHECK:   %[[CAST:.*]] = fir.convert %[[ADDR]] : (!fir.ref<!fir.array<?x?x2xi32>>) -> !fir.heap<!fir.array<?x?x2xi32>>
+! CHECK:   fir.freemem %[[CAST]] : !fir.heap<!fir.array<?x?x2xi32>>
 ! CHECK:   acc.terminator
 ! CHECK: }
 
@@ -32,20 +35,13 @@
 ! CHECK: ^bb0(%{{.*}}: !fir.box<!fir.array<?xi32>>):
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
-! CHECK:   %[[LB:.*]] = arith.constant 4 : index
-! CHECK:   %[[UB:.*]] = arith.constant 9 : index
-! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   %[[C1:.*]] = arith.constant 1 : index
-! CHECK:   %[[C0:.*]] = arith.constant 0 : index
-! CHECK:   %[[EXT0:.*]] = arith.subi %[[UB]], %[[LB]] : index
-! CHECK:   %[[EXT1:.*]] = arith.addi %[[EXT0]], %[[C1]] : index
-! CHECK:   %[[EXT2:.*]] = arith.divsi %[[EXT1]], %[[STEP]] : index
-! CHECK:   %[[CMP:.*]] = arith.cmpi sgt, %[[EXT2]], %[[C0]] : index
-! CHECK:   %[[SELECT:.*]] = arith.select %[[CMP]], %[[EXT2]], %[[C0]] : index
-! CHECK:   %[[SHAPE:.*]] = fir.shape %[[SELECT]] : (index) -> !fir.shape<1>
-! CHECK:   %[[LEFT:.*]] = hlfir.designate %[[ARG0]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   %[[RIGHT:.*]] = hlfir.designate %[[ARG1]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   hlfir.assign %[[LEFT]] to %[[RIGHT]] : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
+! CHECK:   hlfir.assign {{.*}} to {{.*}} temporary_lhs : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
+! CHECK:   acc.terminator
+! CHECK: } destroy {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[ARG1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK:   %[[CAST:.*]] = fir.convert %[[ADDR]] : (!fir.ref<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[CAST]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:   acc.terminator
 ! CHECK: }
 
@@ -59,10 +55,13 @@
 ! CHECK:   acc.yield %[[DECL]]#0 : !fir.box<!fir.array<?xi32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-! CHECK:   %[[DES_V1:.*]] = hlfir.designate %[[ARG0]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   %[[DES_V2:.*]] = hlfir.designate %[[ARG1]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   hlfir.assign %[[DES_V1]] to %[[DES_V2]] : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
+! CHECK:   hlfir.assign %[[ARG0]] to %[[ARG1]] temporary_lhs : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
+! CHECK:   acc.terminator
+! CHECK: } destroy {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[ARG1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK:   %[[CAST:.*]] = fir.convert %[[ADDR]] : (!fir.ref<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[CAST]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:   acc.terminator
 ! CHECK: }
 
@@ -74,6 +73,12 @@
 ! CHECK:   %[[TEMP:.*]] = fir.allocmem !fir.array<?x?x2xi32>, %[[DIM0]]#1, %[[DIM1]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:   %[[DECL:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?x?x2xi32>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x2xi32>>, !fir.heap<!fir.array<?x?x2xi32>>)
 ! CHECK:   acc.yield %[[DECL]]#0 : !fir.box<!fir.array<?x?x2xi32>>
+! CHECK: } destroy {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?x?x2xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?x?x2xi32>>):
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[ARG1]] : (!fir.box<!fir.array<?x?x2xi32>>) -> !fir.ref<!fir.array<?x?x2xi32>>
+! CHECK:   %[[CAST:.*]] = fir.convert %[[ADDR]] : (!fir.ref<!fir.array<?x?x2xi32>>) -> !fir.heap<!fir.array<?x?x2xi32>>
+! CHECK:   fir.freemem %[[CAST]] : !fir.heap<!fir.array<?x?x2xi32>>
+! CHECK:   acc.terminator
 ! CHECK: }
 
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> init {
@@ -84,14 +89,34 @@
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! CHECK:   %[[TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xi32>>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:   %[[DECLAREBOX:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:   %[[CONV:.*]] = fir.convert %[[DECLAREBOX]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.array<?xi32>>>
+! CHECK:   fir.store %[[DECLARE]]#0 to %[[CONV]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+! CHECK:   acc.yield %[[DECLAREBOX]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK: } destroy {
+! CHECK: ^bb0(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
+! CHECK:   %[[LOAD:.*]] = fir.load %arg1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
+! CHECK:   %[[CAST:.*]] = fir.convert %[[ADDR]] : (!fir.ptr<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[CAST]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:   acc.terminator
 ! CHECK: }
 
 ! CHECK-LABEL: @privatization_ref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> init {
 ! CHECK: ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>):
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
 ! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:   %[[ALLOCMEM:.*]] = fir.allocmem i32
+! CHECK:   %[[BOX:.*]] = fir.embox %[[ALLOCMEM]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK:   fir.store %[[BOX]] to %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: } destroy {
+! CHECK: ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>, %arg1: !fir.ref<!fir.box<!fir.heap<i32>>>):
+! CHECK:   %[[LOAD:.*]] = fir.load %arg1 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:   fir.freemem %[[ADDR]] : !fir.heap<i32>
+! CHECK:   acc.terminator
 ! CHECK: }
 
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> init {
@@ -102,7 +127,17 @@
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! CHECK:   %[[TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xi32>>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:   %[[DECLAREBOX:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:   %[[CONV:.*]] = fir.convert %[[DECLAREBOX]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.array<?xi32>>>
+! CHECK:   fir.store %[[DECLARE]]#0 to %[[CONV]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+! CHECK:   acc.yield %[[DECLAREBOX]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: } destroy {
+! CHECK: ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %arg1: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
+! CHECK:   %[[LOAD:.*]] = fir.load %arg1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:   acc.terminator
 ! CHECK: }
 
 ! CHECK-LABEL: acc.private.recipe @privatization_box_Uxi32 : !fir.box<!fir.array<?xi32>> init {
@@ -113,6 +148,12 @@
 ! CHECK:   %[[TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %0#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:   acc.yield %[[DECLARE:.*]]#0 : !fir.box<!fir.array<?xi32>>
+! CHECK: } destroy {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[ARG1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK:   %[[CAST:.*]] = fir.convert %[[ADDR]] : (!fir.ref<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[CAST]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:   acc.terminator
 ! CHECK: }
 
 ! CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_section_lb50.ub99_ref_50xf32 : !fir.ref<!fir.array<50xf32>> init {
@@ -123,12 +164,20 @@
 ! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<50xf32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<50xf32>>, %[[DST:.*]]: !fir.ref<!fir.array<50xf32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-! CHECK:   %[[DECL_SRC:.*]]:2 = hlfir.declare %[[SRC]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<50xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>)
-! CHECK:   %[[DECL_DST:.*]]:2 = hlfir.declare %[[DST]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<50xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>)
-! CHECK:   %[[DES_SRC:.*]] = hlfir.designate %[[DECL_SRC]]#0 shape %[[SHAPE:.*]] : (!fir.ref<!fir.array<50xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
-! CHECK:   %[[DES_DST:.*]] = hlfir.designate %[[DECL_DST]]#0 shape %[[SHAPE:.*]] : (!fir.ref<!fir.array<50xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
-! CHECK:   hlfir.assign %[[DES_SRC]] to %[[DES_DST]] : !fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>
+! CHECK:   %[[C50:.*]] = arith.constant 50 : index
+! CHECK:   %[[C99:.*]] = arith.constant 99 : index
+! CHECK:   %[[C1:.*]] = arith.constant 1 : index
+! CHECK:   %[[C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[D0:.*]] = arith.subi %[[C99]], %[[C50]] : index
+! CHECK:   %[[D1:.*]] = arith.addi %[[D0]], %[[C1]] : index
+! CHECK:   %[[D2:.*]] = arith.divsi %[[D1]], %[[C1]] : index
+! CHECK:   %[[CMP:.*]] = arith.cmpi sgt, %[[D2]], %[[C0]] : index
+! CHECK:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D2]], %[[C0]] : index
+! CHECK:   %[[SH:.*]] = fir.shape %[[SEL]] : (index) -> !fir.shape<1>
+! CHECK:   %[[SEC_SRC:.*]] = hlfir.designate %[[SRC]] (%c51{{.*}}:%c100{{.*}}:%c1{{.*}}) shape %[[SH]] : (!fir.ref<!fir.array<50xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
+! CHECK:   %[[SEC_DST:.*]] = hlfir.designate %[[DST]] (%c51{{.*}}:%c100{{.*}}:%c1{{.*}}) shape %[[SH]] : (!fir.ref<!fir.array<50xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
+! CHECK:   hlfir.assign %[[SEC_SRC]] to %[[SEC_DST]] temporary_lhs : !fir.ref<!fir.array<50xf32>>, !fir.ref<!fir.array<50xf32>>
+! CHECK:   acc.terminator
 ! CHECK: }
 
 ! CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_100xf32 : !fir.ref<!fir.array<100xf32>> init {
@@ -139,24 +188,19 @@
 ! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xf32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<100xf32>>, %[[DST:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-! CHECK:   %[[DECL_SRC:.*]]:2 = hlfir.declare %[[SRC]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-! CHECK:   %[[DECL_DST:.*]]:2 = hlfir.declare %[[DST]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-! CHECK:   %[[DES_SRC:.*]] = hlfir.designate %[[DECL_SRC]]#0 shape %[[SHAPE]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:   %[[DES_DST:.*]] = hlfir.designate %[[DECL_DST]]#0 shape %[[SHAPE]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:   hlfir.assign %[[DES_SRC]] to %[[DES_DST]] : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+! CHECK:   hlfir.assign %[[SRC]] to %[[DST]] temporary_lhs : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
 ! CHECK:   acc.terminator
 ! CHECK: }
 
 ! CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_i32 : !fir.ref<i32> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca i32
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>) 
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<i32> 
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
 ! CHECK:   %[[VALUE:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
-! CHECK:   fir.store %[[VALUE]] to %[[DST]] : !fir.ref<i32>
+! CHECK:   fir.assign %[[VALUE]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:   acc.terminator
 ! CHECK: }
 
@@ -179,8 +223,8 @@
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_i32 : !fir.ref<i32> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca i32
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>) 
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<i32> 
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: }
 
 program acc_private
@@ -272,7 +316,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_private_assumed_shape(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFacc_private_assumed_shapeEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_private_assumed_shapeEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: %[[PRIVATE:.*]] = acc.private var(%[[DECL_A]]#0 : !fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>> {name = "a"}
 ! CHECK: acc.loop {{.*}} private({{.*}}@privatization_box_Uxi32 -> %[[PRIVATE]] : !fir.box<!fir.array<?xi32>>{{.*}})
@@ -293,7 +337,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_private_allocatable_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}
-! CHECK: %[[DECLA_A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_private_allocatable_arrayEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK: %[[DECLA_A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_private_allocatable_arrayEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "a"}
 ! CHECK: acc.loop {{.*}} private({{.*}}@privatization_ref_box_heap_Uxi32 -> %[[PRIVATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>{{.*}})
@@ -316,7 +360,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_private_allocatable_scalar(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.bindc_name = "b"}
-! CHECK: %[[DECLA_B:.*]]:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_private_allocatable_scalarEb"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK: %[[DECLA_B:.*]]:2 = hlfir.declare %arg0 dummy_scope %0 {{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_private_allocatable_scalarEb"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_B]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = "b"}
 ! CHECK: acc.loop {{.*}} private({{.*}}@privatization_ref_box_heap_i32 -> %[[PRIVATE]] : !fir.ref<!fir.box<!fir.heap<i32>>>{{.*}})
@@ -334,7 +378,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_private_pointer_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFacc_private_pointer_arrayEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFacc_private_pointer_arrayEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_A]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "a"}
 ! CHECK: acc.loop {{.*}} private({{.*}}@privatization_ref_box_ptr_Uxi32 -> %[[PRIVATE]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>{{.*}})
@@ -351,8 +395,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_private_dynamic_extent(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?x?x2xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK: %[[DECL_N:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFacc_private_dynamic_extentEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {uniq_name = "_QFacc_private_dynamic_extentEa"} : (!fir.ref<!fir.array<?x?x2xi32>>, !fir.shape<3>, !fir.dscope) -> (!fir.box<!fir.array<?x?x2xi32>>, !fir.ref<!fir.array<?x?x2xi32>>)
+! CHECK: %[[DECL_N:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_private_dynamic_extentEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_private_dynamic_extentEa"} : (!fir.ref<!fir.array<?x?x2xi32>>, !fir.shape<3>, !fir.dscope) -> (!fir.box<!fir.array<?x?x2xi32>>, !fir.ref<!fir.array<?x?x2xi32>>)
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: %[[PRIV:.*]] = acc.private var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?x2xi32>>) -> !fir.box<!fir.array<?x?x2xi32>> {name = "a"}
 ! CHECK: acc.loop {{.*}} private({{.*}}@privatization_box_UxUx2xi32 -> %[[PRIV]] : !fir.box<!fir.array<?x?x2xi32>>{{.*}})
@@ -415,7 +459,7 @@ end
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[I]] {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.parallel
 ! CHECK: %[[PRIV_I:.*]] = acc.private varPtr(%[[DECL_I]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.loop {{.*}} private(@privatization_ref_i32 -> %[[PRIV_I]] : !fir.ref<i32>) control(%[[IV0:.*]] : i32) = (%c1{{.*}} : i32) to (%c10{{.*}} : i32) step (%c1{{.*}} : i32)
+! CHECK:   %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:   fir.store %[[IV0]] to %[[DECL_PRIV_I]]#0 : !fir.ref<i32>
 ! CHECK:   %{{.*}} = fir.load %[[DECL_PRIV_I]]#0 : !fir.ref<i32>

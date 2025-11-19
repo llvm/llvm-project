@@ -30,8 +30,8 @@ class VTypeIOp<int VTypeINum> : RISCVOp {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
-      return isUInt<VTypeINum>(Imm);
-    return MCOp.isBareSymbolRef();
+      return isUInt<}] # VTypeINum # [{>(Imm);
+    return MCOp.Kind == KindTy::VType;
   }];
 }
 
@@ -138,16 +138,17 @@ class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
 }
 
 // Common class of scheduling definitions for n-ary instructions.
-// The scheudling resources are relevant to LMUL and may be relevant to SEW.
+// The scheduling resources are relevant to LMUL and may be relevant to SEW.
 class SchedNary<string write, list<string> reads, string mx, int sew = 0,
                 bit forceMasked = 0, bit forcePassthruRead = 0>
     : SchedCommon<[!cast<SchedWrite>(
-                      !if(sew,
-                          write # "_" # mx # "_E" # sew,
-                          write # "_" # mx))],
+                       !if(sew,
+                           write # "_" # mx # "_E" # sew,
+                           write # "_" # mx))],
                   !foreach(read, reads,
-                           !cast<SchedRead>(!if(sew, read #"_" #mx #"_E" #sew,
-                                                 read #"_" #mx))),
+                           !cast<SchedRead>(!if(sew,
+                                                read # "_" # mx # "_E" #sew,
+                                                read # "_" # mx))),
                   mx, sew, forceMasked, forcePassthruRead>;
 
 // Classes with postfix "MC" are only used in MC layer.
@@ -474,8 +475,8 @@ class VALUmVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                 opcodestr, "$vd, $vs2, $vs1, $vm">;
 
 // op vd, vs1, vs2, vm (reverse the order of vs1 and vs2)
-class VALUrVV<bits<6> funct6, RISCVVFormat opv, string opcodestr,
-              bit EarlyClobber = 0>
+class VMACVV<bits<6> funct6, RISCVVFormat opv, string opcodestr,
+             bit EarlyClobber = 0>
     : RVInstVV<funct6, opv, (outs VR:$vd_wb),
                 (ins VR:$vd, VR:$vs1, VR:$vs2, VMaskOp:$vm),
                 opcodestr, "$vd, $vs1, $vs2$vm"> {
@@ -504,8 +505,8 @@ class VALUmVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                 opcodestr, "$vd, $vs2, $rs1, $vm">;
 
 // op vd, rs1, vs2, vm (reverse the order of rs1 and vs2)
-class VALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr,
-              bit EarlyClobber = 0>
+class VMACVX<bits<6> funct6, RISCVVFormat opv, string opcodestr,
+             bit EarlyClobber = 0>
     : RVInstVX<funct6, opv, (outs VR:$vd_wb),
                 (ins VR:$vd, GPR:$rs1, VR:$vs2, VMaskOp:$vm),
                 opcodestr, "$vd, $rs1, $vs2$vm"> {
@@ -548,8 +549,8 @@ class VALUVF<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                 opcodestr, "$vd, $vs2, $rs1$vm">;
 
 // op vd, rs1, vs2, vm (Float) (with mask, reverse the order of rs1 and vs2)
-class VALUrVF<bits<6> funct6, RISCVVFormat opv, string opcodestr,
-              bit EarlyClobber = 0>
+class VMACVF<bits<6> funct6, RISCVVFormat opv, string opcodestr,
+             bit EarlyClobber = 0>
     : RVInstVX<funct6, opv, (outs VR:$vd_wb),
                 (ins VR:$vd, FPR32:$rs1, VR:$vs2, VMaskOp:$vm),
                 opcodestr, "$vd, $rs1, $vs2$vm"> {
@@ -627,17 +628,17 @@ multiclass VALU_MV_V_X<string opcodestr, bits<6> funct6, string vw> {
 }
 
 multiclass VMAC_MV_V_X<string opcodestr, bits<6> funct6> {
-  def V : VALUrVV<funct6, OPMVV, opcodestr # ".vv">,
+  def V : VMACVV<funct6, OPMVV, opcodestr # ".vv">,
           SchedTernaryMC<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV",
                          "ReadVIMulAddV">;
-  def X : VALUrVX<funct6, OPMVX, opcodestr # ".vx">,
+  def X : VMACVX<funct6, OPMVX, opcodestr # ".vx">,
           SchedTernaryMC<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddX",
                          "ReadVIMulAddV">;
 }
 
 multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6> {
   let RVVConstraint = WidenV in
-  def X : VALUrVX<funct6, OPMVX, opcodestr # ".vx">,
+  def X : VMACVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>,
           SchedTernaryMC<"WriteVIWMulAddX", "ReadVIWMulAddV", "ReadVIWMulAddX",
                          "ReadVIWMulAddV">;
 }
@@ -645,7 +646,7 @@ multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6> {
 multiclass VWMAC_MV_V_X<string opcodestr, bits<6> funct6>
    : VWMAC_MV_X<opcodestr, funct6> {
   let RVVConstraint = WidenV in
-  def V : VALUrVV<funct6, OPMVV, opcodestr # ".vv", EarlyClobber=1>,
+  def V : VMACVV<funct6, OPMVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
                          "ReadVIWMulAddV">;
 }
@@ -742,20 +743,20 @@ multiclass VWMUL_FV_V_F<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VMAC_FV_V_F<string opcodestr, bits<6> funct6> {
-  def V : VALUrVV<funct6, OPFVV, opcodestr # ".vv">,
+  def V : VMACVV<funct6, OPFVV, opcodestr # ".vv">,
           SchedTernaryMC<"WriteVFMulAddV", "ReadVFMulAddV", "ReadVFMulAddV",
                          "ReadVFMulAddV">;
-  def F : VALUrVF<funct6, OPFVF, opcodestr # ".vf">,
+  def F : VMACVF<funct6, OPFVF, opcodestr # ".vf">,
           SchedTernaryMC<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
                          "ReadVFMulAddV">;
 }
 
 multiclass VWMAC_FV_V_F<string opcodestr, bits<6> funct6> {
   let RVVConstraint = WidenV in {
-  def V : VALUrVV<funct6, OPFVV, opcodestr # ".vv", EarlyClobber=1>,
+  def V : VMACVV<funct6, OPFVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddV", "ReadVFWMulAddV", "ReadVFWMulAddV",
                          "ReadVFWMulAddV">;
-  def F : VALUrVF<funct6, OPFVF, opcodestr # ".vf", EarlyClobber=1>,
+  def F : VMACVF<funct6, OPFVF, opcodestr # ".vf", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddF", "ReadVFWMulAddV", "ReadVFWMulAddF",
                          "ReadVFWMulAddV">;
   }
@@ -1641,7 +1642,7 @@ def VFIRST_M : RVInstV<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
 
 def : MnemonicAlias<"vpopc.m", "vcpop.m">;
 
-let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsVLMask in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask in {
 
 let DestEEW = EEW1 in {
 // vmsbf.m set-before-first mask bit
@@ -1654,7 +1655,7 @@ defm VMSOF_M : VMSFS_MV_V<"vmsof.m", 0b010100, 0b00010>;
 // Vector Iota Instruction
 defm VIOTA_M : VIOTA_MV_V<"viota.m", 0b010100, 0b10000>;
 
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsVLMask
+} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask
 
 // Vector Element Index Instruction
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
@@ -1702,8 +1703,9 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
 defm VSLIDEUP_V : VSLD_IV_X_I<"vslideup", 0b001110, /*slidesUp=*/true>;
 defm VSLIDE1UP_V : VSLD1_MV_X<"vslide1up", 0b001110>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
+let ReadsPastVL = 1 in
 defm VSLIDEDOWN_V : VSLD_IV_X_I<"vslidedown", 0b001111, /*slidesUp=*/false>;
-let ElementsDependOn = EltDepsVL in
+let ElementsDependOn = EltDepsVL, ReadsPastVL = 1 in
 defm VSLIDE1DOWN_V : VSLD1_MV_X<"vslide1down", 0b001111>;
 } // Predicates = [HasVInstructions]
 
@@ -1711,19 +1713,19 @@ let Predicates = [HasVInstructionsAnyF] in {
 let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
 defm VFSLIDE1UP_V : VSLD1_FV_F<"vfslide1up", 0b001110>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
-let ElementsDependOn = EltDepsVL in
+let ElementsDependOn = EltDepsVL, ReadsPastVL = 1 in
 defm VFSLIDE1DOWN_V : VSLD1_FV_F<"vfslide1down", 0b001111>;
 } // Predicates = [HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {
 // Vector Register Gather Instruction
-let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather, ReadsPastVL = 1 in {
 defm VRGATHER_V : VGTR_IV_V_X_I<"vrgather", 0b001100>;
 def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">,
                       SchedBinaryMC<"WriteVRGatherEI16VV",
                                     "ReadVRGatherEI16VV_data",
                                     "ReadVRGatherEI16VV_index">;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather
+} // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather, ReadsPastVL = 1
 
 // Vector Compress Instruction
 let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDependOn = EltDepsVLMask in {
@@ -1836,5 +1838,5 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
 
-include "RISCVInstrInfoZvfbf.td"
 include "RISCVInstrInfoVPseudos.td"
+include "RISCVInstrInfoZvfbf.td"

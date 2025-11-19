@@ -13,6 +13,9 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -161,6 +164,27 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
+/// Gets an SBFileSpec and returns its path as a string.
+///
+/// \param[in] file_spec
+///     The file spec.
+///
+/// \return
+///     The file path as a string.
+std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec);
+
+/// Gets the line entry for a given address.
+/// \param[in] target
+///     The target that has the address.
+///
+/// \param[in] address
+///     The address for which to get the line entry.
+///
+/// \return
+///     The line entry for the given address.
+lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
+                                         const lldb::SBAddress &address);
+
 /// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
 class TelemetryDispatcher {
 public:
@@ -198,6 +222,17 @@ private:
   lldb::SBDebugger *debugger;
 };
 
+/// RAII utility to put the debugger temporarily  into synchronous mode.
+class ScopeSyncMode {
+public:
+  ScopeSyncMode(lldb::SBDebugger &debugger);
+  ~ScopeSyncMode();
+
+private:
+  lldb::SBDebugger &m_debugger;
+  bool m_async;
+};
+
 /// Get the stop-disassembly-display settings
 ///
 /// \param[in] debugger
@@ -207,9 +242,8 @@ private:
 ///     The value of the stop-disassembly-display setting
 lldb::StopDisassemblyType GetStopDisassemblyDisplay(lldb::SBDebugger &debugger);
 
-
 /// Take ownership of the stored error.
-llvm::Error ToError(const lldb::SBError &error);
+llvm::Error ToError(const lldb::SBError &error, bool show_user = true);
 
 /// Provides the string value if this data structure is a string type.
 std::string GetStringValue(const lldb::SBStructuredData &data);

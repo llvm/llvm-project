@@ -16,7 +16,6 @@
 
 #include "Yaml.h"
 #include "clang/AST/Attr.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -154,7 +153,6 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
   return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
                        TaintedArgs = std::move(TaintedArgs), CallLocation](
                           PathSensitiveBugReport &BR) -> std::string {
-    SmallString<256> Msg;
     // We give diagnostics only for taint related reports
     if (!BR.isInteresting(CallLocation) ||
         BR.getBugType().getCategory() != categories::TaintedData) {
@@ -1045,8 +1043,7 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
 
   // Generate diagnostic.
   assert(BT);
-  static CheckerProgramPointTag Tag(BT->getCheckerName(), Msg);
-  if (ExplodedNode *N = C.generateNonFatalErrorNode(C.getState(), &Tag)) {
+  if (ExplodedNode *N = C.generateNonFatalErrorNode(C.getState())) {
     auto report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     report->addRange(E->getSourceRange());
     for (auto TaintedSym : getTaintedSymbols(C.getState(), *TaintedSVal)) {

@@ -8,7 +8,7 @@ define <vscale x 2 x float> @vrgather_all_undef(ptr %p) {
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, i64 0, i64 0)
+  %0 = tail call <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float> poison, <vscale x 2 x float> poison, i64 0, i64 0)
   ret <vscale x 2 x float> %0
 }
 
@@ -28,7 +28,7 @@ define dso_local signext i32 @undef_early_clobber_chain() {
 entry:
   %dst = alloca [100 x float], align 8
   call void @llvm.lifetime.start.p0(i64 400, ptr nonnull %dst) #4
-  %0 = tail call <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, i64 0, i64 0)
+  %0 = tail call <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float> poison, <vscale x 2 x float> poison, i64 0, i64 0)
   call void @llvm.riscv.vse.nxv2f32.i64(<vscale x 2 x float> %0, ptr nonnull %dst, i64 0)
   call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %dst) #4
   ret i32 0
@@ -48,10 +48,10 @@ define internal void @SubRegLivenessUndefInPhi(i64 %cond) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vadd.vi v10, v9, 1
 ; CHECK-NEXT:    vadd.vi v11, v9, 3
-; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
 ; CHECK-NEXT:    vslideup.vx v12, v10, a0
@@ -96,10 +96,10 @@ UseSR:                                      ; preds = %Cond1, Cond2
     %v18.3 = phi <vscale x 8 x i16> [ %v18, %Cond1 ], [ %v18.2, %Cond2 ]
     %v20.3 = phi <vscale x 8 x i16> [ %v20, %Cond1 ], [ %v20.2, %Cond2 ]
     %v37 = load <vscale x 8 x i8>, ptr addrspace(1) null, align 8
-    %v38 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v17.3, i64 4)
-    %v40 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v18.3, i64 4)
+    %v38 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v17.3, i64 4)
+    %v40 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v18.3, i64 4)
     %v42 = and <vscale x 8 x i8> %v38, %v40
-    %v46 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v20.3, i64 4)
+    %v46 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v20.3, i64 4)
     %v60 = and <vscale x 8 x i8> %v42, %v46
     store <vscale x 8 x i8> %v60, ptr addrspace(1) null, align 4
     ret void
@@ -137,10 +137,10 @@ loopIR.preheader.i.i:
 
 loopIR3.i.i:                                      ; preds = %loopIR3.i.i, %loopIR.preheader.i.i
   %v37 = load <vscale x 8 x i8>, ptr addrspace(1) null, align 8
-  %v38 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v17, i64 4)
-  %v40 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v18, i64 4)
+  %v38 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v17, i64 4)
+  %v40 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v18, i64 4)
   %v42 = and <vscale x 8 x i8> %v38, %v40
-  %v46 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v20, i64 4)
+  %v46 = tail call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> %v37, <vscale x 8 x i16> %v20, i64 4)
   %v60 = and <vscale x 8 x i8> %v42, %v46
   store <vscale x 8 x i8> %v60, ptr addrspace(1) null, align 4
   br label %loopIR3.i.i

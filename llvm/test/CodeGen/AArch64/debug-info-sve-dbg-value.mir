@@ -96,8 +96,8 @@ stack:
   - { id: 1, size: 8,  alignment: 8 }
   - { id: 2, size: 16, alignment: 16, stack-id: scalable-vector }
   - { id: 3, size: 16, alignment: 16, stack-id: scalable-vector }
-  - { id: 4, size: 2,  alignment: 2,  stack-id: scalable-vector }
-  - { id: 5, size: 2,  alignment: 2,  stack-id: scalable-vector }
+  - { id: 4, size: 2,  alignment: 2,  stack-id: scalable-predicate-vector }
+  - { id: 5, size: 2,  alignment: 2,  stack-id: scalable-predicate-vector }
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:

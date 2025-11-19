@@ -1,5 +1,5 @@
 ; REQUIRES: cxx-shared-library
-; RUN: %lli -jit-kind=mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s
+; RUN: %lli -jit-kind=mcjit -remote-mcjit -mcjit-remote-process=lli-child-target %s
 ; XFAIL: target=arm{{.*}}, target={{.*-(cygwin|windows-msvc|windows-gnu)}}
 ; REQUIRES: thread_support
 ; UNSUPPORTED: target=powerpc64-unknown-linux-gnu

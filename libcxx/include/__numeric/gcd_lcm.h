@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___NUMERIC_GCD_LCM_H
 #define _LIBCPP___NUMERIC_GCD_LCM_H
 
-#include <__algorithm/min.h>
 #include <__assert>
 #include <__bit/countr.h>
 #include <__config>
@@ -20,6 +19,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_cv.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

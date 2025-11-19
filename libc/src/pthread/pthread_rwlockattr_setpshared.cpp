@@ -9,8 +9,8 @@
 #include "pthread_rwlockattr_setpshared.h"
 
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 #include <pthread.h> // pthread_rwlockattr_t, PTHREAD_PROCESS_SHARED, PTHREAD_PROCESS_PRIVATE
 

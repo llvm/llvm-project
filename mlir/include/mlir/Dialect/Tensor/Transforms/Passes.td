@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def FoldTensorSubsetOps : Pass<"fold-tensor-subset-ops"> {
+def FoldTensorSubsetOpsPass : Pass<"fold-tensor-subset-ops"> {
   let summary = "Fold tensor subset ops into producer/consumer ops";
   let description = [{
     The pass folds tensor subset ops into producer/consumer ops.
@@ -21,7 +21,6 @@ def FoldTensorSubsetOps : Pass<"fold-tensor-subset-ops"> {
       - vector.transfer_write into tensor.insert_slice
 
   }];
-  let constructor = "mlir::tensor::createFoldTensorSubsetOpsPass()";
   let dependentDialects = [
       "affine::AffineDialect", "tensor::TensorDialect", "vector::VectorDialect"
   ];

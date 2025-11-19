@@ -148,8 +148,7 @@ static bool isFeatureTestMacro(StringRef MacroName) {
       "__STDCPP_WANT_MATH_SPEC_FUNCS__",
       "__STDC_FORMAT_MACROS",
   };
-  return std::binary_search(std::begin(ReservedMacro), std::end(ReservedMacro),
-                            MacroName);
+  return llvm::binary_search(ReservedMacro, MacroName);
 }
 
 static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
@@ -184,9 +183,9 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
     AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
         AttributeCommonInfo::getCXX11AttrArgsInfo(II);
     if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
-      return PP.isNextPPTokenLParen();
+      return PP.isNextPPTokenOneOf(tok::l_paren);
 
-    return !PP.isNextPPTokenLParen() ||
+    return !PP.isNextPPTokenOneOf(tok::l_paren) ||
            AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
@@ -249,50 +248,67 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
 
   // The standard C/C++ and Posix headers
   return llvm::StringSwitch<bool>(LowerInclude)
-    // C library headers
-    .Cases("assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h", true)
-    .Cases("float.h", "inttypes.h", "iso646.h", "limits.h", "locale.h", true)
-    .Cases("math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h", true)
-    .Cases("stdatomic.h", "stdbool.h", "stdckdint.h", "stddef.h", true)
-    .Cases("stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h", true)
-    .Cases("string.h", "tgmath.h", "threads.h", "time.h", "uchar.h", true)
-    .Cases("wchar.h", "wctype.h", true)
+      // C library headers
+      .Cases({"assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h"}, true)
+      .Cases({"float.h", "inttypes.h", "iso646.h", "limits.h", "locale.h"},
+             true)
+      .Cases({"math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h"}, true)
+      .Cases({"stdatomic.h", "stdbool.h", "stdckdint.h", "stdcountof.h"}, true)
+      .Cases({"stddef.h", "stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h"},
+             true)
+      .Cases({"string.h", "tgmath.h", "threads.h", "time.h", "uchar.h"}, true)
+      .Cases({"wchar.h", "wctype.h"}, true)
 
-    // C++ headers for C library facilities
-    .Cases("cassert", "ccomplex", "cctype", "cerrno", "cfenv", true)
-    .Cases("cfloat", "cinttypes", "ciso646", "climits", "clocale", true)
-    .Cases("cmath", "csetjmp", "csignal", "cstdalign", "cstdarg", true)
-    .Cases("cstdbool", "cstddef", "cstdint", "cstdio", "cstdlib", true)
-    .Cases("cstring", "ctgmath", "ctime", "cuchar", "cwchar", true)
-    .Case("cwctype", true)
+      // C++ headers for C library facilities
+      .Cases({"cassert", "ccomplex", "cctype", "cerrno", "cfenv"}, true)
+      .Cases({"cfloat", "cinttypes", "ciso646", "climits", "clocale"}, true)
+      .Cases({"cmath", "csetjmp", "csignal", "cstdalign", "cstdarg"}, true)
+      .Cases({"cstdbool", "cstddef", "cstdint", "cstdio", "cstdlib"}, true)
+      .Cases({"cstring", "ctgmath", "ctime", "cuchar", "cwchar"}, true)
+      .Case("cwctype", true)
 
-    // C++ library headers
-    .Cases("algorithm", "fstream", "list", "regex", "thread", true)
-    .Cases("array", "functional", "locale", "scoped_allocator", "tuple", true)
-    .Cases("atomic", "future", "map", "set", "type_traits", true)
-    .Cases("bitset", "initializer_list", "memory", "shared_mutex", "typeindex", true)
-    .Cases("chrono", "iomanip", "mutex", "sstream", "typeinfo", true)
-    .Cases("codecvt", "ios", "new", "stack", "unordered_map", true)
-    .Cases("complex", "iosfwd", "numeric", "stdexcept", "unordered_set", true)
-    .Cases("condition_variable", "iostream", "ostream", "streambuf", "utility", true)
-    .Cases("deque", "istream", "queue", "string", "valarray", true)
-    .Cases("exception", "iterator", "random", "strstream", "vector", true)
-    .Cases("forward_list", "limits", "ratio", "system_error", true)
+      // C++ library headers
+      .Cases({"algorithm", "fstream", "list", "regex", "thread"}, true)
+      .Cases({"array", "functional", "locale", "scoped_allocator", "tuple"},
+             true)
+      .Cases({"atomic", "future", "map", "set", "type_traits"}, true)
+      .Cases(
+          {"bitset", "initializer_list", "memory", "shared_mutex", "typeindex"},
+          true)
+      .Cases({"chrono", "iomanip", "mutex", "sstream", "typeinfo"}, true)
+      .Cases({"codecvt", "ios", "new", "stack", "unordered_map"}, true)
+      .Cases({"complex", "iosfwd", "numeric", "stdexcept", "unordered_set"},
+             true)
+      .Cases(
+          {"condition_variable", "iostream", "ostream", "streambuf", "utility"},
+          true)
+      .Cases({"deque", "istream", "queue", "string", "valarray"}, true)
+      .Cases({"exception", "iterator", "random", "strstream", "vector"}, true)
+      .Cases({"forward_list", "limits", "ratio", "system_error"}, true)
 
-    // POSIX headers (which aren't also C headers)
-    .Cases("aio.h", "arpa/inet.h", "cpio.h", "dirent.h", "dlfcn.h", true)
-    .Cases("fcntl.h", "fmtmsg.h", "fnmatch.h", "ftw.h", "glob.h", true)
-    .Cases("grp.h", "iconv.h", "langinfo.h", "libgen.h", "monetary.h", true)
-    .Cases("mqueue.h", "ndbm.h", "net/if.h", "netdb.h", "netinet/in.h", true)
-    .Cases("netinet/tcp.h", "nl_types.h", "poll.h", "pthread.h", "pwd.h", true)
-    .Cases("regex.h", "sched.h", "search.h", "semaphore.h", "spawn.h", true)
-    .Cases("strings.h", "stropts.h", "sys/ipc.h", "sys/mman.h", "sys/msg.h", true)
-    .Cases("sys/resource.h", "sys/select.h",  "sys/sem.h", "sys/shm.h", "sys/socket.h", true)
-    .Cases("sys/stat.h", "sys/statvfs.h", "sys/time.h", "sys/times.h", "sys/types.h", true)
-    .Cases("sys/uio.h", "sys/un.h", "sys/utsname.h", "sys/wait.h", "syslog.h", true)
-    .Cases("tar.h", "termios.h", "trace.h", "ulimit.h", true)
-    .Cases("unistd.h", "utime.h", "utmpx.h", "wordexp.h", true)
-    .Default(false);
+      // POSIX headers (which aren't also C headers)
+      .Cases({"aio.h", "arpa/inet.h", "cpio.h", "dirent.h", "dlfcn.h"}, true)
+      .Cases({"fcntl.h", "fmtmsg.h", "fnmatch.h", "ftw.h", "glob.h"}, true)
+      .Cases({"grp.h", "iconv.h", "langinfo.h", "libgen.h", "monetary.h"}, true)
+      .Cases({"mqueue.h", "ndbm.h", "net/if.h", "netdb.h", "netinet/in.h"},
+             true)
+      .Cases({"netinet/tcp.h", "nl_types.h", "poll.h", "pthread.h", "pwd.h"},
+             true)
+      .Cases({"regex.h", "sched.h", "search.h", "semaphore.h", "spawn.h"}, true)
+      .Cases({"strings.h", "stropts.h", "sys/ipc.h", "sys/mman.h", "sys/msg.h"},
+             true)
+      .Cases({"sys/resource.h", "sys/select.h", "sys/sem.h", "sys/shm.h",
+              "sys/socket.h"},
+             true)
+      .Cases({"sys/stat.h", "sys/statvfs.h", "sys/time.h", "sys/times.h",
+              "sys/types.h"},
+             true)
+      .Cases(
+          {"sys/uio.h", "sys/un.h", "sys/utsname.h", "sys/wait.h", "syslog.h"},
+          true)
+      .Cases({"tar.h", "termios.h", "trace.h", "ulimit.h"}, true)
+      .Cases({"unistd.h", "utime.h", "utmpx.h", "wordexp.h"}, true)
+      .Default(false);
 }
 
 /// Find a similar string in `Candidates`.
@@ -371,8 +387,13 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   SourceLocation MacroNameLoc = MacroNameTok.getLocation();
   if (ShadowFlag)
     *ShadowFlag = false;
+  // Macro names with reserved identifiers are accepted if built-in or passed
+  // through the command line (the later may be present if -dD was used to
+  // generate the preprocessed file).
+  // NB: isInPredefinedFile() is relatively expensive, so keep it at the end
+  // of the condition.
   if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
-      (SourceMgr.getBufferName(MacroNameLoc) != "<built-in>")) {
+      !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
     MacroDiag D = MD_NoWarn;
     if (isDefineUndef == MU_Define) {
       D = shouldWarnOnMacroDef(*this, II);
@@ -1702,8 +1723,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
-    if (!SourceMgr.isWrittenInBuiltinFile(DigitTok.getLocation()) &&
-        !SourceMgr.isWrittenInCommandLineFile(DigitTok.getLocation()))
+    if (!SourceMgr.isInPredefinedFile(DigitTok.getLocation()))
       Diag(StrTok, diag::ext_pp_gnu_line_directive);
 
     // Exiting to an empty string means pop to the including file, so leave
@@ -3301,23 +3321,6 @@ void Preprocessor::HandleDefineDirective(
   // If the callbacks want to know, tell them about the macro definition.
   if (Callbacks)
     Callbacks->MacroDefined(MacroNameTok, MD);
-
-  // If we're in MS compatibility mode and the macro being defined is the
-  // assert macro, implicitly add a macro definition for static_assert to work
-  // around their broken assert.h header file in C. Only do so if there isn't
-  // already a static_assert macro defined.
-  if (!getLangOpts().CPlusPlus && getLangOpts().MSVCCompat &&
-      MacroNameTok.getIdentifierInfo()->isStr("assert") &&
-      !isMacroDefined("static_assert")) {
-    MacroInfo *MI = AllocateMacroInfo(SourceLocation());
-
-    Token Tok;
-    Tok.startToken();
-    Tok.setKind(tok::kw__Static_assert);
-    Tok.setIdentifierInfo(getIdentifierInfo("_Static_assert"));
-    MI->setTokens({Tok}, BP);
-    (void)appendDefMacroDirective(getIdentifierInfo("static_assert"), MI);
-  }
 }
 
 /// HandleUndefDirective - Implements \#undef.
@@ -3655,7 +3658,6 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
 std::optional<LexEmbedParametersResult>
 Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
   LexEmbedParametersResult Result{};
-  SmallVector<Token, 2> ParameterTokens;
   tok::TokenKind EndTokenKind = ForHasEmbed ? tok::r_paren : tok::eod;
 
   auto DiagMismatchedBracesAndSkipToEOD =
@@ -3663,14 +3665,14 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
           std::pair<tok::TokenKind, SourceLocation> Matches) {
         Diag(CurTok, diag::err_expected) << Expected;
         Diag(Matches.second, diag::note_matching) << Matches.first;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
       };
 
   auto ExpectOrDiagAndSkipToEOD = [&](tok::TokenKind Kind) {
     if (CurTok.isNot(Kind)) {
       Diag(CurTok, diag::err_expected) << Kind;
-      if (CurTok.isNot(tok::eod))
+      if (CurTok.isNot(EndTokenKind))
         DiscardUntilEndOfDirective(CurTok);
       return false;
     }
@@ -3761,6 +3763,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
+        if (CurTok.isNot(EndTokenKind))
+          DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
       return Result.getLimitedValue();
@@ -3808,9 +3812,13 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
             [[fallthrough]];
           case tok::r_brace:
           case tok::r_square: {
+            if (BracketStack.empty()) {
+              ExpectOrDiagAndSkipToEOD(tok::r_paren);
+              return false;
+            }
             tok::TokenKind Matching =
                 GetMatchingCloseBracket(BracketStack.back().first);
-            if (BracketStack.empty() || CurTok.getKind() != Matching) {
+            if (CurTok.getKind() != Matching) {
               DiagMismatchedBracesAndSkipToEOD(Matching, BracketStack.back());
               return false;
             }
@@ -3898,7 +3906,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       }
       if (!ForHasEmbed) {
         Diag(ParamStartLoc, diag::err_pp_unknown_parameter) << 1 << Parameter;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
@@ -4000,14 +4008,17 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   StringRef OriginalFilename = Filename;
   bool isAngled =
       GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  assert(!Filename.empty());
+  if (Filename.empty())
+    return;
+
   OptionalFileEntryRef MaybeFileRef =
       this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
   if (!MaybeFileRef) {
     // could not find file
-    if (Callbacks && Callbacks->EmbedFileNotFound(OriginalFilename)) {
+    if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
       return;
     }
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;

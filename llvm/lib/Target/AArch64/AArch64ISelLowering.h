@@ -23,501 +23,7 @@
 
 namespace llvm {
 
-namespace AArch64ISD {
-
-// For predicated nodes where the result is a vector, the operation is
-// controlled by a governing predicate and the inactive lanes are explicitly
-// defined with a value, please stick the following naming convention:
-//
-//    _MERGE_OP<n>        The result value is a vector with inactive lanes equal
-//                        to source operand OP<n>.
-//
-//    _MERGE_ZERO         The result value is a vector with inactive lanes
-//                        actively zeroed.
-//
-//    _MERGE_PASSTHRU     The result value is a vector with inactive lanes equal
-//                        to the last source operand which only purpose is being
-//                        a passthru value.
-//
-// For other cases where no explicit action is needed to set the inactive lanes,
-// or when the result is not a vector and it is needed or helpful to
-// distinguish a node from similar unpredicated nodes, use:
-//
-//    _PRED
-//
-enum NodeType : unsigned {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  WrapperLarge, // 4-instruction MOVZ/MOVK sequence for 64-bit addresses.
-  CALL,         // Function call.
-
-  // Pseudo for a OBJC call that gets emitted together with a special `mov
-  // x29, x29` marker instruction.
-  CALL_RVMARKER,
-
-  CALL_BTI, // Function call followed by a BTI instruction.
-
-  // Function call, authenticating the callee value first:
-  // AUTH_CALL chain, callee, auth key #, int disc, addr disc, operands.
-  AUTH_CALL,
-  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, int disc, addr disc,
-  // operands.
-  AUTH_TC_RETURN,
-
-  // Authenticated variant of CALL_RVMARKER.
-  AUTH_CALL_RVMARKER,
-
-  COALESCER_BARRIER,
-
-  VG_SAVE,
-  VG_RESTORE,
-
-  SMSTART,
-  SMSTOP,
-  RESTORE_ZA,
-  RESTORE_ZT,
-  SAVE_ZT,
-
-  // A call with the callee in x16, i.e. "blr x16".
-  CALL_ARM64EC_TO_X64,
-
-  // Produces the full sequence of instructions for getting the thread pointer
-  // offset of a variable into X0, using the TLSDesc model.
-  TLSDESC_CALLSEQ,
-  TLSDESC_AUTH_CALLSEQ,
-  ADRP,     // Page address of a TargetGlobalAddress operand.
-  ADR,      // ADR
-  ADDlow,   // Add the low 12 bits of a TargetGlobalAddress operand.
-  LOADgot,  // Load from automatically generated descriptor (e.g. Global
-            // Offset Table, TLS record).
-  RET_GLUE, // Return with a glue operand. Operand 0 is the chain operand.
-  BRCOND,   // Conditional branch instruction; "b.cond".
-  CSEL,
-  CSINV, // Conditional select invert.
-  CSNEG, // Conditional select negate.
-  CSINC, // Conditional select increment.
-
-  // Pointer to the thread's local storage area. Materialised from TPIDR_EL0 on
-  // ELF.
-  THREAD_POINTER,
-  ADC,
-  SBC, // adc, sbc instructions
-
-  // To avoid stack clash, allocation is performed by block and each block is
-  // probed.
-  PROBED_ALLOCA,
-
-  // Predicated instructions where inactive lanes produce undefined results.
-  ABDS_PRED,
-  ABDU_PRED,
-  FADD_PRED,
-  FDIV_PRED,
-  FMA_PRED,
-  FMAX_PRED,
-  FMAXNM_PRED,
-  FMIN_PRED,
-  FMINNM_PRED,
-  FMUL_PRED,
-  FSUB_PRED,
-  HADDS_PRED,
-  HADDU_PRED,
-  MUL_PRED,
-  MULHS_PRED,
-  MULHU_PRED,
-  RHADDS_PRED,
-  RHADDU_PRED,
-  SDIV_PRED,
-  SHL_PRED,
-  SMAX_PRED,
-  SMIN_PRED,
-  SRA_PRED,
-  SRL_PRED,
-  UDIV_PRED,
-  UMAX_PRED,
-  UMIN_PRED,
-
-  // Unpredicated vector instructions
-  BIC,
-
-  SRAD_MERGE_OP1,
-
-  // Predicated instructions with the result of inactive lanes provided by the
-  // last operand.
-  FABS_MERGE_PASSTHRU,
-  FCEIL_MERGE_PASSTHRU,
-  FFLOOR_MERGE_PASSTHRU,
-  FNEARBYINT_MERGE_PASSTHRU,
-  FNEG_MERGE_PASSTHRU,
-  FRECPX_MERGE_PASSTHRU,
-  FRINT_MERGE_PASSTHRU,
-  FROUND_MERGE_PASSTHRU,
-  FROUNDEVEN_MERGE_PASSTHRU,
-  FSQRT_MERGE_PASSTHRU,
-  FTRUNC_MERGE_PASSTHRU,
-  FP_ROUND_MERGE_PASSTHRU,
-  FP_EXTEND_MERGE_PASSTHRU,
-  UINT_TO_FP_MERGE_PASSTHRU,
-  SINT_TO_FP_MERGE_PASSTHRU,
-  FCVTX_MERGE_PASSTHRU,
-  FCVTZU_MERGE_PASSTHRU,
-  FCVTZS_MERGE_PASSTHRU,
-  SIGN_EXTEND_INREG_MERGE_PASSTHRU,
-  ZERO_EXTEND_INREG_MERGE_PASSTHRU,
-  ABS_MERGE_PASSTHRU,
-  NEG_MERGE_PASSTHRU,
-
-  SETCC_MERGE_ZERO,
-
-  // Arithmetic instructions which write flags.
-  ADDS,
-  SUBS,
-  ADCS,
-  SBCS,
-  ANDS,
-
-  // Conditional compares. Operands: left,right,falsecc,cc,flags
-  CCMP,
-  CCMN,
-  FCCMP,
-
-  // Floating point comparison
-  FCMP,
-
-  // Scalar-to-vector duplication
-  DUP,
-  DUPLANE8,
-  DUPLANE16,
-  DUPLANE32,
-  DUPLANE64,
-  DUPLANE128,
-
-  // Vector immedate moves
-  MOVI,
-  MOVIshift,
-  MOVIedit,
-  MOVImsl,
-  FMOV,
-  MVNIshift,
-  MVNImsl,
-
-  // Vector immediate ops
-  BICi,
-  ORRi,
-
-  // Vector bitwise select: similar to ISD::VSELECT but not all bits within an
-  // element must be identical.
-  BSP,
-
-  // Vector shuffles
-  ZIP1,
-  ZIP2,
-  UZP1,
-  UZP2,
-  TRN1,
-  TRN2,
-  REV16,
-  REV32,
-  REV64,
-  EXT,
-  SPLICE,
-
-  // Vector shift by scalar
-  VSHL,
-  VLSHR,
-  VASHR,
-
-  // Vector shift by scalar (again)
-  SQSHL_I,
-  UQSHL_I,
-  SQSHLU_I,
-  SRSHR_I,
-  URSHR_I,
-  URSHR_I_PRED,
-
-  // Vector narrowing shift by immediate (bottom)
-  RSHRNB_I,
-
-  // Vector shift by constant and insert
-  VSLI,
-  VSRI,
-
-  // Vector comparisons
-  FCMEQ,
-  FCMGE,
-  FCMGT,
-
-  // Round wide FP to narrow FP with inexact results to odd.
-  FCVTXN,
-
-  // Vector across-lanes addition
-  // Only the lower result lane is defined.
-  SADDV,
-  UADDV,
-
-  // Unsigned sum Long across Vector
-  UADDLV,
-  SADDLV,
-
-  // Wide adds
-  SADDWT,
-  SADDWB,
-  UADDWT,
-  UADDWB,
-
-  // Add Pairwise of two vectors
-  ADDP,
-  // Add Long Pairwise
-  SADDLP,
-  UADDLP,
-
-  // udot/sdot/usdot instructions
-  UDOT,
-  SDOT,
-  USDOT,
-
-  // Vector across-lanes min/max
-  // Only the lower result lane is defined.
-  SMINV,
-  UMINV,
-  SMAXV,
-  UMAXV,
-
-  SADDV_PRED,
-  UADDV_PRED,
-  SMAXV_PRED,
-  UMAXV_PRED,
-  SMINV_PRED,
-  UMINV_PRED,
-  ORV_PRED,
-  EORV_PRED,
-  ANDV_PRED,
-
-  // Compare-and-branch
-  CBZ,
-  CBNZ,
-  TBZ,
-  TBNZ,
-
-  // Tail calls
-  TC_RETURN,
-
-  // Custom prefetch handling
-  PREFETCH,
-
-  // {s|u}int to FP within a FP register.
-  SITOF,
-  UITOF,
-
-  /// Natural vector cast. ISD::BITCAST is not natural in the big-endian
-  /// world w.r.t vectors; which causes additional REV instructions to be
-  /// generated to compensate for the byte-swapping. But sometimes we do
-  /// need to re-interpret the data in SIMD vector registers in big-endian
-  /// mode without emitting such REV instructions.
-  NVCAST,
-
-  MRS, // MRS, also sets the flags via a glue.
-
-  SMULL,
-  UMULL,
-
-  PMULL,
-
-  // Reciprocal estimates and steps.
-  FRECPE,
-  FRECPS,
-  FRSQRTE,
-  FRSQRTS,
-
-  SUNPKHI,
-  SUNPKLO,
-  UUNPKHI,
-  UUNPKLO,
-
-  CLASTA_N,
-  CLASTB_N,
-  LASTA,
-  LASTB,
-  TBL,
-
-  // Floating-point reductions.
-  FADDA_PRED,
-  FADDV_PRED,
-  FMAXV_PRED,
-  FMAXNMV_PRED,
-  FMINV_PRED,
-  FMINNMV_PRED,
-
-  INSR,
-  PTEST,
-  PTEST_ANY,
-  PTRUE,
-
-  CTTZ_ELTS,
-
-  BITREVERSE_MERGE_PASSTHRU,
-  BSWAP_MERGE_PASSTHRU,
-  REVH_MERGE_PASSTHRU,
-  REVW_MERGE_PASSTHRU,
-  CTLZ_MERGE_PASSTHRU,
-  CTPOP_MERGE_PASSTHRU,
-  DUP_MERGE_PASSTHRU,
-  INDEX_VECTOR,
-
-  // Cast between vectors of the same element type but differ in length.
-  REINTERPRET_CAST,
-
-  // Nodes to build an LD64B / ST64B 64-bit quantity out of i64, and vice versa
-  LS64_BUILD,
-  LS64_EXTRACT,
-
-  LD1_MERGE_ZERO,
-  LD1S_MERGE_ZERO,
-  LDNF1_MERGE_ZERO,
-  LDNF1S_MERGE_ZERO,
-  LDFF1_MERGE_ZERO,
-  LDFF1S_MERGE_ZERO,
-  LD1RQ_MERGE_ZERO,
-  LD1RO_MERGE_ZERO,
-
-  // Structured loads.
-  SVE_LD2_MERGE_ZERO,
-  SVE_LD3_MERGE_ZERO,
-  SVE_LD4_MERGE_ZERO,
-
-  // Unsigned gather loads.
-  GLD1_MERGE_ZERO,
-  GLD1_SCALED_MERGE_ZERO,
-  GLD1_UXTW_MERGE_ZERO,
-  GLD1_SXTW_MERGE_ZERO,
-  GLD1_UXTW_SCALED_MERGE_ZERO,
-  GLD1_SXTW_SCALED_MERGE_ZERO,
-  GLD1_IMM_MERGE_ZERO,
-  GLD1Q_MERGE_ZERO,
-  GLD1Q_INDEX_MERGE_ZERO,
-
-  // Signed gather loads
-  GLD1S_MERGE_ZERO,
-  GLD1S_SCALED_MERGE_ZERO,
-  GLD1S_UXTW_MERGE_ZERO,
-  GLD1S_SXTW_MERGE_ZERO,
-  GLD1S_UXTW_SCALED_MERGE_ZERO,
-  GLD1S_SXTW_SCALED_MERGE_ZERO,
-  GLD1S_IMM_MERGE_ZERO,
-
-  // Unsigned gather loads.
-  GLDFF1_MERGE_ZERO,
-  GLDFF1_SCALED_MERGE_ZERO,
-  GLDFF1_UXTW_MERGE_ZERO,
-  GLDFF1_SXTW_MERGE_ZERO,
-  GLDFF1_UXTW_SCALED_MERGE_ZERO,
-  GLDFF1_SXTW_SCALED_MERGE_ZERO,
-  GLDFF1_IMM_MERGE_ZERO,
-
-  // Signed gather loads.
-  GLDFF1S_MERGE_ZERO,
-  GLDFF1S_SCALED_MERGE_ZERO,
-  GLDFF1S_UXTW_MERGE_ZERO,
-  GLDFF1S_SXTW_MERGE_ZERO,
-  GLDFF1S_UXTW_SCALED_MERGE_ZERO,
-  GLDFF1S_SXTW_SCALED_MERGE_ZERO,
-  GLDFF1S_IMM_MERGE_ZERO,
-
-  // Non-temporal gather loads
-  GLDNT1_MERGE_ZERO,
-  GLDNT1_INDEX_MERGE_ZERO,
-  GLDNT1S_MERGE_ZERO,
-
-  // Contiguous masked store.
-  ST1_PRED,
-
-  // Scatter store
-  SST1_PRED,
-  SST1_SCALED_PRED,
-  SST1_UXTW_PRED,
-  SST1_SXTW_PRED,
-  SST1_UXTW_SCALED_PRED,
-  SST1_SXTW_SCALED_PRED,
-  SST1_IMM_PRED,
-  SST1Q_PRED,
-  SST1Q_INDEX_PRED,
-
-  // Non-temporal scatter store
-  SSTNT1_PRED,
-  SSTNT1_INDEX_PRED,
-
-  // SME
-  RDSVL,
-  REVD_MERGE_PASSTHRU,
-  ALLOCATE_ZA_BUFFER,
-  INIT_TPIDR2OBJ,
-
-  // Needed for __arm_agnostic("sme_za_state")
-  GET_SME_SAVE_SIZE,
-  ALLOC_SME_SAVE_BUFFER,
-
-  // Asserts that a function argument (i32) is zero-extended to i8 by
-  // the caller
-  ASSERT_ZEXT_BOOL,
-
-  // 128-bit system register accesses
-  // lo64, hi64, chain = MRRS(chain, sysregname)
-  MRRS,
-  // chain = MSRR(chain, sysregname, lo64, hi64)
-  MSRR,
-
-  // Strict (exception-raising) floating point comparison
-  FIRST_STRICTFP_OPCODE,
-  STRICT_FCMP = FIRST_STRICTFP_OPCODE,
-  STRICT_FCMPE,
-  LAST_STRICTFP_OPCODE = STRICT_FCMPE,
-
-  // NEON Load/Store with post-increment base updates
-  FIRST_MEMORY_OPCODE,
-  LD2post = FIRST_MEMORY_OPCODE,
-  LD3post,
-  LD4post,
-  ST2post,
-  ST3post,
-  ST4post,
-  LD1x2post,
-  LD1x3post,
-  LD1x4post,
-  ST1x2post,
-  ST1x3post,
-  ST1x4post,
-  LD1DUPpost,
-  LD2DUPpost,
-  LD3DUPpost,
-  LD4DUPpost,
-  LD1LANEpost,
-  LD2LANEpost,
-  LD3LANEpost,
-  LD4LANEpost,
-  ST2LANEpost,
-  ST3LANEpost,
-  ST4LANEpost,
-
-  STG,
-  STZG,
-  ST2G,
-  STZ2G,
-
-  LDP,
-  LDIAPP,
-  LDNP,
-  STP,
-  STILP,
-  STNP,
-  LAST_MEMORY_OPCODE = STNP,
-
-  // SME ZA loads and stores
-  SME_ZA_LDR,
-  SME_ZA_STR,
-
-  // Compare-and-branch
-  CB,
-};
-
-} // end namespace AArch64ISD
+class AArch64TargetMachine;
 
 namespace AArch64 {
 /// Possible values of current rounding mode, which is specified in bits
@@ -559,6 +65,8 @@ class AArch64TargetLowering : public TargetLowering {
 public:
   explicit AArch64TargetLowering(const TargetMachine &TM,
                                  const AArch64Subtarget &STI);
+
+  const AArch64TargetMachine &getTM() const;
 
   /// Control the following reassociation of operands: (op (op x, c1), y) -> (op
   /// (op x, y), c1) where N0 is (op x, c1) and N1 is y.
@@ -625,8 +133,6 @@ public:
   /// Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-  const char *getTargetNodeName(unsigned Opcode) const override;
-
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   /// This method returns a target specific FastISel object, or null if the
@@ -662,6 +168,9 @@ public:
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
+  MachineBasicBlock *EmitCheckMatchingVL(MachineInstr &MI,
+                                         MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
@@ -671,6 +180,10 @@ public:
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
+
+  // Note: The following group of functions are only used as part of the old SME
+  // ABI lowering. They will be removed once -aarch64-new-sme-abi=true is the
+  // default.
   MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
@@ -679,6 +192,15 @@ public:
                                                MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitEntryPStateSM(MachineInstr &MI,
+                                       MachineBasicBlock *BB) const;
+
+  /// Replace (0, vreg) discriminator components with the operands of blend
+  /// or with (immediate, NoRegister) when possible.
+  void fixupPtrauthDiscriminator(MachineInstr &MI, MachineBasicBlock *BB,
+                                 MachineOperand &IntDiscOp,
+                                 MachineOperand &AddrDiscOp,
+                                 const TargetRegisterClass *AddrDiscRC) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -705,22 +227,24 @@ public:
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
 
-  bool hasPairedLoad(EVT LoadedType, Align &RequiredAligment) const override;
+  bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
-  bool lowerInterleavedLoad(LoadInst *LI,
+  bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
-                            ArrayRef<unsigned> Indices,
-                            unsigned Factor) const override;
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
-                             unsigned Factor) const override;
+                            ArrayRef<unsigned> Indices, unsigned Factor,
+                            const APInt &GapMask) const override;
+  bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                             ShuffleVectorInst *SVI, unsigned Factor,
+                             const APInt &GapMask) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(
-      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                        IntrinsicInst *DI) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
+      Instruction *Store, Value *Mask,
+      ArrayRef<Value *> InterleaveValues) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -731,7 +255,7 @@ public:
 
   bool shouldConsiderGEPOffsetSplit() const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   LLT getOptimalMemOpLLT(const MemOp &Op,
@@ -776,11 +300,21 @@ public:
   bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
 
   /// Return true if it is profitable to fold a pair of shifts into a mask.
-  bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                         CombineLevel Level) const override;
+  bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
-  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                            EVT VT) const override;
+  /// Return true if it is profitable to fold a pair of shifts into a mask.
+  bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override {
+    EVT VT = Y.getValueType();
+
+    if (VT.isVector())
+      return false;
+
+    return VT.getScalarSizeInBits() <= 64;
+  }
+
+  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                            unsigned SelectOpcode, SDValue X,
+                                            SDValue Y) const override;
 
   /// Returns true if it is beneficial to convert a load of a constant
   /// to just the constant itself.
@@ -798,6 +332,11 @@ public:
     // AArch64.
     return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
   }
+
+  // Return true if the target wants to optimize the mul overflow intrinsic
+  // for the given \p VT.
+  bool shouldOptimizeMulOverflowWithZeroHighBits(LLVMContext &Context,
+                                                 EVT VT) const override;
 
   Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
@@ -832,8 +371,6 @@ public:
   Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
   void insertSSPDeclarations(Module &M) const override;
-  Value *getSDagStackGuard(const Module &M) const override;
-  Function *getSSPStackGuardCheck(const Module &M) const override;
 
   /// If the target has a standard location for the unsafe stack pointer,
   /// returns the address of that location. Otherwise, returns nullptr.
@@ -875,9 +412,10 @@ public:
     if (!VT.isVector())
       return hasAndNotCompare(Y);
 
-    TypeSize TS = VT.getSizeInBits();
-    // TODO: We should be able to use bic/bif too for SVE.
-    return !TS.isScalable() && TS.getFixedValue() >= 64; // vector 'bic'
+    if (VT.isScalableVector())
+      return true;
+
+    return VT.getFixedSizeInBits() >= 64; // vector 'bic'
   }
 
   bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
@@ -910,7 +448,7 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
-  bool shouldExpandCmpUsingSelects(EVT VT) const override;
+  bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
 
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
@@ -944,6 +482,10 @@ public:
 
   /// Enable aggressive FMA fusion on targets that want it.
   bool enableAggressiveFMAFusion(EVT VT) const override;
+
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
+    return true;
+  }
 
   /// Returns the size of the platform's va_list object.
   unsigned getVaListSizeInBits(const DataLayout &DL) const override;
@@ -994,9 +536,6 @@ public:
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
-  bool
-  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const override;
-
   bool shouldExpandCttzElements(EVT VT) const override;
 
   bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const override;
@@ -1007,7 +546,7 @@ public:
   /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
                               SDValue Chain, SDValue InGlue, unsigned Condition,
-                              SDValue PStateSM = SDValue()) const;
+                              bool InsertVectorLengthCheck = false) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
@@ -1031,13 +570,14 @@ public:
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
 
+  /// In AArch64, true if FEAT_CPA is present. Allows pointer arithmetic
+  /// semantics to be preserved for instruction selection.
+  bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
   const AArch64Subtarget *Subtarget;
-
-  llvm::BumpPtrAllocator BumpAlloc;
-  llvm::StringSaver Saver{BumpAlloc};
 
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
@@ -1047,6 +587,9 @@ private:
   void addQRType(MVT VT);
 
   bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
+
+  SDValue lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
+                          SelectionDAG &DAG) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
@@ -1142,7 +685,9 @@ private:
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(ISD::CondCode CC, SDValue LHS, SDValue RHS,
-                         SDValue TVal, SDValue FVal, const SDLoc &dl,
+                         SDValue TVal, SDValue FVal,
+                         iterator_range<SDNode::user_iterator> Users,
+                         SDNodeFlags Flags, const SDLoc &dl,
                          SelectionDAG &DAG) const;
   SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
@@ -1181,6 +726,8 @@ private:
   SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGET_ACTIVE_LANE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
@@ -1203,11 +750,12 @@ private:
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerLOOP_DEPENDENCE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECREDUCE_MUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
@@ -1319,6 +867,9 @@ private:
   void ReplaceExtractSubVectorResults(SDNode *N,
                                       SmallVectorImpl<SDValue> &Results,
                                       SelectionDAG &DAG) const;
+  void ReplaceGetActiveLaneMaskResults(SDNode *N,
+                                       SmallVectorImpl<SDValue> &Results,
+                                       SelectionDAG &DAG) const;
 
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
 
@@ -1333,6 +884,12 @@ private:
                                          KnownBits &Known,
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
+
+  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           bool PoisonOnly, bool ConsiderFlags,
+                                           unsigned Depth) const override;
 
   bool isTargetCanonicalConstantNode(SDValue Op) const override;
 
@@ -1361,6 +918,10 @@ private:
 
   bool shouldScalarizeBinop(SDValue VecOp) const override {
     return VecOp.getOpcode() == ISD::SETCC;
+  }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override {
+    return VT.isScalableVector();
   }
 };
 

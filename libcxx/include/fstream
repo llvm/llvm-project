@@ -262,8 +262,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_filebuf* open(const string& __s, ios_base::openmode __mode);
 
 #    if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI basic_filebuf*
-  open(const filesystem::path& __p, ios_base::openmode __mode) {
+  _LIBCPP_HIDE_FROM_ABI basic_filebuf* open(const filesystem::path& __p, ios_base::openmode __mode) {
     return open(__p.c_str(), __mode);
   }
 #    endif
@@ -298,6 +297,35 @@ protected:
   pos_type seekpos(pos_type __sp, ios_base::openmode __wch = ios_base::in | ios_base::out) override;
   int sync() override;
   void imbue(const locale& __loc) override;
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL streamsize xsputn(const char_type* __str, streamsize __len) override {
+    if (__always_noconv_ && __len >= (this->epptr() - this->pbase())) {
+      if (traits_type::eq_int_type(overflow(), traits_type::eof()))
+        return 0;
+
+      return std::fwrite(__str, sizeof(char_type), __len, __file_);
+    }
+    return basic_streambuf<_CharT, _Traits>::xsputn(__str, __len);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL streamsize xsgetn(char_type* __str, streamsize __len) override {
+    if (__always_noconv_) {
+      const streamsize __n = std::min(this->egptr() - this->gptr(), __len);
+      if (__n != 0) {
+        traits_type::copy(__str, this->gptr(), __n);
+        this->__gbump_ptrdiff(__n);
+      }
+      const streamsize __remainder    = __len - __n;
+      const streamsize __buffer_space = this->egptr() - this->eback();
+
+      if (__remainder >= __buffer_space)
+        return std::fread(__str + __n, sizeof(char_type), __remainder, __file_) + __n;
+      else if (__remainder > 0)
+        return basic_streambuf<_CharT, _Traits>::xsgetn(__str + __n, __remainder) + __n;
+      return __n;
+    }
+    return basic_streambuf<_CharT, _Traits>::xsgetn(__str, __len);
+  }
 
 private:
   char* __extbuf_;
@@ -400,6 +428,14 @@ private:
         __cm_ = __no_io_operations | __use_unbuffered_io;
       }
     }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI typename traits_type::int_type __overflow_failed() {
+    if (this->pptr() == this->epptr() + 1) {
+      this->pbump(-1); // lose the character we overflowed above -- we don't really have a
+                       // choice since we couldn't commit the contents of the put area
+    }
+    return traits_type::eof();
   }
 };
 
@@ -696,7 +732,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char*
   if (!__mdstr)
     return nullptr;
 
-  return __do_open(fopen(__s, __mdstr), __mode);
+  return __do_open(std::fopen(__s, __mdstr), __mode);
 }
 
 template <class _CharT, class _Traits>
@@ -761,7 +797,7 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
     std::memmove(this->eback(), this->egptr() - __unget_sz, __unget_sz * sizeof(char_type));
     if (__always_noconv_) {
       size_t __nmemb = static_cast<size_t>(this->egptr() - this->eback() - __unget_sz);
-      __nmemb        = ::fread(this->eback() + __unget_sz, 1, __nmemb, __file_);
+      __nmemb        = std::fread(this->eback() + __unget_sz, 1, __nmemb, __file_);
       if (__nmemb != 0) {
         this->setg(this->eback(), this->eback() + __unget_sz, this->eback() + __unget_sz + __nmemb);
         __c = traits_type::to_int_type(*this->gptr());
@@ -778,7 +814,7 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
           std::min(static_cast<size_t>(__ibs_ - __unget_sz), static_cast<size_t>(__extbufend_ - __extbufnext_));
       codecvt_base::result __r;
       __st_last_  = __st_;
-      size_t __nr = fread((void*)const_cast<char*>(__extbufnext_), 1, __nmemb, __file_);
+      size_t __nr = std::fread((void*)const_cast<char*>(__extbufnext_), 1, __nmemb, __file_);
       if (__nr != 0) {
         if (!__cv_)
           std::__throw_bad_cast();
@@ -833,40 +869,64 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
     *this->pptr() = traits_type::to_char_type(__c);
     this->pbump(1);
   }
-  if (this->pptr() != this->pbase()) {
-    if (__always_noconv_) {
-      size_t __nmemb = static_cast<size_t>(this->pptr() - this->pbase());
-      if (std::fwrite(this->pbase(), sizeof(char_type), __nmemb, __file_) != __nmemb)
-        return traits_type::eof();
-    } else {
-      char* __extbe = __extbuf_;
-      codecvt_base::result __r;
-      do {
-        if (!__cv_)
-          std::__throw_bad_cast();
 
-        const char_type* __e;
-        __r = __cv_->out(__st_, this->pbase(), this->pptr(), __e, __extbuf_, __extbuf_ + __ebs_, __extbe);
-        if (__e == this->pbase())
-          return traits_type::eof();
-        if (__r == codecvt_base::noconv) {
-          size_t __nmemb = static_cast<size_t>(this->pptr() - this->pbase());
-          if (std::fwrite(this->pbase(), 1, __nmemb, __file_) != __nmemb)
-            return traits_type::eof();
-        } else if (__r == codecvt_base::ok || __r == codecvt_base::partial) {
-          size_t __nmemb = static_cast<size_t>(__extbe - __extbuf_);
-          if (fwrite(__extbuf_, 1, __nmemb, __file_) != __nmemb)
-            return traits_type::eof();
-          if (__r == codecvt_base::partial) {
-            this->setp(const_cast<char_type*>(__e), this->pptr());
-            this->__pbump(this->epptr() - this->pbase());
-          }
-        } else
-          return traits_type::eof();
-      } while (__r == codecvt_base::partial);
-    }
-    this->setp(__pb_save, __epb_save);
+  // There is nothing to write, early return
+  if (this->pptr() == this->pbase()) {
+    return traits_type::not_eof(__c);
   }
+
+  if (__always_noconv_) {
+    size_t __n = static_cast<size_t>(this->pptr() - this->pbase());
+    if (std::fwrite(this->pbase(), sizeof(char_type), __n, __file_) != __n) {
+      return __overflow_failed();
+    }
+  } else {
+    if (!__cv_)
+      std::__throw_bad_cast();
+
+    // See [filebuf.virtuals]
+    char_type* __b = this->pbase();
+    char_type* __p = this->pptr();
+    const char_type* __end;
+    char* __extbuf_end = __extbuf_;
+    do {
+      codecvt_base::result __r = __cv_->out(__st_, __b, __p, __end, __extbuf_, __extbuf_ + __ebs_, __extbuf_end);
+      if (__end == __b) {
+        return __overflow_failed();
+      }
+
+      // No conversion needed: output characters directly to the file, done.
+      if (__r == codecvt_base::noconv) {
+        size_t __n = static_cast<size_t>(__p - __b);
+        if (std::fwrite(__b, 1, __n, __file_) != __n) {
+          return __overflow_failed();
+        }
+        break;
+
+        // Conversion successful: output the converted characters to the file, done.
+      } else if (__r == codecvt_base::ok) {
+        size_t __n = static_cast<size_t>(__extbuf_end - __extbuf_);
+        if (std::fwrite(__extbuf_, 1, __n, __file_) != __n) {
+          return __overflow_failed();
+        }
+        break;
+
+        // Conversion partially successful: output converted characters to the file and repeat with the
+        // remaining characters.
+      } else if (__r == codecvt_base::partial) {
+        size_t __n = static_cast<size_t>(__extbuf_end - __extbuf_);
+        if (std::fwrite(__extbuf_, 1, __n, __file_) != __n) {
+          return __overflow_failed();
+        }
+        __b = const_cast<char_type*>(__end);
+        continue;
+
+      } else {
+        return __overflow_failed();
+      }
+    } while (true);
+  }
+  this->setp(__pb_save, __epb_save);
   return traits_type::not_eof(__c);
 }
 
@@ -990,12 +1050,12 @@ int basic_filebuf<_CharT, _Traits>::sync() {
       char* __extbe;
       __r            = __cv_->unshift(__st_, __extbuf_, __extbuf_ + __ebs_, __extbe);
       size_t __nmemb = static_cast<size_t>(__extbe - __extbuf_);
-      if (fwrite(__extbuf_, 1, __nmemb, __file_) != __nmemb)
+      if (std::fwrite(__extbuf_, 1, __nmemb, __file_) != __nmemb)
         return -1;
     } while (__r == codecvt_base::partial);
     if (__r == codecvt_base::error)
       return -1;
-    if (fflush(__file_))
+    if (std::fflush(__file_))
       return -1;
   } else if (__cm_ & ios_base::in) {
     off_type __c;
@@ -1115,8 +1175,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const string& __s, ios_base::openmode __mode = ios_base::in);
 #    if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-      _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const _Tp& __p, ios_base::openmode __mode = ios_base::in)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const _Tp& __p, ios_base::openmode __mode = ios_base::in)
       : basic_ifstream(__p.c_str(), __mode) {}
 #    endif // _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI basic_ifstream(basic_ifstream&& __rhs);
@@ -1134,8 +1193,7 @@ public:
 #    endif
   void open(const string& __s, ios_base::openmode __mode = ios_base::in);
 #    if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI void
-  open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in) {
+  _LIBCPP_HIDE_FROM_ABI void open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in) {
     return open(__p.c_str(), __mode);
   }
 #    endif // _LIBCPP_STD_VER >= 17
@@ -1272,8 +1330,7 @@ public:
 
 #    if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-      _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const _Tp& __p, ios_base::openmode __mode = ios_base::out)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const _Tp& __p, ios_base::openmode __mode = ios_base::out)
       : basic_ofstream(__p.c_str(), __mode) {}
 #    endif // _LIBCPP_STD_VER >= 17
 
@@ -1293,8 +1350,7 @@ public:
   void open(const string& __s, ios_base::openmode __mode = ios_base::out);
 
 #    if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI void
-  open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::out) {
+  _LIBCPP_HIDE_FROM_ABI void open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::out) {
     return open(__p.c_str(), __mode);
   }
 #    endif // _LIBCPP_STD_VER >= 17
@@ -1434,8 +1490,7 @@ public:
 
 #    if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(
-      const _Tp& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(const _Tp& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
       : basic_fstream(__p.c_str(), __mode) {}
 #    endif // _LIBCPP_STD_VER >= 17
 
@@ -1457,7 +1512,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 
 #    if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI void
+  _LIBCPP_HIDE_FROM_ABI void
   open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in | ios_base::out) {
     return open(__p.c_str(), __mode);
   }

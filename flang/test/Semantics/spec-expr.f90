@@ -29,14 +29,14 @@ subroutine s2(inArg, inoutArg, outArg, optArg)
 
   outArg = 3
   block
-    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg'
+    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg' [-Whost-associated-intent-out-in-spec-expr]
     real a(outArg)
     !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optarg'
     real b(optArg)
   end block
  contains
   subroutine s2inner
-    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg'
+    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg' [-Whost-associated-intent-out-in-spec-expr]
     real a(outArg)
     !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optarg'
     real b(optArg)
@@ -117,7 +117,7 @@ subroutine s7biii(x, y)
   integer :: local = 5
   ! OK, since "localConst" is a constant
   real, dimension(localConst) :: realArray1
-  !PORTABILITY: specification expression refers to local object 'local' (initialized and saved)
+  !PORTABILITY: specification expression refers to local object 'local' (initialized and saved) [-Wsaved-local-in-spec-expr]
   real, dimension(local) :: realArray2
   real, dimension(size(realArray1)) :: realArray3 ! ok
   real, dimension(size(x)) :: realArray4 ! ok

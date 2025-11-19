@@ -4,6 +4,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX10 %s
 
+; TODO: Switch test to use -new-reg-bank-select after adding G_FNEG support.
+
 define <2 x half> @v_fmul_v2f16(<2 x half> %a, <2 x half> %b) {
 ; GFX9-LABEL: v_fmul_v2f16:
 ; GFX9:       ; %bb.0:
@@ -103,6 +105,104 @@ define <2 x half> @v_fmul_v2f16_fneg_lhs_fneg_rhs(<2 x half> %a, <2 x half> %b) 
   %neg.a = fneg <2 x half> %a
   %neg.b = fneg <2 x half> %b
   %mul = fmul <2 x half> %neg.a, %neg.b
+  ret <2 x half> %mul
+}
+
+define <2 x half> @v_fmul_v2f16_partial_neg(<2 x half> %a, <2 x half> %b) {
+; GFX9-LABEL: v_fmul_v2f16_partial_neg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_mul_f16 v0, v1, v0 neg_hi:[1,0]
+; GFX9-NEXT:    v_pk_mul_f16 v0, v1, v0 neg_lo:[1,0]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_fmul_v2f16_partial_neg:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80008000, v1
+; GFX8-NEXT:    v_mul_f16_e32 v3, v1, v0
+; GFX8-NEXT:    v_mul_f16_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_mul_f16_e32 v1, v2, v3
+; GFX8-NEXT:    v_mul_f16_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_fmul_v2f16_partial_neg:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_pk_mul_f16 v0, v1, v0 neg_hi:[1,0]
+; GFX10-NEXT:    v_pk_mul_f16 v0, v1, v0 neg_lo:[1,0]
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+  %b1 = bitcast <2 x half> %b to float
+  %b2 = fneg float %b1
+  %b3 = bitcast float %b2 to <2 x half>
+  %b4 = fneg <2 x half> %b3
+  %mul1 = fmul <2 x half> %b3, %a
+  %mul2 = fmul <2 x half> %b4, %mul1
+  ret <2 x half> %mul2
+}
+
+define <2 x half> @fmul_v2_half_neg_hi(<2 x half> %a, <2 x half> %b) #0 {
+; GFX9-LABEL: fmul_v2_half_neg_hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_mul_f16 v0, v0, v1 neg_hi:[0,1]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: fmul_v2_half_neg_hi:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
+; GFX8-NEXT:    v_mul_f16_e32 v1, v0, v1
+; GFX8-NEXT:    v_mul_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: fmul_v2_half_neg_hi:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_pk_mul_f16 v0, v0, v1 neg_hi:[0,1]
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+  %b1 = bitcast <2 x half> %b to float
+  %b2 = fneg float %b1
+  %b3 = bitcast float %b2 to <2 x half>
+  %b4 = extractelement <2 x half> %b3, i64 1
+  %tmp = insertelement <2 x half> poison, half %b4, i64 0
+  %k = shufflevector <2 x half> %tmp, <2 x half> %b, <2 x i32> <i32 2, i32 0>
+  %mul = fmul <2 x half> %a, %k
+  ret <2 x half> %mul
+}
+
+
+define <2 x half> @fmul_v2_half_neg_lo1(<2 x half> %a, <2 x half> %b) #0 {
+; GFX9-LABEL: fmul_v2_half_neg_lo1:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_mul_f16 v0, v0, v1 op_sel_hi:[1,0]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: fmul_v2_half_neg_lo1:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
+; GFX8-NEXT:    v_mul_f16_e32 v1, v0, v1
+; GFX8-NEXT:    v_mul_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: fmul_v2_half_neg_lo1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_pk_mul_f16 v0, v0, v1 op_sel_hi:[1,0]
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+  %b1 = bitcast <2 x half> %b to float
+  %b2 = fneg float %b1
+  %b3 = bitcast float %b2 to <2 x half>
+  %b4 = extractelement <2 x half> %b3, i64 0
+  %tmp = insertelement <2 x half> poison, half %b4, i64 0
+  %k = shufflevector <2 x half> %tmp, <2 x half> %b, <2 x i32> <i32 2, i32 0>
+  %mul = fmul <2 x half> %a, %k
   ret <2 x half> %mul
 }
 

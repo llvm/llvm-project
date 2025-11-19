@@ -46,6 +46,8 @@ public:
   constexpr const char &operator[](std::size_t j) const {
     return interval_.start()[j];
   }
+  constexpr const char &front() const { return (*this)[0]; }
+  constexpr const char &back() const { return (*this)[size() - 1]; }
 
   bool Contains(const CharBlock &that) const {
     return interval_.Contains(that.interval_);
@@ -150,7 +152,12 @@ private:
 
   int Compare(const char *that) const {
     std::size_t bytes{size()};
-    if (int cmp{std::strncmp(begin(), that, bytes)}) {
+    // strncmp is undefined if either pointer is null.
+    if (!bytes) {
+      return that == nullptr ? 0 : -1;
+    } else if (!that) {
+      return 1;
+    } else if (int cmp{std::strncmp(begin(), that, bytes)}) {
       return cmp;
     }
     return that[bytes] == '\0' ? 0 : -1;

@@ -347,7 +347,7 @@ define void @f1_vector_4096_arr(ptr %out) #0 {
 ; RV64IV-NEXT:    add sp, sp, a0
 ; RV64IV-NEXT:    .cfi_def_cfa sp, 12304
 ; RV64IV-NEXT:    lui a0, 3
-; RV64IV-NEXT:    addiw a0, a0, 16
+; RV64IV-NEXT:    addi a0, a0, 16
 ; RV64IV-NEXT:    add sp, sp, a0
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IV-NEXT:    ret

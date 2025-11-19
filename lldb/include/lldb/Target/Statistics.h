@@ -123,6 +123,25 @@ struct StatsSuccessFail {
   uint32_t failures = 0;
 };
 
+/// Holds statistics about DWO (Debug With Object) files.
+struct DWOStats {
+  uint32_t loaded_dwo_file_count = 0;
+  uint32_t dwo_file_count = 0;
+  uint32_t dwo_error_count = 0;
+
+  DWOStats &operator+=(const DWOStats &rhs) {
+    loaded_dwo_file_count += rhs.loaded_dwo_file_count;
+    dwo_file_count += rhs.dwo_file_count;
+    dwo_error_count += rhs.dwo_error_count;
+    return *this;
+  }
+
+  friend DWOStats operator+(DWOStats lhs, const DWOStats &rhs) {
+    lhs += rhs;
+    return lhs;
+  }
+};
+
 /// A class that represents statistics for a since lldb_private::Module.
 struct ModuleStats {
   llvm::json::Value ToJSON() const;
@@ -153,6 +172,7 @@ struct ModuleStats {
   bool symtab_stripped = false;
   bool debug_info_had_variable_errors = false;
   bool debug_info_had_incomplete_types = false;
+  DWOStats dwo_stats;
 };
 
 struct ConstStringStats {
@@ -189,11 +209,15 @@ public:
 
   void SetIncludeTranscript(bool value) { m_include_transcript = value; }
   bool GetIncludeTranscript() const {
-    if (m_include_transcript.has_value())
-      return m_include_transcript.value();
-    // `m_include_transcript` has no value set, so return a value based on
-    // `m_summary_only`.
-    return !GetSummaryOnly();
+    return m_include_transcript.value_or(false);
+  }
+
+  void SetIncludePlugins(bool value) { m_include_plugins = value; }
+  bool GetIncludePlugins() const {
+    if (m_include_plugins.has_value())
+      return m_include_plugins.value();
+    // Default to true in both default mode and summary mode.
+    return true;
   }
 
 private:
@@ -202,6 +226,7 @@ private:
   std::optional<bool> m_include_targets;
   std::optional<bool> m_include_modules;
   std::optional<bool> m_include_transcript;
+  std::optional<bool> m_include_plugins;
 };
 
 /// A class that represents statistics about a TypeSummaryProviders invocations
@@ -297,12 +322,14 @@ public:
   void IncreaseSourceRealpathCompatibleCount(uint32_t count);
 
   StatsDuration &GetCreateTime() { return m_create_time; }
+  StatsDuration &GetLoadCoreTime() { return m_load_core_time; }
   StatsSuccessFail &GetExpressionStats() { return m_expr_eval; }
   StatsSuccessFail &GetFrameVariableStats() { return m_frame_var; }
   void Reset(Target &target);
 
 protected:
   StatsDuration m_create_time;
+  StatsDuration m_load_core_time;
   std::optional<StatsTimepoint> m_launch_or_attach_time;
   std::optional<StatsTimepoint> m_first_private_stop_time;
   std::optional<StatsTimepoint> m_first_public_stop_time;

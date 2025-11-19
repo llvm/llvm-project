@@ -173,8 +173,8 @@ define dso_local i32 @and_mul_reduce_add(ptr noalias nocapture readonly %a, ptr 
 ; CHECK-LABEL: and_mul_reduce_add:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    ldr.w r12, [sp, #12]
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    ldr.w r12, [sp, #16]
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq .LBB2_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
@@ -195,9 +195,14 @@ define dso_local i32 @and_mul_reduce_add(ptr noalias nocapture readonly %a, ptr 
 ; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    sub.w r12, r12, #4
 ; CHECK-NEXT:    vsub.i32 q1, q2, q1
-; CHECK-NEXT:    vpsttt
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vcmpt.i32 eq, q1, zr
+; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q1, [r3], #16
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q2, [r2], #16
 ; CHECK-NEXT:    vmul.i32 q1, q2, q1
 ; CHECK-NEXT:    vadd.i32 q1, q1, q0
@@ -206,11 +211,11 @@ define dso_local i32 @and_mul_reduce_add(ptr noalias nocapture readonly %a, ptr 
 ; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vaddv.u32 r0, q0
-; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:  .LBB2_4:
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r4, pc}
                                          ptr noalias nocapture readonly %c, ptr noalias nocapture readonly %d, i32 %N) {
 entry:

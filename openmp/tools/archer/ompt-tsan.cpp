@@ -1224,7 +1224,7 @@ static void ompt_tsan_finalize(ompt_data_t *tool_data) {
   if (archer_flags->print_max_rss) {
     struct rusage end;
     getrusage(RUSAGE_SELF, &end);
-    printf("MAX RSS[KBytes] during execution: %ld\n", end.ru_maxrss);
+    printf("MAX RSS[KiB] during execution: %ld\n", end.ru_maxrss);
   }
 
   if (archer_flags)

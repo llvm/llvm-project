@@ -389,7 +389,7 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     if (SemaRef.BuiltinConstantArg(TheCall, ArgIdx, Imm))
       return true;
 
-    if (std::find(Set.begin(), Set.end(), Imm.getSExtValue()) == Set.end())
+    if (!llvm::is_contained(Set, Imm.getSExtValue()))
       return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
     return false;
   };
@@ -569,37 +569,42 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   // * When compiling for SVE only, the caller must be in non-streaming mode.
   // * When compiling for both SVE and SME, the caller can be in either mode.
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
-    llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
-    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
-    CallerFeatureMapWithoutSVE["sve"] = false;
+    llvm::StringMap<bool> CallerFeatures;
+    S.Context.getFunctionFeatureMap(CallerFeatures, FD);
 
     // Avoid emitting diagnostics for a function that can never compile.
-    if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
+    if (FnType == SemaARM::ArmStreaming && !CallerFeatures["sme"])
       return false;
 
-    llvm::StringMap<bool> CallerFeatureMapWithoutSME;
-    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
-    CallerFeatureMapWithoutSME["sme"] = false;
+    const auto FindTopLevelPipe = [](const char *S) {
+      unsigned Depth = 0;
+      unsigned I = 0, E = strlen(S);
+      for (; I < E; ++I) {
+        if (S[I] == '|' && Depth == 0)
+          break;
+        if (S[I] == '(')
+          ++Depth;
+        else if (S[I] == ')')
+          --Depth;
+      }
+      return I;
+    };
 
-    // We know the builtin requires either some combination of SVE flags, or
-    // some combination of SME flags, but we need to figure out which part
-    // of the required features is satisfied by the target features.
-    //
-    // For a builtin with target guard 'sve2p1|sme2', if we compile with
-    // '+sve2p1,+sme', then we know that it satisfies the 'sve2p1' part if we
-    // evaluate the features for '+sve2p1,+sme,+nosme'.
-    //
-    // Similarly, if we compile with '+sve2,+sme2', then we know it satisfies
-    // the 'sme2' part if we evaluate the features for '+sve2,+sme2,+nosve'.
-    StringRef BuiltinTargetGuards(
-        S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
+    const char *RequiredFeatures =
+        S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
+    unsigned PipeIdx = FindTopLevelPipe(RequiredFeatures);
+    assert(PipeIdx != 0 && PipeIdx != strlen(RequiredFeatures) &&
+           "Expected feature string of the form 'SVE-EXPR|SME-EXPR'");
+    StringRef NonStreamingBuiltinGuard = StringRef(RequiredFeatures, PipeIdx);
+    StringRef StreamingBuiltinGuard = StringRef(RequiredFeatures + PipeIdx + 1);
+
     bool SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
-        BuiltinTargetGuards, CallerFeatureMapWithoutSME);
+        NonStreamingBuiltinGuard, CallerFeatures);
     bool SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
-        BuiltinTargetGuards, CallerFeatureMapWithoutSVE);
+        StreamingBuiltinGuard, CallerFeatures);
 
-    if ((SatisfiesSVE && SatisfiesSME) ||
-        (SatisfiesSVE && FnType == SemaARM::ArmStreamingCompatible))
+    if (SatisfiesSVE && SatisfiesSME)
+      // Function type is irrelevant for streaming-agnostic builtins.
       return false;
     else if (SatisfiesSVE)
       BuiltinType = SemaARM::ArmNonStreaming;
@@ -766,7 +771,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
-    Sema::AssignConvertType ConvTy;
+    AssignConvertType ConvTy;
     ConvTy = SemaRef.CheckSingleAssignmentConstraints(LHSTy, RHS);
     if (RHS.isInvalid())
       return true;
@@ -841,12 +846,14 @@ bool SemaARM::CheckARMCoprocessorImmediate(const TargetInfo &TI,
   return false;
 }
 
-bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
-                                           CallExpr *TheCall,
-                                           unsigned MaxWidth) {
+bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
+                                           unsigned BuiltinID,
+                                           CallExpr *TheCall) {
   assert((BuiltinID == ARM::BI__builtin_arm_ldrex ||
+          BuiltinID == ARM::BI__builtin_arm_ldrexd ||
           BuiltinID == ARM::BI__builtin_arm_ldaex ||
           BuiltinID == ARM::BI__builtin_arm_strex ||
+          BuiltinID == ARM::BI__builtin_arm_strexd ||
           BuiltinID == ARM::BI__builtin_arm_stlex ||
           BuiltinID == AArch64::BI__builtin_arm_ldrex ||
           BuiltinID == AArch64::BI__builtin_arm_ldaex ||
@@ -854,9 +861,12 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
           BuiltinID == AArch64::BI__builtin_arm_stlex) &&
          "unexpected ARM builtin");
   bool IsLdrex = BuiltinID == ARM::BI__builtin_arm_ldrex ||
+                 BuiltinID == ARM::BI__builtin_arm_ldrexd ||
                  BuiltinID == ARM::BI__builtin_arm_ldaex ||
                  BuiltinID == AArch64::BI__builtin_arm_ldrex ||
                  BuiltinID == AArch64::BI__builtin_arm_ldaex;
+  bool IsDoubleWord = BuiltinID == ARM::BI__builtin_arm_ldrexd ||
+                      BuiltinID == ARM::BI__builtin_arm_strexd;
 
   ASTContext &Context = getASTContext();
   DeclRefExpr *DRE =
@@ -918,12 +928,64 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
     return true;
   }
 
-  // But ARM doesn't have instructions to deal with 128-bit versions.
-  if (Context.getTypeSize(ValType) > MaxWidth) {
-    assert(MaxWidth == 64 && "Diagnostic unexpectedly inaccurate");
-    Diag(DRE->getBeginLoc(), diag::err_atomic_exclusive_builtin_pointer_size)
-        << PointerArg->getType() << PointerArg->getSourceRange();
-    return true;
+  // Check whether the size of the type can be handled atomically on this
+  // target.
+  if (!TI.getTriple().isAArch64()) {
+    unsigned Mask = TI.getARMLDREXMask();
+    unsigned Bits = Context.getTypeSize(ValType);
+    if (IsDoubleWord) {
+      // Explicit request for ldrexd/strexd means only double word sizes
+      // supported if the target supports them.
+      Mask &= TargetInfo::ARM_LDREX_D;
+    }
+    bool Supported =
+        (llvm::isPowerOf2_64(Bits)) && Bits >= 8 && (Mask & (Bits / 8));
+
+    if (!Supported) {
+      // Emit a diagnostic saying that this size isn't available. If _no_ size
+      // of exclusive access is supported on this target, we emit a diagnostic
+      // with special wording for that case, but otherwise, we emit
+      // err_atomic_exclusive_builtin_pointer_size and loop over `Mask` to
+      // control what subset of sizes it lists as legal.
+      if (Mask) {
+        auto D = Diag(DRE->getBeginLoc(),
+                      diag::err_atomic_exclusive_builtin_pointer_size)
+                 << PointerArg->getType();
+        bool Started = false;
+        for (unsigned Size = 1; Size <= 8; Size <<= 1) {
+          // For each of the sizes 1,2,4,8, pass two integers into the
+          // diagnostic. The first selects a separator from the previous
+          // number: 0 for no separator at all, 1 for a comma, 2 for " or "
+          // which appears before the final number in a list of more than one.
+          // The second integer just indicates whether we print this size in
+          // the message at all.
+          if (!(Mask & Size)) {
+            // This size isn't one of the supported ones, so emit no separator
+            // text and don't print the size itself.
+            D << 0 << 0;
+          } else {
+            // This size is supported, so print it, and an appropriate
+            // separator.
+            Mask &= ~Size;
+            if (!Started)
+              D << 0; // No separator if this is the first size we've printed
+            else if (Mask)
+              D << 1; // "," if there's still another size to come
+            else
+              D << 2; // " or " if the size we're about to print is the last
+            D << 1;   // print the size itself
+            Started = true;
+          }
+        }
+      } else {
+        bool EmitDoubleWordDiagnostic =
+            IsDoubleWord && !Mask && TI.getARMLDREXMask();
+        Diag(DRE->getBeginLoc(),
+             diag::err_atomic_exclusive_builtin_pointer_size_none)
+            << (EmitDoubleWordDiagnostic ? 1 : 0)
+            << PointerArg->getSourceRange();
+      }
+    }
   }
 
   switch (ValType.getObjCLifetime()) {
@@ -964,10 +1026,12 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
                                           unsigned BuiltinID,
                                           CallExpr *TheCall) {
   if (BuiltinID == ARM::BI__builtin_arm_ldrex ||
+      BuiltinID == ARM::BI__builtin_arm_ldrexd ||
       BuiltinID == ARM::BI__builtin_arm_ldaex ||
       BuiltinID == ARM::BI__builtin_arm_strex ||
+      BuiltinID == ARM::BI__builtin_arm_strexd ||
       BuiltinID == ARM::BI__builtin_arm_stlex) {
-    return CheckARMBuiltinExclusiveCall(BuiltinID, TheCall, 64);
+    return CheckARMBuiltinExclusiveCall(TI, BuiltinID, TheCall);
   }
 
   if (BuiltinID == ARM::BI__builtin_arm_prefetch) {
@@ -1010,8 +1074,11 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
   case ARM::BI__builtin_arm_vcvtr_d:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
   case ARM::BI__builtin_arm_dmb:
+  case ARM::BI__dmb:
   case ARM::BI__builtin_arm_dsb:
+  case ARM::BI__dsb:
   case ARM::BI__builtin_arm_isb:
+  case ARM::BI__isb:
   case ARM::BI__builtin_arm_dbg:
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15);
   case ARM::BI__builtin_arm_cdp:
@@ -1045,7 +1112,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
       BuiltinID == AArch64::BI__builtin_arm_ldaex ||
       BuiltinID == AArch64::BI__builtin_arm_strex ||
       BuiltinID == AArch64::BI__builtin_arm_stlex) {
-    return CheckARMBuiltinExclusiveCall(BuiltinID, TheCall, 128);
+    return CheckARMBuiltinExclusiveCall(TI, BuiltinID, TheCall);
   }
 
   if (BuiltinID == AArch64::BI__builtin_arm_prefetch) {
@@ -1081,7 +1148,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   // converted to a register of the form S1_2_C3_C4_5. Let the hardware throw
   // an exception for incorrect registers. This matches MSVC behavior.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
-      BuiltinID == AArch64::BI_WriteStatusReg)
+      BuiltinID == AArch64::BI_WriteStatusReg || BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x7fff);
 
   if (BuiltinID == AArch64::BI__getReg)
@@ -1108,12 +1175,14 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default: return false;
   case AArch64::BI__builtin_arm_dmb:
+  case AArch64::BI__dmb:
   case AArch64::BI__builtin_arm_dsb:
+  case AArch64::BI__dsb:
   case AArch64::BI__builtin_arm_isb:
+  case AArch64::BI__isb:
     l = 0;
     u = 15;
     break;
-  case AArch64::BI__builtin_arm_tcancel: l = 0; u = 65535; break;
   }
 
   return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
@@ -1401,6 +1470,218 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
            diag::err_sme_definition_using_zt0_in_non_sme2_target);
     }
   }
+}
+
+/// getSVETypeSize - Return SVE vector or predicate register size.
+static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty,
+                               bool IsStreaming) {
+  assert(Ty->isSveVLSBuiltinType() && "Invalid SVE Type");
+  uint64_t VScale = IsStreaming ? Context.getLangOpts().VScaleStreamingMin
+                                : Context.getLangOpts().VScaleMin;
+  if (Ty->getKind() == BuiltinType::SveBool ||
+      Ty->getKind() == BuiltinType::SveCount)
+    return (VScale * 128) / Context.getCharWidth();
+  return VScale * 128;
+}
+
+bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
+  bool IsStreaming = false;
+  if (getLangOpts().VScaleMin != getLangOpts().VScaleStreamingMin ||
+      getLangOpts().VScaleMax != getLangOpts().VScaleStreamingMax) {
+    if (const FunctionDecl *FD =
+            SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+      // For streaming-compatible functions, we don't know vector length.
+      if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
+        if (T->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask)
+          return false;
+      }
+
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+        IsStreaming = true;
+    }
+  }
+
+  auto IsValidCast = [&](QualType FirstType, QualType SecondType) {
+    if (const auto *BT = FirstType->getAs<BuiltinType>()) {
+      if (const auto *VT = SecondType->getAs<VectorType>()) {
+        // Predicates have the same representation as uint8 so we also have to
+        // check the kind to make these types incompatible.
+        ASTContext &Context = getASTContext();
+        if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
+          return BT->getKind() == BuiltinType::SveBool;
+        else if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
+          return VT->getElementType().getCanonicalType() ==
+                 FirstType->getSveEltType(Context);
+        else if (VT->getVectorKind() == VectorKind::Generic)
+          return Context.getTypeSize(SecondType) ==
+                     getSVETypeSize(Context, BT, IsStreaming) &&
+                 Context.hasSameType(
+                     VT->getElementType(),
+                     Context.getBuiltinVectorTypeInfo(BT).ElementType);
+      }
+    }
+    return false;
+  };
+
+  return IsValidCast(FirstType, SecondType) ||
+         IsValidCast(SecondType, FirstType);
+}
+
+bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
+                                       QualType SecondType) {
+  bool IsStreaming = false;
+  if (getLangOpts().VScaleMin != getLangOpts().VScaleStreamingMin ||
+      getLangOpts().VScaleMax != getLangOpts().VScaleStreamingMax) {
+    if (const FunctionDecl *FD =
+            SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+      // For streaming-compatible functions, we don't know vector length.
+      if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+        if (T->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask)
+          return false;
+
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+        IsStreaming = true;
+    }
+  }
+
+  auto IsLaxCompatible = [&](QualType FirstType, QualType SecondType) {
+    const auto *BT = FirstType->getAs<BuiltinType>();
+    if (!BT)
+      return false;
+
+    const auto *VecTy = SecondType->getAs<VectorType>();
+    if (VecTy && (VecTy->getVectorKind() == VectorKind::SveFixedLengthData ||
+                  VecTy->getVectorKind() == VectorKind::Generic)) {
+      const LangOptions::LaxVectorConversionKind LVCKind =
+          getLangOpts().getLaxVectorConversions();
+      ASTContext &Context = getASTContext();
+
+      // Can not convert between sve predicates and sve vectors because of
+      // different size.
+      if (BT->getKind() == BuiltinType::SveBool &&
+          VecTy->getVectorKind() == VectorKind::SveFixedLengthData)
+        return false;
+
+      // If __ARM_FEATURE_SVE_BITS != N do not allow GNU vector lax conversion.
+      // "Whenever __ARM_FEATURE_SVE_BITS==N, GNUT implicitly
+      // converts to VLAT and VLAT implicitly converts to GNUT."
+      // ACLE Spec Version 00bet6, 3.7.3.2. Behavior common to vectors and
+      // predicates.
+      if (VecTy->getVectorKind() == VectorKind::Generic &&
+          Context.getTypeSize(SecondType) !=
+              getSVETypeSize(Context, BT, IsStreaming))
+        return false;
+
+      // If -flax-vector-conversions=all is specified, the types are
+      // certainly compatible.
+      if (LVCKind == LangOptions::LaxVectorConversionKind::All)
+        return true;
+
+      // If -flax-vector-conversions=integer is specified, the types are
+      // compatible if the elements are integer types.
+      if (LVCKind == LangOptions::LaxVectorConversionKind::Integer)
+        return VecTy->getElementType().getCanonicalType()->isIntegerType() &&
+               FirstType->getSveEltType(Context)->isIntegerType();
+    }
+
+    return false;
+  };
+
+  return IsLaxCompatible(FirstType, SecondType) ||
+         IsLaxCompatible(SecondType, FirstType);
+}
+
+bool SemaARM::checkTargetVersionAttr(const StringRef Param,
+                                     const SourceLocation Loc) {
+  using namespace DiagAttrParams;
+
+  llvm::SmallVector<StringRef, 8> Features;
+  Param.split(Features, '+');
+  for (StringRef Feat : Features) {
+    Feat = Feat.trim();
+    if (Feat == "default")
+      continue;
+    if (!getASTContext().getTargetInfo().validateCpuSupports(Feat))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << Feat << TargetVersion;
+  }
+  return false;
+}
+
+bool SemaARM::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
+  if (!getASTContext().getTargetInfo().hasFeature("fmv"))
+    return true;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  bool HasDefault = false;
+  bool HasNonDefault = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    if (Param.empty())
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Param == "default") {
+      if (HasDefault)
+        Diag(Loc, diag::warn_target_clone_duplicate_options);
+      else {
+        NewParams.push_back(Param);
+        HasDefault = true;
+      }
+      continue;
+    }
+
+    bool HasCodeGenImpact = false;
+    llvm::SmallVector<StringRef, 8> Features;
+    llvm::SmallVector<StringRef, 8> ValidFeatures;
+    Param.split(Features, '+');
+    for (StringRef Feat : Features) {
+      Feat = Feat.trim();
+      if (!getASTContext().getTargetInfo().validateCpuSupports(Feat)) {
+        Diag(Loc, diag::warn_unsupported_target_attribute)
+            << Unsupported << None << Feat << TargetClones;
+        continue;
+      }
+      if (getASTContext().getTargetInfo().doesFeatureAffectCodeGen(Feat))
+        HasCodeGenImpact = true;
+      ValidFeatures.push_back(Feat);
+    }
+
+    // Ignore features that don't impact code generation.
+    if (!HasCodeGenImpact) {
+      Diag(Loc, diag::warn_target_clone_no_impact_options);
+      continue;
+    }
+
+    if (ValidFeatures.empty())
+      continue;
+
+    // Canonicalize attribute parameter.
+    llvm::sort(ValidFeatures);
+    SmallString<64> NewParam(llvm::join(ValidFeatures, "+"));
+    if (llvm::is_contained(NewParams, NewParam)) {
+      Diag(Loc, diag::warn_target_clone_duplicate_options);
+      continue;
+    }
+
+    // Valid non-default argument.
+    NewParams.push_back(NewParam);
+    HasNonDefault = true;
+  }
+  if (!HasNonDefault)
+    return true;
+
+  return false;
 }
 
 } // namespace clang

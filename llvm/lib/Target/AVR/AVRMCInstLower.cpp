@@ -13,7 +13,7 @@
 
 #include "AVRMCInstLower.h"
 #include "AVRInstrInfo.h"
-#include "MCTargetDesc/AVRMCExpr.h"
+#include "MCTargetDesc/AVRMCAsmInfo.h"
 
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/Mangler.h"
@@ -42,19 +42,19 @@ AVRMCInstLower::lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
 
   if (TF & AVRII::MO_LO) {
     if (IsFunction) {
-      Expr = AVRMCExpr::create(Subtarget.hasEIJMPCALL() ? AVRMCExpr::VK_LO8_GS
-                                                        : AVRMCExpr::VK_PM_LO8,
+      Expr = AVRMCExpr::create(Subtarget.hasEIJMPCALL() ? AVR::S_LO8_GS
+                                                        : AVR::S_PM_LO8,
                                Expr, IsNegated, Ctx);
     } else {
-      Expr = AVRMCExpr::create(AVRMCExpr::VK_LO8, Expr, IsNegated, Ctx);
+      Expr = AVRMCExpr::create(AVR::S_LO8, Expr, IsNegated, Ctx);
     }
   } else if (TF & AVRII::MO_HI) {
     if (IsFunction) {
-      Expr = AVRMCExpr::create(Subtarget.hasEIJMPCALL() ? AVRMCExpr::VK_HI8_GS
-                                                        : AVRMCExpr::VK_PM_HI8,
+      Expr = AVRMCExpr::create(Subtarget.hasEIJMPCALL() ? AVR::S_HI8_GS
+                                                        : AVR::S_PM_HI8,
                                Expr, IsNegated, Ctx);
     } else {
-      Expr = AVRMCExpr::create(AVRMCExpr::VK_HI8, Expr, IsNegated, Ctx);
+      Expr = AVRMCExpr::create(AVR::S_HI8, Expr, IsNegated, Ctx);
     }
   } else if (TF != 0) {
     llvm_unreachable("Unknown target flag on symbol operand");

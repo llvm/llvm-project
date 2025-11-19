@@ -6,12 +6,13 @@ The extension requires the `lldb-dap` (formerly `lldb-vscode`) binary.
 This binary is not packaged with the VS Code extension.
 
 There are multiple ways to obtain this binary:
-* Use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it.
-* Download one of the relase packages from the [LLVM release page](https://github.com/llvm/llvm-project/releases/). The `LLVM-19.1.0-{operating_system}.tar.xz` packages contain a prebuilt `lldb-dap` binary.
-* Build it from source (see [LLDB's build instructions](https://lldb.llvm.org/resources/build.html)).
+
+- Use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it.
+- Download one of the release packages from the [LLVM release page](https://github.com/llvm/llvm-project/releases/). The `LLVM-19.1.0-{operating_system}.tar.xz` packages contain a prebuilt `lldb-dap` binary.
+- Build it from source (see [LLDB's build instructions](https://lldb.llvm.org/resources/build.html)).
 
 By default, the VS Code extension will expect to find `lldb-dap` in your `PATH`.
-Alternatively, you can explictly specify the location of the `lldb-dap` binary using the `lldb-dap.executable-path` setting.
+Alternatively, you can explicitly specify the location of the `lldb-dap` binary using the `lldb-dap.executable-path` setting.
 
 ### Usage with other IDEs
 
@@ -40,6 +41,34 @@ adds `FOO=1` and `bar` to the environment:
     "FOO": "1",
     "BAR": ""
   }
+}
+```
+
+#### Launch in integrated terminal
+
+This will launch process in IDE's integrated terminal.
+
+```javascript
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug",
+  "program": "/tmp/a.out",
+  "console": "integratedTerminal"
+}
+```
+
+#### Setup IO redirection
+
+This will launch process and connect `stdin` to `in.txt`, both of `stdout` and `stderr` to `out.txt`.
+
+```javascript
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug",
+  "program": "/tmp/a.out",
+  "stdio": ["in.txt", "out.txt"]
 }
 ```
 
@@ -144,7 +173,7 @@ instead of using the custom command `attachCommands`.
 ### Connect to a Debug Server on Another Machine
 
 This connects to a debug server running on another machine with hostname
-`hostnmame`. Which is debugging the program `/tmp/a.out` and listening on
+`hostname`. Which is debugging the program `/tmp/a.out` and listening on
 port `5678` of that other machine.
 
 ```javascript
@@ -161,7 +190,6 @@ You can also use the `gdb-remote-hostname` and `gdb-remote-port` parameters
 to send an attach request to a debug server running on a different machine,
 instead of custom command `attachCommands`.
 The default hostname being used `localhost`.
-
 
 ```javascript
 {
@@ -212,7 +240,7 @@ specific key/value pairs:
 | **customThreadFormat**            | string      |     | Same as `customFrameFormat`, but for threads instead of stack frames.
 | **displayExtendedBacktrace**      | bool        |     | Enable language specific extended backtraces.
 | **enableAutoVariableSummaries**   | bool        |     | Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.
-| **enableSyntheticChildDebugging** | bool        |     | If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.
+| **enableSyntheticChildDebugging** | bool        |     | If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating synthetic child plug-ins as it lets you see the actual contents of the variable.
 | **initCommands**                  | [string]    |     | LLDB commands executed upon debugger startup prior to creating the LLDB target.
 | **preRunCommands**                | [string]    |     | LLDB commands executed just before launching/attaching, after the LLDB target has been created.
 | **stopCommands**                  | [string]    |     | LLDB commands executed just after each stop.
@@ -221,8 +249,9 @@ specific key/value pairs:
 
 All commands and command outputs will be sent to the debugger console when they are executed.
 Commands can be prefixed with `?` or `!` to modify their behavior:
-* Commands prefixed with `?` are quiet on success, i.e. nothing is written to stdout if the command succeeds.
-* Prefixing a command with `!` enables error checking: If a command prefixed with `!` fails, subsequent commands will not be run. This is usefule if one of the commands depends on another, as it will stop the chain of commands.
+
+- Commands prefixed with `?` are quiet on success, i.e. nothing is written to stdout if the command succeeds.
+- Prefixing a command with `!` enables error checking: If a command prefixed with `!` fails, subsequent commands will not be run. This is useful if one of the commands depends on another, as it will stop the chain of commands.
 
 For JSON configurations of `"type": "launch"`, the JSON configuration can additionally
 contain the following key/value pairs:
@@ -234,7 +263,9 @@ contain the following key/value pairs:
 | **cwd**                           | string      |     | The program working directory.
 | **env**                           | dictionary  |     | Environment variables to set when launching the program. The format of each environment variable string is "VAR=VALUE" for environment variables with values or just "VAR" for environment variables with no values.
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
-| **runInTerminal**                 | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
+| **runInTerminal** (deprecated)    | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
+| **console**                       | string      |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.
+| **stdio**                         | [string]    |     | The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.). Supported from lldb-dap 22.0 version.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain
@@ -243,9 +274,39 @@ the following `lldb-dap` specific key/value pairs:
 | Parameter                         | Type        | Req |         |
 |-----------------------------------|-------------|:---:|---------|
 | **program**                       | string      |     | Path to the executable to attach to. This value is optional but can help to resolve breakpoints prior the attaching to the program.
-| **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **porgram**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
+| **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **program**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
 | **waitFor**                       | boolean     |     | Wait for the process to launch.
 | **attachCommands**                | [string]    |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
+
+### Configuring `lldb-dap` defaults
+
+User settings can set the default value for the following supported
+`launch.json` configuration keys:
+
+| Parameter                         | Type     | Default |
+| --------------------------------- | -------- | :-----: |
+| **commandEscapePrefix**           | string   | ``"`"`` |
+| **customFrameFormat**             | string   |  `""`   |
+| **customThreadFormat**            | string   |  `""`   |
+| **detachOnError**                 | boolean  | `false` |
+| **disableASLR**                   | boolean  | `true`  |
+| **disableSTDIO**                  | boolean  | `false` |
+| **displayExtendedBacktrace**      | boolean  | `false` |
+| **enableAutoVariableSummaries**   | boolean  | `false` |
+| **enableSyntheticChildDebugging** | boolean  | `false` |
+| **timeout**                       | number   |  `30`   |
+| **targetTriple**                  | string   |  `""`   |
+| **platformName**                  | string   |  `""`   |
+| **initCommands**                  | [string] |  `[]`   |
+| **preRunCommands**                | [string] |  `[]`   |
+| **postRunCommands**               | [string] |  `[]`   |
+| **stopCommands**                  | [string] |  `[]`   |
+| **exitCommands**                  | [string] |  `[]`   |
+| **terminateCommands**             | [string] |  `[]`   |
+
+To adjust your settings, open the Settings editor
+via the `File > Preferences > Settings` menu or press `Ctrl+,` on Windows/Linux,
+and the `VS Code > Settings... > Settings` menu or press `Cmd+,` on Mac.
 
 ## Debug Console
 
@@ -294,13 +355,13 @@ Inspect or adjust the behavior of lldb-dap repl evaluation requests. The
 supported modes are `variable`, `command` and `auto`.
 
 - `variable` - Variable mode expressions are evaluated in the context of the
-   current frame.
+  current frame.
 - `command` - Command mode expressions are evaluated as lldb commands, as a
-   result, values printed by lldb are always stringified representations of the
-   expression output.
+  result, values printed by lldb are always stringified representations of the
+  expression output.
 - `auto` - Auto mode will attempt to infer if the expression represents an lldb
-   command or a variable expression. A heuristic is used to infer if the input
-   represents a variable or a command.
+  command or a variable expression. A heuristic is used to infer if the input
+  represents a variable or a command.
 
 In all three modes, you can use the `commandEscapePrefix` to ensure an expression
 is evaluated as a command.
@@ -330,7 +391,7 @@ For example you can use a launch configuration hook to trigger custom events lik
   "program": "exe",
   "stopCommands": [
     "lldb-dap send-event MyStopEvent",
-    "lldb-dap send-event MyStopEvent '{\"key\": 321}",
+    "lldb-dap send-event MyStopEvent '{\"key\": 321}"
   ]
 }
 ```
@@ -339,6 +400,19 @@ For example you can use a launch configuration hook to trigger custom events lik
 for more details on Debug Adapter Protocol events and the VS Code
 [debug.onDidReceiveDebugSessionCustomEvent](https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent)
 API for handling a custom event from an extension.
+
+## Server Mode
+
+lldb-dap supports a server mode that can be enabled via the following user settings.
+
+| Setting                    | Type     | Default |           |
+| -------------------------- | -------- | :-----: | --------- |
+| **Server Mode**            | string   | `False` | Run lldb-dap in server mode. When enabled, lldb-dap will start a background server that will be reused between debug sessions. This allows caching of debug symbols between sessions and improves launch performance.
+| **Connection Timeout**     | number   |   `0`   | When running lldb-dap in server mode, the time in seconds to wait for new connections after the server has started and after all clients have disconnected. Each new connection will reset the timeout. When the timeout is reached, the server will be closed and the process will exit. Specifying non-positive values will cause the server to wait for new connections indefinitely.
+
+To adjust your settings, open the Settings editor
+via the `File > Preferences > Settings` menu or press `Ctrl+,` on Windows/Linux,
+and the `VS Code > Settings... > Settings` menu or press `Cmd+,` on Mac.
 
 ## Contributing
 

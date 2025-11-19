@@ -513,7 +513,7 @@ protected:
           "No selected frame to use to find the default source.");
       return false;
     } else if (!cur_frame->HasDebugInformation()) {
-      result.AppendError("No debug info for the selected frame.");
+      result.AppendError("no debug info for the selected frame");
       return false;
     } else {
       const SymbolContext &sc =
@@ -553,11 +553,11 @@ protected:
         }
       }
       if (!m_module_list.GetSize()) {
-        result.AppendError("No modules match the input.");
+        result.AppendError("no modules match the input");
         return;
       }
     } else if (target.GetImages().GetSize() == 0) {
-      result.AppendError("The target has no associated executable images.");
+      result.AppendError("the target has no associated executable images");
       return;
     }
 
@@ -1067,7 +1067,16 @@ protected:
                 &result.GetOutputStream(), m_options.num_lines,
                 m_options.reverse, GetBreakpointLocations())) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
+        } else {
+          if (target.GetSourceManager().AtLastLine(m_options.reverse)) {
+            result.AppendNoteWithFormatv(
+                "Reached {0} of the file, no more to page",
+                m_options.reverse ? "beginning" : "end");
+          } else {
+            result.AppendNote("No source available");
+          }
         }
+
       } else {
         if (m_options.num_lines == 0)
           m_options.num_lines = 10;
@@ -1099,9 +1108,15 @@ protected:
         }
       }
     } else {
-      const char *filename = m_options.file_name.c_str();
-
+      //      const char *filename = m_options.file_name.c_str();
+      FileSpec file_spec(m_options.file_name);
       bool check_inlines = false;
+      const InlineStrategy inline_strategy = target.GetInlineStrategy();
+      if (inline_strategy == eInlineBreakpointsAlways ||
+          (inline_strategy == eInlineBreakpointsHeaders &&
+           !file_spec.IsSourceImplementationFile()))
+        check_inlines = true;
+
       SymbolContextList sc_list;
       size_t num_matches = 0;
 
@@ -1113,17 +1128,20 @@ protected:
             ModuleSpec module_spec(module_file_spec);
             matching_modules.Clear();
             target.GetImages().FindModules(module_spec, matching_modules);
-            num_matches += matching_modules.ResolveSymbolContextForFilePath(
-                filename, 0, check_inlines,
+            num_matches += matching_modules.ResolveSymbolContextsForFileSpec(
+                file_spec, 1, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
-                                  eSymbolContextCompUnit),
+                                  eSymbolContextCompUnit |
+                                  eSymbolContextLineEntry),
                 sc_list);
           }
         }
       } else {
-        num_matches = target.GetImages().ResolveSymbolContextForFilePath(
-            filename, 0, check_inlines,
-            eSymbolContextModule | eSymbolContextCompUnit, sc_list);
+        num_matches = target.GetImages().ResolveSymbolContextsForFileSpec(
+            file_spec, 1, check_inlines,
+            eSymbolContextModule | eSymbolContextCompUnit |
+                eSymbolContextLineEntry,
+            sc_list);
       }
 
       if (num_matches == 0) {
@@ -1170,10 +1188,18 @@ protected:
           if (m_options.num_lines == 0)
             m_options.num_lines = 10;
           const uint32_t column = 0;
+
+          // Headers aren't always in the DWARF but if they have
+          // executable code (eg., inlined-functions) then the callsite's
+          // file(s) will be found and assigned to
+          // sc.comp_unit->GetPrimarySupportFile, which is NOT what we want to
+          // print. Instead, we want to print the one from the line entry.
+          lldb::SupportFileSP found_file_sp = sc.line_entry.file_sp;
+
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimarySupportFile(),
-              m_options.start_line, column, 0, m_options.num_lines, "",
-              &result.GetOutputStream(), GetBreakpointLocations());
+              found_file_sp, m_options.start_line, column, 0,
+              m_options.num_lines, "", &result.GetOutputStream(),
+              GetBreakpointLocations());
 
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {

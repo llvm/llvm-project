@@ -50,6 +50,34 @@ namespace llvm {
     };
   }
 
+  enum class ExceptionHandling {
+    None,     ///< No exception support
+    DwarfCFI, ///< DWARF-like instruction based exceptions
+    SjLj,     ///< setjmp/longjmp based exceptions
+    ARM,      ///< ARM EHABI
+    WinEH,    ///< Windows Exception Handling
+    Wasm,     ///< WebAssembly Exception Handling
+    AIX,      ///< AIX Exception Handling
+    ZOS, ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the
+         ///< PPA1 is used instead of an .eh_frame section.
+  };
+
+  namespace FloatABI {
+  enum ABIType {
+    Default, // Target-specific (either soft or hard depending on triple, etc).
+    Soft,    // Soft float.
+    Hard     // Hard float.
+  };
+  }
+
+  enum class EABI {
+    Unknown,
+    Default, // Default means not specified
+    EABI4,   // Target-specific (either 4, 5 or gnu depending on triple).
+    EABI5,
+    GNU
+  };
+
   /// Code generation optimization level.
   enum class CodeGenOptLevel {
     None = 0,      ///< -O0
@@ -87,7 +115,13 @@ namespace llvm {
   };
 
   // Specify what functions should keep the frame pointer.
-  enum class FramePointerKind { None, NonLeaf, All, Reserved };
+  enum class FramePointerKind {
+    None,
+    NonLeaf,
+    All,
+    Reserved,
+    NonLeafNoReserve
+  };
 
   // Specify what type of zeroing callee-used registers.
   namespace ZeroCallUsedRegs {
@@ -128,6 +162,15 @@ namespace llvm {
     Keep = 0,    ///< No function return thunk.
     Extern = 1,  ///< Replace returns with jump to thunk, don't emit thunk.
     Invalid = 2, ///< Not used.
+  };
+
+  enum class WinX64EHUnwindV2Mode {
+    // Don't use unwind v2 (i.e., use v1).
+    Disabled = 0,
+    // Use unwind v2 here possible, otherwise fallback to v1.
+    BestEffort = 1,
+    // Use unwind v2 everywhere, otherwise raise an error.
+    Required = 2,
   };
 
   } // namespace llvm

@@ -1,4 +1,4 @@
-//===------------- Aliasing.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,14 +14,14 @@
 namespace clang::tidy::utils {
 
 /// Return whether \p S is a reference to the declaration of \p Var.
-static bool isAccessForVar(const Stmt *S, const VarDecl *Var) {
+static bool isAccessForVar(const Stmt *S, const ValueDecl *Var) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(S))
     return DRE->getDecl() == Var;
 
   return false;
 }
 
-static bool capturesByRef(const CXXRecordDecl *RD, const VarDecl *Var) {
+static bool capturesByRef(const CXXRecordDecl *RD, const ValueDecl *Var) {
   return llvm::any_of(RD->captures(), [Var](const LambdaCapture &C) {
     return C.capturesVariable() && C.getCaptureKind() == LCK_ByRef &&
            C.getCapturedVar() == Var;
@@ -29,9 +29,9 @@ static bool capturesByRef(const CXXRecordDecl *RD, const VarDecl *Var) {
 }
 
 /// Return whether \p Var has a pointer or reference in \p S.
-static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
+static bool isPtrOrReferenceForVar(const Stmt *S, const ValueDecl *Var) {
   // Treat block capture by reference as a form of taking a reference.
-  if (Var->isEscapingByref())
+  if (const auto *VD = dyn_cast<VarDecl>(Var); VD && VD->isEscapingByref())
     return true;
 
   if (const auto *DS = dyn_cast<DeclStmt>(S)) {
@@ -61,7 +61,7 @@ static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
 }
 
 /// Return whether \p Var has a pointer or reference in \p S.
-static bool hasPtrOrReferenceInStmt(const Stmt *S, const VarDecl *Var) {
+static bool hasPtrOrReferenceInStmt(const Stmt *S, const ValueDecl *Var) {
   if (isPtrOrReferenceForVar(S, Var))
     return true;
 
@@ -77,7 +77,7 @@ static bool hasPtrOrReferenceInStmt(const Stmt *S, const VarDecl *Var) {
 }
 
 static bool refersToEnclosingLambdaCaptureByRef(const Decl *Func,
-                                                const VarDecl *Var) {
+                                                const ValueDecl *Var) {
   const auto *MD = dyn_cast<CXXMethodDecl>(Func);
   if (!MD)
     return false;
@@ -89,7 +89,7 @@ static bool refersToEnclosingLambdaCaptureByRef(const Decl *Func,
   return capturesByRef(RD, Var);
 }
 
-bool hasPtrOrReferenceInFunc(const Decl *Func, const VarDecl *Var) {
+bool hasPtrOrReferenceInFunc(const Decl *Func, const ValueDecl *Var) {
   return hasPtrOrReferenceInStmt(Func->getBody(), Var) ||
          refersToEnclosingLambdaCaptureByRef(Func, Var);
 }

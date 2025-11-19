@@ -9,13 +9,18 @@
 #include "lldb/Host/Host.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Host/Pipe.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
+#include <thread>
 
 using namespace lldb_private;
 using namespace llvm;
@@ -86,4 +91,81 @@ TEST(Host, LaunchProcessSetsArgv0) {
   });
   ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), Succeeded());
   ASSERT_THAT(exit_status.get_future().get(), 0);
+}
+
+TEST(Host, FindProcesses) {
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
+
+  if (test_arg != 0) {
+    // Give the parent time to retrieve information about self.
+    // It will kill self when it is done.
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    exit(0);
+  }
+
+  bool foundPID = false;
+  ProcessLaunchInfo info;
+  ProcessInstanceInfoList processes;
+  ProcessInstanceInfoMatch match(TestMainArgv0, NameMatch::Equals);
+  info.SetExecutableFile(FileSpec(TestMainArgv0),
+                         /*add_exe_file_as_first_arg=*/true);
+  info.GetArguments().AppendArgument("--gtest_filter=Host.FindProcesses");
+  info.GetArguments().AppendArgument("--test-arg=48");
+  std::promise<int> exit_status;
+  info.SetMonitorProcessCallback([&](lldb::pid_t pid, int signal, int status) {
+    exit_status.set_value(status);
+  });
+  ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), Succeeded());
+  ASSERT_TRUE(Host::FindProcesses(match, processes));
+  for (const auto &process : processes) {
+    if (process.GetProcessID() == info.GetProcessID()) {
+      ASSERT_EQ(process.GetExecutableFile().GetFilename(),
+                info.GetExecutableFile().GetFilename());
+      foundPID = true;
+    }
+  }
+  ASSERT_TRUE(foundPID);
+  auto clean_up = llvm::make_scope_exit([&] {
+    Host::Kill(info.GetProcessID(), SIGKILL);
+    exit_status.get_future().get();
+  });
+}
+
+TEST(Host, LaunchProcessDuplicatesHandle) {
+  static constexpr llvm::StringLiteral test_msg("Hello subprocess!");
+
+  SubsystemRAII<FileSystem> subsystems;
+
+  if (test_arg) {
+    Pipe pipe(LLDB_INVALID_PIPE, (lldb::pipe_t)test_arg.getValue());
+    llvm::Expected<size_t> bytes_written =
+        pipe.Write(test_msg.data(), test_msg.size());
+    if (bytes_written && *bytes_written == test_msg.size())
+      exit(0);
+    exit(1);
+  }
+  Pipe pipe;
+  ASSERT_THAT_ERROR(pipe.CreateNew().takeError(), llvm::Succeeded());
+  SCOPED_TRACE(llvm::formatv("Pipe handles are: {0}/{1}",
+                             (uint64_t)pipe.GetReadPipe(),
+                             (uint64_t)pipe.GetWritePipe())
+                   .str());
+  ProcessLaunchInfo info;
+  info.SetExecutableFile(FileSpec(TestMainArgv0),
+                         /*add_exe_file_as_first_arg=*/true);
+  info.GetArguments().AppendArgument(
+      "--gtest_filter=Host.LaunchProcessDuplicatesHandle");
+  info.GetArguments().AppendArgument(
+      ("--test-arg=" + llvm::Twine((uint64_t)pipe.GetWritePipe())).str());
+  info.AppendDuplicateFileAction((uint64_t)pipe.GetWritePipe(),
+                                 (uint64_t)pipe.GetWritePipe());
+  info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback);
+  ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), llvm::Succeeded());
+  pipe.CloseWriteFileDescriptor();
+
+  char msg[100];
+  llvm::Expected<size_t> bytes_read =
+      pipe.Read(msg, sizeof(msg), std::chrono::seconds(10));
+  ASSERT_THAT_EXPECTED(bytes_read, llvm::Succeeded());
+  ASSERT_EQ(llvm::StringRef(msg, *bytes_read), test_msg);
 }

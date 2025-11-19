@@ -19,6 +19,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/CapturedStmt.h"
+#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
@@ -276,24 +277,14 @@ protected:
     SourceLocation GotoLoc;
   };
 
-  class ContinueStmtBitfields {
-    friend class ContinueStmt;
+  class LoopControlStmtBitfields {
+    friend class LoopControlStmt;
 
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-    /// The location of the "continue".
-    SourceLocation ContinueLoc;
-  };
-
-  class BreakStmtBitfields {
-    friend class BreakStmt;
-
-    LLVM_PREFERRED_TYPE(StmtBitfields)
-    unsigned : NumStmtBits;
-
-    /// The location of the "break".
-    SourceLocation BreakLoc;
+    /// The location of the "continue"/"break".
+    SourceLocation KwLoc;
   };
 
   class ReturnStmtBitfields {
@@ -563,17 +554,21 @@ protected:
     unsigned HasFPFeatures : 1;
 
     /// True if the call expression is a must-elide call to a coroutine.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsCoroElideSafe : 1;
 
-    /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 4 - NumExprBits;
+    /// Tracks when CallExpr is used to represent an explicit object
+    /// member function, in order to adjust the begin location.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExplicitObjectMemFunUsingMemberSyntax : 1;
 
-    /// The offset in bytes from the this pointer to the start of the
-    /// trailing objects belonging to CallExpr. Intentionally byte sized
-    /// for faster access.
-    unsigned OffsetToTrailingObjects : 8;
+    /// Indicates that SourceLocations are cached as
+    /// Trailing objects. See the definition of CallExpr.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasTrailingSourceLoc : 1;
   };
-  enum { NumCallExprBits = 32 };
+
+  enum { NumCallExprBits = 25 };
 
   class MemberExprBitfields {
     friend class ASTStmtReader;
@@ -732,6 +727,15 @@ protected:
     unsigned ProducedByFoldExpansion : 1;
   };
 
+  class ShuffleVectorExprBitfields {
+    friend class ShuffleVectorExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    unsigned NumExprs;
+  };
+
   class StmtExprBitfields {
     friend class ASTStmtReader;
     friend class StmtExpr;
@@ -743,6 +747,17 @@ protected:
     /// expression. Used to determine if a statement expression remains
     /// dependent after instantiation.
     unsigned TemplateDepth;
+  };
+
+  class ChooseExprBitfields {
+    friend class ASTStmtReader;
+    friend class ChooseExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    bool CondIsTrue : 1;
   };
 
   //===--- C++ Expression bitfields classes ---===//
@@ -1180,6 +1195,57 @@ protected:
     SourceLocation RequiresKWLoc;
   };
 
+  class ArrayTypeTraitExprBitfields {
+    friend class ArrayTypeTraitExpr;
+    friend class ASTStmtReader;
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// The trait. An ArrayTypeTrait enum in MSVC compat unsigned.
+    LLVM_PREFERRED_TYPE(ArrayTypeTrait)
+    unsigned ATT : 2;
+  };
+
+  class ExpressionTraitExprBitfields {
+    friend class ExpressionTraitExpr;
+    friend class ASTStmtReader;
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// The trait. A ExpressionTrait enum in MSVC compatible unsigned.
+    LLVM_PREFERRED_TYPE(ExpressionTrait)
+    unsigned ET : 31;
+
+    /// The value of the type trait. Unspecified if dependent.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Value : 1;
+  };
+
+  class CXXFoldExprBitfields {
+    friend class CXXFoldExpr;
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    BinaryOperatorKind Opcode;
+  };
+
+  class PackIndexingExprBitfields {
+    friend class PackIndexingExpr;
+    friend class ASTStmtWriter;
+    friend class ASTStmtReader;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+    // The size of the trailing expressions.
+    unsigned TransformedExpressions : 31;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FullySubstituted : 1;
+  };
+
   //===--- C++ Coroutines bitfields classes ---===//
 
   class CoawaitExprBitfields {
@@ -1249,8 +1315,7 @@ protected:
     DoStmtBitfields DoStmtBits;
     ForStmtBitfields ForStmtBits;
     GotoStmtBitfields GotoStmtBits;
-    ContinueStmtBitfields ContinueStmtBits;
-    BreakStmtBitfields BreakStmtBits;
+    LoopControlStmtBitfields LoopControlStmtBits;
     ReturnStmtBitfields ReturnStmtBits;
     SwitchCaseBitfields SwitchCaseBits;
 
@@ -1275,9 +1340,11 @@ protected:
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
     ParenExprBitfields ParenExprBits;
+    ShuffleVectorExprBitfields ShuffleVectorExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;
+    ChooseExprBitfields ChooseExprBits;
 
     // C++ Expressions
     CXXOperatorCallExprBitfields CXXOperatorCallExprBits;
@@ -1304,6 +1371,10 @@ protected:
     SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
     LambdaExprBitfields LambdaExprBits;
     RequiresExprBitfields RequiresExprBits;
+    ArrayTypeTraitExprBitfields ArrayTypeTraitExprBits;
+    ExpressionTraitExprBitfields ExpressionTraitExprBits;
+    CXXFoldExprBitfields CXXFoldExprBits;
+    PackIndexingExprBitfields PackIndexingExprBits;
 
     // C++ Coroutines expressions
     CoawaitExprBitfields CoawaitBits;
@@ -1760,26 +1831,6 @@ public:
     return const_reverse_body_iterator(body_begin());
   }
 
-  // Get the Stmt that StmtExpr would consider to be the result of this
-  // compound statement. This is used by StmtExpr to properly emulate the GCC
-  // compound expression extension, which ignores trailing NullStmts when
-  // getting the result of the expression.
-  // i.e. ({ 5;;; })
-  //           ^^ ignored
-  // If we don't find something that isn't a NullStmt, just return the last
-  // Stmt.
-  Stmt *getStmtExprResult() {
-    for (auto *B : llvm::reverse(body())) {
-      if (!isa<NullStmt>(B))
-        return B;
-    }
-    return body_back();
-  }
-
-  const Stmt *getStmtExprResult() const {
-    return const_cast<CompoundStmt *>(this)->getStmtExprResult();
-  }
-
   SourceLocation getBeginLoc() const { return LBraceLoc; }
   SourceLocation getEndLoc() const { return RBraceLoc; }
 
@@ -1869,10 +1920,6 @@ class CaseStmt final
 
   unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
     return NumMandatoryStmtPtr + caseStmtIsGNURange();
-  }
-
-  unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
-    return caseStmtIsGNURange();
   }
 
   unsigned lhsOffset() const { return LhsOffset; }
@@ -2106,6 +2153,14 @@ public:
   SourceLocation getBeginLoc() const { return getIdentLoc(); }
   SourceLocation getEndLoc() const LLVM_READONLY { return SubStmt->getEndLoc();}
 
+  /// Look through nested labels and return the first non-label statement; e.g.
+  /// if this is 'a:' in 'a: b: c: for(;;)', this returns the for loop.
+  const Stmt *getInnermostLabeledStmt() const;
+  Stmt *getInnermostLabeledStmt() {
+    return const_cast<Stmt *>(
+        const_cast<const LabelStmt *>(this)->getInnermostLabeledStmt());
+  }
+
   child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
 
   const_child_range children() const {
@@ -2136,7 +2191,7 @@ class AttributedStmt final
       : ValueStmt(AttributedStmtClass), SubStmt(SubStmt) {
     AttributedStmtBits.NumAttrs = Attrs.size();
     AttributedStmtBits.AttrLoc = Loc;
-    std::copy(Attrs.begin(), Attrs.end(), getAttrArrayPtr());
+    llvm::copy(Attrs, getAttrArrayPtr());
   }
 
   explicit AttributedStmt(EmptyShell Empty, unsigned NumAttrs)
@@ -2146,10 +2201,8 @@ class AttributedStmt final
     std::fill_n(getAttrArrayPtr(), NumAttrs, nullptr);
   }
 
-  const Attr *const *getAttrArrayPtr() const {
-    return getTrailingObjects<const Attr *>();
-  }
-  const Attr **getAttrArrayPtr() { return getTrailingObjects<const Attr *>(); }
+  const Attr *const *getAttrArrayPtr() const { return getTrailingObjects(); }
+  const Attr **getAttrArrayPtr() { return getTrailingObjects(); }
 
 public:
   static AttributedStmt *Create(const ASTContext &C, SourceLocation Loc,
@@ -2160,7 +2213,7 @@ public:
 
   SourceLocation getAttrLoc() const { return AttributedStmtBits.AttrLoc; }
   ArrayRef<const Attr *> getAttrs() const {
-    return llvm::ArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
+    return {getAttrArrayPtr(), AttributedStmtBits.NumAttrs};
   }
 
   Stmt *getSubStmt() { return SubStmt; }
@@ -2461,7 +2514,7 @@ class SwitchStmt final : public Stmt,
   SourceLocation LParenLoc;
   SourceLocation RParenLoc;
 
-  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+  unsigned numTrailingStatements() const {
     return NumMandatoryStmtPtr + hasInitStorage() + hasVarStorage();
   }
 
@@ -2497,40 +2550,34 @@ public:
   bool hasVarStorage() const { return SwitchStmtBits.HasVar; }
 
   Expr *getCond() {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   const Expr *getCond() const {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   void setCond(Expr *Cond) {
-    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+    getTrailingObjects()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
   }
 
-  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
-  const Stmt *getBody() const {
-    return getTrailingObjects<Stmt *>()[bodyOffset()];
-  }
+  Stmt *getBody() { return getTrailingObjects()[bodyOffset()]; }
+  const Stmt *getBody() const { return getTrailingObjects()[bodyOffset()]; }
 
-  void setBody(Stmt *Body) {
-    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
-  }
+  void setBody(Stmt *Body) { getTrailingObjects()[bodyOffset()] = Body; }
 
   Stmt *getInit() {
-    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
-                            : nullptr;
+    return hasInitStorage() ? getTrailingObjects()[initOffset()] : nullptr;
   }
 
   const Stmt *getInit() const {
-    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
-                            : nullptr;
+    return hasInitStorage() ? getTrailingObjects()[initOffset()] : nullptr;
   }
 
   void setInit(Stmt *Init) {
     assert(hasInitStorage() &&
            "This switch statement has no storage for an init statement!");
-    getTrailingObjects<Stmt *>()[initOffset()] = Init;
+    getTrailingObjects()[initOffset()] = Init;
   }
 
   /// Retrieve the variable declared in this "switch" statement, if any.
@@ -2554,20 +2601,20 @@ public:
   /// If this SwitchStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
   DeclStmt *getConditionVariableDeclStmt() {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   const DeclStmt *getConditionVariableDeclStmt() const {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   void setConditionVariableDeclStmt(DeclStmt *CondVar) {
     assert(hasVarStorage());
-    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+    getTrailingObjects()[varOffset()] = CondVar;
   }
 
   SwitchCase *getSwitchCaseList() { return FirstCase; }
@@ -2611,15 +2658,13 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() +
-                           numTrailingObjects(OverloadToken<Stmt *>()));
+    return child_range(getTrailingObjects(),
+                       getTrailingObjects() + numTrailingStatements());
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() +
-                                 numTrailingObjects(OverloadToken<Stmt *>()));
+    return const_child_range(getTrailingObjects(),
+                             getTrailingObjects() + numTrailingStatements());
   }
 
   static bool classof(const Stmt *T) {
@@ -2656,7 +2701,7 @@ class WhileStmt final : public Stmt,
   unsigned condOffset() const { return VarOffset + hasVarStorage(); }
   unsigned bodyOffset() const { return condOffset() + BodyOffsetFromCond; }
 
-  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+  unsigned numTrailingStatements() const {
     return NumMandatoryStmtPtr + hasVarStorage();
   }
 
@@ -2682,25 +2727,21 @@ public:
   bool hasVarStorage() const { return WhileStmtBits.HasVar; }
 
   Expr *getCond() {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   const Expr *getCond() const {
-    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+    return reinterpret_cast<Expr *>(getTrailingObjects()[condOffset()]);
   }
 
   void setCond(Expr *Cond) {
-    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+    getTrailingObjects()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
   }
 
-  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
-  const Stmt *getBody() const {
-    return getTrailingObjects<Stmt *>()[bodyOffset()];
-  }
+  Stmt *getBody() { return getTrailingObjects()[bodyOffset()]; }
+  const Stmt *getBody() const { return getTrailingObjects()[bodyOffset()]; }
 
-  void setBody(Stmt *Body) {
-    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
-  }
+  void setBody(Stmt *Body) { getTrailingObjects()[bodyOffset()] = Body; }
 
   /// Retrieve the variable declared in this "while" statement, if any.
   ///
@@ -2722,20 +2763,20 @@ public:
   /// If this WhileStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
   DeclStmt *getConditionVariableDeclStmt() {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   const DeclStmt *getConditionVariableDeclStmt() const {
-    return hasVarStorage() ? static_cast<DeclStmt *>(
-                                 getTrailingObjects<Stmt *>()[varOffset()])
-                           : nullptr;
+    return hasVarStorage()
+               ? static_cast<DeclStmt *>(getTrailingObjects()[varOffset()])
+               : nullptr;
   }
 
   void setConditionVariableDeclStmt(DeclStmt *CondVar) {
     assert(hasVarStorage());
-    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+    getTrailingObjects()[varOffset()] = CondVar;
   }
 
   SourceLocation getWhileLoc() const { return WhileStmtBits.WhileLoc; }
@@ -2757,15 +2798,13 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() +
-                           numTrailingObjects(OverloadToken<Stmt *>()));
+    return child_range(getTrailingObjects(),
+                       getTrailingObjects() + numTrailingStatements());
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() +
-                                 numTrailingObjects(OverloadToken<Stmt *>()));
+    return const_child_range(getTrailingObjects(),
+                             getTrailingObjects() + numTrailingStatements());
   }
 };
 
@@ -2994,63 +3033,97 @@ public:
   }
 };
 
-/// ContinueStmt - This represents a continue.
-class ContinueStmt : public Stmt {
-public:
-  ContinueStmt(SourceLocation CL) : Stmt(ContinueStmtClass) {
-    setContinueLoc(CL);
+/// Base class for BreakStmt and ContinueStmt.
+class LoopControlStmt : public Stmt {
+  /// If this is a named break/continue, the label whose statement we're
+  /// targeting, as well as the source location of the label after the
+  /// keyword; for example:
+  ///
+  ///   a: // <-- TargetLabel
+  ///   for (;;)
+  ///     break a; // <-- LabelLoc
+  ///
+  LabelDecl *TargetLabel = nullptr;
+  SourceLocation LabelLoc;
+
+protected:
+  LoopControlStmt(StmtClass Class, SourceLocation Loc, SourceLocation LabelLoc,
+                  LabelDecl *Target)
+      : Stmt(Class), TargetLabel(Target), LabelLoc(LabelLoc) {
+    setKwLoc(Loc);
   }
 
+  LoopControlStmt(StmtClass Class, SourceLocation Loc)
+      : LoopControlStmt(Class, Loc, SourceLocation(), nullptr) {}
+
+  LoopControlStmt(StmtClass Class, EmptyShell ES) : Stmt(Class, ES) {}
+
+public:
+  SourceLocation getKwLoc() const { return LoopControlStmtBits.KwLoc; }
+  void setKwLoc(SourceLocation L) { LoopControlStmtBits.KwLoc = L; }
+
+  SourceLocation getBeginLoc() const { return getKwLoc(); }
+  SourceLocation getEndLoc() const {
+    return hasLabelTarget() ? getLabelLoc() : getKwLoc();
+  }
+
+  bool hasLabelTarget() const { return TargetLabel != nullptr; }
+
+  SourceLocation getLabelLoc() const { return LabelLoc; }
+  void setLabelLoc(SourceLocation L) { LabelLoc = L; }
+
+  LabelDecl *getLabelDecl() { return TargetLabel; }
+  const LabelDecl *getLabelDecl() const { return TargetLabel; }
+  void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
+
+  /// If this is a named break/continue, get the loop or switch statement
+  /// that this targets.
+  const Stmt *getNamedLoopOrSwitch() const;
+
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    StmtClass Class = T->getStmtClass();
+    return Class == ContinueStmtClass || Class == BreakStmtClass;
+  }
+};
+
+/// ContinueStmt - This represents a continue.
+class ContinueStmt : public LoopControlStmt {
+public:
+  ContinueStmt(SourceLocation CL) : LoopControlStmt(ContinueStmtClass, CL) {}
+  ContinueStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
+      : LoopControlStmt(ContinueStmtClass, CL, LabelLoc, Target) {}
+
   /// Build an empty continue statement.
-  explicit ContinueStmt(EmptyShell Empty) : Stmt(ContinueStmtClass, Empty) {}
-
-  SourceLocation getContinueLoc() const { return ContinueStmtBits.ContinueLoc; }
-  void setContinueLoc(SourceLocation L) { ContinueStmtBits.ContinueLoc = L; }
-
-  SourceLocation getBeginLoc() const { return getContinueLoc(); }
-  SourceLocation getEndLoc() const { return getContinueLoc(); }
+  explicit ContinueStmt(EmptyShell Empty)
+      : LoopControlStmt(ContinueStmtClass, Empty) {}
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ContinueStmtClass;
   }
-
-  // Iterators
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
 };
 
 /// BreakStmt - This represents a break.
-class BreakStmt : public Stmt {
+class BreakStmt : public LoopControlStmt {
 public:
-  BreakStmt(SourceLocation BL) : Stmt(BreakStmtClass) {
-    setBreakLoc(BL);
-  }
+  BreakStmt(SourceLocation BL) : LoopControlStmt(BreakStmtClass, BL) {}
+  BreakStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
+      : LoopControlStmt(BreakStmtClass, CL, LabelLoc, Target) {}
 
   /// Build an empty break statement.
-  explicit BreakStmt(EmptyShell Empty) : Stmt(BreakStmtClass, Empty) {}
-
-  SourceLocation getBreakLoc() const { return BreakStmtBits.BreakLoc; }
-  void setBreakLoc(SourceLocation L) { BreakStmtBits.BreakLoc = L; }
-
-  SourceLocation getBeginLoc() const { return getBreakLoc(); }
-  SourceLocation getEndLoc() const { return getBreakLoc(); }
+  explicit BreakStmt(EmptyShell Empty)
+      : LoopControlStmt(BreakStmtClass, Empty) {}
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BreakStmtClass;
-  }
-
-  // Iterators
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 };
 
@@ -3075,10 +3148,6 @@ class ReturnStmt final
 
   /// True if this ReturnStmt has storage for an NRVO candidate.
   bool hasNRVOCandidate() const { return ReturnStmtBits.HasNRVOCandidate; }
-
-  unsigned numTrailingObjects(OverloadToken<const VarDecl *>) const {
-    return hasNRVOCandidate();
-  }
 
   /// Build a return statement.
   ReturnStmt(SourceLocation RL, Expr *E, const VarDecl *NRVOCandidate);
@@ -3105,8 +3174,7 @@ public:
   /// The optimization itself can only be performed if the variable is
   /// also marked as an NRVO object.
   const VarDecl *getNRVOCandidate() const {
-    return hasNRVOCandidate() ? *getTrailingObjects<const VarDecl *>()
-                              : nullptr;
+    return hasNRVOCandidate() ? *getTrailingObjects() : nullptr;
   }
 
   /// Set the variable that might be used for the named return value
@@ -3115,7 +3183,7 @@ public:
   void setNRVOCandidate(const VarDecl *Var) {
     assert(hasNRVOCandidate() &&
            "This return statement has no storage for an NRVO candidate!");
-    *getTrailingObjects<const VarDecl *>() = Var;
+    *getTrailingObjects() = Var;
   }
 
   SourceLocation getReturnLoc() const { return ReturnStmtBits.RetLoc; }
@@ -3592,16 +3660,13 @@ public:
   //===--- Other ---===//
 
   ArrayRef<StringRef> getAllConstraints() const {
-    return llvm::ArrayRef(Constraints, NumInputs + NumOutputs);
+    return {Constraints, NumInputs + NumOutputs};
   }
 
-  ArrayRef<StringRef> getClobbers() const {
-    return llvm::ArrayRef(Clobbers, NumClobbers);
-  }
+  ArrayRef<StringRef> getClobbers() const { return {Clobbers, NumClobbers}; }
 
   ArrayRef<Expr*> getAllExprs() const {
-    return llvm::ArrayRef(reinterpret_cast<Expr **>(Exprs),
-                          NumInputs + NumOutputs);
+    return {reinterpret_cast<Expr **>(Exprs), NumInputs + NumOutputs};
   }
 
   StringRef getClobber(unsigned i) const { return getClobbers()[i]; }

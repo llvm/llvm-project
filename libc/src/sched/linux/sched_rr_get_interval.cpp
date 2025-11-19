@@ -10,9 +10,11 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
+#include "hdr/types/pid_t.h"
+#include "hdr/types/struct_timespec.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 #ifdef SYS_sched_rr_get_interval_time64

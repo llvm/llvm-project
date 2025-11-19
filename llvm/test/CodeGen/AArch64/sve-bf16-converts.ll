@@ -171,11 +171,11 @@ define <vscale x 8 x bfloat> @fptrunc_nxv8f32_to_nxv8bf16(<vscale x 8 x float> %
 ; NOBF16-NEXT:    ptrue p0.s
 ; NOBF16-NEXT:    and z3.s, z3.s, #0x1
 ; NOBF16-NEXT:    and z4.s, z4.s, #0x1
-; NOBF16-NEXT:    fcmuo p1.s, p0/z, z1.s, z1.s
 ; NOBF16-NEXT:    add z5.s, z1.s, z2.s
 ; NOBF16-NEXT:    add z2.s, z0.s, z2.s
-; NOBF16-NEXT:    fcmuo p0.s, p0/z, z0.s, z0.s
+; NOBF16-NEXT:    fcmuo p1.s, p0/z, z1.s, z1.s
 ; NOBF16-NEXT:    orr z1.s, z1.s, #0x400000
+; NOBF16-NEXT:    fcmuo p0.s, p0/z, z0.s, z0.s
 ; NOBF16-NEXT:    orr z0.s, z0.s, #0x400000
 ; NOBF16-NEXT:    add z3.s, z3.s, z5.s
 ; NOBF16-NEXT:    add z2.s, z4.s, z2.s

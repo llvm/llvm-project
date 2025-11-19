@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_REGISTERBANK_H
 #define LLVM_CODEGEN_REGISTERBANK_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -54,30 +55,31 @@ public:
   /// \note This method does not check anything when assertions are disabled.
   ///
   /// \return True is the check was successful.
-  bool verify(const RegisterBankInfo &RBI, const TargetRegisterInfo &TRI) const;
+  LLVM_ABI bool verify(const RegisterBankInfo &RBI,
+                       const TargetRegisterInfo &TRI) const;
 
   /// Check whether this register bank covers \p RC.
   /// In other words, check if this register bank fully covers
   /// the registers that \p RC contains.
-  bool covers(const TargetRegisterClass &RC) const;
+  LLVM_ABI bool covers(const TargetRegisterClass &RC) const;
 
   /// Check whether \p OtherRB is the same as this.
-  bool operator==(const RegisterBank &OtherRB) const;
+  LLVM_ABI bool operator==(const RegisterBank &OtherRB) const;
   bool operator!=(const RegisterBank &OtherRB) const {
     return !this->operator==(OtherRB);
   }
 
   /// Dump the register mask on dbgs() stream.
   /// The dump is verbose.
-  void dump(const TargetRegisterInfo *TRI = nullptr) const;
+  LLVM_ABI void dump(const TargetRegisterInfo *TRI = nullptr) const;
 
   /// Print the register mask on OS.
   /// If IsForDebug is false, then only the name of the register bank
   /// is printed. Otherwise, all the fields are printing.
   /// TRI is then used to print the name of the register classes that
   /// this register bank covers.
-  void print(raw_ostream &OS, bool IsForDebug = false,
-             const TargetRegisterInfo *TRI = nullptr) const;
+  LLVM_ABI void print(raw_ostream &OS, bool IsForDebug = false,
+                      const TargetRegisterInfo *TRI = nullptr) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const RegisterBank &RegBank) {

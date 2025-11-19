@@ -1,0 +1,8 @@
+! RUN: not bbc -fcuda -fcuda-disable-warp-function %s -o - 2>&1 | FileCheck %s
+
+attributes(device) subroutine testMatch()
+  integer :: a, ipred, mask, v32
+  a = match_all_sync(mask, v32, ipred)
+end subroutine
+
+! CHECK:  warp match function disabled

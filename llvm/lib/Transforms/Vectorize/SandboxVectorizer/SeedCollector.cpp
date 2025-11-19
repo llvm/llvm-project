@@ -12,6 +12,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -20,12 +21,7 @@ namespace llvm::sandboxir {
 static cl::opt<unsigned> SeedBundleSizeLimit(
     "sbvec-seed-bundle-size-limit", cl::init(32), cl::Hidden,
     cl::desc("Limit the size of the seed bundle to cap compilation time."));
-#define LoadSeedsDef "loads"
-#define StoreSeedsDef "stores"
-static cl::opt<std::string> CollectSeeds(
-    "sbvec-collect-seeds", cl::init(LoadSeedsDef "," StoreSeedsDef), cl::Hidden,
-    cl::desc("Collect these seeds. Use empty for none or a comma-separated "
-             "list of '" LoadSeedsDef "' and '" StoreSeedsDef "'."));
+
 static cl::opt<unsigned> SeedGroupsLimit(
     "sbvec-seed-groups-limit", cl::init(256), cl::Hidden,
     cl::desc("Limit the number of collected seeds groups in a BB to "
@@ -77,22 +73,28 @@ ArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
 }
 
 template <typename LoadOrStoreT>
-SeedContainer::KeyT SeedContainer::getKey(LoadOrStoreT *LSI) const {
+SeedContainer::KeyT SeedContainer::getKey(LoadOrStoreT *LSI,
+                                          bool AllowDiffTypes) const {
   assert((isa<LoadInst>(LSI) || isa<StoreInst>(LSI)) &&
          "Expected Load or Store!");
   Value *Ptr = Utils::getMemInstructionBase(LSI);
   Instruction::Opcode Op = LSI->getOpcode();
-  Type *Ty = Utils::getExpectedType(LSI);
-  if (auto *VTy = dyn_cast<VectorType>(Ty))
-    Ty = VTy->getElementType();
+  Type *Ty;
+  if (AllowDiffTypes) {
+    Ty = nullptr;
+  } else {
+    Ty = Utils::getExpectedType(LSI);
+    if (auto *VTy = dyn_cast<VectorType>(Ty))
+      Ty = VTy->getElementType();
+  }
   return {Ptr, Ty, Op};
 }
 
 // Explicit instantiations
 template SeedContainer::KeyT
-SeedContainer::getKey<LoadInst>(LoadInst *LSI) const;
+SeedContainer::getKey<LoadInst>(LoadInst *LSI, bool AllowDiffTypes) const;
 template SeedContainer::KeyT
-SeedContainer::getKey<StoreInst>(StoreInst *LSI) const;
+SeedContainer::getKey<StoreInst>(StoreInst *LSI, bool AllowDiffTypes) const;
 
 bool SeedContainer::erase(Instruction *I) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) && "Expected Load or Store!");
@@ -104,9 +106,10 @@ bool SeedContainer::erase(Instruction *I) {
   return true;
 }
 
-template <typename LoadOrStoreT> void SeedContainer::insert(LoadOrStoreT *LSI) {
+template <typename LoadOrStoreT>
+void SeedContainer::insert(LoadOrStoreT *LSI, bool AllowDiffTypes) {
   // Find the bundle containing seeds for this symbol and type-of-access.
-  auto &BundleVec = Bundles[getKey(LSI)];
+  auto &BundleVec = Bundles[getKey(LSI, AllowDiffTypes)];
   // Fill this vector of bundles front to back so that only the last bundle in
   // the vector may have available space. This avoids iteration to find one with
   // space.
@@ -119,8 +122,10 @@ template <typename LoadOrStoreT> void SeedContainer::insert(LoadOrStoreT *LSI) {
 }
 
 // Explicit instantiations
-template void SeedContainer::insert<LoadInst>(LoadInst *);
-template void SeedContainer::insert<StoreInst>(StoreInst *);
+template LLVM_EXPORT_TEMPLATE void SeedContainer::insert<LoadInst>(LoadInst *,
+                                                                   bool);
+template LLVM_EXPORT_TEMPLATE void SeedContainer::insert<StoreInst>(StoreInst *,
+                                                                    bool);
 
 #ifndef NDEBUG
 void SeedContainer::print(raw_ostream &OS) const {
@@ -160,11 +165,11 @@ template <typename LoadOrStoreT> static bool isValidMemSeed(LoadOrStoreT *LSI) {
 template bool isValidMemSeed<LoadInst>(LoadInst *LSI);
 template bool isValidMemSeed<StoreInst>(StoreInst *LSI);
 
-SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
+SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
+                             bool CollectStores, bool CollectLoads,
+                             bool AllowDiffTypes)
     : StoreSeeds(SE), LoadSeeds(SE), Ctx(BB->getContext()) {
 
-  bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
-  bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
   if (!CollectStores && !CollectLoads)
     return;
 
@@ -179,10 +184,10 @@ SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
   for (auto &I : *BB) {
     if (StoreInst *SI = dyn_cast<StoreInst>(&I))
       if (CollectStores && isValidMemSeed(SI))
-        StoreSeeds.insert(SI);
+        StoreSeeds.insert(SI, AllowDiffTypes);
     if (LoadInst *LI = dyn_cast<LoadInst>(&I))
       if (CollectLoads && isValidMemSeed(LI))
-        LoadSeeds.insert(LI);
+        LoadSeeds.insert(LI, AllowDiffTypes);
     // Cap compilation time.
     if (totalNumSeedGroups() > SeedGroupsLimit)
       break;

@@ -5,7 +5,7 @@ define i32 @main() vscale_range(2,2) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %vector.body
 ; CHECK-NEXT:    lui a0, 1040368
-; CHECK-NEXT:    addiw a0, a0, -144
+; CHECK-NEXT:    addi a0, a0, -144
 ; CHECK-NEXT:    vl2re16.v v8, (a0)
 ; CHECK-NEXT:    vs2r.v v8, (zero)
 ; CHECK-NEXT:    li a0, 0

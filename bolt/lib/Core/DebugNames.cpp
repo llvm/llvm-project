@@ -8,8 +8,8 @@
 
 #include "bolt/Core/DebugNames.h"
 #include "bolt/Core/BinaryContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 #include <cstdint>
@@ -55,7 +55,7 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
           llvm::hash_value(llvm::StringRef(CStr)), StrOffset);
       if (!R.second)
         BC.errs()
-            << "BOLT-WARNING: [internal-dwarf-error]: collision occured on "
+            << "BOLT-WARNING: [internal-dwarf-error]: collision occurred on "
             << CStr << " at offset : 0x" << Twine::utohexstr(StrOffset)
             << ". Previous string offset is: 0x"
             << Twine::utohexstr(R.first->second) << ".\n";
@@ -86,7 +86,7 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
   if (Unit.isTypeUnit()) {
     if (DWOID) {
       // We adding an entry for a DWO TU. The DWO CU might not have any entries,
-      // so need to add it to the list pre-emptively.
+      // so need to add it to the list preemptively.
       auto Iter = CUOffsetsToPatch.insert({*DWOID, CUList.size()});
       if (Iter.second)
         CUList.push_back(BADCUOFFSET);
@@ -555,7 +555,7 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
 
 void DWARF5AcceleratorTable::writeEntry(BOLTDWARF5AccelTableData &Entry) {
   const uint64_t EntryID = getEntryID(Entry);
-  if (EntryRelativeOffsets.find(EntryID) != EntryRelativeOffsets.end())
+  if (EntryRelativeOffsets.contains(EntryID))
     EntryRelativeOffsets[EntryID] = EntriesBuffer->size();
 
   const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
@@ -648,8 +648,8 @@ void DWARF5AcceleratorTable::writeEntries() {
         if (const auto Iter = EntryRelativeOffsets.find(*ParentOffset);
             Iter != EntryRelativeOffsets.end()) {
           const uint64_t PatchOffset = Entry->getPatchOffset();
-          uint32_t *Ptr = reinterpret_cast<uint32_t *>(
-              &EntriesBuffer.get()->data()[PatchOffset]);
+          uint32_t *Ptr =
+              reinterpret_cast<uint32_t *>(&EntriesBuffer->data()[PatchOffset]);
           *Ptr = Iter->second;
         } else {
           BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "

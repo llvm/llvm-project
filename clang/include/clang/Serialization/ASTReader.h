@@ -72,6 +72,7 @@ class ASTContext;
 class ASTDeserializationListener;
 class ASTReader;
 class ASTRecordReader;
+class CodeGenOptions;
 class CXXTemporary;
 class Decl;
 class DeclarationName;
@@ -137,6 +138,15 @@ public:
     return false;
   }
 
+  /// Receives the codegen options.
+  ///
+  /// \returns true to indicate the options are invalid or false otherwise.
+  virtual bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                                  StringRef ModuleFilename, bool Complain,
+                                  bool AllowCompatibleDifferences) {
+    return false;
+  }
+
   /// Receives the target options.
   ///
   /// \returns true to indicate the target options are invalid, or false
@@ -151,9 +161,8 @@ public:
   ///
   /// \returns true to indicate the diagnostic options are invalid, or false
   /// otherwise.
-  virtual bool
-  ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                        StringRef ModuleFilename, bool Complain) {
+  virtual bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
+                                     StringRef ModuleFilename, bool Complain) {
     return false;
   }
 
@@ -211,8 +220,8 @@ public:
   }
 
   /// Receives __COUNTER__ value.
-  virtual void ReadCounter(const serialization::ModuleFile &M,
-                           unsigned Value) {}
+  virtual void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) {
+  }
 
   /// This is called for each AST file loaded.
   virtual void visitModuleFile(StringRef Filename,
@@ -237,15 +246,16 @@ public:
     return true;
   }
 
-  /// Overloaded member function of \c visitInputFile that should
-  /// be defined when there is a distinction between
-  /// the file name and name-as-requested. For example, when deserializing input
+  /// Similiar to member function of \c visitInputFile but should
+  /// be defined when there is a distinction between the file name
+  /// and the name-as-requested. For example, when deserializing input
   /// files from precompiled AST files.
   ///
   /// \returns true to continue receiving the next input file, false to stop.
-  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                              bool isSystem, bool isOverridden,
-                              bool isExplicitModule) {
+  virtual bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                         StringRef Filename, bool isSystem,
+                                         bool isOverridden,
+                                         bool isExplicitModule) {
     return true;
   }
 
@@ -282,10 +292,13 @@ public:
   bool ReadLanguageOptions(const LangOptions &LangOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
+  bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                          StringRef ModuleFilename, bool Complain,
+                          bool AllowCompatibleDifferences) override;
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
-  bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+  bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                              StringRef ModuleFilename, bool Complain) override;
   bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override;
@@ -299,7 +312,7 @@ public:
                                bool Complain,
                                std::string &SuggestedPredefines) override;
 
-  void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
+  void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
   void visitModuleFile(StringRef Filename,
@@ -323,10 +336,13 @@ public:
   bool ReadLanguageOptions(const LangOptions &LangOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
+  bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                          StringRef ModuleFilename, bool Complain,
+                          bool AllowCompatibleDifferences) override;
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
-  bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+  bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                              StringRef ModuleFilename, bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                StringRef ModuleFilename, bool ReadMacros,
@@ -336,7 +352,7 @@ public:
                                StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
-  void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
+  void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
 };
 
 /// ASTReaderListenter implementation to set SuggestedPredefines of
@@ -373,6 +389,24 @@ struct LazySpecializationInfoLookupTable;
 } // namespace reader
 
 } // namespace serialization
+
+struct VisibleLookupBlockOffsets {
+  uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  uint64_t TULocalOffset = 0;
+
+  operator bool() const {
+    return VisibleOffset || ModuleLocalOffset || TULocalOffset;
+  }
+};
+
+struct LookupBlockOffsets : VisibleLookupBlockOffsets {
+  uint64_t LexicalOffset = 0;
+
+  operator bool() const {
+    return VisibleLookupBlockOffsets::operator bool() || LexicalOffset;
+  }
+};
 
 /// Reads an AST files chain containing the contents of a translation
 /// unit.
@@ -447,8 +481,6 @@ public:
   using ModuleReverseIterator = ModuleManager::ModuleReverseIterator;
 
 private:
-  using LocSeq = SourceLocationSequence;
-
   /// The receiver of some callbacks invoked by ASTReader.
   std::unique_ptr<ASTReaderListener> Listener;
 
@@ -478,6 +510,9 @@ private:
   /// The AST consumer.
   ASTConsumer *Consumer = nullptr;
 
+  /// The codegen options.
+  const CodeGenOptions &CodeGenOpts;
+
   /// The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
 
@@ -491,6 +526,9 @@ private:
 
   /// A timer used to track the time spent deserializing.
   std::unique_ptr<llvm::Timer> ReadTimer;
+
+  // A TimeRegion used to start and stop ReadTimer via RAII.
+  std::optional<llvm::TimeRegion> ReadTimeRegion;
 
   /// The location where the module file will be considered as
   /// imported from. For non-module AST types it should be invalid.
@@ -510,7 +548,7 @@ private:
   ContinuousRangeMap<unsigned, ModuleFile*, 64> GlobalSLocEntryMap;
 
   using GlobalSLocOffsetMapType =
-      ContinuousRangeMap<unsigned, ModuleFile *, 64>;
+      ContinuousRangeMap<SourceLocation::UIntTy, ModuleFile *, 64>;
 
   /// A map of reversed (SourceManager::MaxLoadedOffset - SLocOffset)
   /// SourceLocation offsets to the modules containing them.
@@ -536,13 +574,6 @@ private:
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
 
-  struct LookupBlockOffsets {
-    uint64_t LexicalOffset;
-    uint64_t VisibleOffset;
-    uint64_t ModuleLocalOffset;
-    uint64_t TULocalOffset;
-  };
-
   using DelayedNamespaceOffsetMapTy =
       llvm::DenseMap<GlobalDeclID, LookupBlockOffsets>;
 
@@ -566,7 +597,7 @@ private:
   /// modules. It is used for the following cases:
   /// - Lambda inside a template function definition: The main declaration is
   ///   the enclosing function, and the related declarations are the lambda
-  ///   declarations.
+  ///   call operators.
   /// - Friend function defined inside a template CXXRecord declaration: The
   ///   main declaration is the enclosing record, and the related declarations
   ///   are the friend functions.
@@ -768,14 +799,6 @@ private:
   /// deduplicate the same #undef information coming from multiple module
   /// files.
   llvm::DenseSet<LoadedMacroInfo> LoadedUndefs;
-
-  using GlobalMacroMapType =
-      ContinuousRangeMap<serialization::MacroID, ModuleFile *, 4>;
-
-  /// Mapping from global macro IDs to the module in which the
-  /// macro resides along with the offset that should be added to the
-  /// global macro ID to produce a local ID.
-  GlobalMacroMapType GlobalMacroMap;
 
   /// A vector containing submodules that have already been loaded.
   ///
@@ -1091,8 +1114,11 @@ private:
   /// from the current compiler instance.
   bool AllowConfigurationMismatch;
 
-  /// Whether validate system input files.
+  /// Whether to validate system input files.
   bool ValidateSystemInputs;
+
+  /// Whether to force the validation of user input files.
+  bool ForceValidateUserInputs;
 
   /// Whether validate headers and module maps using hash based on contents.
   bool ValidateASTInputFilesContent;
@@ -1569,6 +1595,10 @@ private:
                                    StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
                                    bool AllowCompatibleDifferences);
+  static bool ParseCodeGenOptions(const RecordData &Record,
+                                  StringRef ModuleFilename, bool Complain,
+                                  ASTReaderListener &Listener,
+                                  bool AllowCompatibleDifferences);
   static bool ParseTargetOptions(const RecordData &Record,
                                  StringRef ModuleFilename, bool Complain,
                                  ASTReaderListener &Listener,
@@ -1617,8 +1647,7 @@ private:
 
   /// Returns the first preprocessed entity ID that begins or ends after
   /// \arg Loc.
-  serialization::PreprocessedEntityID
-  findPreprocessedEntity(SourceLocation Loc, bool EndsAfter) const;
+  unsigned findPreprocessedEntity(SourceLocation Loc, bool EndsAfter) const;
 
   /// Find the next module that contains entities and return the ID
   /// of the first entry.
@@ -1626,9 +1655,8 @@ private:
   /// \param SLocMapI points at a chunk of a module that contains no
   /// preprocessed entities or the entities it contains are not the
   /// ones we are looking for.
-  serialization::PreprocessedEntityID
-    findNextPreprocessedEntity(
-                        GlobalSLocOffsetMapType::const_iterator SLocMapI) const;
+  unsigned findNextPreprocessedEntity(
+      GlobalSLocOffsetMapType::const_iterator SLocMapI) const;
 
   /// Returns (ModuleFile, Local index) pair for \p GlobalIndex of a
   /// preprocessed entity.
@@ -1710,6 +1738,14 @@ private:
   std::pair<ModuleFile *, unsigned>
   translateIdentifierIDToIndex(serialization::IdentifierID ID) const;
 
+  /// Translate an \param MacroID ID to the index of MacrosLoaded
+  /// array and the corresponding module file.
+  std::pair<ModuleFile *, unsigned>
+  translateMacroIDToIndex(serialization::MacroID ID) const;
+
+  unsigned translatePreprocessedEntityIDToIndex(
+      serialization::PreprocessedEntityID ID) const;
+
   /// Translate an \param TypeID ID to the index of TypesLoaded
   /// array and the corresponding module file.
   std::pair<ModuleFile *, unsigned>
@@ -1760,6 +1796,7 @@ public:
   /// deserializing.
   ASTReader(Preprocessor &PP, ModuleCache &ModCache, ASTContext *Context,
             const PCHContainerReader &PCHContainerRdr,
+            const CodeGenOptions &CodeGenOpts,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             StringRef isysroot = "",
             DisableValidationForModuleKind DisableValidationKind =
@@ -1767,6 +1804,7 @@ public:
             bool AllowASTWithCompilerErrors = false,
             bool AllowConfigurationMismatch = false,
             bool ValidateSystemInputs = false,
+            bool ForceValidateUserInputs = true,
             bool ValidateASTInputFilesContent = false,
             bool UseGlobalIndex = true,
             std::unique_ptr<llvm::Timer> ReadTimer = {});
@@ -1777,6 +1815,7 @@ public:
   SourceManager &getSourceManager() const { return SourceMgr; }
   FileManager &getFileManager() const { return FileMgr; }
   DiagnosticsEngine &getDiags() const { return Diags; }
+  const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
 
   /// Flags that indicate what kind of AST loading failures the client
   /// of the AST reader can directly handle.
@@ -1978,14 +2017,12 @@ public:
 
   /// Determine whether the given AST file is acceptable to load into a
   /// translation unit with the given language and target options.
-  static bool isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
-                                  const ModuleCache &ModCache,
-                                  const PCHContainerReader &PCHContainerRdr,
-                                  const LangOptions &LangOpts,
-                                  const TargetOptions &TargetOpts,
-                                  const PreprocessorOptions &PPOpts,
-                                  StringRef ExistingModuleCachePath,
-                                  bool RequireStrictOptionMatches = false);
+  static bool isAcceptableASTFile(
+      StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
+      const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
+      const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
+      const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
+      bool RequireStrictOptionMatches = false);
 
   /// Returns the suggested contents of the predefines buffer,
   /// which contains a (typically-empty) subset of the predefines
@@ -2123,6 +2160,14 @@ public:
   /// module file.
   LocalDeclID mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
                                               GlobalDeclID GlobalID);
+
+  /// Reads a macro ID from the given position in a record in the
+  /// given module.
+  ///
+  /// \returns The declaration ID read from the record, adjusted to a global
+  /// Macro ID.
+  serialization::MacroID
+  ReadMacroID(ModuleFile &F, const RecordDataImpl &Record, unsigned &Idx);
 
   /// Reads a declaration ID from the given position in a record in the
   /// given module.
@@ -2349,7 +2394,8 @@ public:
 
   /// Retrieve the global macro ID corresponding to the given local
   /// ID within the given module file.
-  serialization::MacroID getGlobalMacroID(ModuleFile &M, unsigned LocalID);
+  serialization::MacroID getGlobalMacroID(ModuleFile &M,
+                                          serialization::MacroID LocalID);
 
   /// Read the source location entry with index ID.
   bool ReadSLocEntry(int ID) override;
@@ -2423,18 +2469,16 @@ public:
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.
   std::pair<SourceLocation, unsigned>
-  ReadUntranslatedSourceLocation(RawLocEncoding Raw,
-                                 LocSeq *Seq = nullptr) const {
-    return SourceLocationEncoding::decode(Raw, Seq);
+  ReadUntranslatedSourceLocation(RawLocEncoding Raw) const {
+    return SourceLocationEncoding::decode(Raw);
   }
 
   /// Read a source location from raw form.
-  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
-                                    LocSeq *Seq = nullptr) const {
+  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw) const {
     if (!MF.ModuleOffsetMap.empty())
       ReadModuleOffsetMap(MF);
 
-    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
+    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw);
     ModuleFile *OwningModuleFile =
         ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
 
@@ -2462,9 +2506,9 @@ public:
 
   /// Read a source location.
   SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
-                                    const RecordDataImpl &Record, unsigned &Idx,
-                                    LocSeq *Seq = nullptr) {
-    return ReadSourceLocation(ModuleFile, Record[Idx++], Seq);
+                                    const RecordDataImpl &Record,
+                                    unsigned &Idx) {
+    return ReadSourceLocation(ModuleFile, Record[Idx++]);
   }
 
   /// Read a FileID.
@@ -2483,7 +2527,7 @@ public:
 
   /// Read a source range.
   SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
-                              unsigned &Idx, LocSeq *Seq = nullptr);
+                              unsigned &Idx);
 
   static llvm::BitVector ReadBitVector(const RecordData &Record,
                                        const StringRef Blob);
@@ -2535,8 +2579,8 @@ public:
 
   /// Determine the global preprocessed entity ID that corresponds to
   /// the given local ID within the given module.
-  serialization::PreprocessedEntityID
-  getGlobalPreprocessedEntityID(ModuleFile &M, unsigned LocalID) const;
+  serialization::PreprocessedEntityID getGlobalPreprocessedEntityID(
+      ModuleFile &M, serialization::PreprocessedEntityID LocalID) const;
 
   /// Add a macro to deserialize its macro directive history.
   ///

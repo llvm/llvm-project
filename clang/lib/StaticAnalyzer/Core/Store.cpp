@@ -30,8 +30,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -212,7 +210,7 @@ std::optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
           // Is the offset a multiple of the size?  If so, we can layer the
           // ElementRegion (with elementType == PointeeTy) directly on top of
           // the base region.
-          if (off % pointeeTySize == 0) {
+          if (off.isMultipleOf(pointeeTySize)) {
             newIndex = off / pointeeTySize;
             newSuperR = baseR;
           }

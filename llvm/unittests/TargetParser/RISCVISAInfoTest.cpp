@@ -552,7 +552,7 @@ TEST(ParseArchString,
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
   EXPECT_EQ(Exts.count("zalasr"), 1U);
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p1", true);
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p9", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   const auto &Exts2 = (*MaybeISAInfo2)->getExtensions();
   EXPECT_EQ(Exts2.size(), 2UL);
@@ -581,7 +581,7 @@ TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
       toString(
           RISCVISAInfo::parseArchString("rv64izalasr9p9", true).takeError()),
       "unsupported version number 9.9 for experimental extension 'zalasr' "
-      "(this compiler supports 0.1)");
+      "(this compiler supports 0.9)");
 }
 
 TEST(ParseArchString, RejectsExtensionVersionForG) {
@@ -682,12 +682,12 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 
   for (StringRef Input :
-       {"rv64i_xqcisls0p2", "rv64i_xqcia0p4", "rv64i_xqciac0p3",
-        "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
-        "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p4",
-        "rv64i_xqciio0p1", "rv64i_xqcilo0p2", "rv64i_xqcilia0p2",
-        "rv64i_xqcibm0p4", "rv64i_xqcibi0p2", "rv64i_xqcili0p2",
-        "rv64i_xqcisim0p2", "rv64i_xqcilb0p2", "rv64i_xqcisync0p2"}) {
+       {"rv64i_xqcia0p7", "rv64i_xqciac0p3", "rv64i_xqcibi0p2",
+        "rv64i_xqcibm0p8", "rv64i_xqcicli0p3", "rv64i_xqcicm0p2",
+        "rv64i_xqcics0p2", "rv64i_xqcicsr0p4", "rv64i_xqciint0p10",
+        "rv64i_xqciio0p1", "rv64i_xqcilb0p2", "rv64i_xqcili0p2",
+        "rv64i_xqcilia0p2", "rv64i_xqcilo0p3", "rv64i_xqcilsm0p6",
+        "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p3"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -695,13 +695,13 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
 
   for (StringRef Input :
        {"rv32idc_xqciac0p3", "rv32i_zcd_xqciac0p3", "rv32idc_xqcicm0p2",
-        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p1", "rv32i_zcd_xqccmp0p1"}) {
+        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p3", "rv32i_zcd_xqccmp0p3"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith("extension when 'd' extension is enabled"));
   }
 
-  for (StringRef Input : {"rv32i_zcmp_xqccmp0p1", "rv64i_zcmp_xqccmp0p1"}) {
+  for (StringRef Input : {"rv32i_zcmp_xqccmp0p3", "rv64i_zcmp_xqccmp0p3"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcmp' and 'xqccmp' extensions are incompatible");
   }
@@ -730,6 +730,11 @@ TEST(ParseArchString, MissingDepency) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "");
   }
+
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64i_xsfvfbfexp16e", true)
+                         .takeError()),
+            "'xsfvfbfexp16e' requires 'zvfbfmin' or 'zvfbfa' extension to also "
+            "be specified");
 }
 
 TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
@@ -809,7 +814,7 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
       RISCVISAInfo::parseArchString("rv64im_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
-              ElementsAre("+m", "+zmmul", "+experimental-zalasr"));
+              ElementsAre("+i", "+m", "+zmmul", "+experimental-zalasr"));
 
   auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
       "rv32e_zalasr_xventanacondops", true, false);
@@ -822,7 +827,7 @@ TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
   auto MaybeISAInfo =
       RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo)->toFeatures(), ElementsAre("+m"));
+  EXPECT_THAT((*MaybeISAInfo)->toFeatures(), ElementsAre("+i", "+m"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreKeptIfIgnoreUnknownIsFalse) {
@@ -830,7 +835,7 @@ TEST(ToFeatures, UnsupportedExtensionsAreKeptIfIgnoreUnknownIsFalse) {
       RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   EXPECT_THAT((*MaybeISAInfo)->toFeatures(false, false),
-              ElementsAre("+m", "+xmadeup"));
+              ElementsAre("+i", "+m", "+xmadeup"));
 }
 
 TEST(ToFeatures, AddAllExtensionsAddsNegativeExtensions) {
@@ -838,10 +843,11 @@ TEST(ToFeatures, AddAllExtensionsAddsNegativeExtensions) {
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
 
   auto Features = (*MaybeISAInfo)->toFeatures(true);
-  EXPECT_GT(Features.size(), 1UL);
-  EXPECT_EQ(Features.front(), "+m");
+  EXPECT_GT(Features.size(), 2UL);
+  EXPECT_EQ(Features[0], "+i");
+  EXPECT_EQ(Features[1], "+m");
   // Every feature after should be a negative feature
-  for (auto &NegativeExt : llvm::drop_begin(Features))
+  for (auto &NegativeExt : llvm::drop_begin(Features, 2))
     EXPECT_TRUE(NegativeExt.substr(0, 1) == "-");
 }
 
@@ -981,6 +987,7 @@ R"(All available -march extensions for RISC-V
     a                    2.1
     f                    2.2
     d                    2.2
+    q                    2.2
     c                    2.0
     b                    1.0
     v                    1.0
@@ -1089,6 +1096,7 @@ R"(All available -march extensions for RISC-V
     sha                  1.0
     shcounterenw         1.0
     shgatpa              1.0
+    shlcofideleg         1.0
     shtvala              1.0
     shvsatpa             1.0
     shvstvala            1.0
@@ -1097,6 +1105,7 @@ R"(All available -march extensions for RISC-V
     smcdeleg             1.0
     smcntrpmf            1.0
     smcsrind             1.0
+    smctr                1.0
     smdbltrp             1.0
     smepmp               1.0
     smmpm                1.0
@@ -1109,6 +1118,7 @@ R"(All available -march extensions for RISC-V
     sscofpmf             1.0
     sscounterenw         1.0
     sscsrind             1.0
+    ssctr                1.0
     ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
@@ -1127,6 +1137,13 @@ R"(All available -march extensions for RISC-V
     svnapot              1.0
     svpbmt               1.0
     svvptc               1.0
+    xandesbfhcvt         5.0
+    xandesperf           5.0
+    xandesvbfhcvt        5.0
+    xandesvdot           5.0
+    xandesvpackfph       5.0
+    xandesvsinth         5.0
+    xandesvsintload      5.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0
@@ -1134,16 +1151,34 @@ R"(All available -march extensions for RISC-V
     xcvmac               1.0
     xcvmem               1.0
     xcvsimd              1.0
+    xmipscbop            1.0
     xmipscmov            1.0
+    xmipsexectl          1.0
     xmipslsp             1.0
     xsfcease             1.0
+    xsfmm128t            0.6
+    xsfmm16t             0.6
+    xsfmm32a16f          0.6
+    xsfmm32a32f          0.6
+    xsfmm32a8f           0.6
+    xsfmm32a8i           0.6
+    xsfmm32t             0.6
+    xsfmm64a64f          0.6
+    xsfmm64t             0.6
+    xsfmmbase            0.6
     xsfvcp               1.0
+    xsfvfbfexp16e        0.5
+    xsfvfexp16e          0.5
+    xsfvfexp32e          0.5
+    xsfvfexpa            0.2
+    xsfvfexpa64e         0.2
     xsfvfnrclipxfqf      1.0
     xsfvfwmaccqqq        1.0
     xsfvqmaccdod         1.0
     xsfvqmaccqoq         1.0
     xsifivecdiscarddlone 1.0
     xsifivecflushdlone   1.0
+    xsmtvdot             1.0
     xtheadba             1.0
     xtheadbb             1.0
     xtheadbs             1.0
@@ -1159,35 +1194,37 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    p                    0.14
+    p                    0.15
+    zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
-    zalasr               0.1
+    zalasr               0.9
     zvbc32e              0.7
+    zvfbfa               0.1
+    zvfofp8min           0.2
     zvkgs                0.7
     zvqdotq              0.0
-    smctr                1.0
-    ssctr                1.0
+    smpmpmt              0.6
     svukte               0.3
-    xqccmp               0.1
-    xqcia                0.4
+    xqccmp               0.3
+    xqcia                0.7
     xqciac               0.3
     xqcibi               0.2
-    xqcibm               0.4
-    xqcicli              0.2
+    xqcibm               0.8
+    xqcicli              0.3
     xqcicm               0.2
     xqcics               0.2
-    xqcicsr              0.2
-    xqciint              0.4
+    xqcicsr              0.4
+    xqciint              0.10
     xqciio               0.1
     xqcilb               0.2
     xqcili               0.2
     xqcilia              0.2
-    xqcilo               0.2
-    xqcilsm              0.2
+    xqcilo               0.3
+    xqcilsm              0.6
     xqcisim              0.2
     xqcisls              0.2
-    xqcisync             0.2
+    xqcisync             0.3
     xrivosvisni          0.1
     xrivosvizip          0.1
     xsfmclic             0.1

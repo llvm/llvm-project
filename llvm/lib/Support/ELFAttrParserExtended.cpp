@@ -10,7 +10,6 @@
 #include "llvm/Support/ELFAttrParserExtended.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"

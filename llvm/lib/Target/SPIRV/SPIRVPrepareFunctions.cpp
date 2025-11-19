@@ -56,6 +56,13 @@ public:
   }
 };
 
+static cl::list<std::string> SPVAllowUnknownIntrinsics(
+    "spv-allow-unknown-intrinsics", cl::CommaSeparated,
+    cl::desc("Emit unknown intrinsics as calls to external functions. A "
+             "comma-separated input list of intrinsic prefixes must be "
+             "provided, and only intrinsics carrying a listed prefix get "
+             "emitted as described."),
+    cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
 char SPIRVPrepareFunctions::ID = 0;
@@ -234,7 +241,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
       return SmallVector<Metadata *>{};
     MDs.push_back(MDNode::get(Ctx, MDsItem));
   }
-  return Pos == static_cast<int>(Anno.length()) ? MDs
+  return Pos == static_cast<int>(Anno.length()) ? std::move(MDs)
                                                 : SmallVector<Metadata *>{};
 }
 
@@ -335,6 +342,21 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   FSHIntrinsic->setCalledFunction(FSHFunc);
 }
 
+static void lowerConstrainedFPCmpIntrinsic(
+    ConstrainedFPCmpIntrinsic *ConstrainedCmpIntrinsic,
+    SmallVector<Instruction *> &EraseFromParent) {
+  if (!ConstrainedCmpIntrinsic)
+    return;
+  // Extract the floating-point values being compared
+  Value *LHS = ConstrainedCmpIntrinsic->getArgOperand(0);
+  Value *RHS = ConstrainedCmpIntrinsic->getArgOperand(1);
+  FCmpInst::Predicate Pred = ConstrainedCmpIntrinsic->getPredicate();
+  IRBuilder<> Builder(ConstrainedCmpIntrinsic);
+  Value *FCmp = Builder.CreateFCmp(Pred, LHS, RHS);
+  ConstrainedCmpIntrinsic->replaceAllUsesWith(FCmp);
+  EraseFromParent.push_back(dyn_cast<Instruction>(ConstrainedCmpIntrinsic));
+}
+
 static void lowerExpectAssume(IntrinsicInst *II) {
   // If we cannot use the SPV_KHR_expect_assume extension, then we need to
   // ignore the intrinsic and move on. It should be removed later on by LLVM.
@@ -357,22 +379,17 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
-
-  return;
 }
 
-static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
-                                     ArrayRef<unsigned> OpNos) {
-  Function *F = nullptr;
-  if (OpNos.empty()) {
-    F = Intrinsic::getOrInsertDeclaration(II->getModule(), NewID);
-  } else {
-    SmallVector<Type *, 4> Tys;
-    for (unsigned OpNo : OpNos)
-      Tys.push_back(II->getOperand(OpNo)->getType());
-    F = Intrinsic::getOrInsertDeclaration(II->getModule(), NewID, Tys);
-  }
-  II->setCalledFunction(F);
+static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
+  IRBuilder<> Builder(II);
+  auto *Alloca = cast<AllocaInst>(II->getArgOperand(0));
+  std::optional<TypeSize> Size =
+      Alloca->getAllocationSize(Alloca->getDataLayout());
+  Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
+  Builder.CreateIntrinsic(NewID, Alloca->getType(),
+                          {SizeVal, II->getArgOperand(0)});
+  II->eraseFromParent();
   return true;
 }
 
@@ -381,8 +398,9 @@ static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+  SmallVector<Instruction *> EraseFromParent;
   for (BasicBlock &BB : *F) {
-    for (Instruction &I : BB) {
+    for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
       if (!Call)
         continue;
@@ -407,24 +425,47 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       case Intrinsic::lifetime_start:
-        if (STI.isOpenCLEnv()) {
-          Changed |= toSpvOverloadedIntrinsic(
-              II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
+        if (!STI.isShader()) {
+          Changed |= toSpvLifetimeIntrinsic(
+              II, Intrinsic::SPVIntrinsics::spv_lifetime_start);
+        } else {
+          II->eraseFromParent();
+          Changed = true;
         }
         break;
       case Intrinsic::lifetime_end:
-        if (STI.isOpenCLEnv()) {
-          Changed |= toSpvOverloadedIntrinsic(
-              II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
+        if (!STI.isShader()) {
+          Changed |= toSpvLifetimeIntrinsic(
+              II, Intrinsic::SPVIntrinsics::spv_lifetime_end);
+        } else {
+          II->eraseFromParent();
+          Changed = true;
         }
         break;
       case Intrinsic::ptr_annotation:
         lowerPtrAnnotation(II);
         Changed = true;
         break;
+      case Intrinsic::experimental_constrained_fcmp:
+      case Intrinsic::experimental_constrained_fcmps:
+        lowerConstrainedFPCmpIntrinsic(dyn_cast<ConstrainedFPCmpIntrinsic>(II),
+                                       EraseFromParent);
+        Changed = true;
+        break;
+      default:
+        if (TM.getTargetTriple().getVendor() == Triple::AMD ||
+            any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
+              if (Prefix.empty())
+                return false;
+              return II->getCalledFunction()->getName().starts_with(Prefix);
+            }))
+          Changed |= lowerIntrinsicToFunction(II);
+        break;
       }
     }
   }
+  for (auto *I : EraseFromParent)
+    I->eraseFromParent();
   return Changed;
 }
 
@@ -440,10 +481,9 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
 
   IRBuilder<> B(F->getContext());
 
-  bool HasAggrArg =
-      std::any_of(F->arg_begin(), F->arg_end(), [](Argument &Arg) {
-        return Arg.getType()->isAggregateType();
-      });
+  bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
+    return Arg.getType()->isAggregateType();
+  });
   bool DoClone = IsRetAggr || HasAggrArg;
   if (!DoClone)
     return F;

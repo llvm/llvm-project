@@ -90,6 +90,10 @@ namespace llvm {
     /// POP_FROM_X87_REG (which may remove a required FPU stack pop).
     POP_FROM_X87_REG,
 
+    // Pseudo for a call to an imported function to ensure the correct machine
+    // instruction is emitted for Import Call Optimization.
+    IMP_CALL,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,
@@ -467,8 +471,7 @@ namespace llvm {
     // VBMI2 Concat & Shift.
     VSHLD,
     VSHRD,
-    VSHLDV,
-    VSHRDV,
+
     // Shuffle Packed Values at 128-bit granularity.
     SHUF128,
     MOVDDUP,
@@ -724,6 +727,10 @@ namespace llvm {
     MCVTSI2P,
     MCVTUI2P,
 
+    // Custom handling for FP_TO_xINT_SAT
+    FP_TO_SINT_SAT,
+    FP_TO_UINT_SAT,
+
     // Vector float to bfloat16.
     // Convert packed single data to packed BF16 data
     CVTNEPS2BF16,
@@ -917,10 +924,6 @@ namespace llvm {
     // Load x87 FPU environment from memory.
     FLDENVm,
 
-    // Custom handling for FP_TO_xINT_SAT
-    FP_TO_SINT_SAT,
-    FP_TO_UINT_SAT,
-
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
     /// to the X86::FIST*m instructions and the rounding mode change stuff. It
@@ -1000,13 +1003,14 @@ namespace llvm {
     /// Current rounding mode is represented in bits 11:10 of FPSR. These
     /// values are same as corresponding constants for rounding mode used
     /// in glibc.
-    enum RoundingMode {
-      rmToNearest   = 0,        // FE_TONEAREST
-      rmDownward    = 1 << 10,  // FE_DOWNWARD
-      rmUpward      = 2 << 10,  // FE_UPWARD
-      rmTowardZero  = 3 << 10,  // FE_TOWARDZERO
-      rmMask        = 3 << 10   // Bit mask selecting rounding mode
-    };
+  enum RoundingMode {
+    rmInvalid = -1,         // For handle Invalid rounding mode
+    rmToNearest = 0,        // FE_TONEAREST
+    rmDownward = 1 << 10,   // FE_DOWNWARD
+    rmUpward = 2 << 10,     // FE_UPWARD
+    rmTowardZero = 3 << 10, // FE_TOWARDZERO
+    rmMask = 3 << 10        // Bit mask selecting rounding mode
+  };
   }
 
   /// Define some predicates that are used for node matching.
@@ -1054,6 +1058,10 @@ namespace llvm {
     /// functions.
     bool isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
                                             const MachineFunction &MF);
+
+    /// Convert LLVM rounding mode to X86 rounding mode.
+    int getRoundingModeX86(unsigned RM);
+
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//
@@ -1091,7 +1099,7 @@ namespace llvm {
     /// 4-byte boundaries.
     Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// Returns true if it's safe to use load / store of the
@@ -1236,8 +1244,7 @@ namespace llvm {
     getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
                                   const Value *Rhs) const override;
 
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
     bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
@@ -1337,8 +1344,8 @@ namespace llvm {
                                    unsigned Depth) const override;
 
     bool isTargetCanonicalConstantNode(SDValue Op) const override {
-      // Peek through bitcasts/extracts/inserts to see if we have a broadcast
-      // vector from memory.
+      // Peek through bitcasts/extracts/inserts to see if we have a vector
+      // load/broadcast from memory.
       while (Op.getOpcode() == ISD::BITCAST ||
              Op.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
              (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
@@ -1346,16 +1353,19 @@ namespace llvm {
         Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
 
       return Op.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+             Op.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
+             (Op.getOpcode() == ISD::LOAD &&
+              getTargetConstantFromLoad(cast<LoadSDNode>(Op))) ||
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
+
+    bool isTargetCanonicalSelect(SDNode *N) const override;
 
     const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
     SDValue unwrapAddress(SDValue N) const override;
 
     SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
-
-    bool ExpandInlineAsm(CallInst *CI) const override;
 
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
@@ -1460,8 +1470,9 @@ namespace llvm {
     /// from i32 to i16.
     bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
-    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                              EVT VT) const override;
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                              unsigned SelectOpcode, SDValue X,
+                                              SDValue Y) const override;
 
     /// Given an intrinsic, checks if on the target the intrinsic will need to map
     /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
@@ -1581,8 +1592,6 @@ namespace llvm {
     bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
     void insertSSPDeclarations(Module &M) const override;
-    Value *getSDagStackGuard(const Module &M) const override;
-    Function *getSSPStackGuardCheck(const Module &M) const override;
     SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
 
@@ -1651,15 +1660,16 @@ namespace llvm {
 
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
-    bool lowerInterleavedLoad(LoadInst *LI,
+    bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
-                              ArrayRef<unsigned> Indices,
-                              unsigned Factor) const override;
+                              ArrayRef<unsigned> Indices, unsigned Factor,
+                              const APInt &GapMask) const override;
 
     /// Lower interleaved store(s) into target specific
     /// instructions/intrinsics.
-    bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
-                               unsigned Factor) const override;
+    bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                               ShuffleVectorInst *SVI, unsigned Factor,
+                               const APInt &GapMask) const override;
 
     SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                    int JTI, SelectionDAG &DAG) const override;
@@ -1743,8 +1753,8 @@ namespace llvm {
 
     /// Creates target global address or external symbol nodes for calls or
     /// other uses.
-    SDValue LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
-                                  bool ForCall) const;
+    SDValue LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG, bool ForCall,
+                                  bool *IsImpCall) const;
 
     SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;

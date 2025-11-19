@@ -194,7 +194,7 @@ void TestSubElementsAccessAttr::print(::mlir::AsmPrinter &printer) const {
 ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
   if (auto *blob = getHandle().getBlob())
     return blob->getDataAs<uint64_t>();
-  return std::nullopt;
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,6 +211,16 @@ static ParseResult parseTrueFalse(AsmParser &p, std::optional<int> &result) {
 
 static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
   p << (*result ? "true" : "false");
+}
+
+//===----------------------------------------------------------------------===//
+// TestCopyCountAttr Implementation
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCopyCountAttr::verify(
+    llvm::function_ref<::mlir::InFlightDiagnostic()> /*emitError*/,
+    CopyCount /*copy_count*/) {
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -317,6 +327,49 @@ static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
 }
 
 //===----------------------------------------------------------------------===//
+// TestCustomStructAttr
+//===----------------------------------------------------------------------===//
+
+static void printCustomStructAttr(AsmPrinter &p, int64_t value) {
+  if (ShapedType::isDynamic(value)) {
+    p << "?";
+  } else {
+    p.printStrippedAttrOrType(value);
+  }
+}
+
+static ParseResult parseCustomStructAttr(AsmParser &p, int64_t &value) {
+  if (succeeded(p.parseOptionalQuestion())) {
+    value = ShapedType::kDynamic;
+    return success();
+  }
+  return p.parseInteger(value);
+}
+
+static void printCustomOptStructFieldAttr(AsmPrinter &p, ArrayAttr attr) {
+  if (attr && attr.size() == 1 && isa<IntegerAttr>(attr[0])) {
+    p << cast<IntegerAttr>(attr[0]).getInt();
+  } else {
+    p.printStrippedAttrOrType(attr);
+  }
+}
+
+static ParseResult parseCustomOptStructFieldAttr(AsmParser &p,
+                                                 ArrayAttr &attr) {
+  int64_t value;
+  OptionalParseResult result = p.parseOptionalInteger(value);
+  if (result.has_value()) {
+    if (failed(result.value()))
+      return failure();
+    attr = ArrayAttr::get(
+        p.getContext(),
+        {IntegerAttr::get(IntegerType::get(p.getContext(), 64), value)});
+    return success();
+  }
+  return p.parseAttribute(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // TestOpAsmAttrInterfaceAttr
 //===----------------------------------------------------------------------===//
 
@@ -332,13 +385,15 @@ TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
 //===----------------------------------------------------------------------===//
 
 bool TestConstMemorySpaceAttr::isValidLoad(
-    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    Type type, mlir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
 
 bool TestConstMemorySpaceAttr::isValidStore(
-    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    Type type, mlir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
@@ -347,7 +402,8 @@ bool TestConstMemorySpaceAttr::isValidStore(
 
 bool TestConstMemorySpaceAttr::isValidAtomicOp(
     mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
-    IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
   return false;
@@ -355,7 +411,8 @@ bool TestConstMemorySpaceAttr::isValidAtomicOp(
 
 bool TestConstMemorySpaceAttr::isValidAtomicXchg(
     Type type, mlir::ptr::AtomicOrdering successOrdering,
-    mlir::ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
+    mlir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
@@ -452,6 +509,54 @@ getDynamicCustomAssemblyFormatAttr(TestDialect *testDialect) {
   return DynamicAttrDefinition::get("dynamic_custom_assembly_format",
                                     testDialect, std::move(verifier),
                                     std::move(parser), std::move(printer));
+}
+
+//===----------------------------------------------------------------------===//
+// SlashAttr
+//===----------------------------------------------------------------------===//
+
+Attribute SlashAttr::parse(AsmParser &parser, Type type) {
+  int lhs, rhs;
+
+  if (parser.parseLess() || parser.parseInteger(lhs) || parser.parseSlash() ||
+      parser.parseInteger(rhs) || parser.parseGreater())
+    return Attribute();
+
+  return SlashAttr::get(parser.getContext(), lhs, rhs);
+}
+
+void SlashAttr::print(AsmPrinter &printer) const {
+  printer << "<" << getLhs() << " / " << getRhs() << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// TestCustomStorageCtorAttr
+//===----------------------------------------------------------------------===//
+
+test::detail::TestCustomStorageCtorAttrAttrStorage *
+test::detail::TestCustomStorageCtorAttrAttrStorage::construct(
+    mlir::StorageUniquer::StorageAllocator &, std::tuple<int> &&) {
+  // Note: this tests linker error ("undefined symbol"), the actual
+  // implementation is not important.
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// TestTensorEncodingAttr
+//===----------------------------------------------------------------------===//
+
+::llvm::LogicalResult TestTensorEncodingAttr::verifyEncoding(
+    mlir::ArrayRef<int64_t> shape, mlir::Type elementType,
+    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TestMemRefLayoutAttr
+//===----------------------------------------------------------------------===//
+
+mlir::AffineMap TestMemRefLayoutAttr::getAffineMap() const {
+  return mlir::AffineMap::getMultiDimIdentityMap(1, getContext());
 }
 
 //===----------------------------------------------------------------------===//

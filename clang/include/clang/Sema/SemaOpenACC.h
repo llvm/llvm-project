@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAOPENACC_H
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenACCKinds.h"
@@ -117,6 +118,15 @@ private:
     OpenACCDirectiveKind DirectiveKind = OpenACCDirectiveKind::Invalid;
   } TileInfo;
 
+  /// The 'cache' var-list requires some additional work to track variable
+  /// references to make sure they are on the 'other' side of a `loop`. This
+  /// structure is used during parse time to track vardecl use while parsing a
+  /// cache var list.
+  struct CacheParseInfo {
+    bool ParsingCacheVarList = false;
+    bool IsInvalidCacheRef = false;
+  } CacheInfo;
+
   /// A list of the active reduction clauses, which allows us to check that all
   /// vars on nested constructs for the same reduction var have the same
   /// reduction operator. Currently this is enforced against all constructs
@@ -125,38 +135,74 @@ private:
   /// 'loop' clause enforcement, where this is 'blocked' by a compute construct.
   llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
 
-  // Type to check the info about the 'for stmt'.
-  struct ForStmtBeginChecker {
+  // Type to check the 'for' (or range-for) statement for compatibility with the
+  // 'loop' directive.
+  class ForStmtBeginChecker {
     SemaOpenACC &SemaRef;
     SourceLocation ForLoc;
-    bool IsRangeFor = false;
-    std::optional<const CXXForRangeStmt *> RangeFor = nullptr;
-    const Stmt *Init = nullptr;
-    bool InitChanged = false;
-    std::optional<const Stmt *> Cond = nullptr;
-    std::optional<const Stmt *> Inc = nullptr;
+    bool IsInstantiation = false;
+
+    struct RangeForInfo {
+      const CXXForRangeStmt *Uninstantiated = nullptr;
+      const CXXForRangeStmt *CurrentVersion = nullptr;
+      // GCC 7.x requires this constructor, else the construction of variant
+      // doesn't work correctly.
+      RangeForInfo() : Uninstantiated{nullptr}, CurrentVersion{nullptr} {}
+      RangeForInfo(const CXXForRangeStmt *Uninst, const CXXForRangeStmt *Cur)
+          : Uninstantiated{Uninst}, CurrentVersion{Cur} {}
+    };
+
+    struct ForInfo {
+      const Stmt *Init = nullptr;
+      const Stmt *Condition = nullptr;
+      const Stmt *Increment = nullptr;
+    };
+
+    struct CheckForInfo {
+      ForInfo Uninst;
+      ForInfo Current;
+    };
+
+    std::variant<RangeForInfo, CheckForInfo> Info;
     // Prevent us from checking 2x, which can happen with collapse & tile.
     bool AlreadyChecked = false;
 
-    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
-                        std::optional<const CXXForRangeStmt *> S)
-        : SemaRef(SemaRef), ForLoc(ForLoc), IsRangeFor(true), RangeFor(S) {}
+    void checkRangeFor();
 
+    bool checkForInit(const Stmt *InitStmt, const ValueDecl *&InitVar,
+                      bool Diag);
+    bool checkForCond(const Stmt *CondStmt, const ValueDecl *InitVar,
+                      bool Diag);
+    bool checkForInc(const Stmt *IncStmt, const ValueDecl *InitVar, bool Diag);
+
+    void checkFor();
+
+  public:
+    // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
-                        const Stmt *I, bool InitChanged,
-                        std::optional<const Stmt *> C,
-                        std::optional<const Stmt *> Inc)
-        : SemaRef(SemaRef), ForLoc(ForLoc), IsRangeFor(false), Init(I),
-          InitChanged(InitChanged), Cond(C), Inc(Inc) {}
-    // Do the checking for the For/Range-For. Currently this implements the 'not
-    // seq' restrictions only, and should be called either if we know we are a
-    // top-level 'for' (the one associated via associated-stmt), or extended via
-    // 'collapse'.
+                        const CXXForRangeStmt *RangeFor)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(false),
+          Info(RangeForInfo{nullptr, RangeFor}) {}
+    // Checking for an instantiation of the range-for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const CXXForRangeStmt *OldRangeFor,
+                        const CXXForRangeStmt *RangeFor)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(true),
+          Info(RangeForInfo{OldRangeFor, RangeFor}) {}
+    // Checking for a non-instantiation version of a traditional for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const Stmt *Init, const Stmt *Cond, const Stmt *Inc)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(false),
+          Info(CheckForInfo{{}, {Init, Cond, Inc}}) {}
+    // Checking for an instantiation version of a traditional for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const Stmt *OldInit, const Stmt *OldCond,
+                        const Stmt *OldInc, const Stmt *Init, const Stmt *Cond,
+                        const Stmt *Inc)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(true),
+          Info(CheckForInfo{{OldInit, OldCond, OldInc}, {Init, Cond, Inc}}) {}
+
     void check();
-
-    const ValueDecl *checkInit();
-    void checkCond();
-    void checkInc(const ValueDecl *Init);
   };
 
   /// Helper function for checking the 'for' and 'range for' stmts.
@@ -182,6 +228,11 @@ private:
 
   bool DiagnoseAllowedClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                               SourceLocation ClauseLoc);
+  bool CreateReductionCombinerRecipe(
+      SourceLocation loc, OpenACCReductionOperator ReductionOperator,
+      QualType VarTy,
+      llvm::SmallVectorImpl<OpenACCReductionRecipe::CombinerRecipe>
+          &CombinerRecipes);
 
 public:
   // Needed from the visitor, so should be public.
@@ -191,6 +242,12 @@ public:
   bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                 SourceLocation ClauseLoc,
                                 ArrayRef<const OpenACCClause *> Clauses);
+
+  OpenACCPrivateRecipe CreatePrivateInitRecipe(const Expr *VarExpr);
+  OpenACCFirstPrivateRecipe CreateFirstPrivateInitRecipe(const Expr *VarExpr);
+  OpenACCReductionRecipeWithStorage
+  CreateReductionInitRecipe(OpenACCReductionOperator ReductionOperator,
+                            const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -821,6 +878,12 @@ public:
   ExprResult ActOnIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                           SourceLocation Loc, Expr *IntExpr);
 
+  /// Called right before a 'var' is parsed, so we can set the state for parsing
+  /// a 'cache' var.
+  void ActOnStartParseVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK);
+  /// Called only if the parse of a 'var' was invalid, else 'ActOnVar' should be
+  /// called.
+  void ActOnInvalidParseVar();
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
   ExprResult ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
@@ -853,6 +916,7 @@ public:
   ExprResult CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
                                OpenACCReductionOperator ReductionOp,
                                Expr *VarExpr);
+  bool CheckReductionVarType(Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.
@@ -873,6 +937,10 @@ public:
                            OpenACCDirectiveKind DK, OpenACCGangKind GK,
                            Expr *E);
 
+  // Called when a declaration is referenced, so that we can make sure certain
+  // clauses don't do the 'wrong' thing/have incorrect references.
+  void CheckDeclReference(SourceLocation Loc, Expr *E, Decl *D);
+
   // Does the checking for a 'gang' clause that needs to be done in dependent
   // and not dependent cases.
   OpenACCClause *
@@ -888,7 +956,9 @@ public:
                        OpenACCDirectiveKind DirectiveKind,
                        SourceLocation BeginLoc, SourceLocation LParenLoc,
                        OpenACCReductionOperator ReductionOp,
-                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
+                       ArrayRef<Expr *> Vars,
+                       ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+                       SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

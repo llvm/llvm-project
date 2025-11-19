@@ -1,0 +1,22 @@
+RUN: mkdir -p %t/Outputs
+
+# Run the convert script on lldb-defines.h.
+RUN: %python %p/../../../../../scripts/convert-lldb-header-to-rpc-header.py %p/Inputs/lldb-defines.h %t/Outputs/lldb-rpc-defines.h
+
+# Check the output
+RUN: cat %t/Outputs/lldb-rpc-defines.h | FileCheck %s
+
+# The include guards must change from LLDB_LLDB_DEFINES_H to LLDB_RPC_DEFINES_H.
+CHECK: #ifndef LLDB_RPC_DEFINES_H
+CHECK: #define LLDB_RPC_DEFINES_H
+
+# Includes of other lldb headers must begin with "lldb-rpc-".
+CHECK: #include "lldb-rpc-types.h"
+
+# The version info must be changed from LLDB_VERSION to LLDB_RPC_VERSION
+CHECK: #define LLDB_RPC_VERSION 21
+CHECK: #define LLDB_RPC_REVISION 12
+CHECK: #define LLDB_RPC_VERSION_STRING "21.0.12"
+
+# The comment that closes the include guard should match the guard.
+CHECK: #endif // LLDB_RPC_DEFINES_H

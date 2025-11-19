@@ -29,10 +29,9 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/threads/thread.h"
 
-#include "src/errno/libc_errno.h"
-
 #include "test/IntegrationTest/test.h"
 
+#include <errno.h>
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <pthread.h>
 
@@ -109,14 +108,14 @@ static void *successThread(void *Arg) {
     volatile uint8_t *bytes_on_stack =
         (volatile uint8_t *)__builtin_alloca(test_stacksize);
 
-    for (size_t I = 0; I < test_stacksize; ++I) {
+    for (size_t i = 0; i < test_stacksize; ++i) {
       // Write permissions
-      bytes_on_stack[I] = static_cast<uint8_t>(I);
+      bytes_on_stack[i] = static_cast<uint8_t>(i);
     }
 
-    for (size_t I = 0; I < test_stacksize; ++I) {
+    for (size_t i = 0; i < test_stacksize; ++i) {
       // Read/write permissions
-      bytes_on_stack[I] += static_cast<uint8_t>(I);
+      bytes_on_stack[i] += static_cast<uint8_t>(i);
     }
   }
 
@@ -332,7 +331,7 @@ static void run_failure_tests() {
 }
 
 TEST_MAIN() {
-  LIBC_NAMESPACE::libc_errno = 0;
+  errno = 0;
   run_success_tests();
   run_failure_tests();
   return 0;

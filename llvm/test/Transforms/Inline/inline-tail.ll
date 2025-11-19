@@ -64,7 +64,7 @@ define void @test_byval_a(ptr byval(i32) %p) {
 ; CHECK-LABEL: define void @test_byval_a
 ; CHECK-SAME: (ptr byval(i32) [[P:%.*]]) {
 ; CHECK-NEXT:    [[P1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[P1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[P1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P1]], ptr [[P]], i64 4, i1 false)
 ; CHECK-NEXT:    musttail call void @test_byval_c(ptr byval(i32) [[P1]])
 ; CHECK-NEXT:    ret void
@@ -87,7 +87,7 @@ define void @test_dynalloca_a(ptr byval(i32) %p, i32 %n) {
 ; CHECK-SAME: (ptr byval(i32) [[P:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:    [[P1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[SAVEDSTACK:%.*]] = call ptr @llvm.stacksave.p0()
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[P1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[P1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P1]], ptr [[P]], i64 4, i1 false)
 ; CHECK-NEXT:    [[BUF_I:%.*]] = alloca i8, i32 [[N]], align 1
 ; CHECK-NEXT:    call void @escape(ptr [[BUF_I]])

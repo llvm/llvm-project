@@ -55,8 +55,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
@@ -67,7 +66,7 @@ namespace {
                           MachineBasicBlock &MBB);
     void addDirtySuccessor(MachineBasicBlock &MBB);
 
-    using BlockExitState = enum { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
+    enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
 
     static const char* getBlockExitStateName(BlockExitState ST);
 

@@ -9,203 +9,140 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBListener.h"
+#include "lldb/lldb-defines.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+
+using namespace llvm;
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
-// "AttachRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Attach request; value of command field is 'attach'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "attach" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/AttachRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments" ]
-//   }]
-// },
-// "AttachRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'attach' request.\nThe attach request has no
-//   standardized attributes."
-// },
-// "AttachResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'attach' request. This is just an
-//     acknowledgement, so no body field is required."
-//   }]
-// }
-void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
-  dap.is_attach = true;
-  llvm::json::Object response;
-  lldb::SBError error;
-  FillResponse(request, response);
-  lldb::SBAttachInfo attach_info;
-  const int invalid_port = 0;
-  const auto *arguments = request.getObject("arguments");
-  const lldb::pid_t pid =
-      GetInteger<uint64_t>(arguments, "pid").value_or(LLDB_INVALID_PROCESS_ID);
-  const auto gdb_remote_port =
-      GetInteger<uint64_t>(arguments, "gdb-remote-port").value_or(invalid_port);
-  const auto gdb_remote_hostname =
-      GetString(arguments, "gdb-remote-hostname").value_or("localhost");
-  if (pid != LLDB_INVALID_PROCESS_ID)
-    attach_info.SetProcessID(pid);
-  const auto wait_for = GetBoolean(arguments, "waitFor").value_or(false);
-  attach_info.SetWaitForLaunch(wait_for, false /*async*/);
-  dap.configuration.initCommands = GetStrings(arguments, "initCommands");
-  dap.configuration.preRunCommands = GetStrings(arguments, "preRunCommands");
-  dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
-  dap.configuration.stopCommands = GetStrings(arguments, "stopCommands");
-  dap.configuration.exitCommands = GetStrings(arguments, "exitCommands");
-  dap.configuration.terminateCommands =
-      GetStrings(arguments, "terminateCommands");
-  auto attachCommands = GetStrings(arguments, "attachCommands");
-  llvm::StringRef core_file = GetString(arguments, "coreFile").value_or("");
-  const uint64_t timeout_seconds =
-      GetInteger<uint64_t>(arguments, "timeout").value_or(30);
-  dap.stop_at_entry = core_file.empty()
-                          ? GetBoolean(arguments, "stopOnEntry").value_or(false)
-                          : true;
-  const llvm::StringRef debuggerRoot =
-      GetString(arguments, "debuggerRoot").value_or("");
-  dap.configuration.enableAutoVariableSummaries =
-      GetBoolean(arguments, "enableAutoVariableSummaries").value_or(false);
-  dap.configuration.enableSyntheticChildDebugging =
-      GetBoolean(arguments, "enableSyntheticChildDebugging").value_or(false);
-  dap.configuration.displayExtendedBacktrace =
-      GetBoolean(arguments, "displayExtendedBacktrace").value_or(false);
-  dap.configuration.commandEscapePrefix =
-      GetString(arguments, "commandEscapePrefix").value_or("`");
-  dap.configuration.program = GetString(arguments, "program");
-  dap.configuration.targetTriple = GetString(arguments, "targetTriple");
-  dap.configuration.platformName = GetString(arguments, "platformName");
-  dap.SetFrameFormat(GetString(arguments, "customFrameFormat").value_or(""));
-  dap.SetThreadFormat(GetString(arguments, "customThreadFormat").value_or(""));
+/// The `attach` request is sent from the client to the debug adapter to attach
+/// to a debuggee that is already running.
+///
+/// Since attaching is debugger/runtime specific, the arguments for this request
+/// are not part of this specification.
+Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
+  // Validate that we have a well formed attach request.
+  if (args.attachCommands.empty() && args.coreFile.empty() &&
+      args.configuration.program.empty() &&
+      args.pid == LLDB_INVALID_PROCESS_ID &&
+      args.gdbRemotePort == LLDB_DAP_INVALID_PORT)
+    return make_error<DAPError>(
+        "expected one of 'pid', 'program', 'attachCommands', "
+        "'coreFile' or 'gdb-remote-port' to be specified");
+
+  // Check if we have mutually exclusive arguments.
+  if ((args.pid != LLDB_INVALID_PROCESS_ID) &&
+      (args.gdbRemotePort != LLDB_DAP_INVALID_PORT))
+    return make_error<DAPError>(
+        "'pid' and 'gdb-remote-port' are mutually exclusive");
+
+  dap.SetConfiguration(args.configuration, /*is_attach=*/true);
+  if (!args.coreFile.empty())
+    dap.stop_at_entry = true;
 
   PrintWelcomeMessage();
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
-  // in the debug map of the main executable have relative paths which require
-  // the lldb-dap binary to have its working directory set to that relative
-  // root for the .o files in order to be able to load debug info.
-  if (!debuggerRoot.empty())
-    llvm::sys::fs::set_current_path(debuggerRoot);
+  // in the debug map of the main executable have relative paths which
+  // require the lldb-dap binary to have its working directory set to that
+  // relative root for the .o files in order to be able to load debug info.
+  if (!dap.configuration.debuggerRoot.empty())
+    sys::fs::set_current_path(dap.configuration.debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunInitCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+  if (llvm::Error err = dap.RunInitCommands())
+    return err;
 
-  SetSourceMapFromArguments(*arguments);
+  dap.ConfigureSourceMaps();
 
-  lldb::SBError status;
-  dap.SetTarget(dap.CreateTarget(status));
-  if (status.Fail()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", status.GetCString());
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+  lldb::SBError error;
+  lldb::SBTarget target = dap.CreateTarget(error);
+  if (error.Fail())
+    return ToError(error);
+
+  dap.SetTarget(target);
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunPreRunCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+  if (Error err = dap.RunPreRunCommands())
+    return err;
 
-  if ((pid == LLDB_INVALID_PROCESS_ID || gdb_remote_port == invalid_port) &&
-      wait_for) {
-    char attach_msg[256];
-    auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
-                                   "Waiting to attach to \"%s\"...",
-                                   dap.target.GetExecutable().GetFilename());
+  if ((args.pid == LLDB_INVALID_PROCESS_ID ||
+       args.gdbRemotePort == LLDB_DAP_INVALID_PORT) &&
+      args.waitFor) {
     dap.SendOutput(OutputType::Console,
-                   llvm::StringRef(attach_msg, attach_msg_len));
+                   llvm::formatv("Waiting to attach to \"{0}\"...",
+                                 dap.target.GetExecutable().GetFilename())
+                       .str());
   }
-  if (attachCommands.empty()) {
-    // No "attachCommands", just attach normally.
-    // Disable async events so the attach will be successful when we return from
-    // the launch call and the launch will happen synchronously
-    dap.debugger.SetAsync(false);
-    if (core_file.empty()) {
-      if ((pid != LLDB_INVALID_PROCESS_ID) &&
-          (gdb_remote_port != invalid_port)) {
-        // If both pid and port numbers are specified.
-        error.SetErrorString("The user can't specify both pid and port");
-      } else if (gdb_remote_port != invalid_port) {
-        // If port is specified and pid is not.
-        lldb::SBListener listener = dap.debugger.GetListener();
 
-        // If the user hasn't provided the hostname property, default localhost
-        // being used.
-        std::string connect_url =
-            llvm::formatv("connect://{0}:", gdb_remote_hostname);
-        connect_url += std::to_string(gdb_remote_port);
-        dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
-                                 error);
-      } else {
-        // Attach by process name or id.
-        dap.target.Attach(attach_info, error);
-      }
-    } else
-      dap.target.LoadCore(core_file.data(), error);
-    // Reenable async events
-    dap.debugger.SetAsync(true);
-  } else {
-    // We have "attachCommands" that are a set of commands that are expected
-    // to execute the commands after which a process should be created. If there
-    // is no valid process after running these commands, we have failed.
-    if (llvm::Error err = dap.RunAttachCommands(attachCommands)) {
-      response["success"] = false;
-      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-      dap.SendJSON(llvm::json::Value(std::move(response)));
-      return;
+  {
+    // Perform the launch in synchronous mode so that we don't have to worry
+    // about process state changes during the launch.
+    ScopeSyncMode scope_sync_mode(dap.debugger);
+
+    if (!args.attachCommands.empty()) {
+      // Run the attach commands, after which we expect the debugger's selected
+      // target to contain a valid and stopped process. Otherwise inform the
+      // user that their command failed or the debugger is in an unexpected
+      // state.
+      if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
+        return err;
+
+      dap.target = dap.debugger.GetSelectedTarget();
+
+      // Validate the attachCommand results.
+      if (!dap.target.GetProcess().IsValid())
+        return make_error<DAPError>(
+            "attachCommands failed to attach to a process");
+    } else if (!args.coreFile.empty()) {
+      dap.target.LoadCore(args.coreFile.data(), error);
+    } else if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
+      lldb::SBListener listener = dap.debugger.GetListener();
+
+      // If the user hasn't provided the hostname property, default
+      // localhost being used.
+      std::string connect_url =
+          llvm::formatv("connect://{0}:", args.gdbRemoteHostname);
+      connect_url += std::to_string(args.gdbRemotePort);
+      dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                               error);
+    } else {
+      // Attach by pid or process name.
+      lldb::SBAttachInfo attach_info;
+      if (args.pid != LLDB_INVALID_PROCESS_ID)
+        attach_info.SetProcessID(args.pid);
+      else if (!dap.configuration.program.empty())
+        attach_info.SetExecutable(dap.configuration.program.data());
+      attach_info.SetWaitForLaunch(args.waitFor, /*async=*/false);
+      dap.target.Attach(attach_info, error);
     }
-    // The custom commands might have created a new target so we should use the
-    // selected target after these commands are run.
-    dap.target = dap.debugger.GetSelectedTarget();
-
-    // Make sure the process is attached and stopped before proceeding as the
-    // the launch commands are not run using the synchronous mode.
-    error = dap.WaitForProcessToStop(std::chrono::seconds(timeout_seconds));
+    if (error.Fail())
+      return ToError(error);
   }
 
-  if (error.Success() && core_file.empty()) {
-    auto attached_pid = dap.target.GetProcess().GetProcessID();
-    if (attached_pid == LLDB_INVALID_PROCESS_ID) {
-      if (attachCommands.empty())
-        error.SetErrorString("failed to attach to a process");
-      else
-        error.SetErrorString("attachCommands failed to attach to a process");
-    }
-  }
+  // Make sure the process is attached and stopped.
+  error = dap.WaitForProcessToStop(args.configuration.timeout);
+  if (error.Fail())
+    return ToError(error);
 
-  if (error.Fail()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", std::string(error.GetCString()));
-  } else {
-    dap.RunPostRunCommands();
-  }
+  if (args.coreFile.empty() && !dap.target.GetProcess().IsValid())
+    return make_error<DAPError>("failed to attach to process");
 
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-  if (error.Success()) {
-    SendProcessEvent(dap, Attach);
-    dap.SendJSON(CreateEventObject("initialized"));
-  }
+  dap.RunPostRunCommands();
+
+  return Error::success();
+}
+
+void AttachRequestHandler::PostRun() const {
+  dap.SendJSON(CreateEventObject("initialized"));
 }
 
 } // namespace lldb_dap

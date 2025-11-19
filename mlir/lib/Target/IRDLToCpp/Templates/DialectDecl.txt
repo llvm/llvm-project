@@ -1,0 +1,28 @@
+R"(
+__NAMESPACE_OPEN__
+
+class __DIALECT_CPP_NAME__ : public ::mlir::Dialect {
+  explicit __DIALECT_CPP_NAME__(::mlir::MLIRContext *context);
+
+  void initialize();
+  friend class ::mlir::MLIRContext;
+
+public:
+  ~__DIALECT_CPP_NAME__() override;
+  static constexpr ::llvm::StringLiteral getDialectNamespace() {
+    return ::llvm::StringLiteral("__DIALECT_NAME__");
+  }
+
+  /// Parse a type registered to this dialect.
+  ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
+
+  /// Print a type registered to this dialect.
+  void printType(::mlir::Type type,
+                 ::mlir::DialectAsmPrinter &os) const override;
+};
+
+__NAMESPACE_CLOSE__
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__DIALECT_CPP_NAME__)
+
+)"

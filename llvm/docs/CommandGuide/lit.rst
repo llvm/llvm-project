@@ -63,12 +63,12 @@ GENERAL OPTIONS
 
  Show :program:`lit`'s version number and exit.
 
-.. option:: -j N, --workers=N
+.. option:: -j N, --workers N
 
  Run ``N`` tests in parallel.  By default, this is automatically chosen to
  match the number of detected available CPUs.
 
-.. option:: --config-prefix=NAME
+.. option:: --config-prefix NAME
 
  Search for :file:`{NAME}.cfg` and :file:`{NAME}.site.cfg` when searching for
  test suites, instead of :file:`lit.cfg` and :file:`lit.site.cfg`.
@@ -157,7 +157,7 @@ EXECUTION OPTIONS
 
  Disable sharding for GoogleTest format.
 
-.. option:: --path=PATH
+.. option:: --path PATH
 
  Specify an additional ``PATH`` to use when searching for executables in tests.
 
@@ -178,7 +178,7 @@ EXECUTION OPTIONS
  feature that can be used to conditionally disable (or expect failure in)
  certain tests.
 
-.. option:: --vg-arg=ARG
+.. option:: --vg-arg ARG
 
  When :option:`--vg` is used, specify an additional argument to pass to
  :program:`valgrind` itself.
@@ -193,7 +193,7 @@ EXECUTION OPTIONS
 
 .. option:: --report-failures-only
 
- Only include unresolved, timed out, failed and unexpectedly passed tests in the report.
+ Only include failures (see :ref:`test-status-results`) in the report.
 
 .. option:: --resultdb-output RESULTDB_OUTPUT
 
@@ -208,7 +208,7 @@ EXECUTION OPTIONS
  Maximum time to spend running a single test (in seconds). 0 means no time
  limit. [Default: 0]
 
-.. option:: --timeout=N
+.. option:: --timeout N
 
  Spend at most ``N`` seconds (approximately) running each individual test.
  ``0`` means no time limit, and ``0`` is the default. Note that this is not an
@@ -217,6 +217,19 @@ EXECUTION OPTIONS
 .. option:: --max-failures MAX_FAILURES
 
  Stop execution after the given number of failures.
+
+.. option:: --max-retries-per-test N
+
+ Retry running failed tests at most ``N`` times.
+ Out of the following options to rerun failed tests the
+ :option:`--max-retries-per-test` is the only one that doesn't
+ require a change in the test scripts or the test config:
+
+  * :option:`--max-retries-per-test` lit option
+  * ``config.test_retry_attempts`` test suite option
+  * ``ALLOW_RETRIES:`` annotation in test script
+
+ Any option in the list above overrules its predecessor.
 
 .. option:: --allow-empty-runs
 
@@ -255,17 +268,17 @@ The timing data is stored in the `test_exec_root` in a file named
 `.lit_test_times.txt`. If this file does not exist, then `lit` checks the
 `test_source_root` for the file to optionally accelerate clean builds.
 
-.. option:: --max-tests=N
+.. option:: --max-tests N
 
  Run at most ``N`` tests and then terminate.
 
-.. option:: --max-time=N
+.. option:: --max-time N
 
  Spend at most ``N`` seconds (approximately) running tests and then terminate.
  Note that this is not an alias for :option:`--timeout`; the two are
  different kinds of maximums.
 
-.. option:: --order={lexical,random,smart}
+.. option:: --order {lexical,random,smart}
 
  Define the order in which tests are run. The supported values are:
 
@@ -287,21 +300,21 @@ The timing data is stored in the `test_exec_root` in a file named
 
  Run failed tests first (DEPRECATED: use ``--order=smart``).
 
-.. option:: --filter=REGEXP
+.. option:: --filter REGEXP
 
   Run only those tests whose name matches the regular expression specified in
   ``REGEXP``. The environment variable ``LIT_FILTER`` can be also used in place
   of this option, which is especially useful in environments where the call
   to ``lit`` is issued indirectly.
 
-.. option:: --filter-out=REGEXP
+.. option:: --filter-out REGEXP
 
   Filter out those tests whose name matches the regular expression specified in
   ``REGEXP``. The environment variable ``LIT_FILTER_OUT`` can be also used in
   place of this option, which is especially useful in environments where the
   call to ``lit`` is issued indirectly.
 
-.. option:: --xfail=LIST
+.. option:: --xfail LIST
 
   Treat those tests whose name is in the semicolon separated list ``LIST`` as
   ``XFAIL``. This can be helpful when one does not want to modify the test
@@ -333,7 +346,7 @@ The timing data is stored in the `test_exec_root` in a file named
 
     LIT_XFAIL="affinity/kmp-hw-subset.c;libomptarget :: x86_64-pc-linux-gnu :: offloading/memory_manager.cpp"
 
-.. option:: --xfail-not=LIST
+.. option:: --xfail-not LIST
 
   Do not treat the specified tests as ``XFAIL``.  The environment variable
   ``LIT_XFAIL_NOT`` can also be used in place of this option.  The syntax is the
@@ -343,7 +356,12 @@ The timing data is stored in the `test_exec_root` in a file named
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
 
-.. option:: --num-shards=M
+.. option:: --exclude-xfail
+
+  ``XFAIL`` tests won't be run, unless they are listed in the ``--xfail-not``
+  (or ``LIT_XFAIL_NOT``) lists.
+
+.. option:: --num-shards M
 
  Divide the set of selected tests into ``M`` equal-sized subsets or
  "shards", and run only one of them.  Must be used with the
@@ -353,7 +371,7 @@ The timing data is stored in the `test_exec_root` in a file named
  testsuites, for parallel execution on separate machines (say in a large
  testing farm).
 
-.. option:: --run-shard=N
+.. option:: --run-shard N
 
  Select which shard to run, assuming the ``--num-shards=M`` option was
  provided. The two options must be used together, and the value of ``N``
@@ -381,11 +399,17 @@ ADDITIONAL OPTIONS
  Show all features used in the test suite (in ``XFAIL``, ``UNSUPPORTED`` and
  ``REQUIRES``) and exit.
 
+.. option:: --update-tests
+
+ Pass failing tests to functions in the ``lit_config.test_updaters`` list to
+ check whether any of them know how to update the test to make it pass.
+
 EXIT STATUS
 -----------
 
-:program:`lit` will exit with an exit code of 1 if there are any FAIL or XPASS
-results.  Otherwise, it will exit with the status 0.  Other exit codes are used
+:program:`lit` will exit with an exit code of 1 if there are any failures
+(see :ref:`test-status-results`) and :option:`--ignore-fail` has not been
+passed.  Otherwise, it will exit with the status 0.  Other exit codes are used
 for non-test related failures (for example a user error or an internal program
 error).
 
@@ -461,8 +485,10 @@ Each test ultimately produces one of the following eight results:
 
 **TIMEOUT**
 
- The test was run, but it timed out before it was able to complete. This is
- considered a failure.
+ The test was run, but it timed out before it was able to complete.
+
+Unresolved (**UNRESOLVED**), timed out (**TIMEOUT**), failed (**FAIL**) and
+unexpectedly passed (**XPASS**) tests are considered failures.
 
 Depending on the test format tests may produce additional information about
 their status (generally only for failures).  See the :ref:`output-options`
@@ -602,32 +628,27 @@ TestRunner.py:
  %{fs-src-root}          root component of file system paths pointing to the LLVM checkout
  %{fs-tmp-root}          root component of file system paths pointing to the test's temporary directory
  %{fs-sep}               file system path separator
- %t                      temporary file name unique to the test
+ %t                      a path unique to the test (which may be used to make files or directories)
  %basename_t             The last path component of %t but without the ``.tmp`` extension (deprecated, use ``%{t:stem}`` instead)
- %T                      parent directory of %t (not unique, deprecated, do not use)
  %%                      %
  %/s                     %s but ``\`` is replaced by ``/``
  %/S                     %S but ``\`` is replaced by ``/``
  %/p                     %p but ``\`` is replaced by ``/``
  %/t                     %t but ``\`` is replaced by ``/``
- %/T                     %T but ``\`` is replaced by ``/``
  %{s:basename}           The last path component of %s
  %{t:stem}               The last path component of %t but without the ``.tmp`` extension (alias for %basename_t)
  %{s:real}               %s after expanding all symbolic links and substitute drives
  %{S:real}               %S after expanding all symbolic links and substitute drives
  %{p:real}               %p after expanding all symbolic links and substitute drives
  %{t:real}               %t after expanding all symbolic links and substitute drives
- %{T:real}               %T after expanding all symbolic links and substitute drives
  %{/s:real}              %/s after expanding all symbolic links and substitute drives
  %{/S:real}              %/S after expanding all symbolic links and substitute drives
  %{/p:real}              %/p after expanding all symbolic links and substitute drives
  %{/t:real}              %/t after expanding all symbolic links and substitute drives
- %{/T:real}              %/T after expanding all symbolic links and substitute drives
  %{/s:regex_replacement} %/s but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/S:regex_replacement} %/S but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/p:regex_replacement} %/p but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/t:regex_replacement} %/t but escaped for use in the replacement of a ``s@@@`` command in sed
- %{/T:regex_replacement} %/T but escaped for use in the replacement of a ``s@@@`` command in sed
  %:s                     On Windows, %/s but a ``:`` is removed if its the second character.
                          Otherwise, %s but with a single leading ``/`` removed.
  %:S                     On Windows, %/S but a ``:`` is removed if its the second character.
@@ -636,8 +657,7 @@ TestRunner.py:
                          Otherwise, %p but with a single leading ``/`` removed.
  %:t                     On Windows, %/t but a ``:`` is removed if its the second character.
                          Otherwise, %t but with a single leading ``/`` removed.
- %:T                     On Windows, %/T but a ``:`` is removed if its the second character.
-                         Otherwise, %T but with a single leading ``/`` removed.
+ %{readfile:<filename>}  Reads the file specified.
  ======================= ==============
 
 Other substitutions are provided that are variations on this base set and
@@ -671,6 +691,14 @@ newline.
 
 The ``<progress info>`` field can be used to report progress information such
 as (1/300) or can be empty, but even when empty the parentheses are required.
+
+Should a test be allowed retries (see ``ALLOW_RETRIES:`` annotation) and it
+needed more than one attempt to succeed, then ``<progress info>`` is extended
+by this information:
+
+.. code-block:: none
+
+  , <num_attempts_made> of <max_allowed_attempts> attempts
 
 Each test result may include additional (multiline) log information in the
 following format:

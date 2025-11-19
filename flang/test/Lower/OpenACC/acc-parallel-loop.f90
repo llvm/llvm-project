@@ -49,7 +49,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {
 ! CHECK:        acc.loop private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {{{.*}}independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -61,7 +61,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel combined(loop) {
 ! CHECK:        acc.loop combined(parallel) private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {{{.*}}independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -71,12 +71,12 @@ subroutine acc_parallel_loop
   END DO
   !$acc end parallel loop
 
-! CHECK:      acc.parallel {{.*}} {
+! CHECK:      acc.parallel {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc parallel loop async(1)
   DO i = 1, n
@@ -103,6 +103,12 @@ subroutine acc_parallel_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+
+  !$acc parallel loop async(async) device_type(nvidia) async(1)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+! CHECK: acc.parallel combined(loop) async(%{{.*}} : i32, %c1{{.*}} : i32 [#acc.device_type<nvidia>])
 
   !$acc parallel loop wait
   DO i = 1, n
@@ -354,7 +360,7 @@ subroutine acc_parallel_loop
   END DO
 
 ! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a"}
-! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "b"}
+! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyout_zero>, name = "b"}
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[CREATE_A]], %[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
@@ -362,7 +368,7 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 ! CHECK:      acc.copyout accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) {name = "a"}
-! CHECK:      acc.copyout accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) {name = "b"}
+! CHECK:      acc.copyout accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copyout_zero>, name = "b"}
 
   !$acc parallel loop create(b) create(zero: a)
   DO i = 1, n
@@ -499,7 +505,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -512,7 +518,7 @@ subroutine acc_parallel_loop
 ! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
 ! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32})
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -525,7 +531,7 @@ subroutine acc_parallel_loop
 ! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32})
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -537,7 +543,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang({num=%{{.*}} : i32, static=%{{.*}} : i32})
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -549,7 +555,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} vector
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -562,7 +568,7 @@ subroutine acc_parallel_loop
 ! CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
 ! CHECK:        acc.loop {{.*}} vector([[CONSTANT128]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -576,7 +582,7 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.loop {{.*}} vector([[VECTORLENGTH]] : i32) {{.*}} {
 ! CHECK-NOT:      fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -589,7 +595,7 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.loop {{.*}} worker {{.*}} {
 ! CHECK-NOT:      fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -603,7 +609,7 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.loop {{.*}} worker([[WORKER128]] : i32) {{.*}} {
 ! CHECK-NOT:      fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -617,7 +623,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true>}
+! CHECK-NEXT:   } attributes {{{.*}}collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -633,9 +639,9 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:            acc.loop {{.*}} {
 ! CHECK:              acc.yield
-! CHECK-NEXT:     }{{$}}
+! CHECK-NEXT:     } attributes {{{.*}}independent = [#acc.device_type<none>]}
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } attributes {{{.*}}independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -675,7 +681,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
@@ -701,7 +707,7 @@ subroutine acc_parallel_loop
   END DO
 
 ! CHECK:      acc.parallel {{.*}} {
-! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield

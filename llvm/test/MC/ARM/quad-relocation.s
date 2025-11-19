@@ -3,7 +3,7 @@
 
 	.align 3
 symbol:
-@ CHECK:      :[[#@LINE+1]]:6: error: unsupported relocation type
+@ CHECK:      :[[#@LINE+1]]:7: error: unsupported relocation type
 .quad(symbol)
 @ CHECK:      :[[#@LINE+1]]:8: error: unsupported relocation type
 .8byte symbol

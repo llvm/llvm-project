@@ -25,8 +25,14 @@
 
 #include "GCNSchedStrategy.h"
 #include "AMDGPUIGroupLP.h"
+#include "GCNRegPressure.h"
 #include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "machine-scheduler"
 
@@ -63,6 +69,27 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
+static cl::opt<unsigned> PendingQueueLimit(
+    "amdgpu-scheduler-pending-queue-limit", cl::Hidden,
+    cl::desc(
+        "Max (Available+Pending) size to inspect pending queue (0 disables)"),
+    cl::init(256));
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#define DUMP_MAX_REG_PRESSURE
+static cl::opt<bool> PrintMaxRPRegUsageBeforeScheduler(
+    "amdgpu-print-max-reg-pressure-regusage-before-scheduler", cl::Hidden,
+    cl::desc("Print a list of live registers along with their def/uses at the "
+             "point of maximum register pressure before scheduling."),
+    cl::init(false));
+
+static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
+    "amdgpu-print-max-reg-pressure-regusage-after-scheduler", cl::Hidden,
+    cl::desc("Print a list of live registers along with their def/uses at the "
+             "point of maximum register pressure after scheduling."),
+    cl::init(false));
+#endif
+
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
@@ -94,17 +121,20 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
 
   if (!KnownExcessRP) {
-    VGPRCriticalLimit =
-        std::min(ST.getMaxNumVGPRs(TargetOccupancy), VGPRExcessLimit);
+    VGPRCriticalLimit = std::min(
+        ST.getMaxNumVGPRs(TargetOccupancy, MFI.getDynamicVGPRBlockSize()),
+        VGPRExcessLimit);
   } else {
     // This is similar to ST.getMaxNumVGPRs(TargetOccupancy) result except
     // returns a reasonably small number for targets with lots of VGPRs, such
     // as GFX10 and GFX11.
     LLVM_DEBUG(dbgs() << "Region is known to spill, use alternative "
                          "VGPRCriticalLimit calculation method.\n");
-
-    unsigned Granule = AMDGPU::IsaInfo::getVGPRAllocGranule(&ST);
-    unsigned Addressable = AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST);
+    unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
+    unsigned Granule =
+        AMDGPU::IsaInfo::getVGPRAllocGranule(&ST, DynamicVGPRBlockSize);
+    unsigned Addressable =
+        AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST, DynamicVGPRBlockSize);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
@@ -301,14 +331,48 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     HasHighPressure = true;
     if (SGPRDelta > VGPRDelta) {
       Cand.RPDelta.CriticalMax =
-        PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
+          PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
       Cand.RPDelta.CriticalMax.setUnitInc(SGPRDelta);
     } else {
       Cand.RPDelta.CriticalMax =
-        PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
+          PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
       Cand.RPDelta.CriticalMax.setUnitInc(VGPRDelta);
     }
   }
+}
+
+static bool shouldCheckPending(SchedBoundary &Zone,
+                               const TargetSchedModel *SchedModel) {
+  bool HasBufferedModel =
+      SchedModel->hasInstrSchedModel() && SchedModel->getMicroOpBufferSize();
+  unsigned Combined = Zone.Available.size() + Zone.Pending.size();
+  return Combined <= PendingQueueLimit && HasBufferedModel;
+}
+
+static SUnit *pickOnlyChoice(SchedBoundary &Zone,
+                             const TargetSchedModel *SchedModel) {
+  // pickOnlyChoice() releases pending instructions and checks for new hazards.
+  SUnit *OnlyChoice = Zone.pickOnlyChoice();
+  if (!shouldCheckPending(Zone, SchedModel) || Zone.Pending.empty())
+    return OnlyChoice;
+
+  return nullptr;
+}
+
+void GCNSchedStrategy::printCandidateDecision(const SchedCandidate &Current,
+                                              const SchedCandidate &Preferred) {
+  LLVM_DEBUG({
+    dbgs() << "Prefer:\t\t";
+    DAG->dumpNode(*Preferred.SU);
+
+    if (Current.SU) {
+      dbgs() << "Not:\t";
+      DAG->dumpNode(*Current.SU);
+    }
+
+    dbgs() << "Reason:\t\t";
+    traceCandidate(Preferred);
+  });
 }
 
 // This function is mostly cut and pasted from
@@ -316,12 +380,13 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
 void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                                          const CandPolicy &ZonePolicy,
                                          const RegPressureTracker &RPTracker,
-                                         SchedCandidate &Cand,
+                                         SchedCandidate &Cand, bool &IsPending,
                                          bool IsBottomUp) {
-  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo*>(TRI);
+  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
   unsigned SGPRPressure = 0;
   unsigned VGPRPressure = 0;
+  IsPending = false;
   if (DAG->isTrackingPressure()) {
     if (!GCNTrackers) {
       SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
@@ -334,8 +399,9 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
       VGPRPressure = T->getPressure().getArchVGPRNum();
     }
   }
-  ReadyQueue &Q = Zone.Available;
-  for (SUnit *SU : Q) {
+  LLVM_DEBUG(dbgs() << "Available Q:\n");
+  ReadyQueue &AQ = Zone.Available;
+  for (SUnit *SU : AQ) {
 
     SchedCandidate TryCand(ZonePolicy);
     initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,
@@ -347,27 +413,55 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
       // Initialize resource delta if needed in case future heuristics query it.
       if (TryCand.ResDelta == SchedResourceDelta())
         TryCand.initResourceDelta(Zone.DAG, SchedModel);
+      LLVM_DEBUG(printCandidateDecision(Cand, TryCand));
       Cand.setBest(TryCand);
-      LLVM_DEBUG(traceCandidate(Cand));
+    } else {
+      printCandidateDecision(TryCand, Cand);
+    }
+  }
+
+  if (!shouldCheckPending(Zone, SchedModel))
+    return;
+
+  LLVM_DEBUG(dbgs() << "Pending Q:\n");
+  ReadyQueue &PQ = Zone.Pending;
+  for (SUnit *SU : PQ) {
+
+    SchedCandidate TryCand(ZonePolicy);
+    initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,
+                  VGPRPressure, IsBottomUp);
+    // Pass SchedBoundary only when comparing nodes from the same boundary.
+    SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
+    tryPendingCandidate(Cand, TryCand, ZoneArg);
+    if (TryCand.Reason != NoCand) {
+      // Initialize resource delta if needed in case future heuristics query it.
+      if (TryCand.ResDelta == SchedResourceDelta())
+        TryCand.initResourceDelta(Zone.DAG, SchedModel);
+      LLVM_DEBUG(printCandidateDecision(Cand, TryCand));
+      IsPending = true;
+      Cand.setBest(TryCand);
+    } else {
+      printCandidateDecision(TryCand, Cand);
     }
   }
 }
 
 // This function is mostly cut and pasted from
 // GenericScheduler::pickNodeBidirectional()
-SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
+SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
+                                               bool &PickedPending) {
   // Schedule as far as possible in the direction of no choice. This is most
   // efficient, but also provides the best heuristics for CriticalPSets.
-  if (SUnit *SU = Bot.pickOnlyChoice()) {
+  if (SUnit *SU = pickOnlyChoice(Bot, SchedModel)) {
     IsTopNode = false;
     return SU;
   }
-  if (SUnit *SU = Top.pickOnlyChoice()) {
+  if (SUnit *SU = pickOnlyChoice(Top, SchedModel)) {
     IsTopNode = true;
     return SU;
   }
-  // Set the bottom-up policy based on the state of the current bottom zone and
-  // the instructions outside the zone, including the top zone.
+  // Set the bottom-up policy based on the state of the current bottom zone
+  // and the instructions outside the zone, including the top zone.
   CandPolicy BotPolicy;
   setPolicy(BotPolicy, /*IsPostRA=*/false, Bot, &Top);
   // Set the top-down policy based on the state of the current top zone and
@@ -375,12 +469,14 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
   CandPolicy TopPolicy;
   setPolicy(TopPolicy, /*IsPostRA=*/false, Top, &Bot);
 
+  bool BotPending = false;
   // See if BotCand is still valid (because we previously scheduled from Top).
   LLVM_DEBUG(dbgs() << "Picking from Bot:\n");
   if (!BotCand.isValid() || BotCand.SU->isScheduled ||
       BotCand.Policy != BotPolicy) {
     BotCand.reset(CandPolicy());
     pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), BotCand,
+                      BotPending,
                       /*IsBottomUp=*/true);
     assert(BotCand.Reason != NoCand && "failed to find the first candidate");
   } else {
@@ -390,6 +486,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand,
+                        BotPending,
                         /*IsBottomUp=*/true);
       assert(TCand.SU == BotCand.SU &&
              "Last pick result should correspond to re-picking right now");
@@ -397,12 +494,14 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
 #endif
   }
 
+  bool TopPending = false;
   // Check if the top Q has a better candidate.
   LLVM_DEBUG(dbgs() << "Picking from Top:\n");
   if (!TopCand.isValid() || TopCand.SU->isScheduled ||
       TopCand.Policy != TopPolicy) {
     TopCand.reset(CandPolicy());
     pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TopCand,
+                      TopPending,
                       /*IsBottomUp=*/false);
     assert(TopCand.Reason != NoCand && "failed to find the first candidate");
   } else {
@@ -412,9 +511,10 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand,
+                        TopPending,
                         /*IsBottomUp=*/false);
       assert(TCand.SU == TopCand.SU &&
-           "Last pick result should correspond to re-picking right now");
+             "Last pick result should correspond to re-picking right now");
     }
 #endif
   }
@@ -422,12 +522,21 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
   // Pick best from BotCand and TopCand.
   LLVM_DEBUG(dbgs() << "Top Cand: "; traceCandidate(TopCand);
              dbgs() << "Bot Cand: "; traceCandidate(BotCand););
-  SchedCandidate Cand = BotCand;
-  TopCand.Reason = NoCand;
-  tryCandidate(Cand, TopCand, nullptr);
-  if (TopCand.Reason != NoCand) {
-    Cand.setBest(TopCand);
+  SchedCandidate Cand = BotPending ? TopCand : BotCand;
+  SchedCandidate TryCand = BotPending ? BotCand : TopCand;
+  PickedPending = BotPending && TopPending;
+
+  TryCand.Reason = NoCand;
+  if (BotPending || TopPending) {
+    PickedPending |= tryPendingCandidate(Cand, TopCand, nullptr);
+  } else {
+    tryCandidate(Cand, TryCand, nullptr);
   }
+
+  if (TryCand.Reason != NoCand) {
+    Cand.setBest(TryCand);
+  }
+
   LLVM_DEBUG(dbgs() << "Picking: "; traceCandidate(Cand););
 
   IsTopNode = Cand.AtTop;
@@ -442,34 +551,54 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
            Bot.Available.empty() && Bot.Pending.empty() && "ReadyQ garbage");
     return nullptr;
   }
+  bool PickedPending;
   SUnit *SU;
   do {
+    PickedPending = false;
     if (RegionPolicy.OnlyTopDown) {
-      SU = Top.pickOnlyChoice();
+      SU = pickOnlyChoice(Top, SchedModel);
       if (!SU) {
         CandPolicy NoPolicy;
         TopCand.reset(NoPolicy);
         pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand,
+                          PickedPending,
                           /*IsBottomUp=*/false);
         assert(TopCand.Reason != NoCand && "failed to find a candidate");
         SU = TopCand.SU;
       }
       IsTopNode = true;
     } else if (RegionPolicy.OnlyBottomUp) {
-      SU = Bot.pickOnlyChoice();
+      SU = pickOnlyChoice(Bot, SchedModel);
       if (!SU) {
         CandPolicy NoPolicy;
         BotCand.reset(NoPolicy);
         pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand,
+                          PickedPending,
                           /*IsBottomUp=*/true);
         assert(BotCand.Reason != NoCand && "failed to find a candidate");
         SU = BotCand.SU;
       }
       IsTopNode = false;
     } else {
-      SU = pickNodeBidirectional(IsTopNode);
+      SU = pickNodeBidirectional(IsTopNode, PickedPending);
     }
   } while (SU->isScheduled);
+
+  if (PickedPending) {
+    unsigned ReadyCycle = IsTopNode ? SU->TopReadyCycle : SU->BotReadyCycle;
+    SchedBoundary &Zone = IsTopNode ? Top : Bot;
+    unsigned CurrentCycle = Zone.getCurrCycle();
+    if (ReadyCycle > CurrentCycle)
+      Zone.bumpCycle(ReadyCycle);
+
+    // FIXME: checkHazard() doesn't give information about which cycle the
+    // hazard will resolve so just keep bumping the cycle by 1. This could be
+    // made more efficient if checkHazard() returned more details.
+    while (Zone.checkHazard(SU))
+      Zone.bumpCycle(Zone.getCurrCycle() + 1);
+
+    Zone.releasePending();
+  }
 
   if (SU->isTopReady())
     Top.removeReady(SU);
@@ -514,6 +643,47 @@ bool GCNSchedStrategy::hasNextStage() const {
 GCNSchedStageID GCNSchedStrategy::getNextStage() const {
   assert(CurrentStage && std::next(CurrentStage) != SchedStages.end());
   return *std::next(CurrentStage);
+}
+
+bool GCNSchedStrategy::tryPendingCandidate(SchedCandidate &Cand,
+                                           SchedCandidate &TryCand,
+                                           SchedBoundary *Zone) const {
+  // Initialize the candidate if needed.
+  if (!Cand.isValid()) {
+    TryCand.Reason = NodeOrder;
+    return true;
+  }
+
+  // Bias PhysReg Defs and copies to their uses and defined respectively.
+  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
+                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
+    return TryCand.Reason != NoCand;
+
+  // Avoid exceeding the target's limit.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
+                  RegExcess, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  // Avoid increasing the max critical pressure in the scheduled region.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
+                  TryCand, Cand, RegCritical, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  bool SameBoundary = Zone != nullptr;
+  if (SameBoundary) {
+    TryCand.initResourceDelta(DAG, SchedModel);
+    if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
+                TryCand, Cand, ResourceReduce))
+      return TryCand.Reason != NoCand;
+    if (tryGreater(TryCand.ResDelta.DemandedResources,
+                   Cand.ResDelta.DemandedResources, TryCand, Cand,
+                   ResourceDemand))
+      return TryCand.Reason != NoCand;
+  }
+
+  return false;
 }
 
 GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
@@ -584,12 +754,14 @@ bool GCNMaxILPSchedStrategy::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   // Avoid increasing the max critical pressure in the scheduled region.
@@ -659,12 +831,14 @@ bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
 
   // MaxMemoryClause-specific: We prioritize clustered instructions as we would
   // get more benefit from clausing these memory instructions.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   // We only compare a subset of features when comparing nodes between
@@ -797,7 +971,8 @@ void GCNScheduleDAGMILive::schedule() {
 GCNRegPressure
 GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   GCNDownwardRPTracker RPTracker(*LIS);
-  RPTracker.advance(begin(), end(), &LiveIns[RegionIdx]);
+  RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
+                    &LiveIns[RegionIdx]);
   return RPTracker.moveMaxPressure();
 }
 
@@ -889,15 +1064,10 @@ GCNScheduleDAGMILive::getRegionLiveInMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> RegionFirstMIs;
   RegionFirstMIs.reserve(Regions.size());
-  auto I = Regions.rbegin(), E = Regions.rend();
-  auto *BB = I->first->getParent();
-  do {
-    auto *MI = &*skipDebugInstructionsForward(I->first, I->second);
-    RegionFirstMIs.push_back(MI);
-    do {
-      ++I;
-    } while (I != E && I->first->getParent() == BB);
-  } while (I != E);
+  for (auto &[RegionBegin, RegionEnd] : reverse(Regions))
+    RegionFirstMIs.push_back(
+        &*skipDebugInstructionsForward(RegionBegin, RegionEnd));
+
   return getLiveRegMap(RegionFirstMIs, /*After=*/false, *LIS);
 }
 
@@ -932,15 +1102,11 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   // GCNScheduleDAGMILive::schedule().
   LiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
-  RescheduleRegions.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
-  RegionsWithMinOcc.resize(Regions.size());
   RegionsWithIGLPInstrs.resize(Regions.size());
-  RescheduleRegions.set();
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
-  RegionsWithMinOcc.reset();
   RegionsWithIGLPInstrs.reset();
 
   runSchedStages();
@@ -954,6 +1120,14 @@ void GCNScheduleDAGMILive::runSchedStages() {
     if (GCNTrackers)
       RegionLiveOuts.buildLiveRegMap();
   }
+
+#ifdef DUMP_MAX_REG_PRESSURE
+  if (PrintMaxRPRegUsageBeforeScheduler) {
+    dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);
+    dumpMaxRegPressure(MF, GCNRegPressure::SGPR, *LIS, MLI);
+    LIS->dump();
+  }
+#endif
 
   GCNSchedStrategy &S = static_cast<GCNSchedStrategy &>(*SchedImpl);
   while (S.advanceStage()) {
@@ -990,6 +1164,14 @@ void GCNScheduleDAGMILive::runSchedStages() {
 
     Stage->finalizeGCNSchedStage();
   }
+
+#ifdef DUMP_MAX_REG_PRESSURE
+  if (PrintMaxRPRegUsageAfterScheduler) {
+    dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);
+    dumpMaxRegPressure(MF, GCNRegPressure::SGPR, *LIS, MLI);
+    LIS->dump();
+  }
+#endif
 }
 
 #ifndef NDEBUG
@@ -1046,18 +1228,20 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
       createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PreRAReentry));
 
   InitialOccupancy = DAG.MinOccupancy;
-  // Aggressivly try to reduce register pressure in the unclustered high RP
+  // Aggressively try to reduce register pressure in the unclustered high RP
   // stage. Temporarily increase occupancy target in the region.
+  TempTargetOccupancy = MFI.getMaxWavesPerEU() > DAG.MinOccupancy
+                            ? InitialOccupancy + 1
+                            : InitialOccupancy;
+  IsAnyRegionScheduled = false;
   S.SGPRLimitBias = S.HighRPSGPRBias;
   S.VGPRLimitBias = S.HighRPVGPRBias;
-  if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy)
-    MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);
 
   LLVM_DEBUG(
       dbgs()
       << "Retrying function scheduling without clustering. "
-         "Aggressivly try to reduce register pressure to achieve occupancy "
-      << DAG.MinOccupancy << ".\n");
+         "Aggressively try to reduce register pressure to achieve occupancy "
+      << TempTargetOccupancy << ".\n");
 
   return true;
 }
@@ -1081,31 +1265,51 @@ bool ClusteredLowOccStage::initGCNSchedStage() {
   return true;
 }
 
+/// Allows to easily filter for this stage's debug output.
+#define REMAT_PREFIX "[PreRARemat] "
+#define REMAT_DEBUG(X) LLVM_DEBUG(dbgs() << REMAT_PREFIX; X;)
+
 bool PreRARematStage::initGCNSchedStage() {
-  if (!GCNSchedStage::initGCNSchedStage())
-    return false;
-
-  if (DAG.RegionsWithMinOcc.none() || DAG.Regions.size() == 1)
-    return false;
-
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  // Rematerialization will not help if occupancy is not limited by reg usage.
-  if (ST.getOccupancyWithWorkGroupSizes(MF).second == DAG.MinOccupancy)
-    return false;
-
-  // FIXME: This pass will invalidate cached MBBLiveIns for regions
-  // inbetween the defs and region we sinked the def to. Cached pressure
-  // for regions where a def is sinked from will also be invalidated. Will
-  // need to be fixed if there is another pass after this pass.
+  // FIXME: This pass will invalidate cached BBLiveInMap and MBBLiveIns for
+  // regions inbetween the defs and region we sinked the def to. Will need to be
+  // fixed if there is another pass after this pass.
   assert(!S.hasNextStage());
 
-  collectRematerializableInstructions();
-  if (RematerializableInsts.empty() || !sinkTriviallyRematInsts(ST, TII))
+  if (!GCNSchedStage::initGCNSchedStage() || DAG.Regions.size() == 1)
     return false;
 
-  LLVM_DEBUG(
-      dbgs() << "Retrying function scheduling with improved occupancy of "
-             << DAG.MinOccupancy << " from rematerializing\n");
+  // Before performing any IR modification record the parent region of each MI
+  // and the parent MBB of each region.
+  const unsigned NumRegions = DAG.Regions.size();
+  RegionBB.reserve(NumRegions);
+  for (unsigned I = 0; I < NumRegions; ++I) {
+    RegionBoundaries Region = DAG.Regions[I];
+    for (auto MI = Region.first; MI != Region.second; ++MI)
+      MIRegion.insert({&*MI, I});
+    RegionBB.push_back(Region.first->getParent());
+  }
+
+  if (!canIncreaseOccupancyOrReduceSpill())
+    return false;
+
+  // Rematerialize identified instructions and update scheduler's state.
+  rematerialize();
+  if (GCNTrackers)
+    DAG.RegionLiveOuts.buildLiveRegMap();
+  REMAT_DEBUG({
+    dbgs() << "Retrying function scheduling with new min. occupancy of "
+           << AchievedOcc << " from rematerializing (original was "
+           << DAG.MinOccupancy;
+    if (TargetOcc)
+      dbgs() << ", target was " << *TargetOcc;
+    dbgs() << ")\n";
+  });
+
+  if (AchievedOcc > DAG.MinOccupancy) {
+    DAG.MinOccupancy = AchievedOcc;
+    SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+    MFI.increaseOccupancy(MF, DAG.MinOccupancy);
+  }
   return true;
 }
 
@@ -1118,13 +1322,16 @@ void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   SavedMutations.swap(DAG.Mutations);
   S.SGPRLimitBias = S.VGPRLimitBias = 0;
   if (DAG.MinOccupancy > InitialOccupancy) {
-    for (unsigned IDX = 0; IDX < DAG.Pressure.size(); ++IDX)
-      DAG.RegionsWithMinOcc[IDX] =
-          DAG.Pressure[IDX].getOccupancy(DAG.ST) == DAG.MinOccupancy;
-
+    assert(IsAnyRegionScheduled);
     LLVM_DEBUG(dbgs() << StageID
                       << " stage successfully increased occupancy to "
                       << DAG.MinOccupancy << '\n');
+  } else if (!IsAnyRegionScheduled) {
+    assert(DAG.MinOccupancy == InitialOccupancy);
+    LLVM_DEBUG(dbgs() << StageID
+                      << ": No regions scheduled, min occupancy stays at "
+                      << DAG.MinOccupancy << ", MFI occupancy stays at "
+                      << MFI.getOccupancy() << ".\n");
   }
 
   GCNSchedStage::finalizeGCNSchedStage();
@@ -1193,14 +1400,32 @@ bool GCNSchedStage::initGCNRegion() {
 }
 
 bool UnclusteredHighRPStage::initGCNRegion() {
-  // Only reschedule regions with the minimum occupancy or regions that may have
-  // spilling (excess register pressure).
-  if ((!DAG.RegionsWithMinOcc[RegionIdx] ||
-       DAG.MinOccupancy <= InitialOccupancy) &&
-      !DAG.RegionsWithExcessRP[RegionIdx])
+  // Only reschedule regions that have excess register pressure (i.e. spilling)
+  // or had minimum occupancy at the beginning of the stage (as long as
+  // rescheduling of previous regions did not make occupancy drop back down to
+  // the initial minimum).
+  unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
+  // If no region has been scheduled yet, the DAG has not yet been updated with
+  // the occupancy target. So retrieve it from the temporary.
+  unsigned CurrentTargetOccupancy =
+      IsAnyRegionScheduled ? DAG.MinOccupancy : TempTargetOccupancy;
+  if (!DAG.RegionsWithExcessRP[RegionIdx] &&
+      (CurrentTargetOccupancy <= InitialOccupancy ||
+       DAG.Pressure[RegionIdx].getOccupancy(ST, DynamicVGPRBlockSize) !=
+           InitialOccupancy))
     return false;
 
-  return GCNSchedStage::initGCNRegion();
+  bool IsSchedulingThisRegion = GCNSchedStage::initGCNRegion();
+  // If this is the first region scheduled during this stage, make the target
+  // occupancy changes in the DAG and MFI.
+  if (!IsAnyRegionScheduled && IsSchedulingThisRegion) {
+    IsAnyRegionScheduled = true;
+    if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy) {
+      DAG.MinOccupancy = TempTargetOccupancy;
+      MFI.increaseOccupancy(MF, TempTargetOccupancy);
+    }
+  }
+  return IsSchedulingThisRegion;
 }
 
 bool ClusteredLowOccStage::initGCNRegion() {
@@ -1216,10 +1441,7 @@ bool ClusteredLowOccStage::initGCNRegion() {
 }
 
 bool PreRARematStage::initGCNRegion() {
-  if (!DAG.RescheduleRegions[RegionIdx])
-    return false;
-
-  return GCNSchedStage::initGCNRegion();
+  return RescheduleRegions[RegionIdx] && GCNSchedStage::initGCNRegion();
 }
 
 void GCNSchedStage::setupNewBlock() {
@@ -1238,7 +1460,6 @@ void GCNSchedStage::setupNewBlock() {
 
 void GCNSchedStage::finalizeGCNRegion() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
-  DAG.RescheduleRegions[RegionIdx] = false;
   if (S.HasHighPressure)
     DAG.RegionsWithHighRP[RegionIdx] = true;
 
@@ -1251,7 +1472,7 @@ void GCNSchedStage::finalizeGCNRegion() {
     SavedMutations.swap(DAG.Mutations);
 
   DAG.exitRegion();
-  RegionIdx++;
+  advanceRegion();
 }
 
 void GCNSchedStage::checkScheduling() {
@@ -1261,11 +1482,11 @@ void GCNSchedStage::checkScheduling() {
   LLVM_DEBUG(dbgs() << "Pressure after scheduling: " << print(PressureAfter));
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
+  unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
+
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
     DAG.Pressure[RegionIdx] = PressureAfter;
-    DAG.RegionsWithMinOcc[RegionIdx] =
-        PressureAfter.getOccupancy(ST) == DAG.MinOccupancy;
 
     // Early out if we have achieved the occupancy target.
     LLVM_DEBUG(dbgs() << "Pressure in desired limits, done.\n");
@@ -1274,10 +1495,10 @@ void GCNSchedStage::checkScheduling() {
 
   unsigned TargetOccupancy = std::min(
       S.getTargetOccupancy(), ST.getOccupancyWithWorkGroupSizes(MF).second);
-  unsigned WavesAfter =
-      std::min(TargetOccupancy, PressureAfter.getOccupancy(ST));
-  unsigned WavesBefore =
-      std::min(TargetOccupancy, PressureBefore.getOccupancy(ST));
+  unsigned WavesAfter = std::min(
+      TargetOccupancy, PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize));
+  unsigned WavesBefore = std::min(
+      TargetOccupancy, PressureBefore.getOccupancy(ST, DynamicVGPRBlockSize));
   LLVM_DEBUG(dbgs() << "Occupancy before scheduling: " << WavesBefore
                     << ", after " << WavesAfter << ".\n");
 
@@ -1299,7 +1520,6 @@ void GCNSchedStage::checkScheduling() {
   if (NewOccupancy < DAG.MinOccupancy) {
     DAG.MinOccupancy = NewOccupancy;
     MFI.limitOccupancy(DAG.MinOccupancy);
-    DAG.RegionsWithMinOcc.reset();
     LLVM_DEBUG(dbgs() << "Occupancy lowered for the function to "
                       << DAG.MinOccupancy << ".\n");
   }
@@ -1312,23 +1532,19 @@ void GCNSchedStage::checkScheduling() {
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
-      PressureAfter.getVGPRNum(false) > MaxArchVGPRs ||
+      PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
       PressureAfter.getAGPRNum() > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
-    DAG.RescheduleRegions[RegionIdx] = true;
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;
   }
 
   // Revert if this region's schedule would cause a drop in occupancy or
   // spilling.
-  if (shouldRevertScheduling(WavesAfter)) {
+  if (shouldRevertScheduling(WavesAfter))
     revertScheduling();
-  } else {
+  else
     DAG.Pressure[RegionIdx] = PressureAfter;
-    DAG.RegionsWithMinOcc[RegionIdx] =
-        PressureAfter.getOccupancy(ST) == DAG.MinOccupancy;
-  }
 }
 
 unsigned
@@ -1450,11 +1666,13 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
     return true;
 
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
-  if (ST.isDynamicVGPREnabled()) {
+  if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, PressureBefore.getVGPRNum(false));
+        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
+        PressureBefore.getVGPRNum(false));
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, PressureAfter.getVGPRNum(false));
+        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
+        PressureAfter.getVGPRNum(false));
     if (BlocksAfter > BlocksBefore)
       return true;
   }
@@ -1478,7 +1696,8 @@ bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   // If RP is not reduced in the unclustered reschedule stage, revert to the
   // old schedule.
-  if ((WavesAfter <= PressureBefore.getOccupancy(ST) &&
+  if ((WavesAfter <=
+           PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()) &&
        mayCauseSpilling(WavesAfter)) ||
       GCNSchedStage::shouldRevertScheduling(WavesAfter)) {
     LLVM_DEBUG(dbgs() << "Unclustered reschedule did not help.\n");
@@ -1493,16 +1712,16 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
       dbgs()
       << "\n\t      *** In shouldRevertScheduling ***\n"
       << "      *********** BEFORE UnclusteredHighRPStage ***********\n");
-  ScheduleMetrics MBefore =
-      getScheduleMetrics(DAG.SUnits);
+  ScheduleMetrics MBefore = getScheduleMetrics(DAG.SUnits);
   LLVM_DEBUG(
       dbgs()
       << "\n      *********** AFTER UnclusteredHighRPStage ***********\n");
   ScheduleMetrics MAfter = getScheduleMetrics(DAG);
   unsigned OldMetric = MBefore.getMetric();
   unsigned NewMetric = MAfter.getMetric();
-  unsigned WavesBefore =
-      std::min(S.getTargetOccupancy(), PressureBefore.getOccupancy(ST));
+  unsigned WavesBefore = std::min(
+      S.getTargetOccupancy(),
+      PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()));
   unsigned Profit =
       ((WavesAfter * ScheduleMetrics::ScaleFactor) / WavesBefore *
        ((OldMetric + ScheduleMetricBias) * ScheduleMetrics::ScaleFactor) /
@@ -1527,13 +1746,8 @@ bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool PreRARematStage::shouldRevertScheduling(unsigned WavesAfter) {
-  if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
-    return true;
-
-  if (mayCauseSpilling(WavesAfter))
-    return true;
-
-  return false;
+  return GCNSchedStage::shouldRevertScheduling(WavesAfter) ||
+         mayCauseSpilling(WavesAfter) || (TargetOcc && WavesAfter < TargetOcc);
 }
 
 bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
@@ -1559,12 +1773,7 @@ bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
 }
 
 void GCNSchedStage::revertScheduling() {
-  DAG.RegionsWithMinOcc[RegionIdx] =
-      PressureBefore.getOccupancy(ST) == DAG.MinOccupancy;
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
-  DAG.RescheduleRegions[RegionIdx] =
-      S.hasNextStage() &&
-      S.getNextStage() != GCNSchedStageID::UnclusteredHighRPReschedule;
   DAG.RegionEnd = DAG.RegionBegin;
   int SkippedDebugInstr = 0;
   for (MachineInstr *MI : Unsched) {
@@ -1625,218 +1834,232 @@ void GCNSchedStage::revertScheduling() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
 }
 
-bool PreRARematStage::allUsesAvailableAt(const MachineInstr *InstToRemat,
-                                         SlotIndex OriginalIdx,
-                                         SlotIndex RematIdx) const {
+bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
+  const Function &F = MF.getFunction();
 
-  LiveIntervals *LIS = DAG.LIS;
-  MachineRegisterInfo &MRI = DAG.MRI;
-  OriginalIdx = OriginalIdx.getRegSlot(true);
-  RematIdx = std::max(RematIdx, RematIdx.getRegSlot(true));
-  for (const MachineOperand &MO : InstToRemat->operands()) {
-    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
-      continue;
-
-    if (!MO.getReg().isVirtual()) {
-      // Do not attempt to reason about PhysRegs
-      // TODO: better analysis of PhysReg livness
-      if (!DAG.MRI.isConstantPhysReg(MO.getReg()) &&
-          !DAG.TII->isIgnorableUse(MO))
-        return false;
-
-      // Constant PhysRegs and IgnorableUses are okay
-      continue;
-    }
-
-    LiveInterval &LI = LIS->getInterval(MO.getReg());
-    const VNInfo *OVNI = LI.getVNInfoAt(OriginalIdx);
-    assert(OVNI);
-
-    // Don't allow rematerialization immediately after the original def.
-    // It would be incorrect if InstToRemat redefines the register.
-    // See PR14098.
-    if (SlotIndex::isSameInstr(OriginalIdx, RematIdx))
-      return false;
-
-    if (OVNI != LI.getVNInfoAt(RematIdx))
-      return false;
-
-    // Check that subrange is live at RematIdx.
-    if (LI.hasSubRanges()) {
-      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      unsigned SubReg = MO.getSubReg();
-      LaneBitmask LM = SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
-                              : MRI.getMaxLaneMaskForVReg(MO.getReg());
-      for (LiveInterval::SubRange &SR : LI.subranges()) {
-        if ((SR.LaneMask & LM).none())
-          continue;
-        if (!SR.liveAt(RematIdx))
-          return false;
-
-        // Early exit if all used lanes are checked. No need to continue.
-        LM &= ~SR.LaneMask;
-        if (LM.none())
-          break;
-      }
-    }
-  }
-  return true;
-}
-
-void PreRARematStage::collectRematerializableInstructions() {
-  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(DAG.TRI);
-  for (unsigned I = 0, E = DAG.MRI.getNumVirtRegs(); I != E; ++I) {
-    Register Reg = Register::index2VirtReg(I);
-    if (!DAG.LIS->hasInterval(Reg))
-      continue;
-
-    // TODO: Handle AGPR and SGPR rematerialization
-    if (!SRI->isVGPRClass(DAG.MRI.getRegClass(Reg)) ||
-        !DAG.MRI.hasOneDef(Reg) || !DAG.MRI.hasOneNonDBGUse(Reg))
-      continue;
-
-    MachineOperand *Op = DAG.MRI.getOneDef(Reg);
-    MachineInstr *Def = Op->getParent();
-    if (Op->getSubReg() != 0 || !isTriviallyReMaterializable(*Def))
-      continue;
-
-    MachineInstr *UseI = &*DAG.MRI.use_instr_nodbg_begin(Reg);
-    if (Def->getParent() == UseI->getParent())
-      continue;
-
-    bool HasRematDependency = false;
-    // Check if this instruction uses any registers that are planned to be
-    // rematerialized
-    for (auto &RematEntry : RematerializableInsts) {
-      if (find_if(RematEntry.second,
-                  [&Def](std::pair<MachineInstr *, MachineInstr *> &Remat) {
-                    for (MachineOperand &MO : Def->operands()) {
-                      if (!MO.isReg())
-                        continue;
-                      if (MO.getReg() == Remat.first->getOperand(0).getReg())
-                        return true;
-                    }
-                    return false;
-                  }) != RematEntry.second.end()) {
-        HasRematDependency = true;
-        break;
-      }
-    }
-    // Do not rematerialize an instruction if it uses an instruction that we
-    // have designated for rematerialization.
-    // FIXME: Allow for rematerialization chains: this requires 1. updating
-    // remat points to account for uses that are rematerialized, and 2. either
-    // rematerializing the candidates in careful ordering, or deferring the MBB
-    // RP walk until the entire chain has been rematerialized.
-    if (HasRematDependency)
-      continue;
-
-    // Similarly, check if the UseI is planned to be remat.
-    for (auto &RematEntry : RematerializableInsts) {
-      if (find_if(RematEntry.second,
-                  [&UseI](std::pair<MachineInstr *, MachineInstr *> &Remat) {
-                    return Remat.first == UseI;
-                  }) != RematEntry.second.end()) {
-        HasRematDependency = true;
-        break;
-      }
-    }
-
-    if (HasRematDependency)
-      break;
-
-    // We are only collecting defs that are defined in another block and are
-    // live-through or used inside regions at MinOccupancy. This means that the
-    // register must be in the live-in set for the region.
-    bool AddedToRematList = false;
+  // Maps optimizable regions (i.e., regions at minimum and register-limited
+  // occupancy, or regions with spilling) to the target RP we would like to
+  // reach.
+  DenseMap<unsigned, GCNRPTarget> OptRegions;
+  unsigned MaxSGPRs = ST.getMaxNumSGPRs(F);
+  unsigned MaxVGPRs = ST.getMaxNumVGPRs(F);
+  auto ResetTargetRegions = [&]() {
+    OptRegions.clear();
     for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
-      auto It = DAG.LiveIns[I].find(Reg);
-      if (It != DAG.LiveIns[I].end() && !It->second.none()) {
-        if (DAG.RegionsWithMinOcc[I]) {
-          SlotIndex DefIdx = DAG.LIS->getInstructionIndex(*Def);
-          SlotIndex UseIdx =
-              DAG.LIS->getInstructionIndex(*UseI).getRegSlot(true);
-          if (allUsesAvailableAt(Def, DefIdx, UseIdx)) {
-            RematerializableInsts[I][Def] = UseI;
-            AddedToRematList = true;
-          }
-        }
+      const GCNRegPressure &RP = DAG.Pressure[I];
+      GCNRPTarget Target(MaxSGPRs, MaxVGPRs, MF, RP);
+      if (!Target.satisfied())
+        OptRegions.insert({I, Target});
+    }
+  };
 
-        // Collect regions with rematerializable reg as live-in to avoid
-        // searching later when updating RP.
-        RematDefToLiveInRegions[Def].push_back(I);
+  ResetTargetRegions();
+  if (!OptRegions.empty() || DAG.MinOccupancy >= MFI.getMaxWavesPerEU()) {
+    // In addition to register usage being above addressable limits, occupancy
+    // below the minimum is considered like "spilling" as well.
+    TargetOcc = std::nullopt;
+  } else {
+    // There is no spilling and room to improve occupancy; set up "increased
+    // occupancy targets" for all regions.
+    TargetOcc = DAG.MinOccupancy + 1;
+    unsigned VGPRBlockSize =
+        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+    MaxSGPRs = ST.getMaxNumSGPRs(*TargetOcc, false);
+    MaxVGPRs = ST.getMaxNumVGPRs(*TargetOcc, VGPRBlockSize);
+    ResetTargetRegions();
+  }
+  REMAT_DEBUG({
+    dbgs() << "Analyzing ";
+    MF.getFunction().printAsOperand(dbgs(), false);
+    dbgs() << ": ";
+    if (OptRegions.empty()) {
+      dbgs() << "no objective to achieve, occupancy is maximal at "
+             << MFI.getMaxWavesPerEU();
+    } else if (!TargetOcc) {
+      dbgs() << "reduce spilling (minimum target occupancy is "
+             << MFI.getMinWavesPerEU() << ')';
+    } else {
+      dbgs() << "increase occupancy from " << DAG.MinOccupancy << " to "
+             << TargetOcc;
+    }
+    dbgs() << '\n';
+    for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
+      if (auto OptIt = OptRegions.find(I); OptIt != OptRegions.end()) {
+        dbgs() << REMAT_PREFIX << "  [" << I << "] " << OptIt->getSecond()
+               << '\n';
       }
     }
-    if (!AddedToRematList)
-      RematDefToLiveInRegions.erase(Def);
+  });
+  if (OptRegions.empty())
+    return false;
+
+  // Accounts for a reduction in RP in an optimizable region. Returns whether we
+  // estimate that we have identified enough rematerialization opportunities to
+  // achieve our goal, and sets Progress to true when this particular reduction
+  // in pressure was helpful toward that goal.
+  auto ReduceRPInRegion = [&](auto OptIt, Register Reg, LaneBitmask Mask,
+                              bool &Progress) -> bool {
+    GCNRPTarget &Target = OptIt->getSecond();
+    if (!Target.isSaveBeneficial(Reg))
+      return false;
+    Progress = true;
+    Target.saveReg(Reg, Mask, DAG.MRI);
+    if (Target.satisfied())
+      OptRegions.erase(OptIt->getFirst());
+    return OptRegions.empty();
+  };
+
+  // We need up-to-date live-out info. to query live-out register masks in
+  // regions containing rematerializable instructions.
+  DAG.RegionLiveOuts.buildLiveRegMap();
+
+  // Cache set of registers that are going to be rematerialized.
+  DenseSet<unsigned> RematRegs;
+
+  // Identify rematerializable instructions in the function.
+  for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
+    auto Region = DAG.Regions[I];
+    for (auto MI = Region.first; MI != Region.second; ++MI) {
+      // The instruction must be rematerializable.
+      MachineInstr &DefMI = *MI;
+      if (!isReMaterializable(DefMI))
+        continue;
+
+      // We only support rematerializing virtual registers with one definition.
+      Register Reg = DefMI.getOperand(0).getReg();
+      if (!Reg.isVirtual() || !DAG.MRI.hasOneDef(Reg))
+        continue;
+
+      // We only care to rematerialize the instruction if it has a single
+      // non-debug user in a different region. The using MI may not belong to a
+      // region if it is a lone region terminator.
+      MachineInstr *UseMI = DAG.MRI.getOneNonDBGUser(Reg);
+      if (!UseMI)
+        continue;
+      auto UseRegion = MIRegion.find(UseMI);
+      if (UseRegion != MIRegion.end() && UseRegion->second == I)
+        continue;
+
+      // Do not rematerialize an instruction if it uses or is used by an
+      // instruction that we have designated for rematerialization.
+      // FIXME: Allow for rematerialization chains: this requires 1. updating
+      // remat points to account for uses that are rematerialized, and 2. either
+      // rematerializing the candidates in careful ordering, or deferring the
+      // MBB RP walk until the entire chain has been rematerialized.
+      if (Rematerializations.contains(UseMI) ||
+          llvm::any_of(DefMI.operands(), [&RematRegs](MachineOperand &MO) {
+            return MO.isReg() && RematRegs.contains(MO.getReg());
+          }))
+        continue;
+
+      // Do not rematerialize an instruction it it uses registers that aren't
+      // available at its use. This ensures that we are not extending any live
+      // range while rematerializing.
+      SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot(true);
+      if (!VirtRegAuxInfo::allUsesAvailableAt(&DefMI, UseIdx, *DAG.LIS, DAG.MRI,
+                                              *DAG.TII))
+        continue;
+
+      REMAT_DEBUG(dbgs() << "Region " << I << ": remat instruction " << DefMI);
+      RematInstruction &Remat =
+          Rematerializations.try_emplace(&DefMI, UseMI).first->second;
+
+      bool RematUseful = false;
+      if (auto It = OptRegions.find(I); It != OptRegions.end()) {
+        // Optimistically consider that moving the instruction out of its
+        // defining region will reduce RP in the latter; this assumes that
+        // maximum RP in the region is reached somewhere between the defining
+        // instruction and the end of the region.
+        REMAT_DEBUG(dbgs() << "  Defining region is optimizable\n");
+        LaneBitmask Mask = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I)[Reg];
+        if (ReduceRPInRegion(It, Reg, Mask, RematUseful))
+          return true;
+      }
+
+      for (unsigned LIRegion = 0; LIRegion != E; ++LIRegion) {
+        // We are only collecting regions in which the register is a live-in
+        // (and may be live-through).
+        auto It = DAG.LiveIns[LIRegion].find(Reg);
+        if (It == DAG.LiveIns[LIRegion].end() || It->second.none())
+          continue;
+        Remat.LiveInRegions.insert(LIRegion);
+
+        // Account for the reduction in RP due to the rematerialization in an
+        // optimizable region in which the defined register is a live-in. This
+        // is exact for live-through region but optimistic in the using region,
+        // where RP is actually reduced only if maximum RP is reached somewhere
+        // between the beginning of the region and the rematerializable
+        // instruction's use.
+        if (auto It = OptRegions.find(LIRegion); It != OptRegions.end()) {
+          REMAT_DEBUG(dbgs() << "  Live-in in region " << LIRegion << '\n');
+          if (ReduceRPInRegion(It, Reg, DAG.LiveIns[LIRegion][Reg],
+                               RematUseful))
+            return true;
+        }
+      }
+
+      // If the instruction is not a live-in or live-out in any optimizable
+      // region then there is no point in rematerializing it.
+      if (!RematUseful) {
+        Rematerializations.pop_back();
+        REMAT_DEBUG(dbgs() << "  No impact, not rematerializing instruction\n");
+      } else {
+        RematRegs.insert(Reg);
+      }
+    }
   }
+
+  if (TargetOcc) {
+    // We were trying to increase occupancy but failed, abort the stage.
+    REMAT_DEBUG(dbgs() << "Cannot increase occupancy\n");
+    Rematerializations.clear();
+    return false;
+  }
+  REMAT_DEBUG(dbgs() << "Can reduce but not eliminate spilling\n");
+  return !Rematerializations.empty();
 }
 
-bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
-                                              const TargetInstrInfo *TII) {
-  // Temporary copies of cached variables we will be modifying and replacing if
-  // sinking succeeds.
-  SmallVector<
-      std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>, 32>
-      NewRegions;
-  DenseMap<unsigned, GCNRPTracker::LiveRegSet> NewLiveIns;
-  DenseMap<unsigned, GCNRegPressure> NewPressure;
-  BitVector NewRescheduleRegions;
-  LiveIntervals *LIS = DAG.LIS;
+void PreRARematStage::rematerialize() {
+  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
-  NewRegions.resize(DAG.Regions.size());
-  NewRescheduleRegions.resize(DAG.Regions.size());
+  // Collect regions whose RP changes in unpredictable way; we will have to
+  // fully recompute their RP after all rematerailizations.
+  DenseSet<unsigned> RecomputeRP;
 
-  // Collect only regions that has a rematerializable def as a live-in.
-  SmallSet<unsigned, 16> ImpactedRegions;
-  for (const auto &It : RematDefToLiveInRegions)
-    ImpactedRegions.insert_range(It.second);
+  // Rematerialize all instructions.
+  for (auto &[DefMI, Remat] : Rematerializations) {
+    MachineBasicBlock::iterator InsertPos(Remat.UseMI);
+    Register Reg = DefMI->getOperand(0).getReg();
+    unsigned DefRegion = MIRegion.at(DefMI);
 
-  // Make copies of register pressure and live-ins cache that will be updated
-  // as we rematerialize.
-  for (auto Idx : ImpactedRegions) {
-    NewPressure[Idx] = DAG.Pressure[Idx];
-    NewLiveIns[Idx] = DAG.LiveIns[Idx];
-  }
-  NewRegions = DAG.Regions;
-  NewRescheduleRegions.reset();
+    // Rematerialize DefMI to its use block.
+    TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg,
+                       AMDGPU::NoSubRegister, *DefMI);
+    Remat.RematMI = &*std::prev(InsertPos);
+    DAG.LIS->InsertMachineInstrInMaps(*Remat.RematMI);
 
-  DenseMap<MachineInstr *, MachineInstr *> InsertedMIToOldDef;
-  bool Improved = false;
-  for (auto I : ImpactedRegions) {
-    if (!DAG.RegionsWithMinOcc[I])
-      continue;
-
-    Improved = false;
-    int VGPRUsage = NewPressure[I].getVGPRNum(ST.hasGFX90AInsts());
-    int SGPRUsage = NewPressure[I].getSGPRNum();
-
-    // TODO: Handle occupancy drop due to AGPR and SGPR.
-    // Check if cause of occupancy drop is due to VGPR usage and not SGPR.
-    if (ST.getOccupancyWithNumSGPRs(SGPRUsage) == DAG.MinOccupancy)
-      break;
-
-    // The occupancy of this region could have been improved by a previous
-    // iteration's sinking of defs.
-    if (NewPressure[I].getOccupancy(ST) > DAG.MinOccupancy) {
-      NewRescheduleRegions[I] = true;
-      Improved = true;
-      continue;
+    // Update region boundaries in regions we sinked from (remove defining MI)
+    // and to (insert MI rematerialized in use block). Only then we can erase
+    // the original MI.
+    DAG.updateRegionBoundaries(DAG.Regions[DefRegion], DefMI, nullptr);
+    auto UseRegion = MIRegion.find(Remat.UseMI);
+    if (UseRegion != MIRegion.end()) {
+      DAG.updateRegionBoundaries(DAG.Regions[UseRegion->second], InsertPos,
+                                 Remat.RematMI);
     }
+    DAG.LIS->RemoveMachineInstrFromMaps(*DefMI);
+    DefMI->eraseFromParent();
 
-    // First check if we have enough trivially rematerializable instructions to
-    // improve occupancy. Optimistically assume all instructions we are able to
-    // sink decreased RP.
-    int TotalSinkableRegs = 0;
-    for (const auto &It : RematerializableInsts[I]) {
-      MachineInstr *Def = It.first;
-      Register DefReg = Def->getOperand(0).getReg();
-      TotalSinkableRegs +=
-          SIRegisterInfo::getNumCoveredRegs(NewLiveIns[I][DefReg]);
+    // Collect all regions impacted by the rematerialization and update their
+    // live-in/RP information.
+    for (unsigned I : Remat.LiveInRegions) {
+      ImpactedRegions.insert({I, DAG.Pressure[I]});
+      GCNRPTracker::LiveRegSet &RegionLiveIns = DAG.LiveIns[I];
+
 #ifdef EXPENSIVE_CHECKS
       // All uses are known to be available / live at the remat point. Thus, the
       // uses should already be live in to the region.
-      for (MachineOperand &MO : Def->operands()) {
+      for (MachineOperand &MO : DefMI->operands()) {
         if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
           continue;
 
@@ -1844,13 +2067,12 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
         if (!UseReg.isVirtual())
           continue;
 
-        LiveInterval &LI = LIS->getInterval(UseReg);
+        LiveInterval &LI = DAG.LIS->getInterval(UseReg);
         LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
         if (LI.hasSubRanges() && MO.getSubReg())
           LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-        assert(NewLiveIns[I].contains(UseReg));
-        LaneBitmask LiveInMask = NewLiveIns[I][UseReg];
+        LaneBitmask LiveInMask = RegionLiveIns.at(UseReg);
         LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
         // If this register has lanes not covered by the LiveIns, be sure they
         // do not map to any subrange. ref:
@@ -1862,128 +2084,69 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
         }
       }
 #endif
+
+      // The register is no longer a live-in in all regions but the one that
+      // contains the single use. In live-through regions, maximum register
+      // pressure decreases predictably so we can directly update it. In the
+      // using region, maximum RP may or may not decrease, so we will mark it
+      // for re-computation after all materializations have taken place.
+      LaneBitmask PrevMask = RegionLiveIns[Reg];
+      RegionLiveIns.erase(Reg);
+      RegMasks.insert({{I, Remat.RematMI->getOperand(0).getReg()}, PrevMask});
+      if (Remat.UseMI->getParent() != DAG.Regions[I].first->getParent())
+        DAG.Pressure[I].inc(Reg, PrevMask, LaneBitmask::getNone(), DAG.MRI);
+      else
+        RecomputeRP.insert(I);
     }
-    int VGPRsAfterSink = VGPRUsage - TotalSinkableRegs;
-    unsigned OptimisticOccupancy = ST.getOccupancyWithNumVGPRs(VGPRsAfterSink);
-    // If in the most optimistic scenario, we cannot improve occupancy, then do
-    // not attempt to sink any instructions.
-    if (OptimisticOccupancy <= DAG.MinOccupancy)
-      break;
+    // RP in the region from which the instruction was rematerialized may or may
+    // not decrease.
+    ImpactedRegions.insert({DefRegion, DAG.Pressure[DefRegion]});
+    RecomputeRP.insert(DefRegion);
 
-    unsigned ImproveOccupancy = 0;
-    SmallVector<MachineInstr *, 4> SinkedDefs;
-    for (auto &It : RematerializableInsts[I]) {
-      MachineInstr *Def = It.first;
-      MachineBasicBlock::iterator InsertPos =
-          MachineBasicBlock::iterator(It.second);
-      Register Reg = Def->getOperand(0).getReg();
-      // Rematerialize MI to its use block.
-      TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg,
-                         Def->getOperand(0).getSubReg(), *Def, *DAG.TRI);
-      MachineInstr *NewMI = &*std::prev(InsertPos);
-      LIS->InsertMachineInstrInMaps(*NewMI);
-      LIS->removeInterval(Reg);
-      LIS->createAndComputeVirtRegInterval(Reg);
-      InsertedMIToOldDef[NewMI] = Def;
+    // Recompute live interval to reflect the register's rematerialization.
+    Register RematReg = Remat.RematMI->getOperand(0).getReg();
+    DAG.LIS->removeInterval(RematReg);
+    DAG.LIS->createAndComputeVirtRegInterval(RematReg);
+  }
 
-      // Update region boundaries in scheduling region we sinked from since we
-      // may sink an instruction that was at the beginning or end of its region
-      DAG.updateRegionBoundaries(NewRegions, Def, /*NewMI =*/nullptr,
-                                 /*Removing =*/true);
+  // All regions impacted by at least one rematerialization must be rescheduled.
+  // Maximum pressure must also be recomputed for all regions where it changed
+  // non-predictably and checked against the target occupancy.
+  unsigned DynamicVGPRBlockSize =
+      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+  AchievedOcc = MFI.getMaxWavesPerEU();
+  for (auto &[I, OriginalRP] : ImpactedRegions) {
+    bool IsEmptyRegion = DAG.Regions[I].first == DAG.Regions[I].second;
+    RescheduleRegions[I] = !IsEmptyRegion;
+    if (!RecomputeRP.contains(I))
+      continue;
 
-      // Update region boundaries in region we sinked to.
-      DAG.updateRegionBoundaries(NewRegions, InsertPos, NewMI);
-
-      LaneBitmask PrevMask = NewLiveIns[I][Reg];
-      // FIXME: Also update cached pressure for where the def was sinked from.
-      // Update RP for all regions that has this reg as a live-in and remove
-      // the reg from all regions as a live-in.
-      for (auto Idx : RematDefToLiveInRegions[Def]) {
-        NewLiveIns[Idx].erase(Reg);
-        if (InsertPos->getParent() != DAG.Regions[Idx].first->getParent()) {
-          // Def is live-through and not used in this block.
-          NewPressure[Idx].inc(Reg, PrevMask, LaneBitmask::getNone(), DAG.MRI);
-        } else {
-          // Def is used and rematerialized into this block.
-          GCNDownwardRPTracker RPT(*LIS);
-          auto *NonDbgMI = &*skipDebugInstructionsForward(
-              NewRegions[Idx].first, NewRegions[Idx].second);
-          RPT.reset(*NonDbgMI, &NewLiveIns[Idx]);
-          RPT.advance(NewRegions[Idx].second);
-          NewPressure[Idx] = RPT.moveMaxPressure();
-        }
+    GCNRegPressure RP;
+    if (IsEmptyRegion) {
+      RP = getRegPressure(DAG.MRI, DAG.LiveIns[I]);
+    } else {
+      GCNDownwardRPTracker RPT(*DAG.LIS);
+      auto *NonDbgMI = &*skipDebugInstructionsForward(DAG.Regions[I].first,
+                                                      DAG.Regions[I].second);
+      if (NonDbgMI == DAG.Regions[I].second) {
+        // Region is non-empty but contains only debug instructions.
+        RP = getRegPressure(DAG.MRI, DAG.LiveIns[I]);
+      } else {
+        RPT.reset(*NonDbgMI, &DAG.LiveIns[I]);
+        RPT.advance(DAG.Regions[I].second);
+        RP = RPT.moveMaxPressure();
       }
-
-      SinkedDefs.push_back(Def);
-      ImproveOccupancy = NewPressure[I].getOccupancy(ST);
-      if (ImproveOccupancy > DAG.MinOccupancy)
-        break;
     }
-
-    // Remove defs we just sinked from all regions' list of sinkable defs
-    for (auto &Def : SinkedDefs)
-      for (auto TrackedIdx : RematDefToLiveInRegions[Def])
-        RematerializableInsts[TrackedIdx].erase(Def);
-
-    if (ImproveOccupancy <= DAG.MinOccupancy)
-      break;
-
-    NewRescheduleRegions[I] = true;
-    Improved = true;
+    DAG.Pressure[I] = RP;
+    AchievedOcc =
+        std::min(AchievedOcc, RP.getOccupancy(ST, DynamicVGPRBlockSize));
   }
-
-  if (!Improved) {
-    // Occupancy was not improved for all regions that were at MinOccupancy.
-    // Undo sinking and remove newly rematerialized instructions.
-    for (auto &Entry : InsertedMIToOldDef) {
-      MachineInstr *MI = Entry.first;
-      MachineInstr *OldMI = Entry.second;
-      Register Reg = MI->getOperand(0).getReg();
-      LIS->RemoveMachineInstrFromMaps(*MI);
-      MI->eraseFromParent();
-      OldMI->clearRegisterDeads(Reg);
-      LIS->removeInterval(Reg);
-      LIS->createAndComputeVirtRegInterval(Reg);
-    }
-    return false;
-  }
-
-  // Occupancy was improved for all regions.
-  for (auto &Entry : InsertedMIToOldDef) {
-    MachineInstr *MI = Entry.first;
-    MachineInstr *OldMI = Entry.second;
-
-    // Remove OldMI from BBLiveInMap since we are sinking it from its MBB.
-    DAG.BBLiveInMap.erase(OldMI);
-
-    // Remove OldMI and update LIS
-    Register Reg = MI->getOperand(0).getReg();
-    LIS->RemoveMachineInstrFromMaps(*OldMI);
-    OldMI->eraseFromParent();
-    LIS->removeInterval(Reg);
-    LIS->createAndComputeVirtRegInterval(Reg);
-  }
-
-  // Update live-ins, register pressure, and regions caches.
-  for (auto Idx : ImpactedRegions) {
-    DAG.LiveIns[Idx] = NewLiveIns[Idx];
-    DAG.Pressure[Idx] = NewPressure[Idx];
-    DAG.MBBLiveIns.erase(DAG.Regions[Idx].first->getParent());
-  }
-  DAG.Regions = NewRegions;
-  DAG.RescheduleRegions = NewRescheduleRegions;
-
-  if (GCNTrackers)
-    DAG.RegionLiveOuts.buildLiveRegMap();
-
-  SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);
-
-  return true;
+  REMAT_DEBUG(dbgs() << "Achieved occupancy " << AchievedOcc << "\n");
 }
 
-bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
-  if (!DAG.TII->isTriviallyReMaterializable(MI))
+// Copied from MachineLICM
+bool PreRARematStage::isReMaterializable(const MachineInstr &MI) {
+  if (!DAG.TII->isReMaterializable(MI))
     return false;
 
   for (const MachineOperand &MO : MI.all_uses()) {
@@ -1999,46 +2162,81 @@ bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
   return true;
 }
 
-// When removing, we will have to check both beginning and ending of the region.
-// When inserting, we will only have to check if we are inserting NewMI in front
-// of a scheduling region and do not need to check the ending since we will only
-// ever be inserting before an already existing MI.
-void GCNScheduleDAGMILive::updateRegionBoundaries(
-    SmallVectorImpl<std::pair<MachineBasicBlock::iterator,
-                              MachineBasicBlock::iterator>> &RegionBoundaries,
-    MachineBasicBlock::iterator MI, MachineInstr *NewMI, bool Removing) {
-  unsigned I = 0, E = RegionBoundaries.size();
-  // Search for first region of the block where MI is located
-  while (I != E && MI->getParent() != RegionBoundaries[I].first->getParent())
-    ++I;
+void PreRARematStage::finalizeGCNSchedStage() {
+  // We consider that reducing spilling is always beneficial so we never
+  // rollback rematerializations in such cases. It's also possible that
+  // rescheduling lowers occupancy over the one achieved just through remats, in
+  // which case we do not want to rollback either (the rescheduling was already
+  // reverted in PreRARematStage::shouldRevertScheduling in such cases).
+  unsigned MaxOcc = std::max(AchievedOcc, DAG.MinOccupancy);
+  if (!TargetOcc || MaxOcc >= *TargetOcc)
+    return;
 
-  for (; I != E; ++I) {
-    if (MI->getParent() != RegionBoundaries[I].first->getParent())
-      return;
+  REMAT_DEBUG(dbgs() << "Rolling back all rematerializations\n");
+  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
-    if (Removing && MI == RegionBoundaries[I].first &&
-        MI == RegionBoundaries[I].second) {
-      // MI is in a region with size 1, after removing, the region will be
-      // size 0, set RegionBegin and RegionEnd to pass end of block iterator.
-      RegionBoundaries[I] =
-          std::pair(MI->getParent()->end(), MI->getParent()->end());
-      return;
+  // Rollback the rematerializations.
+  for (const auto &[DefMI, Remat] : Rematerializations) {
+    MachineInstr &RematMI = *Remat.RematMI;
+    unsigned DefRegion = MIRegion.at(DefMI);
+    MachineBasicBlock::iterator InsertPos(DAG.Regions[DefRegion].second);
+    MachineBasicBlock *MBB = RegionBB[DefRegion];
+    Register Reg = RematMI.getOperand(0).getReg();
+
+    // Re-rematerialize MI at the end of its original region. Note that it may
+    // not be rematerialized exactly in the same position as originally within
+    // the region, but it should not matter much.
+    TII->reMaterialize(*MBB, InsertPos, Reg, AMDGPU::NoSubRegister, RematMI);
+    MachineInstr *NewMI = &*std::prev(InsertPos);
+    DAG.LIS->InsertMachineInstrInMaps(*NewMI);
+
+    auto UseRegion = MIRegion.find(Remat.UseMI);
+    if (UseRegion != MIRegion.end()) {
+      DAG.updateRegionBoundaries(DAG.Regions[UseRegion->second], RematMI,
+                                 nullptr);
     }
-    if (MI == RegionBoundaries[I].first) {
-      if (Removing)
-        RegionBoundaries[I] =
-            std::pair(std::next(MI), RegionBoundaries[I].second);
-      else
-        // Inserted NewMI in front of region, set new RegionBegin to NewMI
-        RegionBoundaries[I] = std::pair(MachineBasicBlock::iterator(NewMI),
-                                        RegionBoundaries[I].second);
-      return;
-    }
-    if (Removing && MI == RegionBoundaries[I].second) {
-      RegionBoundaries[I] = std::pair(RegionBoundaries[I].first, std::prev(MI));
-      return;
-    }
+    DAG.updateRegionBoundaries(DAG.Regions[DefRegion], InsertPos, NewMI);
+
+    // Erase rematerialized MI.
+    DAG.LIS->RemoveMachineInstrFromMaps(RematMI);
+    RematMI.eraseFromParent();
+
+    // Recompute live interval for the re-rematerialized register
+    DAG.LIS->removeInterval(Reg);
+    DAG.LIS->createAndComputeVirtRegInterval(Reg);
+
+    // Re-add the register as a live-in in all regions it used to be one in.
+    for (unsigned LIRegion : Remat.LiveInRegions)
+      DAG.LiveIns[LIRegion].insert({Reg, RegMasks.at({LIRegion, Reg})});
   }
+
+  // Reset RP in all impacted regions.
+  for (auto &[I, OriginalRP] : ImpactedRegions)
+    DAG.Pressure[I] = OriginalRP;
+
+  GCNSchedStage::finalizeGCNSchedStage();
+}
+
+void GCNScheduleDAGMILive::updateRegionBoundaries(
+    RegionBoundaries &RegionBounds, MachineBasicBlock::iterator MI,
+    MachineInstr *NewMI) {
+  assert((!NewMI || NewMI != RegionBounds.second) &&
+         "cannot remove at region end");
+
+  if (RegionBounds.first == RegionBounds.second) {
+    assert(NewMI && "cannot remove from an empty region");
+    RegionBounds.first = NewMI;
+    return;
+  }
+
+  // We only care for modifications at the beginning of a non-empty region since
+  // the upper region boundary is exclusive.
+  if (MI != RegionBounds.first)
+    return;
+  if (!NewMI)
+    RegionBounds.first = std::next(MI); // Removal
+  else
+    RegionBounds.first = NewMI; // Insertion
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {

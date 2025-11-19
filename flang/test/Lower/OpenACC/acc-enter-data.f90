@@ -2,6 +2,14 @@
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
+module mod1
+  implicit none
+  type :: derived
+     real :: m
+   contains
+  end type derived
+end module mod1
+
 subroutine acc_enter_data
   integer :: async = 1
   real, dimension(10, 10) :: a, b, c
@@ -53,16 +61,16 @@ subroutine acc_enter_data
 !CHECK: acc.enter_data dataOperands(%[[COPYIN_A]], %[[CREATE_B]], %[[ATTACH_D]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.box<!fir.ptr<f32>>>){{$}}
 
   !$acc enter data create(a) async
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async}
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) async -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: acc.enter_data async dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) wait
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {wait}
+!CHECK: acc.enter_data wait dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) async wait
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async, wait}
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) async -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: acc.enter_data async wait dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) async(1)
 !CHECK: %[[ASYNC1:.*]] = arith.constant 1 : i32
@@ -651,3 +659,15 @@ subroutine acc_enter_data_single_array_element()
 !CHECK:           acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?x?xf32>>)
 
 end subroutine
+
+subroutine test_class(a)
+  use mod1
+  class(derived) :: a
+  !$acc enter data copyin(a)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_class(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMmod1Tderived{m:f32}>> {fir.bindc_name = "a"}) {
+! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %0 {{.*}} {uniq_name = "_QFtest_classEa"} : (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>)
+! CHECK: %[[COPYIN:.*]] = acc.copyin var(%[[DECL_ARG0]]#0 : !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>) -> !fir.class<!fir.type<_QMmod1Tderived{m:f32}>> {name = "a", structured = false}
+! CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>)

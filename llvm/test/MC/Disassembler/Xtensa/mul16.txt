@@ -1,0 +1,14 @@
+# RUN: llvm-mc -triple=xtensa -mattr=+mul16 -disassemble %s | FileCheck -check-prefixes=CHECK-MUL16 %s
+# RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
+
+## Verify that binary code is correctly disassembled with
+## mul16 option enabled. Also verify that dissasembling without
+## mul16 option generates warnings.
+
+[0x50,0x34,0xd1]
+# CHECK-MUL16: mul16s a3, a4, a5
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x50,0x34,0xc1]
+# CHECK-MUL16: mul16u a3, a4, a5
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding

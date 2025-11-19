@@ -142,6 +142,44 @@ define i32 @m_offset_2048(ptr %p) nounwind {
   ret i32 %2
 }
 
+define i32 @m_constant_0() nounwind {
+; LA32-LABEL: m_constant_0:
+; LA32:       # %bb.0:
+; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: m_constant_0:
+; LA64:       # %bb.0:
+; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    ret
+  %1 = call i32 asm sideeffect "", "=r,m"(i64 0)
+  ret i32 %1
+}
+
+define i32 @m_constant_1() nounwind {
+; LA32-LABEL: m_constant_1:
+; LA32:       # %bb.0:
+; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_0)
+; LA32-NEXT:    #APP
+; LA32-NEXT:    ld.w $a0, $a0, %pc_lo12(.LCPI8_0)
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: m_constant_1:
+; LA64:       # %bb.0:
+; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_0)
+; LA64-NEXT:    #APP
+; LA64-NEXT:    ld.w $a0, $a0, %pc_lo12(.LCPI8_0)
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    ret
+  %1 = call i32 asm sideeffect "ld.w $0, $1", "=r,m"(i64 1)
+  ret i32 %1
+}
+
 @g_i32 = dso_local global i32 0
 
 define i32 @m_addr_pcrel() nounwind {

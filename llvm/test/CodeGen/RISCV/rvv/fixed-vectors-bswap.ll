@@ -116,7 +116,7 @@ define void @bswap_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    lui a4, 4080
 ; RV64-NEXT:    li a5, 255
-; RV64-NEXT:    addiw a3, a3, -256
+; RV64-NEXT:    addi a3, a3, -256
 ; RV64-NEXT:    slli a5, a5, 24
 ; RV64-NEXT:    vsrl.vx v9, v8, a1
 ; RV64-NEXT:    vsrl.vx v10, v8, a2
@@ -269,7 +269,7 @@ define void @bswap_v4i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    lui a4, 4080
 ; RV64-NEXT:    li a5, 255
-; RV64-NEXT:    addiw a3, a3, -256
+; RV64-NEXT:    addi a3, a3, -256
 ; RV64-NEXT:    slli a5, a5, 24
 ; RV64-NEXT:    vsrl.vx v10, v8, a1
 ; RV64-NEXT:    vsrl.vx v12, v8, a2

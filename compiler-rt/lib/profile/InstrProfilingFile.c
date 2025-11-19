@@ -8,6 +8,11 @@
 
 #if !defined(__Fuchsia__)
 
+#if defined(__linux__)
+// For fileno(), ftruncate(), getpagesize(), setenv()
+#define _DEFAULT_SOURCE
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -1088,8 +1093,10 @@ const char *__llvm_profile_get_filename(void) {
     return "\0";
   }
   Filename = getCurFilename(FilenameBuf, 1);
-  if (!Filename)
+  if (!Filename) {
+    free(FilenameBuf);
     return "\0";
+  }
 
   return FilenameBuf;
 }

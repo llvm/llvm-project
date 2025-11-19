@@ -17,7 +17,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
@@ -26,7 +25,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -45,10 +43,13 @@ using namespace ento;
 namespace {
 class BindingKey {
 public:
-  enum Kind { Default = 0x0, Direct = 0x1 };
-private:
-  enum { Symbolic = 0x2 };
+  enum Kind {
+    Default = 0x0,
+    Direct = 0x1,
+    Symbolic = 0x2,
+  };
 
+private:
   llvm::PointerIntPair<const MemRegion *, 2> P;
   uint64_t Data;
 
@@ -563,15 +564,15 @@ public:
   //===-------------------------------------------------------------------===//
   // Binding values to regions.
   //===-------------------------------------------------------------------===//
-  RegionBindingsRef invalidateGlobalRegion(MemRegion::Kind K, const Stmt *S,
-                                           unsigned Count,
-                                           const LocationContext *LCtx,
-                                           RegionBindingsRef B,
-                                           InvalidatedRegions *Invalidated);
+  RegionBindingsRef
+  invalidateGlobalRegion(MemRegion::Kind K, ConstCFGElementRef Elem,
+                         unsigned Count, const LocationContext *LCtx,
+                         RegionBindingsRef B, InvalidatedRegions *Invalidated);
 
-  StoreRef invalidateRegions(Store store, ArrayRef<SVal> Values, const Stmt *S,
-                             unsigned Count, const LocationContext *LCtx,
-                             const CallEvent *Call, InvalidatedSymbols &IS,
+  StoreRef invalidateRegions(Store store, ArrayRef<SVal> Values,
+                             ConstCFGElementRef Elem, unsigned Count,
+                             const LocationContext *LCtx, const CallEvent *Call,
+                             InvalidatedSymbols &IS,
                              RegionAndSymbolInvalidationTraits &ITraits,
                              InvalidatedRegions *Invalidated,
                              InvalidatedRegions *InvalidatedTopLevel) override;
@@ -712,11 +713,6 @@ public: // Part of public interface to class.
   SVal getBinding(Store S, Loc L, QualType T) override {
     return getBinding(getRegionBindings(S), L, T);
   }
-
-  std::optional<SVal> getUniqueDefaultBinding(RegionBindingsConstRef B,
-                                              const TypedValueRegion *R) const;
-  std::optional<SVal>
-  getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
 
   std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
@@ -1147,7 +1143,7 @@ RegionStoreManager::removeSubRegionBindings(LimitedRegionBindingsConstRef B,
 namespace {
 class InvalidateRegionsWorker : public ClusterAnalysis<InvalidateRegionsWorker>
 {
-  const Stmt *S;
+  ConstCFGElementRef Elem;
   unsigned Count;
   const LocationContext *LCtx;
   InvalidatedSymbols &IS;
@@ -1156,12 +1152,13 @@ class InvalidateRegionsWorker : public ClusterAnalysis<InvalidateRegionsWorker>
   GlobalsFilterKind GlobalsFilter;
 public:
   InvalidateRegionsWorker(RegionStoreManager &rm, ProgramStateManager &stateMgr,
-                          RegionBindingsRef b, const Stmt *S, unsigned count,
-                          const LocationContext *lctx, InvalidatedSymbols &is,
+                          RegionBindingsRef b, ConstCFGElementRef elem,
+                          unsigned count, const LocationContext *lctx,
+                          InvalidatedSymbols &is,
                           RegionAndSymbolInvalidationTraits &ITraitsIn,
                           StoreManager::InvalidatedRegions *r,
                           GlobalsFilterKind GFK)
-      : ClusterAnalysis<InvalidateRegionsWorker>(rm, stateMgr, b), S(S),
+      : ClusterAnalysis<InvalidateRegionsWorker>(rm, stateMgr, b), Elem(elem),
         Count(count), LCtx(lctx), IS(is), ITraits(ITraitsIn), Regions(r),
         GlobalsFilter(GFK) {}
 
@@ -1296,7 +1293,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-        svalBuilder.conjureSymbolVal(baseR, S, LCtx, Ctx.IntTy, Count);
+        svalBuilder.conjureSymbolVal(baseR, Elem, LCtx, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1318,7 +1315,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-        svalBuilder.conjureSymbolVal(baseR, S, LCtx, Ctx.IntTy, Count);
+        svalBuilder.conjureSymbolVal(baseR, Elem, LCtx, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1386,13 +1383,13 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   conjure_default:
       // Set the default value of the array to conjured symbol.
       DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(
-          baseR, S, LCtx, AT->getElementType(), Count);
+          baseR, Elem, LCtx, AT->getElementType(), Count);
       B = B.addBinding(baseR, BindingKey::Default, V);
       return;
   }
 
   DefinedOrUnknownSVal V =
-      svalBuilder.conjureSymbolVal(baseR, S, LCtx, T, Count);
+      svalBuilder.conjureSymbolVal(baseR, Elem, LCtx, T, Count);
   assert(SymbolManager::canSymbolicate(T) || V.isUnknown());
   B = B.addBinding(baseR, BindingKey::Direct, V);
 }
@@ -1421,15 +1418,15 @@ bool InvalidateRegionsWorker::includeEntireMemorySpace(const MemRegion *Base) {
 }
 
 RegionBindingsRef RegionStoreManager::invalidateGlobalRegion(
-    MemRegion::Kind K, const Stmt *S, unsigned Count,
+    MemRegion::Kind K, ConstCFGElementRef Elem, unsigned Count,
     const LocationContext *LCtx, RegionBindingsRef B,
     InvalidatedRegions *Invalidated) {
   // Bind the globals memory space to a new symbol that we will use to derive
   // the bindings for all globals.
   const GlobalsSpaceRegion *GS = MRMgr.getGlobalsRegion(K);
-  SVal V =
-      svalBuilder.conjureSymbolVal(/* symbolTag = */ (const void *)GS, S, LCtx,
-                                   /* type does not matter */ Ctx.IntTy, Count);
+  SVal V = svalBuilder.conjureSymbolVal(
+      /* symbolTag = */ (const void *)GS, Elem, LCtx,
+      /* type does not matter */ Ctx.IntTy, Count);
 
   B = B.removeBinding(GS)
        .addBinding(BindingKey::Make(GS, BindingKey::Default), V);
@@ -1464,7 +1461,7 @@ void RegionStoreManager::populateWorkList(InvalidateRegionsWorker &W,
 }
 
 StoreRef RegionStoreManager::invalidateRegions(
-    Store store, ArrayRef<SVal> Values, const Stmt *S, unsigned Count,
+    Store store, ArrayRef<SVal> Values, ConstCFGElementRef Elem, unsigned Count,
     const LocationContext *LCtx, const CallEvent *Call, InvalidatedSymbols &IS,
     RegionAndSymbolInvalidationTraits &ITraits,
     InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) {
@@ -1479,7 +1476,7 @@ StoreRef RegionStoreManager::invalidateRegions(
   }
 
   RegionBindingsRef B = getRegionBindings(store);
-  InvalidateRegionsWorker W(*this, StateMgr, B, S, Count, LCtx, IS, ITraits,
+  InvalidateRegionsWorker W(*this, StateMgr, B, Elem, Count, LCtx, IS, ITraits,
                             Invalidated, GlobalsFilter);
 
   // Scan the bindings and generate the clusters.
@@ -1499,12 +1496,12 @@ StoreRef RegionStoreManager::invalidateRegions(
   // TODO: This could possibly be more precise with modules.
   switch (GlobalsFilter) {
   case GFK_All:
-    B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind, S,
+    B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind, Elem,
                                Count, LCtx, B, Invalidated);
     [[fallthrough]];
   case GFK_SystemOnly:
-    B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind, S, Count,
-                               LCtx, B, Invalidated);
+    B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind, Elem,
+                               Count, LCtx, B, Invalidated);
     [[fallthrough]];
   case GFK_None:
     break;
@@ -2454,7 +2451,8 @@ NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
 
 SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
-  const RecordDecl *RD = R->getValueType()->castAs<RecordType>()->getDecl();
+  const RecordDecl *RD =
+      R->getValueType()->castAsCanonical<RecordType>()->getDecl();
   if (!RD->getDefinition())
     return UnknownVal();
 
@@ -2462,11 +2460,6 @@ SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
   // behavior doesn't depend on the struct layout.
   // This way even an empty struct can carry taint, no matter if creduce drops
   // the last field member or not.
-
-  // Try to avoid creating a LCV if it would anyways just refer to a single
-  // default binding.
-  if (std::optional<SVal> Val = getUniqueDefaultBinding(B, R))
-    return *Val;
   return createLazyBinding(B, R);
 }
 
@@ -2655,13 +2648,19 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, V);
   }
 
-  // Handle lazy compound values.
+  // FIXME Single value constant should have been handled before this call to
+  // bindArray. This is only a hotfix to not crash.
+  if (Init.isConstant())
+    return bindAggregate(B, R, Init);
+
   if (std::optional LCV = Init.getAs<nonloc::LazyCompoundVal>()) {
     if (std::optional NewB = tryBindSmallArray(B, R, AT, *LCV))
       return *NewB;
-
     return bindAggregate(B, R, Init);
   }
+
+  if (isa<nonloc::SymbolVal>(Init))
+    return bindAggregate(B, R, Init);
 
   if (Init.isUnknown())
     return bindAggregate(B, R, UnknownVal());
@@ -2748,49 +2747,11 @@ RegionStoreManager::bindVector(LimitedRegionBindingsConstRef B,
   return NewB;
 }
 
-std::optional<SVal>
-RegionStoreManager::getUniqueDefaultBinding(RegionBindingsConstRef B,
-                                            const TypedValueRegion *R) const {
-  if (R != R->getBaseRegion())
-    return std::nullopt;
-
-  const auto *Cluster = B.lookup(R);
-  if (!Cluster || !llvm::hasSingleElement(*Cluster))
-    return std::nullopt;
-
-  const auto [Key, Value] = *Cluster->begin();
-  return Key.isDirect() ? std::optional<SVal>{} : Value;
-}
-
-std::optional<SVal>
-RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
-  auto B = getRegionBindings(LCV.getStore());
-  return getUniqueDefaultBinding(B, LCV.getRegion());
-}
-
 std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
     LimitedRegionBindingsConstRef B, const TypedValueRegion *R,
     const RecordDecl *RD, nonloc::LazyCompoundVal LCV) {
   if (B.hasExhaustedBindingLimit())
     return B.withValuesEscaped(LCV);
-
-  // If we try to copy a Conjured value representing the value of the whole
-  // struct, don't try to element-wise copy each field.
-  // That would unnecessarily bind Derived symbols slicing off the subregion for
-  // the field from the whole Conjured symbol.
-  //
-  //   struct Window { int width; int height; };
-  //   Window getWindow(); <-- opaque fn.
-  //   Window w = getWindow(); <-- conjures a new Window.
-  //   Window w2 = w; <-- trivial copy "w", calling "tryBindSmallStruct"
-  //
-  // We should not end up with a new Store for "w2" like this:
-  //   Direct [ 0..31]: Derived{Conj{}, w.width}
-  //   Direct [32..63]: Derived{Conj{}, w.height}
-  // Instead, we should just bind that Conjured value instead.
-  if (std::optional<SVal> Val = getUniqueDefaultBinding(LCV)) {
-    return B.addBinding(BindingKey::Make(R, BindingKey::Default), Val.value());
-  }
 
   FieldVector Fields;
 
@@ -2844,9 +2805,7 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
-  const RecordType* RT = T->castAs<RecordType>();
-  const RecordDecl *RD = RT->getDecl();
-
+  const auto *RD = T->castAsRecordDecl();
   if (!RD->isCompleteDefinition())
     return B;
 

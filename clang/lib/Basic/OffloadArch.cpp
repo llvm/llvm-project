@@ -33,8 +33,12 @@ static const OffloadArchToStringMap ArchNames[] = {
     SM(100a),                        // Blackwell
     SM(101),                         // Blackwell
     SM(101a),                        // Blackwell
+    SM(103),                         // Blackwell
+    SM(103a),                        // Blackwell
     SM(120),                         // Blackwell
     SM(120a),                        // Blackwell
+    SM(121),                         // Blackwell
+    SM(121a),                        // Blackwell
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -86,7 +90,13 @@ static const OffloadArchToStringMap ArchNames[] = {
     {OffloadArch::GFX12_GENERIC, "gfx12-generic", "compute_amdgcn"},
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
+    GFX(1250), // gfx1250
+    GFX(1251), // gfx1251
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
+    // Intel CPUs
+    {OffloadArch::GRANITERAPIDS, "graniterapids", ""},
+    // Intel GPUS
+    {OffloadArch::BMG_G21, "bmg_g21", ""},
     {OffloadArch::Generic, "generic", ""},
     // clang-format on
 };

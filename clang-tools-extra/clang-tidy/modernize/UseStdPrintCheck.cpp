@@ -1,4 +1,4 @@
-//===--- UseStdPrintCheck.cpp - clang-tidy-----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -24,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), PP(nullptr),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       PrintfLikeFunctions(utils::options::parseStringList(
           Options.get("PrintfLikeFunctions", ""))),
       FprintfLikeFunctions(utils::options::parseStringList(
@@ -71,8 +70,8 @@ void UseStdPrintCheck::registerPPCallbacks(const SourceManager &SM,
   this->PP = PP;
 }
 
-static clang::ast_matchers::StatementMatcher
-unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
+static clang::ast_matchers::StatementMatcher unusedReturnValue(
+    const clang::ast_matchers::StatementMatcher &MatchedCallExpr) {
   auto UnusedInCompoundStmt =
       compoundStmt(forEach(MatchedCallExpr),
                    // The checker can't currently differentiate between the

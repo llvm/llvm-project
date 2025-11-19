@@ -1,6 +1,6 @@
-; RUN: llc -mtriple amdgcn-unknown-linux-gnu -mcpu=tahiti -verify-machineinstrs < %s | FileCheck  %s
-; RUN: llc -mtriple amdgcn-unknown-linux-gnu -mcpu=tonga -verify-machineinstrs < %s | FileCheck  %s
-; RUN: llc -mtriple r600-unknown-linux-gnu -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s --check-prefix=R600
+; RUN: llc -mtriple amdgcn-unknown-linux-gnu -mcpu=tahiti < %s | FileCheck  %s
+; RUN: llc -mtriple amdgcn-unknown-linux-gnu -mcpu=tonga < %s | FileCheck  %s
+; RUN: llc -mtriple r600-unknown-linux-gnu -mcpu=redwood < %s | FileCheck %s --check-prefix=R600
 
 ; ALL-NOT: {{^}}func:
 define internal i32 @func(i32 %a) {

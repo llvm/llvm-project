@@ -18,12 +18,103 @@ define i32 @func_01() {
 ; RV64IF-NEXT:    frrm a0
 ; RV64IF-NEXT:    lui a1, 66
 ; RV64IF-NEXT:    slli a0, a0, 2
-; RV64IF-NEXT:    addiw a1, a1, 769
+; RV64IF-NEXT:    addi a1, a1, 769
 ; RV64IF-NEXT:    srl a0, a1, a0
 ; RV64IF-NEXT:    andi a0, a0, 7
 ; RV64IF-NEXT:    ret
   %rm = call i32 @llvm.get.rounding()
   ret i32 %rm
+}
+
+define i1 @test_get_rounding_sideeffect() #0 {
+; RV32IF-LABEL: test_get_rounding_sideeffect:
+; RV32IF:       # %bb.0: # %entry
+; RV32IF-NEXT:    addi sp, sp, -16
+; RV32IF-NEXT:    .cfi_def_cfa_offset 16
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    .cfi_offset ra, -4
+; RV32IF-NEXT:    .cfi_offset s0, -8
+; RV32IF-NEXT:    li a0, 1
+; RV32IF-NEXT:    call fesetround
+; RV32IF-NEXT:    frrm a0
+; RV32IF-NEXT:    lui a1, 66
+; RV32IF-NEXT:    slli a0, a0, 2
+; RV32IF-NEXT:    addi s0, a1, 769
+; RV32IF-NEXT:    srl a0, s0, a0
+; RV32IF-NEXT:    andi a0, a0, 7
+; RV32IF-NEXT:    beqz a0, .LBB1_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    li a0, 0
+; RV32IF-NEXT:    j .LBB1_3
+; RV32IF-NEXT:  .LBB1_2: # %if.end
+; RV32IF-NEXT:    call fesetround
+; RV32IF-NEXT:    frrm a0
+; RV32IF-NEXT:    slli a0, a0, 2
+; RV32IF-NEXT:    srl a0, s0, a0
+; RV32IF-NEXT:    andi a0, a0, 7
+; RV32IF-NEXT:    addi a0, a0, -1
+; RV32IF-NEXT:    seqz a0, a0
+; RV32IF-NEXT:  .LBB1_3: # %return
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    .cfi_restore ra
+; RV32IF-NEXT:    .cfi_restore s0
+; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    .cfi_def_cfa_offset 0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: test_get_rounding_sideeffect:
+; RV64IF:       # %bb.0: # %entry
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    .cfi_def_cfa_offset 16
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    .cfi_offset ra, -8
+; RV64IF-NEXT:    .cfi_offset s0, -16
+; RV64IF-NEXT:    li a0, 1
+; RV64IF-NEXT:    call fesetround
+; RV64IF-NEXT:    frrm a0
+; RV64IF-NEXT:    lui a1, 66
+; RV64IF-NEXT:    slli a0, a0, 2
+; RV64IF-NEXT:    addi s0, a1, 769
+; RV64IF-NEXT:    srl a0, s0, a0
+; RV64IF-NEXT:    andi a0, a0, 7
+; RV64IF-NEXT:    beqz a0, .LBB1_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    li a0, 0
+; RV64IF-NEXT:    j .LBB1_3
+; RV64IF-NEXT:  .LBB1_2: # %if.end
+; RV64IF-NEXT:    call fesetround
+; RV64IF-NEXT:    frrm a0
+; RV64IF-NEXT:    slli a0, a0, 2
+; RV64IF-NEXT:    srl a0, s0, a0
+; RV64IF-NEXT:    andi a0, a0, 7
+; RV64IF-NEXT:    addi a0, a0, -1
+; RV64IF-NEXT:    seqz a0, a0
+; RV64IF-NEXT:  .LBB1_3: # %return
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    .cfi_restore ra
+; RV64IF-NEXT:    .cfi_restore s0
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    .cfi_def_cfa_offset 0
+; RV64IF-NEXT:    ret
+entry:
+  %call = tail call i32 @fesetround(i32 noundef 1) #0
+  %0 = tail call i32 @llvm.get.rounding() #0
+  %cmp.not = icmp eq i32 %0, 0
+  br i1 %cmp.not, label %if.end, label %return
+
+if.end:
+  %call1 = tail call i32 @fesetround(i32 noundef 0) #0
+  %1 = tail call i32 @llvm.get.rounding() #0
+  %cmp2.not = icmp eq i32 %1, 1
+  br label %return
+
+return:
+  %retval.0 = phi i1 [ false, %entry ], [ %cmp2.not, %if.end ]
+  ret i1 %retval.0
 }
 
 define void @func_02(i32 %rm) {
@@ -42,7 +133,7 @@ define void @func_02(i32 %rm) {
 ; RV64IF-NEXT:    slli a0, a0, 32
 ; RV64IF-NEXT:    lui a1, 66
 ; RV64IF-NEXT:    srli a0, a0, 30
-; RV64IF-NEXT:    addiw a1, a1, 769
+; RV64IF-NEXT:    addi a1, a1, 769
 ; RV64IF-NEXT:    srl a0, a1, a0
 ; RV64IF-NEXT:    andi a0, a0, 7
 ; RV64IF-NEXT:    fsrm a0
@@ -121,5 +212,9 @@ define void @func_07() {
   ret void
 }
 
+attributes #0 = { strictfp }
+
 declare void @llvm.set.rounding(i32)
 declare i32 @llvm.get.rounding()
+declare i32 @fesetround(i32 noundef)
+

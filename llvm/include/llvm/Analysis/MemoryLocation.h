@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 #include <optional>
@@ -30,8 +31,6 @@ class StoreInst;
 class MemTransferInst;
 class MemIntrinsic;
 class AtomicCmpXchgInst;
-class AtomicMemTransferInst;
-class AtomicMemIntrinsic;
 class AtomicRMWInst;
 class AnyMemTransferInst;
 class AnyMemIntrinsic;
@@ -147,7 +146,8 @@ public:
     if (isScalable() || Other.isScalable())
       return afterPointer();
 
-    return upperBound(std::max(getValue(), Other.getValue()));
+    return upperBound(
+        std::max(getValue().getFixedValue(), Other.getValue().getFixedValue()));
   }
 
   bool hasValue() const {
@@ -193,7 +193,7 @@ public:
   // - values that don't exist against values that do, and
   // - precise values to imprecise values
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   // Returns an opaque value that represents this LocationSize. Cannot be
   // reliably converted back into a LocationSize.
@@ -241,32 +241,32 @@ public:
 
   /// Return a location with information about the memory reference by the given
   /// instruction.
-  static MemoryLocation get(const LoadInst *LI);
-  static MemoryLocation get(const StoreInst *SI);
-  static MemoryLocation get(const VAArgInst *VI);
-  static MemoryLocation get(const AtomicCmpXchgInst *CXI);
-  static MemoryLocation get(const AtomicRMWInst *RMWI);
+  LLVM_ABI static MemoryLocation get(const LoadInst *LI);
+  LLVM_ABI static MemoryLocation get(const StoreInst *SI);
+  LLVM_ABI static MemoryLocation get(const VAArgInst *VI);
+  LLVM_ABI static MemoryLocation get(const AtomicCmpXchgInst *CXI);
+  LLVM_ABI static MemoryLocation get(const AtomicRMWInst *RMWI);
   static MemoryLocation get(const Instruction *Inst) {
     return *MemoryLocation::getOrNone(Inst);
   }
-  static std::optional<MemoryLocation> getOrNone(const Instruction *Inst);
+  LLVM_ABI static std::optional<MemoryLocation>
+  getOrNone(const Instruction *Inst);
 
   /// Return a location representing the source of a memory transfer.
-  static MemoryLocation getForSource(const MemTransferInst *MTI);
-  static MemoryLocation getForSource(const AtomicMemTransferInst *MTI);
-  static MemoryLocation getForSource(const AnyMemTransferInst *MTI);
+  LLVM_ABI static MemoryLocation getForSource(const MemTransferInst *MTI);
+  LLVM_ABI static MemoryLocation getForSource(const AnyMemTransferInst *MTI);
 
   /// Return a location representing the destination of a memory set or
   /// transfer.
-  static MemoryLocation getForDest(const MemIntrinsic *MI);
-  static MemoryLocation getForDest(const AtomicMemIntrinsic *MI);
-  static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
-  static std::optional<MemoryLocation> getForDest(const CallBase *CI,
-                                                  const TargetLibraryInfo &TLI);
+  LLVM_ABI static MemoryLocation getForDest(const MemIntrinsic *MI);
+  LLVM_ABI static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
+  LLVM_ABI static std::optional<MemoryLocation>
+  getForDest(const CallBase *CI, const TargetLibraryInfo &TLI);
 
   /// Return a location representing a particular argument of a call.
-  static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,
-                                       const TargetLibraryInfo *TLI);
+  LLVM_ABI static MemoryLocation getForArgument(const CallBase *Call,
+                                                unsigned ArgIdx,
+                                                const TargetLibraryInfo *TLI);
   static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,
                                        const TargetLibraryInfo &TLI) {
     return getForArgument(Call, ArgIdx, &TLI);

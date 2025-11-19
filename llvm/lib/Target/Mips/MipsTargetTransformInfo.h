@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-class MipsTTIImpl : public BasicTTIImplBase<MipsTTIImpl> {
+class MipsTTIImpl final : public BasicTTIImplBase<MipsTTIImpl> {
   using BaseT = BasicTTIImplBase<MipsTTIImpl>;
   using TTI = TargetTransformInfo;
 

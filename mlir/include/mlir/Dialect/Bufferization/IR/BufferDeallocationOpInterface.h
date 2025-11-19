@@ -104,7 +104,7 @@ struct DeallocationOptions {
 /// BufferDeallocation pass.
 class DeallocationState {
 public:
-  DeallocationState(Operation *op);
+  DeallocationState(Operation *op, SymbolTableCollection &symbolTables);
 
   // The state should always be passed by reference.
   DeallocationState(const DeallocationState &) = delete;
@@ -189,7 +189,7 @@ public:
 private:
   // Symbol cache to lookup functions from call operations to check attributes
   // on the function operation.
-  SymbolTableCollection symbolTable;
+  SymbolTableCollection &symbolTable;
 
   // Mapping from each SSA value with MemRef type to the associated ownership in
   // each block.

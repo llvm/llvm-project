@@ -45,9 +45,7 @@
 // CHECK:           %[[VAL_30:.*]] = llvm.load %[[VAL_29]] : !llvm.ptr -> i64
 // CHECK:           %[[VAL_31:.*]] = llvm.sdiv %[[VAL_16]], %[[VAL_13]]  : i64
 // CHECK:           %[[VAL_32:.*]] = llvm.mlir.constant(44 : i32) : i32
-// CHECK:           %[[VAL_33:.*]] = llvm.mlir.zero : !llvm.ptr
-// CHECK:           %[[VAL_34:.*]] = llvm.getelementptr %[[VAL_33]][1] : (!llvm.ptr) -> !llvm.ptr, i32
-// CHECK:           %[[VAL_35:.*]] = llvm.ptrtoint %[[VAL_34]] : !llvm.ptr to i64
+// CHECK:           %[[VAL_35:.*]] = llvm.mlir.constant(4 : i64) : i64
 // CHECK:           %[[VAL_36:.*]] = llvm.mul %[[VAL_35]], %[[VAL_31]] : i64
 // CHECK:           %[[VAL_37:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_38:.*]] = llvm.insertvalue %[[VAL_36]], %[[VAL_37]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
@@ -139,9 +137,7 @@ func.func @test_char4(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.cha
 // CHECK:           %[[VAL_28:.*]] = llvm.getelementptr %[[VAL_10]][0, 7, %[[VAL_11]], 2] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_29:.*]] = llvm.load %[[VAL_28]] : !llvm.ptr -> i64
 // CHECK:           %[[VAL_30:.*]] = llvm.mlir.constant(40 : i32) : i32
-// CHECK:           %[[VAL_31:.*]] = llvm.mlir.zero : !llvm.ptr
-// CHECK:           %[[VAL_32:.*]] = llvm.getelementptr %[[VAL_31]][1] : (!llvm.ptr) -> !llvm.ptr, i8
-// CHECK:           %[[VAL_33:.*]] = llvm.ptrtoint %[[VAL_32]] : !llvm.ptr to i64
+// CHECK:           %[[VAL_33:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_34:.*]] = llvm.mul %[[VAL_33]], %[[VAL_15]] : i64
 // CHECK:           %[[VAL_35:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_36:.*]] = llvm.insertvalue %[[VAL_34]], %[[VAL_35]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>

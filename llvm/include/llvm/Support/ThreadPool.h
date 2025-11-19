@@ -14,7 +14,10 @@
 #define LLVM_SUPPORT_THREADPOOL_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/thread.h"
@@ -24,7 +27,6 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -46,10 +48,10 @@ class ThreadPoolTaskGroup;
 /// available threads are used up by tasks waiting for a task that has no thread
 /// left to run on (this includes waiting on the returned future). It should be
 /// generally safe to wait() for a group as long as groups do not form a cycle.
-class ThreadPoolInterface {
+class LLVM_ABI ThreadPoolInterface {
   /// The actual method to enqueue a task to be defined by the concrete
   /// implementation.
-  virtual void asyncEnqueue(std::function<void()> Task,
+  virtual void asyncEnqueue(llvm::unique_function<void()> Task,
                             ThreadPoolTaskGroup *Group) = 0;
 
 public:
@@ -93,22 +95,22 @@ public:
   /// used to wait for the task to finish and is *non-blocking* on destruction.
   template <typename Func>
   auto async(Func &&F) -> std::shared_future<decltype(F())> {
-    return asyncImpl(std::function<decltype(F())()>(std::forward<Func>(F)),
-                     nullptr);
+    return asyncImpl(
+        llvm::unique_function<decltype(F())()>(std::forward<Func>(F)), nullptr);
   }
 
   template <typename Func>
   auto async(ThreadPoolTaskGroup &Group, Func &&F)
       -> std::shared_future<decltype(F())> {
-    return asyncImpl(std::function<decltype(F())()>(std::forward<Func>(F)),
-                     &Group);
+    return asyncImpl(
+        llvm::unique_function<decltype(F())()>(std::forward<Func>(F)), &Group);
   }
 
 private:
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
   template <typename ResTy>
-  std::shared_future<ResTy> asyncImpl(std::function<ResTy()> Task,
+  std::shared_future<ResTy> asyncImpl(llvm::unique_function<ResTy()> Task,
                                       ThreadPoolTaskGroup *Group) {
     auto Future = std::async(std::launch::deferred, std::move(Task)).share();
     asyncEnqueue([Future]() { Future.wait(); }, Group);
@@ -121,7 +123,7 @@ private:
 ///
 /// The pool keeps a vector of threads alive, waiting on a condition variable
 /// for some work to become available.
-class StdThreadPool : public ThreadPoolInterface {
+class LLVM_ABI StdThreadPool : public ThreadPoolInterface {
 public:
   /// Construct a pool using the hardware strategy \p S for mapping hardware
   /// execution resources (threads, cores, CPUs)
@@ -148,10 +150,6 @@ public:
   /// number of threads!
   unsigned getMaxConcurrency() const override { return MaxThreadCount; }
 
-  // TODO: Remove, misleading legacy name warning!
-  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
-  unsigned getThreadCount() const { return MaxThreadCount; }
-
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;
 
@@ -162,7 +160,7 @@ private:
 
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
-  void asyncEnqueue(std::function<void()> Task,
+  void asyncEnqueue(llvm::unique_function<void()> Task,
                     ThreadPoolTaskGroup *Group) override {
     int requestedThreads;
     {
@@ -183,6 +181,7 @@ private:
   void grow(int requested);
 
   void processTasks(ThreadPoolTaskGroup *WaitingForGroup);
+  void processTasksWithJobserver();
 
   /// Threads in flight
   std::vector<llvm::thread> Threads;
@@ -190,7 +189,8 @@ private:
   mutable llvm::sys::RWMutex ThreadsLock;
 
   /// Tasks waiting for execution in the pool.
-  std::deque<std::pair<std::function<void()>, ThreadPoolTaskGroup *>> Tasks;
+  std::deque<std::pair<llvm::unique_function<void()>, ThreadPoolTaskGroup *>>
+      Tasks;
 
   /// Locking and signaling for accessing the Tasks queue.
   std::mutex QueueLock;
@@ -211,11 +211,13 @@ private:
 
   /// Maximum number of threads to potentially grow this pool to.
   const unsigned MaxThreadCount;
+
+  JobserverClient *TheJobserver = nullptr;
 };
 #endif // LLVM_ENABLE_THREADS
 
 /// A non-threaded implementation.
-class SingleThreadExecutor : public ThreadPoolInterface {
+class LLVM_ABI SingleThreadExecutor : public ThreadPoolInterface {
 public:
   /// Construct a non-threaded pool, ignoring using the hardware strategy.
   SingleThreadExecutor(ThreadPoolStrategy ignored = {});
@@ -232,23 +234,20 @@ public:
   /// Returns always 1: there is no concurrency.
   unsigned getMaxConcurrency() const override { return 1; }
 
-  // TODO: Remove, misleading legacy name warning!
-  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
-  unsigned getThreadCount() const { return 1; }
-
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;
 
 private:
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
-  void asyncEnqueue(std::function<void()> Task,
+  void asyncEnqueue(llvm::unique_function<void()> Task,
                     ThreadPoolTaskGroup *Group) override {
     Tasks.emplace_back(std::make_pair(std::move(Task), Group));
   }
 
   /// Tasks waiting for execution in the pool.
-  std::deque<std::pair<std::function<void()>, ThreadPoolTaskGroup *>> Tasks;
+  std::deque<std::pair<llvm::unique_function<void()>, ThreadPoolTaskGroup *>>
+      Tasks;
 };
 
 #if LLVM_ENABLE_THREADS

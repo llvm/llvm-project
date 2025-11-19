@@ -1,0 +1,67 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump %t -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --match-full-lines -DABS_ADRP_VAL=0x6000
+# RUN: llvm-objdump %t -d --symbolize-operands --no-show-raw-insn --no-leading-addr --adjust-vma=0x2000 | \
+# RUN:   FileCheck %s --match-full-lines -DABS_ADRP_VAL=0x8000
+
+## Expect to find the branch labels and global variable name.
+# CHECK:      <_start>:
+# CHECK-NEXT:   ldr x0, <symbol>
+# CHECK-NEXT: <L0>:
+# CHECK-NEXT:   adrp x1, [[ABS_ADRP_VAL]] <symbol+0xff4>
+# CHECK-NEXT:   adr x2, <symbol>
+# CHECK-NEXT:   cmp x1, x2
+# CHECK-NEXT:   b.eq <L1>
+# CHECK-NEXT:   b <L0>
+# CHECK-NEXT: <L1>:
+# CHECK-NEXT:   cbz x2, <L0>
+# CHECK-NEXT:   ret
+
+## Machine code generated with:
+# llvm-mc --arch=aarch64 --filetype=obj -o tmp.o <<EOF
+#   .text
+#   .p2align 14
+#   .globl .start
+# _start:
+#   ldr x0, symbol
+# 1:
+#   adrp x1, symbol + 0x1000
+#   adr x2, symbol
+#   cmp x1, x2
+#   b.eq 2f
+#   b 1b
+# 2:
+#   cbz x2, 1b
+#   ret
+#
+#   .data
+#   .p2align 12
+#   .skip 12
+# symbol:
+# EOF
+# ld.lld -shared --nmagic -o tmp.so tmp.o
+# llvm-objdump -s tmp.so --section=.text
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Address: 0x4000
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '60800058010000d0228000103f0002eb40000054fcffff1762ffffb4c0035fd6'
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Address: 0x5000
+Symbols:
+  - Name:    _start
+    Section: .text
+    Value:   0x4000
+  - Name:    symbol
+    Section: .data
+    Value:   0x500c

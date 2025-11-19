@@ -12,9 +12,10 @@
 
 // template <class charT> T10 put_time(const struct tm* tmb, const charT* fmt);
 
+#include <cassert>
+#include <ctime>
 #include <iomanip>
 #include <ostream>
-#include <cassert>
 
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros

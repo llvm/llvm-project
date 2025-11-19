@@ -311,12 +311,12 @@ enum GlobalValueSummarySymtabCodes {
   // [nummib x (numcontext x total size)]?]
   FS_PERMODULE_ALLOC_INFO = 27,
   // Summary of combined index memprof callsite metadata.
-  // [valueid, context radix tree index, numver,
-  //  numver x version]
+  // [valueid, numstackindices, numver,
+  //  numstackindices x stackidindex, numver x version]
   FS_COMBINED_CALLSITE_INFO = 28,
   // Summary of combined index allocation memprof metadata.
   // [nummib, numver,
-  //  nummib x (alloc type, numstackids, numstackids x stackidindex),
+  //  nummib x (alloc type, context radix tree index),
   //  numver x version]
   FS_COMBINED_ALLOC_INFO = 29,
   // List of all stack ids referenced by index in the callsite and alloc infos.
@@ -335,6 +335,11 @@ enum GlobalValueSummarySymtabCodes {
   // CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
   // [n x entry]
   FS_CONTEXT_RADIX_TREE_ARRAY = 32,
+  // Summary of combined index allocation memprof metadata, without context.
+  // [nummib, numver,
+  //  nummib x alloc type,
+  //  numver x version]
+  FS_COMBINED_ALLOC_INFO_NO_CONTEXT = 33,
 };
 
 enum MetadataCodes {
@@ -451,7 +456,8 @@ enum CastOpcodes {
   CAST_PTRTOINT = 9,
   CAST_INTTOPTR = 10,
   CAST_BITCAST = 11,
-  CAST_ADDRSPACECAST = 12
+  CAST_ADDRSPACECAST = 12,
+  CAST_PTRTOADDR = 13,
 };
 
 /// UnaryOpcodes - These are values used in the bitcode files to encode which
@@ -504,7 +510,9 @@ enum RMWOperations {
   RMW_UINC_WRAP = 15,
   RMW_UDEC_WRAP = 16,
   RMW_USUB_COND = 17,
-  RMW_USUB_SAT = 18
+  RMW_USUB_SAT = 18,
+  RMW_FMAXIMUM = 19,
+  RMW_FMINIMUM = 20,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -791,6 +799,9 @@ enum AttributeKindCodes {
   ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
   ATTR_KIND_SANITIZE_TYPE = 101,
   ATTR_KIND_CAPTURES = 102,
+  ATTR_KIND_DEAD_ON_RETURN = 103,
+  ATTR_KIND_SANITIZE_ALLOC_TOKEN = 104,
+  ATTR_KIND_NO_CREATE_UNDEF_OR_POISON = 105,
 };
 
 enum ComdatSelectionKindCodes {

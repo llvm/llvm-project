@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -23,11 +22,9 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/CSE.h"
@@ -40,19 +37,23 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
 #include <optional>
 
 #define DEBUG_TYPE "transform-dialect"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
-
 #define DEBUG_TYPE_MATCHER "transform-matcher"
-#define DBGS_MATCHER() (llvm::dbgs() << "[" DEBUG_TYPE_MATCHER "] ")
-#define DEBUG_MATCHER(x) DEBUG_WITH_TYPE(DEBUG_TYPE_MATCHER, x)
 
 using namespace mlir;
 
+static ParseResult parseApplyRegisteredPassOptions(
+    OpAsmParser &parser, DictionaryAttr &options,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions);
+static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
+                                            Operation *op,
+                                            DictionaryAttr options,
+                                            ValueRange dynamicOptions);
 static ParseResult parseSequenceOpOperands(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
     Type &rootType,
@@ -95,9 +96,9 @@ ensurePayloadIsSeparateFromTransform(transform::TransformOpInterface transform,
 // AlternativesOp
 //===----------------------------------------------------------------------===//
 
-OperandRange
-transform::AlternativesOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  if (!point.isParent() && getOperation()->getNumOperands() == 1)
+OperandRange transform::AlternativesOp::getEntrySuccessorOperands(
+    RegionSuccessor successor) {
+  if (!successor.isParent() && getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
                       getOperation()->operand_end());
@@ -106,15 +107,18 @@ transform::AlternativesOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 void transform::AlternativesOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   for (Region &alternative : llvm::drop_begin(
-           getAlternatives(),
-           point.isParent() ? 0
-                            : point.getRegionOrNull()->getRegionNumber() + 1)) {
+           getAlternatives(), point.isParent()
+                                  ? 0
+                                  : point.getTerminatorPredecessorOrNull()
+                                            ->getParentRegion()
+                                            ->getRegionNumber() +
+                                        1)) {
     regions.emplace_back(&alternative, !getOperands().empty()
                                            ? alternative.getArguments()
                                            : Block::BlockArgListType());
   }
   if (!point.isParent())
-    regions.emplace_back(getOperation()->getResults());
+    regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 void transform::AlternativesOp::getRegionInvocationBounds(
@@ -178,8 +182,7 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
       DiagnosedSilenceableFailure result =
           state.applyTransform(cast<TransformOpInterface>(transform));
       if (result.isSilenceableFailure()) {
-        LLVM_DEBUG(DBGS() << "alternative failed: " << result.getMessage()
-                          << "\n");
+        LDBG() << "alternative failed: " << result.getMessage();
         failed = true;
         break;
       }
@@ -616,11 +619,10 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
       if (diag.succeeded()) {
         // Tracking failure is the only failure.
         return trackingFailure;
-      } else {
-        diag.attachNote() << "tracking listener also failed: "
-                          << trackingFailure.getMessage();
-        (void)trackingFailure.silence();
       }
+      diag.attachNote() << "tracking listener also failed: "
+                        << trackingFailure.getMessage();
+      (void)trackingFailure.silence();
     }
 
     if (!diag.succeeded())
@@ -766,17 +768,63 @@ void transform::ApplyLoopInvariantCodeMotionOp::getEffects(
 // ApplyRegisteredPassOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
-    transform::TransformRewriter &rewriter, Operation *target,
-    ApplyToEachResultList &results, transform::TransformState &state) {
-  // Make sure that this transform is not applied to itself. Modifying the
-  // transform IR while it is being interpreted is generally dangerous. Even
-  // more so when applying passes because they may perform a wide range of IR
-  // modifications.
-  DiagnosedSilenceableFailure payloadCheck =
-      ensurePayloadIsSeparateFromTransform(*this, target);
-  if (!payloadCheck.succeeded())
-    return payloadCheck;
+void transform::ApplyRegisteredPassOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getDynamicOptionsMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  // Obtain a single options-string to pass to the pass(-pipeline) from options
+  // passed in as a dictionary of keys mapping to values which are either
+  // attributes or param-operands pointing to attributes.
+  OperandRange dynamicOptions = getDynamicOptions();
+
+  std::string options;
+  llvm::raw_string_ostream optionsStream(options); // For "printing" attrs.
+
+  // A helper to convert an option's attribute value into a corresponding
+  // string representation, with the ability to obtain the attr(s) from a param.
+  std::function<void(Attribute)> appendValueAttr = [&](Attribute valueAttr) {
+    if (auto paramOperand = dyn_cast<transform::ParamOperandAttr>(valueAttr)) {
+      // The corresponding value attribute(s) is/are passed in via a param.
+      // Obtain the param-operand via its specified index.
+      int64_t dynamicOptionIdx = paramOperand.getIndex().getInt();
+      assert(dynamicOptionIdx < static_cast<int64_t>(dynamicOptions.size()) &&
+             "the number of ParamOperandAttrs in the options DictionaryAttr"
+             "should be the same as the number of options passed as params");
+      ArrayRef<Attribute> attrsAssociatedToParam =
+          state.getParams(dynamicOptions[dynamicOptionIdx]);
+      // Recursive so as to append all attrs associated to the param.
+      llvm::interleave(attrsAssociatedToParam, optionsStream, appendValueAttr,
+                       ",");
+    } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+      // Recursive so as to append all nested attrs of the array.
+      llvm::interleave(arrayAttr, optionsStream, appendValueAttr, ",");
+    } else if (auto strAttr = dyn_cast<StringAttr>(valueAttr)) {
+      // Convert to unquoted string.
+      optionsStream << strAttr.getValue().str();
+    } else {
+      // For all other attributes, ask the attr to print itself (without type).
+      valueAttr.print(optionsStream, /*elideType=*/true);
+    }
+  };
+
+  // Convert the options DictionaryAttr into a single string.
+  llvm::interleave(
+      getOptions(), optionsStream,
+      [&](auto namedAttribute) {
+        optionsStream << namedAttribute.getName().str(); // Append the key.
+        optionsStream << "="; // And the key-value separator.
+        appendValueAttr(namedAttribute.getValue()); // And the attr's str repr.
+      },
+      " ");
+  optionsStream.flush();
 
   // Get pass or pass pipeline from registry.
   const PassRegistryEntry *info = PassPipelineInfo::lookup(getPassName());
@@ -786,9 +834,9 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
     return emitDefiniteFailure()
            << "unknown pass or pass pipeline: " << getPassName();
 
-  // Create pass manager and run the pass or pass pipeline.
+  // Create pass manager and add the pass or pass pipeline.
   PassManager pm(getContext());
-  if (failed(info->addToPipeline(pm, getOptions(), [&](const Twine &msg) {
+  if (failed(info->addToPipeline(pm, options, [&](const Twine &msg) {
         emitError(msg);
         return failure();
       }))) {
@@ -796,14 +844,203 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
            << "failed to add pass or pass pipeline to pipeline: "
            << getPassName();
   }
-  if (failed(pm.run(target))) {
-    auto diag = emitSilenceableError() << "pass pipeline failed";
-    diag.attachNote(target->getLoc()) << "target op";
-    return diag;
+
+  auto targets = SmallVector<Operation *>(state.getPayloadOps(getTarget()));
+  for (Operation *target : targets) {
+    // Make sure that this transform is not applied to itself. Modifying the
+    // transform IR while it is being interpreted is generally dangerous. Even
+    // more so when applying passes because they may perform a wide range of IR
+    // modifications.
+    DiagnosedSilenceableFailure payloadCheck =
+        ensurePayloadIsSeparateFromTransform(*this, target);
+    if (!payloadCheck.succeeded())
+      return payloadCheck;
+
+    // Run the pass or pass pipeline on the current target operation.
+    if (failed(pm.run(target))) {
+      auto diag = emitSilenceableError() << "pass pipeline failed";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
   }
 
-  results.push_back(target);
+  // The applied pass will have directly modified the payload IR(s).
+  results.set(llvm::cast<OpResult>(getResult()), targets);
   return DiagnosedSilenceableFailure::success();
+}
+
+static ParseResult parseApplyRegisteredPassOptions(
+    OpAsmParser &parser, DictionaryAttr &options,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions) {
+  // Construct the options DictionaryAttr per a `{ key = value, ... }` syntax.
+  SmallVector<NamedAttribute> keyValuePairs;
+  size_t dynamicOptionsIdx = 0;
+
+  // Helper for allowing parsing of option values which can be of the form:
+  // - a normal attribute
+  // - an operand (which would be converted to an attr referring to the operand)
+  // - ArrayAttrs containing the foregoing (in correspondence with ListOptions)
+  std::function<ParseResult(Attribute &)> parseValue =
+      [&](Attribute &valueAttr) -> ParseResult {
+    // Allow for array syntax, e.g. `[0 : i64, %param, true, %other_param]`:
+    if (succeeded(parser.parseOptionalLSquare())) {
+      SmallVector<Attribute> attrs;
+
+      // Recursively parse the array's elements, which might be operands.
+      if (parser.parseCommaSeparatedList(
+              AsmParser::Delimiter::None,
+              [&]() -> ParseResult { return parseValue(attrs.emplace_back()); },
+              " in options dictionary") ||
+          parser.parseRSquare())
+        return failure(); // NB: Attempted parse should've output error message.
+
+      valueAttr = ArrayAttr::get(parser.getContext(), attrs);
+
+      return success();
+    }
+
+    // Parse the value, which can be either an attribute or an operand.
+    OptionalParseResult parsedValueAttr =
+        parser.parseOptionalAttribute(valueAttr);
+    if (!parsedValueAttr.has_value()) {
+      OpAsmParser::UnresolvedOperand operand;
+      ParseResult parsedOperand = parser.parseOperand(operand);
+      if (failed(parsedOperand))
+        return failure(); // NB: Attempted parse should've output error message.
+      // To make use of the operand, we need to store it in the options dict.
+      // As SSA-values cannot occur in attributes, what we do instead is store
+      // an attribute in its place that contains the index of the param-operand,
+      // so that an attr-value associated to the param can be resolved later on.
+      dynamicOptions.push_back(operand);
+      auto wrappedIndex = IntegerAttr::get(
+          IntegerType::get(parser.getContext(), 64), dynamicOptionsIdx++);
+      valueAttr =
+          transform::ParamOperandAttr::get(parser.getContext(), wrappedIndex);
+    } else if (failed(parsedValueAttr.value())) {
+      return failure(); // NB: Attempted parse should have output error message.
+    } else if (isa<transform::ParamOperandAttr>(valueAttr)) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "the param_operand attribute is a marker reserved for "
+             << "indicating a value will be passed via params and is only used "
+             << "in the generic print format";
+    }
+
+    return success();
+  };
+
+  // Helper for `key = value`-pair parsing where `key` is a bare identifier or a
+  // string and `value` looks like either an attribute or an operand-in-an-attr.
+  std::function<ParseResult()> parseKeyValuePair = [&]() -> ParseResult {
+    std::string key;
+    Attribute valueAttr;
+
+    if (failed(parser.parseOptionalKeywordOrString(&key)) || key.empty())
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected key to either be an identifier or a string";
+
+    if (failed(parser.parseEqual()))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected '=' after key in key-value pair";
+
+    if (failed(parseValue(valueAttr)))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected a valid attribute or operand as value associated "
+             << "to key '" << key << "'";
+
+    keyValuePairs.push_back(NamedAttribute(key, valueAttr));
+
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Braces,
+                                     parseKeyValuePair,
+                                     " in options dictionary"))
+    return failure(); // NB: Attempted parse should have output error message.
+
+  if (DictionaryAttr::findDuplicate(
+          keyValuePairs, /*isSorted=*/false) // Also sorts the keyValuePairs.
+          .has_value())
+    return parser.emitError(parser.getCurrentLocation())
+           << "duplicate keys found in options dictionary";
+
+  options = DictionaryAttr::getWithSorted(parser.getContext(), keyValuePairs);
+
+  return success();
+}
+
+static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
+                                            Operation *op,
+                                            DictionaryAttr options,
+                                            ValueRange dynamicOptions) {
+  if (options.empty())
+    return;
+
+  std::function<void(Attribute)> printOptionValue = [&](Attribute valueAttr) {
+    if (auto paramOperandAttr =
+            dyn_cast<transform::ParamOperandAttr>(valueAttr)) {
+      // Resolve index of param-operand to its actual SSA-value and print that.
+      printer.printOperand(
+          dynamicOptions[paramOperandAttr.getIndex().getInt()]);
+    } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+      // This case is so that ArrayAttr-contained operands are pretty-printed.
+      printer << "[";
+      llvm::interleaveComma(arrayAttr, printer, printOptionValue);
+      printer << "]";
+    } else {
+      printer.printAttribute(valueAttr);
+    }
+  };
+
+  printer << "{";
+  llvm::interleaveComma(options, printer, [&](NamedAttribute namedAttribute) {
+    printer << namedAttribute.getName();
+    printer << " = ";
+    printOptionValue(namedAttribute.getValue());
+  });
+  printer << "}";
+}
+
+LogicalResult transform::ApplyRegisteredPassOp::verify() {
+  // Check that there is a one-to-one correspondence between param operands
+  // and references to dynamic options in the options dictionary.
+
+  auto dynamicOptions = SmallVector<Value>(getDynamicOptions());
+
+  // Helper for option values to mark seen operands as having been seen (once).
+  std::function<LogicalResult(Attribute)> checkOptionValue =
+      [&](Attribute valueAttr) -> LogicalResult {
+    if (auto paramOperand = dyn_cast<transform::ParamOperandAttr>(valueAttr)) {
+      int64_t dynamicOptionIdx = paramOperand.getIndex().getInt();
+      if (dynamicOptionIdx < 0 ||
+          dynamicOptionIdx >= static_cast<int64_t>(dynamicOptions.size()))
+        return emitOpError()
+               << "dynamic option index " << dynamicOptionIdx
+               << " is out of bounds for the number of dynamic options: "
+               << dynamicOptions.size();
+      if (dynamicOptions[dynamicOptionIdx] == nullptr)
+        return emitOpError() << "dynamic option index " << dynamicOptionIdx
+                             << " is already used in options";
+      dynamicOptions[dynamicOptionIdx] = nullptr; // Mark this option as used.
+    } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+      // Recurse into ArrayAttrs as they may contain references to operands.
+      for (auto eltAttr : arrayAttr)
+        if (failed(checkOptionValue(eltAttr)))
+          return failure();
+    }
+    return success();
+  };
+
+  for (NamedAttribute namedAttr : getOptions())
+    if (failed(checkOptionValue(namedAttr.getValue())))
+      return failure();
+
+  // All dynamicOptions-params seen in the dict will have been set to null.
+  for (Value dynamicOption : dynamicOptions)
+    if (dynamicOption)
+      return emitOpError() << "a param operand does not have a corresponding "
+                           << "param_operand attr in the options dict";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -916,12 +1153,10 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
   std::optional<DiagnosedSilenceableFailure> maybeFailure;
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
-      DEBUG_MATCHER({
-        DBGS_MATCHER() << "matching ";
-        op->print(llvm::dbgs(),
-                  OpPrintingFlags().assumeVerified().skipRegions());
-        llvm::dbgs() << " @" << op << "\n";
-      });
+      LDBG(DEBUG_TYPE_MATCHER, 1)
+          << "matching "
+          << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
+          << " @" << op;
 
       // Try matching.
       SmallVector<SmallVector<MappedValue>> mappings;
@@ -933,8 +1168,8 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
       if (diag.isDefiniteFailure())
         return WalkResult::interrupt();
       if (diag.isSilenceableFailure()) {
-        DEBUG_MATCHER(DBGS_MATCHER() << "matcher " << matcher.getName()
-                                     << " failed: " << diag.getMessage());
+        LDBG(DEBUG_TYPE_MATCHER, 1) << "matcher " << matcher.getName()
+                                    << " failed: " << diag.getMessage();
         return WalkResult::advance();
       }
 
@@ -1065,12 +1300,10 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
       if (!getRestrictRoot() && op == root)
         return WalkResult::advance();
 
-      DEBUG_MATCHER({
-        DBGS_MATCHER() << "matching ";
-        op->print(llvm::dbgs(),
-                  OpPrintingFlags().assumeVerified().skipRegions());
-        llvm::dbgs() << " @" << op << "\n";
-      });
+      LDBG(DEBUG_TYPE_MATCHER, 1)
+          << "matching "
+          << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
+          << " @" << op;
 
       firstMatchArgument.clear();
       firstMatchArgument.push_back(op);
@@ -1083,8 +1316,8 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
         if (diag.isDefiniteFailure())
           return WalkResult::interrupt();
         if (diag.isSilenceableFailure()) {
-          DEBUG_MATCHER(DBGS_MATCHER() << "matcher " << matcher.getName()
-                                       << " failed: " << diag.getMessage());
+          LDBG(DEBUG_TYPE_MATCHER, 1) << "matcher " << matcher.getName()
+                                      << " failed: " << diag.getMessage();
           continue;
         }
 
@@ -1403,13 +1636,13 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   // smallest payload in the targets.
   if (withZipShortest) {
     numIterations =
-        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &A,
-                                        const SmallVector<MappedValue> &B) {
-          return A.size() < B.size();
+        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &a,
+                                        const SmallVector<MappedValue> &b) {
+          return a.size() < b.size();
         })->size();
 
-    for (size_t argIdx = 0; argIdx < payloads.size(); argIdx++)
-      payloads[argIdx].resize(numIterations);
+    for (auto &payload : payloads)
+      payload.resize(numIterations);
   }
 
   // As we will be "zipping" over them, check all payloads have the same size.
@@ -1510,16 +1743,18 @@ void transform::ForeachOp::getSuccessorRegions(
   }
 
   // Branch back to the region or the parent.
-  assert(point == getBody() && "unexpected region index");
+  assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+             &getBody() &&
+         "unexpected region index");
   regions.emplace_back(bodyRegion, bodyRegion->getArguments());
-  regions.emplace_back();
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 OperandRange
-transform::ForeachOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+transform::ForeachOp::getEntrySuccessorOperands(RegionSuccessor successor) {
   // Each block argument handle is mapped to a subset (one op to be precise)
   // of the payload of the corresponding `targets` operand of ForeachOp.
-  assert(point == getBody() && "unexpected region index");
+  assert(successor.getSuccessor() == &getBody() && "unexpected region index");
   return getOperation()->getOperands();
 }
 
@@ -1867,17 +2102,11 @@ void transform::IncludeOp::getEffects(
       getOperation(), getTarget());
   if (!callee)
     return defaultEffects();
-  DiagnosedSilenceableFailure earlyVerifierResult =
-      verifyNamedSequenceOp(callee, /*emitWarnings=*/false);
-  if (!earlyVerifierResult.succeeded()) {
-    (void)earlyVerifierResult.silence();
-    return defaultEffects();
-  }
 
   for (unsigned i = 0, e = getNumOperands(); i < e; ++i) {
     if (callee.getArgAttr(i, TransformDialect::kArgConsumedAttrName))
       consumesHandle(getOperation()->getOpOperand(i), effects);
-    else
+    else if (callee.getArgAttr(i, TransformDialect::kArgReadOnlyAttrName))
       onlyReadsHandle(getOperation()->getOpOperand(i), effects);
   }
 }
@@ -1934,10 +2163,10 @@ DiagnosedSilenceableFailure transform::MatchOperationEmptyOp::matchOperation(
     ::std::optional<::mlir::Operation *> maybeCurrent,
     transform::TransformResults &results, transform::TransformState &state) {
   if (!maybeCurrent.has_value()) {
-    DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp success\n"; });
+    LDBG(DEBUG_TYPE_MATCHER, 1) << "MatchOperationEmptyOp success";
     return DiagnosedSilenceableFailure::success();
   }
-  DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp failure\n"; });
+  LDBG(DEBUG_TYPE_MATCHER, 1) << "MatchOperationEmptyOp failure";
   return emitSilenceableError() << "operation is not empty";
 }
 
@@ -2073,7 +2302,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
       return DiagnosedSilenceableFailure::success();
     }
 
-    SetVector<Operation *> uniqued(operations.begin(), operations.end());
+    SetVector<Operation *> uniqued(llvm::from_range, operations);
     results.set(llvm::cast<OpResult>(getResult()), uniqued.getArrayRef());
     return DiagnosedSilenceableFailure::success();
   }
@@ -2087,7 +2316,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
       return DiagnosedSilenceableFailure::success();
     }
 
-    SetVector<Attribute> uniqued(attrs.begin(), attrs.end());
+    SetVector<Attribute> uniqued(llvm::from_range, attrs);
     results.setParams(cast<OpResult>(getResult()), uniqued.getArrayRef());
     return DiagnosedSilenceableFailure::success();
   }
@@ -2103,7 +2332,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
 
-  SetVector<Value> uniqued(payloadValues.begin(), payloadValues.end());
+  SetVector<Value> uniqued(llvm::from_range, payloadValues);
   results.setValues(cast<OpResult>(getResult()), uniqued.getArrayRef());
   return DiagnosedSilenceableFailure::success();
 }
@@ -2367,10 +2596,7 @@ transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
           .Case([&](TransformParamTypeInterface param) {
             return llvm::range_size(state.getParams(getHandle()));
           })
-          .Default([](Type) {
-            llvm_unreachable("unknown kind of transform dialect type");
-            return 0;
-          });
+          .DefaultUnreachable("unknown kind of transform dialect type");
   results.setParams(cast<OpResult>(getNum()),
                     rewriter.getI64IntegerAttr(numAssociations));
   return DiagnosedSilenceableFailure::success();
@@ -2427,10 +2653,7 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
           .Case<TransformParamTypeInterface>([&](auto x) {
             return llvm::range_size(state.getParams(getHandle()));
           })
-          .Default([](auto x) {
-            llvm_unreachable("unknown transform dialect type interface");
-            return -1;
-          });
+          .DefaultUnreachable("unknown transform dialect type interface");
 
   auto produceNumOpsError = [&]() {
     return emitSilenceableError()
@@ -2730,8 +2953,8 @@ void transform::SequenceOp::getEffects(
 }
 
 OperandRange
-transform::SequenceOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBody() && "unexpected region index");
+transform::SequenceOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getBody() && "unexpected region index");
   if (getOperation()->getNumOperands() > 0)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
@@ -2748,8 +2971,10 @@ void transform::SequenceOp::getSuccessorRegions(
     return;
   }
 
-  assert(point == getBody() && "unexpected region index");
-  regions.emplace_back(getOperation()->getResults());
+  assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+             &getBody() &&
+         "unexpected region index");
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 void transform::SequenceOp::getRegionInvocationBounds(

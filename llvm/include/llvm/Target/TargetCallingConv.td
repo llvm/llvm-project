@@ -97,6 +97,12 @@ class CCIfVarArg<CCAction A> : CCIf<"State.isVarArg()", A> {}
 /// CCIfNotVarArg - If the current function is not vararg - apply the action
 class CCIfNotVarArg<CCAction A> : CCIf<"!State.isVarArg()", A> {}
 
+/// Apply the action if argument is fixed (not vararg).
+class CCIfArgFixed<CCAction A> : CCIf<"!ArgFlags.isVarArg()", A>;
+
+/// Apply the action if argument is vararg (not fixed).
+class CCIfArgVarArg<CCAction A> : CCIf<"ArgFlags.isVarArg()", A>;
+
 /// CCIfPtrAddrSpace - If the top-level parent of the current argument has
 /// pointer type in the specified address-space.
 class CCIfPtrAddrSpace<int AS, CCAction A>
@@ -111,6 +117,13 @@ class CCIfPtr<CCAction A> : CCIf<"ArgFlags.isPointer()", A> {}
 /// available register and succeeds.
 class CCAssignToReg<list<Register> regList> : CCAction {
   list<Register> RegList = regList;
+}
+
+/// CCAssignToRegTuple - Same as CCAssignToReg, but with a list of registers as
+/// strings. This is needed because records synthesized during tuple expansion
+/// are not visible outside of the register info emitter.
+class CCAssignToRegTuple<list<string> regList> : CCAction {
+  list<string> RegList = regList;
 }
 
 /// CCAssignToRegWithShadow - Same as CCAssignToReg, but with list of registers

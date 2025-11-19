@@ -387,6 +387,12 @@ class PowerPC_VSX_Sca_DDD_Intrinsic<string GCCIntSuffix>
                           [llvm_double_ty], [llvm_double_ty, llvm_double_ty],
                           [IntrNoMem]>;
 
+/// PowerPC_VSX_WWW_Intrinsic - A PowerPC intrinsic that takes two v4i32
+/// vectors and returns one.  These intrinsics have no side effects.
+class PowerPC_VSX_WWW_Intrinsic<string GCCIntSuffix>
+  : PowerPC_VSX_Intrinsic<GCCIntSuffix,
+                          [llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty],
+                          [IntrNoMem]>;
 //===----------------------------------------------------------------------===//
 // PowerPC Altivec Intrinsic Definitions.
 
@@ -655,6 +661,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
       DefaultAttrsIntrinsic<[llvm_v1i128_ty],[llvm_v1i128_ty],[IntrNoMem]>;
 
   // BCD intrinsics.
+  def int_ppc_national2packed: ClangBuiltin<"__builtin_ppc_national2packed">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_packed2national: ClangBuiltin<"__builtin_ppc_packed2national">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_packed2zoned: ClangBuiltin<"__builtin_ppc_packed2zoned">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_zoned2packed: ClangBuiltin<"__builtin_ppc_zoned2packed">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   def int_ppc_cdtbcdd : ClangBuiltin<"__builtin_ppc_cdtbcd">,
     DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty], [IntrNoMem]>;
   def int_ppc_cbcdtdd: ClangBuiltin<"__builtin_ppc_cbcdtd">,
@@ -667,6 +681,13 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
     DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_ppc_addg6s: ClangBuiltin<"__builtin_addg6s">,
     DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+  // BCD Format conversion intrinsics 
+  def int_ppc_bcdcopysign : ClangBuiltin<"__builtin_ppc_bcdcopysign">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>; 
+  def int_ppc_bcdsetsign : ClangBuiltin<"__builtin_ppc_bcdsetsign">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty], 
+    [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
   def int_ppc_bcdadd : ClangBuiltin<"__builtin_ppc_bcdadd">,
     DefaultAttrsIntrinsic<
@@ -1199,6 +1220,7 @@ def int_ppc_altivec_vsraw : PowerPC_Vec_WWW_Intrinsic<"vsraw">;
 def int_ppc_altivec_vrlb  : PowerPC_Vec_BBB_Intrinsic<"vrlb">;
 def int_ppc_altivec_vrlh  : PowerPC_Vec_HHH_Intrinsic<"vrlh">;
 def int_ppc_altivec_vrlw  : PowerPC_Vec_WWW_Intrinsic<"vrlw">;
+def int_ppc_vsx_xvrlw     : PowerPC_VSX_WWW_Intrinsic<"xvrlw">;
 def int_ppc_altivec_vrld  : PowerPC_Vec_DDD_Intrinsic<"vrld">;
 
 let TargetPrefix = "ppc" in {  // All PPC intrinsics start with "llvm.ppc.".
@@ -1343,6 +1365,18 @@ def int_ppc_vsx_lxvll :
 def int_ppc_vsx_lxvp :
     DefaultAttrsIntrinsic<[llvm_v256i1_ty], [llvm_ptr_ty],
                           [IntrReadMem, IntrArgMemOnly]>;
+def int_ppc_vsx_lxvrl :
+    DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i64_ty],
+                          [IntrReadMem, IntrArgMemOnly]>;
+def int_ppc_vsx_lxvrll :
+    DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i64_ty],
+                          [IntrReadMem, IntrArgMemOnly]>;
+def int_ppc_vsx_lxvprl :
+    DefaultAttrsIntrinsic<[llvm_v256i1_ty], [llvm_ptr_ty, llvm_i64_ty],
+                          [IntrReadMem, IntrArgMemOnly]>;
+def int_ppc_vsx_lxvprll :
+    DefaultAttrsIntrinsic<[llvm_v256i1_ty], [llvm_ptr_ty, llvm_i64_ty],
+                          [IntrReadMem, IntrArgMemOnly]>;
 
 // Vector store.
 def int_ppc_vsx_stxvw4x : Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
@@ -1362,6 +1396,19 @@ def int_ppc_vsx_stxvll :
 def int_ppc_vsx_stxvp :
       Intrinsic<[], [llvm_v256i1_ty, llvm_ptr_ty], [IntrWriteMem,
       IntrArgMemOnly]>;
+def int_ppc_vsx_stxvrl :
+      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
+      [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_stxvrll :
+      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
+      [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_stxvprl :
+      Intrinsic<[], [llvm_v256i1_ty, llvm_ptr_ty, llvm_i64_ty], [IntrWriteMem,
+      IntrArgMemOnly]>;
+def int_ppc_vsx_stxvprll :
+      Intrinsic<[], [llvm_v256i1_ty, llvm_ptr_ty, llvm_i64_ty], [IntrWriteMem,
+      IntrArgMemOnly]>;
+
 // Vector and scalar maximum.
 def int_ppc_vsx_xvmaxdp : PowerPC_VSX_Vec_DDD_Intrinsic<"xvmaxdp">;
 def int_ppc_vsx_xvmaxsp : PowerPC_VSX_Vec_FFF_Intrinsic<"xvmaxsp">;
@@ -1693,6 +1740,16 @@ let TargetPrefix = "ppc" in {
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty, llvm_v256i1_ty,
                              llvm_i32_ty], [IntrNoMem]>;
 
+  def int_ppc_mma_disassemble_dmr :
+      DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_v1024i1_ty],
+                            [IntrWriteMem, IntrArgMemOnly]>;
+
+  def int_ppc_mma_build_dmr :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v16i8_ty, llvm_v16i8_ty,
+                             llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty,
+                             llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+
   // MMA Reduced-Precision: Outer Product Intrinsic Definitions.
   defm int_ppc_mma_xvi4ger8 :
         PowerPC_MMA_ACC_PP_Intrinsic<[llvm_v16i8_ty, llvm_v16i8_ty]>;
@@ -1771,6 +1828,27 @@ let TargetPrefix = "ppc" in {
   defm int_ppc_mma_pmdmxvbf16gerx2 :
        PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty, llvm_i32_ty,
                                      llvm_i32_ty, llvm_i32_ty]>;
+
+  // MMA+ Half-precision Outer Product Intrinsic Definitions.
+  defm int_ppc_mma_dmxvf16gerx2 :
+       PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty]>;
+  defm int_ppc_mma_pmdmxvf16gerx2 :
+       PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty, llvm_i32_ty,
+                                     llvm_i32_ty, llvm_i32_ty]>;
+  def int_ppc_mma_dmsha2hash :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
+                             llvm_v1024i1_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+  def int_ppc_mma_dmsha3hash :
+      DefaultAttrsIntrinsic<[llvm_v2048i1_ty], [llvm_v2048i1_ty,
+                             llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+  def int_ppc_mma_dmxxshapad :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
+                             llvm_v16i8_ty, llvm_i32_ty, llvm_i32_ty,
+                             llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<2>>,
+                             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 }
 
 // XL Compat intrinsics.
@@ -1814,6 +1892,19 @@ let TargetPrefix = "ppc" in {
                       Intrinsic<[],[],[]>;
   def int_ppc_iospace_eieio : ClangBuiltin<"__builtin_ppc_iospace_eieio">,
                               Intrinsic<[],[],[]>;
+  def int_ppc_lbarx :
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+              [IntrReadMem, IntrArgMemOnly]>;
+  def int_ppc_lharx :
+    Intrinsic<[llvm_i32_ty],[llvm_ptr_ty],
+              [IntrReadMem, IntrArgMemOnly]>;
+  def int_ppc_lwarx :
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+              [IntrReadMem, IntrArgMemOnly]>;
+  def int_ppc_ldarx :
+    Intrinsic<[llvm_i64_ty],[llvm_ptr_ty],
+              [IntrReadMem, IntrArgMemOnly]>;
+
   def int_ppc_stdcx :
     ClangBuiltin<"__builtin_ppc_stdcx">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i64_ty],
@@ -1823,7 +1914,7 @@ let TargetPrefix = "ppc" in {
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
               [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_sthcx :
-    Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty ],
+    Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty],
               [IntrWriteMem, IntrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_stbcx :
     ClangBuiltin<"__builtin_ppc_stbcx">,

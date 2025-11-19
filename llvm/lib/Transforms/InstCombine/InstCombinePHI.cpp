@@ -60,17 +60,18 @@ bool InstCombinerImpl::foldDeadPhiWeb(PHINode &PN) {
   SmallVector<PHINode *, 16> Stack;
   SmallPtrSet<PHINode *, 16> Visited;
   Stack.push_back(&PN);
+  Visited.insert(&PN);
   while (!Stack.empty()) {
     PHINode *Phi = Stack.pop_back_val();
-    if (!Visited.insert(Phi).second)
-      continue;
-    // Early stop if the set of PHIs is large
-    if (Visited.size() == 16)
-      return false;
     for (User *Use : Phi->users()) {
-      if (PHINode *PhiUse = dyn_cast<PHINode>(Use))
+      if (PHINode *PhiUse = dyn_cast<PHINode>(Use)) {
+        if (!Visited.insert(PhiUse).second)
+          continue;
+        // Early stop if the set of PHIs is large
+        if (Visited.size() >= 16)
+          return false;
         Stack.push_back(PhiUse);
-      else
+      } else
         return false;
     }
   }
@@ -339,7 +340,7 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
 Instruction *InstCombinerImpl::foldPHIArgIntToPtrToPHI(PHINode &PN) {
   // convert ptr2int ( phi[ int2ptr(ptr2int(x))] ) --> ptr2int ( phi [ x ] )
   // Make sure all uses of phi are ptr2int.
-  if (!all_of(PN.users(), [](User *U) { return isa<PtrToIntInst>(U); }))
+  if (!all_of(PN.users(), IsaPred<PtrToIntInst>))
     return nullptr;
 
   // Iterating over all operands to check presence of target pointers for
@@ -574,8 +575,8 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       // substantially cheaper to compute for the constants, so making it a
       // variable index could pessimize the path.  This also handles the case
       // for struct indices, which must always be constant.
-      if (isa<ConstantInt>(FirstInst->getOperand(Op)) ||
-          isa<ConstantInt>(GEP->getOperand(Op)))
+      if (isa<Constant>(FirstInst->getOperand(Op)) ||
+          isa<Constant>(GEP->getOperand(Op)))
         return nullptr;
 
       if (FirstInst->getOperand(Op)->getType() !=
@@ -841,7 +842,7 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
       NumZexts++;
     } else if (auto *C = dyn_cast<Constant>(V)) {
       // Make sure that constants can fit in the new type.
-      Constant *Trunc = getLosslessUnsignedTrunc(C, NarrowType);
+      Constant *Trunc = getLosslessUnsignedTrunc(C, NarrowType, DL);
       if (!Trunc)
         return nullptr;
       NewIncoming.push_back(Trunc);
@@ -870,7 +871,14 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
     NewPhi->addIncoming(NewIncoming[I], Phi.getIncomingBlock(I));
 
   InsertNewInstBefore(NewPhi, Phi.getIterator());
-  return CastInst::CreateZExtOrBitCast(NewPhi, Phi.getType());
+  auto *CI = CastInst::CreateZExtOrBitCast(NewPhi, Phi.getType());
+
+  // We use a dropped location here because the new ZExt is necessarily a merge
+  // of ZExtInsts and at least one constant from incoming branches; the presence
+  // of the constant means we have no viable DebugLoc from that branch, and
+  // therefore we must use a dropped location.
+  CI->setDebugLoc(DebugLoc::getDropped());
+  return CI;
 }
 
 /// If all operands to a PHI node are the same "unary" operator and they all are
@@ -1061,27 +1069,22 @@ struct LoweredPHIRecord {
 };
 } // namespace
 
-namespace llvm {
-  template<>
-  struct DenseMapInfo<LoweredPHIRecord> {
-    static inline LoweredPHIRecord getEmptyKey() {
-      return LoweredPHIRecord(nullptr, 0);
-    }
-    static inline LoweredPHIRecord getTombstoneKey() {
-      return LoweredPHIRecord(nullptr, 1);
-    }
-    static unsigned getHashValue(const LoweredPHIRecord &Val) {
-      return DenseMapInfo<PHINode*>::getHashValue(Val.PN) ^ (Val.Shift>>3) ^
-             (Val.Width>>3);
-    }
-    static bool isEqual(const LoweredPHIRecord &LHS,
-                        const LoweredPHIRecord &RHS) {
-      return LHS.PN == RHS.PN && LHS.Shift == RHS.Shift &&
-             LHS.Width == RHS.Width;
-    }
-  };
-} // namespace llvm
-
+template <> struct llvm::DenseMapInfo<LoweredPHIRecord> {
+  static inline LoweredPHIRecord getEmptyKey() {
+    return LoweredPHIRecord(nullptr, 0);
+  }
+  static inline LoweredPHIRecord getTombstoneKey() {
+    return LoweredPHIRecord(nullptr, 1);
+  }
+  static unsigned getHashValue(const LoweredPHIRecord &Val) {
+    return DenseMapInfo<PHINode *>::getHashValue(Val.PN) ^ (Val.Shift >> 3) ^
+           (Val.Width >> 3);
+  }
+  static bool isEqual(const LoweredPHIRecord &LHS,
+                      const LoweredPHIRecord &RHS) {
+    return LHS.PN == RHS.PN && LHS.Shift == RHS.Shift && LHS.Width == RHS.Width;
+  }
+};
 
 /// This is an integer PHI and we know that it has an illegal type: see if it is
 /// only used by trunc or trunc(lshr) operations. If so, we split the PHI into
@@ -1291,7 +1294,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   //          \       /
   //       phi [v1] [v2]
   // Make sure all inputs are constants.
-  if (!all_of(PN.operands(), [](Value *V) { return isa<ConstantInt>(V); }))
+  if (!all_of(PN.operands(), IsaPred<ConstantInt>))
     return nullptr;
 
   BasicBlock *BB = PN.getParent();

@@ -14,10 +14,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBaseClass.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeVTable.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -30,7 +33,7 @@ class BaseClassLayout;
 class ClassLayout;
 class UDTLayoutBase;
 
-class LayoutItemBase {
+class LLVM_ABI LayoutItemBase {
 public:
   LayoutItemBase(const UDTLayoutBase *Parent, const PDBSymbol *Symbol,
                  const std::string &Name, uint32_t OffsetInParent,
@@ -70,9 +73,9 @@ protected:
 
 class VBPtrLayoutItem : public LayoutItemBase {
 public:
-  VBPtrLayoutItem(const UDTLayoutBase &Parent,
-                  std::unique_ptr<PDBSymbolTypeBuiltin> Sym, uint32_t Offset,
-                  uint32_t Size);
+  LLVM_ABI VBPtrLayoutItem(const UDTLayoutBase &Parent,
+                           std::unique_ptr<PDBSymbolTypeBuiltin> Sym,
+                           uint32_t Offset, uint32_t Size);
 
   bool isVBPtr() const override { return true; }
 
@@ -82,12 +85,12 @@ private:
 
 class DataMemberLayoutItem : public LayoutItemBase {
 public:
-  DataMemberLayoutItem(const UDTLayoutBase &Parent,
-                       std::unique_ptr<PDBSymbolData> DataMember);
+  LLVM_ABI DataMemberLayoutItem(const UDTLayoutBase &Parent,
+                                std::unique_ptr<PDBSymbolData> DataMember);
 
-  const PDBSymbolData &getDataMember();
-  bool hasUDTLayout() const;
-  const ClassLayout &getUDTLayout() const;
+  LLVM_ABI const PDBSymbolData &getDataMember();
+  LLVM_ABI bool hasUDTLayout() const;
+  LLVM_ABI const ClassLayout &getUDTLayout() const;
 
 private:
   std::unique_ptr<PDBSymbolData> DataMember;
@@ -96,8 +99,8 @@ private:
 
 class VTableLayoutItem : public LayoutItemBase {
 public:
-  VTableLayoutItem(const UDTLayoutBase &Parent,
-                   std::unique_ptr<PDBSymbolTypeVTable> VTable);
+  LLVM_ABI VTableLayoutItem(const UDTLayoutBase &Parent,
+                            std::unique_ptr<PDBSymbolTypeVTable> VTable);
 
   uint32_t getElementSize() const { return ElementSize; }
 
@@ -106,13 +109,17 @@ private:
   std::unique_ptr<PDBSymbolTypeVTable> VTable;
 };
 
-class UDTLayoutBase : public LayoutItemBase {
+class LLVM_ABI UDTLayoutBase : public LayoutItemBase {
   template <typename T> using UniquePtrVector = std::vector<std::unique_ptr<T>>;
 
 public:
   UDTLayoutBase(const UDTLayoutBase *Parent, const PDBSymbol &Sym,
                 const std::string &Name, uint32_t OffsetInParent, uint32_t Size,
                 bool IsElided);
+
+  // Explicitly non-copyable.
+  UDTLayoutBase(UDTLayoutBase const &) = delete;
+  UDTLayoutBase &operator=(UDTLayoutBase const &) = delete;
 
   uint32_t tailPadding() const override;
   ArrayRef<LayoutItemBase *> layout_items() const { return LayoutItems; }
@@ -146,8 +153,9 @@ protected:
 
 class BaseClassLayout : public UDTLayoutBase {
 public:
-  BaseClassLayout(const UDTLayoutBase &Parent, uint32_t OffsetInParent,
-                  bool Elide, std::unique_ptr<PDBSymbolTypeBaseClass> Base);
+  LLVM_ABI BaseClassLayout(const UDTLayoutBase &Parent, uint32_t OffsetInParent,
+                           bool Elide,
+                           std::unique_ptr<PDBSymbolTypeBaseClass> Base);
 
   const PDBSymbolTypeBaseClass &getBase() const { return *Base; }
   bool isVirtualBase() const { return IsVirtualBase; }
@@ -158,12 +166,10 @@ private:
   bool IsVirtualBase;
 };
 
-class ClassLayout : public UDTLayoutBase {
+class LLVM_ABI ClassLayout : public UDTLayoutBase {
 public:
   explicit ClassLayout(const PDBSymbolTypeUDT &UDT);
   explicit ClassLayout(std::unique_ptr<PDBSymbolTypeUDT> UDT);
-
-  ClassLayout(ClassLayout &&Other) = default;
 
   const PDBSymbolTypeUDT &getClass() const { return UDT; }
   uint32_t immediatePadding() const override;

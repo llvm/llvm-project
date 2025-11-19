@@ -11,7 +11,7 @@ module attributes {omp.is_target_device = false} {
       %13 = llvm.mlir.constant(1 : i32) : i32
       llvm.store %13, %arg0 : i32, !llvm.ptr loc(#loc2)
       omp.terminator
-    }
+    }  loc(#loc4)
     llvm.return
   } loc(#loc3)
 }
@@ -22,9 +22,13 @@ module attributes {omp.is_target_device = false} {
 #sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 #sp = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #cu, scope = #file,
  name = "_QQmain", file = #file, subprogramFlags = "Definition", type = #sp_ty>
+#sp1 = #llvm.di_subprogram<id = distinct[2]<>, compileUnit = #cu, scope = #file,
+ name = "__omp_offloading_target", file = #file, subprogramFlags = "Definition",
+ type = #sp_ty>
 #loc1 = loc("target.f90":1:1)
 #loc2 = loc("target.f90":46:3)
 #loc3 = loc(fused<#sp>[#loc1])
+#loc4 = loc(fused<#sp1>[#loc1])
 
-// CHECK-DAG: ![[SP:.*]] = {{.*}}!DISubprogram(name: "__omp_offloading_{{.*}}"{{.*}})
+// CHECK-DAG: ![[SP:.*]] = {{.*}}!DISubprogram(name: "__omp_offloading_target"{{.*}})
 // CHECK-DAG: !DILocation(line: 46, column: 3, scope: ![[SP]])

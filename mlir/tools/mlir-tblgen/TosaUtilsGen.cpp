@@ -1,4 +1,4 @@
-//===- TosaUtilsGen.cpp - Tosa utility generator -===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,22 +32,12 @@
 #include <list>
 #include <optional>
 
-using llvm::ArrayRef;
 using llvm::formatv;
 using llvm::raw_ostream;
-using llvm::raw_string_ostream;
 using llvm::Record;
 using llvm::RecordKeeper;
-using llvm::SmallVector;
-using llvm::SMLoc;
 using llvm::StringMap;
 using llvm::StringRef;
-using mlir::tblgen::Attribute;
-using mlir::tblgen::EnumCase;
-using mlir::tblgen::EnumInfo;
-using mlir::tblgen::NamedAttribute;
-using mlir::tblgen::NamedTypeConstraint;
-using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//
@@ -132,7 +122,7 @@ StringRef Availability::getMergeInstance() const {
 }
 
 // Returns the availability spec of the given `def`.
-std::vector<Availability> getAvailabilities(const Record &def) {
+static std::vector<Availability> getAvailabilities(const Record &def) {
   std::vector<Availability> availabilities;
 
   if (def.getValue("availability")) {

@@ -3,8 +3,12 @@
 # Test the ${function.template-arguments} frame-format variable.
 
 # RUN: split-file %s %t
-# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.cxx.out
-# RUN: %lldb -x -b -s %t/commands.input %t.cxx.out -o exit 2>&1 \
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+#
+# RUN: %clangxx_host -O0 %t/main.cpp -o %t-nodebug.out
+# RUN: %lldb -x -b -s %t/commands.input %t-nodebug.out -o exit 2>&1 \
 # RUN:       | FileCheck %s
 
 #--- main.cpp
@@ -29,7 +33,7 @@ int main() { return bar(); }
 
 #--- commands.input
 settings set -f frame-format "custom-frame '${function.template-arguments}'\n"
-break set -l 4 -f main.cpp
+break set -n func
 
 run
 bt

@@ -45,8 +45,12 @@ enum class OffloadArch {
   SM_100a,
   SM_101,
   SM_101a,
+  SM_103,
+  SM_103a,
   SM_120,
   SM_120a,
+  SM_121,
+  SM_121a,
   GFX600,
   GFX601,
   GFX602,
@@ -98,9 +102,15 @@ enum class OffloadArch {
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
+  GFX1250,
+  GFX1251,
   AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
+  // Intel CPUs
+  GRANITERAPIDS,
+  // Intel GPUs
+  BMG_G21,
   LAST,
 
   CudaDefault = OffloadArch::SM_52,
@@ -114,6 +124,18 @@ static inline bool IsNVIDIAOffloadArch(OffloadArch A) {
 static inline bool IsAMDOffloadArch(OffloadArch A) {
   // Generic processor model is for testing only.
   return A >= OffloadArch::GFX600 && A < OffloadArch::Generic;
+}
+
+static inline bool IsIntelCPUOffloadArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::GRANITERAPIDS && Arch < OffloadArch::BMG_G21;
+}
+
+static inline bool IsIntelGPUOffloadArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::BMG_G21 && Arch < OffloadArch::LAST;
+}
+
+static inline bool IsIntelOffloadArch(OffloadArch Arch) {
+  return IsIntelCPUOffloadArch(Arch) || IsIntelGPUOffloadArch(Arch);
 }
 
 const char *OffloadArchToString(OffloadArch A);

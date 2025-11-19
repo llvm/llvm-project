@@ -20,17 +20,22 @@
 
 #include "memory.h"
 #include "type-code.h"
+#include "flang-rt/runtime/allocator-registry.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
-/// Value used for asyncId when no specific stream is specified.
-static constexpr std::int64_t kNoAsyncId = -1;
+RT_OFFLOAD_VAR_GROUP_BEGIN
+/// Value used for asyncObject when no specific stream is specified.
+static constexpr std::int64_t *kNoAsyncObject = nullptr;
+RT_OFFLOAD_VAR_GROUP_END
 
 namespace Fortran::runtime {
 
@@ -98,6 +103,9 @@ public:
   explicit RT_API_ATTRS DescriptorAddendum(
       const typeInfo::DerivedType *dt = nullptr)
       : derivedType_{dt}, len_{0} {}
+  RT_API_ATTRS DescriptorAddendum(const DescriptorAddendum &that) {
+    *this = that;
+  }
   RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
   RT_API_ATTRS const typeInfo::DerivedType *derivedType() const {
@@ -163,20 +171,24 @@ public:
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(TypeCategory, int kind, void *p = nullptr,
       int rank = maxRank, const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(int characterKind, std::size_t characters,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(const typeInfo::DerivedType &dt,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
-      ISO::CFI_attribute_t attribute = CFI_attribute_other);
+      ISO::CFI_attribute_t attribute = CFI_attribute_other,
+      int allocatorIdx = kDefaultAllocator);
+
+  RT_API_ATTRS void UncheckedScalarEstablish(
+      const typeInfo::DerivedType &, void *);
 
   // To create a descriptor for a derived type the caller
   // must provide non-null dt argument.
@@ -262,9 +274,20 @@ public:
 
   template <typename A>
   RT_API_ATTRS A *ZeroBasedIndexedElement(std::size_t n) const {
-    SubscriptValue at[maxRank];
-    if (SubscriptsForZeroBasedElementNumber(at, n)) {
-      return Element<A>(at);
+    if (raw_.rank == 0) {
+      if (n == 0) {
+        return OffsetElement<A>();
+      }
+    } else if (raw_.rank == 1) {
+      const auto &dim{GetDimension(0)};
+      if (n < static_cast<std::size_t>(dim.Extent())) {
+        return OffsetElement<A>(n * dim.ByteStride());
+      }
+    } else {
+      SubscriptValue at[maxRank];
+      if (SubscriptsForZeroBasedElementNumber(at, n)) {
+        return Element<A>(at);
+      }
     }
     return nullptr;
   }
@@ -366,18 +389,45 @@ public:
   RT_API_ATTRS std::size_t SizeInBytes() const;
 
   RT_API_ATTRS std::size_t Elements() const;
+  RT_API_ATTRS std::size_t InlineElements() const {
+    int n{rank()};
+    if (n == 0) {
+      return 1;
+    } else {
+      auto elements{static_cast<std::size_t>(GetDimension(0).Extent())};
+      for (int j{1}; j < n; ++j) {
+        elements *= GetDimension(j).Extent();
+      }
+      return elements;
+    }
+  }
 
   // Allocate() assumes Elements() and ElementBytes() work;
   // define the extents of the dimensions and the element length
   // before calling.  It (re)computes the byte strides after
   // allocation.  Does not allocate automatic components or
   // perform default component initialization.
-  RT_API_ATTRS int Allocate(std::int64_t asyncId);
+  RT_API_ATTRS int Allocate(std::int64_t *asyncObject);
   RT_API_ATTRS void SetByteStrides();
 
   // Deallocates storage; does not call FINAL subroutines or
   // deallocate allocatable/automatic components.
-  RT_API_ATTRS int Deallocate();
+  RT_API_ATTRS int Deallocate() {
+    ISO::CFI_cdesc_t &descriptor{raw()};
+    void *pointer{descriptor.base_addr};
+    if (!pointer) {
+      return CFI_ERROR_BASE_ADDR_NULL;
+    } else {
+      int allocIndex{MapAllocIdx()};
+      if (allocIndex == kDefaultAllocator) {
+        std::free(pointer);
+      } else {
+        allocatorRegistry.GetDeallocator(MapAllocIdx())(pointer);
+      }
+      descriptor.base_addr = nullptr;
+      return CFI_SUCCESS;
+    }
+  }
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
@@ -392,8 +442,9 @@ public:
     bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      stridesAreContiguous &=
-          (bytes == dim.ByteStride()) || (dim.Extent() == 1);
+      if (bytes != dim.ByteStride() && dim.Extent() != 1) {
+        stridesAreContiguous = false;
+      }
       bytes *= dim.Extent();
     }
     // One and zero element arrays are contiguous even if the descriptor
@@ -406,13 +457,56 @@ public:
     return stridesAreContiguous || bytes == 0;
   }
 
+  // The result, if any, is a fixed stride value that can be used to
+  // address all elements.  It generalizes contiguity by also allowing
+  // the case of an array with extent 1 on all dimensions but one.
+  // Returns 0 for an empty array, a byte stride if one is well-defined
+  // for the array, or nullopt otherwise.
+  RT_API_ATTRS common::optional<SubscriptValue> FixedStride() const {
+    int rank{raw_.rank};
+    auto elementBytes{static_cast<SubscriptValue>(ElementBytes())};
+    if (rank == 0) {
+      return elementBytes;
+    } else if (rank == 1) {
+      const Dimension &dim{GetDimension(0)};
+      return dim.Extent() == 0 ? 0 : dim.ByteStride();
+    } else {
+      common::optional<SubscriptValue> stride;
+      auto bytes{elementBytes};
+      for (int j{0}; j < rank; ++j) {
+        const Dimension &dim{GetDimension(j)};
+        auto extent{dim.Extent()};
+        if (extent == 0) {
+          return 0; // empty array
+        } else if (extent == 1) { // ok
+        } else {
+          if (stride) { // Extent > 1 on multiple dimensions
+            if (bytes != dim.ByteStride()) { // discontiguity
+              while (++j < rank) {
+                if (GetDimension(j).Extent() == 0) {
+                  return 0; // empty array
+                }
+              }
+              return common::nullopt; // nonempty, discontiguous
+            }
+          } else {
+            stride = dim.ByteStride();
+          }
+          bytes *= extent;
+        }
+      }
+      return stride.value_or(elementBytes /*for singleton*/);
+    }
+  }
+
   // Establishes a pointer to a section or element.
   RT_API_ATTRS bool EstablishPointerSection(const Descriptor &source,
       const SubscriptValue *lower = nullptr,
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
 
-  RT_API_ATTRS void ApplyMold(const Descriptor &, int rank);
+  RT_API_ATTRS void ApplyMold(
+      const Descriptor &, int rank, bool isMonomorphic = false);
 
   RT_API_ATTRS void Check() const;
 
@@ -427,6 +521,14 @@ public:
   RT_API_ATTRS inline int GetAllocIdx() const {
     return (raw_.extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ALLOCATOR_IDX_SHIFT;
   }
+  RT_API_ATTRS int MapAllocIdx() const {
+#ifdef RT_DEVICE_COMPILATION
+    // Force default allocator in device code.
+    return kDefaultAllocator;
+#else
+    return GetAllocIdx();
+#endif
+  }
   RT_API_ATTRS inline void SetAllocIdx(int pos) {
     raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
     raw_.extra |= pos << _CFI_ALLOCATOR_IDX_SHIFT;
@@ -436,6 +538,64 @@ private:
   ISO::CFI_cdesc_t raw_;
 };
 static_assert(sizeof(Descriptor) == sizeof(ISO::CFI_cdesc_t));
+
+// Lightweight iterator-like API to simplify specialising Descriptor indexing
+// in cases where it can improve application performance. On account of the
+// purpose of this API being performance optimisation, it is up to the user to
+// do all the necessary checks to make sure the specialised variants can be used
+// safely and that Advance() is not called more times than the number of
+// elements in the Descriptor allows for.
+// Default RANK=-1 supports aray descriptors of any rank up to maxRank.
+template <int RANK = -1> class DescriptorIterator {
+private:
+  const Descriptor &descriptor;
+  SubscriptValue subscripts[maxRank];
+  std::size_t elementOffset{0};
+
+public:
+  RT_API_ATTRS DescriptorIterator(const Descriptor &descriptor)
+      : descriptor(descriptor) {
+    // We do not need the subscripts to iterate over a rank-1 array
+    if constexpr (RANK != 1) {
+      descriptor.GetLowerBounds(subscripts);
+    }
+  };
+
+  template <typename A> RT_API_ATTRS A *Get() {
+    std::size_t offset{0};
+    // The rank-1 case doesn't require looping at all
+    if constexpr (RANK == 1) {
+      offset = elementOffset;
+      // The compiler might be able to optimise this better if we know the rank
+      // at compile time
+    } else if constexpr (RANK != -1) {
+      for (int j{0}; j < RANK; ++j) {
+        offset += descriptor.SubscriptByteOffset(j, subscripts[j]);
+      }
+      // General fallback
+    } else {
+      offset = descriptor.SubscriptsToByteOffset(subscripts);
+    }
+
+    return descriptor.OffsetElement<A>(offset);
+  }
+
+  RT_API_ATTRS void Advance() {
+    if constexpr (RANK == 1) {
+      elementOffset += descriptor.GetDimension(0).ByteStride();
+    } else if constexpr (RANK != -1) {
+      for (int j{0}; j < RANK; ++j) {
+        const Dimension &dim{descriptor.GetDimension(j)};
+        if (subscripts[j]++ < dim.UpperBound()) {
+          break;
+        }
+        subscripts[j] = dim.LowerBound();
+      }
+    } else {
+      descriptor.IncrementSubscripts(subscripts);
+    }
+  }
+};
 
 // Properly configured instances of StaticDescriptor will occupy the
 // exact amount of storage required for the descriptor, its dimensional

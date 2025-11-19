@@ -354,29 +354,7 @@ public:
 
   /// Erase any analysis state associated with the given lattice anchor.
   template <typename AnchorT>
-  void eraseState(AnchorT anchor) {
-    LatticeAnchor latticeAnchor(anchor);
-
-    // Update equivalentAnchorMap.
-    for (auto &&[TypeId, eqClass] : equivalentAnchorMap) {
-      if (!eqClass.contains(latticeAnchor)) {
-        continue;
-      }
-      llvm::EquivalenceClasses<LatticeAnchor>::member_iterator leaderIt =
-          eqClass.findLeader(latticeAnchor);
-
-      // Update analysis states with new leader if needed.
-      if (*leaderIt == latticeAnchor && ++leaderIt != eqClass.member_end()) {
-        analysisStates[*leaderIt][TypeId] =
-            std::move(analysisStates[latticeAnchor][TypeId]);
-      }
-
-      eqClass.erase(latticeAnchor);
-    }
-
-    // Update analysis states.
-    analysisStates.erase(latticeAnchor);
-  }
+  void eraseState(AnchorT anchor);
 
   /// Erase all analysis states.
   void eraseAllStates() {
@@ -561,6 +539,36 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// DataFlowSolver definition
+//===----------------------------------------------------------------------===//
+// This method is defined outside `DataFlowSolver` and after `AnalysisState`
+// to prevent issues around `AnalysisState` being used before it is defined.
+template <typename AnchorT>
+void DataFlowSolver::eraseState(AnchorT anchor) {
+  LatticeAnchor latticeAnchor(anchor);
+
+  // Update equivalentAnchorMap.
+  for (auto &&[TypeId, eqClass] : equivalentAnchorMap) {
+    if (!eqClass.contains(latticeAnchor)) {
+      continue;
+    }
+    llvm::EquivalenceClasses<LatticeAnchor>::member_iterator leaderIt =
+        eqClass.findLeader(latticeAnchor);
+
+    // Update analysis states with new leader if needed.
+    if (*leaderIt == latticeAnchor && ++leaderIt != eqClass.member_end()) {
+      analysisStates[*leaderIt][TypeId] =
+          std::move(analysisStates[latticeAnchor][TypeId]);
+    }
+
+    eqClass.erase(latticeAnchor);
+  }
+
+  // Update analysis states.
+  analysisStates.erase(latticeAnchor);
+}
+
+//===----------------------------------------------------------------------===//
 // DataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
@@ -622,7 +630,7 @@ public:
   /// This function will union lattice anchor to same equivalent class if the
   /// analysis can determine the lattice content of lattice anchor is
   /// necessarily identical under the corrensponding lattice type.
-  virtual void initializeEquivalentLatticeAnchor(Operation *top) { return; }
+  virtual void initializeEquivalentLatticeAnchor(Operation *top) {}
 
 protected:
   /// Create a dependency between the given analysis state and lattice anchor
@@ -707,7 +715,7 @@ template <typename AnalysisT, typename... Args>
 AnalysisT *DataFlowSolver::load(Args &&...args) {
   childAnalyses.emplace_back(new AnalysisT(*this, std::forward<Args>(args)...));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  childAnalyses.back().get()->debugName = llvm::getTypeName<AnalysisT>();
+  childAnalyses.back()->debugName = llvm::getTypeName<AnalysisT>();
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
   return static_cast<AnalysisT *>(childAnalyses.back().get());
 }

@@ -69,7 +69,7 @@ func.func @matmul_with_extra_ops_in_func(%lhs: tensor<10x20xf32>, %rhs: tensor<2
   // expected-remark @below {{fill}}
   %fill = linalg.fill ins(%cst : f64) outs(%empty : tensor<10x15xf32>) -> tensor<10x15xf32>
 
-  %real_lhs = linalg.elemwise_binary { fun = #linalg.binary_fn<mul> } 
+  %real_lhs = linalg.mul
     ins(%lhs, %lhs : tensor<10x20xf32>, tensor<10x20xf32>) outs(%lhs : tensor<10x20xf32>) -> tensor<10x20xf32>
 
   // expected-remark @below {{matmul}}

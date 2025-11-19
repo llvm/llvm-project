@@ -12,6 +12,7 @@
 
 #include "NVPTXInstrInfo.h"
 #include "NVPTX.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -24,7 +25,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void NVPTXInstrInfo::anchor() {}
 
-NVPTXInstrInfo::NVPTXInstrInfo() : RegInfo() {}
+NVPTXInstrInfo::NVPTXInstrInfo(const NVPTXSubtarget &STI)
+    : NVPTXGenInstrInfo(STI, RegInfo), RegInfo() {}
 
 void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
@@ -35,31 +37,23 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
 
-  if (RegInfo.getRegSizeInBits(*DestRC) != RegInfo.getRegSizeInBits(*SrcRC))
+  if (DestRC != SrcRC)
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
-  if (DestRC == &NVPTX::Int1RegsRegClass) {
-    Op = NVPTX::IMOV1r;
-  } else if (DestRC == &NVPTX::Int16RegsRegClass) {
-    Op = NVPTX::MOV16r;
-  } else if (DestRC == &NVPTX::Int32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int32RegsRegClass ? NVPTX::IMOV32r
-                                             : NVPTX::BITCONVERT_32_F2I);
-  } else if (DestRC == &NVPTX::Int64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int64RegsRegClass ? NVPTX::IMOV64r
-                                             : NVPTX::BITCONVERT_64_F2I);
-  } else if (DestRC == &NVPTX::Int128RegsRegClass) {
-    Op = NVPTX::IMOV128r;
-  } else if (DestRC == &NVPTX::Float32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float32RegsRegClass ? NVPTX::FMOV32r
-                                               : NVPTX::BITCONVERT_32_I2F);
-  } else if (DestRC == &NVPTX::Float64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float64RegsRegClass ? NVPTX::FMOV64r
-                                               : NVPTX::BITCONVERT_64_I2F);
-  } else {
+  if (DestRC == &NVPTX::B1RegClass)
+    Op = NVPTX::MOV_B1_r;
+  else if (DestRC == &NVPTX::B16RegClass)
+    Op = NVPTX::MOV_B16_r;
+  else if (DestRC == &NVPTX::B32RegClass)
+    Op = NVPTX::MOV_B32_r;
+  else if (DestRC == &NVPTX::B64RegClass)
+    Op = NVPTX::MOV_B64_r;
+  else if (DestRC == &NVPTX::B128RegClass)
+    Op = NVPTX::MOV_B128_r;
+  else
     llvm_unreachable("Bad register copy");
-  }
+
   BuildMI(MBB, I, DL, get(Op), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
 }
@@ -198,24 +192,4 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
   BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
-}
-
-bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
-                                          const MachineBasicBlock *MBB,
-                                          const MachineFunction &MF) const {
-  // Prevent the scheduler from reordering & splitting up MachineInstrs
-  // which must stick together (in initially set order) to
-  // comprise a valid PTX function call sequence.
-  switch (MI.getOpcode()) {
-  case NVPTX::CallUniPrintCallRetInst1:
-  case NVPTX::CallArgBeginInst:
-  case NVPTX::CallArgI32imm:
-  case NVPTX::CallArgParam:
-  case NVPTX::LastCallArgI32imm:
-  case NVPTX::LastCallArgParam:
-  case NVPTX::CallArgEndInst1:
-    return true;
-  }
-
-  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }

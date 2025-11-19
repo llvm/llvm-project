@@ -9,6 +9,7 @@
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
@@ -25,8 +26,8 @@ mlir::gpu::GPUModuleOp cuf::getOrCreateGPUModule(mlir::ModuleOp mod,
                mlir::UnitAttr::get(ctx));
 
   mlir::OpBuilder builder(ctx);
-  auto gpuMod = builder.create<mlir::gpu::GPUModuleOp>(mod.getLoc(),
-                                                       cudaDeviceModuleName);
+  auto gpuMod = mlir::gpu::GPUModuleOp::create(builder, mod.getLoc(),
+                                               cudaDeviceModuleName);
   mlir::Block::iterator insertPt(mod.getBodyRegion().front().end());
   symTab.insert(gpuMod, insertPt);
   return gpuMod;
@@ -43,7 +44,8 @@ bool cuf::isCUDADeviceContext(mlir::Operation *op) {
 // for it.
 // If the insertion point is inside an OpenACC region op, it is considered
 // device context.
-bool cuf::isCUDADeviceContext(mlir::Region &region) {
+bool cuf::isCUDADeviceContext(mlir::Region &region,
+                              bool isDoConcurrentOffloadEnabled) {
   if (region.getParentOfType<cuf::KernelOp>())
     return true;
   if (region.getParentOfType<mlir::acc::ComputeRegionOpInterface>())
@@ -56,6 +58,9 @@ bool cuf::isCUDADeviceContext(mlir::Region &region) {
              cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
     }
   }
+  if (isDoConcurrentOffloadEnabled &&
+      region.getParentOfType<fir::DoConcurrentLoopOp>())
+    return true;
   return false;
 }
 
@@ -80,10 +85,32 @@ void cuf::genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder) {
       if (auto globalOp =
               mod.lookupSymbol<fir::GlobalOp>(addrOfOp.getSymbol())) {
         if (cuf::isRegisteredDeviceGlobal(globalOp)) {
-          builder.create<cuf::SyncDescriptorOp>(box.getLoc(),
-                                                addrOfOp.getSymbol());
+          cuf::SyncDescriptorOp::create(builder, box.getLoc(),
+                                        addrOfOp.getSymbol());
         }
       }
     }
   }
+}
+
+int cuf::computeElementByteSize(mlir::Location loc, mlir::Type type,
+                                fir::KindMapping &kindMap,
+                                bool emitErrorOnFailure) {
+  auto eleTy = fir::unwrapSequenceType(type);
+  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)})
+    return t.getWidth() / 8;
+  if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)})
+    return t.getWidth() / 8;
+  if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)})
+    return kindMap.getLogicalBitsize(t.getFKind()) / 8;
+  if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
+    int elemSize =
+        mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
+    return 2 * elemSize;
+  }
+  if (auto t{mlir::dyn_cast<fir::CharacterType>(eleTy)})
+    return kindMap.getCharacterBitsize(t.getFKind()) / 8;
+  if (emitErrorOnFailure)
+    mlir::emitError(loc, "unsupported type");
+  return 0;
 }

@@ -32,10 +32,8 @@ define <8 x i8> @concat2(<4 x i8> %A, <4 x i8> %B) {
 ;
 ; CHECK-GI-LABEL: concat2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -63,10 +61,8 @@ define <4 x i16> @concat4(<2 x i16> %A, <2 x i16> %B) {
 ;
 ; CHECK-GI-LABEL: concat4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -129,9 +125,8 @@ define <4 x half> @concat9(<2 x half> %A, <2 x half> %B) {
 ;
 ; CHECK-GI-LABEL: concat9:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -168,9 +163,8 @@ define <8 x i16> @concat_v8s16_v2s16(ptr %ptr) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldrh w8, [x0]
 ; CHECK-GI-NEXT:    ldrh w9, [x0, #2]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w9
 ; CHECK-GI-NEXT:    ret
     %a = load <2 x i16>, ptr %ptr
     %b = shufflevector <2 x i16> %a, <2 x i16> %a, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -192,8 +186,9 @@ define <16 x i8> @concat_v16s8_v4s8_load(ptr %ptrA, ptr %ptrB, ptr %ptrC, ptr %p
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x1]
-; CHECK-NEXT:    ld1 { v0.s }[2], [x2]
-; CHECK-NEXT:    ld1 { v0.s }[3], [x3]
+; CHECK-NEXT:    ldr s1, [x2]
+; CHECK-NEXT:    ld1 { v1.s }[1], [x3]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
     %A = load <4 x i8>, ptr %ptrA
     %B = load <4 x i8>, ptr %ptrB
@@ -220,15 +215,13 @@ define <16 x i8> @concat_v16s8_v4s8_reg(<4 x i8> %A, <4 x i8> %B, <4 x i8> %C, <
 ;
 ; CHECK-GI-LABEL: concat_v16s8_v4s8_reg:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    uzp1 v1.8b, v3.8b, v0.8b
 ; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    uzp1 v1.8b, v3.8b, v0.8b
 ; CHECK-GI-NEXT:    mov v0.s[2], w8
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    mov v0.s[3], w8
@@ -253,15 +246,13 @@ define <8 x i16> @concat_v8s16_v2s16_reg(<2 x i16> %A, <2 x i16> %B, <2 x i16> %
 ;
 ; CHECK-GI-LABEL: concat_v8s16_v2s16_reg:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    uzp1 v2.4h, v2.4h, v0.4h
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    uzp1 v1.4h, v3.4h, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    uzp1 v1.4h, v3.4h, v0.4h
 ; CHECK-GI-NEXT:    mov v0.s[2], w8
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    mov v0.s[3], w8

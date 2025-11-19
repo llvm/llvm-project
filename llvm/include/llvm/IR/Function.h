@@ -32,6 +32,7 @@
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -110,11 +111,6 @@ private:
   friend class SymbolTableListTraits<Function>;
 
 public:
-  /// Is this function using intrinsics to record the position of debugging
-  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
-  /// \ref BasicBlock.
-  bool IsNewDbgInfoFormat;
-
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
@@ -128,9 +124,6 @@ public:
 
   /// \see BasicBlock::convertFromNewDbgValues.
   void convertFromNewDbgValues();
-
-  void setIsNewDbgInfoFormat(bool NewVal);
-  void setNewDbgInfoFormatFlag(bool NewVal);
 
 private:
   friend class TargetLibraryInfoImpl;
@@ -759,7 +752,6 @@ public:
   /// to the newly inserted BB.
   Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
     Function::iterator FIt = BasicBlocks.insert(Position, BB);
-    BB->setIsNewDbgInfoFormat(IsNewDbgInfoFormat);
     return FIt;
   }
 
@@ -791,8 +783,8 @@ public:
 
 private:
   // These need access to the underlying BB list.
-  friend void BasicBlock::removeFromParent();
-  friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
+  LLVM_ABI friend void BasicBlock::removeFromParent();
+  LLVM_ABI friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
   template <class BB_t, class BB_i_t, class BI_t, class II_t>
   friend class InstIterator;
   friend class llvm::SymbolTableListTraits<llvm::BasicBlock>;
@@ -1036,6 +1028,25 @@ public:
   /// Return value: true =>  null pointer dereference is not undefined.
   bool nullPointerIsDefined() const;
 
+  /// Returns the alignment of the given function.
+  ///
+  /// Note that this is the alignment of the code, not the alignment of a
+  /// function pointer.
+  MaybeAlign getAlign() const { return GlobalObject::getAlign(); }
+
+  /// Sets the alignment attribute of the Function.
+  void setAlignment(Align Align) { GlobalObject::setAlignment(Align); }
+
+  /// Sets the alignment attribute of the Function.
+  ///
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
+  void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
+
+  /// Return the value for vscale based on the vscale_range attribute or 0 when
+  /// unknown.
+  unsigned getVScaleValue() const;
+
 private:
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);
@@ -1048,12 +1059,19 @@ private:
   void setValueSubclassDataBit(unsigned Bit, bool On);
 };
 
+namespace CallingConv {
+
+// TODO: Need similar function for support of argument in position. General
+// version on FunctionType + Attributes + CallingConv::ID?
+LLVM_ABI LLVM_READNONE bool supportsNonVoidReturnType(CallingConv::ID CC);
+} // namespace CallingConv
+
 /// Check whether null pointer dereferencing is considered undefined behavior
 /// for a given function or an address space.
 /// Null pointer access in non-zero address space is not considered undefined.
 /// Return value: false => null pointer dereference is undefined.
 /// Return value: true =>  null pointer dereference is not undefined.
-bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
+LLVM_ABI bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
 template <> struct OperandTraits<Function> : public HungoffOperandTraits {};
 

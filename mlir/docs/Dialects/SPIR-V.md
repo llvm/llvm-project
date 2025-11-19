@@ -734,6 +734,18 @@ func.func @loop(%count : i32) -> () {
 }
 ```
 
+Similarly to selection, loops can also yield values using `spirv.mlir.merge`. This
+mechanism allows values defined within the loop region to be used outside of it.
+
+For example
+
+```mlir
+%yielded = spirv.mlir.loop -> i32 {
+  // ...
+  spirv.mlir.merge %to_yield : i32
+}
+```
+
 ### Block argument for Phi
 
 There are no direct Phi operations in the SPIR-V dialect; SPIR-V `OpPhi`
@@ -1363,7 +1375,7 @@ the proper file in test/Dialect/SPIRV/.
 
 The generated op will automatically gain the logic for (de)serialization.
 However, tests still need to be coupled with the change to make sure no
-surprises. Serialization tests live in test/Dialect/SPIRV/Serialization.
+surprises (see [Add a new test](#add-a-new-test) below).
 
 ### Add a new enum
 
@@ -1403,6 +1415,40 @@ conversion][MlirDialectConversionSignatureConversion] might be needed as well.
 **Note**: The current validation rules of `spirv.module` require that all
 operations contained within its region are valid operations in the SPIR-V
 dialect.
+
+### Add a new test
+
+Currently the SPIR-V dialect has three types of tests that should be added or
+updated accordingly:
+
+1.  **Dialect tests** - Those tests check different aspects of the op in isolation.
+    They should include both positive and negative case, and exercise the verifier,
+    parser and printer. Dialect tests do not have to form a valid SPIR-V code and
+    should be kept as simple as possible. They are run with `mlir-opt`; and are
+    also used to test transformations.
+
+2.  **Target tests** - Those tests are designed to exercise serialization and
+    deserialization, so each module should be a valid SPIR-V module. (De)serialization
+    is tested using the `mlir-translate --test-spirv-roundtrip` option.
+
+    To ensure that the SPIR-V MLIR forms and serializes into a valid SPIR-V, the
+    `spriv-val` tool should be run on a serialized binary (`--serialize-spirv`).
+    This can be automated by adding a conditional validation section to the test:
+
+    ```
+    // RUN: %if spirv-tools %{ rm -rf %t %}
+    // RUN: %if spirv-tools %{ mkdir %t %}
+    // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+    // RUN: %if spirv-tools %{ spirv-val %t %}
+    ```
+
+    This sequence serializes and dumps each MLIR SPIR-V module into a separate
+    SPIR-V binary (MLIR allows multiple modules per files, however the SPIR-V
+    spec restricts each binary to a single module), and then runs `spirv-val`
+    on each of the file.
+
+3.  **Integration tests** - Those tests execute the MLIR code using the `mlir-runner`
+    to verify its functional correctness.
 
 ## Operation definitions
 

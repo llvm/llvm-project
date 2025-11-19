@@ -6,21 +6,41 @@
 from __future__ import print_function
 import argparse
 import os
+import re
 import sys
 from json import loads
 from collections import defaultdict
 from collections import OrderedDict
 
-
 class DILocBug:
-    def __init__(self, action, bb_name, fn_name, instr):
+    def __init__(self, origin, action, bb_name, fn_name, instr):
+        self.origin = origin
         self.action = action
         self.bb_name = bb_name
         self.fn_name = fn_name
         self.instr = instr
 
-    def __str__(self):
+    def key(self):
         return self.action + self.bb_name + self.fn_name + self.instr
+
+    def reduced_key(self, bug_pass):
+        if self.origin is not None:
+            # If we have the origin stacktrace available, we can use it to efficiently deduplicate identical errors. We
+            # just need to remove the pointer values from the string first, so that we can deduplicate across files.
+            origin_no_addr = re.sub(r"0x[0-9a-fA-F]+", "", self.origin)
+            return origin_no_addr
+        return bug_pass + self.instr
+
+    def to_dict(self):
+        result = {
+            "instr": self.instr,
+            "fn_name": self.fn_name,
+            "bb_name": self.bb_name,
+            "action": self.action,
+        }
+        if self.origin:
+            result["origin"] = self.origin
+        return result
 
 
 class DISPBug:
@@ -28,8 +48,17 @@ class DISPBug:
         self.action = action
         self.fn_name = fn_name
 
-    def __str__(self):
+    def key(self):
         return self.action + self.fn_name
+
+    def reduced_key(self, bug_pass):
+        return bug_pass + self.fn_name
+
+    def to_dict(self):
+        return {
+            "fn_name": self.fn_name,
+            "action": self.action,
+        }
 
 
 class DIVarBug:
@@ -38,9 +67,44 @@ class DIVarBug:
         self.name = name
         self.fn_name = fn_name
 
-    def __str__(self):
+    def key(self):
         return self.action + self.name + self.fn_name
 
+    def reduced_key(self, bug_pass):
+        return bug_pass + self.name
+
+    def to_dict(self):
+        return {
+            "fn_name": self.fn_name,
+            "name": self.name,
+            "action": self.action,
+        }
+
+
+def print_bugs_yaml(name, bugs_dict, indent=2):
+    def get_bug_line(indent_level: int, text: str, margin_mark: bool = False):
+        if margin_mark:
+            return "- ".rjust(indent_level * indent) + text
+        return " " * indent * indent_level + text
+
+    print(f"{name}:")
+    for bugs_file, bugs_pass_dict in sorted(iter(bugs_dict.items())):
+        print(get_bug_line(1, f"{bugs_file}:"))
+        for bugs_pass, bugs_list in sorted(iter(bugs_pass_dict.items())):
+            print(get_bug_line(2, f"{bugs_pass}:"))
+            for bug in bugs_list:
+                bug_dict = bug.to_dict()
+                first_line = True
+                # First item needs a '-' in the margin.
+                for key, val in sorted(iter(bug_dict.items())):
+                    if "\n" in val:
+                        # Output block text for any multiline string.
+                        print(get_bug_line(3, f"{key}: |", first_line))
+                        for line in val.splitlines():
+                            print(get_bug_line(4, line))
+                    else:
+                        print(get_bug_line(3, f"{key}: {val}", first_line))
+                    first_line = False
 
 # Report the bugs in form of html.
 def generate_html_report(
@@ -79,6 +143,15 @@ def generate_html_report(
         table_title_di_loc
     )
 
+    # If any DILocation bug has an origin stack trace, we emit an extra column in the table, which we must therefore
+    # determine up-front.
+    has_origin_col = any(
+        x.origin is not None
+        for per_file_bugs in di_location_bugs.values()
+        for per_pass_bugs in per_file_bugs.values()
+        for x in per_pass_bugs
+    )
+
     header_di_loc = [
         "File",
         "LLVM Pass Name",
@@ -87,6 +160,8 @@ def generate_html_report(
         "Basic Block Name",
         "Action",
     ]
+    if has_origin_col:
+        header_di_loc.append("Origin")
 
     for column in header_di_loc:
         table_di_loc += "    <th>{0}</th>\n".format(column.strip())
@@ -112,6 +187,13 @@ def generate_html_report(
                 row.append(x.fn_name)
                 row.append(x.bb_name)
                 row.append(x.action)
+                if has_origin_col:
+                    if x.origin is not None:
+                        row.append(
+                            f"<details><summary>View Origin StackTrace</summary><pre>{x.origin}</pre></details>"
+                        )
+                    else:
+                        row.append("")
                 row.append("    </tr>\n")
             # Dump the bugs info into the table.
             for column in row:
@@ -411,9 +493,20 @@ def get_json_chunk(file, start, size):
 # Parse the program arguments.
 def parse_program_args(parser):
     parser.add_argument("file_name", type=str, help="json file to process")
-    parser.add_argument("html_file", type=str, help="html file to output data")
     parser.add_argument(
-        "-compress", action="store_true", help="create reduced html report"
+        "--reduce",
+        action="store_true",
+        help="create reduced report by deduplicating bugs within and across files",
+    )
+
+    report_type_group = parser.add_mutually_exclusive_group(required=True)
+    report_type_group.add_argument(
+        "--report-html-file", type=str, help="output HTML file for the generated report"
+    )
+    report_type_group.add_argument(
+        "--acceptance-test",
+        action="store_true",
+        help="if set, produce terminal-friendly output and return 0 iff the input file is empty or does not exist",
     )
 
     return parser.parse_args()
@@ -423,27 +516,36 @@ def Main():
     parser = argparse.ArgumentParser()
     opts = parse_program_args(parser)
 
-    if not opts.html_file.endswith(".html"):
+    if opts.report_html_file is not None and not opts.report_html_file.endswith(
+        ".html"
+    ):
         print("error: The output file must be '.html'.")
         sys.exit(1)
 
+    if opts.acceptance_test:
+        if os.path.isdir(opts.file_name):
+            print(f"error: Directory passed as input file: '{opts.file_name}'")
+            sys.exit(1)
+        if not os.path.exists(opts.file_name):
+            # We treat an empty input file as a success, as debugify will generate an output file iff any errors are
+            # found, meaning we expect 0 errors to mean that the expected file does not exist.
+            print(f"No errors detected for: {opts.file_name}")
+            sys.exit(0)
+
     # Use the defaultdict in order to make multidim dicts.
-    di_location_bugs = defaultdict(lambda: defaultdict(dict))
-    di_subprogram_bugs = defaultdict(lambda: defaultdict(dict))
-    di_variable_bugs = defaultdict(lambda: defaultdict(dict))
+    di_location_bugs = defaultdict(lambda: defaultdict(list))
+    di_subprogram_bugs = defaultdict(lambda: defaultdict(list))
+    di_variable_bugs = defaultdict(lambda: defaultdict(list))
 
     # Use the ordered dict to make a summary.
     di_location_bugs_summary = OrderedDict()
     di_sp_bugs_summary = OrderedDict()
     di_var_bugs_summary = OrderedDict()
 
-    # Compress similar bugs.
-    # DILocBugs with same pass & instruction name.
-    di_loc_pass_instr_set = set()
-    # DISPBugs with same pass & function name.
-    di_sp_pass_fn_set = set()
-    # DIVarBugs with same pass & variable name.
-    di_var_pass_var_set = set()
+    # If we are using --reduce, use these sets to deduplicate similar bugs within and across files.
+    di_loc_reduced_set = set()
+    di_sp_reduced_set = set()
+    di_var_reduced_set = set()
 
     start_line = 0
     chunk_size = 1000000
@@ -470,9 +572,9 @@ def Main():
                 skipped_lines += 1
                 continue
 
-            di_loc_bugs = []
-            di_sp_bugs = []
-            di_var_bugs = []
+            di_loc_bugs = di_location_bugs.get("bugs_file", {}).get("bugs_pass", [])
+            di_sp_bugs = di_subprogram_bugs.get("bugs_file", {}).get("bugs_pass", [])
+            di_var_bugs = di_variable_bugs.get("bugs_file", {}).get("bugs_pass", [])
 
             # Omit duplicated bugs.
             di_loc_set = set()
@@ -487,6 +589,7 @@ def Main():
 
                 if bugs_metadata == "DILocation":
                     try:
+                        origin = bug.get("origin")
                         action = bug["action"]
                         bb_name = bug["bb-name"]
                         fn_name = bug["fn-name"]
@@ -494,13 +597,13 @@ def Main():
                     except:
                         skipped_bugs += 1
                         continue
-                    di_loc_bug = DILocBug(action, bb_name, fn_name, instr)
-                    if not str(di_loc_bug) in di_loc_set:
-                        di_loc_set.add(str(di_loc_bug))
-                        if opts.compress:
-                            pass_instr = bugs_pass + instr
-                            if not pass_instr in di_loc_pass_instr_set:
-                                di_loc_pass_instr_set.add(pass_instr)
+                    di_loc_bug = DILocBug(origin, action, bb_name, fn_name, instr)
+                    if not di_loc_bug.key() in di_loc_set:
+                        di_loc_set.add(di_loc_bug.key())
+                        if opts.reduce:
+                            reduced_key = di_loc_bug.reduced_key(bugs_pass)
+                            if not reduced_key in di_loc_reduced_set:
+                                di_loc_reduced_set.add(reduced_key)
                                 di_loc_bugs.append(di_loc_bug)
                         else:
                             di_loc_bugs.append(di_loc_bug)
@@ -518,12 +621,12 @@ def Main():
                         skipped_bugs += 1
                         continue
                     di_sp_bug = DISPBug(action, name)
-                    if not str(di_sp_bug) in di_sp_set:
-                        di_sp_set.add(str(di_sp_bug))
-                        if opts.compress:
-                            pass_fn = bugs_pass + name
-                            if not pass_fn in di_sp_pass_fn_set:
-                                di_sp_pass_fn_set.add(pass_fn)
+                    if not di_sp_bug.key() in di_sp_set:
+                        di_sp_set.add(di_sp_bug.key())
+                        if opts.reduce:
+                            reduced_key = di_sp_bug.reduced_key(bugs_pass)
+                            if not reduced_key in di_sp_reduced_set:
+                                di_sp_reduced_set.add(reduced_key)
                                 di_sp_bugs.append(di_sp_bug)
                         else:
                             di_sp_bugs.append(di_sp_bug)
@@ -542,12 +645,12 @@ def Main():
                         skipped_bugs += 1
                         continue
                     di_var_bug = DIVarBug(action, name, fn_name)
-                    if not str(di_var_bug) in di_var_set:
-                        di_var_set.add(str(di_var_bug))
-                        if opts.compress:
-                            pass_var = bugs_pass + name
-                            if not pass_var in di_var_pass_var_set:
-                                di_var_pass_var_set.add(pass_var)
+                    if not di_var_bug.key() in di_var_set:
+                        di_var_set.add(di_var_bug.key())
+                        if opts.reduce:
+                            reduced_key = di_var_bug.reduced_key(bugs_pass)
+                            if not reduced_key in di_var_reduced_set:
+                                di_var_reduced_set.add(reduced_key)
                                 di_var_bugs.append(di_var_bug)
                         else:
                             di_var_bugs.append(di_var_bug)
@@ -562,19 +665,40 @@ def Main():
                     skipped_bugs += 1
                     continue
 
-            di_location_bugs[bugs_file][bugs_pass] = di_loc_bugs
-            di_subprogram_bugs[bugs_file][bugs_pass] = di_sp_bugs
-            di_variable_bugs[bugs_file][bugs_pass] = di_var_bugs
+            if di_loc_bugs:
+                di_location_bugs[bugs_file][bugs_pass] = di_loc_bugs
+            if di_sp_bugs:
+                di_subprogram_bugs[bugs_file][bugs_pass] = di_sp_bugs
+            if di_var_bugs:
+                di_variable_bugs[bugs_file][bugs_pass] = di_var_bugs
 
-    generate_html_report(
-        di_location_bugs,
-        di_subprogram_bugs,
-        di_variable_bugs,
-        di_location_bugs_summary,
-        di_sp_bugs_summary,
-        di_var_bugs_summary,
-        opts.html_file,
-    )
+    if opts.report_html_file is not None:
+        generate_html_report(
+            di_location_bugs,
+            di_subprogram_bugs,
+            di_variable_bugs,
+            di_location_bugs_summary,
+            di_sp_bugs_summary,
+            di_var_bugs_summary,
+            opts.report_html_file,
+        )
+    else:
+        # Pretty(ish) print the detected bugs, but check if any exist first so that we don't print an empty dict.
+        if di_location_bugs:
+            print_bugs_yaml("DILocation Bugs", di_location_bugs)
+        if di_subprogram_bugs:
+            print_bugs_yaml("DISubprogram Bugs", di_subprogram_bugs)
+        if di_variable_bugs:
+            print_bugs_yaml("DIVariable Bugs", di_variable_bugs)
+
+    if opts.acceptance_test:
+        if any((di_location_bugs, di_subprogram_bugs, di_variable_bugs)):
+            # Add a newline gap after printing at least one error.
+            print()
+            print(f"Errors detected for: {opts.file_name}")
+            sys.exit(1)
+        else:
+            print(f"No errors detected for: {opts.file_name}")
 
     if skipped_lines > 0:
         print("Skipped lines: " + str(skipped_lines))

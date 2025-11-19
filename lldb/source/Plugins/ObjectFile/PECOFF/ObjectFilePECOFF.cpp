@@ -919,8 +919,7 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
     uint32_t idx = symtab.AddSymbol(symbol);
     export_list.push_back(std::make_pair(function_rva, idx));
   }
-  std::stable_sort(export_list.begin(), export_list.end(),
-                   RVASymbolListCompareRVA);
+  llvm::stable_sort(export_list, RVASymbolListCompareRVA);
   return export_list;
 }
 
@@ -977,27 +976,16 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
       return eSectionTypeData;
   }
 
+  if (sect_name.consume_front(".debug_"))
+    return GetDWARFSectionTypeFromName(sect_name);
+
   SectionType section_type =
       llvm::StringSwitch<SectionType>(sect_name)
           .Case(".debug", eSectionTypeDebug)
           .Case(".stabstr", eSectionTypeDataCString)
           .Case(".reloc", eSectionTypeOther)
-          .Case(".debug_abbrev", eSectionTypeDWARFDebugAbbrev)
-          .Case(".debug_aranges", eSectionTypeDWARFDebugAranges)
-          .Case(".debug_frame", eSectionTypeDWARFDebugFrame)
-          .Case(".debug_info", eSectionTypeDWARFDebugInfo)
-          .Case(".debug_line", eSectionTypeDWARFDebugLine)
-          .Case(".debug_loc", eSectionTypeDWARFDebugLoc)
-          .Case(".debug_loclists", eSectionTypeDWARFDebugLocLists)
-          .Case(".debug_macinfo", eSectionTypeDWARFDebugMacInfo)
-          .Case(".debug_names", eSectionTypeDWARFDebugNames)
-          .Case(".debug_pubnames", eSectionTypeDWARFDebugPubNames)
-          .Case(".debug_pubtypes", eSectionTypeDWARFDebugPubTypes)
-          .Case(".debug_ranges", eSectionTypeDWARFDebugRanges)
-          .Case(".debug_str", eSectionTypeDWARFDebugStr)
-          .Case(".debug_types", eSectionTypeDWARFDebugTypes)
           // .eh_frame can be truncated to 8 chars.
-          .Cases(".eh_frame", ".eh_fram", eSectionTypeEHFrame)
+          .Cases({".eh_frame", ".eh_fram"}, eSectionTypeEHFrame)
           .Case(".gosymtab", eSectionTypeGoSymtab)
           .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
           .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)

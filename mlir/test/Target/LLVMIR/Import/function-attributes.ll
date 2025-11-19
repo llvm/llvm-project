@@ -303,18 +303,6 @@ declare void @align_decl() align 64
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_unsafe_fp_math_true
-; CHECK-SAME: attributes {unsafe_fp_math = true}
-declare void @func_attr_unsafe_fp_math_true() "unsafe-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_unsafe_fp_math_false
-; CHECK-SAME: attributes {unsafe_fp_math = false}
-declare void @func_attr_unsafe_fp_math_false() "unsafe-fp-math"="false"
-
-; // -----
-
 ; CHECK-LABEL: @func_attr_no_infs_fp_math_true
 ; CHECK-SAME: attributes {no_infs_fp_math = true}
 declare void @func_attr_no_infs_fp_math_true() "no-infs-fp-math"="true"
@@ -336,18 +324,6 @@ declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
 ; CHECK-LABEL: @func_attr_no_nans_fp_math_false
 ; CHECK-SAME: attributes {no_nans_fp_math = false}
 declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_approx_func_fp_math_true
-; CHECK-SAME: attributes {approx_func_fp_math = true}
-declare void @func_attr_approx_func_fp_math_true() "approx-func-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_approx_func_fp_math_false
-; CHECK-SAME: attributes {approx_func_fp_math = false}
-declare void @func_attr_approx_func_fp_math_false() "approx-func-fp-math"="false"
 
 ; // -----
 
@@ -381,6 +357,18 @@ declare void @func_attr_fp_contract_fast() "fp-contract"="fast"
 
 // -----
 
+; CHECK-LABEL: @func_attr_instrument_function_entry
+; CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+declare void @func_attr_instrument_function_entry() "instrument-function-entry"="__cyg_profile_func_enter"
+
+// -----
+
+; CHECK-LABEL: @func_attr_instrument_function_exit
+; CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
+declare void @func_attr_instrument_function_exit() "instrument-function-exit"="__cyg_profile_func_exit"
+
+// -----
+
 ; CHECK-LABEL: @noinline_attribute
 ; CHECK-SAME: attributes {no_inline}
 declare void @noinline_attribute() noinline
@@ -390,6 +378,12 @@ declare void @noinline_attribute() noinline
 ; CHECK-LABEL: @alwaysinline_attribute
 ; CHECK-SAME: attributes {always_inline}
 declare void @alwaysinline_attribute() alwaysinline
+
+// -----
+
+; CHECK-LABEL: @inlinehint_attribute
+; CHECK-SAME: attributes {inline_hint}
+declare void @inlinehint_attribute() inlinehint
 
 // -----
 
@@ -414,3 +408,8 @@ declare void @nounwind_attribute() nounwind
 ; CHECK-LABEL: @willreturn_attribute
 ; CHECK-SAME: attributes {will_return}
 declare void @willreturn_attribute() willreturn
+
+// -----
+
+; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
+declare void @test() preallocated(i32)

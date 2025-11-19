@@ -22,6 +22,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -155,23 +156,50 @@ static TokenSequence TokenPasting(TokenSequence &&text) {
   }
   TokenSequence result;
   std::size_t tokens{text.SizeInTokens()};
-  bool pasting{false};
+  std::optional<CharBlock> before; // last non-blank token before ##
   for (std::size_t j{0}; j < tokens; ++j) {
-    if (IsTokenPasting(text.TokenAt(j))) {
-      if (!pasting) {
+    CharBlock after{text.TokenAt(j)};
+    if (!before) {
+      if (IsTokenPasting(after)) {
         while (!result.empty() &&
             result.TokenAt(result.SizeInTokens() - 1).IsBlank()) {
           result.pop_back();
         }
         if (!result.empty()) {
-          result.ReopenLastToken();
-          pasting = true;
+          before = result.TokenAt(result.SizeInTokens() - 1);
+        }
+      } else {
+        result.AppendRange(text, j, 1);
+      }
+    } else if (after.IsBlank() || IsTokenPasting(after)) {
+      // drop it
+    } else { // pasting before ## after
+      bool doPaste{false};
+      char last{before->back()};
+      char first{after.front()};
+      // Apply basic sanity checking to pasting so avoid constructing a bogus
+      // token that might cause macro replacement to fail, like "macro(".
+      if (IsLegalInIdentifier(last) && IsLegalInIdentifier(first)) {
+        doPaste = true;
+      } else if (IsDecimalDigit(first) &&
+          (last == '.' || last == '+' || last == '-')) {
+        doPaste = true; // 1. ## 0, - ## 1
+      } else if (before->size() == 1 && after.size() == 1) {
+        if (first == last &&
+            (last == '<' || last == '>' || last == '*' || last == '/' ||
+                last == '=' || last == '&' || last == '|' || last == ':')) {
+          // Fortran **, //, ==, ::
+          // C <<, >>, &&, || for use in #if expressions
+          doPaste = true;
+        } else if (first == '=' && (last == '!' || last == '/')) {
+          doPaste = true; // != and /=
         }
       }
-    } else if (pasting && text.TokenAt(j).IsBlank()) {
-    } else {
+      if (doPaste) {
+        result.ReopenLastToken();
+      }
       result.AppendRange(text, j, 1);
-      pasting = false;
+      before.reset();
     }
   }
   return result;
@@ -299,10 +327,85 @@ void Preprocessor::DefineStandardMacros() {
   Define("__FILE__"s, "__FILE__"s);
   Define("__LINE__"s, "__LINE__"s);
   Define("__TIMESTAMP__"s, "__TIMESTAMP__"s);
+  Define("__COUNTER__"s, "__COUNTER__"s);
+}
+
+static const std::string idChars{
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789"s};
+
+static std::optional<std::vector<std::string>> TokenizeMacroNameAndArgs(
+    const std::string &str) {
+  // TODO: variadic macros on the command line (?)
+  std::vector<std::string> names;
+  for (std::string::size_type at{0};;) {
+    auto nameStart{str.find_first_not_of(" "s, at)};
+    if (nameStart == str.npos) {
+      return std::nullopt;
+    }
+    auto nameEnd{str.find_first_not_of(idChars, nameStart)};
+    if (nameEnd == str.npos) {
+      return std::nullopt;
+    }
+    auto punc{str.find_first_not_of(" "s, nameEnd)};
+    if (punc == str.npos) {
+      return std::nullopt;
+    }
+    if ((at == 0 && str[punc] != '(') ||
+        (at > 0 && str[punc] != ',' && str[punc] != ')')) {
+      return std::nullopt;
+    }
+    names.push_back(str.substr(nameStart, nameEnd - nameStart));
+    at = punc + 1;
+    if (str[punc] == ')') {
+      if (str.find_first_not_of(" "s, at) != str.npos) {
+        return std::nullopt;
+      } else {
+        return names;
+      }
+    }
+  }
+}
+
+TokenSequence Preprocessor::TokenizeMacroBody(const std::string &str) {
+  TokenSequence tokens;
+  Provenance provenance{allSources_.AddCompilerInsertion(str).start()};
+  auto end{str.size()};
+  for (std::string::size_type at{0}; at < end;) {
+    // Alternate between tokens that are identifiers (and therefore subject
+    // to argument replacement) and those that are not.
+    auto start{str.find_first_of(idChars, at)};
+    if (start == str.npos) {
+      tokens.Put(str.substr(at), provenance + at);
+      break;
+    } else if (start > at) {
+      tokens.Put(str.substr(at, start - at), provenance + at);
+    }
+    at = str.find_first_not_of(idChars, start + 1);
+    if (at == str.npos) {
+      tokens.Put(str.substr(start), provenance + start);
+      break;
+    } else {
+      tokens.Put(str.substr(start, at - start), provenance + start);
+    }
+  }
+  return tokens;
 }
 
 void Preprocessor::Define(const std::string &macro, const std::string &value) {
-  definitions_.emplace(SaveTokenAsName(macro), Definition{value, allSources_});
+  if (auto lhs{TokenizeMacroNameAndArgs(macro)}) {
+    // function-like macro
+    CharBlock macroName{SaveTokenAsName(lhs->front())};
+    auto iter{lhs->begin()};
+    ++iter;
+    std::vector<std::string> argNames{iter, lhs->end()};
+    auto rhs{TokenizeMacroBody(value)};
+    definitions_.emplace(std::make_pair(macroName,
+        Definition{
+            argNames, rhs, 0, rhs.SizeInTokens(), /*isVariadic=*/false}));
+  } else { // keyword macro
+    definitions_.emplace(
+        SaveTokenAsName(macro), Definition{value, allSources_});
+  }
 }
 
 void Preprocessor::Undefine(std::string macro) { definitions_.erase(macro); }
@@ -311,7 +414,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
     const TokenSequence &input, Prescanner &prescanner,
     std::optional<std::size_t> *partialFunctionLikeMacro, bool inIfExpression) {
   // Do quick scan for any use of a defined name.
-  if (definitions_.empty()) {
+  if (!inIfExpression && definitions_.empty()) {
     return std::nullopt;
   }
   std::size_t tokens{input.SizeInTokens()};
@@ -421,6 +524,8 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
               repl = "\""s + time + '"';
             }
           }
+        } else if (name == "__COUNTER__") {
+          repl = std::to_string(counterVal_++);
         }
         if (!repl.empty()) {
           ProvenanceRange insert{allSources_.AddCompilerInsertion(repl)};
@@ -637,12 +742,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
           "# missing or invalid name"_err_en_US);
     } else {
       if (dir.IsAnythingLeft(++j)) {
-        if (prescanner.features().ShouldWarn(
-                common::UsageWarning::Portability)) {
-          prescanner.Say(common::UsageWarning::Portability,
-              dir.GetIntervalProvenanceRange(j, tokens - j),
-              "#undef: excess tokens at end of directive"_port_en_US);
-        }
+        prescanner.Warn(common::UsageWarning::Portability,
+            dir.GetIntervalProvenanceRange(j, tokens - j),
+            "#undef: excess tokens at end of directive"_port_en_US);
       } else {
         definitions_.erase(nameToken);
       }
@@ -655,12 +757,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
           "#%s: missing name"_err_en_US, dirName);
     } else {
       if (dir.IsAnythingLeft(++j)) {
-        if (prescanner.features().ShouldWarn(
-                common::UsageWarning::Portability)) {
-          prescanner.Say(common::UsageWarning::Portability,
-              dir.GetIntervalProvenanceRange(j, tokens - j),
-              "#%s: excess tokens at end of directive"_port_en_US, dirName);
-        }
+        prescanner.Warn(common::UsageWarning::Portability,
+            dir.GetIntervalProvenanceRange(j, tokens - j),
+            "#%s: excess tokens at end of directive"_port_en_US, dirName);
       }
       doThen = IsNameDefined(nameToken) == (dirName == "ifdef");
     }
@@ -679,12 +778,11 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     }
   } else if (dirName == "else") {
     if (dir.IsAnythingLeft(j)) {
-      if (prescanner.features().ShouldWarn(common::UsageWarning::Portability)) {
-        prescanner.Say(common::UsageWarning::Portability,
-            dir.GetIntervalProvenanceRange(j, tokens - j),
-            "#else: excess tokens at end of directive"_port_en_US);
-      }
-    } else if (ifStack_.empty()) {
+      prescanner.Warn(common::UsageWarning::Portability,
+          dir.GetIntervalProvenanceRange(j, tokens - j),
+          "#else: excess tokens at end of directive"_port_en_US);
+    }
+    if (ifStack_.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
           "#else: not nested within #if, #ifdef, or #ifndef"_err_en_US);
     } else if (ifStack_.top() != CanDeadElseAppear::Yes) {
@@ -709,11 +807,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     }
   } else if (dirName == "endif") {
     if (dir.IsAnythingLeft(j)) {
-      if (prescanner.features().ShouldWarn(common::UsageWarning::Portability)) {
-        prescanner.Say(common::UsageWarning::Portability,
-            dir.GetIntervalProvenanceRange(j, tokens - j),
-            "#endif: excess tokens at end of directive"_port_en_US);
-      }
+      prescanner.Warn(common::UsageWarning::Portability,
+          dir.GetIntervalProvenanceRange(j, tokens - j),
+          "#endif: excess tokens at end of directive"_port_en_US);
     } else if (ifStack_.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
           "#endif: no #if, #ifdef, or #ifndef"_err_en_US);
@@ -760,12 +856,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
         ++k;
       }
       if (k >= pathTokens) {
-        if (prescanner.features().ShouldWarn(
-                common::UsageWarning::Portability)) {
-          prescanner.Say(common::UsageWarning::Portability,
-              dir.GetIntervalProvenanceRange(j, tokens - j),
-              "#include: expected '>' at end of included file"_port_en_US);
-        }
+        prescanner.Warn(common::UsageWarning::Portability,
+            dir.GetIntervalProvenanceRange(j, tokens - j),
+            "#include: expected '>' at end of included file"_port_en_US);
       }
       TokenSequence braced{path, 1, k - 1};
       include = braced.ToString();
@@ -791,11 +884,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     }
     k = path.SkipBlanks(k + 1);
     if (k < pathTokens && path.TokenAt(k).ToString() != "!") {
-      if (prescanner.features().ShouldWarn(common::UsageWarning::Portability)) {
-        prescanner.Say(common::UsageWarning::Portability,
-            dir.GetIntervalProvenanceRange(j, tokens - j),
-            "#include: extra stuff ignored after file name"_port_en_US);
-      }
+      prescanner.Warn(common::UsageWarning::Portability,
+          dir.GetIntervalProvenanceRange(j, tokens - j),
+          "#include: extra stuff ignored after file name"_port_en_US);
     }
     std::string buf;
     llvm::raw_string_ostream error{buf};
@@ -1197,15 +1288,19 @@ static std::int64_t ExpressionValue(const TokenSequence &token,
       left = right >= 64 ? 0 : left >> right;
       break;
     case BITAND:
-    case AND:
       left = left & right;
       break;
     case BITXOR:
       left = left ^ right;
       break;
     case BITOR:
-    case OR:
       left = left | right;
+      break;
+    case AND:
+      left = left && right;
+      break;
+    case OR:
+      left = left || right;
       break;
     case LT:
       left = -(left < right);

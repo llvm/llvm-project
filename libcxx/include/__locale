@@ -56,7 +56,8 @@ _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale&);
 
 class _LIBCPP_EXPORTED_FROM_ABI locale {
 public:
-  // locale is essentially a shared_ptr that doesn't support weak_ptrs and never got a move constructor.
+  // locale is essentially a shared_ptr that doesn't support weak_ptrs and never got a move constructor,
+  // so it is trivially relocatable.
   using __trivially_relocatable _LIBCPP_NODEBUG = locale;
 
   // types:
@@ -583,22 +584,10 @@ public:
 #  ifdef _CACHED_RUNES
   static const size_t table_size = _CACHED_RUNES;
 #  else
-  static const size_t table_size = 256; // FIXME: Don't hardcode this.
+  static const size_t table_size = 256;
 #  endif
   _LIBCPP_HIDE_FROM_ABI const mask* table() const _NOEXCEPT { return __tab_; }
   static const mask* classic_table() _NOEXCEPT;
-#  if defined(__GLIBC__) || defined(__EMSCRIPTEN__)
-  static const int* __classic_upper_table() _NOEXCEPT;
-  static const int* __classic_lower_table() _NOEXCEPT;
-#  endif
-#  if defined(__NetBSD__)
-  static const short* __classic_upper_table() _NOEXCEPT;
-  static const short* __classic_lower_table() _NOEXCEPT;
-#  endif
-#  if defined(__MVS__)
-  static const unsigned short* __classic_upper_table() _NOEXCEPT;
-  static const unsigned short* __classic_lower_table() _NOEXCEPT;
-#  endif
 
 protected:
   ~ctype() override;

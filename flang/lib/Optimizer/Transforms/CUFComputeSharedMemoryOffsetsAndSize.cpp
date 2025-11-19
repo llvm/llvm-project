@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Value.h"
@@ -36,6 +37,14 @@ namespace fir {
 using namespace Fortran::runtime::cuda;
 
 namespace {
+
+static bool isAssumedSize(mlir::ValueRange shape) {
+  if (shape.size() != 1)
+    return false;
+  if (llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(shape[0].getDefiningOp()))
+    return true;
+  return false;
+}
 
 struct CUFComputeSharedMemoryOffsetsAndSize
     : public fir::impl::CUFComputeSharedMemoryOffsetsAndSizeBase<
@@ -81,21 +90,22 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           alignment = std::max(alignment, align);
           uint64_t tySize = dl->getTypeSize(ty);
           ++nbDynamicSharedVariables;
-          if (crtDynOffset) {
-            sharedOp.getOffsetMutable().assign(
-                builder.createConvert(loc, i32Ty, crtDynOffset));
-          } else {
+          if (isAssumedSize(sharedOp.getShape()) || !crtDynOffset) {
             mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
             sharedOp.getOffsetMutable().assign(zero);
+          } else {
+            sharedOp.getOffsetMutable().assign(
+                builder.createConvert(loc, i32Ty, crtDynOffset));
           }
 
           mlir::Value dynSize =
               builder.createIntegerConstant(loc, idxTy, tySize);
           for (auto extent : sharedOp.getShape())
-            dynSize = builder.create<mlir::arith::MulIOp>(loc, dynSize, extent);
+            dynSize =
+                mlir::arith::MulIOp::create(builder, loc, dynSize, extent);
           if (crtDynOffset)
-            crtDynOffset =
-                builder.create<mlir::arith::AddIOp>(loc, crtDynOffset, dynSize);
+            crtDynOffset = mlir::arith::AddIOp::create(builder, loc,
+                                                       crtDynOffset, dynSize);
           else
             crtDynOffset = dynSize;
 
@@ -132,7 +142,11 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
       std::string sharedMemGlobalName =
           (funcOp.getName() + llvm::Twine(cudaSharedMemSuffix)).str();
-      mlir::StringAttr linkage = builder.createInternalLinkage();
+      // Dynamic shared memory needs an external linkage while static shared
+      // memory needs an internal linkage.
+      mlir::StringAttr linkage = nbDynamicSharedVariables > 0
+                                     ? builder.createExternalLinkage()
+                                     : builder.createInternalLinkage();
       builder.setInsertionPointToEnd(gpuMod.getBody());
       llvm::SmallVector<mlir::NamedAttribute> attrs;
       auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
@@ -141,9 +155,9 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           fir::GlobalOp::getDataAttrAttrName(globalOpName),
           cuf::DataAttributeAttr::get(gpuMod.getContext(),
                                       cuf::DataAttribute::Shared)));
-      auto sharedMem = builder.create<fir::GlobalOp>(
-          funcOp.getLoc(), sharedMemGlobalName, false, false, sharedMemType,
-          init, linkage, attrs);
+      auto sharedMem = fir::GlobalOp::create(
+          builder, funcOp.getLoc(), sharedMemGlobalName, false, false,
+          sharedMemType, init, linkage, attrs);
       sharedMem.setAlignment(alignment);
     }
   }
