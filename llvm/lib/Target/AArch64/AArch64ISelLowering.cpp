@@ -19454,39 +19454,26 @@ static bool IsSVECntIntrinsic(SDValue S) {
   case Intrinsic::aarch64_sve_cntp:
     return true;
   }
-  return {};
-}
-
-// Creates a constexpr (IID, VT) pair that can be used in switch cases.
-static constexpr uint64_t intrinsicWithType(Intrinsic::ID IID, MVT VT) {
-  static_assert(sizeof(VT.SimpleTy) <= sizeof(uint32_t) &&
-                    sizeof(IID) <= sizeof(uint32_t),
-                "IID and MVT should fit in 64 bits");
-  return (uint64_t(IID) << 32) | uint64_t(VT.SimpleTy);
+  return false;
 }
 
 // Returns the maximum (scalable) value that can be returned by an SVE count
 // intrinsic. The supported intrinsics are covered by IsSVECntIntrinsic.
 static ElementCount getMaxValueForSVECntIntrinsic(SDValue Op) {
   Intrinsic::ID IID = getIntrinsicID(Op.getNode());
-  MVT VT = IID == Intrinsic::aarch64_sve_cntp
-               ? Op.getOperand(1).getValueType().getSimpleVT()
-               : MVT::Untyped;
-  switch (intrinsicWithType(IID, VT)) {
-  case intrinsicWithType(Intrinsic::aarch64_sve_cntd, MVT::Untyped):
-  case intrinsicWithType(Intrinsic::aarch64_sve_cntp, MVT::nxv2i1):
+  if (IID == Intrinsic::aarch64_sve_cntp)
+    return Op.getOperand(1).getValueType().getVectorElementCount();
+  switch (IID) {
+  case Intrinsic::aarch64_sve_cntd:
     return ElementCount::getScalable(2);
-  case intrinsicWithType(Intrinsic::aarch64_sve_cntw, MVT::Untyped):
-  case intrinsicWithType(Intrinsic::aarch64_sve_cntp, MVT::nxv4i1):
+  case Intrinsic::aarch64_sve_cntw:
     return ElementCount::getScalable(4);
-  case intrinsicWithType(Intrinsic::aarch64_sve_cnth, MVT::Untyped):
-  case intrinsicWithType(Intrinsic::aarch64_sve_cntp, MVT::nxv8i1):
+  case Intrinsic::aarch64_sve_cnth:
     return ElementCount::getScalable(8);
-  case intrinsicWithType(Intrinsic::aarch64_sve_cntb, MVT::Untyped):
-  case intrinsicWithType(Intrinsic::aarch64_sve_cntp, MVT::nxv16i1):
+  case Intrinsic::aarch64_sve_cntb:
     return ElementCount::getScalable(16);
   default:
-    llvm_unreachable("unexpected intrininc type pair");
+    llvm_unreachable("unexpected intrininc");
   }
 }
 
