@@ -6591,7 +6591,7 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
 
     // Multi-use reductions (e.g., used in FindLastIV patterns) are handled
     // separately and should not be considered for in-loop reductions.
-    if (RdxDesc.isPhiMultiUse())
+    if (RdxDesc.hasLoopUsesOutsideReductionChain())
       continue;
 
     // We don't collect reductions that are type promoted (yet).
@@ -7253,9 +7253,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     Value *StartV = getStartValueFromReductionResult(EpiRedResult);
     Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
     using namespace llvm::PatternMatch;
-    MainResumeValue = cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())
-                          ->getOperand(0)
-                          ->getUnderlyingValue();
     Value *Cmp, *OrigResumeV, *CmpOp;
     [[maybe_unused]] bool IsExpectedPattern =
         match(MainResumeValue,
@@ -7266,9 +7263,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
          ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
     MainResumeValue = OrigResumeV;
-  } else if (auto *VPI =
-                 dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
-    MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
   }
 
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
@@ -8008,11 +8002,9 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   SmallVector<std::pair<PartialReductionChain, unsigned>>
       PartialReductionChains;
   for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
-    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(
-            RdxDesc.getRecurrenceKind()))
-      continue;
-    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
-                        PartialReductionChains);
+    if (Instruction *RdxExitInstr = RdxDesc.getLoopExitInstr()) {
+      getScaledReductions(Phi, RdxExitInstr, Range, PartialReductionChains);
+    }
   }
 
   // A partial reduction is invalid if any of its extends are used by
@@ -8193,6 +8185,9 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       return Recipe;
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
+    assert((Legal->isReductionVariable(Phi) ||
+            Legal->isFixedOrderRecurrence(Phi)) &&
+           "can only widen reductions and fixed-order recurrences here");
     VPValue *StartV = R->getOperand(0);
     if (Legal->isReductionVariable(Phi)) {
       const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
@@ -8205,18 +8200,13 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor,
-          RdxDesc.isPhiMultiUse());
+          RdxDesc.hasLoopUsesOutsideReductionChain());
     } else if (Legal->isFixedOrderRecurrence(Phi)) {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
       // recurrences in the chain, the fixed order recurrence should be modeled
       // directly, enabling more efficient codegen.
       PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
-    } else {
-      // Failed to identify phi as reduction or fixed-order recurrence. Keep the
-      // original VPWidenPHIRecipe for now, to be legalized later if possible.
-      setRecipe(Phi, R);
-      return nullptr;
     }
     // Add backedge value.
     PhiRecipe->addOperand(R->getOperand(1));
@@ -8490,12 +8480,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
-      if (!Recipe) {
-        if (isa<VPPhi>(SingleDef))
-          continue;
+      if (!Recipe)
         Recipe = RecipeBuilder.handleReplication(cast<VPInstruction>(SingleDef),
                                                  Range);
-      }
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
@@ -8543,8 +8530,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
 
-  // Try to legalize reductions with multiple in-loop uses.
-  if (!VPlanTransforms::runPass(VPlanTransforms::legalizeMultiUseReductions,
+  // Apply mandatory transformation to handle reductions with multiple in-loop
+  // uses if possible, bail out otherwise.
+  if (!VPlanTransforms::runPass(VPlanTransforms::handleMultiUseReductions,
                                 *Plan))
     return nullptr;
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with

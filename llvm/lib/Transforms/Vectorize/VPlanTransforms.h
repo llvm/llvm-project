@@ -148,7 +148,7 @@ struct VPlanTransforms {
   /// Try to legalize reductions with multiple in-loop uses. Currently only
   /// min/max reductions used by FindLastIV reductions are supported. Otherwise
   /// return false.
-  static bool legalizeMultiUseReductions(VPlan &Plan);
+  static bool handleMultiUseReductions(VPlan &Plan);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes

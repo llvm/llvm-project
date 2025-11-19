@@ -2072,9 +2072,8 @@ public:
   static inline bool classof(const VPValue *V) {
     return isa<VPHeaderPHIRecipe>(V->getDefiningRecipe());
   }
-  static inline bool classof(const VPSingleDefRecipe *B) {
-    return B->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
-           B->getVPDefID() <= VPDef::VPLastHeaderPHISC;
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return isa<VPHeaderPHIRecipe>(static_cast<const VPRecipeBase *>(R));
   }
 
   /// Generate the phi nodes.
@@ -2425,7 +2424,7 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 
   /// The phi is part of a multi-use reduction (e.g., used in FindLastIV
   /// patterns).
-  bool IsPhiMultiUse;
+  bool HasLoopUsesOutsideReductionChain;
 
   /// When expanding the reduction PHI, the plan's VF element count is divided
   /// by this factor to form the reduction phi's VF.
@@ -2435,9 +2434,11 @@ public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        bool IsInLoop = false, bool IsOrdered = false,
-                       unsigned VFScaleFactor = 1, bool IsPhiMultiUse = false)
+                       unsigned VFScaleFactor = 1,
+                       bool HasLoopUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
-        IsInLoop(IsInLoop), IsOrdered(IsOrdered), IsPhiMultiUse(IsPhiMultiUse),
+        IsInLoop(IsInLoop), IsOrdered(IsOrdered),
+        HasLoopUsesOutsideReductionChain(HasLoopUsesOutsideReductionChain),
         VFScaleFactor(VFScaleFactor) {
     assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
   }
@@ -2447,7 +2448,8 @@ public:
   VPReductionPHIRecipe *clone() override {
     auto *R = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), IsInLoop, IsOrdered, VFScaleFactor, IsPhiMultiUse);
+        *getOperand(0), IsInLoop, IsOrdered, VFScaleFactor,
+        HasLoopUsesOutsideReductionChain);
     R->addOperand(getBackedgeValue());
     return R;
   }
@@ -2475,7 +2477,9 @@ public:
   bool isInLoop() const { return IsInLoop; }
 
   /// Returns true, if the phi is part of a multi-use reduction.
-  bool isPhiMultiUse() const { return IsPhiMultiUse; }
+  bool hasLoopUsesOutsideReductionChain() const {
+    return HasLoopUsesOutsideReductionChain;
+  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {

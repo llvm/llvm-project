@@ -95,14 +95,17 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy, bool PhiMultiUse = false)
+                       unsigned MinWidthCastToRecurTy,
+                       bool PhiHasLoopUsesOutsideReductionChain = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
-        IsSigned(Signed), IsOrdered(Ordered), IsPhiMultiUse(PhiMultiUse),
+        IsSigned(Signed), IsOrdered(Ordered),
+        PhiHasLoopUsesOutsideReductionChain(
+            PhiHasLoopUsesOutsideReductionChain),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert_range(CI);
     assert(
-        (!PhiMultiUse || isMinMaxRecurrenceKind(K)) &&
+        (!PhiHasLoopUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
         "Only min/max recurrences are allowed to have multiple uses currently");
   }
 
@@ -344,7 +347,9 @@ public:
 
   /// Returns true if the reduction PHI has multiple in-loop users. This is
   /// relevant for min/max reductions that are part of a FindLastIV pattern.
-  bool isPhiMultiUse() const { return IsPhiMultiUse; }
+  bool hasLoopUsesOutsideReductionChain() const {
+    return PhiHasLoopUsesOutsideReductionChain;
+  }
 
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
   /// be treated as a set of reductions instructions for in-loop reductions.
@@ -383,9 +388,10 @@ private:
   // Currently only a non-reassociative FAdd can be considered in-order,
   // if it is also the only FAdd in the PHI's use chain.
   bool IsOrdered = false;
-  // True if the reduction PHI has multiple in-loop users. This is relevant
-  // for min/max reductions that are part of a FindLastIV pattern.
-  bool IsPhiMultiUse = false;
+  // True if the reduction PHI has in-loop users outside the reduction chain.
+  // This is relevant for min/max reductions that are part of a FindLastIV
+  // pattern.
+  bool PhiHasLoopUsesOutsideReductionChain = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
   // The minimum width used by the recurrence.

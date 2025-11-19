@@ -877,7 +877,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
       AllowedExit.insert(RedDes.getLoopExitInstr());
       Reductions[Phi] = RedDes;
-      assert((!RedDes.isPhiMultiUse() ||
+      assert((!RedDes.hasLoopUsesOutsideReductionChain() ||
               RecurrenceDescriptor::isMinMaxRecurrenceKind(
                   RedDes.getRecurrenceKind())) &&
              "Only min/max recurrences are allowed to have multiple uses "

@@ -993,7 +993,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   return true;
 }
 
-bool VPlanTransforms::legalizeMultiUseReductions(VPlan &Plan) {
+bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
@@ -1002,9 +1002,12 @@ bool VPlanTransforms::legalizeMultiUseReductions(VPlan &Plan) {
 
     RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
     // TODO: check for multi-uses in VPlan directly.
-    if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) ||
-        !MinMaxPhiR->isPhiMultiUse())
+    if (!MinMaxPhiR->hasLoopUsesOutsideReductionChain())
       continue;
+
+    assert(
+        RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
+        "only min/max recurrences support users outside the reduction chain");
 
     // One user of MinMaxPhiR is MinMaxOp, the other users must be a compare
     // that's part of a FindLastIV chain.
@@ -1022,31 +1025,16 @@ bool VPlanTransforms::legalizeMultiUseReductions(VPlan &Plan) {
                                                 m_VPValue(CmpOpB))))
       return false;
 
-    // Normalize the predicate so MinMaxPhiR is on the right side.
     CmpInst::Predicate Pred = Cmp->getPredicate();
-    if (CmpOpA == MinMaxPhiR)
-      Pred = CmpInst::getSwappedPredicate(Pred);
-
-    // Determine if the predicate is not strict.
-    bool IsNonStrictPred = ICmpInst::isLE(Pred) || ICmpInst::isGE(Pred);
-    // Account for a mis-match between RdxKind and the predicate.
-    switch (RdxKind) {
-    case RecurKind::UMin:
-    case RecurKind::SMin:
-      IsNonStrictPred |= ICmpInst::isGT(Pred);
-      break;
-    case RecurKind::UMax:
-    case RecurKind::SMax:
-      IsNonStrictPred |= ICmpInst::isLT(Pred);
-      break;
-    default:
-      llvm_unreachable("unsupported kind");
-    }
-
     // TODO: Strict predicates need to find the first IV value for which the
     // predicate holds, not the last.
-    if (Pred == CmpInst::ICMP_NE || !IsNonStrictPred)
+    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
+        ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred))
       return false;
+
+    // Normalize the predicate so MinMaxPhiR is on the right side.
+    if (CmpOpA == MinMaxPhiR)
+      Pred = CmpInst::getSwappedPredicate(Pred);
 
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(*Cmp->user_begin());
@@ -1054,13 +1042,16 @@ bool VPlanTransforms::legalizeMultiUseReductions(VPlan &Plan) {
     if (!Sel ||
         !match(Sel,
                m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))) ||
-        Sel->getNumUsers() != 2 || !isa<VPWidenIntOrFpInductionRecipe>(IVOp))
+        Sel->getNumUsers() != 2)
       return false;
+
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
     if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
                            FindIVPhiR->getRecurrenceKind()))
       return false;
 
+    assert(isa<VPWidenIntOrFpInductionRecipe>(IVOp) &&
+           "IVOp must be a wide induction");
     assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
 
