@@ -1,4 +1,4 @@
-//===- GenericUniformityImpl.h -----------------------*- C++ -*------------===//
+﻿//===- GenericUniformityImpl.h -----------------------*- C++ -*------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -428,8 +428,7 @@ protected:
 
   // Map containing tracked instruction that can be proven uniform based on its
   // operand Uniformity.
-  DenseMap<const InstructionT *, InstructionUniformity>
-      UniformInstruction;
+  DenseMap<const InstructionT *, InstructionUniformity> UniformInstruction;
 
   /// \brief Mark \p Term as divergent and push all Instructions that become
   /// divergent as a result on the worklist.
