@@ -15559,8 +15559,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     auto Mode =
         Info.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
     uint64_t BitWidth = Info.Ctx.getTypeSize(Info.Ctx.getSizeType());
+    auto MaxTokensOpt = Info.getLangOpts().AllocTokenMax;
     uint64_t MaxTokens =
-        Info.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+        MaxTokensOpt.value_or(0) ? *MaxTokensOpt : (~0ULL >> (64 - BitWidth));
     auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
     if (!MaybeToken)
       return Error(E, diag::note_constexpr_infer_alloc_token_stateful_mode);

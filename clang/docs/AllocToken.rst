@@ -52,8 +52,8 @@ change or removal. These may (experimentally) be selected with ``-Xclang
 The following command-line options affect generated token IDs:
 
 * ``-falloc-token-max=<N>``
-    Configures the maximum number of tokens. No max by default (tokens bounded
-    by ``SIZE_MAX``).
+    Configures the maximum number of token IDs. By default the number of tokens
+    is bounded by ``SIZE_MAX``.
 
 Querying Token IDs with ``__builtin_infer_alloc_token``
 =======================================================
@@ -129,7 +129,7 @@ Fast ABI
 --------
 
 An alternative ABI can be enabled with ``-fsanitize-alloc-token-fast-abi``,
-which encodes the token ID hint in the allocation function name.
+which encodes the token ID in the allocation function name.
 
 .. code-block:: c
 
