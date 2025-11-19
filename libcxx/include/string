@@ -719,10 +719,16 @@ struct __init_with_sentinel_tag {};
 template <size_t _PaddingSize>
 struct __padding {
   char __padding_[_PaddingSize];
+  constexpr void clear() {
+    __padding __initialized = {0};
+    *this = __initialized;
+  }
 };
 
 template <>
-struct __padding<0> {};
+struct __padding<0> {
+  constexpr void clear() {}
+};
 
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
@@ -819,6 +825,33 @@ private:
 
 #  ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
+  // The __long structure contains at least a `pointer` to an allocated buffer,
+  // and two `size_type` (the second one being a bitfield container). This
+  // struct, only used by `sizeof`, is the minimum that will fit those fields.
+  struct __long_min {
+    pointer __data_;
+    size_type __size_;
+    size_type __bitfield_container;
+  };
+
+  // The __short structure has a byte-sized bitfield container at the end, and
+  // the rest of it can be taken up by value_type. We want at least two
+  // value_type, or more if they will fit.
+  static constexpr size_t __fit_cap = (sizeof(__long_min) - 1) / sizeof(value_type);
+  static constexpr size_t __min_cap = __fit_cap > 2 ? __fit_cap : 2;
+
+  // Now we know how many value_type will fit, calculate how much space they
+  // take up in total; add one byte for the final bitfield container; and round
+  // up to the nearest multiple of the alignment. That's the total size of the
+  // structure.
+  static constexpr size_t __short_packed_size = sizeof(value_type) * __min_cap + 1;
+  union __union_alignment_check { __long_min __long_; value_type v; };
+  static constexpr size_t __union_alignment = _LIBCPP_ALIGNOF(__union_alignment_check);
+  static constexpr size_t __full_size = (__short_packed_size + __union_alignment - 1) & -__union_alignment;
+
+  // Now define both structures for real, with padding to ensure they are both
+  // exactly the calculated size.
+
   struct __long {
     __long() = default;
 
@@ -829,18 +862,22 @@ private:
 
     pointer __data_;
     size_type __size_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<__full_size - sizeof(__long_min)> __padding_;
     size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
     size_type __is_long_ : 1;
   };
 
-  enum { __min_cap = (sizeof(__long) - 1) / sizeof(value_type) > 2 ? (sizeof(__long) - 1) / sizeof(value_type) : 2 };
-
   struct __short {
     value_type __data_[__min_cap];
-    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<__full_size - __short_packed_size> __padding_;
     unsigned char __size_    : 7;
     unsigned char __is_long_ : 1;
   };
+
+  // Finally, check that we got it all right, and that both structures have
+  // exactly the expected size.
+  static_assert(sizeof(__long) == __full_size, "Miscalculated size for __long");
+  static_assert(sizeof(__short) == __full_size, "Miscalculated size for __short");
 
   // The __endian_factor is required because the field we use to store the size
   // has one fewer bit than it would if it were not a bitfield.
@@ -887,6 +924,13 @@ private:
     };
     size_type __size_;
     pointer __data_;
+
+    // No padding is needed in this version of the structure, but we add a
+    // zero-sized __padding_ member anyway to match the
+    // `_LIBCPP_ABI_ALTERNATE_STRING_LAYOUT` version, so that
+    // `__padding_.clear()` can be performed unconditionally in code common to
+    // both layouts.
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<0> __padding_;
   };
 
   enum { __min_cap = (sizeof(__long) - 1) / sizeof(value_type) > 2 ? (sizeof(__long) - 1) / sizeof(value_type) : 2 };
@@ -900,9 +944,9 @@ private:
     value_type __data_[__min_cap];
   };
 
-#  endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
   static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
+
+#  endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
   union __rep {
     __short __s;
@@ -2764,6 +2808,7 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
   // This is -1 to make sure the caller sets the size properly, since old versions of this function didn't set the size
   // at all.
   __buffer.__size_ = -1;
+  __buffer.__padding_.clear();
   __reset_internal_buffer(__buffer);
 }
 
