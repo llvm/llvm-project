@@ -23,3 +23,12 @@ void f10(int);
 #pragma export(f11) // expected-warning{{failed to resolve '#pragma export' to a declaration}}
 void f11(int);
 
+template<auto func>
+struct S {
+
+#pragma export(func) // expected-error{{this pragma cannot appear in struct declaration}}
+};
+
+extern "C" void funcToExport();
+
+S<funcToExport> s{};

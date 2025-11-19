@@ -30,10 +30,10 @@ int var = 4;
 #pragma export(var) // expected-warning {{#pragma export can only applied before a symbol is defined}}
 
 int func() {
+#pragma export(local) // expected-error{{'#pragma export' can only appear at file scope}}
   int local;
-#pragma export(local) // expected-warning{{#pragma export is applicable to symbols with external linkage only; not applied to 'local'}}
-#pragma export(l2) // expected-warning{{#pragma export is applicable to symbols with external linkage only; not applied to 'l2'}}
   int l2;
+#pragma export(l2) // expected-error{{'#pragma export' can only appear at file scope}}
   return local+l2;
 }
 

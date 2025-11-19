@@ -24,8 +24,6 @@ void f2(void) {}
 
 int func() {
   int local;
-#pragma export(local)
-#pragma export(l2)
   int l2;
   return local+l2;
 }
