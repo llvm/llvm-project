@@ -1114,7 +1114,6 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
     emitADASection();
     emitIDRLSection(M);
     // Emit EXTRN declarations.
-    OutStreamer->pushSection();
     for (auto &GO : M.global_objects()) {
       if (GO.isDeclaration()) {
         MCSymbol *Sym = TM.getSymbol(&GO);
@@ -1126,9 +1125,6 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
                                                   : MCSA_ELF_TypeObject);
       }
     }
-    OutStreamer->switchSection(
-        static_cast<MCSectionGOFF *>(getObjFileLowering().getTextSection())
-            ->getParent());
     getTargetStreamer()->emitExterns();
     OutStreamer->popSection();
   }

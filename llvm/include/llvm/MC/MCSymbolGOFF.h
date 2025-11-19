@@ -25,11 +25,6 @@ class MCSymbolGOFF : public MCSymbol {
   // Associated data area of the section. Needs to be emitted first.
   MCSectionGOFF *ADA = nullptr;
 
-  // Owner of the symbol if symbol is an external reference. External references
-  // need a section, too, but adding them to a section would make the symbol
-  // defined.
-  MCSectionGOFF *Owner = nullptr;
-
   GOFF::LDAttr LDAttributes;
   GOFF::ERAttr ERAttributes;
 
@@ -68,9 +63,6 @@ public:
     AssociatedDataArea->RequiresNonZeroLength = true;
   }
   MCSectionGOFF *getADA() const { return ADA; }
-
-  void setOwner(MCSectionGOFF *Owner) { this->Owner = Owner; }
-  MCSectionGOFF *getOwner() const { return Owner; }
 
   bool isExternal() const { return IsExternal; }
   void setExternal(bool Value) const { IsExternal = Value; }

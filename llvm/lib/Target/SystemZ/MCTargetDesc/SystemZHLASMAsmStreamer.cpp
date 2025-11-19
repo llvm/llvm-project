@@ -419,7 +419,6 @@ void SystemZHLASMAsmStreamer::emitExterns() {
       continue;
     if (Symbol.isRegistered()) {
       auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-      Sym.setOwner(static_cast<MCSectionGOFF *>(getCurrentSection().first));
       Sym.initAttributes();
       GOFF::ERAttr &ER = Sym.getERAttributes();
       OS << " "

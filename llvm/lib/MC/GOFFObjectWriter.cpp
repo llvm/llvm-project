@@ -283,6 +283,7 @@ public:
 class GOFFWriter {
   GOFFOstream OS;
   MCAssembler &Asm;
+  MCSectionGOFF *RootSD;
 
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
@@ -295,13 +296,14 @@ class GOFFWriter {
   void defineSymbols();
 
 public:
-  GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm);
+  GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm, MCSectionGOFF *RootSD);
   uint64_t writeObject();
 };
 } // namespace
 
-GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm)
-    : OS(OS), Asm(Asm) {}
+GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm,
+                       MCSectionGOFF *RootSD)
+    : OS(OS), Asm(Asm), RootSD(RootSD) {}
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
   if (Section.isSD()) {
@@ -347,7 +349,7 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
   GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(),
-                Symbol.getOwner()->getOrdinal(), Symbol.getERAttributes());
+                RootSD->getOrdinal(), Symbol.getERAttributes());
   writeSymbol(ER);
 }
 
@@ -546,7 +548,7 @@ GOFFObjectWriter::GOFFObjectWriter(
 GOFFObjectWriter::~GOFFObjectWriter() = default;
 
 uint64_t GOFFObjectWriter::writeObject() {
-  uint64_t Size = GOFFWriter(OS, *Asm).writeObject();
+  uint64_t Size = GOFFWriter(OS, *Asm, RootSD).writeObject();
   return Size;
 }
 

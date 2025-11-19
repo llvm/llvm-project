@@ -18,12 +18,27 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
+MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
+                               std::unique_ptr<MCAsmBackend> MAB,
+                               std::unique_ptr<MCObjectWriter> OW,
+                               std::unique_ptr<MCCodeEmitter> Emitter)
+    : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
+                       std::move(Emitter)) {}
+
 MCGOFFStreamer::~MCGOFFStreamer() = default;
+
+void MCGOFFStreamer::finishImpl() {
+  getWriter().setRootSD(static_cast<MCSectionGOFF *>(
+                            getContext().getObjectFileInfo()->getTextSection())
+                            ->getParent());
+  MCObjectStreamer::finishImpl();
+}
 
 GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
@@ -111,7 +126,6 @@ void MCGOFFStreamer::emitExterns() {
       continue;
     if (Symbol.isRegistered()) {
       auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-      Sym.setOwner(static_cast<MCSectionGOFF *>(getCurrentSection().first));
       Sym.initAttributes();
     }
   }
@@ -125,9 +139,3 @@ MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
       new MCGOFFStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
   return S;
 }
-llvm::MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
-                                     std::unique_ptr<MCAsmBackend> MAB,
-                                     std::unique_ptr<MCObjectWriter> OW,
-                                     std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
-                       std::move(Emitter)) {}
