@@ -46,6 +46,8 @@ public:
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
 private:
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
+
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
   SDValue getImplicitArgPtr(SelectionDAG &DAG, const SDLoc &SL) const;
