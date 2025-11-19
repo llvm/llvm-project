@@ -54,7 +54,9 @@ protected:
       return ContainerElementsMap();
 
     ContainerElementsMap Result = SNs[0]->defs();
+#ifndef NDEBUG
     const ContainerElementsMap &Deps = SNs[0]->deps();
+#endif // NDEBUG
 
     for (size_t I = 1; I != SNs.size(); ++I) {
       assert(!DepsMustMatch || SNs[I]->deps() == Deps);

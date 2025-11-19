@@ -23,8 +23,8 @@ runtimes_targets="${4}"
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
-export CC=cl
-export CXX=cl
+export CC=C:/clang/clang-msvc/bin/clang-cl.exe
+export CXX=C:/clang/clang-msvc/bin/clang-cl.exe
 export LD=link
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
@@ -32,8 +32,6 @@ export LD=link
 # see https://github.com/llvm/llvm-project/pull/82393 and
 # https://discourse.llvm.org/t/rfc-future-of-windows-pre-commit-ci/76840/40
 # for further information.
-# We limit the number of parallel compile jobs to 24 control memory
-# consumption and improve build reliability.
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
@@ -57,7 +55,7 @@ start-group "ninja"
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
 cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
 
-if [[ "${runtime_targets}" != "" ]]; then
+if [[ "${runtimes_targets}" != "" ]]; then
   start-group "ninja runtimes"
   
   ninja -C "${BUILD_DIR}" -k 0 ${runtimes_targets} |& tee ninja_runtimes.log

@@ -1588,6 +1588,10 @@ multiclass SiFive7SchedResources<int vlen, bit dualVALU,
   //===----------------------------------------------------------------------===//
   // Unsupported extensions
   defm : UnsupportedSchedQ;
+  // TODO: scheduling info of XSfvfexp* and XSfvfexpa*
+  // for SiFive7 will be added in follow-up patches.
+  defm : UnsupportedSchedXSfvfexp;
+  defm : UnsupportedSchedXSfvfexpa;
   defm : UnsupportedSchedZabha;
   defm : UnsupportedSchedZbc;
   defm : UnsupportedSchedZbkb;

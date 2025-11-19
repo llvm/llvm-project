@@ -218,6 +218,7 @@ def HasStdExtZaamo
     : Predicate<"Subtarget->hasStdExtZaamo()">,
       AssemblerPredicate<(any_of FeatureStdExtZaamo),
                          "'Zaamo' (Atomic Memory Operations)">;
+def NoStdExtZaamo : Predicate<"!Subtarget->hasStdExtZaamo()">;
 
 def FeatureStdExtZalrsc
     : RISCVExtension<1, 0, "Load-Reserved/Store-Conditional">;
@@ -955,6 +956,9 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmpmpmt
+    : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
+
 def FeatureStdExtSmrnmi
     : RISCVExtension<1, 0, "Resumable Non-Maskable Interrupts">;
 def HasStdExtSmrnmi : Predicate<"Subtarget->hasStdExtSmrnmi()">,
@@ -1123,7 +1127,8 @@ def HasStdExtZbkbOrP
                          "'Base P' (Packed-SIMD)">;
 
 def HasStdExtZbbOrZbkbOrP
-    : Predicate<"Subtarget->HasStdExtZbbOrZbkb()|| Subtarget->hasStdExtP()">,
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb() || "
+                "Subtarget->hasStdExtP()">,
       AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb, FeatureStdExtP),
                          "'Zbb' (Basic Bit-Manipulation) or "
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "
@@ -1333,6 +1338,44 @@ def HasVendorXSfvfnrclipxfqf
     : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                          "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
+
+// Note: XSfvfbfexp16e depends on either Zvfbfmin _or_ Zvfbfa, which cannot be expressed here in
+// TableGen. Instead, we check that in RISCVISAInfo.
+def FeatureVendorXSfvfbfexp16e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, BFloat16">;
+def HasVendorXSfvfbfexp16e : Predicate<"Subtarget->hasVendorXSfvfbfexp16e()">;
+
+def FeatureVendorXSfvfexp16e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, Half Precision",
+                     [FeatureStdExtZvfh]>;
+def HasVendorXSfvfexp16e : Predicate<"Subtarget->hasVendorXSfvfexp16e()">;
+
+def FeatureVendorXSfvfexp32e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, Single Precision",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfexp32e : Predicate<"Subtarget->hasVendorXSfvfexp32e()">;
+
+def HasVendorXSfvfexpAnyFloat : Predicate<"Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">;
+def HasVendorXSfvfexpAny : Predicate<"Subtarget->hasVendorXSfvfbfexp16e() || Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">,
+                           AssemblerPredicate<(any_of FeatureVendorXSfvfbfexp16e, FeatureVendorXSfvfexp16e, FeatureVendorXSfvfexp32e),
+                           "'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)">;
+
+def FeatureVendorXSfvfexpa
+    : RISCVExtension<0, 2,
+                     "SiFive Vector Floating-Point Exponential Approximation Instruction",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfexpa : Predicate<"Subtarget->hasVendorXSfvfexpa()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvfexpa),
+                         "'Xsfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction)">;
+
+def FeatureVendorXSfvfexpa64e
+    : RISCVExtension<0, 2,
+                     "SiFive Vector Floating-Point Exponential Approximation Instruction with Double-Precision",
+                     [FeatureVendorXSfvfexpa, FeatureStdExtZve64d]>;
+def HasVendorXSfvfexpa64e : Predicate<"Subtarget->hasVendorXSfvfexpa64e()">;
 
 def FeatureVendorXSiFivecdiscarddlone
     : RISCVExtension<1, 0,
@@ -1811,6 +1854,16 @@ def TuneShortForwardBranchOpt
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
 
+def TuneShortForwardBranchIMinMax
+    : SubtargetFeature<"short-forward-branch-i-minmax", "HasShortForwardBranchIMinMax",
+                       "true", "Enable short forward branch optimization for min,max instructions in Zbb",
+                       [TuneShortForwardBranchOpt]>;
+
+def TuneShortForwardBranchIMul
+    : SubtargetFeature<"short-forward-branch-i-mul", "HasShortForwardBranchIMul",
+                       "true", "Enable short forward branch optimization for mul instruction",
+                       [TuneShortForwardBranchOpt]>;
+
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands
@@ -1864,7 +1917,26 @@ def FeatureForcedAtomics : SubtargetFeature<
     "forced-atomics", "HasForcedAtomics", "true",
     "Assume that lock-free native-width atomics are available">;
 def HasAtomicLdSt
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasForcedAtomics()">;
+    : Predicate<"Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
+
+// The RISC-V Unprivileged Architecture - ISA Volume 1 (Version: 20250508)
+// [https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf]
+// in section 13.3. Eventual Success of Store-Conditional Instructions, defines
+// _constrained_ LR/SC loops:
+//   The dynamic code executed between the LR and SC instructions can only
+//   contain instructions from the base ''I'' instruction set, excluding loads,
+//   stores, backward jumps, taken backward branches, JALR, FENCE, and SYSTEM
+//   instructions. Compressed forms of the aforementioned ''I'' instructions in
+//   the Zca and Zcb extensions are also permitted.
+// LR/SC loops that do not adhere to the above are _unconstrained_ LR/SC loops,
+// and success is implementation specific. For implementations which know that
+// non-base instructions (such as the ''B'' extension) will not violate any
+// forward progress guarantees, using these instructions to reduce the LR/SC
+// sequence length is desirable.
+def FeaturePermissiveZalrsc
+    : SubtargetFeature<
+          "permissive-zalrsc", "HasPermissiveZalrsc", "true",
+          "Implementation permits non-base instructions between LR/SC pairs">;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",

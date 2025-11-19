@@ -29,11 +29,16 @@ namespace mlir {
 namespace xegpu {
 namespace uArch {
 
+constexpr unsigned generalPackedFormatBitSize{32};
+
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
-  DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix
-        // multiply-add operation
+  SubgroupMatrixMultiplyAcc, // Dot Product Accumulate Systolic (DPAS) is a
+                             // matrix multiply-add operation
+  Subgroup2DBlockStore,      // Subgroup-level 2D block write instruction
+  Subgroup2DBlockLoad,       // Subgroup-level 2D block load instruction
+  Subgroup2DBlockPrefetch    // Subgroup-level 2D block prefetch instruction
   // @TODO: Add more instructions as needed
 };
 
@@ -46,14 +51,20 @@ struct Instruction {
   Instruction(InstructionKind kind, InstructionScope scope)
       : instKind(kind), scope(scope) {}
 
-  virtual ~Instruction() = default;
+  ~Instruction() = default;
   // Get methods
-  InstructionKind getInstructionKind() { return instKind; }
-  InstructionScope getScope() { return scope; }
+  InstructionKind getInstructionKind() const { return instKind; }
+  InstructionScope getScope() const { return scope; }
   static llvm::StringRef toString(InstructionKind instKind) {
     switch (instKind) {
-    case InstructionKind::DPAS:
+    case InstructionKind::SubgroupMatrixMultiplyAcc:
       return "dpas";
+    case InstructionKind::Subgroup2DBlockStore:
+      return "store_nd";
+    case InstructionKind::Subgroup2DBlockLoad:
+      return "load_nd";
+    case InstructionKind::Subgroup2DBlockPrefetch:
+      return "prefetch_nd";
     }
     llvm_unreachable("Unknown InstructionKind");
   }
@@ -61,14 +72,14 @@ struct Instruction {
   static std::optional<InstructionKind>
   parseInstructionKind(llvm::StringRef str) {
     if (str.equals_insensitive("dpas"))
-      return InstructionKind::DPAS;
+      return InstructionKind::SubgroupMatrixMultiplyAcc;
     return std::nullopt;
   }
 
 protected:
-  InstructionKind instKind; // Specific InstructionKind (e.g., DPAS)
-  InstructionScope scope;   // scope of the instruction (e.g., lane, subgroup,
-                            // workgroup, cluster)
+  const InstructionKind instKind; // Specific InstructionKind (e.g., DPAS)
+  const InstructionScope scope;   // scope of the instruction (e.g., lane,
+                                  // subgroup, workgroup, cluster)
   // @TODO: Add more fields as needed
 };
 
@@ -129,61 +140,36 @@ protected:
   // latency, throughput, bandwidth)
 };
 
-// A struct to represent the uArch
-// This struct is used to represent the microarchitecture of a target device.
 struct uArch {
   // Constructor
-  uArch(
-      const std::string &name, const std::string &description,
-      const std::map<RegisterFileType, RegisterFileInfo> &registerFileInfo = {},
-      const llvm::SmallVector<CacheInfo, 4> &cacheInfo = {},
-      const std::map<InstructionKind, std::shared_ptr<Instruction>>
-          &instructions = {})
-      : name(name), description(description),
-        registerFileInfo(registerFileInfo), cacheInfo(cacheInfo),
-        instructions(instructions) {}
+  uArch(StringRef name, StringRef description,
+        llvm::ArrayRef<const Instruction *> instructionRegistry)
+      : name(name), description(description) {
+    for (const Instruction *instr : instructionRegistry)
+      this->instructionRegistry[instr->getInstructionKind()] = instr;
+  }
+  virtual ~uArch() = default;
+  StringRef getName() const { return name; }
+  StringRef getDescription() const { return description; }
+  virtual int getSubgroupSize() const = 0;
+  virtual unsigned getGeneralPackedFormatBitSize() const = 0;
 
-  // Get methods
-  const std::string &getName() const { return name; }
-
-  const std::string &getDescription() const { return description; }
-
-  const std::map<RegisterFileType, RegisterFileInfo> &
-  getRegisterFileInfo() const {
-    return registerFileInfo;
+  const Instruction *getInstruction(InstructionKind instKind) const {
+    auto it = instructionRegistry.find(instKind);
+    assert(it != instructionRegistry.end() &&
+           "Instruction not found in registry");
+    return it->second;
   }
 
-  const llvm::SmallVector<CacheInfo, 4> &getCacheInfo() const {
-    return cacheInfo;
-  }
-
-  const std::map<InstructionKind, std::shared_ptr<Instruction>> &
-  getInstructions() const {
-    return instructions;
-  }
-
-  // Get the name of the supported instruction names for that
-  // architecture. It returns the names of the instructions added to the uArch.
-  llvm::SmallVector<StringRef, 8> getSupportedInstructionNames() const {
-    llvm::SmallVector<StringRef, 8> instructionNames;
-    for (const auto &inst : instructions) {
-      instructionNames.push_back(Instruction::toString(inst.first));
-    }
-    return instructionNames;
-  }
-
-  // Checks if an instruction is supported in this uArch
-  bool checkSupportedInstruction(InstructionKind instr) const {
-    return instructions.find(instr) != instructions.end();
+  bool isSupportedInstruction(InstructionKind instr) const {
+    return instructionRegistry.contains(instr);
   }
 
 protected:
-  std::string name; // Name of the uArch, similar to target triple
-  std::string description;
-  std::map<RegisterFileType, RegisterFileInfo> registerFileInfo;
-  llvm::SmallVector<CacheInfo, 4> cacheInfo;
-  std::map<InstructionKind, std::shared_ptr<Instruction>>
-      instructions; // set of instructions supported by the uArch
+  StringRef name;
+  StringRef description;
+  llvm::SmallDenseMap<InstructionKind, const Instruction *, 32>
+      instructionRegistry;
 };
 
 // A struct to represent shared memory information
@@ -251,9 +237,9 @@ struct MMAInstructionInterface {
                         std::pair<uint32_t, uint32_t> CShape,
                         std::pair<uint32_t, uint32_t> DShape, Type AType,
                         Type BType, Type CType, Type DType) = 0;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedM(Type type) = 0;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedK(Type type) = 0;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedM(Type type) const = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedK(Type type) const = 0;
+  virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) const = 0;
 
   virtual ~MMAInstructionInterface() = default;
 };

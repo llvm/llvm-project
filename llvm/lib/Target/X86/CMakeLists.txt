@@ -31,7 +31,6 @@ set(sources
   X86CmovConversion.cpp
   X86CodeGenPassBuilder.cpp
   X86DomainReassignment.cpp
-  X86DiscriminateMemOps.cpp
   X86LowerTileCopy.cpp
   X86LowerAMXType.cpp
   X86LowerAMXIntrinsics.cpp
@@ -57,7 +56,6 @@ set(sources
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
   X86InterleavedAccess.cpp
-  X86InsertPrefetch.cpp
   X86InstCombineIntrinsic.cpp
   X86InstrFMA3Info.cpp
   X86InstrFoldTables.cpp

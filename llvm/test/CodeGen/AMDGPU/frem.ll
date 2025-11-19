@@ -2048,7 +2048,7 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1200-FAKE16-NEXT:    v_fmac_f16_e32 v1, v3, v2
 ; GFX1200-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX1200-FAKE16-NEXT:    s_endpgm
-                             ptr addrspace(1) %in2) #1 {
+                             ptr addrspace(1) %in2) #0 {
    %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
    %r0 = load half, ptr addrspace(1) %in1, align 4
    %r1 = load half, ptr addrspace(1) %gep2, align 4
@@ -3417,7 +3417,7 @@ define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1200-NEXT:    v_fmac_f32_e32 v1, v3, v2
 ; GFX1200-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1200-NEXT:    s_endpgm
-                             ptr addrspace(1) %in2) #1 {
+                             ptr addrspace(1) %in2) #0 {
    %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
    %r0 = load float, ptr addrspace(1) %in1, align 4
    %r1 = load float, ptr addrspace(1) %gep2, align 4
@@ -4821,7 +4821,7 @@ define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1200-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX1200-NEXT:    global_store_b64 v12, v[0:1], s[0:1]
 ; GFX1200-NEXT:    s_endpgm
-                             ptr addrspace(1) %in2) #1 {
+                             ptr addrspace(1) %in2) #0 {
    %r0 = load double, ptr addrspace(1) %in1, align 8
    %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem afn double %r0, %r1
@@ -18918,7 +18918,4 @@ define amdgpu_kernel void @frem_v2f64_const(ptr addrspace(1) %out) #0 {
 
 
 
-attributes #0 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-
-
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

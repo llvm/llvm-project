@@ -23,6 +23,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -104,8 +105,30 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
   return 0;
 }
 
+static int WriteOutput(const TGParser &Parser, const char *argv0,
+                       StringRef Filename, StringRef Content) {
+  if (WriteIfChanged) {
+    // Only updates the real output file if there are any differences.
+    // This prevents recompilation of all the files depending on it if there
+    // aren't any.
+    if (auto ExistingOrErr = MemoryBuffer::getFile(Filename, /*IsText=*/true))
+      if (std::move(ExistingOrErr.get())->getBuffer() == Content)
+        return 0;
+  }
+  std::error_code EC;
+  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
+  if (EC)
+    return reportError(argv0, "error opening " + Filename + ": " +
+                                  EC.message() + "\n");
+  OutFile.os() << Content;
+  if (ErrorsPrinted == 0)
+    OutFile.keep();
+
+  return 0;
+}
+
 int llvm::TableGenMain(const char *argv0,
-                       std::function<TableGenMainFn> MainFn) {
+                       std::function<MultiFileTableGenMainFn> MainFn) {
   RecordKeeper Records;
   TGTimer &Timer = Records.getTimer();
 
@@ -144,13 +167,13 @@ int llvm::TableGenMain(const char *argv0,
 
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
-  std::string OutString;
-  raw_string_ostream Out(OutString);
+  TableGenOutputFiles OutFiles;
   unsigned status = 0;
   // ApplyCallback will return true if it did not apply any callback. In that
   // case, attempt to apply the MainFn.
-  if (TableGen::Emitter::ApplyCallback(Records, Out))
-    status = MainFn ? MainFn(Out, Records) : 1;
+  StringRef FilenamePrefix(sys::path::stem(OutputFilename));
+  if (TableGen::Emitter::ApplyCallback(Records, OutFiles, FilenamePrefix))
+    status = MainFn ? MainFn(OutFiles, Records) : 1;
   Timer.stopBackendTimer();
   if (status)
     return 1;
@@ -165,25 +188,17 @@ int llvm::TableGenMain(const char *argv0,
   }
 
   Timer.startTimer("Write output");
-  bool WriteFile = true;
-  if (WriteIfChanged) {
-    // Only updates the real output file if there are any differences.
-    // This prevents recompilation of all the files depending on it if there
-    // aren't any.
-    if (auto ExistingOrErr =
-            MemoryBuffer::getFile(OutputFilename, /*IsText=*/true))
-      if (std::move(ExistingOrErr.get())->getBuffer() == OutString)
-        WriteFile = false;
-  }
-  if (WriteFile) {
-    std::error_code EC;
-    ToolOutputFile OutFile(OutputFilename, EC, sys::fs::OF_Text);
-    if (EC)
-      return reportError(argv0, "error opening " + OutputFilename + ": " +
-                                    EC.message() + "\n");
-    OutFile.os() << OutString;
-    if (ErrorsPrinted == 0)
-      OutFile.keep();
+  if (int Ret = WriteOutput(Parser, argv0, OutputFilename, OutFiles.MainFile))
+    return Ret;
+  for (auto [Suffix, Content] : OutFiles.AdditionalFiles) {
+    SmallString<128> Filename(OutputFilename);
+    // TODO: Format using the split-file convention when writing to stdout?
+    if (Filename != "-") {
+      sys::path::replace_extension(Filename, "");
+      Filename.append(Suffix);
+    }
+    if (int Ret = WriteOutput(Parser, argv0, Filename, Content))
+      return Ret;
   }
 
   Timer.stopTimer();
@@ -192,4 +207,16 @@ int llvm::TableGenMain(const char *argv0,
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
   return 0;
+}
+
+int llvm::TableGenMain(const char *argv0,
+                       std::function<TableGenMainFn> MainFn) {
+  return TableGenMain(argv0, [&MainFn](TableGenOutputFiles &OutFiles,
+                                       const RecordKeeper &Records) {
+    std::string S;
+    raw_string_ostream OS(S);
+    int Res = MainFn(OS, Records);
+    OutFiles = {S, {}};
+    return Res;
+  });
 }

@@ -50,11 +50,11 @@ static void attachVarNameAttr(Operation *op, OpBuilder &builder,
   }
 }
 
+template <typename T>
 struct MemRefPointerLikeModel
-    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
-                                            MemRefType> {
+    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel<T>, T> {
   Type getElementType(Type pointer) const {
-    return cast<MemRefType>(pointer).getElementType();
+    return cast<T>(pointer).getElementType();
   }
 
   mlir::acc::VariableTypeCategory
@@ -63,7 +63,7 @@ struct MemRefPointerLikeModel
     if (auto mappableTy = dyn_cast<MappableType>(varType)) {
       return mappableTy.getTypeCategory(varPtr);
     }
-    auto memrefTy = cast<MemRefType>(pointer);
+    auto memrefTy = cast<T>(pointer);
     if (!memrefTy.hasRank()) {
       // This memref is unranked - aka it could have any rank, including a
       // rank of 0 which could mean scalar. For now, return uncategorized.
@@ -296,7 +296,10 @@ void OpenACCDialect::initialize() {
   // By attaching interfaces here, we make the OpenACC dialect dependent on
   // the other dialects. This is probably better than having dialects like LLVM
   // and memref be dependent on OpenACC.
-  MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
+  MemRefType::attachInterface<MemRefPointerLikeModel<MemRefType>>(
+      *getContext());
+  UnrankedMemRefType::attachInterface<
+      MemRefPointerLikeModel<UnrankedMemRefType>>(*getContext());
   LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
       *getContext());
 }
@@ -599,6 +602,20 @@ LogicalResult acc::PrivateOp::verify() {
 // FirstprivateOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::FirstprivateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_firstprivate)
+    return emitError("data clause associated with firstprivate operation must "
+                     "match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FirstprivateMapInitialOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::FirstprivateMapInitialOp::verify() {
   if (getDataClause() != acc::DataClause::acc_firstprivate)
     return emitError("data clause associated with firstprivate operation must "
                      "match its intent");
@@ -1020,6 +1037,65 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
       rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
     else
       replaceOpWithRegion(rewriter, op, op.getRegion());
+
+    return success();
+  }
+};
+
+/// Remove empty acc.kernel_environment operations. If the operation has wait
+/// operands, create a acc.wait operation to preserve synchronization.
+struct RemoveEmptyKernelEnvironment
+    : public OpRewritePattern<acc::KernelEnvironmentOp> {
+  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
+                                PatternRewriter &rewriter) const override {
+    assert(op->getNumRegions() == 1 && "expected op to have one region");
+
+    Block &block = op.getRegion().front();
+    if (!block.empty())
+      return failure();
+
+    // Conservatively disable canonicalization of empty acc.kernel_environment
+    // operations if the wait operands in the kernel_environment cannot be fully
+    // represented by acc.wait operation.
+
+    // Disable canonicalization if device type is not the default
+    if (auto deviceTypeAttr = op.getWaitOperandsDeviceTypeAttr()) {
+      for (auto attr : deviceTypeAttr) {
+        if (auto dtAttr = mlir::dyn_cast<acc::DeviceTypeAttr>(attr)) {
+          if (dtAttr.getValue() != mlir::acc::DeviceType::None)
+            return failure();
+        }
+      }
+    }
+
+    // Disable canonicalization if any wait segment has a devnum
+    if (auto hasDevnumAttr = op.getHasWaitDevnumAttr()) {
+      for (auto attr : hasDevnumAttr) {
+        if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(attr)) {
+          if (boolAttr.getValue())
+            return failure();
+        }
+      }
+    }
+
+    // Disable canonicalization if there are multiple wait segments
+    if (auto segmentsAttr = op.getWaitOperandsSegmentsAttr()) {
+      if (segmentsAttr.size() > 1)
+        return failure();
+    }
+
+    // Remove empty kernel environment.
+    // Preserve synchronization by creating acc.wait operation if needed.
+    if (!op.getWaitOperands().empty() || op.getWaitOnlyAttr())
+      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
+                                               /*asyncOperand=*/Value(),
+                                               /*waitDevnum=*/Value(),
+                                               /*async=*/nullptr,
+                                               /*ifCond=*/Value());
+    else
+      rewriter.eraseOp(op);
 
     return success();
   }
@@ -2674,6 +2750,15 @@ void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// KernelEnvironmentOp
+//===----------------------------------------------------------------------===//
+
+void acc::KernelEnvironmentOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<RemoveEmptyKernelEnvironment>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//
 
@@ -3051,8 +3136,12 @@ LogicalResult acc::LoopOp::verify() {
   if (getRegion().empty())
     return emitError("expected non-empty body.");
 
-  // When it is container-like - it is expected to hold a loop-like operation.
-  if (isContainerLike()) {
+  if (getUnstructured()) {
+    if (!isContainerLike())
+      return emitError(
+          "unstructured acc.loop must not have induction variables");
+  } else if (isContainerLike()) {
+    // When it is container-like - it is expected to hold a loop-like operation.
     // Obtain the maximum collapse count - we use this to check that there
     // are enough loops contained.
     uint64_t collapseCount = getCollapseValue().value_or(1);

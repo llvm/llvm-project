@@ -278,15 +278,21 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();
 
+  std::string DefaultName = "llvm." + EnumName.str();
+  llvm::replace(DefaultName, '_', '.');
+
   if (Name == "") {
     // If an explicit name isn't specified, derive one from the DefName.
-    Name = "llvm." + EnumName.str();
-    llvm::replace(Name, '_', '.');
+    Name = std::move(DefaultName);
   } else {
     // Verify it starts with "llvm.".
     if (!StringRef(Name).starts_with("llvm."))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "'s name does not start with 'llvm.'!");
+
+    if (Name == DefaultName)
+      PrintNote(DefLoc, "Explicitly specified name matches default name, "
+                        "consider dropping it");
   }
 
   // If TargetPrefix is specified, make sure that Name starts with
@@ -401,6 +407,8 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     hasSideEffects = true;
   else if (R->getName() == "IntrStrictFP")
     isStrictFP = true;
+  else if (R->getName() == "IntrNoCreateUndefOrPoison")
+    isNoCreateUndefOrPoison = true;
   else if (R->isSubClassOf("NoCapture")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, NoCapture);
@@ -441,6 +449,29 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
+  } else if (R->isSubClassOf("ArgInfo")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(),
+                      "ArgInfo requires ArgNo >= 1 (0 is return value)");
+    const ListInit *Properties = R->getValueAsListInit("Properties");
+    StringRef ArgName;
+    StringRef FuncName;
+
+    for (const Init *PropInit : Properties->getElements()) {
+      if (const auto *PropDef = dyn_cast<DefInit>(PropInit)) {
+        const Record *PropRec = PropDef->getDef();
+
+        if (PropRec->isSubClassOf("ArgName"))
+          ArgName = PropRec->getValueAsString("Name");
+        else if (PropRec->isSubClassOf("ImmArgPrinter"))
+          FuncName = PropRec->getValueAsString("FuncName");
+        else
+          PrintFatalError(PropRec->getLoc(),
+                          "Unknown ArgProperty type: " + PropRec->getName());
+      }
+    }
+    addPrettyPrintFunction(ArgNo - 1, ArgName, FuncName);
   } else {
     llvm_unreachable("Unknown property!");
   }
@@ -467,4 +498,17 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   if (Idx >= ArgumentAttributes.size())
     ArgumentAttributes.resize(Idx + 1);
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
+}
+
+void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
+                                              StringRef ArgName,
+                                              StringRef FuncName) {
+  auto It = llvm::find_if(PrettyPrintFunctions, [ArgIdx](const auto &Info) {
+    return Info.ArgIdx == ArgIdx;
+  });
+  if (It != PrettyPrintFunctions.end())
+    PrintFatalError(TheDef->getLoc(), "ArgInfo for argument " + Twine(ArgIdx) +
+                                          " is already defined as '" +
+                                          It->FuncName + "'");
+  PrettyPrintFunctions.emplace_back(ArgIdx, ArgName, FuncName);
 }

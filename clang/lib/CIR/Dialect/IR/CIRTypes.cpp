@@ -12,11 +12,16 @@
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/MLIRContext.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 //===----------------------------------------------------------------------===//
@@ -341,7 +346,7 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
   if (isUnion())
     return dataLayout.getTypeSize(getLargestMember(dataLayout));
 
-  unsigned recordSize = computeStructSize(dataLayout);
+  auto recordSize = static_cast<uint64_t>(computeStructSize(dataLayout));
   return llvm::TypeSize::getFixed(recordSize * 8);
 }
 
@@ -806,6 +811,27 @@ mlir::LogicalResult cir::VectorType::verify(
 //===----------------------------------------------------------------------===//
 // TargetAddressSpace definitions
 //===----------------------------------------------------------------------===//
+
+cir::TargetAddressSpaceAttr
+cir::toCIRTargetAddressSpace(mlir::MLIRContext &context, clang::LangAS langAS) {
+  return cir::TargetAddressSpaceAttr::get(
+      &context,
+      IntegerAttr::get(&context,
+                       llvm::APSInt(clang::toTargetAddressSpace(langAS))));
+}
+
+bool cir::isMatchingAddressSpace(cir::TargetAddressSpaceAttr cirAS,
+                                 clang::LangAS as) {
+  // If there is no CIR target attr, consider it "default" and only match
+  // when the AST address space is LangAS::Default.
+  if (!cirAS)
+    return as == clang::LangAS::Default;
+
+  if (!isTargetAddressSpace(as))
+    return false;
+
+  return cirAS.getValue().getUInt() == toTargetAddressSpace(as);
+}
 
 mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
                                           cir::TargetAddressSpaceAttr &attr) {

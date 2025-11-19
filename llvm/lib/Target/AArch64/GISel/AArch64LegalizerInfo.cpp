@@ -825,6 +825,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(
           {{s32, s16}, {s64, s16}, {s64, s32}, {v4s32, v4s16}, {v2s64, v2s32}})
       .libcallFor({{s128, s64}, {s128, s32}, {s128, s16}})
+      .moreElementsToNextPow2(0)
+      .widenScalarIf(
+          [](const LegalityQuery &Q) {
+            LLT DstTy = Q.Types[0];
+            LLT SrcTy = Q.Types[1];
+            return SrcTy.isVector() && DstTy.isVector() &&
+                   SrcTy.getScalarSizeInBits() == 16 &&
+                   DstTy.getScalarSizeInBits() == 64;
+          },
+          changeElementTo(1, s32))
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .scalarize(0);
@@ -1201,25 +1211,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return llvm::is_contained(
             {v8s8, v16s8, v4s16, v8s16, v2s32, v4s32, v2s64}, DstTy);
       })
-      // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors) or scalar
-      // destinations, we just want those lowered into G_BUILD_VECTOR or
-      // G_EXTRACT_ELEMENT.
-      .lowerIf([=](const LegalityQuery &Query) {
-        return !Query.Types[0].isVector() || !Query.Types[1].isVector();
-      })
       .moreElementsIf(
           [](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() && Query.Types[1].isVector() &&
-                   Query.Types[0].getNumElements() >
-                       Query.Types[1].getNumElements();
+            return Query.Types[0].getNumElements() >
+                   Query.Types[1].getNumElements();
           },
           changeTo(1, 0))
       .moreElementsToNextPow2(0)
       .moreElementsIf(
           [](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() && Query.Types[1].isVector() &&
-                   Query.Types[0].getNumElements() <
-                       Query.Types[1].getNumElements();
+            return Query.Types[0].getNumElements() <
+                   Query.Types[1].getNumElements();
           },
           changeTo(0, 1))
       .widenScalarOrEltToNextPow2OrMinSize(0, 8)
@@ -1817,6 +1819,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_FMAXNUM);
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
+  case Intrinsic::aarch64_neon_pmull:
+  case Intrinsic::aarch64_neon_pmull64:
+    return LowerBinOp(AArch64::G_PMULL);
   case Intrinsic::aarch64_neon_smull:
     return LowerBinOp(AArch64::G_SMULL);
   case Intrinsic::aarch64_neon_umull:

@@ -35,12 +35,10 @@ Error enableDebuggerSupport(LLJIT &J) {
 
   switch (TT.getObjectFormat()) {
   case Triple::ELF: {
-    auto Registrar = createJITLoaderGDBRegistrar(ES);
-    if (!Registrar)
-      return Registrar.takeError();
+    Error TargetSymErr = Error::success();
     ObjLinkingLayer->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-        ES, std::move(*Registrar), false, true));
-    return Error::success();
+        ES, false, true, TargetSymErr));
+    return TargetSymErr;
   }
   case Triple::MachO: {
     auto DS = GDBJITDebugInfoRegistrationPlugin::Create(ES, *ProcessSymsJD, TT);

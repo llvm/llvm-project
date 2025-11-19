@@ -142,6 +142,25 @@ class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
   int Upper = upper;
 }
 
+// ArgProperty - Base class for argument properties that can be specified in ArgInfo.
+class ArgProperty;
+
+// ArgName - Specifies the name of an argument for pretty-printing.
+class ArgName<string name> : ArgProperty {
+  string Name = name;
+}
+
+// ImmArgPrinter - Specifies a custom printer function for immediate arguments.
+class ImmArgPrinter<string funcname> : ArgProperty {
+  string FuncName = funcname;
+}
+
+// ArgInfo - The specified argument has properties defined by a list of ArgProperty objects.
+class ArgInfo<ArgIndex idx, list<ArgProperty> arg_properties> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  list<ArgProperty> Properties = arg_properties;
+}
+
 def IntrNoReturn : IntrinsicProperty;
 
 // Applied by default.
@@ -185,6 +204,10 @@ def IntrSpeculatable : IntrinsicProperty;
 // For this property, 'side effects' has the same meaning as 'side effects'
 // defined by the hasSideEffects property of the TableGen Instruction class.
 def IntrHasSideEffects : IntrinsicProperty;
+
+// Result will not be undef or poison if all arguments are not undef and not
+// poison.
+def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 
 //===----------------------------------------------------------------------===//
 // IIT constants and utils
@@ -1039,7 +1062,7 @@ def int_experimental_memset_pattern
 // FIXME: Add version of these floating point intrinsics which allow non-default
 // rounding modes and FP exception handling.
 
-let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
   def int_fma  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>,
                             LLVMMatchType<0>]>;
@@ -1052,16 +1075,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   // environment so they can be treated as readnone.
   def int_sqrt : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_powi : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
-  def int_asin : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_acos : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_atan : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_atan2 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_tan  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_sinh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_cosh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_tanh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_pow  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_log  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
@@ -1080,12 +1095,6 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_nearbyint : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_round : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_roundeven    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_sincos : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
-                             [llvm_anyfloat_ty]>;
-  def int_sincospi : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
-                             [llvm_anyfloat_ty]>;
-  def int_modf : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
-                             [llvm_anyfloat_ty]>;
 
   // Truncate a floating point number with a specific rounding mode
   def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
@@ -1097,6 +1106,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_arithmetic_fence : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                                    [IntrNoMem]>;
 
+  // If the value doesn't fit an unspecified value is returned, but this
+  // is not poison so we can still mark these as IntrNoCreateUndefOrPoison.
   def int_lround : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
   def int_llround : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
   def int_lrint : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
@@ -1110,29 +1121,50 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_frexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty, llvm_anyint_ty], [LLVMMatchType<0>]>;
 }
 
+// TODO: Move all of these into the IntrNoCreateUndefOrPoison case above.
+let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+  // These functions do not read memory, but are sensitive to the
+  // rounding mode. LLVM purposely does not model changes to the FP
+  // environment so they can be treated as readnone.
+  def int_asin : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_acos : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_atan : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_atan2 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_tan  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_sinh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_cosh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_tanh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_sincos : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+  def int_sincospi : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+  def int_modf : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+}
+
 def int_minnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, Commutative]
+  [IntrNoMem, IntrSpeculatable, Commutative, IntrNoCreateUndefOrPoison]
 >;
 def int_maxnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, Commutative]
+  [IntrNoMem, IntrSpeculatable, Commutative, IntrNoCreateUndefOrPoison]
 >;
 def int_minimum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, Commutative]
+  [IntrNoMem, IntrSpeculatable, Commutative, IntrNoCreateUndefOrPoison]
 >;
 def int_maximum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, Commutative]
+  [IntrNoMem, IntrSpeculatable, Commutative, IntrNoCreateUndefOrPoison]
 >;
 def int_minimumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, Commutative]
+  [IntrNoMem, IntrSpeculatable, Commutative, IntrNoCreateUndefOrPoison]
 >;
 def int_maximumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, Commutative]
+  [IntrNoMem, IntrSpeculatable, Commutative, IntrNoCreateUndefOrPoison]
 >;
 
 // Internal interface for object size checking
@@ -1164,7 +1196,7 @@ let IntrProperties = [IntrInaccessibleMemOnly] in {
 def int_is_fpclass
     : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                             [llvm_anyfloat_ty, llvm_i32_ty],
-                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+                            [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>]>;
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
@@ -1406,7 +1438,7 @@ def int_expect_with_probability : DefaultAttrsIntrinsic<[llvm_anyint_ty],
 //
 
 // None of these intrinsics accesses memory at all.
-let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
   def int_bswap: DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
   def int_ctpop: DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
   def int_bitreverse : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
@@ -1487,24 +1519,23 @@ def int_eh_sjlj_setup_dispatch  : Intrinsic<[], []>;
 //
 def int_var_annotation : DefaultAttrsIntrinsic<
     [], [llvm_anyptr_ty, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
-    [IntrInaccessibleMemOnly], "llvm.var.annotation">;
+    [IntrInaccessibleMemOnly]>;
 
 def int_ptr_annotation : DefaultAttrsIntrinsic<
     [llvm_anyptr_ty],
     [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
-    [IntrInaccessibleMemOnly], "llvm.ptr.annotation">;
+    [IntrInaccessibleMemOnly]>;
 
 def int_annotation : DefaultAttrsIntrinsic<
     [llvm_anyint_ty],
     [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty],
-    [IntrInaccessibleMemOnly], "llvm.annotation">;
+    [IntrInaccessibleMemOnly]>;
 
 // Annotates the current program point with metadata strings which are emitted
 // as CodeView debug info records. This is expensive, as it disables inlining
 // and is modelled as having side effects.
 def int_codeview_annotation : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
-                                        [IntrInaccessibleMemOnly, IntrNoDuplicate],
-                                        "llvm.codeview.annotation">;
+                                        [IntrInaccessibleMemOnly, IntrNoDuplicate]>;
 
 //===------------------------ Trampoline Intrinsics -----------------------===//
 //
@@ -1522,7 +1553,7 @@ def int_adjust_trampoline : DefaultAttrsIntrinsic<
 //
 
 // Expose the carry flag from add operations on two integrals.
-let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
   def int_sadd_with_overflow : DefaultAttrsIntrinsic<[llvm_anyint_ty,
                                           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                          [LLVMMatchType<0>, LLVMMatchType<0>]>;
@@ -1548,16 +1579,16 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
 //
 def int_sadd_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
-                             [IntrNoMem, IntrSpeculatable, Commutative]>;
+                             [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison, Commutative]>;
 def int_uadd_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
-                             [IntrNoMem, IntrSpeculatable, Commutative]>;
+                             [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison, Commutative]>;
 def int_ssub_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
-                             [IntrNoMem, IntrSpeculatable]>;
+                             [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
 def int_usub_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
-                             [IntrNoMem, IntrSpeculatable]>;
+                             [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
 def int_sshl_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable]>;
@@ -1612,22 +1643,22 @@ def int_abs : DefaultAttrsIntrinsic<
 
 def int_smax : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
-    [IntrNoMem, IntrSpeculatable]>;
+    [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
 def int_smin : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
-    [IntrNoMem, IntrSpeculatable]>;
+    [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
 def int_umax : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
-    [IntrNoMem, IntrSpeculatable]>;
+    [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
 def int_umin : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
-    [IntrNoMem, IntrSpeculatable]>;
+    [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
 def int_scmp : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>],
-    [IntrNoMem, IntrSpeculatable, Range<RetIndex, -1, 2>]>;
+    [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison, Range<RetIndex, -1, 2>]>;
 def int_ucmp : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>],
-    [IntrNoMem, IntrSpeculatable, Range<RetIndex, -1, 2>]>;
+    [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison, Range<RetIndex, -1, 2>]>;
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
@@ -1869,7 +1900,7 @@ def int_convert_from_fp16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i16_
 }
 
 // Saturating floating point to integer intrinsics
-let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
 def int_fptoui_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
 def int_fptosi_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
 }
@@ -1881,8 +1912,7 @@ def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
 
 // Intrinsic to detect whether its argument is a constant.
 def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
-                                [IntrNoMem, IntrConvergent],
-                                "llvm.is.constant">;
+                                [IntrNoMem, IntrConvergent]>;
 
 // Introduce a use of the argument without generating any code.
 def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
@@ -1892,7 +1922,7 @@ def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
 // First argument must be pointer or vector of pointer. This is checked by the
 // verifier.
 def int_ptrmask: DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty],
-                           [IntrNoMem, IntrSpeculatable]>;
+                           [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
 
 // Intrinsic to wrap a thread local variable.
 def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>],
@@ -1901,6 +1931,9 @@ def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatch
 
 def int_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                             [], [IntrNoMem]>;
+
+def int_reloc_none : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
+  [IntrNoMem, IntrHasSideEffects]>;
 
 //===---------------- Vector Predication Intrinsics --------------===//
 // Memory Intrinsics
@@ -2799,6 +2832,10 @@ def int_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
                                                           [IntrNoMem,
                                                            IntrSpeculatable]>;
 
+def int_vector_partial_reduce_fadd : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                                           [llvm_anyfloat_ty, llvm_anyfloat_ty],
+                                                           [IntrNoMem]>;
+
 //===----------------- Pointer Authentication Intrinsics ------------------===//
 //
 
@@ -2851,7 +2888,15 @@ def int_ptrauth_blend :
 def int_ptrauth_sign_generic :
   DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 
+//===----------------- AllocToken Intrinsics ------------------------------===//
+
+// Return the token ID for the given !alloc_token metadata.
+def int_alloc_token_id :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
+                        [IntrNoMem, NoUndef<RetIndex>]>;
+
 //===----------------------------------------------------------------------===//
+
 //===------- Convergence Intrinsics ---------------------------------------===//
 
 def int_experimental_convergence_entry

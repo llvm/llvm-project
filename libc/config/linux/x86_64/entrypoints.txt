@@ -326,6 +326,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # unistd.h entrypoints
     libc.src.unistd.access
     libc.src.unistd.chdir
+    libc.src.unistd.chown
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -333,6 +334,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.execve
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir
+    libc.src.unistd.fchown
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
@@ -344,6 +346,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getppid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
+    libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
     libc.src.unistd.link
@@ -395,8 +398,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wmemchr
     libc.src.wchar.wcpcpy
     libc.src.wchar.wcpncpy
+    libc.src.wchar.wcstod
+    libc.src.wchar.wcstof
     libc.src.wchar.wcstok
     libc.src.wchar.wcstol
+    libc.src.wchar.wcstold
     libc.src.wchar.wcstoll
     libc.src.wchar.wcstoul
     libc.src.wchar.wcstoull
@@ -1113,6 +1119,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # arpa/inet.h entrypoints
     libc.src.arpa.inet.htonl
     libc.src.arpa.inet.htons
+    libc.src.arpa.inet.inet_addr
+    libc.src.arpa.inet.inet_aton
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -1247,7 +1255,11 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.mbstowcs
+    libc.src.stdlib.mbtowc
     libc.src.stdlib.quick_exit
+    libc.src.stdlib.wcstombs
+    libc.src.stdlib.wctomb
 
     # signal.h entrypoints
     libc.src.signal.kill
@@ -1310,6 +1322,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime_r
     libc.src.time.clock
     libc.src.time.clock_gettime
+    libc.src.time.clock_settime
     libc.src.time.difftime
     libc.src.time.gettimeofday
     libc.src.time.gmtime
@@ -1364,15 +1377,16 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.mbrlen
     libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc
-    libc.src.wchar.mbtowc
-    libc.src.wchar.mbstowcs
     libc.src.wchar.mbsrtowcs
     libc.src.wchar.mbsnrtowcs
     libc.src.wchar.wcrtomb
-    libc.src.wchar.wctomb
-    libc.src.wchar.wcstombs
     libc.src.wchar.wcsrtombs
     libc.src.wchar.wcsnrtombs
+
+    # nl_types.h entrypoints
+    libc.src.nl_types.catopen 
+    libc.src.nl_types.catclose
+    libc.src.nl_types.catgets
   )
 endif()
 

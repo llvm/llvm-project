@@ -60,10 +60,10 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
     // For each StructField, record how big it is (in bits).
     // Would be good to use a pair of <offset, size> to advise a better
     // packing order.
-    QualType StructFieldTy = StructField->getType();
+    const QualType StructFieldTy = StructField->getType();
     if (StructFieldTy->isIncompleteType())
       return;
-    unsigned int StructFieldWidth =
+    const unsigned int StructFieldWidth =
         (unsigned int)Result.Context->getTypeInfo(StructFieldTy.getTypePtr())
             .Width;
     FieldSizes.emplace_back(StructFieldWidth, StructField->getFieldIndex());
@@ -72,21 +72,22 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
     TotalBitSize += StructFieldWidth;
   }
 
-  uint64_t CharSize = Result.Context->getCharWidth();
-  CharUnits CurrSize = Result.Context->getASTRecordLayout(Struct).getSize();
-  CharUnits MinByteSize =
+  const uint64_t CharSize = Result.Context->getCharWidth();
+  const CharUnits CurrSize =
+      Result.Context->getASTRecordLayout(Struct).getSize();
+  const CharUnits MinByteSize =
       CharUnits::fromQuantity(std::max<clang::CharUnits::QuantityType>(
           std::ceil(static_cast<float>(TotalBitSize) / CharSize), 1));
-  CharUnits MaxAlign = CharUnits::fromQuantity(
+  const CharUnits MaxAlign = CharUnits::fromQuantity(
       std::ceil((float)Struct->getMaxAlignment() / CharSize));
-  CharUnits CurrAlign =
+  const CharUnits CurrAlign =
       Result.Context->getASTRecordLayout(Struct).getAlignment();
-  CharUnits NewAlign = computeRecommendedAlignment(MinByteSize);
+  const CharUnits NewAlign = computeRecommendedAlignment(MinByteSize);
 
-  bool IsPacked = Struct->hasAttr<PackedAttr>();
-  bool NeedsPacking = (MinByteSize < CurrSize) && (MaxAlign != NewAlign) &&
-                      (CurrSize != NewAlign);
-  bool NeedsAlignment = CurrAlign.getQuantity() != NewAlign.getQuantity();
+  const bool IsPacked = Struct->hasAttr<PackedAttr>();
+  const bool NeedsPacking = (MinByteSize < CurrSize) &&
+                            (MaxAlign != NewAlign) && (CurrSize != NewAlign);
+  const bool NeedsAlignment = CurrAlign.getQuantity() != NewAlign.getQuantity();
 
   if (!NeedsAlignment && !NeedsPacking)
     return;
@@ -111,7 +112,8 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
 
   FixItHint FixIt;
   auto *Attribute = Struct->getAttr<AlignedAttr>();
-  std::string NewAlignQuantity = std::to_string((int)NewAlign.getQuantity());
+  const std::string NewAlignQuantity =
+      std::to_string((int)NewAlign.getQuantity());
   if (Attribute) {
     FixIt = FixItHint::CreateReplacement(
         Attribute->getRange(),

@@ -29,13 +29,12 @@ def testSmoke():
     a_frag = arith.constant(v16f32, f32_array)
     b_frag = arith.constant(v16f32, f32_array)
     c_frag = arith.constant(v16f32, f32_array)
-    false = arith.constant(T.bool(), False)
 
-    c_frag = rocdl.wmma_f16_16x16x16_f16(v16f32, [a_frag, b_frag, c_frag, false])
-    # CHECK: %{{.*}} = rocdl.wmma.f16.16x16x16.f16
+    c_frag = rocdl.wmma_f16_16x16x16_f16(v16f32, a_frag, b_frag, c_frag, opsel=False)
+    # CHECK: %{{.*}} = "rocdl.wmma.f16.16x16x16.f16"
     print(c_frag)
     assert isinstance(c_frag, OpView)
-    # CHECK: Value(%{{.*}} = rocdl.wmma.f16.16x16x16.f16
-    c_frag = rocdl.wmma_f16_16x16x16_f16_(v16f32, [a_frag, b_frag, c_frag, false])
+    # CHECK: Value(%{{.*}} = "rocdl.wmma.f16.16x16x16.f16"
+    c_frag = rocdl.wmma_f16_16x16x16_f16_(v16f32, a_frag, b_frag, c_frag, opsel=False)
     print(c_frag)
     assert isinstance(c_frag, Value)
