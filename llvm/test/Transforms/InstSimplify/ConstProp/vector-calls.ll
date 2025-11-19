@@ -133,8 +133,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_dein
 
 define { <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave3() {
 ; CHECK-LABEL: define { <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave3() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave3.v12i32(<12 x i32> <i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11, i32 4, i32 8, i32 12>)
-; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32> } { <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12> }
 ;
   %1 = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave3.v4i32.v12i32(<12 x i32> <i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11, i32 4, i32 8, i32 12>)
   ret { <4 x i32>, <4 x i32>, <4 x i32> } %1
@@ -142,8 +141,7 @@ define { <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave3() {
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave3() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave3() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave3.nxv12i32(<vscale x 12 x i32> zeroinitializer)
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave3.v4i32.v12i32(<vscale x 12 x i32> zeroinitializer)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -151,8 +149,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scal
 
 define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @fold_scalable_vector_deinterleave3_splat() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave3_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave3.nxv12i32(<vscale x 12 x i32> splat (i32 1))
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } { <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1) }
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave3.v4i32.v12i32(<vscale x 12 x i32> splat (i32 1))
   ret {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} %1
@@ -160,8 +157,7 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @fold_scalab
 
 define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @fold_scalable_vector_deinterleave3_splatfp() {
 ; CHECK-LABEL: define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave3_splatfp() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave3.nxv12f32(<vscale x 12 x float> splat (float 1.000000e+00))
-; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } { <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00) }
 ;
   %1 = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave3.v4f32.v12f32(<vscale x 12 x float> splat (float 1.0))
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %1
@@ -169,8 +165,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @fold_
 
 define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave4() {
 ; CHECK-LABEL: define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave4() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave4.v16i32(<16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15, i32 4, i32 8, i32 12, i32 16>)
-; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } { <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16> }
 ;
   %1 = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave4.v4i32.v16i32(<16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15, i32 4, i32 8, i32 12, i32 16>)
   ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %1
@@ -178,8 +173,7 @@ define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave4
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave4() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave4() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> zeroinitializer)
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.v4i32.v16i32(<vscale x 16 x i32> zeroinitializer)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -187,8 +181,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave4_splat() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave4_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> splat (i32 1))
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } { <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1) }
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.v4i32.v16i32(<vscale x 16 x i32> splat (i32 1))
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -196,8 +189,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave4_splatfp() {
 ; CHECK-LABEL: define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave4_splatfp() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave4.nxv16f32(<vscale x 16 x float> splat (float 1.000000e+00))
-; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } { <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00) }
 ;
   %1 = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave4.v4f32.v16f32(<vscale x 16 x float> splat (float 1.0))
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %1
@@ -205,8 +197,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 
 define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave5() {
 ; CHECK-LABEL: define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave5() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave5.v20i32(<20 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 2, i32 6, i32 10, i32 14, i32 18, i32 3, i32 7, i32 11, i32 15, i32 19, i32 4, i32 8, i32 12, i32 16, i32 20>)
-; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } { <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>, <4 x i32> <i32 17, i32 18, i32 19, i32 20> }
 ;
   %1 = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave5.v4i32.v20i32(<20 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 2, i32 6, i32 10, i32 14, i32 18, i32 3, i32 7, i32 11, i32 15, i32 19, i32 4, i32 8, i32 12, i32 16, i32 20>)
   ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %1
@@ -214,8 +205,7 @@ define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_de
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave5() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave5() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave5.nxv20i32(<vscale x 20 x i32> zeroinitializer)
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave5.v4i32.v20i32(<vscale x 20 x i32> zeroinitializer)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -223,8 +213,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave5_splat() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave5_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave5.nxv20i32(<vscale x 20 x i32> splat (i32 1))
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } { <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1) }
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave5.v4i32.v20i32(<vscale x 20 x i32> splat (i32 1))
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -232,8 +221,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave5_splatfp() {
 ; CHECK-LABEL: define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave5_splatfp() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave5.nxv20f32(<vscale x 20 x float> splat (float 1.000000e+00))
-; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } { <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00) }
 ;
   %1 = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave5.v4f32.v20f32(<vscale x 20 x float> splat (float 1.0))
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %1
@@ -241,8 +229,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 
 define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave6() {
 ; CHECK-LABEL: define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave6() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave6.v24i32(<24 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24>)
-; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } { <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>, <4 x i32> <i32 17, i32 18, i32 19, i32 20>, <4 x i32> <i32 21, i32 22, i32 23, i32 24> }
 ;
   %1 = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave6.v4i32.v24i32(<24 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24>)
   ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %1
@@ -250,8 +237,7 @@ define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fol
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave6() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave6() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave6.nxv24i32(<vscale x 24 x i32> zeroinitializer)
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave6.v4i32.v24i32(<vscale x 24 x i32> zeroinitializer)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -259,8 +245,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave6_splat() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave6_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave6.nxv24i32(<vscale x 24 x i32> splat (i32 1))
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } { <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1) }
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave6.v4i32.v24i32(<vscale x 24 x i32> splat (i32 1))
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -268,8 +253,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave6_splatfp() {
 ; CHECK-LABEL: define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave6_splatfp() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave6.nxv24f32(<vscale x 24 x float> splat (float 1.000000e+00))
-; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } { <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00) }
 ;
   %1 = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave6.v4f32.v24f32(<vscale x 24 x float> splat (float 1.0))
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %1
@@ -277,8 +261,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 
 define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave7() {
 ; CHECK-LABEL: define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave7() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave7.v28i32(<28 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>)
-; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } { <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>, <4 x i32> <i32 17, i32 18, i32 19, i32 20>, <4 x i32> <i32 21, i32 22, i32 23, i32 24>, <4 x i32> <i32 25, i32 26, i32 27, i32 28> }
 ;
   %1 = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave7.v4i32.v28i32(<28 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>)
   ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %1
@@ -286,8 +269,7 @@ define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x 
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave7() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave7() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave7.nxv28i32(<vscale x 28 x i32> zeroinitializer)
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave7.v4i32.v28i32(<vscale x 28 x i32> zeroinitializer)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -295,8 +277,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave7_splat() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave7_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave7.nxv28i32(<vscale x 28 x i32> splat (i32 1))
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } { <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1) }
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave7.v4i32.v28i32(<vscale x 28 x i32> splat (i32 1))
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -304,8 +285,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave7_splatfp() {
 ; CHECK-LABEL: define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave7_splatfp() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave7.nxv28f32(<vscale x 28 x float> splat (float 1.000000e+00))
-; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } { <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00) }
 ;
   %1 = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave7.v4f32.v28f32(<vscale x 28 x float> splat (float 1.0))
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %1
@@ -313,8 +293,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 
 define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave8() {
 ; CHECK-LABEL: define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @fold_vector_deinterleave8() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave8.v32i32(<32 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32>)
-; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } { <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>, <4 x i32> <i32 13, i32 14, i32 15, i32 16>, <4 x i32> <i32 17, i32 18, i32 19, i32 20>, <4 x i32> <i32 21, i32 22, i32 23, i32 24>, <4 x i32> <i32 25, i32 26, i32 27, i32 28>, <4 x i32> <i32 29, i32 30, i32 31, i32 32> }
 ;
   %1 = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave8.v4i32.v32i32(<32 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32>)
   ret { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %1
@@ -322,8 +301,7 @@ define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x 
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave8() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave8() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave8.nxv32i32(<vscale x 32 x i32> zeroinitializer)
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave8.v4i32.v32i32(<vscale x 32 x i32> zeroinitializer)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -331,8 +309,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave8_splat() {
 ; CHECK-LABEL: define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @fold_scalable_vector_deinterleave8_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave8.nxv32i32(<vscale x 32 x i32> splat (i32 1))
-; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } { <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1) }
 ;
   %1 = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave8.v4i32.v32i32(<vscale x 32 x i32> splat (i32 1))
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %1
@@ -340,8 +317,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave8_splatfp() {
 ; CHECK-LABEL: define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @fold_scalable_vector_deinterleave8_splatfp() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave8.nxv32f32(<vscale x 32 x float> splat (float 1.000000e+00))
-; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]]
+; CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } { <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 1.000000e+00) }
 ;
   %1 = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave8.v4f32.v32f32(<vscale x 32 x float> splat (float 1.0))
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %1
