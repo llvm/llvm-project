@@ -557,3 +557,21 @@ func.func @negative_shape_cast_source_shape_not_determinable(%v: vector<8x3xf32>
 // CHECK-SAME: (%[[V:.*]]: vector<8x3xf32>) -> vector<6x4xf32> {
 // CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<8x3xf32> to vector<6x4xf32>
 // CHECK:   return %[[SC]] : vector<6x4xf32>
+
+
+// TargetShape is [1x16]
+func.func @shape_cast_leading_unit_dim(%v: vector<32xf32>) -> vector<1x32xf32> {
+  %0 = vector.shape_cast %v : vector<32xf32> to vector<1x32xf32>
+  return %0 : vector<1x32xf32>
+}
+
+// CHECK-LABEL: func @shape_cast_leading_unit_dim
+// CHECK-SAME: (%[[V:.*]]: vector<32xf32>) -> vector<1x32xf32> {
+// CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<1x32xf32>
+// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0], sizes = [16], strides = [1]} : vector<32xf32> to vector<16xf32>
+// CHECK:   %[[SC0:.*]] = vector.shape_cast %[[S0]] : vector<16xf32> to vector<1x16xf32>
+// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[SC0]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<1x16xf32> into vector<1x32xf32>
+// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [16], sizes = [16], strides = [1]} : vector<32xf32> to vector<16xf32>
+// CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<16xf32> to vector<1x16xf32>
+// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [0, 16], strides = [1, 1]} : vector<1x16xf32> into vector<1x32xf32>
+// CHECK:   return %[[I1]] : vector<1x32xf32>
