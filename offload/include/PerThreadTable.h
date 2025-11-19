@@ -21,29 +21,17 @@
 #include <type_traits>
 
 template <typename ObjectType> class PerThread {
-  struct PerThreadData {
-    std::unique_ptr<ObjectType> ThreadEntry;
-  };
-
   std::mutex Mutex;
-  llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
+  llvm::SmallVector<std::shared_ptr<ObjectType>> ThreadDataList;
 
-  PerThreadData &getThreadData() {
-    static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
+  ObjectType &getThreadData() {
+    static thread_local std::shared_ptr<ObjectType> ThreadData = nullptr;
     if (!ThreadData) {
-      ThreadData = std::make_shared<PerThreadData>();
+      ThreadData = std::make_shared<ObjectType>();
       std::lock_guard<std::mutex> Lock(Mutex);
       ThreadDataList.push_back(ThreadData);
     }
     return *ThreadData;
-  }
-
-  ObjectType &getThreadEntry() {
-    PerThreadData &ThreadData = getThreadData();
-    if (ThreadData.ThreadEntry)
-      return *ThreadData.ThreadEntry;
-    ThreadData.ThreadEntry = std::make_unique<ObjectType>();
-    return *ThreadData.ThreadEntry;
   }
 
 public:
@@ -59,15 +47,15 @@ public:
     ThreadDataList.clear();
   }
 
-  ObjectType &get() { return getThreadEntry(); }
+  ObjectType &get() { return getThreadData(); }
 
   template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
     assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
            "Clear cannot be called while other threads are adding entries");
-    for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
-      if (!ThreadData->ThreadEntry)
+    for (std::shared_ptr<ObjectType> ThreadData : ThreadDataList) {
+      if (!ThreadData)
         continue;
-      ClearFunc(*ThreadData->ThreadEntry);
+      ClearFunc(*ThreadData);
     }
     ThreadDataList.clear();
   }
