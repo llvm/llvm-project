@@ -1,9 +1,11 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,GFX11
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,GFX12
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
 
@@ -211,6 +213,20 @@ entry:
   %dpp.shr8 = tail call half @llvm.amdgcn.update.dpp.f16(half 0xHFC00, half %max3, i32 280, i32 15, i32 15, i1 false)
   %max4 = tail call nnan half @llvm.maxnum.f16(half %max3, half %dpp.shr8)
   ret half %max4
+
+; GCN-LABEL: {{^}}dpp_src1_sgpr:
+; GFX11: v_add_nc_u16 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_add_nc_u16_e64_dpp {{v[0-9]+}}, {{v[0-9]+}}, {{s[0-9]+}}
+define amdgpu_kernel void @dpp_src1_sgpr(ptr addrspace(1) %out, i32 %in) {
+  %5 = trunc i32 %in to i8
+  %6 = shl i8 %5, 3
+  %7 = sext i8 %6 to i32
+  %8 = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %7, i32 280, i32 15, i32 15, i1 true)
+  %9 = trunc i32 %8 to i8
+  %10 = add i8 %6, %9
+  %11 = sext i8 %10 to i32
+  store i32 %11, ptr addrspace(1) %out
+  ret void
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
