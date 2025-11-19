@@ -586,7 +586,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     }
 
     auto Loc = getLoc(e->getSourceRange());
-    cir::BinOpOverflowOp ArithOp =
+    auto arithOp =
         cir::BinOpOverflowOp::create(builder, Loc, ResultCIRTy, OpKind, Left, Right);
 
     // Here is a slight difference from the original clang CodeGen:
