@@ -167,6 +167,10 @@ Error parseTuneFeatureString(StringRef TFString,
   const StringSet<> AllTuneFeatureSet(llvm::from_range, TuneFeatures);
   using SmallStringSet = SmallSet<StringRef, 4>;
 
+  // Do not create ParserWarning right away. Instead, we store the warning
+  // message until the last moment.
+  std::string WarningMsg;
+
   TFString = TFString.trim();
   // Note: StringSet is not really ergnomic to use in this case here.
   SmallStringSet PositiveFeatures;
@@ -190,9 +194,8 @@ Error parseTuneFeatureString(StringRef TFString,
               "'");
       }
     } else {
-      // Raise it as a warning for better compatibilities.
-      return make_error<ParserWarning>("unrecognized tune feature directive '" +
-                                       Twine(FeatureStr) + "'");
+      raw_string_ostream SS(WarningMsg);
+      SS << "unrecognized tune feature directive '" << FeatureStr << "'";
     }
   } while (!TFString.empty());
 
@@ -242,7 +245,10 @@ Error parseTuneFeatureString(StringRef TFString,
   for (StringRef NF : NegativeFeatures)
     ResFeatures.emplace_back(NegPrefix + NF.str());
 
-  return Error::success();
+  if (WarningMsg.empty())
+    return Error::success();
+  else
+    return make_error<ParserWarning>(WarningMsg);
 }
 } // namespace RISCV
 

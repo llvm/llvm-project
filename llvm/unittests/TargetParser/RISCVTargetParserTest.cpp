@@ -93,13 +93,14 @@ TEST(RISCVTuneFeature, LegalTuneFeatureStrings) {
   EXPECT_TRUE(is_contained(Result, "-no-default-unroll"));
 }
 
-TEST(RISCVTuneFeature, UnrecognizedTuneFeature) {
+TEST(RISCVTuneFeature, IgnoreUnrecognizedTuneFeature) {
   SmallVector<std::string> Result;
-  auto Err = RISCV::parseTuneFeatureString("32bit", Result);
+  auto Err = RISCV::parseTuneFeatureString("32bit,log-vrgather", Result);
   // This should be an warning.
   EXPECT_TRUE(Err.isA<RISCV::ParserWarning>());
   EXPECT_EQ(toString(std::move(Err)),
             "unrecognized tune feature directive '32bit'");
+  EXPECT_TRUE(is_contained(Result, "+log-vrgather"));
 }
 
 TEST(RISCVTuneFeature, DuplicatedFeatures) {
