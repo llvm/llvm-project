@@ -7028,7 +7028,7 @@ std::string escapeFormatString(StringRef Input) {
 
 static void CheckMissingFormatAttributes(
     Sema *S, ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
-    const StringLiteral *ReferenceFormatString, unsigned FormatIdx,
+    StringLiteral *ReferenceFormatString, unsigned FormatIdx,
     unsigned FirstDataArg, FormatStringType FormatType, unsigned CallerParamIdx,
     SourceLocation Loc) {
   NamedDecl *Caller = S->getCurFunctionOrMethodDecl();
@@ -7085,9 +7085,9 @@ static void CheckMissingFormatAttributes(
   }
 
   // Emit the diagnostic and fixit.
+  unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
+  StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
   do {
-    unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
-    StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
     std::string Attr, Fixit;
     if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere)
       llvm::raw_string_ostream(Attr)
@@ -7125,11 +7125,21 @@ static void CheckMissingFormatAttributes(
     DB << FixItHint::CreateInsertion(SL, Fixit);
   } while (false);
   S->Diag(Caller->getLocation(), diag::note_entity_declared_at) << Caller;
+
+  if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere) {
+    Caller->addAttr(FormatAttr::CreateImplicit(
+        S->getASTContext(), &S->getASTContext().Idents.get(FormatTypeName),
+        FormatStringIndex, FirstArgumentIndex));
+  } else {
+    Caller->addAttr(FormatMatchesAttr::CreateImplicit(
+        S->getASTContext(), &S->getASTContext().Idents.get(FormatTypeName),
+        FormatStringIndex, ReferenceFormatString));
+  }
 }
 
 bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
                                 Sema::FormatArgumentPassingKind APK,
-                                const StringLiteral *ReferenceFormatString,
+                                StringLiteral *ReferenceFormatString,
                                 unsigned format_idx, unsigned firstDataArg,
                                 FormatStringType Type,
                                 VariadicCallType CallType, SourceLocation Loc,

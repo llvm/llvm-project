@@ -24,37 +24,108 @@ int vscanf(const char *restrict format, va_list arg);
 
 char * global_fmt;
 
-void check_string_literal( FILE* fp, const char* s, char *buf, ... ) {
-
-  char * b;
+void check_string_literal1( const char* s, ... ) {
   va_list ap;
-  va_start(ap,buf);
-
+  va_start(ap,s);
   printf(s); // expected-warning {{format string is not a string literal}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
+}
+
+void check_string_literal2( const char* s, ... ) {
+  va_list ap;
+  va_start(ap,s);
   vprintf(s,ap); // expected-warning {{format string is not a string literal}}
+}
+
+void check_string_literal3( FILE* fp, const char* s, ... ) {
+  va_list ap;
+  va_start(ap,s);
   fprintf(fp,s); // expected-warning {{format string is not a string literal}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
+}
+
+void check_string_literal4( FILE* fp, const char* s, ... ) {
+  va_list ap;
+  va_start(ap,s);
   vfprintf(fp,s,ap); // expected-warning {{format string is not a string literal}}
+}
+
+void check_string_literal5( const char* s, ... ) {
+  char * b;
+  va_list ap;
+  va_start(ap,s);
   asprintf(&b,s); // expected-warning {{format string is not a string lit}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
+}
+
+void check_string_literal6( const char* s, ... ) {
+  char * b;
+  va_list ap;
+  va_start(ap,s);
   vasprintf(&b,s,ap); // expected-warning {{format string is not a string literal}}
+}
+
+void check_string_literal7( const char* s, char *buf ) {
   sprintf(buf,s); // expected-warning {{format string is not a string literal}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
+}
+
+void check_string_literal8( const char* s, char *buf ) {
   snprintf(buf,2,s); // expected-warning {{format string is not a string lit}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
+}
+
+void check_string_literal9( const char* s, char *buf, ... ) {
+  va_list ap;
+  va_start(ap,buf);
   __builtin___sprintf_chk(buf,0,-1,s); // expected-warning {{format string is not a string literal}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
+}
+
+void check_string_literal10( const char* s, char *buf, ... ) {
+  va_list ap;
+  va_start(ap,buf);
   __builtin___snprintf_chk(buf,2,0,-1,s); // expected-warning {{format string is not a string lit}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
+}
+
+void check_string_literal11( const char* s, char *buf, ... ) {
+  va_list ap;
+  va_start(ap,buf);
   vsprintf(buf,s,ap); // expected-warning {{format string is not a string lit}}
+}
+
+void check_string_literal12( const char* s, char *buf, ... ) {
+  va_list ap;
+  va_start(ap,buf);
   vsnprintf(buf,2,s,ap); // expected-warning {{format string is not a string lit}}
+}
+
+void check_string_literal13( char *buf, ... ) {
+  va_list ap;
+  va_start(ap,buf);
   vsnprintf(buf,2,global_fmt,ap); // expected-warning {{format string is not a string literal}}
+}
+
+void check_string_literal14( FILE* fp, const char* s, char *buf, ... ) {
+  va_list ap;
+  va_start(ap,buf);
   __builtin___vsnprintf_chk(buf,2,0,-1,s,ap); // expected-warning {{format string is not a string lit}}
+}
+
+void check_string_literal15( FILE* fp, const char* s, char *buf, ... ) {
+  va_list ap;
+  va_start(ap,buf);
   __builtin___vsnprintf_chk(buf,2,0,-1,global_fmt,ap); // expected-warning {{format string is not a string literal}}
+}
 
+void check_string_literal16(const char* s, ... ) {
+  va_list ap;
+  va_start(ap,s);
   vscanf(s, ap); // expected-warning {{format string is not a string literal}}
+}
 
+void check_string_literal17() {
   const char *const fmt = "%d"; // FIXME -- defined here
   printf(fmt, 1, 2); // expected-warning{{data argument not used}}
 
@@ -74,7 +145,7 @@ def"
 // warn only if the format string argument is a parameter that is not itself
 // declared as a format string with compatible format.
 __attribute__((__format__ (__printf__, 2, 4)))
-void check_string_literal2( FILE* fp, const char* s, char *buf, ... ) {
+void check_string_literal18( FILE* fp, const char* s, char *buf, ... ) {
   char * b;
   va_list ap;
   va_start(ap,buf);
