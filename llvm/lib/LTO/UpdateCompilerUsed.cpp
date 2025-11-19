@@ -62,8 +62,8 @@ private:
 
     // TargetLibraryInfo has info on C runtime library calls on the current
     // target.
-    for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs);
-         I != E; ++I) {
+    for (unsigned I = LibFunc::Begin_LibFunc, E = LibFunc::End_LibFunc; I != E;
+         ++I) {
       LibFunc F = static_cast<LibFunc>(I);
       if (TLI.has(F))
         Libcalls.insert(TLI.getName(F));

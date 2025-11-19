@@ -1,4 +1,4 @@
-# RUN: llc %s -mtriple=riscv64 \
+# RUN: llc -x mir < %s -mtriple=riscv64 \
 # RUN: -run-pass=cfi-instr-inserter \
 # RUN: -riscv-enable-cfi-instr-inserter=true
 # UNSUPPORTED: target={{.*}}

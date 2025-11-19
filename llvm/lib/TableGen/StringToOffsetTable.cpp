@@ -39,7 +39,8 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
 {} constexpr char {}{}Storage[] =)",
-                ClassPrefix.empty() ? "static" : "", ClassPrefix, Name);
+                ClassPrefix.empty() ? "static" : "",
+                UsePrefixForStorageMember ? ClassPrefix : "", Name);
 
   // MSVC silently miscompiles string literals longer than 64k in some
   // circumstances. The build system sets EmitLongStrLiterals to false when it
