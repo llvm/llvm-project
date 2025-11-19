@@ -5150,22 +5150,6 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
     return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
   return false;
 }
-    /*auto *WideMember0 =*/
-        /*dyn_cast_or_null<VPWidenRecipe>(InterleaveR->getStoredValues()[0]);*/
-    /*if (!WideMember0)*/
-      /*return nullptr;*/
-    /*for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {*/
-      /*auto *R = dyn_cast_or_null<VPWidenRecipe>(V);*/
-      /*if (!R || R->getOpcode() != WideMember0->getOpcode() ||*/
-          /*R->getNumOperands() > 2)*/
-        /*return nullptr;*/
-      /*if (any_of(enumerate(R->operands()),*/
-                 /*[WideMember0, Idx = I](const auto &P) {*/
-                   /*const auto &[OpIdx, OpV] = P;*/
-                   /*return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);*/
-                 /*}))*/
-        /*return nullptr;*/
-    /*}*/
 
 static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
   SmallVector<VPValue *> Ops0;
@@ -5181,10 +5165,11 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
   }
 
   for (unsigned Idx = 0; Idx != WideMember0->getNumOperands(); ++Idx) {
-    SmallVector<VPValue *> Ops0;
+    SmallVector<VPValue *> OpsI;
     for (VPValue *Op : Ops)
-      Ops0.push_back(Op->getDefiningRecipe()->getOperand(Idx));
-    if (any_of(enumerate(Ops0), [WideMember0, Idx](const auto &P) {
+      OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
+
+    if (any_of(enumerate(OpsI), [WideMember0, Idx](const auto &P) {
           const auto &[OpIdx, OpV] = P;
           return !canNarrowLoad(WideMember0, Idx, OpV, OpIdx);
         }))
