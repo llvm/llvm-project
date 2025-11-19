@@ -15,15 +15,19 @@
 #ifndef _LIBSYCL___IMPL_PLATFORM_HPP
 #define _LIBSYCL___IMPL_PLATFORM_HPP
 
+#include <sycl/__impl/aspect.hpp>
 #include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
+#include <sycl/__impl/info/device_type.hpp>
 #include <sycl/__impl/info/platform.hpp>
 
 #include <memory>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
+
+class device;
 
 namespace detail {
 class PlatformImpl;
@@ -56,6 +60,16 @@ public:
   /// \return the backend associated with this platform.
   backend get_backend() const noexcept;
 
+  /// Returns all SYCL devices associated with this platform.
+  ///
+  /// If there are no devices that match given device
+  /// type, resulting vector is empty.
+  ///
+  /// \param DeviceType is a SYCL device type.
+  /// \return a vector of SYCL devices.
+  std::vector<device>
+  get_devices(info::device_type DeviceType = info::device_type::all) const;
+
   /// Queries this SYCL platform for info.
   ///
   /// The return type depends on information being queried.
@@ -68,6 +82,16 @@ public:
   template <typename Param>
   typename detail::is_backend_info_desc<Param>::return_type
   get_backend_info() const;
+
+  /// Indicates if all of the SYCL devices on this platform have the
+  /// given feature.
+  ///
+  /// \param Aspect is one of the values in Table 4.20 of the SYCL 2020
+  /// Provisional Spec.
+  ///
+  /// \return true if all of the SYCL devices on this platform have the
+  /// given feature.
+  bool has(aspect Aspect) const;
 
   /// Returns all SYCL platforms from all backends that are available in the
   /// system.

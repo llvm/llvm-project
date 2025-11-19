@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <detail/device_impl.hpp>
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
 
@@ -29,7 +30,7 @@ std::vector<PlatformImplUPtr> &getPlatformCache() {
   return PlatformCache;
 }
 
-void shutdown() {
+static void shutdown() {
   // No error reporting in shutdown
   std::ignore = olShutDown();
 }
