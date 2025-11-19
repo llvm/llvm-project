@@ -235,9 +235,9 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 - Removed OpenCL header-only feature macros (previously unconditionally enabled
-  on SPIR-V and only selectively disabled via -D__undef_<feature>). All OpenCL
-  extensions and features are now centralized in OpenCLExtensions.def, allowing
-  consistent control via getSupportedOpenCLOpts and -cl-ext.
+  on SPIR-V and only selectively disabled via ``-D__undef_<feature>``). All
+  OpenCL extensions and features are now centralized in OpenCLExtensions.def,
+  allowing consistent control via ``getSupportedOpenCLOpts`` and ``-cl-ext``.
 
 - Added ``__builtin_elementwise_ldexp``.
 
