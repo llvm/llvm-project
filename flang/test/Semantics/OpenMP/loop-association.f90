@@ -81,6 +81,8 @@
   do i = 1, N
   enddo
   !$omp end parallel do
+  !ERROR: Misplaced OpenMP end-directive
+  !$omp end parallel do
 
   !$omp parallel
   a = 3.0
@@ -96,6 +98,8 @@
   !$omp end parallel
 
   a = 0.0
+  !ERROR: Misplaced OpenMP end-directive
+  !$omp end parallel do
   !$omp parallel do private(c)
   do i = 1, N
      do j = 1, N
@@ -103,8 +107,12 @@
         !ERROR: OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs
         a = 3.14
      enddo
+     !ERROR: Misplaced OpenMP end-directive
+     !$omp end parallel do
   enddo
   a = 1.414
+  !ERROR: Misplaced OpenMP end-directive
+  !$omp end parallel do
 
   do i = 1, N
      !$omp parallel do
@@ -112,6 +120,8 @@
         a = 3.14
      enddo
   enddo
+  !ERROR: Misplaced OpenMP end-directive
+  !$omp end parallel do
 
   !$omp parallel do private(c)
   !ERROR: OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs
@@ -119,11 +129,15 @@
   do i=1, N
      a = 3.14
   enddo
+  !ERROR: Misplaced OpenMP end-directive
+  !$omp end parallel do
 
   !$omp parallel do simd
   do i = 1, N
      a = 3.14
   enddo
+  !$omp end parallel do simd
+  !ERROR: Misplaced OpenMP end-directive
   !$omp end parallel do simd
 
   !$omp simd
