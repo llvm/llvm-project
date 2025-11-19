@@ -61,7 +61,7 @@ private:
   SmallVector<FileList> Files;
   DuplicateIncludeCheck &Check;
   const SourceManager &SM;
-  std::vector<llvm::Regex> AllowedRegexes;
+  SmallVector<llvm::Regex> AllowedRegexes;
 };
 
 } // namespace
