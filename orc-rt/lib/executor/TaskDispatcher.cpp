@@ -1,4 +1,4 @@
-//===- TaskDispatch.cpp ---------------------------------------------------===//
+//===- TaskDispatcher.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/TaskDispatch.h header.
+// Contains the implementation of APIs in the orc-rt/TaskDispatcher.h header.
 //
 //===----------------------------------------------------------------------===//
 
