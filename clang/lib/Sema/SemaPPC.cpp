@@ -256,17 +256,27 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinPPCMMACall(TheCall, BuiltinID, Types);
 #include "clang/Basic/BuiltinsPPC.def"
   case PPC::BI__builtin_amo_lwat:
-  case PPC::BI__builtin_amo_ldat: {
+  case PPC::BI__builtin_amo_ldat:
+  case PPC::BI__builtin_amo_lwat_s:
+  case PPC::BI__builtin_amo_ldat_s: {
     llvm::APSInt Result;
     if (SemaRef.BuiltinConstantArg(TheCall, 2, Result))
       return true;
     unsigned Val = Result.getZExtValue();
-    static constexpr unsigned ValidFC[] = {0, 1, 2, 3, 4, 6, 8};
-    if (llvm::is_contained(ValidFC, Val))
+
+    bool IsUnsigned = (BuiltinID == PPC::BI__builtin_amo_lwat ||
+                       BuiltinID == PPC::BI__builtin_amo_ldat);
+
+    bool IsValid = IsUnsigned ? llvm::is_contained({0, 1, 2, 3, 4, 6, 8}, Val)
+                              : llvm::is_contained({0, 5, 7, 8}, Val);
+
+    if (IsValid)
       return false;
+
     Expr *Arg = TheCall->getArg(2);
     return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
-           << toString(Result, 10) << "0-4, 6" << "8" << Arg->getSourceRange();
+           << toString(Result, 10) << (IsUnsigned ? "0-4, 6" : "0, 5, 7") << "8"
+           << Arg->getSourceRange();
   }
   }
   llvm_unreachable("must return from switch");

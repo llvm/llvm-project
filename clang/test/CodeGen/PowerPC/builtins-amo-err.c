@@ -15,4 +15,16 @@ void test_amo() {
   __builtin_amo_ldat(ptr2, value2, 3);
   // FC-ERROR: error: argument value 26 is outside the valid range [0-4, 6, 8]
   __builtin_amo_ldat(ptr2, value2, 26);
+
+  signed int *ptr3, value3;
+  // AIX32-ERROR: error: this builtin is only available on 64-bit targets
+  __builtin_amo_lwat_s(ptr3, value3, 0);
+  // FC-ERROR: argument value 2 is outside the valid range [0, 5, 7, 8]
+  __builtin_amo_lwat_s(ptr3, value3, 2);
+
+  unsigned long int *ptr4, value4;
+  // AIX32-ERROR: error: this builtin is only available on 64-bit targets
+  __builtin_amo_ldat_s(ptr4, value4, 3);
+  // FC-ERROR: error: argument value 6 is outside the valid range [0, 5, 7, 8]
+  __builtin_amo_ldat_s(ptr4, value4, 6);
 }
