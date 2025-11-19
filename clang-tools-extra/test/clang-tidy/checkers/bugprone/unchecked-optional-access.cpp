@@ -67,6 +67,21 @@ void bsl_optional_unchecked_value_access(const bsl::optional<int> &opt) {
   x = *opt;
 }
 
+void bsl_optional_unchecked_value_access_for_allocation_aware_class(const bsl::optional<bsl::string> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  bsl::string x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+}
+
 void bsl_optional_checked_access(const bsl::optional<int> &opt) {
   if (opt.has_value()) {
     opt.value();

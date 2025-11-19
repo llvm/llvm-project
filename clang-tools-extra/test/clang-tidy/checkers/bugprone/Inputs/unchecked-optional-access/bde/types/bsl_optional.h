@@ -3,18 +3,21 @@
 
 #include "../../std/types/optional.h"
 
+namespace bsl {
+  class string {};
+}
 
 /// Mock of `BloombergLP::bslstl::Optional_Base`
 namespace BloombergLP::bslstl {
 
 template <class T>
 constexpr bool isAllocatorAware() {
-  return true;
+  return false;
 }
 
 template <>
-constexpr bool isAllocatorAware<int>() {
-  return false;
+constexpr bool isAllocatorAware<bsl::string>() {
+  return true;
 }
 
 // Note: in reality `Optional_Base` checks if type uses bsl::allocator<>
