@@ -17,9 +17,8 @@
 // bool unique() const; // deprecated in C++17, removed in C++20
 
 #include <memory>
-#include <tuple>
 
 void f() {
   const std::shared_ptr<int> p;
-  std::ignore = p.unique(); // expected-warning {{'unique' is deprecated}}
+  (void)p.unique(); // expected-warning {{'unique' is deprecated}}
 }
