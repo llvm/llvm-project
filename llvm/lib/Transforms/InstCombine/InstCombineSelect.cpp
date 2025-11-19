@@ -1990,7 +1990,7 @@ static Value *foldSelectToInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
     Value *FrozenX = Builder.CreateFreeze(X, X->getName() + ".frz");
     Value *FrozenY = Builder.CreateFreeze(Y, Y->getName() + ".frz");
     Value *Cmp =
-        Builder.CreateIntrinsic(FrozenX->getType(), IID, {FrozenX, FrozenY});
+        Builder.CreateIntrinsic(FalseVal->getType(), IID, {FrozenX, FrozenY});
     return Builder.CreateSelect(SI.getCondition(), TrueVal, Cmp, "select.ucmp");
   }
 

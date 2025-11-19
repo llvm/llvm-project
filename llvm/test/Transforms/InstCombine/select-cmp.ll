@@ -922,5 +922,21 @@ define i16 @icmp_fold_to_llvm_ucmp_negative_test_invalid_constant_2(i16 %x, i16 
   ret i16 %6
 }
 
+define i32 @icmp_fold_to_llvm_ucmp_mixed_types(i16 %0, i16 %1) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_mixed_types(
+; CHECK-NEXT:    [[DOTFRZ1:%.*]] = freeze i16 [[TMP1:%.*]]
+; CHECK-NEXT:    [[DOTFRZ:%.*]] = freeze i16 [[TMP0:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[DOTFRZ]], [[DOTFRZ1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.ucmp.i32.i16(i16 [[DOTFRZ]], i16 [[DOTFRZ1]])
+; CHECK-NEXT:    [[SELECT_UCMP:%.*]] = select i1 [[DOTNOT]], i32 1, i32 [[TMP3]]
+; CHECK-NEXT:    ret i32 [[SELECT_UCMP]]
+;
+  %.not = icmp eq i16 %0, %1
+  %3 = icmp ult i16 %0, %1
+  %4 = select i1 %3, i32 -1, i32 1
+  %.1 = select i1 %.not, i32 1, i32 %4
+  ret i32 %.1
+}
+
 declare void @use(i1)
 declare void @use.i8(i8)
