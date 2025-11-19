@@ -180,7 +180,8 @@ protected:
     const SmallVectorImpl<ISD::InputArg> &Ins) const;
 
 public:
-  AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
+  AMDGPUTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI,
+                       const AMDGPUSubtarget &AMDGPUSTI);
 
   bool mayIgnoreSignedZero(SDValue Op) const;
 

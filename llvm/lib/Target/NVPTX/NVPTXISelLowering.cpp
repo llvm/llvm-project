@@ -514,7 +514,7 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
+    : TargetLowering(TM, STI), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.

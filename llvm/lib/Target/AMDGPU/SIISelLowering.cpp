@@ -87,7 +87,7 @@ static unsigned findFirstFreeSGPR(CCState &CCInfo) {
 
 SITargetLowering::SITargetLowering(const TargetMachine &TM,
                                    const GCNSubtarget &STI)
-    : AMDGPUTargetLowering(TM, STI), Subtarget(&STI) {
+    : AMDGPUTargetLowering(TM, STI, STI), Subtarget(&STI) {
   addRegisterClass(MVT::i1, &AMDGPU::VReg_1RegClass);
   addRegisterClass(MVT::i64, &AMDGPU::SReg_64RegClass);
 

@@ -60,8 +60,9 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
-                                           const AMDGPUSubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+                                           const TargetSubtargetInfo &STI,
+                                           const AMDGPUSubtarget &AMDGPUSTI)
+    : TargetLowering(TM, STI), Subtarget(&AMDGPUSTI) {
   // Always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather then generating calls to memset, mempcy or memmove.
   MaxStoresPerMemset = MaxStoresPerMemsetOptSize = ~0U;

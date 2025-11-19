@@ -114,6 +114,7 @@ AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
+  iRelSymbolicRel = R_AARCH64_FUNCINIT64;
   gotRel = R_AARCH64_GLOB_DAT;
   pltRel = R_AARCH64_JUMP_SLOT;
   symbolicRel = R_AARCH64_ABS64;
@@ -137,6 +138,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_ABS16:
   case R_AARCH64_ABS32:
   case R_AARCH64_ABS64:
+  case R_AARCH64_FUNCINIT64:
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_LDST16_ABS_LO12_NC:
@@ -267,7 +269,8 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
 }
 
 RelType AArch64::getDynRel(RelType type) const {
-  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64)
+  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64 ||
+      type == R_AARCH64_FUNCINIT64)
     return type;
   return R_AARCH64_NONE;
 }

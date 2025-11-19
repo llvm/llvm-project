@@ -484,6 +484,7 @@ Bug Fixes in This Version
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 - Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
 - Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
+- Fix a bug leading to incorrect code generation with complex number compound assignment and bitfield values, which also caused a crash with UBsan. (#GH166798)
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 
 Bug Fixes to Compiler Builtins
