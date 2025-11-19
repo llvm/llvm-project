@@ -4,7 +4,8 @@
 // UNSUPPORTED: ios
 
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: cp `%clang_asan -print-file-name=lib`/darwin/libclang_rt.asan_osx_dynamic.dylib \
+// RUN: %clang_asan -print-file-name=lib | tr -d '\n' > %t.lib_name
+// RUN: cp %{readfile:%t.lib_name}/darwin/libclang_rt.asan_osx_dynamic.dylib \
 // RUN:   %t/libclang_rt.asan_osx_dynamic.dylib
 // RUN: %clangxx_asan %s -o %t/a.out
 

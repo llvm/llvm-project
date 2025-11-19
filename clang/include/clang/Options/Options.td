@@ -201,6 +201,10 @@ def hlsl_Group : OptionGroup<"<HLSL group>">, Group<f_Group>,
                    DocName<"HLSL options">,
                    Visibility<[ClangOption]>;
 
+def fsan_cov_Group : OptionGroup<"<-fsanitize-coverage group>">,
+                   Group<f_clang_Group>,
+                   DocName<"Sanitizer Coverage options">;
+
 // Feature groups - these take command line options that correspond directly to
 // target specific features and can be translated directly from command line
 // options.
@@ -2407,26 +2411,26 @@ def : Flag<["-"], "fno-sanitize-blacklist">,
   Group<f_clang_Group>, Flags<[HelpHidden]>, Alias<fno_sanitize_ignorelist>;
 
 def fsanitize_coverage : CommaJoined<["-"], "fsanitize-coverage=">,
-  Group<f_clang_Group>,
+  Group<fsan_cov_Group>,
   HelpText<"Specify the type of coverage instrumentation for Sanitizers">;
 def fno_sanitize_coverage : CommaJoined<["-"], "fno-sanitize-coverage=">,
-  Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+  Group<fsan_cov_Group>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Disable features of coverage instrumentation for Sanitizers">,
   Values<"func,bb,edge,indirect-calls,trace-bb,trace-cmp,trace-div,trace-gep,"
          "8bit-counters,trace-pc,trace-pc-guard,no-prune,inline-8bit-counters,"
          "inline-bool-flag">;
 def fsanitize_coverage_allowlist : Joined<["-"], "fsanitize-coverage-allowlist=">,
-    Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<fsan_cov_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageAllowlistFiles">>;
 def fsanitize_coverage_ignorelist : Joined<["-"], "fsanitize-coverage-ignorelist=">,
-    Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<fsan_cov_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Disable sanitizer coverage instrumentation for modules and functions "
              "that match the provided special case list, even the allowed ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageIgnorelistFiles">>;
 def fsanitize_coverage_stack_depth_callback_min_EQ
     : Joined<["-"], "fsanitize-coverage-stack-depth-callback-min=">,
-      Group<f_clang_Group>,
+      Group<fsan_cov_Group>,
       MetaVarName<"<M>">,
       HelpText<"Use callback for max stack depth tracing with minimum stack "
                "depth M">,
@@ -2754,7 +2758,7 @@ defm sanitize_alloc_token_extended : BoolOption<"f", "sanitize-alloc-token-exten
 def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<N>">,
-  HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
+  HelpText<"Limit to maximum N allocation tokens (0 = target SIZE_MAX)">;
 
 def falloc_token_mode_EQ : Joined<["-"], "falloc-token-mode=">,
   Group<f_Group>, Visibility<[CC1Option]>,
@@ -7901,70 +7905,87 @@ def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;
 def fsanitize_coverage_type : Joined<["-"], "fsanitize-coverage-type=">,
+                              Group<fsan_cov_Group>,
                               HelpText<"Sanitizer coverage type">,
                               MarshallingInfoInt<CodeGenOpts<"SanitizeCoverageType">>;
 def fsanitize_coverage_indirect_calls
     : Flag<["-"], "fsanitize-coverage-indirect-calls">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable sanitizer coverage for indirect calls">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageIndirectCalls">>;
 def fsanitize_coverage_trace_bb
     : Flag<["-"], "fsanitize-coverage-trace-bb">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable basic block tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceBB">>;
 def fsanitize_coverage_trace_cmp
     : Flag<["-"], "fsanitize-coverage-trace-cmp">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable cmp instruction tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceCmp">>;
 def fsanitize_coverage_trace_div
     : Flag<["-"], "fsanitize-coverage-trace-div">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable div instruction tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceDiv">>;
 def fsanitize_coverage_trace_gep
     : Flag<["-"], "fsanitize-coverage-trace-gep">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable gep instruction tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceGep">>;
 def fsanitize_coverage_8bit_counters
     : Flag<["-"], "fsanitize-coverage-8bit-counters">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable frequency counters in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverage8bitCounters">>;
 def fsanitize_coverage_inline_8bit_counters
     : Flag<["-"], "fsanitize-coverage-inline-8bit-counters">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable inline 8-bit counters in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageInline8bitCounters">>;
 def fsanitize_coverage_inline_bool_flag
     : Flag<["-"], "fsanitize-coverage-inline-bool-flag">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable inline bool flag in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageInlineBoolFlag">>;
 def fsanitize_coverage_pc_table
     : Flag<["-"], "fsanitize-coverage-pc-table">,
+      Group<fsan_cov_Group>,
       HelpText<"Create a table of coverage-instrumented PCs">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoveragePCTable">>;
 def fsanitize_coverage_control_flow
     : Flag<["-"], "fsanitize-coverage-control-flow">,
+      Group<fsan_cov_Group>,
       HelpText<"Collect control flow of function">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageControlFlow">>;
 def fsanitize_coverage_trace_pc
     : Flag<["-"], "fsanitize-coverage-trace-pc">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable PC tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTracePC">>;
 def fsanitize_coverage_trace_pc_guard
     : Flag<["-"], "fsanitize-coverage-trace-pc-guard">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable PC tracing with guard in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTracePCGuard">>;
 def fsanitize_coverage_no_prune
     : Flag<["-"], "fsanitize-coverage-no-prune">,
+      Group<fsan_cov_Group>,
       HelpText<"Disable coverage pruning (i.e. instrument all blocks/edges)">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageNoPrune">>;
 def fsanitize_coverage_stack_depth
     : Flag<["-"], "fsanitize-coverage-stack-depth">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable max stack depth tracing">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageStackDepth">>;
 def fsanitize_coverage_trace_loads
     : Flag<["-"], "fsanitize-coverage-trace-loads">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable tracing of loads">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceLoads">>;
 def fsanitize_coverage_trace_stores
     : Flag<["-"], "fsanitize-coverage-trace-stores">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable tracing of stores">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceStores">>;
 def fexperimental_sanitize_metadata_EQ_covered
