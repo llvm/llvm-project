@@ -62,7 +62,7 @@ static bool isPtrInSharedCTASpace(mlir::Value ptr) {
 }
 
 // Helper method to convert CtaGroupKind in NVVM Dialect to CtaGroupKind in LLVM
-static constexpr llvm::nvvm::CTAGroupKind
+static llvm::nvvm::CTAGroupKind
 getNVVMCtaGroupKind(NVVM::CTAGroupKind ctaGroup) {
   switch (ctaGroup) {
   case NVVM::CTAGroupKind::CTA_1:
