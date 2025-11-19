@@ -293,8 +293,8 @@ while.end:                                        ; preds = %while.end.loopexit,
 }
 
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %cmp1 = fcmp
-; CHECK: Cost of 12 for VF 2: WIDEN ir<%cmp1> = fcmp olt ir<%0>, ir<0.000000e+00>
-; CHECK: Cost of 24 for VF 4: WIDEN ir<%cmp1> = fcmp olt ir<%0>, ir<0.000000e+00>
+; CHECK: Cost of 12 for VF 2: WIDEN ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
+; CHECK: Cost of 24 for VF 4: WIDEN ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
 define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %blockSize) #0 {
 entry:
   %cmp.not7 = icmp eq i32 %blockSize, 0

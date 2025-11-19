@@ -6904,9 +6904,10 @@ static bool isMaskedLoadCompress(
       ScalarLoadsCost;
   InstructionCost LoadCost = 0;
   if (IsMasked) {
-    LoadCost =
-        TTI.getMaskedMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
-                                  LI->getPointerAddressSpace(), CostKind);
+    LoadCost = TTI.getMaskedMemoryOpCost({Intrinsic::masked_load, LoadVecTy,
+                                          CommonAlignment,
+                                          LI->getPointerAddressSpace()},
+                                         CostKind);
   } else {
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
@@ -7305,8 +7306,9 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
           break;
         case LoadsState::CompressVectorize:
           VecLdCost += TTI.getMaskedMemoryOpCost(
-                           Instruction::Load, SubVecTy, CommonAlignment,
-                           LI0->getPointerAddressSpace(), CostKind) +
+                           {Intrinsic::masked_load, SubVecTy, CommonAlignment,
+                            LI0->getPointerAddressSpace()},
+                           CostKind) +
                        VectorGEPCost +
                        ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, SubVecTy,
                                         {}, CostKind);
@@ -15102,8 +15104,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
         } else if (IsMasked) {
           VecLdCost = TTI->getMaskedMemoryOpCost(
-              Instruction::Load, LoadVecTy, CommonAlignment,
-              LI0->getPointerAddressSpace(), CostKind);
+              {Intrinsic::masked_load, LoadVecTy, CommonAlignment,
+               LI0->getPointerAddressSpace()},
+              CostKind);
           // TODO: include this cost into CommonCost.
           VecLdCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
                                         LoadVecTy, CompressMask, CostKind);
@@ -21479,7 +21482,18 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
            "new ScheduleData already in scheduling region");
     SD->init(SchedulingRegionID, I);
 
+    auto CanIgnoreLoad = [](const Instruction *I) {
+      const auto *LI = dyn_cast<LoadInst>(I);
+      // If there is a simple load marked as invariant, we can ignore it.
+      // But, in the (unlikely) case of non-simple invariant load,
+      // we should not ignore it.
+      return LI && LI->isSimple() &&
+             LI->getMetadata(LLVMContext::MD_invariant_load);
+    };
+
     if (I->mayReadOrWriteMemory() &&
+        // Simple InvariantLoad does not depend on other memory accesses.
+        !CanIgnoreLoad(I) &&
         (!isa<IntrinsicInst>(I) ||
          (cast<IntrinsicInst>(I)->getIntrinsicID() != Intrinsic::sideeffect &&
           cast<IntrinsicInst>(I)->getIntrinsicID() !=
