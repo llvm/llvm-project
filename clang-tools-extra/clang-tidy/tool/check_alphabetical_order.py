@@ -64,9 +64,11 @@ class BulletBlocks(NamedTuple):
     - blocks: list of (label, block-lines) pairs for each bullet block.
     - suffix: lines after the last bullet within the section range.
     """
+
     prefix: Lines
     blocks: List[BulletItem]
     suffix: Lines
+
 
 class ScannedBlocks(NamedTuple):
     """Result of scanning bullet blocks within a section range.
@@ -74,13 +76,12 @@ class ScannedBlocks(NamedTuple):
     - blocks_with_pos: list of (start_index, block_lines) for each bullet block.
     - next_index: index where scanning stopped; start of the suffix region.
     """
+
     blocks_with_pos: List[Tuple[BulletStart, BulletBlock]]
     next_index: int
 
 
-def _scan_bullet_blocks(
-    lines: Sequence[str], start: int, end: int
-) -> ScannedBlocks:
+def _scan_bullet_blocks(lines: Sequence[str], start: int, end: int) -> ScannedBlocks:
     """Scan consecutive bullet blocks and return (blocks_with_pos, next_index).
 
     Each entry in blocks_with_pos is a tuple of (start_index, block_lines).
@@ -188,9 +189,7 @@ def _is_bullet_start(line: str) -> bool:
     return line.startswith("- ")
 
 
-def _parse_bullet_blocks(
-    lines: Sequence[str], start: int, end: int
-) -> BulletBlocks:
+def _parse_bullet_blocks(lines: Sequence[str], start: int, end: int) -> BulletBlocks:
     i = start
     n = end
     first_bullet = i
@@ -204,7 +203,7 @@ def _parse_bullet_blocks(
         key: CheckLabel = extract_label(block[0])
         blocks.append((key, block))
 
-    suffix: Lines = list(lines[res.next_index:n])
+    suffix: Lines = list(lines[res.next_index : n])
     return BulletBlocks(prefix, blocks, suffix)
 
 
