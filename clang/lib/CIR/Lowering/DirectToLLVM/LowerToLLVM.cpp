@@ -284,7 +284,10 @@ void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
     memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
         callOp->getContext(), /*other=*/ModRefInfo::Ref,
         /*argMem=*/ModRefInfo::Ref,
-        /*inaccessibleMem=*/ModRefInfo::Ref);
+        /*inaccessibleMem=*/ModRefInfo::Ref,
+        /*errnoMem=*/ModRefInfo::Ref,
+        /*targetMem0=*/ModRefInfo::Ref,
+        /*targetMem1=*/ModRefInfo::Ref);
     noUnwind = true;
     willReturn = true;
     break;
@@ -293,7 +296,10 @@ void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
     memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
         callOp->getContext(), /*other=*/ModRefInfo::NoModRef,
         /*argMem=*/ModRefInfo::NoModRef,
-        /*inaccessibleMem=*/ModRefInfo::NoModRef);
+        /*inaccessibleMem=*/ModRefInfo::NoModRef,
+        /*errnoMem=*/ModRefInfo::NoModRef,
+        /*targetMem0=*/ModRefInfo::NoModRef,
+        /*targetMem1=*/ModRefInfo::NoModRef);
     noUnwind = true;
     willReturn = true;
     break;
