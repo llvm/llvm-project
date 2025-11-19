@@ -13,9 +13,11 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
@@ -265,47 +267,102 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
 
 static void emitRISCVTuneFeatures(const RecordKeeper &RK, raw_ostream &OS) {
   std::vector<const Record *> TuneFeatureRecords =
-      RK.getAllDerivedDefinitionsIfDefined("RISCVTuneFeature");
+      RK.getAllDerivedDefinitionsIfDefined("RISCVTuneFeatureBase");
 
-  SmallVector<StringRef> TuneFeatures;
-  // A list of {Feature -> Implied Feature}
-  SmallVector<std::pair<StringRef, StringRef>> ImpliedFeatures;
+  // {Post Directive Idx, Neg Directive Idx, TuneFeature Record}
+  SmallVector<std::tuple<unsigned, unsigned, const Record *>>
+      TuneFeatureDirectives;
+  // {Directive Idx -> Original Record}
+  // This is primarily for diagnosing purposes -- when there is a duplication,
+  // we are able to pointed out the previous definition.
+  DenseMap<unsigned, const Record *> DirectiveToRecord;
+  // A list of {Feature Name, Implied Feature Name}
+  SmallVector<std::pair<StringRef, StringRef>> ImpliedFeatureList;
+  StringToOffsetTable StrTable;
+
+  auto tryInsertDirectives = [&](StringRef PosName, StringRef NegName,
+                                 const Record *R) {
+    unsigned PosIdx = StrTable.GetOrAddStringOffset(PosName);
+    if (auto [ItEntry, Inserted] = DirectiveToRecord.try_emplace(PosIdx, R);
+        !Inserted) {
+      PrintError(R, "RISC-V tune feature positive directive '" +
+                        Twine(PosName) + "' was already defined");
+      PrintFatalNote(ItEntry->second, "Previously defined here");
+    }
+    unsigned NegIdx = StrTable.GetOrAddStringOffset(NegName);
+    if (auto [ItEntry, Inserted] = DirectiveToRecord.try_emplace(NegIdx, R);
+        !Inserted) {
+      PrintError(R, "RISC-V tune feature negative directive '" +
+                        Twine(NegName) + "' was already defined");
+      PrintFatalNote(ItEntry->second, "Previously defined here");
+    }
+
+    TuneFeatureDirectives.emplace_back(PosIdx, NegIdx, R);
+  };
+
+  const std::string SimpleNegPrefix("no-");
   for (const auto *R : TuneFeatureRecords) {
+    if (!R->isSubClassOf("SubtargetFeature"))
+      PrintFatalError(
+          R, "A RISC-V tune feature should also be a SubtargetFeature");
+    // Preemptively insert feature name into the string table because we know
+    // it will be used later.
     StringRef FeatureName = R->getValueAsString("Name");
-    TuneFeatures.push_back(FeatureName);
+    StrTable.GetOrAddStringOffset(FeatureName);
+    if (R->isSubClassOf("RISCVSimpleTuneFeature")) {
+      // The positive directve will be the feature name, and the negative
+      // directive will be "no-" + feature name.
+      std::string NegName = SimpleNegPrefix + FeatureName.str();
+      tryInsertDirectives(FeatureName, NegName, R);
+    } else if (R->isSubClassOf("RISCVTuneFeature")) {
+      StringRef PosName = R->getValueAsString("PositiveDirectiveName");
+      StringRef NegName = R->getValueAsString("NegativeDirectiveName");
+      tryInsertDirectives(PosName, NegName, R);
+    } else {
+      llvm_unreachable("unrecognized RISCVTuneFeatureBase");
+    }
+  }
+
+  for (const auto *R : TuneFeatureRecords) {
     std::vector<const Record *> Implies = R->getValueAsListOfDefs("Implies");
     for (const auto *ImpliedRecord : Implies) {
-      if (!ImpliedRecord->isSubClassOf("RISCVTuneFeature") ||
+      if (!ImpliedRecord->isSubClassOf("RISCVTuneFeatureBase") ||
           ImpliedRecord == R) {
         PrintError(ImpliedRecord,
-                   "RISCVTuneFeature can only imply other RISCVTuneFeatures");
-        PrintFatalNote(R, "implied by this RISCVTuneFeature");
+                   "A RISC-V tune feature can only imply another tune feature");
+        PrintFatalNote(R, "implied by this tune feature");
       }
-      ImpliedFeatures.emplace_back(FeatureName,
-                                   ImpliedRecord->getValueAsString("Name"));
+      StringRef CurrFeatureName = R->getValueAsString("Name");
+      StringRef ImpliedFeatureName = ImpliedRecord->getValueAsString("Name");
+
+      ImpliedFeatureList.emplace_back(CurrFeatureName, ImpliedFeatureName);
     }
   }
 
   OS << "#ifdef GET_TUNE_FEATURES\n";
   OS << "#undef GET_TUNE_FEATURES\n\n";
 
-  OS << "static const char *TuneFeatures[] = {\n";
-  for (StringRef Feature : TuneFeatures)
-    OS.indent(4) << "\"" << Feature << "\",\n";
+  StrTable.EmitStringTableDef(OS, "TuneFeatureStrings");
+  OS << "\n";
+
+  OS << "static constexpr RISCVTuneFeature TuneFeatures[] = {\n";
+  for (const auto &[PosIdx, NegIdx, R] : TuneFeatureDirectives) {
+    StringRef FeatureName = R->getValueAsString("Name");
+    OS.indent(4) << formatv("{{ {0}, {1}, {2} },\t// '{3}'\n", PosIdx, NegIdx,
+                            *StrTable.GetStringOffset(FeatureName),
+                            FeatureName);
+  }
   OS << "};\n\n";
 
-  OS << "#endif // GET_TUNE_FEATURES\n\n";
-
-  OS << "#ifdef GET_IMPLIED_TUNE_FEATURES\n";
-  OS << "#undef GET_IMPLIED_TUNE_FEATURES\n\n";
-
-  OS << "static const RISCVImpliedTuneFeature ImpliedTuneFeatures[] = {\n";
-  for (auto [Feature, ImpliedFeature] : ImpliedFeatures)
-    OS.indent(4) << "{" << "\"" << Feature << "\", \"" << ImpliedFeature
-                 << "\"},\n";
+  OS << "static constexpr RISCVImpliedTuneFeature ImpliedTuneFeatures[] = {\n";
+  for (auto [Feature, ImpliedFeature] : ImpliedFeatureList)
+    OS.indent(4) << formatv("{{ {0}, {1} }, // '{2}' -> '{3}'\n",
+                            *StrTable.GetStringOffset(Feature),
+                            *StrTable.GetStringOffset(ImpliedFeature), Feature,
+                            ImpliedFeature);
   OS << "};\n\n";
 
-  OS << "#endif // GET_IMPLIED_TUNE_FEATURES\n";
+  OS << "#endif // GET_TUNE_FEATURES\n";
 }
 
 static void emitRiscvTargetDef(const RecordKeeper &RK, raw_ostream &OS) {

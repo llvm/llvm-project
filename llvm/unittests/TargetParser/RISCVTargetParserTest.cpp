@@ -36,6 +36,8 @@ TEST(RISCVVType, CheckSameRatioLMUL) {
 TEST(RISCVTuneFeature, AllTuneFeatures) {
   SmallVector<StringRef> AllTuneFeatures;
   RISCV::getAllTuneFeatures(AllTuneFeatures);
+  // Only allowed subtarget features that are explicitly marked by
+  // special TableGen class.
   EXPECT_EQ(AllTuneFeatures.size(), 28U);
   for (auto F : {"conditional-cmv-fusion",
                  "dlen-factor-2",
@@ -80,6 +82,7 @@ TEST(RISCVTuneFeature, LegalTuneFeatureStrings) {
   EXPECT_TRUE(is_contained(Result, "-short-forward-branch-i-mul"));
 
   Result.clear();
+  // Test inverse implied features.
   EXPECT_FALSE(errorToBool(RISCV::parseTuneFeatureString(
       "no-short-forward-branch-i-mul,short-forward-branch-i-minmax", Result)));
   EXPECT_TRUE(is_contained(Result, "+short-forward-branch-i-minmax"));
@@ -87,10 +90,14 @@ TEST(RISCVTuneFeature, LegalTuneFeatureStrings) {
   EXPECT_TRUE(is_contained(Result, "-short-forward-branch-i-mul"));
 
   Result.clear();
-  EXPECT_FALSE(errorToBool(RISCV::parseTuneFeatureString(
-      "no-no-default-unroll,no-sink-splat-operands", Result)));
+  // Test custom directive names.
+  EXPECT_FALSE(errorToBool(
+      RISCV::parseTuneFeatureString("enable-default-unroll,no-sink-splat-"
+                                    "operands,enable-latency-sched-heuristic",
+                                    Result)));
   EXPECT_TRUE(is_contained(Result, "+no-sink-splat-operands"));
   EXPECT_TRUE(is_contained(Result, "-no-default-unroll"));
+  EXPECT_TRUE(is_contained(Result, "-disable-latency-sched-heuristic"));
 }
 
 TEST(RISCVTuneFeature, IgnoreUnrecognizedTuneFeature) {
@@ -115,6 +122,15 @@ TEST(RISCVTuneFeature, DuplicatedFeatures) {
                 Result)),
             "Feature(s) 'log-vrgather', 'short-forward-branch-i-mul' cannot "
             "appear in both positive and negative directives");
+
+  // The error message should show the feature name for those using custom
+  // directives.
+  EXPECT_EQ(
+      toString(RISCV::parseTuneFeatureString(
+          "disable-latency-sched-heuristic,enable-latency-sched-heuristic",
+          Result)),
+      "Feature(s) 'disable-latency-sched-heuristic' cannot appear in both "
+      "positive and negative directives");
 
   EXPECT_EQ(
       toString(RISCV::parseTuneFeatureString(

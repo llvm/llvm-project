@@ -16,8 +16,8 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 
 namespace llvm {
@@ -152,20 +152,83 @@ void getFeaturesForCPU(StringRef CPU,
       EnabledFeatures.push_back(F.substr(1));
 }
 
-using RISCVImpliedTuneFeature = std::pair<const char *, const char *>;
+class RISCVTuneFeatureLookupTable {
+  struct RISCVTuneFeature {
+    unsigned PosIdx;
+    unsigned NegIdx;
+    unsigned FeatureIdx;
+  };
+
+  struct RISCVImpliedTuneFeature {
+    unsigned FeatureIdx;
+    unsigned ImpliedFeatureIdx;
+  };
 
 #define GET_TUNE_FEATURES
-#define GET_IMPLIED_TUNE_FEATURES
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
+  // Positive directive name -> Feature name
+  StringMap<StringRef> PositiveMap;
+  // Negative directive name -> Feature name
+  StringMap<StringRef> NegativeMap;
+
+  StringMap<SmallVector<StringRef>> ImpliedFeatureMap;
+  StringMap<SmallVector<StringRef>> InvImpliedFeatureMap;
+
+public:
+  static void getAllTuneFeatures(SmallVectorImpl<StringRef> &Features) {
+    for (const auto &TuneFeature : TuneFeatures)
+      Features.push_back(TuneFeatureStrings[TuneFeature.FeatureIdx]);
+  }
+
+  RISCVTuneFeatureLookupTable() {
+    for (const auto &TuneFeature : TuneFeatures) {
+      StringRef PosDirective = TuneFeatureStrings[TuneFeature.PosIdx];
+      StringRef NegDirective = TuneFeatureStrings[TuneFeature.NegIdx];
+      StringRef FeatureName = TuneFeatureStrings[TuneFeature.FeatureIdx];
+      PositiveMap[PosDirective] = FeatureName;
+      NegativeMap[NegDirective] = FeatureName;
+    }
+
+    for (const auto &Imp : ImpliedTuneFeatures) {
+      StringRef Feature = TuneFeatureStrings[Imp.FeatureIdx];
+      StringRef ImpliedFeature = TuneFeatureStrings[Imp.ImpliedFeatureIdx];
+      ImpliedFeatureMap[Feature].push_back(ImpliedFeature);
+      InvImpliedFeatureMap[ImpliedFeature].push_back(Feature);
+    }
+  }
+
+  /// Returns {Feature name, Is positive or not}, or empty feature name
+  /// if not found.
+  std::pair<StringRef, bool> getFeature(StringRef DirectiveName) const {
+    auto It = PositiveMap.find(DirectiveName);
+    if (It != PositiveMap.end())
+      return {It->getValue(), /*IsPositive=*/true};
+
+    return {NegativeMap.lookup(DirectiveName), /*IsPositive=*/false};
+  }
+
+  /// Returns the implied features, or empty ArrayRef if not found. Note:
+  /// ImpliedFeatureMap / InvImpliedFeatureMap are the owner of these implied
+  /// feature list, so we can just return the ArrayRef.
+  ArrayRef<StringRef> featureImplies(StringRef FeatureName,
+                                     bool Inverse = false) const {
+    const auto &Map = Inverse ? InvImpliedFeatureMap : ImpliedFeatureMap;
+    auto It = Map.find(FeatureName);
+    if (It == Map.end())
+      return {};
+    return It->second;
+  }
+};
+
 void getAllTuneFeatures(SmallVectorImpl<StringRef> &Features) {
-  Features.assign(std::begin(TuneFeatures), std::end(TuneFeatures));
+  RISCVTuneFeatureLookupTable::getAllTuneFeatures(Features);
 }
 
 Error parseTuneFeatureString(StringRef TFString,
                              SmallVectorImpl<std::string> &ResFeatures) {
-  const StringSet<> AllTuneFeatureSet(llvm::from_range, TuneFeatures);
   using SmallStringSet = SmallSet<StringRef, 4>;
+  RISCVTuneFeatureLookupTable TFLookup;
 
   // Do not create ParserWarning right away. Instead, we store the warning
   // message until the last moment.
@@ -176,27 +239,21 @@ Error parseTuneFeatureString(StringRef TFString,
   SmallStringSet PositiveFeatures;
   SmallStringSet NegativeFeatures;
   // Phase 1: Collect explicit features.
-  StringRef FeatureStr;
+  StringRef DirectiveStr;
   do {
-    std::tie(FeatureStr, TFString) = TFString.split(",");
-    if (AllTuneFeatureSet.count(FeatureStr)) {
-      if (!PositiveFeatures.insert(FeatureStr).second)
-        return make_error<ParserError>(
-            "cannot specify more than one instance of '" + Twine(FeatureStr) +
-            "'");
-    } else if (FeatureStr.starts_with("no-")) {
-      // Check if this is a negative feature, like `no-foo` for `foo`.
-      StringRef ActualFeature = FeatureStr.drop_front(3);
-      if (AllTuneFeatureSet.count(ActualFeature)) {
-        if (!NegativeFeatures.insert(ActualFeature).second)
-          return make_error<ParserError>(
-              "cannot specify more than one instance of '" + Twine(FeatureStr) +
-              "'");
-      }
-    } else {
+    std::tie(DirectiveStr, TFString) = TFString.split(",");
+    auto [FeatureName, IsPositive] = TFLookup.getFeature(DirectiveStr);
+    if (FeatureName.empty()) {
       raw_string_ostream SS(WarningMsg);
-      SS << "unrecognized tune feature directive '" << FeatureStr << "'";
+      SS << "unrecognized tune feature directive '" << DirectiveStr << "'";
+      continue;
     }
+
+    auto &Features = IsPositive ? PositiveFeatures : NegativeFeatures;
+    if (!Features.insert(FeatureName).second)
+      return make_error<ParserError>(
+          "cannot specify more than one instance of '" + Twine(DirectiveStr) +
+          "'");
   } while (!TFString.empty());
 
   auto Intersection =
@@ -209,25 +266,19 @@ Error parseTuneFeatureString(StringRef TFString,
   }
 
   // Phase 2: Derive implied features.
-  StringMap<SmallVector<StringRef, 2>> ImpliedFeatureMap;
-  StringMap<SmallVector<StringRef, 2>> InverseImpliedFeatureMap;
-  for (auto [Feature, ImpliedFeature] : ImpliedTuneFeatures) {
-    ImpliedFeatureMap[Feature].push_back(ImpliedFeature);
-    InverseImpliedFeatureMap[ImpliedFeature].push_back(Feature);
-  }
-
+  SmallStringSet DerivedPosFeatures;
+  SmallStringSet DerivedNegFeatures;
   for (StringRef PF : PositiveFeatures) {
-    auto ItFeatures = ImpliedFeatureMap.find(PF);
-    if (ItFeatures != ImpliedFeatureMap.end())
-      PositiveFeatures.insert(ItFeatures->second.begin(),
-                              ItFeatures->second.end());
+    if (auto FeatureList = TFLookup.featureImplies(PF); !FeatureList.empty())
+      DerivedPosFeatures.insert_range(FeatureList);
   }
   for (StringRef NF : NegativeFeatures) {
-    auto ItFeatures = InverseImpliedFeatureMap.find(NF);
-    if (ItFeatures != InverseImpliedFeatureMap.end())
-      NegativeFeatures.insert(ItFeatures->second.begin(),
-                              ItFeatures->second.end());
+    if (auto FeatureList = TFLookup.featureImplies(NF, /*Inverse=*/true);
+        !FeatureList.empty())
+      DerivedNegFeatures.insert_range(FeatureList);
   }
+  PositiveFeatures.insert_range(DerivedPosFeatures);
+  NegativeFeatures.insert_range(DerivedNegFeatures);
 
   Intersection = llvm::set_intersection(PositiveFeatures, NegativeFeatures);
   if (!Intersection.empty()) {
