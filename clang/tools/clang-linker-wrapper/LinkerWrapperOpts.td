@@ -64,6 +64,11 @@ def should_extract : CommaJoined<["--"], "should-extract=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<kind=file>">,
   HelpText<"Set of device architectures we should always extract if found.">;
 
+def emit_fatbin_only
+    : Flag<["--"], "emit-fatbin-only">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Emit fat binary directly without wrapping or host linking">;
+
 // Flags passed to the device linker.
 def arch_EQ : Joined<["--"], "arch=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<arch>">,

@@ -121,18 +121,18 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
 TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   /*
    * Create the following code:
-   * func(i64 addrspace(10)* %arg)
+   * func(ptr addrspace(10) %arg)
    * top:
    *  br label %L.ph
    * L.ph:
-   *  %gepbase = getelementptr i64 addrspace(10)* %arg, i64 1
+   *  %gepbase = getelementptr ptr addrspace(10) %arg, i64 1
    *  br label %L
    * L:
    *  %phi = phi i64 [i64 0, %L.ph], [ %add, %L2 ]
    *  %add = add i64 %phi2, 1
    *  br i1 undef, label %post, label %L2
    * post:
-   *  #= %gep = getelementptr i64 addrspace(10)* %gepbase, i64 %add =#
+   *  #= %gep = getelementptr ptr addrspace(10) %gepbase, i64 %add =#
    *  ret void
    *
    * We will create the appropriate SCEV expression for %gep and expand it,
@@ -199,7 +199,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
 TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderIsSafeToExpandAt) {
   /*
    * Create the following code:
-   * func(i64 addrspace(10)* %arg)
+   * func(ptr addrspace(10) %arg)
    * top:
    *  br label %L.ph
    * L.ph:
@@ -704,14 +704,14 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderShlNSW) {
     EXPECT_FALSE(I->hasNoSignedWrap());
   };
 
-  checkOneCase("define void @f(i16* %arrayidx) { "
-               "  %1 = load i16, i16* %arrayidx "
+  checkOneCase("define void @f(ptr %arrayidx) { "
+               "  %1 = load i16, ptr %arrayidx "
                "  %2 = and i16 %1, -32768 "
                "  ret void "
                "} ");
 
-  checkOneCase("define void @f(i8* %arrayidx) { "
-               "  %1 = load i8, i8* %arrayidx "
+  checkOneCase("define void @f(ptr %arrayidx) { "
+               "  %1 = load i8, ptr %arrayidx "
                "  %2 = and i8 %1, -128 "
                "  ret void "
                "} ");

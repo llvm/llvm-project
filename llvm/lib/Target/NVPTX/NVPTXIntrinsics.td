@@ -364,7 +364,42 @@ def INT_FENCE_SC_CLUSTER:
        NullaryInst<"fence.sc.cluster", int_nvvm_fence_sc_cluster>,
        Requires<[hasPTX<78>, hasSM<90>]>;
 
+def INT_FENCE_MBARRIER_INIT_RELEASE_CLUSTER:
+       NullaryInst<"fence.mbarrier_init.release.cluster",
+        int_nvvm_fence_mbarrier_init_release_cluster>,
+       Requires<[hasPTX<80>, hasSM<90>]>;
+
+let Predicates = [hasPTX<86>, hasSM<90>] in {
+def INT_FENCE_ACQUIRE_SYNC_RESTRICT_CLUSTER_CLUSTER:
+       NullaryInst<"fence.acquire.sync_restrict::shared::cluster.cluster",
+        int_nvvm_fence_acquire_sync_restrict_space_cluster_scope_cluster>;
+
+def INT_FENCE_RELEASE_SYNC_RESTRICT_CTA_CLUSTER:
+       NullaryInst<"fence.release.sync_restrict::shared::cta.cluster",
+        int_nvvm_fence_release_sync_restrict_space_cta_scope_cluster>;
+}
+
 // Proxy fence (uni-directional)
+let Predicates = [hasPTX<86>, hasSM<90>] in {
+def INT_NVVM_FENCE_PROXY_ASYNC_GENERIC_ACQUIRE_SYNC_RESTRICT_SPACE_CLUSTER_SCOPE_CLUSTER:
+       NullaryInst<"fence.proxy.async::generic.acquire.sync_restrict::shared::cluster.cluster",
+        int_nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster>;
+
+def INT_NVVM_FENCE_PROXY_ASYNC_GENERIC_RELEASE_SYNC_RESTRICT_SPACE_CTA_SCOPE_CLUSTER:
+       NullaryInst<"fence.proxy.async::generic.release.sync_restrict::shared::cta.cluster",
+        int_nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster>;
+}
+
+// Proxy fence (bi-directional)
+foreach proxykind = ["alias", "async", "async.global", "async.shared_cta",
+                      "async.shared_cluster"] in {
+  defvar Preds = !if(!eq(proxykind, "alias"), [hasPTX<75>, hasSM<70>],
+                                              [hasPTX<80>, hasSM<90>]);
+  defvar Intr = IntrinsicName<"llvm.nvvm.fence.proxy." # proxykind>;
+  def : NullaryInst<"fence.proxy." # !subst("_", "::", proxykind),
+          !cast<Intrinsic>(Intr.record_name)>, Requires<Preds>;
+}
+
 class FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<string Scope, Intrinsic Intr> :
         NullaryInst<"fence.proxy.tensormap::generic.release." # Scope, Intr>,
         Requires<[hasPTX<83>, hasSM<90>]>;
@@ -497,6 +532,10 @@ class CpAsyncBulkStr<bit mc, bit ch, bit mask = 0> {
                # !if(mc, ".multicast::cluster", "")
                # !if(ch, ".L2::cache_hint", "");
 
+  // Global to Shared CTA memory
+  string G2S_CTA = "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes"
+                   # !if(ch, ".L2::cache_hint", "");
+
   // Shared CTA to Cluster memory
   string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
 }
@@ -542,6 +581,21 @@ multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch> {
 }
 defm CP_ASYNC_BULK_G2S    : CP_ASYNC_BULK_G2S_INTR<has_ch = 0>;
 defm CP_ASYNC_BULK_G2S_CH : CP_ASYNC_BULK_G2S_INTR<has_ch = 1>;
+
+multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch> {
+  defvar Intr = int_nvvm_cp_async_bulk_global_to_shared_cta;
+
+  def "" : NVPTXInst<(outs),
+      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
+           B32:$size, B64:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<0, 1>.G2S_CTA # " [$dst], [$src], $size, [$mbar], $ch;",
+          CpAsyncBulkStr<0, 0>.G2S_CTA # " [$dst], [$src], $size, [$mbar];"),
+      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<86>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_G2S_CTA    : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_G2S_CTA_CH : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 1>;
 
 def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
   (ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
@@ -1898,7 +1952,12 @@ def : Pat<(int_nvvm_ff2bf16x2_rn f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, C
 def : Pat<(int_nvvm_ff2bf16x2_rn_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRN_RELU)>;
 def : Pat<(int_nvvm_ff2bf16x2_rz f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, CvtRZ)>;
 def : Pat<(int_nvvm_ff2bf16x2_rz_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRZ_RELU)>;
-
+let Predicates = [hasPTX<81>, hasSM<80>] in {
+  def : Pat<(int_nvvm_ff2bf16x2_rn_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff2bf16x2_rn_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_ff2bf16x2_rz_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ)>;
+  def : Pat<(int_nvvm_ff2bf16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ_RELU)>;
+}
 let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
 def : Pat<(int_nvvm_ff2bf16x2_rs f32:$a, f32:$b, i32:$c),
           (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS)>;
@@ -1914,6 +1973,12 @@ def : Pat<(int_nvvm_ff2f16x2_rn f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, Cvt
 def : Pat<(int_nvvm_ff2f16x2_rn_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRN_RELU)>;
 def : Pat<(int_nvvm_ff2f16x2_rz f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRZ)>;
 def : Pat<(int_nvvm_ff2f16x2_rz_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRZ_RELU)>;
+let Predicates = [hasPTX<81>, hasSM<80>] in {
+  def : Pat<(int_nvvm_ff2f16x2_rn_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff2f16x2_rn_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_ff2f16x2_rz_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ)>;
+  def : Pat<(int_nvvm_ff2f16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ_RELU)>;
+}
 
 let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
 def : Pat<(int_nvvm_ff2f16x2_rs f32:$a, f32:$b, i32:$c),
@@ -1929,6 +1994,23 @@ def : Pat<(int_nvvm_f2bf16_rn f32:$a),      (CVT_bf16_f32 $a, CvtRN)>;
 def : Pat<(int_nvvm_f2bf16_rn_relu f32:$a), (CVT_bf16_f32 $a, CvtRN_RELU)>;
 def : Pat<(int_nvvm_f2bf16_rz f32:$a),      (CVT_bf16_f32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_f2bf16_rz_relu f32:$a), (CVT_bf16_f32 $a, CvtRZ_RELU)>;
+let Predicates = [hasPTX<81>, hasSM<80>] in {
+  def : Pat<(int_nvvm_f2bf16_rz_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRZ)>;
+  def : Pat<(int_nvvm_f2bf16_rz_relu_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRZ_RELU)>;
+  def : Pat<(int_nvvm_f2bf16_rn_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRN)>;
+  def : Pat<(int_nvvm_f2bf16_rn_relu_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRN_RELU)>;
+}
+
+def : Pat<(int_nvvm_f2f16_rn f32:$a),      (CVT_f16_f32 $a, CvtRN)>;
+def : Pat<(int_nvvm_f2f16_rn_relu f32:$a), (CVT_f16_f32 $a, CvtRN_RELU)>;
+def : Pat<(int_nvvm_f2f16_rz f32:$a),      (CVT_f16_f32 $a, CvtRZ)>;
+def : Pat<(int_nvvm_f2f16_rz_relu f32:$a), (CVT_f16_f32 $a, CvtRZ_RELU)>;
+let Predicates = [hasPTX<81>, hasSM<80>] in {
+  def : Pat<(int_nvvm_f2f16_rz_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRZ)>;
+  def : Pat<(int_nvvm_f2f16_rz_relu_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRZ_RELU)>;
+  def : Pat<(int_nvvm_f2f16_rn_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRN)>;
+  def : Pat<(int_nvvm_f2f16_rn_relu_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRN_RELU)>;
+}
 
 def : Pat<(int_nvvm_lohi_i2d i32:$a, i32:$b), (V2I32toI64 $a, $b)>;
 def : Pat<(int_nvvm_d2i_lo f64:$a), (I64toI32L $a)>;
@@ -5606,7 +5688,7 @@ class Tcgen05MMADisableOutputLaneSDNode<bit Sp, string ASpace,
                 # "_DISABLE_OUTPUT_LANE_CG" # CtaGroup
                 # !if(!eq(AShift, 1), "_ASHIFT", ""),
         Tcgen05MMADisableOutputLaneTypeProfile<Sp, ASpace, CtaGroup, ScaleInput>,
-                    [SDNPHasChain, SDNPSideEffect]>;
+                    [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
 
 class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace,
                      string Kind, int CtaGroup, string CollectorUsageStr,

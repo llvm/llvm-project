@@ -23,7 +23,6 @@
 #include <fcntl.h>
 #include <io.h>
 #include <malloc.h>
-#include <numeric>
 #include <psapi.h>
 
 //===----------------------------------------------------------------------===//

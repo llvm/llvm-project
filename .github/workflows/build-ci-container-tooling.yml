@@ -36,6 +36,9 @@ jobs:
             test-command: 'cd $HOME && clang-format --version | grep version && git-clang-format -h | grep usage && black --version | grep black'
           - container-name: lint
             test-command: 'cd $HOME && clang-tidy --version | grep version && clang-tidy-diff.py -h | grep usage'
+          - container-name: abi-tests
+            test-command: 'cd $HOME && abi-compliance-checker --help'
+            target: abi-tests
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -52,7 +55,7 @@ jobs:
         with:
           container-name: ci-ubuntu-24.04-${{ matrix.container-name }}
           dockerfile: .github/workflows/containers/github-action-ci-tooling/Dockerfile
-          target: ci-container-code-${{ matrix.container-name }}
+          target: ci-container-${{ matrix.target || format('code-{0}', matrix.container-name) }}
           test-command: ${{ matrix.test-command }}
 
   push-ci-container:

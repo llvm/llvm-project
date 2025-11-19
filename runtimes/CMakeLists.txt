@@ -35,7 +35,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;libclc;openmp;offload")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;offload")
 set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -255,6 +255,20 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
+
+# Make GTest available to all runtimes
+# The runtime must call make_gtest_target() for it to become available. This is
+# to avoid build failures when gtest is not actually needed. In particular,
+# mingw-incomplete-sysroot is missing C++ header files that GTest needs to
+# compile.
+function(build_gtest)
+  if(TARGET default_gtest)
+    # Already available
+    return()
+  endif()
+
+  add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
+endfunction()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)

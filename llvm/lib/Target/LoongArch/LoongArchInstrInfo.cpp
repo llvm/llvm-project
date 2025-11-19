@@ -26,9 +26,9 @@ using namespace llvm;
 #include "LoongArchGenInstrInfo.inc"
 
 LoongArchInstrInfo::LoongArchInstrInfo(const LoongArchSubtarget &STI)
-    : LoongArchGenInstrInfo(STI, LoongArch::ADJCALLSTACKDOWN,
+    : LoongArchGenInstrInfo(STI, RegInfo, LoongArch::ADJCALLSTACKDOWN,
                             LoongArch::ADJCALLSTACKUP),
-      STI(STI) {}
+      RegInfo(STI.getHwMode()), STI(STI) {}
 
 MCInst LoongArchInstrInfo::getNop() const {
   return MCInstBuilder(LoongArch::ANDI)
@@ -113,14 +113,14 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void LoongArchInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool IsKill, int FI, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+
+    Register VReg, MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
   unsigned Opcode;
   if (LoongArch::GPRRegClass.hasSubClassEq(RC))
-    Opcode = TRI->getRegSizeInBits(LoongArch::GPRRegClass) == 32
+    Opcode = TRI.getRegSizeInBits(LoongArch::GPRRegClass) == 32
                  ? LoongArch::ST_W
                  : LoongArch::ST_D;
   else if (LoongArch::FPR32RegClass.hasSubClassEq(RC))
@@ -149,8 +149,8 @@ void LoongArchInstrInfo::storeRegToStackSlot(
 
 void LoongArchInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+    int FI, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   DebugLoc DL;
@@ -159,7 +159,7 @@ void LoongArchInstrInfo::loadRegFromStackSlot(
 
   unsigned Opcode;
   if (LoongArch::GPRRegClass.hasSubClassEq(RC))
-    Opcode = TRI->getRegSizeInBits(LoongArch::GPRRegClass) == 32
+    Opcode = RegInfo.getRegSizeInBits(LoongArch::GPRRegClass) == 32
                  ? LoongArch::LD_W
                  : LoongArch::LD_D;
   else if (LoongArch::FPR32RegClass.hasSubClassEq(RC))
@@ -665,13 +665,13 @@ void LoongArchInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     if (FrameIndex == -1)
       report_fatal_error("The function size is incorrectly estimated.");
     storeRegToStackSlot(MBB, PCALAU12I, Scav, /*IsKill=*/true, FrameIndex,
-                        &LoongArch::GPRRegClass, TRI, Register());
+                        &LoongArch::GPRRegClass, Register());
     TRI->eliminateFrameIndex(std::prev(PCALAU12I.getIterator()),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
     PCALAU12I.getOperand(1).setMBB(&RestoreBB);
     ADDI.getOperand(2).setMBB(&RestoreBB);
     loadRegFromStackSlot(RestoreBB, RestoreBB.end(), Scav, FrameIndex,
-                         &LoongArch::GPRRegClass, TRI, Register());
+                         &LoongArch::GPRRegClass, Register());
     TRI->eliminateFrameIndex(RestoreBB.back(),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
   }
