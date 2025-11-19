@@ -31690,7 +31690,7 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
     if (!MaxSVEVectorSizeInBits)
       MaxSVEVectorSizeInBits = AArch64::SVEMaxBitsPerVector;
     unsigned VscaleMax = MaxSVEVectorSizeInBits / 128;
-    unsigned MaxValue = MaxCount.getKnownMinValue() * VscaleMax;
+    unsigned MaxValue = MaxCount->getKnownMinValue() * VscaleMax;
     // The SVE count intrinsics don't support the multiplier immediate so we
     // don't have to account for that here. The value returned may be slightly
     // over the true required bits, as this is based on the "ALL" pattern. The
