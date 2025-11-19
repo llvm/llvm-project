@@ -554,6 +554,10 @@ constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_BRANCHES = {};
 constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_CALLS = {};
 constexpr FeatureBitset ImpliedFeaturesLVI_CFI = {};
 constexpr FeatureBitset ImpliedFeaturesLVI_LOAD_HARDENING = {};
+constexpr FeatureBitset ImpliedFeaturesX86_64_BASELINE = {};
+constexpr FeatureBitset ImpliedFeaturesX86_64_V2 = {};
+constexpr FeatureBitset ImpliedFeaturesX86_64_V3  = {};
+constexpr FeatureBitset ImpliedFeaturesX86_64_V4 = {};
 
 // XSAVE features are dependent on basic XSAVE.
 constexpr FeatureBitset ImpliedFeaturesXSAVEC = FeatureXSAVE;
@@ -657,9 +661,11 @@ constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
 constexpr FeatureBitset ImpliedFeaturesZU = {};
 
+constexpr FeatureBitset ImpliedFeaturesAPXF = ImpliedFeaturesEGPR | ImpliedFeaturesPush2Pop2 | ImpliedFeaturesPPX | ImpliedFeaturesNDD | ImpliedFeaturesCCMP | ImpliedFeaturesNF | ImpliedFeaturesCF | ImpliedFeaturesZU;
+
 constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
-constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
+constexpr FeatureInfo FeatureInfos[CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
 #include "llvm/TargetParser/X86TargetParser.def"
 };
@@ -759,10 +765,8 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   std::array<uint32_t, 4> FeatureMask{};
   for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
-  .Case(STR, llvm::X86::FEATURE_##ENUM)
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY)                               \
-  .Case(STR, llvm::X86::FEATURE_##ENUM)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                                \
+  .Case(STR, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
         ;
     assert(Feature / 32 < FeatureMask.size());
@@ -776,12 +780,12 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
   // Check that priorities are set properly in the .def file. We expect that
   // "compat" features are assigned non-duplicate consecutive priorities
   // starting from one (1, ..., 37) and multiple zeros.
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
   };
   std::array<unsigned, std::size(Priorities)> HelperList;
-  const size_t MaxPriority = 37;
+  const size_t MaxPriority = 35;
   std::iota(HelperList.begin(), HelperList.begin() + MaxPriority + 1, 0);
   for (size_t i = MaxPriority + 1; i != std::size(Priorities); ++i)
     HelperList[i] = 0;
@@ -791,7 +795,7 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #endif
 
   switch (Feat) {
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                                \
   case X86::FEATURE_##ENUM:                                                    \
     return PRIORITY;
 #include "llvm/TargetParser/X86TargetParser.def"

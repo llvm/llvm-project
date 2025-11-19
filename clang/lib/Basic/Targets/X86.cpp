@@ -1302,15 +1302,14 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
 // X86TargetInfo::hasFeature for a somewhat comprehensive list).
 bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) .Case(STR, true)
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY) .Case(STR, true)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_LEVEL) .Case(STR, true)
 #include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
 
 static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   return llvm::StringSwitch<llvm::X86::ProcessorFeatures>(Name)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                                \
   .Case(STR, llvm::X86::FEATURE_##ENUM)
 
 #include "llvm/TargetParser/X86TargetParser.def"
