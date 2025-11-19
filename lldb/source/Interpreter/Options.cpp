@@ -14,13 +14,13 @@
 #include <set>
 
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/STLExtras.h"
 

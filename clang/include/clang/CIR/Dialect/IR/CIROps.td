@@ -3386,6 +3386,10 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     cannot be known by the operation, and that information affects how the
     operation is lowered.
 
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid base class for the object, the behavior
+    is undefined.
+
     Example:
     ```c++
     struct Base { };
@@ -3399,8 +3403,6 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     ```
   }];
 
-  // The validity of the relationship of derived and base cannot yet be
-  // verified, currently not worth adding a verifier.
   let arguments = (ins
     Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
     IndexAttr:$offset, UnitAttr:$assume_not_null);
@@ -3411,6 +3413,56 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
       $derived_addr `:` qualified(type($derived_addr))
       (`nonnull` $assume_not_null^)?
       ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// DerivedClassAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
+  let summary = "Get the derived class address for a class/struct";
+  let description = [{
+    The `cir.derived_class_addr` operaration gets the address of a particular
+    derived class given a non-virtual base class pointer. The offset in bytes
+    of the base class must be passed in, similar to `cir.base_class_addr`, but
+    going into the other direction. This means lowering to a negative offset.
+
+    The operation contains a flag for whether or not the operand may be nullptr.
+    That depends on the context and cannot be known by the operation, and that
+    information affects how the operation is lowered.
+
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid derived class for the object, the
+    behavior is undefined.
+
+    Example:
+    ```c++
+    class A {};
+    class B : public A {};
+
+    B *getAsB(A *a) {
+      return static_cast<B*>(a);
+    }
+    ```
+
+    leads to
+    ```mlir
+      %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
+      %3 = cir.base_class_addr %2 : !cir.ptr<!rec_B> [0] -> !cir.ptr<!rec_A>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "base class pointer", [MemRead]>:$base_addr,
+    IndexAttr:$offset, UnitAttr:$assume_not_null);
+
+  let results = (outs Res<CIR_PointerType, "">:$derived_addr);
+
+  let assemblyFormat = [{
+      $base_addr `:` qualified(type($base_addr))
+      (`nonnull` $assume_not_null^)?
+      ` ` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
   }];
 }
 
@@ -4607,6 +4659,44 @@ def CIR_TryOp : CIR_Op<"try",[
 }
 
 //===----------------------------------------------------------------------===//
+// Exception related: EhInflightOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
+  let summary = "Materialize the catch clause formal parameter";
+  let description = [{
+    `cir.eh.inflight_exception` returns two values:
+      - `exception_ptr`: The exception pointer for the inflight exception
+      - `type_id`: the type info index for the exception type
+    This operation is expected to be the first operation in the unwind
+    destination basic blocks of a `cir.try_call` operation.
+
+    The `cleanup` attribute indicates that clean up code must be run before the
+    values produced by this operation are used to dispatch the exception. This
+    cleanup code must be executed even if the exception is not caught.
+    This helps CIR to pass down more accurate information for LLVM lowering
+    to landingpads.
+
+    Example:
+
+    ```mlir
+    %exception_ptr, %type_id = cir.eh.inflight_exception
+    %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
+    %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+    ``
+  }];
+
+  let arguments = (ins UnitAttr:$cleanup,
+                       OptionalAttr<FlatSymbolRefArrayAttr>:$catch_type_list);
+  let results = (outs CIR_VoidPtrType:$exception_ptr, CIR_UInt32:$type_id);
+  let assemblyFormat = [{
+    (`cleanup` $cleanup^)?
+    ($catch_type_list^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
@@ -4842,6 +4932,40 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
     $mem_order $ptr
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// BlockAddressOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
+  let summary = "Get the address of a cir.label within a function";
+  let description = [{
+    The `cir.blockaddress` operation takes a function name and a label and
+    produces a pointer value that represents the address of that cir.label
+    within the specified function.
+
+    This operation models GCC's "labels as values" extension (`&&label`), which
+    allows taking the address of a local label and using it as a computed
+    jump target (e.g., with `goto *addr;`).
+
+    Example:
+    ```mlir
+    %1 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
+                                                          {alignment = 8 : i64}
+    %addr = cir.block_address <@c, "label1"> : !cir.ptr<!cir.void>
+    cir.store align(8) %addr, %1 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+    cir.br ^bb1
+   ^bb1:
+    cir.label "label"
+    ```
+  }];
+
+  let arguments = (ins CIR_BlockAddrInfoAttr:$block_addr_info);
+  let results = (outs CIR_VoidPtrType:$addr);
+  let assemblyFormat = [{
+    $block_addr_info `:` qualified(type($addr)) attr-dict
   }];
 }
 
