@@ -22,14 +22,13 @@ std::vector<platform> platform::get_platforms() {
 
 template <typename Param>
 typename detail::is_platform_info_desc<Param>::return_type
-platform::get_info_impl() const {
-  return impl.template get_info<Param>();
+platform::get_info() const {
+  return impl.get_info<Param>();
 }
 
-#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT, OffloadCode)         \
-  template _LIBSYCL_EXPORT ReturnT                                             \
-  platform::get_info_impl<info::platform::Desc>() const;
-
+#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT, PiCode)              \
+  template _LIBSYCL_EXPORT ReturnT platform::get_info<info::platform::Desc>()  \
+      const;
 #include <sycl/__impl/info/platform.def>
 #undef __SYCL_PARAM_TRAITS_SPEC
 

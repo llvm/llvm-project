@@ -64,9 +64,7 @@ public:
   ///
   /// The return type depends on information being queried.
   template <typename Param>
-  typename detail::is_platform_info_desc<Param>::return_type get_info() const {
-    return get_info_impl<Param>();
-  }
+  typename detail::is_platform_info_desc<Param>::return_type get_info() const;
 
   // template <typename Param>
   // typename detail::is_backend_info_desc<Param>::return_type
@@ -99,10 +97,6 @@ public:
 
 private:
   platform(detail::platform_impl &Impl) : ObjBase(Impl) {}
-
-  template <typename Param>
-  typename detail::is_platform_info_desc<Param>::return_type
-  get_info_impl() const;
 
   friend detail::ObjBase<detail::platform_impl &, platform>;
 }; // class platform

@@ -47,6 +47,7 @@ using backend_return_t =
     typename backend_traits<Backend>::template return_type<SYCLObjectT>;
 
 namespace detail {
+// Used by SYCL tools
 inline std::string_view get_backend_name(const backend &Backend) {
   switch (Backend) {
   case backend::opencl:
