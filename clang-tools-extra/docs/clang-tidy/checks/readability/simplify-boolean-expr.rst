@@ -76,8 +76,9 @@ Examples:
      becomes ``return (i & 1) != 0;``
 
   6. Given ``struct X { explicit operator bool(); };``, and an instance ``x``
-     of ``struct X``, the conditional return ``if (x) return true;
-     return false;`` becomes ``return static_cast<bool>(x);``
+     of ``struct X``, the conditional return
+     ``if (x) return true; return false;``
+     becomes ``return static_cast<bool>(x);``
 
 Options
 -------

@@ -17,8 +17,7 @@ format specifier:
 
    * | **Example 1:** Input Date: `29 December 2014` ;
      | Format String: `yyyy-ww`;
-     | Output string: `2014-01` (Wrong because it’s not
-     | the first week of 2014)
+     | Output string: `2014-01` (Wrong because it’s not the first week of 2014)
 
    * | **Example 2:** Input Date: `29 December 2014` ;
      | Format String: `dd-MM-yyyy (ww-YYYY)`;
@@ -27,27 +26,27 @@ format specifier:
 #. F without ee/EE : Numeric day of week in a month without actual day.
 
    * | **Example:** Input Date: `29 December 2014` ; Format String: `F-MM`;
-     | Output string: `5-12` (Wrong because it reads as
-     | *5th ___ of Dec* in English)
+     | Output string: `5-12` (Wrong because it reads as *5th ___ of Dec* in
+     | English)
 
 #. F without MM : Numeric day of week in a month without month.
 
    * | **Example:** Input Date: `29 December 2014` ; Format String: `F-EE`
-     | Output string: `5-Mon` (Wrong because it reads as
-     | *5th Mon of ___* in English)
+     | Output string: `5-Mon` (Wrong because it reads as *5th Mon of ___* in
+     | English)
 
 #. WW without MM : Week of the month without the month.
 
    * | **Example:** Input Date: `29 December 2014` ; Format String: `WW-yyyy`
-     | Output string: `05-2014` (Wrong because it reads as
-     | *5th Week of ___* in English)
+     | Output string: `05-2014` (Wrong because it reads as *5th Week of ___* in
+     | English)
 
 #. YYYY + QQ : Week year specified with quarter of normal year
    (unless yyyy is also specified).
 
    * | **Example 1:** Input Date: `29 December 2014` ; Format String: `YYYY-QQ`
-     | Output string: `2015-04` (Wrong because it’s not
-     | the 4th quarter of 2015)
+     | Output string: `2015-04` (Wrong because it’s not the 4th quarter of
+     | 2015)
 
    * | **Example 2:** Input Date: `29 December 2014` ;
      | Format String: `ww-YYYY (QQ-yyyy)`
@@ -57,8 +56,7 @@ format specifier:
    (unless yyyy is also specified).
 
    * | **Example 1:** Input Date: `29 December 2014` ; Format String: `YYYY-MM`
-     | Output string: `2015-12` (Wrong because it’s not
-     | the 12th month of 2015)
+     | Output string: `2015-12` (Wrong because it’s not the 12th month of 2015)
 
    * | **Example 2:** Input Date: `29 December 2014` ;
      | Format String: `ww-YYYY (MM-yyyy)`
@@ -68,8 +66,7 @@ format specifier:
    (unless yyyy is also specified).
 
    * | **Example 1:** Input Date: `29 December 2014` ; Format String: `YYYY-DD`
-     | Output string: `2015-363` (Wrong because it’s not
-     | the 363rd day of 2015)
+     | Output string: `2015-363` (Wrong because it’s not the 363rd day of 2015)
 
    * | **Example 2:** Input Date: `29 December 2014` ;
      | Format String: `ww-YYYY (DD-yyyy)`
@@ -79,8 +76,7 @@ format specifier:
    (unless yyyy is also specified).
 
    * | **Example 1:** Input Date: `29 December 2014` ; Format String: `YYYY-WW`
-     | Output string: `2015-05` (Wrong because it’s not
-     | the 5th week of 2015)
+     | Output string: `2015-05` (Wrong because it’s not the 5th week of 2015)
 
    * | **Example 2:** Input Date: `29 December 2014` ;
      | Format String: `ww-YYYY (WW-MM-yyyy)`
@@ -91,8 +87,8 @@ format specifier:
 
    * | **Example 1:** Input Date: `29 December 2014` ;
      | Format String: `YYYY-ww-F-EE`
-     | Output string: `2015-01-5-Mon` (Wrong because it’s not
-     | the 5th Monday of January in 2015)
+     | Output string: `2015-01-5-Mon` (Wrong because it’s not the 5th Monday of
+     | January in 2015)
 
    * | **Example 2:** Input Date: `29 December 2014` ;
      | Format String: `ww-YYYY (F-EE-MM-yyyy)`
