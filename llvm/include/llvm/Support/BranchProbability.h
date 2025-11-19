@@ -73,7 +73,7 @@ public:
 
   uint32_t getNumerator() const { return N; }
   static uint32_t getDenominator() { return D; }
-  double toDouble() const { return double(N) / D; }
+  double toDouble() const { return static_cast<double>(N) / D; }
 
   // Return (1 - Probability).
   BranchProbability getCompl() const { return BranchProbability(D - N); }
