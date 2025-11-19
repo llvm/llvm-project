@@ -10628,6 +10628,13 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::NeverUniform;
 
   unsigned opcode = MI.getOpcode();
+
+  // Special handling for permlane16/permlanex16 - uniformity depends on
+  // operands
+  if (opcode == AMDGPU::V_PERMLANE16_B32_e64 ||
+      opcode == AMDGPU::V_PERMLANEX16_B32_e64)
+    return InstructionUniformity::AnyOfFirstTwoUseOp;
+
   if (opcode == AMDGPU::V_READLANE_B32 ||
       opcode == AMDGPU::V_READFIRSTLANE_B32 ||
       opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)

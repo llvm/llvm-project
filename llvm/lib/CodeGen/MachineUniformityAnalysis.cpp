@@ -151,11 +151,42 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
   return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
 }
 
-// This can be defined later depending on use of the MachineUniformityAnalysis.
 template <>
 bool GenericUniformityAnalysisImpl<MachineSSAContext>::isOperandUniform(
     const MachineInstr &MI, InstructionUniformity IU) const {
-  return false;
+  switch (IU) {
+  // For permlane16/permlanex16, check if either src or lane select is uniform
+  // These instructions have mixed immediate and register operands:
+  // Operand 1 is src0 (the source value to permute)
+  // Operand 3 is src1 (lane select - which lane within the 16 to read from)
+  // Result is uniform if EITHER the source OR lane select is uniform
+  case InstructionUniformity::AnyOfFirstTwoUseOp: {
+    // Check if any of the first two register use operands is uniform
+    // Result is uniform if ANY of these operands is uniform
+    const MachineOperand *FirstRegOp = nullptr;
+    const MachineOperand *SecondRegOp = nullptr;
+
+    // Find the first two register use operands
+    for (const MachineOperand &MO : MI.uses()) {
+      if (MO.isReg() && MO.getReg().isVirtual()) {
+        if (!FirstRegOp)
+          FirstRegOp = &MO;
+        else if (!SecondRegOp) {
+          SecondRegOp = &MO;
+          break;
+        }
+      }
+    }
+
+    if (!FirstRegOp || !SecondRegOp)
+      return false;
+
+    // Return true if either operand is uniform
+    return !isDivergentUse(*FirstRegOp) || !isDivergentUse(*SecondRegOp);
+  }
+  default:
+    return false;
+  }
 }
 
 // This ensures explicit instantiation of

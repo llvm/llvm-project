@@ -114,8 +114,11 @@ bool GenericUniformityAnalysisImpl<SSAContext>::isOperandUniform(
     const Instruction &I, InstructionUniformity IU) const {
   switch (IU) {
   case InstructionUniformity::AnyOfFirstTwoUseOp:
-    return !isDivergentUse(I.getOperandUse(0)) ||
-           !isDivergentUse(I.getOperandUse(1));
+    // For permlane16/permlanex16: <old> <src0> <src1> <src2> <fi>
+    // <bound_control> Check if either src0 (operand 1) or src1 (operand 2 -
+    // lane select) is uniform
+    return !isDivergentUse(I.getOperandUse(1)) ||
+           !isDivergentUse(I.getOperandUse(2));
   default:
     return false;
   }
