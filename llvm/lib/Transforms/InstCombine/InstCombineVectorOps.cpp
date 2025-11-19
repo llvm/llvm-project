@@ -588,12 +588,10 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
       // Bitcasts can change the number of vector elements, and they cost
       // nothing.
-      if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast)) {
-        Instruction *U = cast<Instruction>(*CI->user_begin());
-        if (U->getParent() == CI->getParent() || isa<ConstantInt>(Index)) {
-          Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
-          return CastInst::Create(CI->getOpcode(), EE, EI.getType());
-        }
+      if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast) &&
+          (EI.getParent() == CI->getParent() || isa<ConstantInt>(Index))) {
+        Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
+        return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }
     }
   }
