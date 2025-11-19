@@ -1400,20 +1400,10 @@ FormatToken *FormatTokenLexer::getNextToken() {
     StringRef UntrimmedText = FormatTok->TokenText;
     FormatTok->TokenText = FormatTok->TokenText.rtrim(" \t\v\f");
     TrailingWhitespace = UntrimmedText.size() - FormatTok->TokenText.size();
-
-    if (isWellFormedBlockCommentText(FormatTok->TokenText)) {
+    if (FormatTok->TokenText.starts_with("/*") &&
+        FormatTok->TokenText.ends_with("*/")) {
       FormatTok->setBlockCommentKind(
           classifyBlockComment(FormatTok->TokenText));
-      const StringRef Content =
-          FormatTok->TokenText.drop_front(2).drop_back(2).rtrim("\r\n");
-      if (!Content.empty()) {
-        const auto LastChar = static_cast<unsigned char>(Content.back());
-        if (!isHorizontalWhitespace(LastChar)) {
-          FormatTok->NeedsSpaceBeforeClosingBlockComment = true;
-          FormatTok->SpaceBeforeClosingBlockCommentOffset =
-              FormatTok->TokenText.size() - 2;
-        }
-      }
     }
   } else if (FormatTok->is(tok::raw_identifier)) {
     IdentifierInfo &Info = IdentTable.get(FormatTok->TokenText);

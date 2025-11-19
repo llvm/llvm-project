@@ -313,9 +313,6 @@ struct MacroExpansion {
 class TokenRole;
 class AnnotatedLine;
 
-/// A wrapper around a \c Token storing information about the
-/// whitespace characters preceding it.
-
 // Describes the kind of a block comment.
 enum class CommentKind {
   // A plain comment, i.e. /* ... */.
@@ -326,6 +323,8 @@ enum class CommentKind {
   Parameter,
 };
 
+/// A wrapper around a \c Token storing information about the
+/// whitespace characters preceding it.
 struct FormatToken {
   FormatToken()
       : HasUnescapedNewline(false), IsMultiline(false), IsFirst(false),
@@ -335,8 +334,7 @@ struct FormatToken {
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
         ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        NeedsSpaceBeforeClosingBlockComment(false), BlockKind(BK_Unknown),
-        BlockCommentKind(static_cast<unsigned>(CommentKind::Plain)),
+        BlockKind(BK_Unknown), BlockCommentKind(CommentKind::Plain),
         Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
         TypeIsFinalized(false), Type(TT_Unknown) {}
 
@@ -422,7 +420,7 @@ private:
   unsigned BlockKind : 2;
 
   /// Kind of block comment.
-  unsigned BlockCommentKind : 2;
+  CommentKind BlockCommentKind = CommentKind::Plain;
 
 public:
   BraceBlockKind getBlockKind() const {
@@ -433,11 +431,9 @@ public:
     assert(getBlockKind() == BBK && "BraceBlockKind overflow!");
   }
 
-  CommentKind getBlockCommentKind() const {
-    return static_cast<CommentKind>(BlockCommentKind);
-  }
+  CommentKind getBlockCommentKind() const { return BlockCommentKind; }
   void setBlockCommentKind(CommentKind Kind) {
-    BlockCommentKind = static_cast<unsigned>(Kind);
+    BlockCommentKind = Kind;
     assert(getBlockCommentKind() == Kind && "CommentKind overflow!");
   }
 
