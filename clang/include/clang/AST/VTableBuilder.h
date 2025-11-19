@@ -246,12 +246,12 @@ public:
   // point for a given vtable index.
   typedef llvm::SmallVector<unsigned, 4> AddressPointsIndexMapTy;
 
+  using VTableIndicesTy = llvm::SmallVector<std::size_t>;
+
 private:
-  // Stores the component indices of the first component of each virtual table in
-  // the virtual table group. To save a little memory in the common case where
-  // the vtable group contains a single vtable, an empty vector here represents
-  // the vector {0}.
-  OwningArrayRef<size_t> VTableIndices;
+  // Stores the component indices of the first component of each virtual table
+  // in the virtual table group.
+  VTableIndicesTy VTableIndices;
 
   OwningArrayRef<VTableComponent> VTableComponents;
 
@@ -265,7 +265,8 @@ private:
   AddressPointsIndexMapTy AddressPointIndices;
 
 public:
-  VTableLayout(ArrayRef<size_t> VTableIndices,
+  // Requires `!VTableIndicies.empty()`
+  VTableLayout(VTableIndicesTy VTableIndices,
                ArrayRef<VTableComponent> VTableComponents,
                ArrayRef<VTableThunkTy> VTableThunks,
                const AddressPointsMapTy &AddressPoints);
@@ -292,26 +293,11 @@ public:
     return AddressPointIndices;
   }
 
-  size_t getNumVTables() const {
-    if (VTableIndices.empty())
-      return 1;
-    return VTableIndices.size();
-  }
+  size_t getNumVTables() const { return VTableIndices.size(); }
 
-  size_t getVTableOffset(size_t i) const {
-    if (VTableIndices.empty()) {
-      assert(i == 0);
-      return 0;
-    }
-    return VTableIndices[i];
-  }
+  size_t getVTableOffset(size_t i) const { return VTableIndices[i]; }
 
   size_t getVTableSize(size_t i) const {
-    if (VTableIndices.empty()) {
-      assert(i == 0);
-      return vtable_components().size();
-    }
-
     size_t thisIndex = VTableIndices[i];
     size_t nextIndex = (i + 1 == VTableIndices.size())
                            ? vtable_components().size()
