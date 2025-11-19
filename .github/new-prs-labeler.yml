@@ -542,7 +542,7 @@ tools:llvm-mca:
 
 clang:
   - changed-files:
-    - all-globs-to-all-file:
+    - all-globs-to-all-files:
       - clang/**
       - '!clang/**/Format/**'
       - '!clang/tools/clang-format/**'
@@ -1422,7 +1422,7 @@ openmp:libomp:
 
 openmp:libomptarget:
   - changed-files:
-    - all-globs-to-all-file:
+    - all-globs-to-all-files:
       - openmp/**
       - '!openmp/runtime/**'
 
