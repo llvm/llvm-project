@@ -53,8 +53,7 @@ define <8 x i32> @fold_vector_interleave2() {
 
 define <vscale x 8 x i32> @fold_scalable_vector_interleave2() {
 ; CHECK-LABEL: define <vscale x 8 x i32> @fold_scalable_vector_interleave2() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 8 x i32> zeroinitializer
 ;
   %1 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 8 x i32> %1
@@ -62,8 +61,7 @@ define <vscale x 8 x i32> @fold_scalable_vector_interleave2() {
 
 define <vscale x 8 x i32> @fold_scalable_vector_interleave2_splat() {
 ; CHECK-LABEL: define <vscale x 8 x i32> @fold_scalable_vector_interleave2_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
-; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 8 x i32> splat (i32 1)
 ;
   %1 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 8 x i32> %1
@@ -89,8 +87,7 @@ define <12 x i32> @fold_vector_interleave3() {
 
 define <vscale x 12 x i32> @fold_scalable_vector_interleave3() {
 ; CHECK-LABEL: define <vscale x 12 x i32> @fold_scalable_vector_interleave3() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 12 x i32> @llvm.vector.interleave3.nxv12i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 12 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 12 x i32> zeroinitializer
 ;
   %1 = call <vscale x 12 x i32> @llvm.vector.interleave3.nxv8i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 12 x i32> %1
@@ -98,8 +95,7 @@ define <vscale x 12 x i32> @fold_scalable_vector_interleave3() {
 
 define <vscale x 12 x i32> @fold_scalable_vector_interleave3_splat() {
 ; CHECK-LABEL: define <vscale x 12 x i32> @fold_scalable_vector_interleave3_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 12 x i32> @llvm.vector.interleave3.nxv12i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
-; CHECK-NEXT:    ret <vscale x 12 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 12 x i32> splat (i32 1)
 ;
   %1 = call <vscale x 12 x i32> @llvm.vector.interleave3.nxv8i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 12 x i32> %1
@@ -115,8 +111,7 @@ define <16 x i32> @fold_vector_interleave4() {
 
 define <vscale x 16 x i32> @fold_scalable_vector_interleave4() {
 ; CHECK-LABEL: define <vscale x 16 x i32> @fold_scalable_vector_interleave4() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 16 x i32> zeroinitializer
 ;
   %1 = call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 16 x i32> %1
@@ -124,8 +119,7 @@ define <vscale x 16 x i32> @fold_scalable_vector_interleave4() {
 
 define <vscale x 16 x i32> @fold_scalable_vector_interleave4_splat() {
 ; CHECK-LABEL: define <vscale x 16 x i32> @fold_scalable_vector_interleave4_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
-; CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 16 x i32> splat (i32 1)
 ;
   %1 = call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 16 x i32> %1
@@ -141,8 +135,7 @@ define <20 x i32> @fold_vector_interleave5() {
 
 define <vscale x 20 x i32> @fold_scalable_vector_interleave5() {
 ; CHECK-LABEL: define <vscale x 20 x i32> @fold_scalable_vector_interleave5() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 20 x i32> @llvm.vector.interleave5.nxv20i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 20 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 20 x i32> zeroinitializer
 ;
   %1 = call <vscale x 20 x i32> @llvm.vector.interleave5.nxv20i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 20 x i32> %1
@@ -150,8 +143,7 @@ define <vscale x 20 x i32> @fold_scalable_vector_interleave5() {
 
 define <vscale x 20 x i32> @fold_scalable_vector_interleave5_splat() {
 ; CHECK-LABEL: define <vscale x 20 x i32> @fold_scalable_vector_interleave5_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 20 x i32> @llvm.vector.interleave5.nxv20i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
-; CHECK-NEXT:    ret <vscale x 20 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 20 x i32> splat (i32 1)
 ;
   %1 = call <vscale x 20 x i32> @llvm.vector.interleave5.nxv20i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 20 x i32> %1
@@ -167,8 +159,7 @@ define <24 x i32> @fold_vector_interleave6() {
 
 define <vscale x 24 x i32> @fold_scalable_vector_interleave6() {
 ; CHECK-LABEL: define <vscale x 24 x i32> @fold_scalable_vector_interleave6() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 24 x i32> @llvm.vector.interleave6.nxv24i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 24 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 24 x i32> zeroinitializer
 ;
   %1 = call <vscale x 24 x i32> @llvm.vector.interleave6.nxv24i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 24 x i32> %1
@@ -176,8 +167,7 @@ define <vscale x 24 x i32> @fold_scalable_vector_interleave6() {
 
 define <vscale x 24 x i32> @fold_scalable_vector_interleave6_splat() {
 ; CHECK-LABEL: define <vscale x 24 x i32> @fold_scalable_vector_interleave6_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 24 x i32> @llvm.vector.interleave6.nxv24i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
-; CHECK-NEXT:    ret <vscale x 24 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 24 x i32> splat (i32 1)
 ;
   %1 = call <vscale x 24 x i32> @llvm.vector.interleave6.nxv24i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 24 x i32> %1
@@ -193,8 +183,7 @@ define <28 x i32> @fold_vector_interleave7() {
 
 define <vscale x 28 x i32> @fold_scalable_vector_interleave7() {
 ; CHECK-LABEL: define <vscale x 28 x i32> @fold_scalable_vector_interleave7() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 28 x i32> @llvm.vector.interleave7.nxv28i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 28 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 28 x i32> zeroinitializer
 ;
   %1 = call <vscale x 28 x i32> @llvm.vector.interleave7.nxv28i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 28 x i32> %1
@@ -202,8 +191,7 @@ define <vscale x 28 x i32> @fold_scalable_vector_interleave7() {
 
 define <vscale x 28 x i32> @fold_scalable_vector_interleave7_splat() {
 ; CHECK-LABEL: define <vscale x 28 x i32> @fold_scalable_vector_interleave7_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 28 x i32> @llvm.vector.interleave7.nxv28i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
-; CHECK-NEXT:    ret <vscale x 28 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 28 x i32> splat (i32 1)
 ;
   %1 = call <vscale x 28 x i32> @llvm.vector.interleave7.nxv28i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 28 x i32> %1
@@ -219,8 +207,7 @@ define <32 x i32> @fold_vector_interleave8() {
 
 define <vscale x 32 x i32> @fold_scalable_vector_interleave8() {
 ; CHECK-LABEL: define <vscale x 32 x i32> @fold_scalable_vector_interleave8() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 32 x i32> @llvm.vector.interleave8.nxv32i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 32 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 32 x i32> zeroinitializer
 ;
   %1 = call <vscale x 32 x i32> @llvm.vector.interleave8.nxv32i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 32 x i32> %1
@@ -228,8 +215,7 @@ define <vscale x 32 x i32> @fold_scalable_vector_interleave8() {
 
 define <vscale x 32 x i32> @fold_scalable_vector_interleave8_splat() {
 ; CHECK-LABEL: define <vscale x 32 x i32> @fold_scalable_vector_interleave8_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 32 x i32> @llvm.vector.interleave8.nxv32i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
-; CHECK-NEXT:    ret <vscale x 32 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 32 x i32> splat (i32 1)
 ;
   %1 = call <vscale x 32 x i32> @llvm.vector.interleave8.nxv32i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 32 x i32> %1
