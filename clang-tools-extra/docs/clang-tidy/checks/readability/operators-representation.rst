@@ -69,9 +69,10 @@ To configure check to enforce Alternative Token Representation for all
 operators set options to
 `and;and_eq;bitand;bitor;compl;not;not_eq;or;or_eq;xor;xor_eq`.
 
-Developers do not need to enforce all operators, and can mix the representations
-as desired by specifying a semicolon-separated list of both traditional and
-alternative tokens in the configuration, such as `and;||;not`.
+Developers do not need to enforce all operators, and can mix the
+representations as desired by specifying a semicolon-separated list of
+both traditional and alternative tokens in the configuration,
+such as `and;||;not`.
 
 .. option:: BinaryOperators
 

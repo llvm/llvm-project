@@ -609,6 +609,7 @@ public:
 class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
+    FCmp,
     OverflowingBinOp,
     Trunc,
     DisjointOp,
@@ -659,6 +660,12 @@ private:
 
     LLVM_ABI_FOR_TEST FastMathFlagsTy(const FastMathFlags &FMF);
   };
+  /// Holds both the predicate and fast-math flags for floating-point
+  /// comparisons.
+  struct FCmpFlagsTy {
+    CmpInst::Predicate Pred;
+    FastMathFlagsTy FMFs;
+  };
 
   OperationType OpType;
 
@@ -671,6 +678,7 @@ private:
     GEPNoWrapFlags GEPFlags;
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
+    FCmpFlagsTy FCmpFlags;
     unsigned AllFlags;
   };
 
@@ -678,7 +686,11 @@ public:
   VPIRFlags() : OpType(OperationType::Other), AllFlags(0) {}
 
   VPIRFlags(Instruction &I) {
-    if (auto *Op = dyn_cast<CmpInst>(&I)) {
+    if (auto *FCmp = dyn_cast<FCmpInst>(&I)) {
+      OpType = OperationType::FCmp;
+      FCmpFlags.Pred = FCmp->getPredicate();
+      FCmpFlags.FMFs = FCmp->getFastMathFlags();
+    } else if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
       CmpPredicate = Op->getPredicate();
     } else if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I)) {
@@ -710,6 +722,12 @@ public:
 
   VPIRFlags(CmpInst::Predicate Pred)
       : OpType(OperationType::Cmp), CmpPredicate(Pred) {}
+
+  VPIRFlags(CmpInst::Predicate Pred, FastMathFlags FMFs)
+      : OpType(OperationType::FCmp) {
+    FCmpFlags.Pred = Pred;
+    FCmpFlags.FMFs = FMFs;
+  }
 
   VPIRFlags(WrapFlagsTy WrapFlags)
       : OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
@@ -760,8 +778,9 @@ public:
       GEPFlags = GEPNoWrapFlags::none();
       break;
     case OperationType::FPMathOp:
-      FMFs.NoNaNs = false;
-      FMFs.NoInfs = false;
+    case OperationType::FCmp:
+      getFMFsRef().NoNaNs = false;
+      getFMFsRef().NoInfs = false;
       break;
     case OperationType::NonNegOp:
       NonNegFlags.NonNeg = false;
@@ -793,14 +812,17 @@ public:
       cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
-      I.setHasAllowReassoc(FMFs.AllowReassoc);
-      I.setHasNoNaNs(FMFs.NoNaNs);
-      I.setHasNoInfs(FMFs.NoInfs);
-      I.setHasNoSignedZeros(FMFs.NoSignedZeros);
-      I.setHasAllowReciprocal(FMFs.AllowReciprocal);
-      I.setHasAllowContract(FMFs.AllowContract);
-      I.setHasApproxFunc(FMFs.ApproxFunc);
+    case OperationType::FCmp: {
+      const FastMathFlagsTy &F = getFMFsRef();
+      I.setHasAllowReassoc(F.AllowReassoc);
+      I.setHasNoNaNs(F.NoNaNs);
+      I.setHasNoInfs(F.NoInfs);
+      I.setHasNoSignedZeros(F.NoSignedZeros);
+      I.setHasAllowReciprocal(F.AllowReciprocal);
+      I.setHasAllowContract(F.AllowContract);
+      I.setHasApproxFunc(F.ApproxFunc);
       break;
+    }
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
@@ -811,24 +833,31 @@ public:
   }
 
   CmpInst::Predicate getPredicate() const {
-    assert(OpType == OperationType::Cmp &&
+    assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
-    return CmpPredicate;
+    return OpType == OperationType::FCmp ? FCmpFlags.Pred : CmpPredicate;
   }
 
   void setPredicate(CmpInst::Predicate Pred) {
-    assert(OpType == OperationType::Cmp &&
+    assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
-    CmpPredicate = Pred;
+    if (OpType == OperationType::FCmp)
+      FCmpFlags.Pred = Pred;
+    else
+      CmpPredicate = Pred;
   }
 
   GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
 
   /// Returns true if the recipe has a comparison predicate.
-  bool hasPredicate() const { return OpType == OperationType::Cmp; }
+  bool hasPredicate() const {
+    return OpType == OperationType::Cmp || OpType == OperationType::FCmp;
+  }
 
   /// Returns true if the recipe has fast-math flags.
-  bool hasFastMathFlags() const { return OpType == OperationType::FPMathOp; }
+  bool hasFastMathFlags() const {
+    return OpType == OperationType::FPMathOp || OpType == OperationType::FCmp;
+  }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlags() const;
 
@@ -869,6 +898,16 @@ public:
     return DisjointFlags.IsDisjoint;
   }
 
+private:
+  /// Get a reference to the fast-math flags for FPMathOp or FCmp.
+  FastMathFlagsTy &getFMFsRef() {
+    return OpType == OperationType::FCmp ? FCmpFlags.FMFs : FMFs;
+  }
+  const FastMathFlagsTy &getFMFsRef() const {
+    return OpType == OperationType::FCmp ? FCmpFlags.FMFs : FMFs;
+  }
+
+public:
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
   bool flagsValidForOpcode(unsigned Opcode) const;
@@ -2026,14 +2065,12 @@ public:
   ~VPHeaderPHIRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *B) {
-    return B->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
-           B->getVPDefID() <= VPDef::VPLastHeaderPHISC;
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
+           R->getVPDefID() <= VPDef::VPLastHeaderPHISC;
   }
   static inline bool classof(const VPValue *V) {
-    auto *B = V->getDefiningRecipe();
-    return B && B->getVPDefID() >= VPRecipeBase::VPFirstHeaderPHISC &&
-           B->getVPDefID() <= VPRecipeBase::VPLastHeaderPHISC;
+    return isa<VPHeaderPHIRecipe>(V->getDefiningRecipe());
   }
 
   /// Generate the phi nodes.

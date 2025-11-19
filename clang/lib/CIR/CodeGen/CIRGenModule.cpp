@@ -883,8 +883,17 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   // FIXME(cir): setLinkage should likely set MLIR's visibility automatically.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
   assert(!cir::MissingFeatures::opGlobalDLLImportExport());
-  if (linkage == cir::GlobalLinkageKind::CommonLinkage)
-    errorNYI(initExpr->getSourceRange(), "common linkage");
+  if (linkage == cir::GlobalLinkageKind::CommonLinkage) {
+    // common vars aren't constant even if declared const.
+    gv.setConstant(false);
+    // Tentative definition of global variables may be initialized with
+    // non-zero null pointers. In this case they should have weak linkage
+    // since common linkage must have zero initializer and must not have
+    // explicit section therefore cannot have non-zero initial value.
+    std::optional<mlir::Attribute> initializer = gv.getInitialValue();
+    if (initializer && !getBuilder().isNullValue(*initializer))
+      gv.setLinkage(cir::GlobalLinkageKind::WeakAnyLinkage);
+  }
 
   setNonAliasAttributes(vd, gv);
 
@@ -1238,10 +1247,8 @@ cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   // linkage.
   if (!getLangOpts().CPlusPlus && isa<VarDecl>(dd) &&
       !isVarDeclStrongDefinition(astContext, *this, cast<VarDecl>(dd),
-                                 getCodeGenOpts().NoCommon)) {
-    errorNYI(dd->getBeginLoc(), "common linkage", dd->getDeclKindName());
+                                 getCodeGenOpts().NoCommon))
     return cir::GlobalLinkageKind::CommonLinkage;
-  }
 
   // selectany symbols are externally visible, so use weak instead of
   // linkonce.  MSVC optimizes away references to const selectany globals, so

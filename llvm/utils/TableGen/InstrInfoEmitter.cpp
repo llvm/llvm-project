@@ -72,6 +72,13 @@ private:
   using OperandInfoListTy = std::vector<OperandInfoTy>;
   using OperandInfoMapTy = std::map<OperandInfoTy, unsigned>;
 
+  DenseMap<const CodeGenInstruction *, const CodeGenInstruction *>
+      TargetSpecializedPseudoInsts;
+
+  /// Compute mapping of opcodes which should have their definitions overridden
+  /// by a target version.
+  void buildTargetSpecializedPseudoInstsMap();
+
   /// Generate member functions in the target-specific GenInstrInfo class.
   ///
   /// This method is used to custom expand TIIPredicate definitions.
@@ -216,6 +223,10 @@ InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
   const CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned Offset = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructions()) {
+    auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+    if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+      Inst = OverrideEntry->second;
+
     OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
     if (OperandInfoMap.try_emplace(OperandInfo, Offset).second) {
       OperandInfoList.push_back(OperandInfo);
@@ -859,6 +870,25 @@ void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
   }
 }
 
+void InstrInfoEmitter::buildTargetSpecializedPseudoInstsMap() {
+  ArrayRef<const Record *> SpecializedInsts = Records.getAllDerivedDefinitions(
+      "TargetSpecializedStandardPseudoInstruction");
+  const CodeGenTarget &Target = CDP.getTargetInfo();
+
+  for (const Record *SpecializedRec : SpecializedInsts) {
+    const CodeGenInstruction &SpecializedInst =
+        Target.getInstruction(SpecializedRec);
+    const Record *BaseInstRec = SpecializedRec->getValueAsDef("Instruction");
+
+    const CodeGenInstruction &BaseInst = Target.getInstruction(BaseInstRec);
+
+    if (!TargetSpecializedPseudoInsts.insert({&BaseInst, &SpecializedInst})
+             .second)
+      PrintFatalError(SpecializedRec, "multiple overrides of '" +
+                                          BaseInst.getName() + "' defined");
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Main Output.
 //===----------------------------------------------------------------------===//
@@ -881,6 +911,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   // Collect all of the operand info records.
   Timer.startTimer("Collect operand info");
+  buildTargetSpecializedPseudoInstsMap();
+
   OperandInfoListTy OperandInfoList;
   OperandInfoMapTy OperandInfoMap;
   unsigned OperandInfoSize =
@@ -911,24 +943,23 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     }
   }
 
-  OS << "#if defined(GET_INSTRINFO_MC_DESC) || "
-        "defined(GET_INSTRINFO_CTOR_DTOR)\n";
+  {
+    IfGuardEmitter IfGuard(
+        OS,
+        "defined(GET_INSTRINFO_MC_DESC) || defined(GET_INSTRINFO_CTOR_DTOR)");
+    NamespaceEmitter NS(OS, "llvm");
 
-  OS << "namespace llvm {\n\n";
-
-  OS << "struct " << TargetName << "InstrTable {\n";
-  OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
-  OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
-        "\"Unwanted padding between Insts and OperandInfo\");\n";
-  OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
-  OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
-        "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
-  OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U) << "];\n";
-  OS << "};\n\n";
-
-  OS << "} // end namespace llvm\n";
-  OS << "#endif // defined(GET_INSTRINFO_MC_DESC) || "
-        "defined(GET_INSTRINFO_CTOR_DTOR)\n\n";
+    OS << "struct " << TargetName << "InstrTable {\n";
+    OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
+    OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
+          "\"Unwanted padding between Insts and OperandInfo\");\n";
+    OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
+    OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
+          "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
+    OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U)
+       << "];\n";
+    OS << "};";
+  }
 
   const CodeGenRegBank &RegBank = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
@@ -963,6 +994,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
       // Keep a list of the instruction names.
       InstrNames.add(Inst->getName());
+
+      auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+      if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+        Inst = OverrideEntry->second;
+
       // Emit the record into the table.
       emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoMap, OS);
     }
