@@ -2534,7 +2534,7 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
       mlir::StringAttr::get(op.getContext(), intrinName);
 
   mlir::IntegerType overflowLLVMTy = rewriter.getI1Type();
-  mlir::LLVM::LLVMStructType intrinRetTy =
+  auto intrinRetTy =
       mlir::LLVM::LLVMStructType::getLiteral(
           rewriter.getContext(), {encompassedLLVMTy, overflowLLVMTy});
 
