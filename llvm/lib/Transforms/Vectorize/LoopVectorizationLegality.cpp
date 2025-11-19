@@ -1418,7 +1418,8 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
   return FixedOrderRecurrences.count(Phi);
 }
 
-bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
+bool LoopVectorizationLegality::blockNeedsPredication(
+    const BasicBlock *BB) const {
   // When vectorizing early exits, create predicates for the latch block only.
   // The early exiting block must be a direct predecessor of the latch at the
   // moment.
