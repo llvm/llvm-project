@@ -423,6 +423,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MinimalRuntime =
       Args.hasFlag(options::OPT_fsanitize_minimal_runtime,
                    options::OPT_fno_sanitize_minimal_runtime, MinimalRuntime);
+  PreserveRuntime =
+      Args.hasFlag(options::OPT_fsanitize_preserve_runtime,
+                   options::OPT_fno_sanitize_preserve_runtime, PreserveRuntime);
 
   // The object size sanitizer should not be enabled at -O0.
   Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
@@ -1468,6 +1471,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (MinimalRuntime)
     CmdArgs.push_back("-fsanitize-minimal-runtime");
+
+  if (PreserveRuntime)
+    CmdArgs.push_back("-fsanitize-preserve-runtime");
 
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +

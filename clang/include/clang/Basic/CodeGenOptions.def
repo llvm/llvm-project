@@ -270,6 +270,8 @@ CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0, Benign) ///< Enable use-after-delet
 CODEGENOPT(SanitizeCfiCrossDso, 1, 0, Benign) ///< Enable cross-dso support in CFI.
 CODEGENOPT(SanitizeMinimalRuntime, 1, 0, Benign) ///< Use "_minimal" sanitizer runtime for
                                                  ///< diagnostics.
+CODEGENOPT(SanitizePreserveRuntime, 1, 0, Benign) ///< Use "_preserve" sanitizer runtime for
+                                                 ///< diagnostics.
 CODEGENOPT(SanitizeCfiICallGeneralizePointers, 1, 0, Benign) ///< Generalize pointer types in
                                                              ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0, Benign) ///< Normalize integer types in
