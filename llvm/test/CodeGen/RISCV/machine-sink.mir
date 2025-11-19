@@ -37,7 +37,6 @@ body: |
   ; CHECK-NEXT:   liveins: $x8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %x:gpr = COPY $x8
-  ; CHECK-NEXT:   %y:gpr = COPY %x, implicit-def dead $x8
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
