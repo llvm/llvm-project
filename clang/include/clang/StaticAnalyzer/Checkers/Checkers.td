@@ -901,12 +901,21 @@ def UncheckedReturn : Checker<"UncheckedReturn">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
-def DeprecatedOrUnsafeBufferHandling :
-  Checker<"DeprecatedOrUnsafeBufferHandling">,
-  HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
-           "functions">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+def DeprecatedOrUnsafeBufferHandling
+    : Checker<"DeprecatedOrUnsafeBufferHandling">,
+      HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
+               "functions">,
+      Dependencies<[SecuritySyntaxChecker]>,
+      CheckerOptions<
+          [CmdLineOption<
+               Boolean, "AllowWithoutC11",
+               "Allow reporting deprecated or unsafe buffer handling "
+               "functions even when not compiling with C11 standard. "
+               "These functions are deprecated in C11, but may still be "
+               "problematic in earlier C standards.",
+               "false", Released>,
+]>,
+      Documentation<HasDocumentation>;
 
 def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
   HelpText<"Warn on uses of the '-decodeValueOfObjCType:at:' method">,
