@@ -703,7 +703,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   SmallVector<unsigned, 4> RowMap;
   SmallVector<SmallVector<const CodeGenSubRegIndex *, 4>, 4> Rows;
 
-  auto SubRegIndicesSize = llvm::size(SubRegIndices);
+  size_t SubRegIndicesSize = llvm::size(SubRegIndices);
   for (const auto &Idx : SubRegIndices) {
     unsigned Found = ~0u;
     for (unsigned r = 0, re = Rows.size(); r != re; ++r) {
@@ -1526,7 +1526,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   std::string ClassName = Target.getName().str() + "GenRegisterInfo";
 
-  auto SubRegIndicesSize = llvm::size(SubRegIndices);
+  size_t SubRegIndicesSize = llvm::size(SubRegIndices);
 
   if (!SubRegIndices.empty()) {
     emitComposeSubRegIndices(OS, ClassName);
