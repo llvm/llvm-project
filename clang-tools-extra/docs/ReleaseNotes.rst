@@ -426,7 +426,7 @@ Changes in existing checks
 
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
-  notes for downcasts.
+  notes for downcasts and casts to void pointer.
 
 - Improved :doc:`google-readability-todo
   <clang-tidy/checks/google/readability-todo>` check to accept the new TODO
