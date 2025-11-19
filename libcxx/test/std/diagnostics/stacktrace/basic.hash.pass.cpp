@@ -19,7 +19,6 @@
 */
 
 #include <cassert>
-#include <functional>
 #include <stacktrace>
 
 int main(int, char**) {

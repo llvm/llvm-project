@@ -51,7 +51,7 @@ _LIBCPP_EXPORTED_FROM_ABI string _Entry::to_string() const {
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-_LIBCPP_HIDE_FROM_ABI uintptr_t _Entry::adjusted_addr() const {
+uintptr_t _Entry::adjusted_addr() const {
   auto sub = __image_ ? __image_->slide_ : 0;
   return __addr_ - sub;
 }
