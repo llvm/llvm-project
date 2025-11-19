@@ -59,7 +59,7 @@ static llvm::Value *emitPPCLoadReserveIntrinsic(CodeGenFunction &CGF,
     Constraints += MachineClobbers;
   }
 
-  llvm::Type *PtrType = CGF.UnqualPtrTy;
+  llvm::Type *PtrType = CGF.DefaultPtrTy;
   llvm::FunctionType *FTy = llvm::FunctionType::get(RetType, {PtrType}, false);
 
   llvm::InlineAsm *IA =
@@ -1153,7 +1153,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     }
     if (BuiltinID == PPC::BI__builtin_mma_dmmr ||
         BuiltinID == PPC::BI__builtin_mma_dmxor ||
-        BuiltinID == PPC::BI__builtin_mma_disassemble_dmr) {
+        BuiltinID == PPC::BI__builtin_mma_disassemble_dmr ||
+        BuiltinID == PPC::BI__builtin_mma_dmsha2hash) {
       Address Addr = EmitPointerWithAlignment(E->getArg(1));
       Ops[1] = Builder.CreateLoad(Addr);
     }

@@ -964,12 +964,10 @@ class F16_OP_U7<bit i, string asmstr> :
 
 // Special types for different instruction operands.
 def ccond : Operand<i32> {
-  let MIOperandInfo = (ops i32imm);
   let PrintMethod = "printPredicateOperand";
 }
 
 def brccond : Operand<i32> {
-  let MIOperandInfo = (ops i32imm);
   let PrintMethod = "printBRCCPredicateOperand";
 }
 

@@ -872,3 +872,183 @@ namespace is_final_tests {
     // expected-note@-1 {{because it is not a class or union type}}
 
 }
+namespace is_aggregate {
+  struct S1 {  // #ag-S1
+    S1(int);
+  };
+
+  static_assert(__is_aggregate(S1));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S1)'}} \
+  // expected-note@-1 {{because it has a user-declared constructor}} \
+  // expected-note@-1 {{'S1' is not aggregate}} \
+  // expected-note@#ag-S1 {{'S1' defined here}}
+
+  struct B2 {
+    B2(int);
+  };
+
+  struct S2 : B2 { // #ag-S2
+    using B2::B2;
+  };
+
+  static_assert(__is_aggregate(S2));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S2)'}} \
+  // expected-note@-1 {{because it has an inherited constructor}} \
+  // expected-note@-1 {{'S2' is not aggregate}} \
+  // expected-note@#ag-S2 {{'S2' defined here}}
+
+  struct S3 { // #ag-S3
+    protected:
+      int x;
+  };
+  static_assert(__is_aggregate(S3));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S3)'}} \
+  // expected-note@-1 {{because it has a protected direct data member}} \
+  // expected-note@-1 {{'S3' is not aggregate}} \
+  // expected-note@#ag-S3 {{'S3' defined here}}
+
+  struct S4 { // #ag-S4
+    private:
+      int x;
+  };
+  static_assert(__is_aggregate(S4));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S4)'}} \
+  // expected-note@-1 {{because it has a private direct data member}} \
+  // expected-note@-1 {{'S4' is not aggregate}} \
+  // expected-note@#ag-S4 {{'S4' defined here}}
+
+  struct B5 {};
+
+  struct S5 : private B5 { // #ag-S5
+    private:
+      int x;
+  };
+  static_assert(__is_aggregate(S5));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S5)'}} \
+  // expected-note@-1 {{because it has a private direct base}} \
+  // expected-note@-1 {{because it has a private direct data member}} \
+  // expected-note@-1 {{'S5' is not aggregate}} \
+  // expected-note@#ag-S5 {{'S5' defined here}}
+
+  struct B6 {};
+
+  struct S6 : protected B6 { // #ag-S6
+    private:
+      int x;
+  };
+  static_assert(__is_aggregate(S6));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S6)'}} \
+  // expected-note@-1 {{because it has a protected direct base}} \
+  // expected-note@-1 {{because it has a private direct data member}} \
+  // expected-note@-1 {{'S6' is not aggregate}} \
+  // expected-note@#ag-S6 {{'S6' defined here}}
+
+  static_assert(__is_aggregate(S6[]));
+
+  struct B7 {};
+
+  struct S7 : virtual B7 { // #ag-S7
+    virtual void foo();
+
+    private:
+      int x;
+  };
+  static_assert(__is_aggregate(S7));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S7)'}} \
+  // expected-note@-1 {{because it has a private direct data member}} \
+  // expected-note@-1 {{because it has a virtual function 'foo'}} \
+  // expected-note@-1 {{because it has a virtual base}} \
+  // expected-note@-1 {{'S7' is not aggregate}} \
+  // expected-note@-1 {{because it is a polymorphic type}} \
+  // expected-note@#ag-S7 {{'S7' defined here}}
+
+  static_assert(__is_aggregate(S7[10]));
+}
+
+namespace is_abstract_tests {
+struct Abstract1 {
+  virtual void fn1() = 0;
+};
+
+struct Abstract2 {
+   virtual void fn2() = 0;
+};
+
+struct NonAbstract
+{
+   virtual void f() {}
+};
+
+// Multiple inheritance reports all abstract base classes that had their pure virtual functions overridden.
+struct Overrides : Abstract1, Abstract2, NonAbstract {
+  void fn1() override {}
+  void fn2() override {}
+};
+
+static_assert(__is_abstract(Overrides));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::Overrides)'}} \
+// expected-note@-1 {{'Overrides' is not abstract}} \
+// expected-note@-1 {{because it overrides all pure virtual functions from base class 'Abstract1'}} \
+// expected-note@-1 {{because it overrides all pure virtual functions from base class 'Abstract2'}} \
+
+static_assert(__is_abstract(NonAbstract));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::NonAbstract)'}} \
+// expected-note@-1 {{'NonAbstract' is not abstract}}
+
+// Inheriting over two levels reports the last class only although the source of the pure virtual function
+// is the top-most base.
+struct Derived : Abstract1 {
+};
+
+struct Derived2 : Derived {
+   void fn1() override {}
+};
+
+static_assert(__is_abstract(Derived2));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::Derived2)'}} \
+// expected-note@-1 {{'Derived2' is not abstract}} \
+// expected-note@-1 {{because it overrides all pure virtual functions from base class 'Derived'}} \
+
+
+using I = int;
+static_assert(__is_abstract(I));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int)'}} \
+// expected-note@-1 {{'I' (aka 'int') is not abstract}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+using Fty = void();
+static_assert(__is_abstract(Fty));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(void ())'}} \
+// expected-note@-1 {{'Fty' (aka 'void ()') is not abstract}} \
+// expected-note@-1 {{because it is a function type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+using Arr = int[3];
+static_assert(__is_abstract(Arr));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int[3])'}} \
+// expected-note@-1 {{'Arr' (aka 'int[3]') is not abstract}} \
+// expected-note@-1 {{because it is an array type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+using Ref = int&;
+static_assert(__is_abstract(Ref));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int &)'}} \
+// expected-note@-1 {{'Ref' (aka 'int &') is not abstract}} \
+// expected-note@-1 {{because it is a reference type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+using Ptr = int*;
+static_assert(__is_abstract(Ptr));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int *)'}} \
+// expected-note@-1 {{'Ptr' (aka 'int *') is not abstract}} \
+// expected-note@-1 {{because it is a pointer type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+union U { int x; float y;};
+static_assert(__is_abstract(U));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::U)'}} \
+// expected-note@-1 {{'U' is not abstract}} \
+// expected-note@-1 {{because it is a union type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+}

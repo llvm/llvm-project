@@ -149,7 +149,7 @@ class JSONNodeDumper
   void writeIncludeStack(PresumedLoc Loc, bool JustFirst = false);
 
   // Writes the attributes of a SourceLocation object without.
-  void writeBareSourceLocation(SourceLocation Loc, bool IsSpelling);
+  void writeBareSourceLocation(SourceLocation Loc);
 
   // Writes the attributes of a SourceLocation to JSON based on its presumed
   // spelling location. If the given location represents a macro invocation,
@@ -333,6 +333,7 @@ public:
   void VisitStringLiteral(const StringLiteral *SL);
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *BLE);
 
+  void VisitLoopControlStmt(const LoopControlStmt *LS);
   void VisitIfStmt(const IfStmt *IS);
   void VisitSwitchStmt(const SwitchStmt *SS);
   void VisitCaseStmt(const CaseStmt *CS);

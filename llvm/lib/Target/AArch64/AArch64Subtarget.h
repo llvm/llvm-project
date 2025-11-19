@@ -130,8 +130,6 @@ public:
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
 
-  virtual unsigned getHwModeSet() const override;
-
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
@@ -246,8 +244,8 @@ public:
   /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
-           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCCSelect() ||
-           hasFuseAdrpAdd() || hasFuseLiterals();
+           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
+           hasFuseCmpCSet() || hasFuseAdrpAdd() || hasFuseLiterals();
   }
 
   unsigned getEpilogueVectorizationMinVF() const {

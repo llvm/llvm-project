@@ -10,7 +10,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;     a[i] = b[i] * 3;
 ; }
 
-define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp {
+define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B:%.*]] to i64, !dbg [[DBG4:![0-9]+]]
@@ -58,7 +58,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]], !dbg [[DBG14:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef, !dbg [[DBG14]]
+; CHECK-NEXT:    ret void, !dbg [[DBG14]]
 ;
 ; FORCED_OPTSIZE-LABEL: @foo(
 ; FORCED_OPTSIZE-NEXT:  entry:
@@ -80,7 +80,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; FORCED_OPTSIZE:       for.end.loopexit:
 ; FORCED_OPTSIZE-NEXT:    br label [[FOR_END]], !dbg [[DBG10:![0-9]+]]
 ; FORCED_OPTSIZE:       for.end:
-; FORCED_OPTSIZE-NEXT:    ret i32 undef, !dbg [[DBG10]]
+; FORCED_OPTSIZE-NEXT:    ret void, !dbg [[DBG10]]
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0, !dbg !6
@@ -99,7 +99,7 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond, label %for.end, label %for.body, !dbg !7
 
 for.end:                                          ; preds = %for.body, %entry
-  ret i32 undef, !dbg !8
+  ret void, !dbg !8
 }
 
 ; Make sure that we try to vectorize loops with a runtime check if the
@@ -413,7 +413,7 @@ exit:
 define dso_local void @forced_optsize(ptr noalias nocapture readonly %x_p, ptr noalias nocapture readonly %y_p, ptr noalias nocapture %z_p) minsize optsize {
 ; CHECK-LABEL: @forced_optsize(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -429,13 +429,9 @@ define dso_local void @forced_optsize(ptr noalias nocapture readonly %x_p, ptr n
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
-; CHECK:       for.body:
-; CHECK-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ;
 ; FORCED_OPTSIZE-LABEL: @forced_optsize(
 ; FORCED_OPTSIZE-NEXT:  entry:
@@ -492,14 +488,12 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 12
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[LEN]], -7
-; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[LEN]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[OUT]], i64 [[TMP3]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP4]], i64 14
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[IN]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[IN]], [[TMP4]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -511,11 +505,11 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[OUT]], i64 [[TMP6]]
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2, !alias.scope [[META42:![0-9]+]], !noalias [[META45:![0-9]+]]
-; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4, !alias.scope [[META45]]
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2, !alias.scope [[META36:![0-9]+]], !noalias [[META39:![0-9]+]]
+; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4, !alias.scope [[META39]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP47:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -530,7 +524,7 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4
 ; CHECK-NEXT:    [[CMP7_NOT:%.*]] = icmp sgt i32 [[LEN]], [[IV_NEXT]]
-; CHECK-NEXT:    br i1 [[CMP7_NOT]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP48:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP7_NOT]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP42:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

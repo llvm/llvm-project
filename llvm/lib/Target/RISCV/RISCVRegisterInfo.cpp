@@ -178,6 +178,10 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Shadow stack pointer.
   markSuperRegs(Reserved, RISCV::SSP);
 
+  // XSfmmbase
+  for (MCPhysReg Reg = RISCV::T0; Reg <= RISCV::T15; Reg++)
+    markSuperRegs(Reserved, Reg);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -434,18 +438,19 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
   TypeSize VRegSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
 
   Register VLENB = 0;
-  unsigned PreHandledNum = 0;
+  unsigned VLENBShift = 0;
+  unsigned PrevHandledNum = 0;
   unsigned I = 0;
   while (I != NumRegs) {
     auto [LMulHandled, RegClass, Opcode] =
         getSpillReloadInfo(NumRegs - I, RegEncoding, IsSpill);
     auto [RegNumHandled, _] = RISCVVType::decodeVLMUL(LMulHandled);
     bool IsLast = I + RegNumHandled == NumRegs;
-    if (PreHandledNum) {
+    if (PrevHandledNum) {
       Register Step;
       // Optimize for constant VLEN.
       if (auto VLEN = STI.getRealVLen()) {
-        int64_t Offset = *VLEN / 8 * PreHandledNum;
+        int64_t Offset = *VLEN / 8 * PrevHandledNum;
         Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
       } else {
@@ -453,15 +458,21 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
           VLENB = MRI.createVirtualRegister(&RISCV::GPRRegClass);
           BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VLENB);
         }
-        uint32_t ShiftAmount = Log2_32(PreHandledNum);
-        if (ShiftAmount == 0)
-          Step = VLENB;
-        else {
-          Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-          BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), Step)
-              .addReg(VLENB, getKillRegState(IsLast))
-              .addImm(ShiftAmount);
+        uint32_t ShiftAmount = Log2_32(PrevHandledNum);
+        // To avoid using an extra register, we shift the VLENB register and
+        // remember how much it has been shifted. We can then use relative
+        // shifts to adjust to the desired shift amount.
+        if (VLENBShift > ShiftAmount) {
+          BuildMI(MBB, II, DL, TII->get(RISCV::SRLI), VLENB)
+              .addReg(VLENB, RegState::Kill)
+              .addImm(VLENBShift - ShiftAmount);
+        } else if (VLENBShift < ShiftAmount) {
+          BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VLENB)
+              .addReg(VLENB, RegState::Kill)
+              .addImm(ShiftAmount - VLENBShift);
         }
+        VLENBShift = ShiftAmount;
+        Step = VLENB;
       }
 
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
@@ -485,7 +496,7 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
     if (IsSpill)
       MIB.addReg(Reg, RegState::Implicit);
 
-    PreHandledNum = RegNumHandled;
+    PrevHandledNum = RegNumHandled;
     RegEncoding += RegNumHandled;
     I += RegNumHandled;
   }
@@ -966,7 +977,9 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       }
     }
 
-    // Add a hint if it would allow auipc/lui+addi(w) fusion.
+    // Add a hint if it would allow auipc/lui+addi(w) fusion.  We do this even
+    // without the fusions explicitly enabled as the impact is rarely negative
+    // and some cores do implement this fusion.
     if ((MI.getOpcode() == RISCV::ADDIW || MI.getOpcode() == RISCV::ADDI) &&
         MI.getOperand(1).isReg()) {
       const MachineBasicBlock &MBB = *MI.getParent();
@@ -974,9 +987,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       // Is the previous instruction a LUI or AUIPC that can be fused?
       if (I != MBB.begin()) {
         I = skipDebugInstructionsBackward(std::prev(I), MBB.begin());
-        if (((I->getOpcode() == RISCV::LUI && Subtarget.hasLUIADDIFusion()) ||
-             (I->getOpcode() == RISCV::AUIPC &&
-              Subtarget.hasAUIPCADDIFusion())) &&
+        if ((I->getOpcode() == RISCV::LUI || I->getOpcode() == RISCV::AUIPC) &&
             I->getOperand(0).getReg() == MI.getOperand(1).getReg()) {
           if (OpIdx == 0)
             tryAddHint(MO, MI.getOperand(1), /*NeedGPRC=*/false);

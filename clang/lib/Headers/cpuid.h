@@ -253,10 +253,6 @@
 #define bit_RDPRU       0x00000010
 #define bit_WBNOINVD    0x00000200
 
-/* Features in %ebx for leaf 0x24 */
-#define bit_AVX10_256   0x00020000
-#define bit_AVX10_512   0x00040000
-
 #ifdef __i386__
 #define __cpuid(__leaf, __eax, __ebx, __ecx, __edx) \
     __asm("cpuid" : "=a"(__eax), "=b" (__ebx), "=c"(__ecx), "=d"(__edx) \
@@ -348,7 +344,7 @@ static __inline int __get_cpuid_count (unsigned int __leaf,
 // In some cases, offloading will set the host as the aux triple and define the
 // builtin. Given __has_builtin does not detect builtins on aux triples, we need
 // to explicitly check for some offloading cases.
-#ifndef __NVPTX__
+#if !defined(__NVPTX__) && !defined(__AMDGPU__) && !defined(__SPIRV__)
 static __inline void __cpuidex(int __cpu_info[4], int __leaf, int __subleaf) {
   __cpuid_count(__leaf, __subleaf, __cpu_info[0], __cpu_info[1], __cpu_info[2],
                 __cpu_info[3]);

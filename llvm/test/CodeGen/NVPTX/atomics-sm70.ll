@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s --check-prefixes=CHECK64
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx62 | FileCheck %s --check-prefixes=CHECKPTX62
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx62 | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas-sm_70 && ptxas-isa-6.2 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx62 | %ptxas-verify -arch=sm_70 %}
 
 target triple = "nvptx64-nvidia-cuda"
 
@@ -63,32 +63,32 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    ld.b32 %r46, [%r1];
 ; CHECKPTX62-NEXT:  $L__BB0_1: // %atomicrmw.start45
 ; CHECKPTX62-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECKPTX62-NEXT:    shr.u32 %r20, %r46, %r2;
+; CHECKPTX62-NEXT:    mov.b32 %r4, %r46;
+; CHECKPTX62-NEXT:    shr.u32 %r20, %r4, %r2;
 ; CHECKPTX62-NEXT:    cvt.u16.u32 %rs2, %r20;
 ; CHECKPTX62-NEXT:    add.rn.f16 %rs3, %rs2, %rs1;
 ; CHECKPTX62-NEXT:    cvt.u32.u16 %r21, %rs3;
 ; CHECKPTX62-NEXT:    shl.b32 %r22, %r21, %r2;
-; CHECKPTX62-NEXT:    and.b32 %r23, %r46, %r3;
+; CHECKPTX62-NEXT:    and.b32 %r23, %r4, %r3;
 ; CHECKPTX62-NEXT:    or.b32 %r24, %r23, %r22;
-; CHECKPTX62-NEXT:    atom.relaxed.sys.cas.b32 %r4, [%r1], %r46, %r24;
-; CHECKPTX62-NEXT:    setp.ne.b32 %p1, %r4, %r46;
-; CHECKPTX62-NEXT:    mov.b32 %r46, %r4;
+; CHECKPTX62-NEXT:    atom.relaxed.sys.cas.b32 %r46, [%r1], %r4, %r24;
+; CHECKPTX62-NEXT:    setp.ne.b32 %p1, %r46, %r4;
 ; CHECKPTX62-NEXT:    @%p1 bra $L__BB0_1;
 ; CHECKPTX62-NEXT:  // %bb.2: // %atomicrmw.end44
 ; CHECKPTX62-NEXT:    ld.b32 %r47, [%r1];
 ; CHECKPTX62-NEXT:  $L__BB0_3: // %atomicrmw.start27
 ; CHECKPTX62-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECKPTX62-NEXT:    shr.u32 %r25, %r47, %r2;
+; CHECKPTX62-NEXT:    mov.b32 %r5, %r47;
+; CHECKPTX62-NEXT:    shr.u32 %r25, %r5, %r2;
 ; CHECKPTX62-NEXT:    cvt.u16.u32 %rs4, %r25;
 ; CHECKPTX62-NEXT:    mov.b16 %rs5, 0x3C00;
 ; CHECKPTX62-NEXT:    add.rn.f16 %rs6, %rs4, %rs5;
 ; CHECKPTX62-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; CHECKPTX62-NEXT:    shl.b32 %r27, %r26, %r2;
-; CHECKPTX62-NEXT:    and.b32 %r28, %r47, %r3;
+; CHECKPTX62-NEXT:    and.b32 %r28, %r5, %r3;
 ; CHECKPTX62-NEXT:    or.b32 %r29, %r28, %r27;
-; CHECKPTX62-NEXT:    atom.relaxed.sys.cas.b32 %r5, [%r1], %r47, %r29;
-; CHECKPTX62-NEXT:    setp.ne.b32 %p2, %r5, %r47;
-; CHECKPTX62-NEXT:    mov.b32 %r47, %r5;
+; CHECKPTX62-NEXT:    atom.relaxed.sys.cas.b32 %r47, [%r1], %r5, %r29;
+; CHECKPTX62-NEXT:    setp.ne.b32 %p2, %r47, %r5;
 ; CHECKPTX62-NEXT:    @%p2 bra $L__BB0_3;
 ; CHECKPTX62-NEXT:  // %bb.4: // %atomicrmw.end26
 ; CHECKPTX62-NEXT:    and.b32 %r6, %r14, -4;
@@ -100,16 +100,16 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    ld.global.b32 %r48, [%r6];
 ; CHECKPTX62-NEXT:  $L__BB0_5: // %atomicrmw.start9
 ; CHECKPTX62-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECKPTX62-NEXT:    shr.u32 %r33, %r48, %r7;
+; CHECKPTX62-NEXT:    mov.b32 %r9, %r48;
+; CHECKPTX62-NEXT:    shr.u32 %r33, %r9, %r7;
 ; CHECKPTX62-NEXT:    cvt.u16.u32 %rs7, %r33;
 ; CHECKPTX62-NEXT:    add.rn.f16 %rs8, %rs7, %rs1;
 ; CHECKPTX62-NEXT:    cvt.u32.u16 %r34, %rs8;
 ; CHECKPTX62-NEXT:    shl.b32 %r35, %r34, %r7;
-; CHECKPTX62-NEXT:    and.b32 %r36, %r48, %r8;
+; CHECKPTX62-NEXT:    and.b32 %r36, %r9, %r8;
 ; CHECKPTX62-NEXT:    or.b32 %r37, %r36, %r35;
-; CHECKPTX62-NEXT:    atom.relaxed.sys.global.cas.b32 %r9, [%r6], %r48, %r37;
-; CHECKPTX62-NEXT:    setp.ne.b32 %p3, %r9, %r48;
-; CHECKPTX62-NEXT:    mov.b32 %r48, %r9;
+; CHECKPTX62-NEXT:    atom.relaxed.sys.global.cas.b32 %r48, [%r6], %r9, %r37;
+; CHECKPTX62-NEXT:    setp.ne.b32 %p3, %r48, %r9;
 ; CHECKPTX62-NEXT:    @%p3 bra $L__BB0_5;
 ; CHECKPTX62-NEXT:  // %bb.6: // %atomicrmw.end8
 ; CHECKPTX62-NEXT:    and.b32 %r10, %r15, -4;
@@ -121,16 +121,16 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    ld.shared.b32 %r49, [%r10];
 ; CHECKPTX62-NEXT:  $L__BB0_7: // %atomicrmw.start
 ; CHECKPTX62-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECKPTX62-NEXT:    shr.u32 %r41, %r49, %r11;
+; CHECKPTX62-NEXT:    mov.b32 %r13, %r49;
+; CHECKPTX62-NEXT:    shr.u32 %r41, %r13, %r11;
 ; CHECKPTX62-NEXT:    cvt.u16.u32 %rs9, %r41;
 ; CHECKPTX62-NEXT:    add.rn.f16 %rs10, %rs9, %rs1;
 ; CHECKPTX62-NEXT:    cvt.u32.u16 %r42, %rs10;
 ; CHECKPTX62-NEXT:    shl.b32 %r43, %r42, %r11;
-; CHECKPTX62-NEXT:    and.b32 %r44, %r49, %r12;
+; CHECKPTX62-NEXT:    and.b32 %r44, %r13, %r12;
 ; CHECKPTX62-NEXT:    or.b32 %r45, %r44, %r43;
-; CHECKPTX62-NEXT:    atom.relaxed.sys.shared.cas.b32 %r13, [%r10], %r49, %r45;
-; CHECKPTX62-NEXT:    setp.ne.b32 %p4, %r13, %r49;
-; CHECKPTX62-NEXT:    mov.b32 %r49, %r13;
+; CHECKPTX62-NEXT:    atom.relaxed.sys.shared.cas.b32 %r49, [%r10], %r13, %r45;
+; CHECKPTX62-NEXT:    setp.ne.b32 %p4, %r49, %r13;
 ; CHECKPTX62-NEXT:    @%p4 bra $L__BB0_7;
 ; CHECKPTX62-NEXT:  // %bb.8: // %atomicrmw.end
 ; CHECKPTX62-NEXT:    ret;

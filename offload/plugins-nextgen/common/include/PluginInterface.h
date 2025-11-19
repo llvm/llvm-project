@@ -193,7 +193,7 @@ struct InfoTreeNode {
 
   InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
   InfoTreeNode(std::string Key, VariantType Value, std::string Units)
-      : Key(Key), Value(Value), Units(Units) {}
+      : Key(std::move(Key)), Value(Value), Units(std::move(Units)) {}
 
   /// Add a new info entry as a child of this node. The entry requires at least
   /// a key string in \p Key. The value in \p Value is optional and can be any
@@ -202,7 +202,7 @@ struct InfoTreeNode {
   /// use that value for an appropriate olGetDeviceInfo query
   template <typename T = std::monostate>
   InfoTreeNode *add(std::string Key, T Value = T(),
-                    const std::string &Units = std::string(),
+                    std::string Units = std::string(),
                     std::optional<DeviceInfo> DeviceInfoKey = std::nullopt) {
     assert(!Key.empty() && "Invalid info key");
 
@@ -217,7 +217,8 @@ struct InfoTreeNode {
     else
       ValueVariant = std::string{Value};
 
-    auto Ptr = &Children->emplace_back(Key, ValueVariant, Units);
+    auto Ptr =
+        &Children->emplace_back(std::move(Key), ValueVariant, std::move(Units));
 
     if (DeviceInfoKey)
       DeviceInfoMap[*DeviceInfoKey] = Children->size() - 1;
@@ -306,26 +307,18 @@ class DeviceImageTy {
   /// not unique between different device; they may overlap.
   int32_t ImageId;
 
-  /// The pointer to the raw __tgt_device_image.
-  const __tgt_device_image *TgtImage;
-  const __tgt_device_image *TgtImageBitcode;
+  /// The managed image data.
+  std::unique_ptr<MemoryBuffer> Image;
 
   /// Reference to the device this image is loaded on.
   GenericDeviceTy &Device;
 
-  /// If this image has any global destructors that much be called.
-  /// FIXME: This is only required because we currently have no invariants
-  ///        towards the lifetime of the underlying image. We should either copy
-  ///        the image into memory locally or erase the pointers after init.
-  bool PendingGlobalDtors;
-
 public:
+  virtual ~DeviceImageTy() = default;
+
   DeviceImageTy(int32_t Id, GenericDeviceTy &Device,
-                const __tgt_device_image *Image)
-      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr), Device(Device),
-        PendingGlobalDtors(false) {
-    assert(TgtImage && "Invalid target image");
-  }
+                std::unique_ptr<MemoryBuffer> &&Image)
+      : ImageId(Id), Image(std::move(Image)), Device(Device) {}
 
   /// Get the image identifier within the device.
   int32_t getId() const { return ImageId; }
@@ -333,33 +326,17 @@ public:
   /// Get the device that this image is loaded onto.
   GenericDeviceTy &getDevice() const { return Device; }
 
-  /// Get the pointer to the raw __tgt_device_image.
-  const __tgt_device_image *getTgtImage() const { return TgtImage; }
-
-  void setTgtImageBitcode(const __tgt_device_image *TgtImageBitcode) {
-    this->TgtImageBitcode = TgtImageBitcode;
-  }
-
-  const __tgt_device_image *getTgtImageBitcode() const {
-    return TgtImageBitcode;
-  }
-
   /// Get the image starting address.
-  void *getStart() const { return TgtImage->ImageStart; }
+  const void *getStart() const { return Image->getBufferStart(); }
 
   /// Get the image size.
-  size_t getSize() const {
-    return utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
-  }
+  size_t getSize() const { return Image->getBufferSize(); }
 
   /// Get a memory buffer reference to the whole image.
   MemoryBufferRef getMemoryBuffer() const {
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
   }
-  /// Accessors to the boolean value
-  bool setPendingGlobalDtors() { return PendingGlobalDtors = true; }
-  bool hasPendingGlobalDtors() const { return PendingGlobalDtors; }
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
@@ -417,6 +394,7 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_SPMD:
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
+    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
       return true;
     }
     return false;
@@ -434,6 +412,8 @@ protected:
       return "Generic";
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
       return "Generic-SPMD";
+    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
+      return "SPMD-No-Loop";
     }
     llvm_unreachable("Unknown execution mode!");
   }
@@ -471,7 +451,8 @@ private:
                         uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
                         uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
 
-  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
+  /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
+  /// or SPMD mode.
   bool isGenericSPMDMode() const {
     return KernelEnvironment.Configuration.ExecMode ==
            OMP_TGT_EXEC_MODE_GENERIC_SPMD;
@@ -485,6 +466,10 @@ private:
   }
   bool isBareMode() const {
     return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_BARE;
+  }
+  bool isNoLoopMode() const {
+    return KernelEnvironment.Configuration.ExecMode ==
+           OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
   }
 
   /// The kernel name.
@@ -806,6 +791,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
+  /// Get the unique identifier of the device.
+  const char *getDeviceUid() const { return DeviceUid.c_str(); }
+
+  /// Get the total shared memory per block (in bytes) that can be used in any
+  /// kernel.
+  size_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
+
   /// Set the context of the device if needed, before calling device-specific
   /// functions. Plugins may implement this function as a no-op if not needed.
   virtual Error setContext() = 0;
@@ -823,22 +815,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Load the binary image into the device and return the target table.
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
-                                       const __tgt_device_image *TgtImage);
+                                       StringRef TgtImage);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(const __tgt_device_image *TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);
   virtual Error unloadBinaryImpl(DeviceImageTy *Image) = 0;
-
-  /// Setup the device environment if needed. Notice this setup may not be run
-  /// on some plugins. By default, it will be executed, but plugins can change
-  /// this behavior by overriding the shouldSetupDeviceEnvironment function.
-  Error setupDeviceEnvironment(GenericPluginTy &Plugin, DeviceImageTy &Image);
-
-  /// Setup the global device memory pool, if the plugin requires one.
-  Error setupDeviceMemoryPool(GenericPluginTy &Plugin, DeviceImageTy &Image,
-                              uint64_t PoolSize);
 
   // Setup the RPC server for this device if needed. This may not run on some
   // plugins like the CPU targets. By default, it will not be executed so it is
@@ -971,13 +954,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
                      KernelArgsTy &KernelArgs, __tgt_async_info *AsyncInfo);
 
-  /// Initialize a __tgt_async_info structure. Related to interop features.
+  /// Initialize a __tgt_async_info structure.
   Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
   virtual Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
-
-  /// Initialize a __tgt_device_info structure. Related to interop features.
-  Error initDeviceInfo(__tgt_device_info *DeviceInfo);
-  virtual Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) = 0;
 
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -1013,9 +992,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error syncEvent(void *EventPtr);
   virtual Error syncEventImpl(void *EventPtr) = 0;
 
+  /// Obtain information about the device.
+  Expected<InfoTreeNode> obtainInfo();
+  virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
+
   /// Print information about the device.
   Error printInfo();
-  virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
 
   /// Return true if the device has work that is either queued or currently
   /// running
@@ -1035,6 +1017,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
+  uint32_t getDebugKind() const { return OMPX_DebugKind; }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
@@ -1084,10 +1067,24 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Error getDeviceStackSize(uint64_t &V) = 0;
 
+  virtual bool hasDeviceHeapSize() { return false; }
+  virtual Error getDeviceHeapSize(uint64_t &V) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
+  virtual Error setDeviceHeapSize(uint64_t V) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
+
   /// Returns true if current plugin architecture is an APU
   /// and unified_shared_memory was not requested by the program.
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
+
+  /// Returns true if the plugin can guarantee that the associated
+  /// storage is accessible
+  Expected<bool> isAccessiblePtr(const void *Ptr, size_t Size);
 
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
@@ -1172,17 +1169,6 @@ private:
   /// plugin can implement the setters as no-op and setting the output
   /// value to zero for the getters.
   virtual Error setDeviceStackSize(uint64_t V) = 0;
-  virtual Error getDeviceHeapSize(uint64_t &V) = 0;
-  virtual Error setDeviceHeapSize(uint64_t V) = 0;
-
-  /// Indicate whether the device should setup the device environment. Notice
-  /// that returning false in this function will change the behavior of the
-  /// setupDeviceEnvironment() function.
-  virtual bool shouldSetupDeviceEnvironment() const { return true; }
-
-  /// Indicate whether the device should setup the global device memory pool. If
-  /// false is return the value on the device will be uninitialized.
-  virtual bool shouldSetupDeviceMemoryPool() const { return true; }
 
   /// Indicate whether or not the device should setup the RPC server. This is
   /// only necessary for unhosted targets like the GPU.
@@ -1193,6 +1179,10 @@ private:
 
   /// Per device setting of MemoryManager's Threshold
   virtual size_t getMemoryManagerSizeThreshold() { return 0; }
+
+  virtual Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) {
+    return false;
+  }
 
   /// Environment variables defined by the OpenMP standard.
   Int32Envar OMP_TeamLimit;
@@ -1224,6 +1214,14 @@ protected:
   /// global device id and is not the device id visible to the OpenMP user.
   const int32_t DeviceId;
 
+  /// The unique identifier of the device.
+  /// Per default, the unique identifier of the device is set to the device id,
+  /// combined with the plugin name, since the offload device id may overlap
+  /// between different plugins.
+  std::string DeviceUid;
+  /// Construct the device UID from the vendor (U)UID.
+  void setDeviceUidFromVendorUid(StringRef VendorUid);
+
   /// The default grid values used for this device.
   llvm::omp::GV GridValues;
 
@@ -1235,7 +1233,7 @@ protected:
   enum class PeerAccessState : uint8_t { AVAILABLE, UNAVAILABLE, PENDING };
 
   /// Array of peer access states with the rest of devices. This means that if
-  /// the device I has a matrix PeerAccesses with PeerAccesses[J] == AVAILABLE,
+  /// the device I has a matrix PeerAccesses with PeerAccesses == AVAILABLE,
   /// the device I can access device J's memory directly. However, notice this
   /// does not mean that device J can access device I's memory directly.
   llvm::SmallVector<PeerAccessState> PeerAccesses;
@@ -1258,9 +1256,8 @@ protected:
   std::atomic<bool> OmptInitialized;
 #endif
 
-private:
-  DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
-  DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
+  /// The total per-block native shared memory that a kernel may use.
+  size_t MaxBlockSharedMemSize = 0;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -1309,6 +1306,9 @@ struct GenericPluginTy {
     assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
     return UserDeviceIds.at(DeviceId);
   }
+
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
@@ -1403,10 +1403,10 @@ public:
 
   /// Returns non-zero if the \p Image is compatible with the plugin. This
   /// function does not require the plugin to be initialized before use.
-  int32_t is_plugin_compatible(__tgt_device_image *Image);
+  int32_t isPluginCompatible(StringRef Image);
 
   /// Returns non-zero if the \p Image is compatible with the device.
-  int32_t is_device_compatible(int32_t DeviceId, __tgt_device_image *Image);
+  int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
   /// Returns non-zero if the plugin device has been initialized.
   int32_t is_device_initialized(int32_t DeviceId) const;
@@ -1514,15 +1514,14 @@ public:
   /// Creates an asynchronous queue for the given plugin.
   int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
 
-  /// Creates device information to be used for diagnostics.
-  int32_t init_device_info(int32_t DeviceId, __tgt_device_info *DeviceInfo,
-                           const char **ErrStr);
-
   /// Sets the offset into the devices for use by OMPT.
   int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
 
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
+
+  /// Returns if the associated storage is accessible for a given device.
+  int32_t is_accessible_ptr(int32_t DeviceId, const void *Ptr, size_t Size);
 
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,

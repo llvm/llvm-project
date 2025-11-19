@@ -1,4 +1,4 @@
-//===--- TypeTraits.cpp - clang-tidy---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -111,7 +111,7 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
     }
   }
 
-  QualType CanonicalType = Type.getCanonicalType();
+  const QualType CanonicalType = Type.getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
 
@@ -119,9 +119,8 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
     return true;
 
-  if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    return recordIsTriviallyDefaultConstructible(
-        *RT->getOriginalDecl()->getDefinitionOrSelf(), Context);
+  if (const auto *RD = CanonicalType->getAsRecordDecl()) {
+    return recordIsTriviallyDefaultConstructible(*RD, Context);
   }
 
   // No other types can match.

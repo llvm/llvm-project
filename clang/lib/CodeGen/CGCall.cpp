@@ -38,6 +38,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -752,9 +753,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeBuiltinFunctionDeclaration(
                                  RequiredArgs::All);
 }
 
-const CGFunctionInfo &
-CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
-                                                 const FunctionArgList &args) {
+const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
+    QualType resultType, const FunctionArgList &args) {
   CanQualTypeList argTypes = getArgTypesForDeclaration(Context, args);
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
@@ -1005,10 +1005,9 @@ getTypeExpansion(QualType Ty, const ASTContext &Context) {
     return std::make_unique<ConstantArrayExpansion>(AT->getElementType(),
                                                     AT->getZExtSize());
   }
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     SmallVector<const CXXBaseSpecifier *, 1> Bases;
     SmallVector<const FieldDecl *, 1> Fields;
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     assert(!RD->hasFlexibleArrayMember() &&
            "Cannot expand structure with flexible array.");
     if (RD->isUnion()) {
@@ -1897,8 +1896,8 @@ bool CodeGenModule::MayDropFunctionReturn(const ASTContext &Context,
   // We can't just discard the return value for a record type with a
   // complex destructor or a non-trivially copyable type.
   if (const RecordType *RT =
-          ReturnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+          ReturnType.getCanonicalType()->getAsCanonical<RecordType>()) {
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
       return ClassDecl->hasTrivialDestructor();
   }
   return ReturnType.isTriviallyCopyableType(Context);
@@ -1992,6 +1991,7 @@ static void getTrivialDefaultFunctionAttributes(
       // This is the default behavior.
       break;
     case CodeGenOptions::FramePointerKind::Reserved:
+    case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
     case CodeGenOptions::FramePointerKind::NonLeaf:
     case CodeGenOptions::FramePointerKind::All:
       FuncAttrs.addAttribute("frame-pointer",
@@ -2014,15 +2014,6 @@ static void getTrivialDefaultFunctionAttributes(
       FuncAttrs.addAttribute("no-infs-fp-math", "true");
     if (LangOpts.NoHonorNaNs)
       FuncAttrs.addAttribute("no-nans-fp-math", "true");
-    if (LangOpts.ApproxFunc)
-      FuncAttrs.addAttribute("approx-func-fp-math", "true");
-    if (LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
-        LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
-        (LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_Fast ||
-         LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_FastHonorPragmas))
-      FuncAttrs.addAttribute("unsafe-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
     FuncAttrs.addAttribute("stack-protector-buffer-size",
@@ -2442,7 +2433,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   // Some ABIs may result in additional accesses to arguments that may
   // otherwise not be present.
+  std::optional<llvm::Attribute::AttrKind> MemAttrForPtrArgs;
+  bool AddedPotentialArgAccess = false;
   auto AddPotentialArgAccess = [&]() {
+    AddedPotentialArgAccess = true;
     llvm::Attribute A = FuncAttrs.getAttribute(llvm::Attribute::Memory);
     if (A.isValid())
       FuncAttrs.addMemoryAttr(A.getMemoryEffects() |
@@ -2503,11 +2497,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // gcc specifies that 'const' functions have greater restrictions than
       // 'pure' functions, so they also cannot have infinite loops.
       FuncAttrs.addAttribute(llvm::Attribute::WillReturn);
+      MemAttrForPtrArgs = llvm::Attribute::ReadNone;
     } else if (TargetDecl->hasAttr<PureAttr>()) {
       FuncAttrs.addMemoryAttr(llvm::MemoryEffects::readOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
       // gcc specifies that 'pure' functions cannot have infinite loops.
       FuncAttrs.addAttribute(llvm::Attribute::WillReturn);
+      MemAttrForPtrArgs = llvm::Attribute::ReadOnly;
     } else if (TargetDecl->hasAttr<NoAliasAttr>()) {
       FuncAttrs.addMemoryAttr(llvm::MemoryEffects::inaccessibleOrArgMemOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
@@ -2874,10 +2870,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           // whose destruction / clean-up is carried out within the callee
           // (e.g., Obj-C ARC-managed structs, MSVC callee-destroyed objects).
           if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
-              ParamType->castAs<RecordType>()
-                  ->getOriginalDecl()
-                  ->getDefinitionOrSelf()
-                  ->isParamDestroyedInCallee())
+              ParamType->castAsRecordDecl()->isParamDestroyedInCallee())
             Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
         }
       }
@@ -3017,6 +3010,26 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
   }
   assert(ArgNo == FI.arg_size());
+
+  ArgNo = 0;
+  if (AddedPotentialArgAccess && MemAttrForPtrArgs) {
+    llvm::FunctionType *FunctionType = getTypes().GetFunctionType(FI);
+    for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(),
+                                            E = FI.arg_end();
+         I != E; ++I, ++ArgNo) {
+      if (I->info.isDirect() || I->info.isExpand() ||
+          I->info.isCoerceAndExpand()) {
+        unsigned FirstIRArg, NumIRArgs;
+        std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
+        for (unsigned i = FirstIRArg; i < FirstIRArg + NumIRArgs; ++i) {
+          if (FunctionType->getParamType(i)->isPointerTy()) {
+            ArgAttrs[i] =
+                ArgAttrs[i].addAttribute(getLLVMContext(), *MemAttrForPtrArgs);
+          }
+        }
+      }
+    }
+  }
 
   AttrList = llvm::AttributeList::get(
       getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), FuncAttrs),
@@ -3842,7 +3855,7 @@ static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
                         SmallVectorImpl<uint64_t> &Bits) {
   ASTContext &Context = CGM.getContext();
   int CharWidth = Context.getCharWidth();
-  const RecordDecl *RD = RTy->getOriginalDecl()->getDefinition();
+  const RecordDecl *RD = RTy->getDecl()->getDefinition();
   const ASTRecordLayout &ASTLayout = Context.getASTRecordLayout(RD);
   const CGRecordLayout &Layout = CGM.getTypes().getCGRecordLayout(RD);
 
@@ -3890,7 +3903,7 @@ static void setUsedBits(CodeGenModule &CGM, const ConstantArrayType *ATy,
 // the type `QTy`.
 static void setUsedBits(CodeGenModule &CGM, QualType QTy, int Offset,
                         SmallVectorImpl<uint64_t> &Bits) {
-  if (const auto *RTy = QTy->getAs<RecordType>())
+  if (const auto *RTy = QTy->getAsCanonical<RecordType>())
     return setUsedBits(CGM, RTy, Offset, Bits);
 
   ASTContext &Context = CGM.getContext();
@@ -3934,7 +3947,7 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
   const llvm::DataLayout &DataLayout = CGM.getDataLayout();
   int Size = DataLayout.getTypeStoreSize(ITy);
   SmallVector<uint64_t, 4> Bits(Size);
-  setUsedBits(CGM, QTy->castAs<RecordType>(), 0, Bits);
+  setUsedBits(CGM, QTy->castAsCanonical<RecordType>(), 0, Bits);
 
   int CharWidth = CGM.getContext().getCharWidth();
   uint64_t Mask =
@@ -3951,7 +3964,7 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
   const llvm::DataLayout &DataLayout = CGM.getDataLayout();
   int Size = DataLayout.getTypeStoreSize(ATy);
   SmallVector<uint64_t, 16> Bits(Size);
-  setUsedBits(CGM, QTy->castAs<RecordType>(), 0, Bits);
+  setUsedBits(CGM, QTy->castAsCanonical<RecordType>(), 0, Bits);
 
   // Clear each element of the LLVM array.
   int CharWidth = CGM.getContext().getCharWidth();
@@ -4308,10 +4321,7 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
 
   // Deactivate the cleanup for the callee-destructed param that was pushed.
   if (type->isRecordType() && !CurFuncIsThunk &&
-      type->castAs<RecordType>()
-          ->getOriginalDecl()
-          ->getDefinitionOrSelf()
-          ->isParamDestroyedInCallee() &&
+      type->castAsRecordDecl()->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     EHScopeStack::stable_iterator cleanup =
         CalleeDestructedParamCleanups.lookup(cast<ParmVarDecl>(param));
@@ -4827,19 +4837,6 @@ struct DestroyUnpassedArg final : EHScopeStack::Cleanup {
   }
 };
 
-struct DisableDebugLocationUpdates {
-  CodeGenFunction &CGF;
-  bool disabledDebugInfo;
-  DisableDebugLocationUpdates(CodeGenFunction &CGF, const Expr *E) : CGF(CGF) {
-    if ((disabledDebugInfo = isa<CXXDefaultArgExpr>(E) && CGF.getDebugInfo()))
-      CGF.disableDebugInfo();
-  }
-  ~DisableDebugLocationUpdates() {
-    if (disabledDebugInfo)
-      CGF.enableDebugInfo();
-  }
-};
-
 } // end anonymous namespace
 
 RValue CallArg::getRValue(CodeGenFunction &CGF) const {
@@ -4876,7 +4873,9 @@ void CodeGenFunction::EmitWritebacks(const CallArgList &args) {
 
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
                                   QualType type) {
-  DisableDebugLocationUpdates Dis(*this, E);
+  std::optional<DisableDebugLocationUpdates> Dis;
+  if (isa<CXXDefaultArgExpr>(E))
+    Dis.emplace(*this);
   if (const ObjCIndirectCopyRestoreExpr *CRE =
           dyn_cast<ObjCIndirectCopyRestoreExpr>(E)) {
     assert(getLangOpts().ObjCAutoRefCount);
@@ -4904,10 +4903,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  if (type->isRecordType() && type->castAs<RecordType>()
-                                  ->getOriginalDecl()
-                                  ->getDefinitionOrSelf()
-                                  ->isParamDestroyedInCallee()) {
+  if (type->isRecordType() &&
+      type->castAsRecordDecl()->isParamDestroyedInCallee()) {
     // If we're using inalloca, use the argument memory.  Otherwise, use a
     // temporary.
     AggValueSlot Slot = args.isUsingInAlloca()
@@ -5942,8 +5939,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
     SetSqrtFPAccuracy(CI);
   }
-  if (callOrInvoke)
+  if (callOrInvoke) {
     *callOrInvoke = CI;
+    if (CGM.getCodeGenOpts().CallGraphSection) {
+      QualType CST;
+      if (TargetDecl && TargetDecl->getFunctionType())
+        CST = QualType(TargetDecl->getFunctionType(), 0);
+      else if (const auto *FPT =
+                   Callee.getAbstractInfo().getCalleeFunctionProtoType())
+        CST = QualType(FPT, 0);
+      else
+        llvm_unreachable(
+            "Cannot find the callee type to generate callee_type metadata.");
+
+      // Set type identifier metadata of indirect calls for call graph section.
+      if (!CST.isNull())
+        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
+    }
+  }
 
   // If this is within a function that has the guard(nocf) attribute and is an
   // indirect call, add the "guard_nocf" attribute to this call to indicate that
@@ -6266,6 +6279,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     pushDestroy(QualType::DK_nontrivial_c_struct, Ret.getAggregateAddress(),
                 RetTy);
 
+  // Generate function declaration DISuprogram in order to be used
+  // in debug info about call sites.
+  if (CGDebugInfo *DI = getDebugInfo()) {
+    // Ensure call site info would actually be emitted before collecting
+    // further callee info.
+    if (CalleeDecl && !CalleeDecl->hasAttr<NoDebugAttr>() &&
+        DI->getCallSiteRelatedAttrs() != llvm::DINode::FlagZero) {
+      CodeGenFunction CalleeCGF(CGM);
+      const GlobalDecl &CalleeGlobalDecl =
+          Callee.getAbstractInfo().getCalleeDecl();
+      CalleeCGF.CurGD = CalleeGlobalDecl;
+      FunctionArgList Args;
+      QualType ResTy = CalleeCGF.BuildFunctionArgList(CalleeGlobalDecl, Args);
+      DI->EmitFuncDeclForCallSite(
+          CI, DI->getFunctionType(CalleeDecl, ResTy, Args), CalleeGlobalDecl);
+    }
+  }
+
   return Ret;
 }
 
@@ -6292,4 +6323,13 @@ RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
   if (VE->isMicrosoftABI())
     return CGM.getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
   return CGM.getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
+}
+
+DisableDebugLocationUpdates::DisableDebugLocationUpdates(CodeGenFunction &CGF)
+    : CGF(CGF) {
+  CGF.disableDebugInfo();
+}
+
+DisableDebugLocationUpdates::~DisableDebugLocationUpdates() {
+  CGF.enableDebugInfo();
 }

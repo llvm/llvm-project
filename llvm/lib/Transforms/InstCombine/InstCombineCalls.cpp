@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -64,6 +65,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -288,12 +290,11 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
 // * Narrow width by halfs excluding zero/undef lanes
 Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   Value *LoadPtr = II.getArgOperand(0);
-  const Align Alignment =
-      cast<ConstantInt>(II.getArgOperand(1))->getAlignValue();
+  const Align Alignment = II.getParamAlign(0).valueOrOne();
 
   // If the mask is all ones or undefs, this is a plain vector load of the 1st
   // argument.
-  if (maskIsAllOneOrUndef(II.getArgOperand(2))) {
+  if (maskIsAllOneOrUndef(II.getArgOperand(1))) {
     LoadInst *L = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                             "unmaskedload");
     L->copyMetadata(II);
@@ -307,7 +308,7 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
     LI->copyMetadata(II);
-    return Builder.CreateSelect(II.getArgOperand(2), LI, II.getArgOperand(3));
+    return Builder.CreateSelect(II.getArgOperand(1), LI, II.getArgOperand(2));
   }
 
   return nullptr;
@@ -317,18 +318,18 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
 // * Single constant active lane -> store
 // * Narrow width by halfs excluding zero/undef lanes
 Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
-  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
+  Value *StorePtr = II.getArgOperand(1);
+  Align Alignment = II.getParamAlign(1).valueOrOne();
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
   if (!ConstMask)
     return nullptr;
 
   // If the mask is all zeros, this instruction does nothing.
-  if (ConstMask->isNullValue())
+  if (maskIsAllZeroOrUndef(ConstMask))
     return eraseInstFromFunction(II);
 
   // If the mask is all ones, this is a plain vector store of the 1st argument.
-  if (ConstMask->isAllOnesValue()) {
-    Value *StorePtr = II.getArgOperand(1);
-    Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
+  if (maskIsAllOneOrUndef(ConstMask)) {
     StoreInst *S =
         new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
     S->copyMetadata(II);
@@ -355,7 +356,7 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
 // * Narrow width by halfs excluding zero/undef lanes
 // * Vector incrementing address -> vector masked load
 Instruction *InstCombinerImpl::simplifyMaskedGather(IntrinsicInst &II) {
-  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(1));
   if (!ConstMask)
     return nullptr;
 
@@ -365,8 +366,7 @@ Instruction *InstCombinerImpl::simplifyMaskedGather(IntrinsicInst &II) {
   if (ConstMask->isAllOnesValue())
     if (auto *SplatPtr = getSplatValue(II.getArgOperand(0))) {
       auto *VecTy = cast<VectorType>(II.getType());
-      const Align Alignment =
-          cast<ConstantInt>(II.getArgOperand(1))->getAlignValue();
+      const Align Alignment = II.getParamAlign(0).valueOrOne();
       LoadInst *L = Builder.CreateAlignedLoad(VecTy->getElementType(), SplatPtr,
                                               Alignment, "load.scalar");
       Value *Shuf =
@@ -383,12 +383,12 @@ Instruction *InstCombinerImpl::simplifyMaskedGather(IntrinsicInst &II) {
 // * Narrow store width by halfs excluding zero/undef lanes
 // * Vector incrementing address -> vector masked store
 Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
-  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
   if (!ConstMask)
     return nullptr;
 
   // If the mask is all zeros, a scatter does nothing.
-  if (ConstMask->isNullValue())
+  if (maskIsAllZeroOrUndef(ConstMask))
     return eraseInstFromFunction(II);
 
   // Vector splat address -> scalar store
@@ -396,8 +396,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
     // scatter(splat(value), splat(ptr), non-zero-mask) -> store value, ptr
     if (auto *SplatValue = getSplatValue(II.getArgOperand(0))) {
       if (maskContainsAllOneOrUndef(ConstMask)) {
-        Align Alignment =
-            cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
+        Align Alignment = II.getParamAlign(1).valueOrOne();
         StoreInst *S = new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false,
                                      Alignment);
         S->copyMetadata(II);
@@ -407,7 +406,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
     // scatter(vector, splat(ptr), splat(true)) -> store extract(vector,
     // lastlane), ptr
     if (ConstMask->isAllOnesValue()) {
-      Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
+      Align Alignment = II.getParamAlign(1).valueOrOne();
       VectorType *WideLoadTy = cast<VectorType>(II.getArgOperand(1)->getType());
       ElementCount VF = WideLoadTy->getElementCount();
       Value *RunTimeVF = Builder.CreateElementCount(Builder.getInt32Ty(), VF);
@@ -583,6 +582,18 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
       Value *ConstCtlz =
           IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
       return BinaryOperator::CreateSub(ConstCtlz, X);
+    }
+
+    // ctlz(~x & (x - 1)) -> bitwidth - cttz(x, false)
+    if (Op0->hasOneUse() &&
+        match(Op0,
+              m_c_And(m_Not(m_Value(X)), m_Add(m_Deferred(X), m_AllOnes())))) {
+      Type *Ty = II.getType();
+      unsigned BitWidth = Ty->getScalarSizeInBits();
+      auto *Cttz = IC.Builder.CreateIntrinsic(Intrinsic::cttz, Ty,
+                                              {X, IC.Builder.getFalse()});
+      auto *Bw = ConstantInt::get(Ty, APInt(BitWidth, BitWidth));
+      return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Bw, Cttz));
     }
   }
 
@@ -1416,9 +1427,7 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 
   // At least 1 operand must be a shuffle with 1 use because we are creating 2
   // instructions.
-  if (none_of(II->args(), [](Value *V) {
-        return isa<ShuffleVectorInst>(V) && V->hasOneUse();
-      }))
+  if (none_of(II->args(), match_fn(m_OneUse(m_Shuffle(m_Value(), m_Value())))))
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
@@ -1956,7 +1965,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *C;
     if (match(I0, m_ZExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
-      if (Constant *NarrowC = getLosslessUnsignedTrunc(C, X->getType())) {
+      if (Constant *NarrowC = getLosslessUnsignedTrunc(C, X->getType(), DL)) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::ZExt, NarrowMaxMin, II->getType());
       }
@@ -2006,7 +2015,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *C;
     if (match(I0, m_SExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
-      if (Constant *NarrowC = getLosslessSignedTrunc(C, X->getType())) {
+      if (Constant *NarrowC = getLosslessSignedTrunc(C, X->getType(), DL)) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
       }
@@ -2407,6 +2416,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ true,
                                      /*MatchBitReversals*/ true))
         return BitOp;
+
+      // R = fshl(X, X, C2)
+      // fshl(R, R, C1) --> fshl(X, X, (C1 + C2) % bitsize)
+      Value *InnerOp;
+      const APInt *ShAmtInnerC, *ShAmtOuterC;
+      if (match(Op0, m_FShl(m_Value(InnerOp), m_Deferred(InnerOp),
+                            m_APInt(ShAmtInnerC))) &&
+          match(ShAmtC, m_APInt(ShAmtOuterC)) && Op0 == Op1) {
+        APInt Sum = *ShAmtOuterC + *ShAmtInnerC;
+        APInt Modulo = Sum.urem(APInt(Sum.getBitWidth(), BitWidth));
+        if (Modulo.isZero())
+          return replaceInstUsesWith(*II, InnerOp);
+        Constant *ModuloC = ConstantInt::get(Ty, Modulo);
+        return CallInst::Create(cast<IntrinsicInst>(Op0)->getCalledFunction(),
+                                {InnerOp, InnerOp, ModuloC});
+      }
     }
 
     // fshl(X, X, Neg(Y)) --> fshr(X, X, Y)
@@ -3385,12 +3410,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // TODO: apply range metadata for range check patterns?
     }
 
-    // Separate storage assumptions apply to the underlying allocations, not any
-    // particular pointer within them. When evaluating the hints for AA purposes
-    // we getUnderlyingObject them; by precomputing the answers here we can
-    // avoid having to do so repeatedly there.
     for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
       OperandBundleUse OBU = II->getOperandBundleAt(Idx);
+
+      // Separate storage assumptions apply to the underlying allocations, not
+      // any particular pointer within them. When evaluating the hints for AA
+      // purposes we getUnderlyingObject them; by precomputing the answers here
+      // we can avoid having to do so repeatedly there.
       if (OBU.getTagName() == "separate_storage") {
         assert(OBU.Inputs.size() == 2);
         auto MaybeSimplifyHint = [&](const Use &U) {
@@ -3403,6 +3429,36 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(OBU.Inputs[0]);
         MaybeSimplifyHint(OBU.Inputs[1]);
+      }
+
+      // Try to remove redundant alignment assumptions.
+      if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
+        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
+            *cast<AssumeInst>(II), II->arg_size() + Idx);
+        if (!RK || RK.AttrKind != Attribute::Alignment ||
+            !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
+          continue;
+
+        // Remove align 1 bundles; they don't add any useful information.
+        if (RK.ArgValue == 1)
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+
+        // Don't try to remove align assumptions for pointers derived from
+        // arguments. We might lose information if the function gets inline and
+        // the align argument attribute disappears.
+        Value *UO = getUnderlyingObject(RK.WasOn);
+        if (!UO || isa<Argument>(UO))
+          continue;
+
+        // Compute known bits for the pointer, passing nullptr as context to
+        // avoid computeKnownBits using the assumption we are about to remove
+        // for reasoning.
+        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
+        unsigned TZ = std::min(Known.countMinTrailingZeros(),
+                               Value::MaxAlignmentExponent);
+        if ((1ULL << TZ) < RK.ArgValue)
+          continue;
+        return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
     }
 
@@ -3441,7 +3497,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (isPowerOf2_64(AlignMask + 1)) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
-        if (match(A, m_PtrToInt(m_Value(A)))) {
+        if (match(A, m_PtrToIntOrAddr(m_Value(A)))) {
           /// Note: this doesn't preserve the offset information but merges
           /// offset and alignment.
           /// TODO: we can generate a GEP instead of merging the alignment with
@@ -3736,6 +3792,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             return replaceInstUsesWith(CI, Res);
           }
       }
+
+      // vector.reduce.add.vNiM(splat(%x)) -> mul(%x, N)
+      if (Value *Splat = getSplatValue(Arg)) {
+        ElementCount VecToReduceCount =
+            cast<VectorType>(Arg->getType())->getElementCount();
+        if (VecToReduceCount.isFixed()) {
+          unsigned VectorSize = VecToReduceCount.getFixedValue();
+          return BinaryOperator::CreateMul(
+              Splat, ConstantInt::get(Splat->getType(), VectorSize));
+        }
+      }
     }
     [[fallthrough]];
   }
@@ -3925,6 +3992,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::get_active_lane_mask: {
+    const APInt *Op0, *Op1;
+    if (match(II->getOperand(0), m_StrictlyPositive(Op0)) &&
+        match(II->getOperand(1), m_APInt(Op1))) {
+      Type *OpTy = II->getOperand(0)->getType();
+      return replaceInstUsesWith(
+          *II, Builder.CreateIntrinsic(
+                   II->getType(), Intrinsic::get_active_lane_mask,
+                   {Constant::getNullValue(OpTy),
+                    ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
+    }
+    break;
+  }
   default: {
     // Handle target specific intrinsics
     std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
@@ -3936,18 +4016,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
   // Try to fold intrinsic into select/phi operands. This is legal if:
   //  * The intrinsic is speculatable.
-  //  * The select condition is not a vector, or the intrinsic does not
-  //    perform cross-lane operations.
-  if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
-      isNotCrossLaneOperation(II))
+  //  * The operand is one of the following:
+  //    - a phi.
+  //    - a select with a scalar condition.
+  //    - a select with a vector condition and II is not a cross lane operation.
+  if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI)) {
     for (Value *Op : II->args()) {
-      if (auto *Sel = dyn_cast<SelectInst>(Op))
-        if (Instruction *R = FoldOpIntoSelect(*II, Sel))
+      if (auto *Sel = dyn_cast<SelectInst>(Op)) {
+        bool IsVectorCond = Sel->getCondition()->getType()->isVectorTy();
+        if (IsVectorCond && !isNotCrossLaneOperation(II))
+          continue;
+        // Don't replace a scalar select with a more expensive vector select if
+        // we can't simplify both arms of the select.
+        bool SimplifyBothArms =
+            !Op->getType()->isVectorTy() && II->getType()->isVectorTy();
+        if (Instruction *R = FoldOpIntoSelect(
+                *II, Sel, /*FoldWithMultiUse=*/false, SimplifyBothArms))
           return R;
+      }
       if (auto *Phi = dyn_cast<PHINode>(Op))
         if (Instruction *R = foldOpIntoPhi(*II, Phi))
           return R;
     }
+  }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
@@ -4001,6 +4092,70 @@ Instruction *InstCombinerImpl::visitCallBrInst(CallBrInst &CBI) {
   return visitCallBase(CBI);
 }
 
+static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
+  if (!CI->hasFnAttr("modular-format"))
+    return nullptr;
+
+  SmallVector<StringRef> Args(
+      llvm::split(CI->getFnAttr("modular-format").getValueAsString(), ','));
+  // TODO: Make use of the first two arguments
+  unsigned FirstArgIdx;
+  [[maybe_unused]] bool Error;
+  Error = Args[2].getAsInteger(10, FirstArgIdx);
+  assert(!Error && "invalid first arg index");
+  --FirstArgIdx;
+  StringRef FnName = Args[3];
+  StringRef ImplName = Args[4];
+  ArrayRef<StringRef> AllAspects = ArrayRef<StringRef>(Args).drop_front(5);
+
+  if (AllAspects.empty())
+    return nullptr;
+
+  SmallVector<StringRef> NeededAspects;
+  for (StringRef Aspect : AllAspects) {
+    if (Aspect == "float") {
+      if (llvm::any_of(
+              llvm::make_range(std::next(CI->arg_begin(), FirstArgIdx),
+                               CI->arg_end()),
+              [](Value *V) { return V->getType()->isFloatingPointTy(); }))
+        NeededAspects.push_back("float");
+    } else {
+      // Unknown aspects are always considered to be needed.
+      NeededAspects.push_back(Aspect);
+    }
+  }
+
+  if (NeededAspects.size() == AllAspects.size())
+    return nullptr;
+
+  Module *M = CI->getModule();
+  LLVMContext &Ctx = M->getContext();
+  Function *Callee = CI->getCalledFunction();
+  FunctionCallee ModularFn = M->getOrInsertFunction(
+      FnName, Callee->getFunctionType(),
+      Callee->getAttributes().removeFnAttribute(Ctx, "modular-format"));
+  CallInst *New = cast<CallInst>(CI->clone());
+  New->setCalledFunction(ModularFn);
+  New->removeFnAttr("modular-format");
+  B.Insert(New);
+
+  const auto ReferenceAspect = [&](StringRef Aspect) {
+    SmallString<20> Name = ImplName;
+    Name += '_';
+    Name += Aspect;
+    Function *RelocNoneFn =
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::reloc_none);
+    B.CreateCall(RelocNoneFn,
+                 {MetadataAsValue::get(Ctx, MDString::get(Ctx, Name))});
+  };
+
+  llvm::sort(NeededAspects);
+  for (StringRef Request : NeededAspects)
+    ReferenceAspect(Request);
+
+  return New;
+}
+
 Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
 
@@ -4019,6 +4174,10 @@ Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   LibCallSimplifier Simplifier(DL, &TLI, &DT, &DC, &AC, ORE, BFI, PSI,
                                InstCombineRAUW, InstCombineErase);
   if (Value *With = Simplifier.optimizeCall(CI, Builder)) {
+    ++NumSimplified;
+    return CI->use_empty() ? CI : replaceInstUsesWith(*CI, With);
+  }
+  if (Value *With = optimizeModularFormat(CI, Builder)) {
     ++NumSimplified;
     return CI->use_empty() ? CI : replaceInstUsesWith(*CI, With);
   }

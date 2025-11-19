@@ -72,6 +72,13 @@ analyzeModule(Module &M) {
   if (RootSignatureNode == nullptr)
     return RSDMap;
 
+  bool AllowNullFunctions = false;
+  if (M.getTargetTriple().getEnvironment() ==
+      Triple::EnvironmentType::RootSignature) {
+    assert(RootSignatureNode->getNumOperands() == 1);
+    AllowNullFunctions = true;
+  }
+
   for (const auto &RSDefNode : RootSignatureNode->operands()) {
     if (RSDefNode->getNumOperands() != 3) {
       reportError(Ctx, "Invalid Root Signature metadata - expected function, "
@@ -80,24 +87,28 @@ analyzeModule(Module &M) {
     }
 
     // Function was pruned during compilation.
-    const MDOperand &FunctionPointerMdNode = RSDefNode->getOperand(0);
-    if (FunctionPointerMdNode == nullptr) {
-      reportError(
-          Ctx, "Function associated with Root Signature definition is null.");
-      continue;
-    }
+    Function *F = nullptr;
 
-    ValueAsMetadata *VAM =
-        llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
-    if (VAM == nullptr) {
-      reportError(Ctx, "First element of root signature is not a Value");
-      continue;
-    }
+    if (!AllowNullFunctions) {
+      const MDOperand &FunctionPointerMdNode = RSDefNode->getOperand(0);
+      if (FunctionPointerMdNode == nullptr) {
+        reportError(
+            Ctx, "Function associated with Root Signature definition is null.");
+        continue;
+      }
 
-    Function *F = dyn_cast<Function>(VAM->getValue());
-    if (F == nullptr) {
-      reportError(Ctx, "First element of root signature is not a Function");
-      continue;
+      ValueAsMetadata *VAM =
+          llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
+      if (VAM == nullptr) {
+        reportError(Ctx, "First element of root signature is not a Value");
+        continue;
+      }
+
+      F = dyn_cast<Function>(VAM->getValue());
+      if (F == nullptr) {
+        reportError(Ctx, "First element of root signature is not a Function");
+        continue;
+      }
     }
 
     Metadata *RootElementListOperand = RSDefNode->getOperand(1).get();
@@ -182,7 +193,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
          << "\n";
       switch (Info.Type) {
       case dxbc::RootParameterType::Constants32Bit: {
-        const dxbc::RTS0::v1::RootConstants &Constants =
+        const mcdxbc::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Info.Location);
         OS << "  Register Space: " << Constants.RegisterSpace << "\n"
            << "  Shader Register: " << Constants.ShaderRegister << "\n"
@@ -192,7 +203,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case dxbc::RootParameterType::CBV:
       case dxbc::RootParameterType::UAV:
       case dxbc::RootParameterType::SRV: {
-        const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+        const mcdxbc::RootDescriptor &Descriptor =
             RS.ParametersContainer.getRootDescriptor(Info.Location);
         OS << "  Register Space: " << Descriptor.RegisterSpace << "\n"
            << "  Shader Register: " << Descriptor.ShaderRegister << "\n";
@@ -205,8 +216,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
             RS.ParametersContainer.getDescriptorTable(Info.Location);
         OS << "  NumRanges: " << Table.Ranges.size() << "\n";
 
-        for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
-          OS << "  - Range Type: " << Range.RangeType << "\n"
+        for (const mcdxbc::DescriptorRange &Range : Table) {
+          OS << "  - Range Type: "
+             << dxil::getResourceClassName(Range.RangeType) << "\n"
              << "    Register Space: " << Range.RegisterSpace << "\n"
              << "    Base Shader Register: " << Range.BaseShaderRegister << "\n"
              << "    Num Descriptors: " << Range.NumDescriptors << "\n"

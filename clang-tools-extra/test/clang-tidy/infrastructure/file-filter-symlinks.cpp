@@ -1,5 +1,3 @@
-// REQUIRES: shell
-
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/dir1/dir2
 // RUN: echo 'class A { A(int); };' > %t/dir1/header.h

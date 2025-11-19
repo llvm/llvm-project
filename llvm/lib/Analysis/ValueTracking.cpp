@@ -39,6 +39,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -89,6 +90,9 @@ using namespace llvm::PatternMatch;
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
 
+/// Maximum number of instructions to check between assume and context
+/// instruction.
+static constexpr unsigned MaxInstrsToCheckForFree = 16;
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -250,9 +254,8 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 }
 
 bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
-  return !I->user_empty() && all_of(I->users(), [](const User *U) {
-    return match(U, m_ICmp(m_Value(), m_Zero()));
-  });
+  return !I->user_empty() &&
+         all_of(I->users(), match_fn(m_ICmp(m_Value(), m_Zero())));
 }
 
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
@@ -347,6 +350,139 @@ unsigned llvm::ComputeMaxSignificantBits(const Value *V, const DataLayout &DL,
   return V->getType()->getScalarSizeInBits() - SignBits + 1;
 }
 
+/// Try to detect the lerp pattern: a * (b - c) + c * d
+/// where a >= 0, b >= 0, c >= 0, d >= 0, and b >= c.
+///
+/// In that particular case, we can use the following chain of reasoning:
+///
+///   a * (b - c) + c * d <= a' * (b - c) + a' * c = a' * b where a' = max(a, d)
+///
+/// Since that is true for arbitrary a, b, c and d within our constraints, we
+/// can conclude that:
+///
+///   max(a * (b - c) + c * d) <= max(max(a), max(d)) * max(b) = U
+///
+/// Considering that any result of the lerp would be less or equal to U, it
+/// would have at least the number of leading 0s as in U.
+///
+/// While being quite a specific situation, it is fairly common in computer
+/// graphics in the shape of alpha blending.
+///
+/// Modifies given KnownOut in-place with the inferred information.
+static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
+                                            const APInt &DemandedElts,
+                                            KnownBits &KnownOut,
+                                            const SimplifyQuery &Q,
+                                            unsigned Depth) {
+
+  Type *Ty = Op0->getType();
+  const unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  // Only handle scalar types for now
+  if (Ty->isVectorTy())
+    return;
+
+  // Try to match: a * (b - c) + c * d.
+  // When a == 1 => A == nullptr, the same applies to d/D as well.
+  const Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
+  const Instruction *SubBC = nullptr;
+
+  const auto MatchSubBC = [&]() {
+    // (b - c) can have two forms that interest us:
+    //
+    //   1. sub nuw %b, %c
+    //   2. xor %c, %b
+    //
+    // For the first case, nuw flag guarantees our requirement b >= c.
+    //
+    // The second case might happen when the analysis can infer that b is a mask
+    // for c and we can transform sub operation into xor (that is usually true
+    // for constant b's). Even though xor is symmetrical, canonicalization
+    // ensures that the constant will be the RHS. We have additional checks
+    // later on to ensure that this xor operation is equivalent to subtraction.
+    return m_Instruction(SubBC, m_CombineOr(m_NUWSub(m_Value(B), m_Value(C)),
+                                            m_Xor(m_Value(C), m_Value(B))));
+  };
+
+  const auto MatchASubBC = [&]() {
+    // Cases:
+    //   - a * (b - c)
+    //   - (b - c) * a
+    //   - (b - c) <- a implicitly equals 1
+    return m_CombineOr(m_c_Mul(m_Value(A), MatchSubBC()), MatchSubBC());
+  };
+
+  const auto MatchCD = [&]() {
+    // Cases:
+    //   - d * c
+    //   - c * d
+    //   - c <- d implicitly equals 1
+    return m_CombineOr(m_c_Mul(m_Value(D), m_Specific(C)), m_Specific(C));
+  };
+
+  const auto Match = [&](const Value *LHS, const Value *RHS) {
+    // We do use m_Specific(C) in MatchCD, so we have to make sure that
+    // it's bound to anything and match(LHS, MatchASubBC()) absolutely
+    // has to evaluate first and return true.
+    //
+    // If Match returns true, it is guaranteed that B != nullptr, C != nullptr.
+    return match(LHS, MatchASubBC()) && match(RHS, MatchCD());
+  };
+
+  if (!Match(Op0, Op1) && !Match(Op1, Op0))
+    return;
+
+  const auto ComputeKnownBitsOrOne = [&](const Value *V) {
+    // For some of the values we use the convention of leaving
+    // it nullptr to signify an implicit constant 1.
+    return V ? computeKnownBits(V, DemandedElts, Q, Depth + 1)
+             : KnownBits::makeConstant(APInt(BitWidth, 1));
+  };
+
+  // Check that all operands are non-negative
+  const KnownBits KnownA = ComputeKnownBitsOrOne(A);
+  if (!KnownA.isNonNegative())
+    return;
+
+  const KnownBits KnownD = ComputeKnownBitsOrOne(D);
+  if (!KnownD.isNonNegative())
+    return;
+
+  const KnownBits KnownB = computeKnownBits(B, DemandedElts, Q, Depth + 1);
+  if (!KnownB.isNonNegative())
+    return;
+
+  const KnownBits KnownC = computeKnownBits(C, DemandedElts, Q, Depth + 1);
+  if (!KnownC.isNonNegative())
+    return;
+
+  // If we matched subtraction as xor, we need to actually check that xor
+  // is semantically equivalent to subtraction.
+  //
+  // For that to be true, b has to be a mask for c or that b's known
+  // ones cover all known and possible ones of c.
+  if (SubBC->getOpcode() == Instruction::Xor &&
+      !KnownC.getMaxValue().isSubsetOf(KnownB.getMinValue()))
+    return;
+
+  const APInt MaxA = KnownA.getMaxValue();
+  const APInt MaxD = KnownD.getMaxValue();
+  const APInt MaxAD = APIntOps::umax(MaxA, MaxD);
+  const APInt MaxB = KnownB.getMaxValue();
+
+  // We can't infer leading zeros info if the upper-bound estimate wraps.
+  bool Overflow;
+  const APInt UpperBound = MaxAD.umul_ov(MaxB, Overflow);
+
+  if (Overflow)
+    return;
+
+  // If we know that x <= y and both are positive than x has at least the same
+  // number of leading zeros as y.
+  const unsigned MinimumNumberOfLeadingZeros = UpperBound.countl_zero();
+  KnownOut.Zero.setHighBits(MinimumNumberOfLeadingZeros);
+}
+
 static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
                                    bool NSW, bool NUW,
                                    const APInt &DemandedElts,
@@ -366,6 +502,10 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
       isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
           .value_or(false))
     KnownOut.makeNonNegative();
+
+  if (Add)
+    // Try to match lerp pattern and combine results
+    computeKnownBitsFromLerpPattern(Op0, Op1, DemandedElts, KnownOut, Q, Depth);
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
@@ -413,6 +553,18 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
         isGuaranteedNotToBeUndef(Op0, Q.AC, Q.CxtI, Q.DT, Depth + 1);
   Known = KnownBits::mul(Known, Known2, SelfMultiply);
 
+  if (SelfMultiply) {
+    unsigned SignBits = ComputeNumSignBits(Op0, DemandedElts, Q, Depth + 1);
+    unsigned TyBits = Op0->getType()->getScalarSizeInBits();
+    unsigned OutValidBits = 2 * (TyBits - SignBits + 1);
+
+    if (OutValidBits < TyBits) {
+      APInt KnownZeroMask =
+          APInt::getHighBitsSet(TyBits, TyBits - OutValidBits + 1);
+      Known.Zero |= KnownZeroMask;
+    }
+  }
+
   // Only make use of no-wrap flags if we failed to compute the sign bit
   // directly.  This matters if the multiplication always overflows, in
   // which case we prefer to follow the result of the direct computation,
@@ -430,8 +582,7 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
   unsigned NumRanges = Ranges.getNumOperands() / 2;
   assert(NumRanges >= 1);
 
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
+  Known.setAllConflict();
 
   for (unsigned i = 0; i < NumRanges; ++i) {
     ConstantInt *Lower =
@@ -549,6 +700,48 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   }
 
   return false;
+}
+
+bool llvm::willNotFreeBetween(const Instruction *Assume,
+                              const Instruction *CtxI) {
+  // Helper to check if there are any calls in the range that may free memory.
+  auto hasNoFreeCalls = [](auto Range) {
+    for (const auto &[Idx, I] : enumerate(Range)) {
+      if (Idx > MaxInstrsToCheckForFree)
+        return false;
+      if (const auto *CB = dyn_cast<CallBase>(&I))
+        if (!CB->hasFnAttr(Attribute::NoFree))
+          return false;
+    }
+    return true;
+  };
+
+  // Make sure the current function cannot arrange for another thread to free on
+  // its behalf.
+  if (!CtxI->getFunction()->hasNoSync())
+    return false;
+
+  // Handle cross-block case: CtxI in a successor of Assume's block.
+  const BasicBlock *CtxBB = CtxI->getParent();
+  const BasicBlock *AssumeBB = Assume->getParent();
+  BasicBlock::const_iterator CtxIter = CtxI->getIterator();
+  if (CtxBB != AssumeBB) {
+    if (CtxBB->getSinglePredecessor() != AssumeBB)
+      return false;
+
+    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
+      return false;
+
+    CtxIter = AssumeBB->end();
+  } else {
+    // Same block case: check that Assume comes before CtxI.
+    if (!Assume->comesBefore(CtxI))
+      return false;
+  }
+
+  // Check if there are any calls between Assume and CtxIter that may free
+  // memory.
+  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -727,17 +920,16 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
       // For those bits in C that are known, we can propagate them to known
       // bits in V shifted to the right by ShAmt.
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
-      RHSKnown.Zero.lshrInPlace(ShAmt);
-      RHSKnown.One.lshrInPlace(ShAmt);
+      RHSKnown >>= ShAmt;
       Known = Known.unionWith(RHSKnown);
       // assume(V >> ShAmt = C)
     } else if (match(LHS, m_Shr(m_V, m_ConstantInt(ShAmt))) &&
                ShAmt < BitWidth) {
-      KnownBits RHSKnown = KnownBits::makeConstant(*C);
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
-      Known.Zero |= RHSKnown.Zero << ShAmt;
-      Known.One |= RHSKnown.One << ShAmt;
+      KnownBits RHSKnown = KnownBits::makeConstant(*C);
+      RHSKnown <<= ShAmt;
+      Known = Known.unionWith(RHSKnown);
     }
     break;
   case ICmpInst::ICMP_NE: {
@@ -1318,8 +1510,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
 
       if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
-        Known.Zero.setAllBits();
-        Known.One.setAllBits();
+        Known.setAllConflict();
 
         if (FPClasses & fcInf)
           Known = Known.intersectWith(KnownBits::makeConstant(
@@ -1395,8 +1586,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       computeKnownBits(I->getOperand(0), SubDemandedElts, KnownSrc, Q,
                        Depth + 1);
 
-      Known.Zero.setAllBits();
-      Known.One.setAllBits();
+      Known.setAllConflict();
       for (unsigned i = 0; i != NumElts; ++i) {
         if (DemandedElts[i]) {
           unsigned Shifts = IsLE ? i : NumElts - 1 - i;
@@ -1728,8 +1918,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
         break;
 
-      Known.Zero.setAllBits();
-      Known.One.setAllBits();
+      Known.setAllConflict();
       for (const Use &U : P->operands()) {
         Value *IncValue;
         const PHINode *CxtPhi;
@@ -1829,18 +2018,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::abs: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         bool IntMinIsPoison = match(II->getArgOperand(1), m_One());
-        Known = Known2.abs(IntMinIsPoison);
+        Known = Known.unionWith(Known2.abs(IntMinIsPoison));
         break;
       }
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        Known.Zero |= Known2.Zero.reverseBits();
-        Known.One |= Known2.One.reverseBits();
+        Known = Known.unionWith(Known2.reverseBits());
         break;
       case Intrinsic::bswap:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        Known.Zero |= Known2.Zero.byteSwap();
-        Known.One |= Known2.One.byteSwap();
+        Known = Known.unionWith(Known2.byteSwap());
         break;
       case Intrinsic::ctlz: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
@@ -1890,10 +2077,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
 
-        Known.Zero =
-            Known2.Zero.shl(ShiftAmt) | Known3.Zero.lshr(BitWidth - ShiftAmt);
-        Known.One =
-            Known2.One.shl(ShiftAmt) | Known3.One.lshr(BitWidth - ShiftAmt);
+        Known2 <<= ShiftAmt;
+        Known3 >>= BitWidth - ShiftAmt;
+        Known = Known2.unionWith(Known3);
         break;
       }
       case Intrinsic::uadd_sat:
@@ -2076,8 +2262,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Known.resetAll();
       return;
     }
-    Known.One.setAllBits();
-    Known.Zero.setAllBits();
+    Known.setAllConflict();
     if (!!DemandedLHS) {
       const Value *LHS = Shuf->getOperand(0);
       computeKnownBits(LHS, DemandedLHS, Known, Q, Depth + 1);
@@ -2109,8 +2294,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       NeedsElt = DemandedElts[CIdx->getZExtValue()];
     }
 
-    Known.One.setAllBits();
-    Known.Zero.setAllBits();
+    Known.setAllConflict();
     if (NeedsElt) {
       computeKnownBits(Elt, Known, Q, Depth + 1);
       // If we don't know any bits, early out.
@@ -2266,7 +2450,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
     assert(!isa<ScalableVectorType>(V->getType()));
     // We know that CDV must be a vector of integers. Take the intersection of
     // each element.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    Known.setAllConflict();
     for (unsigned i = 0, e = CDV->getNumElements(); i != e; ++i) {
       if (!DemandedElts[i])
         continue;
@@ -2283,7 +2467,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
     assert(!isa<ScalableVectorType>(V->getType()));
     // We know that CV must be a vector of integers. Take the intersection of
     // each element.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    Known.setAllConflict();
     for (unsigned i = 0, e = CV->getNumOperands(); i != e; ++i) {
       if (!DemandedElts[i])
         continue;
@@ -5062,6 +5246,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                      KnownRHS.isKnownNeverPosZero()) &&
                     (KnownLHS.isKnownNeverPosZero() ||
                      KnownRHS.isKnownNeverNegZero()))) {
+          // Don't take sign bit from NaN operands.
+          if (!KnownLHS.isKnownNeverNaN())
+            KnownLHS.SignBit = std::nullopt;
+          if (!KnownRHS.isKnownNeverNaN())
+            KnownRHS.SignBit = std::nullopt;
           if ((IID == Intrinsic::maximum || IID == Intrinsic::maximumnum ||
                IID == Intrinsic::maxnum) &&
               (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
@@ -7386,84 +7575,20 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
         if (cast<ConstantInt>(II->getArgOperand(1))->isNullValue())
           return false;
         break;
-      case Intrinsic::ctpop:
-      case Intrinsic::bswap:
-      case Intrinsic::bitreverse:
-      case Intrinsic::fshl:
-      case Intrinsic::fshr:
-      case Intrinsic::smax:
-      case Intrinsic::smin:
-      case Intrinsic::scmp:
-      case Intrinsic::umax:
-      case Intrinsic::umin:
-      case Intrinsic::ucmp:
-      case Intrinsic::ptrmask:
-      case Intrinsic::fptoui_sat:
-      case Intrinsic::fptosi_sat:
-      case Intrinsic::sadd_with_overflow:
-      case Intrinsic::ssub_with_overflow:
-      case Intrinsic::smul_with_overflow:
-      case Intrinsic::uadd_with_overflow:
-      case Intrinsic::usub_with_overflow:
-      case Intrinsic::umul_with_overflow:
-      case Intrinsic::sadd_sat:
-      case Intrinsic::uadd_sat:
-      case Intrinsic::ssub_sat:
-      case Intrinsic::usub_sat:
-        return false;
       case Intrinsic::sshl_sat:
       case Intrinsic::ushl_sat:
-        return includesPoison(Kind) &&
-               !shiftAmountKnownInRange(II->getArgOperand(1));
-      case Intrinsic::fma:
-      case Intrinsic::fmuladd:
-      case Intrinsic::sqrt:
-      case Intrinsic::powi:
-      case Intrinsic::sin:
-      case Intrinsic::cos:
-      case Intrinsic::pow:
-      case Intrinsic::log:
-      case Intrinsic::log10:
-      case Intrinsic::log2:
-      case Intrinsic::exp:
-      case Intrinsic::exp2:
-      case Intrinsic::exp10:
-      case Intrinsic::fabs:
-      case Intrinsic::copysign:
-      case Intrinsic::floor:
-      case Intrinsic::ceil:
-      case Intrinsic::trunc:
-      case Intrinsic::rint:
-      case Intrinsic::nearbyint:
-      case Intrinsic::round:
-      case Intrinsic::roundeven:
-      case Intrinsic::fptrunc_round:
-      case Intrinsic::canonicalize:
-      case Intrinsic::arithmetic_fence:
-      case Intrinsic::minnum:
-      case Intrinsic::maxnum:
-      case Intrinsic::minimum:
-      case Intrinsic::maximum:
-      case Intrinsic::minimumnum:
-      case Intrinsic::maximumnum:
-      case Intrinsic::is_fpclass:
-      case Intrinsic::ldexp:
-      case Intrinsic::frexp:
-        return false;
-      case Intrinsic::lround:
-      case Intrinsic::llround:
-      case Intrinsic::lrint:
-      case Intrinsic::llrint:
-        // If the value doesn't fit an unspecified value is returned (but this
-        // is not poison).
-        return false;
+        if (!includesPoison(Kind) ||
+            shiftAmountKnownInRange(II->getArgOperand(1)))
+          return false;
+        break;
       }
     }
     [[fallthrough]];
   case Instruction::CallBr:
   case Instruction::Invoke: {
     const auto *CB = cast<CallBase>(Op);
-    return !CB->hasRetAttr(Attribute::NoUndef);
+    return !CB->hasRetAttr(Attribute::NoUndef) &&
+           !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
   }
   case Instruction::InsertElement:
   case Instruction::ExtractElement: {
@@ -7645,25 +7770,31 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         return true;
     }
 
-    if (const auto *PN = dyn_cast<PHINode>(V)) {
-      unsigned Num = PN->getNumIncomingValues();
-      bool IsWellDefined = true;
-      for (unsigned i = 0; i < Num; ++i) {
-        if (PN == PN->getIncomingValue(i))
-          continue;
-        auto *TI = PN->getIncomingBlock(i)->getTerminator();
-        if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), AC, TI,
-                                              DT, Depth + 1, Kind)) {
-          IsWellDefined = false;
-          break;
+    if (!::canCreateUndefOrPoison(Opr, Kind,
+                                  /*ConsiderFlagsAndMetadata=*/true)) {
+      if (const auto *PN = dyn_cast<PHINode>(V)) {
+        unsigned Num = PN->getNumIncomingValues();
+        bool IsWellDefined = true;
+        for (unsigned i = 0; i < Num; ++i) {
+          if (PN == PN->getIncomingValue(i))
+            continue;
+          auto *TI = PN->getIncomingBlock(i)->getTerminator();
+          if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), AC, TI,
+                                                DT, Depth + 1, Kind)) {
+            IsWellDefined = false;
+            break;
+          }
         }
-      }
-      if (IsWellDefined)
+        if (IsWellDefined)
+          return true;
+      } else if (auto *Splat = isa<ShuffleVectorInst>(Opr) ? getSplatValue(Opr)
+                                                           : nullptr) {
+        // For splats we only need to check the value being splatted.
+        if (OpCheck(Splat))
+          return true;
+      } else if (all_of(Opr->operands(), OpCheck))
         return true;
-    } else if (!::canCreateUndefOrPoison(Opr, Kind,
-                                         /*ConsiderFlagsAndMetadata*/ true) &&
-               all_of(Opr->operands(), OpCheck))
-      return true;
+    }
   }
 
   if (auto *I = dyn_cast<LoadInst>(V))
@@ -9061,6 +9192,10 @@ Intrinsic::ID llvm::getInverseMinMaxIntrinsic(Intrinsic::ID MinMaxID) {
   case Intrinsic::minimum: return Intrinsic::maximum;
   case Intrinsic::maxnum: return Intrinsic::minnum;
   case Intrinsic::minnum: return Intrinsic::maxnum;
+  case Intrinsic::maximumnum:
+    return Intrinsic::minimumnum;
+  case Intrinsic::minimumnum:
+    return Intrinsic::maximumnum;
   default: llvm_unreachable("Unexpected intrinsic");
   }
 }
@@ -9413,6 +9548,21 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       return true;
   }
 
+  // a - b == NonZero -> a != b
+  // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
+  const APInt *L1C;
+  Value *A, *B;
+  if (LPred == ICmpInst::ICMP_EQ && ICmpInst::isEquality(RPred) &&
+      match(L1, m_APInt(L1C)) && !L1C->isZero() &&
+      match(L0, m_Sub(m_Value(A), m_Value(B))) &&
+      ((A == R0 && B == R1) || (A == R1 && B == R0) ||
+       (match(A, m_PtrToInt(m_Specific(R0))) &&
+        match(B, m_PtrToInt(m_Specific(R1)))) ||
+       (match(A, m_PtrToInt(m_Specific(R1))) &&
+        match(B, m_PtrToInt(m_Specific(R0)))))) {
+    return RPred.dropSameSign() == ICmpInst::ICMP_NE;
+  }
+
   // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
   if (L0 == R0 &&
       (LPred == ICmpInst::ICMP_ULT || LPred == ICmpInst::ICMP_UGE) &&
@@ -9422,6 +9572,69 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
 
   if (auto P = CmpPredicate::getMatching(LPred, RPred))
     return isImpliedCondOperands(*P, L0, L1, R0, R1);
+
+  return std::nullopt;
+}
+
+/// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
+/// is true.  Return false if LHS implies RHS is false. Otherwise, return
+/// std::nullopt if we can't infer anything.
+static std::optional<bool>
+isImpliedCondFCmps(FCmpInst::Predicate LPred, const Value *L0, const Value *L1,
+                   FCmpInst::Predicate RPred, const Value *R0, const Value *R1,
+                   const DataLayout &DL, bool LHSIsTrue) {
+  // The rest of the logic assumes the LHS condition is true.  If that's not the
+  // case, invert the predicate to make it so.
+  if (!LHSIsTrue)
+    LPred = FCmpInst::getInversePredicate(LPred);
+
+  // We can have non-canonical operands, so try to normalize any common operand
+  // to L0/R0.
+  if (L0 == R1) {
+    std::swap(R0, R1);
+    RPred = FCmpInst::getSwappedPredicate(RPred);
+  }
+  if (R0 == L1) {
+    std::swap(L0, L1);
+    LPred = FCmpInst::getSwappedPredicate(LPred);
+  }
+  if (L1 == R1) {
+    // If we have L0 == R0 and L1 == R1, then make L1/R1 the constants.
+    if (L0 != R0 || match(L0, m_ImmConstant())) {
+      std::swap(L0, L1);
+      LPred = ICmpInst::getSwappedCmpPredicate(LPred);
+      std::swap(R0, R1);
+      RPred = ICmpInst::getSwappedCmpPredicate(RPred);
+    }
+  }
+
+  // Can we infer anything when the two compares have matching operands?
+  if (L0 == R0 && L1 == R1) {
+    if ((LPred & RPred) == LPred)
+      return true;
+    if ((LPred & ~RPred) == LPred)
+      return false;
+  }
+
+  // See if we can infer anything if operand-0 matches and we have at least one
+  // constant.
+  const APFloat *L1C, *R1C;
+  if (L0 == R0 && match(L1, m_APFloat(L1C)) && match(R1, m_APFloat(R1C))) {
+    if (std::optional<ConstantFPRange> DomCR =
+            ConstantFPRange::makeExactFCmpRegion(LPred, *L1C)) {
+      if (std::optional<ConstantFPRange> ImpliedCR =
+              ConstantFPRange::makeExactFCmpRegion(RPred, *R1C)) {
+        if (ImpliedCR->contains(*DomCR))
+          return true;
+      }
+      if (std::optional<ConstantFPRange> ImpliedCR =
+              ConstantFPRange::makeExactFCmpRegion(
+                  FCmpInst::getInversePredicate(RPred), *R1C)) {
+        if (ImpliedCR->contains(*DomCR))
+          return false;
+      }
+    }
+  }
 
   return std::nullopt;
 }
@@ -9481,15 +9694,24 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
     LHSIsTrue = !LHSIsTrue;
 
   // Both LHS and RHS are icmps.
-  if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
-    return isImpliedCondICmps(LHSCmp->getCmpPredicate(), LHSCmp->getOperand(0),
-                              LHSCmp->getOperand(1), RHSPred, RHSOp0, RHSOp1,
-                              DL, LHSIsTrue);
-  const Value *V;
-  if (match(LHS, m_NUWTrunc(m_Value(V))))
-    return isImpliedCondICmps(CmpInst::ICMP_NE, V,
-                              ConstantInt::get(V->getType(), 0), RHSPred,
-                              RHSOp0, RHSOp1, DL, LHSIsTrue);
+  if (RHSOp0->getType()->getScalarType()->isIntOrPtrTy()) {
+    if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
+      return isImpliedCondICmps(LHSCmp->getCmpPredicate(),
+                                LHSCmp->getOperand(0), LHSCmp->getOperand(1),
+                                RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
+    const Value *V;
+    if (match(LHS, m_NUWTrunc(m_Value(V))))
+      return isImpliedCondICmps(CmpInst::ICMP_NE, V,
+                                ConstantInt::get(V->getType(), 0), RHSPred,
+                                RHSOp0, RHSOp1, DL, LHSIsTrue);
+  } else {
+    assert(RHSOp0->getType()->isFPOrFPVectorTy() &&
+           "Expected floating point type only!");
+    if (const auto *LHSCmp = dyn_cast<FCmpInst>(LHS))
+      return isImpliedCondFCmps(LHSCmp->getPredicate(), LHSCmp->getOperand(0),
+                                LHSCmp->getOperand(1), RHSPred, RHSOp0, RHSOp1,
+                                DL, LHSIsTrue);
+  }
 
   /// The LHS should be an 'or', 'and', or a 'select' instruction.  We expect
   /// the RHS to be an icmp.
@@ -9522,6 +9744,13 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
   if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS)) {
     if (auto Implied = isImpliedCondition(
             LHS, RHSCmp->getCmpPredicate(), RHSCmp->getOperand(0),
+            RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
+      return InvertRHS ? !*Implied : *Implied;
+    return std::nullopt;
+  }
+  if (const FCmpInst *RHSCmp = dyn_cast<FCmpInst>(RHS)) {
+    if (auto Implied = isImpliedCondition(
+            LHS, RHSCmp->getPredicate(), RHSCmp->getOperand(0),
             RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
@@ -10168,12 +10397,17 @@ void llvm::findValuesAffectedByCondition(
           AddAffected(B);
         if (HasRHSC) {
           Value *Y;
-          // (X & C) or (X | C).
           // (X << C) or (X >>_s C) or (X >>_u C).
           if (match(A, m_Shift(m_Value(X), m_ConstantInt())))
             AddAffected(X);
+          // (X & C) or (X | C).
           else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
                    match(A, m_Or(m_Value(X), m_Value(Y)))) {
+            AddAffected(X);
+            AddAffected(Y);
+          }
+          // X - Y
+          else if (match(A, m_Sub(m_Value(X), m_Value(Y)))) {
             AddAffected(X);
             AddAffected(Y);
           }
@@ -10262,4 +10496,57 @@ const Value *llvm::stripNullTest(const Value *V) {
 
 Value *llvm::stripNullTest(Value *V) {
   return const_cast<Value *>(stripNullTest(const_cast<const Value *>(V)));
+}
+
+bool llvm::collectPossibleValues(const Value *V,
+                                 SmallPtrSetImpl<const Constant *> &Constants,
+                                 unsigned MaxCount, bool AllowUndefOrPoison) {
+  SmallPtrSet<const Instruction *, 8> Visited;
+  SmallVector<const Instruction *, 8> Worklist;
+  auto Push = [&](const Value *V) -> bool {
+    Constant *C;
+    if (match(const_cast<Value *>(V), m_ImmConstant(C))) {
+      if (!AllowUndefOrPoison && !isGuaranteedNotToBeUndefOrPoison(C))
+        return false;
+      // Check existence first to avoid unnecessary allocations.
+      if (Constants.contains(C))
+        return true;
+      if (Constants.size() == MaxCount)
+        return false;
+      Constants.insert(C);
+      return true;
+    }
+
+    if (auto *Inst = dyn_cast<Instruction>(V)) {
+      if (Visited.insert(Inst).second)
+        Worklist.push_back(Inst);
+      return true;
+    }
+    return false;
+  };
+  if (!Push(V))
+    return false;
+  while (!Worklist.empty()) {
+    const Instruction *CurInst = Worklist.pop_back_val();
+    switch (CurInst->getOpcode()) {
+    case Instruction::Select:
+      if (!Push(CurInst->getOperand(1)))
+        return false;
+      if (!Push(CurInst->getOperand(2)))
+        return false;
+      break;
+    case Instruction::PHI:
+      for (Value *IncomingValue : cast<PHINode>(CurInst)->incoming_values()) {
+        // Fast path for recurrence PHI.
+        if (IncomingValue == CurInst)
+          continue;
+        if (!Push(IncomingValue))
+          return false;
+      }
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
 }

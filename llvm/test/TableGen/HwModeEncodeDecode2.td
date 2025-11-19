@@ -20,8 +20,8 @@ def  Myi32  : Operand<i32> {
 def HasA : Predicate<"Subtarget->hasA()">;
 def HasB : Predicate<"Subtarget->hasB()">;
 
-def ModeA : HwMode<"+a", [HasA]>;
-def ModeB : HwMode<"+b", [HasB]>;
+def ModeA : HwMode<[HasA]>;
+def ModeB : HwMode<[HasB]>;
 
 
 def fooTypeEncA : InstructionEncoding {
@@ -94,25 +94,25 @@ let OutOperandList = (outs) in {
 }
 
 // DECODER-LABEL: DecoderTable_ModeA32
-// DECODER-DAG: Opcode: fooTypeEncA:foo
-// DECODER-DAG: Opcode: bar
+// DECODER-DAG: decode to fooTypeEncA:foo
+// DECODER-DAG: decode to bar
 // DECODER-LABEL: DecoderTable_ModeB32
-// DECODER-DAG: Opcode: fooTypeEncB:foo
-// DECODER-DAG: Opcode: fooTypeEncA:baz
-// DECODER-DAG: Opcode: bar
+// DECODER-DAG: decode to fooTypeEncB:foo
+// DECODER-DAG: decode to fooTypeEncA:baz
+// DECODER-DAG: decode to bar
 // DECODER-LABEL: DecoderTableAlt_ModeA32
-// DECODER-DAG: Opcode: unrelated
+// DECODER-DAG: decode to unrelated
 // DECODER-LABEL: DecoderTableAlt_ModeB32
-// DECODER-DAG: Opcode: unrelated
+// DECODER-DAG: decode to unrelated
 
 // DECODER-SUPPRESS-LABEL: DecoderTable32
-// DECODER-SUPPRESS-DAG: Opcode: bar
+// DECODER-SUPPRESS-DAG: decode to bar
 // DECODER-SUPPRESS-LABEL: DecoderTable_ModeA32
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:foo
-// DECODER-SUPPRESS-NOT: Opcode: bar
+// DECODER-SUPPRESS-DAG: decode to fooTypeEncA:foo
+// DECODER-SUPPRESS-NOT: decode to bar
 // DECODER-SUPPRESS-LABEL: DecoderTable_ModeB32
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncB:foo
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:baz
-// DECODER-SUPPRESS-NOT: Opcode: bar
+// DECODER-SUPPRESS-DAG: decode to fooTypeEncB:foo
+// DECODER-SUPPRESS-DAG: decode to fooTypeEncA:baz
+// DECODER-SUPPRESS-NOT: decode to bar
 // DECODER-SUPPRESS-LABEL: DecoderTableAlt32
-// DECODER-SUPPRESS-DAG: Opcode: unrelated
+// DECODER-SUPPRESS-DAG: decode to unrelated

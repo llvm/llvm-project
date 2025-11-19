@@ -129,7 +129,7 @@ public:
     MCRegister PhysReg;
     LaneBitmask LaneMask;
 
-    RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
+    RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
 
     bool operator==(const RegisterMaskPair &other) const {
@@ -504,6 +504,11 @@ public:
   /// Remove the specified register from the live in set.
   LLVM_ABI void removeLiveIn(MCRegister Reg,
                              LaneBitmask LaneMask = LaneBitmask::getAll());
+
+  /// Remove the specified register from any overlapped live in. The method is
+  /// subreg-aware and removes Reg and its subregs from the live in set. It also
+  /// clears the corresponding bitmask from its live-in super registers.
+  LLVM_ABI void removeLiveInOverlappedWith(MCRegister Reg);
 
   /// Return true if the specified register is in the live in set.
   LLVM_ABI bool isLiveIn(MCRegister Reg,
@@ -1035,7 +1040,9 @@ public:
   /// Succ, can be split. If this returns true a subsequent call to
   /// SplitCriticalEdge is guaranteed to return a valid basic block if
   /// no changes occurred in the meantime.
-  LLVM_ABI bool canSplitCriticalEdge(const MachineBasicBlock *Succ) const;
+  LLVM_ABI bool
+  canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                       const MachineLoopInfo *MLI = nullptr) const;
 
   void pop_front() { Insts.pop_front(); }
   void pop_back() { Insts.pop_back(); }
@@ -1286,6 +1293,15 @@ public:
 
   // Helper function for MIRPrinter.
   LLVM_ABI bool canPredictBranchProbabilities() const;
+
+  /// Iterate over block PHI instructions and remove all incoming values for
+  /// PredMBB.
+  ///
+  /// Method does not erase PHI instructions even if they have single income or
+  /// do not have incoming values ar all. It is a caller responsibility to make
+  /// decision how to process PHI instructions after incoming values removal.
+  LLVM_ABI void
+  removePHIsIncomingValuesForPredecessor(const MachineBasicBlock &PredMBB);
 
 private:
   /// Return probability iterator corresponding to the I successor iterator.

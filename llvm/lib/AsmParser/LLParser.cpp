@@ -315,11 +315,10 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return error(NT.second.second,
                    "use of undefined type '%" + Twine(NT.first) + "'");
 
-  for (StringMap<std::pair<Type*, LocTy> >::iterator I =
-       NamedTypes.begin(), E = NamedTypes.end(); I != E; ++I)
-    if (I->second.second.isValid())
-      return error(I->second.second,
-                   "use of undefined type named '" + I->getKey() + "'");
+  for (const auto &[Name, TypeInfo] : NamedTypes)
+    if (TypeInfo.second.isValid())
+      return error(TypeInfo.second,
+                   "use of undefined type named '" + Name + "'");
 
   if (!ForwardRefComdats.empty())
     return error(ForwardRefComdats.begin()->second,
@@ -329,10 +328,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
       Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
-      if (IID == Intrinsic::not_intrinsic)
-        // Don't do anything for unknown intrinsics.
-        continue;
-
       // Automatically create declarations for intrinsics. Intrinsics can only
       // be called directly, so the call function type directly determines the
       // declaration function type.
@@ -346,11 +341,26 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
           return error(Info.second, "intrinsic can only be used as callee");
 
         SmallVector<Type *> OverloadTys;
-        if (!Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
-                                              OverloadTys))
-          return error(Info.second, "invalid intrinsic signature");
+        if (IID != Intrinsic::not_intrinsic &&
+            Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
+                                             OverloadTys)) {
+          U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
+        } else {
+          // Try to upgrade the intrinsic.
+          Function *TmpF = Function::Create(CB->getFunctionType(),
+                                            Function::ExternalLinkage, Name, M);
+          Function *NewF = nullptr;
+          if (!UpgradeIntrinsicFunction(TmpF, NewF)) {
+            if (IID == Intrinsic::not_intrinsic)
+              return error(Info.second, "unknown intrinsic '" + Name + "'");
+            return error(Info.second, "invalid intrinsic signature");
+          }
 
-        U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
+          U.set(TmpF);
+          UpgradeIntrinsicCall(CB, NewF);
+          if (TmpF->use_empty())
+            TmpF->eraseFromParent();
+        }
       }
 
       Info.first->eraseFromParent();
@@ -440,6 +450,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeModuleFlags(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
+  copyModuleAttrToFunctions(*M);
 
   if (!Slots)
     return false;
@@ -740,14 +751,21 @@ bool LLParser::parseDeclare() {
 ///   ::= 'define' FunctionHeader (!dbg !56)* '{' ...
 bool LLParser::parseDefine() {
   assert(Lex.getKind() == lltok::kw_define);
+  FileLoc FunctionStart(Lex.getTokLineColumnPos());
   Lex.Lex();
 
   Function *F;
   unsigned FunctionNumber = -1;
   SmallVector<unsigned> UnnamedArgNums;
-  return parseFunctionHeader(F, true, FunctionNumber, UnnamedArgNums) ||
-         parseOptionalFunctionMetadata(*F) ||
-         parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
+  bool RetValue =
+      parseFunctionHeader(F, true, FunctionNumber, UnnamedArgNums) ||
+      parseOptionalFunctionMetadata(*F) ||
+      parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
+  if (ParserContext)
+    ParserContext->addFunctionLocation(
+        F, FileLocRange(FunctionStart, Lex.getPrevTokEndLineColumnPos()));
+
+  return RetValue;
 }
 
 /// parseGlobalType
@@ -1257,6 +1275,9 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
       Lex.Lex();
       GV->setPartition(Lex.getStrVal());
       if (parseToken(lltok::StringConstant, "expected partition string"))
+        return true;
+    } else if (!IsAlias && Lex.getKind() == lltok::MetadataVar) {
+      if (parseGlobalObjectMetadataAttachment(*GI))
         return true;
     } else {
       return tokError("unknown alias or ifunc property!");
@@ -2312,6 +2333,15 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
 #undef CC_VLS_CASE
     }
     return false;
+  case lltok::kw_cheriot_compartmentcallcc:
+    CC = CallingConv::CHERIoT_CompartmentCall;
+    break;
+  case lltok::kw_cheriot_compartmentcalleecc:
+    CC = CallingConv::CHERIoT_CompartmentCallee;
+    break;
+  case lltok::kw_cheriot_librarycallcc:
+    CC = CallingConv::CHERIoT_LibraryCall;
+    break;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);
@@ -2521,6 +2551,10 @@ static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
     return IRMemLocation::InaccessibleMem;
   case lltok::kw_errnomem:
     return IRMemLocation::ErrnoMem;
+  case lltok::kw_target_mem0:
+    return IRMemLocation::TargetMem0;
+  case lltok::kw_target_mem1:
+    return IRMemLocation::TargetMem1;
   default:
     return std::nullopt;
   }
@@ -4507,6 +4541,9 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!Indices.empty() && !Ty->isSized(&Visited))
         return error(ID.Loc, "base element of getelementptr must be sized");
 
+      if (!ConstantExpr::isSupportedGetElementPtr(Ty))
+        return error(ID.Loc, "invalid base element for constant getelementptr");
+
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
@@ -4726,6 +4763,10 @@ struct DwarfVirtualityField : public MDUnsignedField {
 
 struct DwarfLangField : public MDUnsignedField {
   DwarfLangField() : MDUnsignedField(0, dwarf::DW_LANG_hi_user) {}
+};
+
+struct DwarfSourceLangNameField : public MDUnsignedField {
+  DwarfSourceLangNameField() : MDUnsignedField(0, UINT32_MAX) {}
 };
 
 struct DwarfCCField : public MDUnsignedField {
@@ -4980,6 +5021,25 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, DwarfLangField &Result) {
     return tokError("invalid DWARF language" + Twine(" '") + Lex.getStrVal() +
                     "'");
   assert(Lang <= Result.Max && "Expected valid DWARF language");
+  Result.assign(Lang);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            DwarfSourceLangNameField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfSourceLangName)
+    return tokError("expected DWARF source language name");
+
+  unsigned Lang = dwarf::getSourceLanguageName(Lex.getStrVal());
+  if (!Lang)
+    return tokError("invalid DWARF source language name" + Twine(" '") +
+                    Lex.getStrVal() + "'");
+  assert(Lang <= Result.Max && "Expected valid DWARF source language name");
   Result.assign(Lang);
   Lex.Lex();
   return false;
@@ -5585,16 +5645,17 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(dataSize, MDUnsignedField, (0, UINT32_MAX));                        \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
   OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val,
-                                         size.getValueAsMetadata(Context),
-                                         align.Val, encoding.Val,
-                                         num_extra_inhabitants.Val, flags.Val));
+  Result = GET_OR_DISTINCT(
+      DIBasicType,
+      (Context, tag.Val, name.Val, size.getValueAsMetadata(Context), align.Val,
+       encoding.Val, num_extra_inhabitants.Val, dataSize.Val, flags.Val));
   return false;
 }
 
@@ -5824,9 +5885,13 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return tokError("missing 'distinct', required for !DICompileUnit");
 
+  LocTy Loc = Lex.getLoc();
+
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  REQUIRED(language, DwarfLangField, );                                        \
   REQUIRED(file, MDField, (/* AllowNull */ false));                            \
+  OPTIONAL(language, DwarfLangField, );                                        \
+  OPTIONAL(sourceLanguageName, DwarfSourceLangNameField, );                    \
+  OPTIONAL(sourceLanguageVersion, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(producer, MDStringField, );                                         \
   OPTIONAL(isOptimized, MDBoolField, );                                        \
   OPTIONAL(flags, MDStringField, );                                            \
@@ -5848,12 +5913,28 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  if (!language.Seen && !sourceLanguageName.Seen)
+    return error(Loc, "missing one of 'language' or 'sourceLanguageName', "
+                      "required for !DICompileUnit");
+
+  if (language.Seen && sourceLanguageName.Seen)
+    return error(Loc, "can only specify one of 'language' and "
+                      "'sourceLanguageName' on !DICompileUnit");
+
+  if (sourceLanguageVersion.Seen && !sourceLanguageName.Seen)
+    return error(Loc, "'sourceLanguageVersion' requires an associated "
+                      "'sourceLanguageName' on !DICompileUnit");
+
   Result = DICompileUnit::getDistinct(
-      Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
-      runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
-      retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
-      splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val,
-      rangesBaseAddress.Val, sysroot.Val, sdk.Val);
+      Context,
+      language.Seen ? DISourceLanguageName(language.Val)
+                    : DISourceLanguageName(sourceLanguageName.Val,
+                                           sourceLanguageVersion.Val),
+      file.Val, producer.Val, isOptimized.Val, flags.Val, runtimeVersion.Val,
+      splitDebugFilename.Val, emissionKind.Val, enums.Val, retainedTypes.Val,
+      globals.Val, imports.Val, macros.Val, dwoId.Val, splitDebugInlining.Val,
+      debugInfoForProfiling.Val, nameTableKind.Val, rangesBaseAddress.Val,
+      sysroot.Val, sdk.Val);
   return false;
 }
 
@@ -6267,8 +6348,8 @@ bool LLParser::parseDIObjCProperty(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIObjCProperty,
-                           (Context, name.Val, file.Val, line.Val, setter.Val,
-                            getter.Val, attributes.Val, type.Val));
+                           (Context, name.Val, file.Val, line.Val, getter.Val,
+                            setter.Val, attributes.Val, type.Val));
   return false;
 }
 
@@ -6951,6 +7032,8 @@ bool LLParser::parseFunctionBody(Function &Fn, unsigned FunctionNumber,
 /// parseBasicBlock
 ///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
+  FileLoc BBStart(Lex.getTokLineColumnPos());
+
   // If this basic block starts out with a name, remember it.
   std::string Name;
   int NameID = -1;
@@ -6992,6 +7075,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
     }
 
+    FileLoc InstStart(Lex.getTokLineColumnPos());
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
@@ -7041,7 +7125,15 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
     for (DbgRecordPtr &DR : TrailingDbgRecord)
       BB->insertDbgRecordBefore(DR.release(), Inst->getIterator());
     TrailingDbgRecord.clear();
+    if (ParserContext) {
+      ParserContext->addInstructionLocation(
+          Inst, FileLocRange(InstStart, Lex.getPrevTokEndLineColumnPos()));
+    }
   } while (!Inst->isTerminator());
+
+  if (ParserContext)
+    ParserContext->addBlockLocation(
+        BB, FileLocRange(BBStart, Lex.getPrevTokEndLineColumnPos()));
 
   assert(TrailingDbgRecord.empty() &&
          "All debug values should have been attached to an instruction.");

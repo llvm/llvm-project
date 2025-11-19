@@ -195,16 +195,14 @@ test_cc_resource_dir, _ = get_path_from_clang(
 # Normalize the path for comparison
 if test_cc_resource_dir is not None:
     test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
-if lit_config.debug:
-    lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
+lit_config.dbg(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
 if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
     if config.compiler_id == "Clang":
-        if lit_config.debug:
-            lit_config.note(
-                f"Overriding test compiler resource dir to use "
-                f'libraries in "{config.compiler_rt_libdir}"'
-            )
+        lit_config.dbg(
+            f"Overriding test compiler resource dir to use "
+            f'libraries in "{config.compiler_rt_libdir}"'
+        )
         # Ensure that we use the just-built static libraries when linking by
         # overriding the Clang resource directory. Additionally, we want to use
         # the builtin headers shipped with clang (e.g. stdint.h), so we
@@ -708,31 +706,7 @@ else:
     config.substitutions.append(("%push_to_device", "echo "))
     config.substitutions.append(("%adb_shell", "echo "))
 
-if config.target_os == "Linux":
-    def add_glibc_versions(ver_string):
-        if config.android:
-            return
-
-        from distutils.version import LooseVersion
-
-        ver = LooseVersion(ver_string)
-        any_glibc = False
-        for required in [
-            "2.19",
-            "2.27",
-            "2.30",
-            "2.33",
-            "2.34",
-            "2.37",
-            "2.38",
-            "2.40",
-        ]:
-            if ver >= LooseVersion(required):
-                config.available_features.add("glibc-" + required)
-                any_glibc = True
-            if any_glibc:
-                config.available_features.add("glibc")
-
+if config.target_os == "Linux" and not config.android:
     # detect whether we are using glibc, and which version
     cmd_args = [
         config.clang.strip(),
@@ -754,7 +728,27 @@ if config.target_os == "Linux":
     try:
         sout, _ = cmd.communicate(b"#include <features.h>")
         m = dict(re.findall(r"#define (__GLIBC__|__GLIBC_MINOR__) (\d+)", str(sout)))
-        add_glibc_versions(f"{m['__GLIBC__']}.{m['__GLIBC_MINOR__']}")
+        major = int(m["__GLIBC__"])
+        minor = int(m["__GLIBC_MINOR__"])
+        any_glibc = False
+        for required in [
+            (2, 19),
+            (2, 27),
+            (2, 30),
+            (2, 33),
+            (2, 34),
+            (2, 37),
+            (2, 38),
+            (2, 40),
+        ]:
+            if (major, minor) >= required:
+                (required_major, required_minor) = required
+                config.available_features.add(
+                    f"glibc-{required_major}.{required_minor}"
+                )
+                any_glibc = True
+            if any_glibc:
+                config.available_features.add("glibc")
     except:
         pass
 
@@ -881,7 +875,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_so" + postfix,
-                "-install_name @rpath/`basename %dynamiclib{}`".format(postfix),
+                "-install_name @rpath/%base_dynamiclib{}".format(postfix),
             )
         )
     elif config.target_os in ("FreeBSD", "NetBSD", "OpenBSD"):
@@ -913,6 +907,9 @@ for postfix in ["2", "1", ""]:
     # Must be defined after the substitutions that use %dynamiclib.
     config.substitutions.append(
         ("%dynamiclib" + postfix, "%t.dir/%xdynamiclib_filename" + postfix)
+    )
+    config.substitutions.append(
+        ("%base_dynamiclib" + postfix, "%xdynamiclib_filename" + postfix)
     )
     config.substitutions.append(
         (
@@ -1070,3 +1067,5 @@ if config.compiler_id == "GNU":
 # llvm.
 config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
 config.substitutions.append(("%llvm_src", config.llvm_src_root))
+
+config.substitutions.append(("%python", '"%s"' % (sys.executable)))

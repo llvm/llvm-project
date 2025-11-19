@@ -659,18 +659,6 @@ void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 
-void TypeLocWriter::VisitDependentTemplateSpecializationTypeLoc(
-       DependentTemplateSpecializationTypeLoc TL) {
-  addSourceLocation(TL.getElaboratedKeywordLoc());
-  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
-  addSourceLocation(TL.getTemplateKeywordLoc());
-  addSourceLocation(TL.getTemplateNameLoc());
-  addSourceLocation(TL.getLAngleLoc());
-  addSourceLocation(TL.getRAngleLoc());
-  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I));
-}
-
 void TypeLocWriter::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
   addSourceLocation(TL.getEllipsisLoc());
 }
@@ -1058,7 +1046,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_TEMPLATE_SPECIALIZATION);
   RECORD(TYPE_DEPENDENT_NAME);
-  RECORD(TYPE_DEPENDENT_TEMPLATE_SPECIALIZATION);
   RECORD(TYPE_DEPENDENT_SIZED_ARRAY);
   RECORD(TYPE_PAREN);
   RECORD(TYPE_MACRO_QUALIFIED);
@@ -1710,9 +1697,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
+  SmallString<256> HSOpts_ModuleCachePath;
+  normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
+                           HSOpts_ModuleCachePath);
+
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
-  AddString(HSOpts.ModuleCachePath, Record);
+  AddString(HSOpts_ModuleCachePath, Record);
   AddString(HSOpts.ModuleUserBuildPath, Record);
   Record.push_back(HSOpts.DisableModuleHash);
   Record.push_back(HSOpts.ImplicitModuleMaps);
@@ -2700,7 +2691,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
         Record.push_back(VisMD->isPublic());
       }
       ModuleMacroRecord.push_back(getSubmoduleID(WritingModule));
-      ModuleMacroRecord.push_back(getMacroRef(MD->getMacroInfo(), Name));
+      AddMacroRef(MD->getMacroInfo(), Name, ModuleMacroRecord);
       Stream.EmitRecord(PP_MODULE_MACRO, ModuleMacroRecord);
       ModuleMacroRecord.clear();
       EmittedModuleMacros = true;
@@ -2729,7 +2720,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
 
         // Emit a record indicating this submodule exports this macro.
         ModuleMacroRecord.push_back(getSubmoduleID(Macro->getOwningModule()));
-        ModuleMacroRecord.push_back(getMacroRef(Macro->getMacroInfo(), Name));
+        AddMacroRef(Macro->getMacroInfo(), Name, ModuleMacroRecord);
         for (auto *M : Macro->overrides())
           ModuleMacroRecord.push_back(getSubmoduleID(M->getOwningModule()));
 
@@ -2828,14 +2819,12 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(MACRO_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of macros
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // first ID
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32));   // base offset
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
 
   unsigned MacroOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   {
     RecordData::value_type Record[] = {MACRO_OFFSET, MacroOffsets.size(),
-                                       FirstMacroID - NUM_PREDEF_MACRO_IDS,
                                        MacroOffsetsBase - ASTBlockStartOffset};
     Stream.EmitRecordWithBlob(MacroOffsetAbbrev, Record, bytes(MacroOffsets));
   }
@@ -2868,9 +2857,7 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     InclusionAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   }
 
-  unsigned FirstPreprocessorEntityID
-    = (Chain ? PPRec.getNumLoadedPreprocessedEntities() : 0)
-    + NUM_PREDEF_PP_ENTITY_IDS;
+  unsigned FirstPreprocessorEntityID = NUM_PREDEF_PP_ENTITY_IDS;
   unsigned NextPreprocessorEntityID = FirstPreprocessorEntityID;
   RecordData Record;
   for (PreprocessingRecord::iterator E = PPRec.local_begin(),
@@ -2934,13 +2921,10 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
 
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(PPD_ENTITIES_OFFSETS));
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // first pp entity
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
     unsigned PPEOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-    RecordData::value_type Record[] = {PPD_ENTITIES_OFFSETS,
-                                       FirstPreprocessorEntityID -
-                                           NUM_PREDEF_PP_ENTITY_IDS};
+    RecordData::value_type Record[] = {PPD_ENTITIES_OFFSETS};
     Stream.EmitRecordWithBlob(PPEOffsetAbbrev, Record,
                               bytes(PreprocessedEntityOffsets));
   }
@@ -3256,7 +3240,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
     // Emit the reachable initializers.
     // The initializer may only be unreachable in reduced BMI.
-    if (Context) {
+    if (Context && !GeneratingReducedBMI) {
       RecordData Inits;
       for (Decl *D : Context->getModuleInitializers(Mod))
         if (wasDeclEmitted(D))
@@ -4306,10 +4290,18 @@ static bool isModuleLocalDecl(NamedDecl *D) {
     if (auto *CDGD = dyn_cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl()))
       return isModuleLocalDecl(CDGD->getDeducedTemplate());
 
-  if (D->getFormalLinkage() == Linkage::Module)
-    return true;
+  if (D->getFormalLinkage() != Linkage::Module)
+    return false;
 
-  return false;
+  // It is hard for the serializer to judge if the in-class friend declaration
+  // is visible or not, so we just transfer the task to Sema. It should be a
+  // safe decision since Sema is able to handle the lookup rules for in-class
+  // friend declarations good enough already.
+  if (D->getFriendObjectKind() &&
+      isa<CXXRecordDecl>(D->getLexicalDeclContext()))
+    return false;
+
+  return true;
 }
 
 static bool isTULocalInNamedModules(NamedDecl *D) {
@@ -4375,8 +4367,7 @@ private:
     // parent of parent. We DON'T remove the enum constant from its parent. So
     // we don't need to care about merging problems here.
     if (auto *ECD = dyn_cast<EnumConstantDecl>(D);
-        ECD && DC.isFileContext() && ECD->getOwningModule() &&
-        ECD->getTopLevelOwningNamedModule()->isNamedModule()) {
+        ECD && DC.isFileContext() && ECD->getTopLevelOwningNamedModule()) {
       if (llvm::all_of(
               DC.noload_lookup(
                   cast<EnumDecl>(ECD->getDeclContext())->getDeclName()),
@@ -5829,17 +5820,19 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
                       UnusedLocalTypedefNameCandidates);
 
-  // Write the record containing pending implicit instantiations.
-  RecordData PendingInstantiations;
-  for (const auto &I : SemaRef.PendingInstantiations) {
-    if (!wasDeclEmitted(I.first))
-      continue;
+  if (!GeneratingReducedBMI) {
+    // Write the record containing pending implicit instantiations.
+    RecordData PendingInstantiations;
+    for (const auto &I : SemaRef.PendingInstantiations) {
+      if (!wasDeclEmitted(I.first))
+        continue;
 
-    AddDeclRef(I.first, PendingInstantiations);
-    AddSourceLocation(I.second, PendingInstantiations);
+      AddDeclRef(I.first, PendingInstantiations);
+      AddSourceLocation(I.second, PendingInstantiations);
+    }
+    if (!PendingInstantiations.empty())
+      Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
   }
-  if (!PendingInstantiations.empty())
-    Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
 
   // Write the record containing declaration references of Sema.
   RecordData SemaDeclRefs;
@@ -6100,9 +6093,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
         // These values should be unique within a chain, since they will be read
         // as keys into ContinuousRangeMaps.
-        writeBaseIDOrNone(M.BaseMacroID, M.LocalNumMacros);
-        writeBaseIDOrNone(M.BasePreprocessedEntityID,
-                          M.NumPreprocessedEntities);
         writeBaseIDOrNone(M.BaseSubmoduleID, M.LocalNumSubmodules);
         writeBaseIDOrNone(M.BaseSelectorID, M.LocalNumSelectors);
       }
@@ -6537,6 +6527,18 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
         Record.AddStmt(cast<CXXDestructorDecl>(D)->getOperatorDeleteThisArg());
         break;
 
+      case DeclUpdateKind::CXXResolvedDtorGlobDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
+      case DeclUpdateKind::CXXResolvedDtorArrayDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
+      case DeclUpdateKind::CXXResolvedDtorGlobArrayDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
       case DeclUpdateKind::CXXResolvedExceptionSpec: {
         auto prototype =
           cast<FunctionDecl>(D)->getType()->castAs<FunctionProtoType>();
@@ -6897,6 +6899,13 @@ void ASTWriter::AddLookupOffsets(const LookupBlockOffsets &Offsets,
   Record.push_back(Offsets.VisibleOffset);
   Record.push_back(Offsets.ModuleLocalOffset);
   Record.push_back(Offsets.TULocalOffset);
+}
+
+void ASTWriter::AddMacroRef(MacroInfo *MI, const IdentifierInfo *Name,
+                            RecordDataImpl &Record) {
+  MacroID MacroRef = getMacroRef(MI, Name);
+  Record.push_back(MacroRef >> 32);
+  Record.push_back(MacroRef & llvm::maskTrailingOnes<MacroID>(32));
 }
 
 void ASTWriter::AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record) {
@@ -7379,12 +7388,8 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 
   Chain = Reader;
 
-  // Note, this will get called multiple times, once one the reader starts up
-  // and again each time it's done reading a PCH or module.
-  FirstMacroID = NUM_PREDEF_MACRO_IDS + Chain->getTotalNumMacros();
   FirstSubmoduleID = NUM_PREDEF_SUBMODULE_IDS + Chain->getTotalNumSubmodules();
   FirstSelectorID = NUM_PREDEF_SELECTOR_IDS + Chain->getTotalNumSelectors();
-  NextMacroID = FirstMacroID;
   NextSelectorID = FirstSelectorID;
   NextSubmoduleID = FirstSubmoduleID;
 }
@@ -7412,6 +7417,14 @@ void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
 void ASTWriter::MacroRead(serialization::MacroID ID, MacroInfo *MI) {
   // Always keep the highest ID. See \p TypeRead() for more information.
   MacroID &StoredID = MacroIDs[MI];
+  unsigned OriginalModuleFileIndex = StoredID >> 32;
+
+  // Always keep the local macro ID. See \p TypeRead() for more information.
+  if (OriginalModuleFileIndex == 0 && StoredID)
+    return;
+
+  // Otherwise, keep the highest ID since the module file comes later has
+  // higher module file indexes.
   if (ID > StoredID)
     StoredID = ID;
 }
@@ -7582,6 +7595,48 @@ void ASTWriter::ResolvedOperatorDelete(const CXXDestructorDecl *DD,
   Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
     DeclUpdates[D].push_back(
         DeclUpdate(DeclUpdateKind::CXXResolvedDtorDelete, Delete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                           const FunctionDecl *GlobDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(GlobDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(
+        DeclUpdate(DeclUpdateKind::CXXResolvedDtorGlobDelete, GlobDelete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                            const FunctionDecl *ArrayDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(ArrayDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(
+        DeclUpdate(DeclUpdateKind::CXXResolvedDtorArrayDelete, ArrayDelete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorGlobArrayDelete(
+    const CXXDestructorDecl *DD, const FunctionDecl *GlobArrayDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(GlobArrayDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(DeclUpdate(
+        DeclUpdateKind::CXXResolvedDtorGlobArrayDelete, GlobArrayDelete));
   });
 }
 
@@ -7865,6 +7920,14 @@ void OMPClauseWriter::VisitOMPPartialClause(OMPPartialClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPLoopRangeClause(OMPLoopRangeClause *C) {
+  Record.AddStmt(C->getFirst());
+  Record.AddStmt(C->getCount());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getFirstLoc());
+  Record.AddSourceLocation(C->getCountLoc());
+}
+
 void OMPClauseWriter::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   Record.AddStmt(C->getAllocator());
   Record.AddSourceLocation(C->getLParenLoc());
@@ -7884,6 +7947,14 @@ void OMPClauseWriter::VisitOMPDefaultClause(OMPDefaultClause *C) {
   Record.push_back(unsigned(C->getDefaultKind()));
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getDefaultKindKwLoc());
+  Record.push_back(unsigned(C->getDefaultVC()));
+  Record.AddSourceLocation(C->getDefaultVCLoc());
+}
+
+void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getThreadsetKindLoc());
+  Record.writeEnum(C->getThreadsetKind());
 }
 
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
@@ -7915,7 +7986,10 @@ void OMPClauseWriter::VisitOMPOrderedClause(OMPOrderedClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
-void OMPClauseWriter::VisitOMPNowaitClause(OMPNowaitClause *) {}
+void OMPClauseWriter::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  Record.AddStmt(C->getCondition());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
 
 void OMPClauseWriter::VisitOMPUntiedClause(OMPUntiedClause *) {}
 
@@ -8547,6 +8621,7 @@ void OMPClauseWriter::VisitOMPSeverityClause(OMPSeverityClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getMessageString());
   Record.AddSourceLocation(C->getLParenLoc());
 }
@@ -8613,6 +8688,17 @@ void OMPClauseWriter::VisitOMPXDynCGroupMemClause(OMPXDynCGroupMemClause *C) {
   VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getSize());
   Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.push_back(C->getDynGroupprivateModifier());
+  Record.push_back(C->getDynGroupprivateFallbackModifier());
+  Record.AddStmt(C->getSize());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getDynGroupprivateModifierLoc());
+  Record.AddSourceLocation(C->getDynGroupprivateFallbackModifierLoc());
 }
 
 void OMPClauseWriter::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
@@ -8750,8 +8836,10 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
 
-    for (VarDecl *VD : PC->getInitRecipes())
-      AddDeclRef(VD);
+    for (const OpenACCPrivateRecipe &R : PC->getInitRecipes()) {
+      static_assert(sizeof(R) == 1 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+    }
     return;
   }
   case OpenACCClauseKind::Host: {
@@ -8772,7 +8860,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(FPC);
 
     for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
-      AddDeclRef(R.RecipeDecl);
+      static_assert(sizeof(R) == 2 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
       AddDeclRef(R.InitFromTemporary);
     }
     return;
@@ -8894,8 +8983,17 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(RC);
 
     for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
-      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
-      AddDeclRef(R.RecipeDecl);
+      AddDeclRef(R.AllocaDecl);
+
+      static_assert(sizeof(OpenACCReductionRecipe::CombinerRecipe) ==
+                    3 * sizeof(int *));
+      writeUInt32(R.CombinerRecipes.size());
+
+      for (auto &CombinerRecipe : R.CombinerRecipes) {
+        AddDeclRef(CombinerRecipe.LHS);
+        AddDeclRef(CombinerRecipe.RHS);
+        AddStmt(CombinerRecipe.Op);
+      }
     }
     return;
   }

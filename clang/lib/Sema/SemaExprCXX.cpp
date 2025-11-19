@@ -354,6 +354,8 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
         CheckTypenameType(ElaboratedTypeKeyword::None, SourceLocation(),
                           SS.getWithLocInContext(Context), II, NameLoc, &TSI,
                           /*DeducedTSTContext=*/true);
+    if (T.isNull())
+      return ParsedType();
     return CreateParsedType(T, TSI);
   }
 
@@ -543,7 +545,7 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
   QualType T
     = Context.getUnqualifiedArrayType(Operand->getType().getNonReferenceType(),
                                       Quals);
-  if (T->getAs<RecordType>() &&
+  if (T->isRecordType() &&
       RequireCompleteType(TypeidLoc, T, diag::err_incomplete_typeid))
     return ExprError();
 
@@ -570,9 +572,7 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
     }
 
     QualType T = E->getType();
-    if (const RecordType *RecordT = T->getAs<RecordType>()) {
-      CXXRecordDecl *RecordD = cast<CXXRecordDecl>(RecordT->getOriginalDecl())
-                                   ->getDefinitionOrSelf();
+    if (auto *RecordD = T->getAsCXXRecordDecl()) {
       // C++ [expr.typeid]p3:
       //   [...] If the type of the expression is a class type, the class
       //   shall be completely-defined.
@@ -1250,6 +1250,10 @@ Sema::CXXThisScopeRAII::CXXThisScopeRAII(Sema &S,
     Record = Template->getTemplatedDecl();
   else
     Record = cast<CXXRecordDecl>(ContextDecl);
+
+  // 'this' never refers to the lambda class itself.
+  if (Record->isLambda())
+    return;
 
   QualType T = S.Context.getCanonicalTagType(Record);
   T = S.getASTContext().getQualifiedType(T, CXXThisTypeQuals);
@@ -1975,8 +1979,8 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
 static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
                                          TypeAwareAllocationMode PassType,
                                          QualType allocType) {
-  const RecordType *record =
-    allocType->getBaseElementTypeUnsafe()->getAs<RecordType>();
+  const auto *record =
+      allocType->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>();
   if (!record) return false;
 
   // Try to find an operator delete[] in class scope.
@@ -1984,7 +1988,7 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   DeclarationName deleteName =
     S.Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
   LookupResult ops(S, deleteName, loc, Sema::LookupOrdinaryName);
-  S.LookupQualifiedName(ops, record->getOriginalDecl()->getDefinitionOrSelf());
+  S.LookupQualifiedName(ops, record->getDecl()->getDefinitionOrSelf());
 
   // We're just doing this for information.
   ops.suppressDiagnostics();
@@ -2297,8 +2301,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       ConvertedSize = PerformImplicitConversion(
           *ArraySize, Context.getSizeType(), AssignmentAction::Converting);
 
-      if (!ConvertedSize.isInvalid() &&
-          (*ArraySize)->getType()->getAs<RecordType>())
+      if (!ConvertedSize.isInvalid() && (*ArraySize)->getType()->isRecordType())
         // Diagnose the compatibility of this conversion.
         Diag(StartLoc, diag::warn_cxx98_compat_array_size_conversion)
           << (*ArraySize)->getType() << 0 << "'size_t'";
@@ -2396,7 +2399,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
           return ExprError(
               Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-              << toString(*Value, 10) << (*ArraySize)->getSourceRange());
+              << toString(*Value, 10, Value->isSigned(),
+                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                          /*InsertSeparators=*/true)
+              << (*ArraySize)->getSourceRange());
       }
 
       KnownArraySize = Value->getZExtValue();
@@ -3055,9 +3061,7 @@ bool Sema::FindAllocationFunctions(
   LookupResult FoundDelete(*this, DeleteName, StartLoc, LookupOrdinaryName);
   if (AllocElemType->isRecordType() &&
       DeleteScope != AllocationFunctionScope::Global) {
-    auto *RD = cast<CXXRecordDecl>(
-                   AllocElemType->castAs<RecordType>()->getOriginalDecl())
-                   ->getDefinitionOrSelf();
+    auto *RD = AllocElemType->castAsCXXRecordDecl();
     LookupQualifiedName(FoundDelete, RD);
   }
   if (FoundDelete.isAmbiguous())
@@ -3584,7 +3588,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
 FunctionDecl *
 Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
                                     ImplicitDeallocationParameters IDP,
-                                    DeclarationName Name) {
+                                    DeclarationName Name, bool Diagnose) {
   DeclareGlobalNewDelete();
 
   LookupResult FoundDelete(*this, Name, StartLoc, LookupOrdinaryName);
@@ -3599,7 +3603,7 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   if (!Result)
     return nullptr;
 
-  if (CheckDeleteOperator(*this, StartLoc, StartLoc, /*Diagnose=*/true,
+  if (CheckDeleteOperator(*this, StartLoc, StartLoc, Diagnose,
                           FoundDelete.getNamingClass(), Result.Found,
                           Result.FD))
     return nullptr;
@@ -3608,10 +3612,9 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD,
-                                                          bool Diagnose) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, bool Diagnose, bool LookForGlobal,
+    DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   CanQualType DeallocType = Context.getCanonicalTagType(RD);
@@ -3619,18 +3622,20 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
       DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
       AlignedAllocationMode::No, SizedDeallocationMode::No};
 
-  if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, IDP, Diagnose))
-    return nullptr;
+  if (!LookForGlobal) {
+    if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, IDP, Diagnose))
+      return nullptr;
 
-  if (OperatorDelete)
-    return OperatorDelete;
+    if (OperatorDelete)
+      return OperatorDelete;
+  }
 
   // If there's no class-specific operator delete, look up the global
   // non-array delete.
   IDP.PassAlignment = alignedAllocationModeFromBool(
       hasNewExtendedAlignment(*this, DeallocType));
   IDP.PassSize = SizedDeallocationMode::Yes;
-  return FindUsualDeallocationFunction(Loc, IDP, Name);
+  return FindUsualDeallocationFunction(Loc, IDP, Name, Diagnose);
 }
 
 bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
@@ -3642,8 +3647,11 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous())
+  if (Found.isAmbiguous()) {
+    if (!Diagnose)
+      Found.suppressDiagnostics();
     return true;
+  }
 
   Found.suppressDiagnostics();
 
@@ -4070,9 +4078,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                    ? diag::err_delete_incomplete
                                    : diag::warn_delete_incomplete,
                                Ex.get())) {
-        if (const RecordType *RT = PointeeElem->getAs<RecordType>())
-          PointeeRD =
-              cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+        PointeeRD = PointeeElem->getAsCXXRecordDecl();
       }
     }
 
@@ -4840,10 +4846,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isBooleanType()) {
-      assert(FromType->castAs<EnumType>()
-                 ->getOriginalDecl()
-                 ->getDefinitionOrSelf()
-                 ->isFixed() &&
+      assert(FromType->castAsEnumDecl()->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&
              "only enums with fixed underlying type can promote to bool");
       From = ImpCastExprToType(From, StepTy, CK_IntegralToBoolean, VK_PRValue,
@@ -5529,8 +5532,8 @@ static bool TryClassUnification(Sema &Self, Expr *From, Expr *To,
   //         the same or one is a base class of the other:
   QualType FTy = From->getType();
   QualType TTy = To->getType();
-  const RecordType *FRec = FTy->getAs<RecordType>();
-  const RecordType *TRec = TTy->getAs<RecordType>();
+  const RecordType *FRec = FTy->getAsCanonical<RecordType>();
+  const RecordType *TRec = TTy->getAsCanonical<RecordType>();
   bool FDerivedFromT = FRec && TRec && FRec != TRec &&
                        Self.IsDerivedFrom(QuestionLoc, FTy, TTy);
   if (FRec && TRec && (FRec == TRec || FDerivedFromT ||
@@ -6665,8 +6668,7 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
 
   // That should be enough to guarantee that this type is complete, if we're
   // not processing a decltype expression.
-  CXXRecordDecl *RD =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  auto *RD = cast<CXXRecordDecl>(RT->getDecl())->getDefinitionOrSelf();
   if (RD->isInvalidDecl() || RD->isDependentContext())
     return E;
 
@@ -7528,12 +7530,10 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
   }
 
   // GCC seems to also exclude expressions of incomplete enum type.
-  if (const EnumType *T = E->getType()->getAs<EnumType>()) {
-    if (!T->getOriginalDecl()->getDefinitionOrSelf()->isComplete()) {
-      // FIXME: stupid workaround for a codegen bug!
-      E = ImpCastExprToType(E, Context.VoidTy, CK_ToVoid).get();
-      return E;
-    }
+  if (const auto *ED = E->getType()->getAsEnumDecl(); ED && !ED->isComplete()) {
+    // FIXME: stupid workaround for a codegen bug!
+    E = ImpCastExprToType(E, Context.VoidTy, CK_ToVoid).get();
+    return E;
   }
 
   ExprResult Res = DefaultFunctionArrayLvalueConversion(E);
@@ -7935,21 +7935,27 @@ Sema::BuildExprRequirement(
     //     be satisfied.
     TemplateParameterList *TPL =
         ReturnTypeRequirement.getTypeConstraintTemplateParameterList();
-    QualType MatchedType =
-        Context.getReferenceQualifiedType(E).getCanonicalType();
+    QualType MatchedType = Context.getReferenceQualifiedType(E);
     llvm::SmallVector<TemplateArgument, 1> Args;
     Args.push_back(TemplateArgument(MatchedType));
 
     auto *Param = cast<TemplateTypeParmDecl>(TPL->getParam(0));
 
-    MultiLevelTemplateArgumentList MLTAL(Param, Args, /*Final=*/false);
+    MultiLevelTemplateArgumentList MLTAL(Param, Args, /*Final=*/true);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
     const TypeConstraint *TC = Param->getTypeConstraint();
     assert(TC && "Type Constraint cannot be null here");
     auto *IDC = TC->getImmediatelyDeclaredConstraint();
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
-    if (Constraint.isInvalid()) {
+    bool HasError = Constraint.isInvalid();
+    if (!HasError) {
+      SubstitutedConstraintExpr =
+          cast<ConceptSpecializationExpr>(Constraint.get());
+      if (SubstitutedConstraintExpr->getSatisfaction().ContainsErrors)
+        HasError = true;
+    }
+    if (HasError) {
       return new (Context) concepts::ExprRequirement(
           createSubstDiagAt(IDC->getExprLoc(),
                             [&](llvm::raw_ostream &OS) {
@@ -7958,8 +7964,6 @@ Sema::BuildExprRequirement(
                             }),
           IsSimple, NoexceptLoc, ReturnTypeRequirement);
     }
-    SubstitutedConstraintExpr =
-        cast<ConceptSpecializationExpr>(Constraint.get());
     if (!SubstitutedConstraintExpr->isSatisfied())
       Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
   }

@@ -179,7 +179,7 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
         TT && TT->isCanonicalUnqualified())
-      OS << TT->getOriginalDecl()->getKindName() << " ";
+      OS << TT->getDecl()->getKindName() << " ";
   }
   QT.print(OS, PP);
 
@@ -454,8 +454,7 @@ std::optional<std::string> printExprValue(const Expr *E,
       Constant.Val.getInt().getSignificantBits() <= 64) {
     // Compare to int64_t to avoid bit-width match requirements.
     int64_t Val = Constant.Val.getInt().getExtValue();
-    for (const EnumConstantDecl *ECD :
-         T->castAs<EnumType>()->getOriginalDecl()->enumerators())
+    for (const EnumConstantDecl *ECD : T->castAsEnumDecl()->enumerators())
       if (ECD->getInitVal() == Val)
         return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
                              printHex(Constant.Val.getInt()))
@@ -795,7 +794,9 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, const syntax::Token &Tok,
     for (const auto &ExpandedTok : Expansion->Expanded) {
       ExpansionText += ExpandedTok.text(SM);
       ExpansionText += " ";
-      if (ExpansionText.size() > 2048) {
+      const Config &Cfg = Config::current();
+      const size_t Limit = static_cast<size_t>(Cfg.Hover.MacroContentsLimit);
+      if (Limit && ExpansionText.size() > Limit) {
         ExpansionText.clear();
         break;
       }
@@ -832,7 +833,7 @@ std::optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
                                                   ASTContext &ASTCtx,
                                                   const PrintingPolicy &PP) {
   QualType OriginThisType = CTE->getType()->getPointeeType();
-  QualType ClassType = declaredType(OriginThisType->getAsTagDecl());
+  QualType ClassType = declaredType(OriginThisType->castAsTagDecl());
   // For partial specialization class, origin `this` pointee type will be
   // parsed as `InjectedClassNameType`, which will ouput template arguments
   // like "type-parameter-0-0". So we retrieve user written class type in this
@@ -1308,7 +1309,9 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       }
     } else if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
       HoverCountMetric.record(1, "keyword");
-      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+      if (auto Deduced =
+              getDeducedType(AST.getASTContext(), AST.getHeuristicResolver(),
+                             Tok.location())) {
         HI = getDeducedTypeHoverContents(*Deduced, Tok, AST.getASTContext(), PP,
                                          Index);
         HighlightRange = Tok.range(SM).toCharRange(SM);
@@ -1534,6 +1537,12 @@ markup::Document HoverInfo::presentDoxygen() const {
   SymbolDocCommentVisitor SymbolDoc(Documentation, CommentOpts);
 
   if (SymbolDoc.hasBriefCommand()) {
+    if (Kind != index::SymbolKind::Parameter &&
+        Kind != index::SymbolKind::TemplateTypeParm)
+      // Only add a "Brief" heading if we are not documenting a parameter.
+      // Parameters only have a brief section and adding the brief header would
+      // be redundant.
+      Output.addHeading(3).appendText("Brief");
     SymbolDoc.briefToMarkup(Output.addParagraph());
     Output.addRuler();
   }
@@ -1547,7 +1556,7 @@ markup::Document HoverInfo::presentDoxygen() const {
   // Returns
   // `type` - description
   if (TemplateParameters && !TemplateParameters->empty()) {
-    Output.addParagraph().appendBoldText("Template Parameters:");
+    Output.addHeading(3).appendText("Template Parameters");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *TemplateParameters) {
       markup::Paragraph &P = L.addItem().addParagraph();
@@ -1561,7 +1570,7 @@ markup::Document HoverInfo::presentDoxygen() const {
   }
 
   if (Parameters && !Parameters->empty()) {
-    Output.addParagraph().appendBoldText("Parameters:");
+    Output.addHeading(3).appendText("Parameters");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *Parameters) {
       markup::Paragraph &P = L.addItem().addParagraph();
@@ -1580,7 +1589,7 @@ markup::Document HoverInfo::presentDoxygen() const {
   if (ReturnType &&
       ((ReturnType->Type != "void" && !ReturnType->AKA.has_value()) ||
        (ReturnType->AKA.has_value() && ReturnType->AKA != "void"))) {
-    Output.addParagraph().appendBoldText("Returns:");
+    Output.addHeading(3).appendText("Returns");
     markup::Paragraph &P = Output.addParagraph();
     P.appendCode(llvm::to_string(*ReturnType));
 
@@ -1588,15 +1597,15 @@ markup::Document HoverInfo::presentDoxygen() const {
       P.appendText(" - ");
       SymbolDoc.returnToMarkup(P);
     }
+
+    SymbolDoc.retvalsToMarkup(Output);
     Output.addRuler();
   }
 
-  // add specially handled doxygen commands.
-  SymbolDoc.warningsToMarkup(Output);
-  SymbolDoc.notesToMarkup(Output);
-
-  // add any other documentation.
-  SymbolDoc.docToMarkup(Output);
+  if (SymbolDoc.hasDetailedDoc()) {
+    Output.addHeading(3).appendText("Details");
+    SymbolDoc.detailedDocToMarkup(Output);
+  }
 
   Output.addRuler();
 

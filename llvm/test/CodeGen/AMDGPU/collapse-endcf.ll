@@ -436,8 +436,6 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GCN-O0-NEXT:    s_mov_b32 s4, 2
 ; GCN-O0-NEXT:    v_lshlrev_b32_e64 v2, s4, v0
-; GCN-O0-NEXT:    s_mov_b32 s4, 0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
@@ -667,8 +665,6 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s0, 2
 ; GCN-O0-NEXT:    v_lshlrev_b32_e64 v2, s0, v0
-; GCN-O0-NEXT:    s_mov_b32 s1, 0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr1
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec

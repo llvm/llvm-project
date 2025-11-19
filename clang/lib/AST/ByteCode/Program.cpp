@@ -36,30 +36,19 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   const size_t BitWidth = CharWidth * Ctx.getCharBit();
   unsigned StringLength = S->getLength();
 
-  PrimType CharType;
-  switch (CharWidth) {
-  case 1:
-    CharType = PT_Sint8;
-    break;
-  case 2:
-    CharType = PT_Uint16;
-    break;
-  case 4:
-    CharType = PT_Uint32;
-    break;
-  default:
-    llvm_unreachable("unsupported character width");
-  }
+  OptPrimType CharType =
+      Ctx.classify(S->getType()->castAsArrayTypeUnsafe()->getElementType());
+  assert(CharType);
 
   if (!Base)
     Base = S;
 
   // Create a descriptor for the string.
-  Descriptor *Desc =
-      allocateDescriptor(Base, CharType, Descriptor::GlobalMD, StringLength + 1,
-                         /*isConst=*/true,
-                         /*isTemporary=*/false,
-                         /*isMutable=*/false);
+  Descriptor *Desc = allocateDescriptor(Base, *CharType, Descriptor::GlobalMD,
+                                        StringLength + 1,
+                                        /*isConst=*/true,
+                                        /*isTemporary=*/false,
+                                        /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -79,29 +68,12 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   } else {
     // Construct the string in storage.
     for (unsigned I = 0; I <= StringLength; ++I) {
-      const uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
-      switch (CharType) {
-      case PT_Sint8: {
-        using T = PrimConv<PT_Sint8>::T;
-        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
-        break;
-      }
-      case PT_Uint16: {
-        using T = PrimConv<PT_Uint16>::T;
-        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
-        break;
-      }
-      case PT_Uint32: {
-        using T = PrimConv<PT_Uint32>::T;
-        Ptr.elem<T>(I) = T::from(CodePoint, BitWidth);
-        break;
-      }
-      default:
-        llvm_unreachable("unsupported character type");
-      }
+      uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
+      INT_TYPE_SWITCH_NO_BOOL(*CharType,
+                              Ptr.elem<T>(I) = T::from(CodePoint, BitWidth););
     }
   }
-  Ptr.initialize();
+  Ptr.initializeAllElements();
 
   return GlobalIndex;
 }
@@ -111,7 +83,7 @@ Pointer Program::getPtrGlobal(unsigned Idx) const {
   return Pointer(Globals[Idx]->block());
 }
 
-std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
+UnsignedOrNone Program::getGlobal(const ValueDecl *VD) {
   if (auto It = GlobalIndices.find(VD); It != GlobalIndices.end())
     return It->second;
 
@@ -131,14 +103,14 @@ std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getGlobal(const Expr *E) {
+UnsignedOrNone Program::getGlobal(const Expr *E) {
   if (auto It = GlobalIndices.find(E); It != GlobalIndices.end())
     return It->second;
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
-                                                   const Expr *Init) {
+UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
+                                          const Expr *Init) {
   if (auto Idx = getGlobal(VD))
     return Idx;
 
@@ -195,8 +167,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   return I;
 }
 
-std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
-                                              const Expr *Init) {
+UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
   bool IsStatic, IsExtern;
   bool IsWeak = VD->isWeak();
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
@@ -213,34 +184,55 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
 
   // Register all previous declarations as well. For extern blocks, just replace
   // the index with the new variable.
-  std::optional<unsigned> Idx =
+  UnsignedOrNone Idx =
       createGlobal(VD, VD->getType(), IsStatic, IsExtern, IsWeak, Init);
   if (!Idx)
     return std::nullopt;
 
   Global *NewGlobal = Globals[*Idx];
+  // Note that this loop has one iteration where Redecl == VD.
   for (const Decl *Redecl : VD->redecls()) {
-    unsigned &PIdx = GlobalIndices[Redecl];
+
+    // If this redecl was registered as a dummy variable, it is now a proper
+    // global variable and points to the block we just created.
+    if (auto DummyIt = DummyVariables.find(Redecl);
+        DummyIt != DummyVariables.end()) {
+      Global *Dummy = Globals[DummyIt->second];
+      Dummy->block()->movePointersTo(NewGlobal->block());
+      Globals[DummyIt->second] = NewGlobal;
+      DummyVariables.erase(DummyIt);
+    }
+    // If the redeclaration hasn't been registered yet at all, we just set its
+    // global index to Idx. If it has been registered yet, it might have
+    // pointers pointing to it and we need to transfer those pointers to the new
+    // block.
+    auto [Iter, Inserted] = GlobalIndices.try_emplace(Redecl);
+    if (Inserted) {
+      GlobalIndices[Redecl] = *Idx;
+      continue;
+    }
+
     if (Redecl != VD) {
-      if (Block *RedeclBlock = Globals[PIdx]->block();
+      if (Block *RedeclBlock = Globals[Iter->second]->block();
           RedeclBlock->isExtern()) {
-        Globals[PIdx] = NewGlobal;
+
         // All pointers pointing to the previous extern decl now point to the
         // new decl.
-        for (Pointer *Ptr = RedeclBlock->Pointers; Ptr; Ptr = Ptr->BS.Next) {
-          RedeclBlock->removePointer(Ptr);
-          Ptr->BS.Pointee = NewGlobal->block();
-          NewGlobal->block()->addPointer(Ptr);
-        }
+        // A previous iteration might've already fixed up the pointers for this
+        // global.
+        if (RedeclBlock != NewGlobal->block())
+          RedeclBlock->movePointersTo(NewGlobal->block());
+
+        Globals[Iter->second] = NewGlobal;
       }
     }
-    PIdx = *Idx;
+    Iter->second = *Idx;
   }
 
   return *Idx;
 }
 
-std::optional<unsigned> Program::createGlobal(const Expr *E) {
+UnsignedOrNone Program::createGlobal(const Expr *E) {
   if (auto Idx = getGlobal(E))
     return Idx;
   if (auto Idx = createGlobal(E, E->getType(), /*isStatic=*/true,
@@ -251,9 +243,9 @@ std::optional<unsigned> Program::createGlobal(const Expr *E) {
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
-                                              bool IsStatic, bool IsExtern,
-                                              bool IsWeak, const Expr *Init) {
+UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
+                                     bool IsStatic, bool IsExtern, bool IsWeak,
+                                     const Expr *Init) {
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
@@ -332,10 +324,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         continue;
 
       // In error cases, the base might not be a RecordType.
-      const auto *RT = Spec.getType()->getAs<RecordType>();
-      if (!RT)
+      const auto *BD = Spec.getType()->getAsCXXRecordDecl();
+      if (!BD)
         return nullptr;
-      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -348,11 +339,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
-      const auto *RT = Spec.getType()->getAs<RecordType>();
-      if (!RT)
-        return nullptr;
-
-      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
+      const auto *BD = Spec.getType()->castAsCXXRecordDecl();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -408,9 +395,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       const Expr *Init) {
 
   // Classes and structures.
-  if (const auto *RT = Ty->getAs<RecordType>()) {
-    if (const auto *Record =
-            getOrCreateRecord(RT->getOriginalDecl()->getDefinitionOrSelf()))
+  if (const auto *RD = Ty->getAsRecordDecl()) {
+    if (const auto *Record = getOrCreateRecord(RD))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable, IsVolatile);
     return allocateDescriptor(D, MDSize);

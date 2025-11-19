@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -50,6 +51,7 @@ class raw_ostream;
 
 namespace bolt {
 class BinaryBasicBlock;
+class BinaryContext;
 class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
@@ -67,6 +69,20 @@ enum class IndirectBranchType : char {
 class MCPlusBuilder {
 public:
   using AllocatorIdTy = uint16_t;
+
+  std::optional<int64_t> getAnnotationAtOpIndex(const MCInst &Inst,
+                                                unsigned OpIndex) const {
+    std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
+    if (!FirstAnnotationOp)
+      return std::nullopt;
+
+    if (*FirstAnnotationOp > OpIndex || Inst.getNumOperands() < OpIndex)
+      return std::nullopt;
+
+    const auto *Op = Inst.begin() + OpIndex;
+    const int64_t ImmValue = Op->getImm();
+    return extractAnnotationIndex(ImmValue);
+  }
 
 private:
   /// A struct that represents a single annotation allocator
@@ -416,7 +432,7 @@ public:
     return Analysis->isConditionalBranch(Inst);
   }
 
-  /// Returns true if Inst is a condtional move instruction
+  /// Returns true if Inst is a conditional move instruction
   virtual bool isConditionalMove(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -529,10 +545,15 @@ public:
     return 0;
   }
 
+  /// Create a helper function to increment counter for Instrumentation
+  virtual void createInstrCounterIncrFunc(BinaryContext &BC) {
+    llvm_unreachable("not implemented");
+  }
+
   /// Create increment contents of target by 1 for Instrumentation
-  virtual InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const {
+  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                                   MCContext *Ctx, bool IsLeaf,
+                                                   unsigned CodePointerSize) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
@@ -594,6 +615,21 @@ public:
   virtual std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
+  }
+
+  virtual bool isPSignOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthAndRet(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   /// Returns the register used as a return address. Returns std::nullopt if
@@ -748,6 +784,11 @@ public:
 
   virtual bool isPop(const MCInst &Inst) const { return false; }
 
+  /// Determine if a basic block looks like an epilogue. For now it is only
+  /// called at the final stage of building CFG to check basic block ending
+  /// with an indirect call that has unknown control flow attribute.
+  virtual bool isEpilogue(const BinaryBasicBlock &BB) const { return false; }
+
   /// Return true if the instruction is used to terminate an indirect branch.
   virtual bool isTerminateBranch(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -800,6 +841,16 @@ public:
   }
 
   virtual bool isAddXri(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRWl(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRXl(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1307,6 +1358,32 @@ public:
   /// Return true if the instruction is a tail call.
   bool isTailCall(const MCInst &Inst) const;
 
+  /// Stores NegateRAState annotation on \p Inst.
+  void setNegateRAState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has NegateRAState annotation.
+  bool hasNegateRAState(const MCInst &Inst) const;
+
+  /// Sets RememberState annotation on \p Inst.
+  void setRememberState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RememberState annotation.
+  bool hasRememberState(const MCInst &Inst) const;
+
+  /// Stores RestoreState annotation on \p Inst.
+  void setRestoreState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RestoreState annotation.
+  bool hasRestoreState(const MCInst &Inst) const;
+
+  /// Sets kRASigned or kRAUnsigned annotation on \p Inst.
+  /// Fails if \p Inst has either annotation already set.
+  void setRAState(MCInst &Inst, bool State) const;
+
+  /// Return true if \p Inst has kRASigned annotation, false if it has
+  /// kRAUnsigned annotation, and std::nullopt if neither annotation is set.
+  std::optional<bool> getRAState(const MCInst &Inst) const;
+
   /// Return true if the instruction is a call with an exception handling info.
   virtual bool isInvoke(const MCInst &Inst) const {
     return isCall(Inst) && getEHInfo(Inst);
@@ -1495,7 +1572,7 @@ public:
   }
 
   /// Get the default def_in and live_out registers for the function
-  /// Currently only used for the Stoke optimzation
+  /// Currently only used for the Stoke optimization
   virtual void getDefaultDefIn(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
@@ -1720,6 +1797,19 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Take \p LDRInst and return ADRP+LDR instruction sequence - for
+  ///
+  ///     ldr  x0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     adrp x0, PageBase(label)
+  ///     ldr  x0, [x0, PageOffset(label)]
+  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                            MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Return not 0 if the instruction CurInst, in combination with the recent
   /// history of disassembled instructions supplied by [Begin, End), is a linker
   /// generated veneer/stub that needs patching. This happens in AArch64 when
@@ -1902,11 +1992,36 @@ public:
     return {};
   }
 
+  /// Find memcpy size in bytes by using preceding instructions.
+  /// Returns std::nullopt if size cannot be determined (no-op for most
+  /// targets).
+  virtual std::optional<uint64_t>
+  findMemcpySizeInBytes(const BinaryBasicBlock &BB,
+                        BinaryBasicBlock::iterator CallInst) const {
+    return std::nullopt;
+  }
+
   /// Creates inline memcpy instruction. If \p ReturnEnd is true, then return
   /// (dest + n) instead of dest.
   virtual InstructionListType createInlineMemcpy(bool ReturnEnd) const {
     llvm_unreachable("not implemented");
     return {};
+  }
+
+  /// Creates size-aware inline memcpy instruction. If \p KnownSize is provided,
+  /// generates optimized code for that specific size. Falls back to regular
+  /// createInlineMemcpy if size is unknown or not needed (e.g. with X86).
+  virtual InstructionListType
+  createInlineMemcpy(bool ReturnEnd, std::optional<uint64_t> KnownSize) const {
+    return createInlineMemcpy(ReturnEnd);
+  }
+
+  /// Extract immediate value from move instruction that sets the given
+  /// register. Returns the immediate value if the instruction is a
+  /// move-immediate to TargetReg.
+  virtual std::optional<uint64_t>
+  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const {
+    return std::nullopt;
   }
 
   /// Create a target-specific relocation out of the \p Fixup.
@@ -2190,7 +2305,8 @@ public:
   }
 
   /// Print each annotation attached to \p Inst.
-  void printAnnotations(const MCInst &Inst, raw_ostream &OS) const;
+  void printAnnotations(const MCInst &Inst, raw_ostream &OS,
+                        bool PrintMemData = false) const;
 
   /// Remove annotation with a given \p Index.
   ///

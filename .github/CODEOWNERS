@@ -17,6 +17,7 @@
 /runtimes/ @llvm/reviewers-libcxx
 
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
+/llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
 /llvm/lib/Analysis/InstructionSimplify.cpp @nikic
 /llvm/lib/Analysis/LazyValueInfo.cpp @nikic
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
@@ -52,11 +53,32 @@
 /mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 /mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 
+# AMDGPU and ROCDL dialects in MLIR.
+/mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar
+/mlir/lib/Dialect/AMDGPU @krzysz00 @kuhar
+/mlir/lib/Conversion/*AMDGPU* @krzysz00 @kuhar
+/mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
+/mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
+
+# XeGPU and XeVM dialects in MLIR.
+/mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
+/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
+/mlir/lib/Conversion/*XeVM* @silee2
+
 # Bufferization Dialect in MLIR.
 /mlir/include/mlir/Dialect/Bufferization @matthias-springer
 /mlir/lib/Dialect/Bufferization @matthias-springer
 /mlir/**/BufferizableOpInterfaceImpl.* @matthias-springer
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
+
+# DLTI Dialect in MLIR
+/mlir/**/Dialect/DLTI @rolfmorel
+/mlir/**/DataLayoutInterfaces.* @rolfmorel
 
 # Linalg Dialect in MLIR.
 /mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
@@ -95,9 +117,9 @@
 /mlir/lib/Dialect/Tensor/Transforms/* @hanhanW @nicolasvasilache
 
 # Transform Dialect in MLIR.
-/mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache
-/mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache
-/mlir/**/*TransformOps* @ftynse @nicolasvasilache
+/mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
+/mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
+/mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
 
 # SPIR-V Dialect in MLIR.
 /mlir/**/SPIRV/ @antiagainst @kuhar
@@ -126,10 +148,14 @@
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/lib/Bindings/Python @makslevental @rolfmorel
+/mlir/include/Bindings/Python @makslevental @rolfmorel
 
 # MLIR Mem2Reg/SROA
 /mlir/**/Transforms/Mem2Reg.* @moxinilian
 /mlir/**/Transforms/SROA.* @moxinilian
+
+# MLIR IRDL-related
+/mlir/**/*IRDL* @moxinilian
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu

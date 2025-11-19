@@ -1311,19 +1311,6 @@ void CXXNameMangler::manglePrefix(QualType type) {
       mangleTemplateArgs(TST->getTemplateName(), TST->template_arguments());
       addSubstitution(QualType(TST, 0));
     }
-  } else if (const auto *DTST =
-                 type->getAs<DependentTemplateSpecializationType>()) {
-    if (!mangleSubstitution(QualType(DTST, 0))) {
-      TemplateName Template = getASTContext().getDependentTemplateName(
-          DTST->getDependentTemplateName());
-      mangleTemplatePrefix(Template);
-
-      // FIXME: GCC does not appear to mangle the template arguments when
-      // the template in question is a dependent template name. Should we
-      // emulate that badness?
-      mangleTemplateArgs(Template, DTST->template_arguments());
-      addSubstitution(QualType(DTST, 0));
-    }
   } else if (const auto *DNT = type->getAs<DependentNameType>()) {
     // Clang 14 and before did not consider this substitutable.
     bool Clang14Compat = isCompatibleWith(LangOptions::ClangABI::Ver14);
@@ -1580,10 +1567,7 @@ void CXXNameMangler::mangleUnqualifiedName(
 
     if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
       // We must have an anonymous union or struct declaration.
-      const RecordDecl *RD = VD->getType()
-                                 ->castAs<RecordType>()
-                                 ->getOriginalDecl()
-                                 ->getDefinitionOrSelf();
+      const auto *RD = VD->getType()->castAsRecordDecl();
 
       // Itanium C++ ABI 5.1.2:
       //
@@ -2507,7 +2491,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Enum:
   case Type::Record:
     mangleSourceNameWithAbiTags(
-        cast<TagType>(Ty)->getOriginalDecl()->getDefinitionOrSelf());
+        cast<TagType>(Ty)->getDecl()->getDefinitionOrSelf());
     break;
 
   case Type::TemplateSpecialization: {
@@ -2528,10 +2512,14 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
       mangleSourceNameWithAbiTags(TD);
       break;
     }
+    case TemplateName::DependentTemplate: {
+      const DependentTemplateStorage *S = TN.getAsDependentTemplateName();
+      mangleSourceName(S->getName().getIdentifier());
+      break;
+    }
 
     case TemplateName::OverloadedTemplate:
     case TemplateName::AssumedTemplate:
-    case TemplateName::DependentTemplate:
     case TemplateName::DeducedTemplate:
       llvm_unreachable("invalid base for a template specialization type");
 
@@ -2568,25 +2556,13 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   }
 
   case Type::InjectedClassName:
-    mangleSourceNameWithAbiTags(cast<InjectedClassNameType>(Ty)
-                                    ->getOriginalDecl()
-                                    ->getDefinitionOrSelf());
+    mangleSourceNameWithAbiTags(
+        cast<InjectedClassNameType>(Ty)->getDecl()->getDefinitionOrSelf());
     break;
 
   case Type::DependentName:
     mangleSourceName(cast<DependentNameType>(Ty)->getIdentifier());
     break;
-
-  case Type::DependentTemplateSpecialization: {
-    const DependentTemplateSpecializationType *DTST =
-        cast<DependentTemplateSpecializationType>(Ty);
-    TemplateName Template = getASTContext().getDependentTemplateName(
-        DTST->getDependentTemplateName());
-    const DependentTemplateStorage &S = DTST->getDependentTemplateName();
-    mangleSourceName(S.getName().getIdentifier());
-    mangleTemplateArgs(Template, DTST->template_arguments());
-    break;
-  }
 
   case Type::Using:
     return mangleUnresolvedTypeOrSimpleId(cast<UsingType>(Ty)->desugar(),
@@ -3818,7 +3794,7 @@ void CXXNameMangler::mangleType(const RecordType *T) {
   mangleType(static_cast<const TagType*>(T));
 }
 void CXXNameMangler::mangleType(const TagType *T) {
-  mangleName(T->getOriginalDecl()->getDefinitionOrSelf());
+  mangleName(T->getDecl()->getDefinitionOrSelf());
 }
 
 // <type>       ::= <array-type>
@@ -4453,24 +4429,22 @@ void CXXNameMangler::mangleType(const InjectedClassNameType *T) {
   // Mangle injected class name types as if the user had written the
   // specialization out fully.  It may not actually be possible to see
   // this mangling, though.
-  mangleType(T->getOriginalDecl()->getCanonicalTemplateSpecializationType(
-      getASTContext()));
+  mangleType(
+      T->getDecl()->getCanonicalTemplateSpecializationType(getASTContext()));
 }
 
 void CXXNameMangler::mangleType(const TemplateSpecializationType *T) {
   if (TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl()) {
     mangleTemplateName(TD, T->template_arguments());
   } else {
-    if (mangleSubstitution(QualType(T, 0)))
-      return;
-
+    Out << 'N';
     mangleTemplatePrefix(T->getTemplateName());
 
     // FIXME: GCC does not appear to mangle the template arguments when
     // the template in question is a dependent template name. Should we
     // emulate that badness?
     mangleTemplateArgs(T->getTemplateName(), T->template_arguments());
-    addSubstitution(QualType(T, 0));
+    Out << 'E';
   }
 }
 
@@ -4505,21 +4479,6 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
   Out << 'N';
   manglePrefix(T->getQualifier());
   mangleSourceName(T->getIdentifier());
-  Out << 'E';
-}
-
-void CXXNameMangler::mangleType(const DependentTemplateSpecializationType *T) {
-  // Dependently-scoped template types are nested if they have a prefix.
-  Out << 'N';
-
-  TemplateName Prefix =
-      getASTContext().getDependentTemplateName(T->getDependentTemplateName());
-  mangleTemplatePrefix(Prefix);
-
-  // FIXME: GCC does not appear to mangle the template arguments when
-  // the template in question is a dependent template name. Should we
-  // emulate that badness?
-  mangleTemplateArgs(Prefix, T->template_arguments());
   Out << 'E';
 }
 
@@ -4664,6 +4623,8 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_ROV";
   if (Attrs.RawBuffer)
     Str += "_Raw";
+  if (Attrs.IsCounter)
+    Str += "_Counter";
   if (T->hasContainedType())
     Str += "_CT";
   mangleVendorQualifier(Str);
@@ -4729,8 +4690,8 @@ void CXXNameMangler::mangleIntegerLiteral(QualType T,
 
 void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {
   // Ignore member expressions involving anonymous unions.
-  while (const auto *RT = Base->getType()->getAs<RecordType>()) {
-    if (!RT->getOriginalDecl()->isAnonymousStructOrUnion())
+  while (const auto *RT = Base->getType()->getAsCanonical<RecordType>()) {
+    if (!RT->getDecl()->isAnonymousStructOrUnion())
       break;
     const auto *ME = dyn_cast<MemberExpr>(Base);
     if (!ME)
@@ -6029,6 +5990,8 @@ void CXXNameMangler::mangleCXXCtorType(CXXCtorType T,
   //                  ::= CI2 <type> # base inheriting constructor
   //
   // In addition, C5 is a comdat name with C1 and C2 in it.
+  // C4 represents a ctor declaration and is used by debuggers to look up
+  // the various ctor variants.
   Out << 'C';
   if (InheritedFrom)
     Out << 'I';
@@ -6038,6 +6001,9 @@ void CXXNameMangler::mangleCXXCtorType(CXXCtorType T,
     break;
   case Ctor_Base:
     Out << '2';
+    break;
+  case Ctor_Unified:
+    Out << '4';
     break;
   case Ctor_Comdat:
     Out << '5';
@@ -6056,6 +6022,8 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   //                  ::= D2  # base object destructor
   //
   // In addition, D5 is a comdat name with D1, D2 and, if virtual, D0 in it.
+  // D4 represents a dtor declaration and is used by debuggers to look up
+  // the various dtor variants.
   switch (T) {
   case Dtor_Deleting:
     Out << "D0";
@@ -6066,9 +6034,14 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Base:
     Out << "D2";
     break;
+  case Dtor_Unified:
+    Out << "D4";
+    break;
   case Dtor_Comdat:
     Out << "D5";
     break;
+  case Dtor_VectorDeleting:
+    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 
@@ -6997,8 +6970,8 @@ static bool hasMangledSubstitutionQualifiers(QualType T) {
 
 bool CXXNameMangler::mangleSubstitution(QualType T) {
   if (!hasMangledSubstitutionQualifiers(T)) {
-    if (const RecordType *RT = T->getAs<RecordType>())
-      return mangleSubstitution(RT->getOriginalDecl()->getDefinitionOrSelf());
+    if (const auto *RD = T->getAsCXXRecordDecl())
+      return mangleSubstitution(RD);
   }
 
   uintptr_t TypePtr = reinterpret_cast<uintptr_t>(T.getAsOpaquePtr());
@@ -7034,12 +7007,11 @@ bool CXXNameMangler::isSpecializedAs(QualType S, llvm::StringRef Name,
   if (S.isNull())
     return false;
 
-  const RecordType *RT = S->getAs<RecordType>();
+  const RecordType *RT = S->getAsCanonical<RecordType>();
   if (!RT)
     return false;
 
-  const ClassTemplateSpecializationDecl *SD =
-      dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
+  const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
   if (!SD || !SD->getIdentifier()->isStr(Name))
     return false;
 
@@ -7168,8 +7140,8 @@ bool CXXNameMangler::mangleStandardSubstitution(const NamedDecl *ND) {
 
 void CXXNameMangler::addSubstitution(QualType T) {
   if (!hasMangledSubstitutionQualifiers(T)) {
-    if (const RecordType *RT = T->getAs<RecordType>()) {
-      addSubstitution(RT->getOriginalDecl()->getDefinitionOrSelf());
+    if (const auto *RD = T->getAsCXXRecordDecl()) {
+      addSubstitution(RD);
       return;
     }
   }

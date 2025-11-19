@@ -22,67 +22,67 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- ---------
 ; PRINT-NEXT:; Zero                              texture     f16         buf      T0             t0         1
 ; PRINT-NEXT:; One                               texture     f32         buf      T1             t1         1
-; PRINT-NEXT:; Two                               texture     f64         buf      T2             t2         1
+; PRINT-NEXT:; Two                               texture     u32         buf      T2             t2         1
 ; PRINT-NEXT:; Three                             texture     i32         buf      T3             t3         1
 ; PRINT-NEXT:; Four                              texture    byte         r/o      T4             t5         1
 ; PRINT-NEXT:; Five                              texture  struct         r/o      T5             t6         1
-; PRINT-NEXT:; Six                               texture     u64         buf      T6     t10,space2         1
+; PRINT-NEXT:; Six                               texture     u32         buf      T6     t10,space2         1
 ; PRINT-NEXT:; Array                             texture     f32         buf      T7      t4,space3       100
-; PRINT-NEXT:; Array2                            texture     f64         buf      T8      t2,space4 unbounded
-; PRINT-NEXT:; Seven                             texture     u64         buf      T9     t20,space5         1
+; PRINT-NEXT:; Array2                            texture     u32         buf      T8      t2,space4 unbounded
+; PRINT-NEXT:; Seven                             texture     u32         buf      T9     t20,space5         1
 ;
 
 define void @test() #0 {
   ; Buffer<half4> Zero : register(t0)
   %Zero_h = call target("dx.TypedBuffer", <4 x half>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr @Zero.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr @Zero.str)
  
   ; Buffer<float4> One : register(t1)
   %One_h = call target("dx.TypedBuffer", <2 x float>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false, ptr @One.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr @One.str)
  
   ; Buffer<double> Two : register(t2);
   %Two_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, i1 false, ptr @Two.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr @Two.str)
 
   ; Buffer<int4> Three : register(t3);
   %Three_h = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 1)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, i1 false, ptr @Three.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, ptr @Three.str)
 
   ; ByteAddressBuffer Four : register(t4)
   %Four_h = call target("dx.RawBuffer", i8, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @Four.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, ptr @Four.str)
 
   ; StructuredBuffer<int16_t> Five : register(t6);
   %Five_h = call target("dx.RawBuffer", i16, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 6, i32 1, i32 0, i1 false, ptr @Five.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 6, i32 1, i32 0, ptr @Five.str)
   
   ; Buffer<double> Six : register(t10, space2);
   %Six_h = call target("dx.TypedBuffer", i64, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 2, i32 10, i32 1, i32 0, i1 false, ptr @Six.str)
+            @llvm.dx.resource.handlefrombinding(i32 2, i32 10, i32 1, i32 0, ptr @Six.str)
 
   ; Same buffer type as Six - should have the same type in metadata
   ; Buffer<double> Seven : register(t20, space5);
   %Seven_h = call target("dx.TypedBuffer", i64, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 5, i32 20, i32 1, i32 0, i1 false, ptr @Seven.str)
+            @llvm.dx.resource.handlefrombinding(i32 5, i32 20, i32 1, i32 0, ptr @Seven.str)
 
   ; Buffer<float4> Array[100] : register(t4, space3);
   ; Buffer<float4> B1 = Array[30];
   ; Buffer<float4> B2 = Array[42];
   ; resource array accesses should produce one metadata entry   
   %Array_30_h = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 30, i1 false, ptr @Array.str)
+            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 30, ptr @Array.str)
   %Array_42_h = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 42, i1 false, ptr @Array.str)
+            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 42, ptr @Array.str)
 
   ; test unbounded resource array
   ; Buffer<double> Array2[] : register(t2, space4);
   ; Buffer<double> C1 = Array[10];
   ; Buffer<double> C2 = Array[20];
   %Array2_10_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, i1 false, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @Array2.str)
   %Array2_20_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 20, i1 false, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 20, ptr @Array2.str)
 
   ret void
 }
@@ -120,15 +120,14 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: ![[Half]] = !{i32 0, i32 8}
 ; CHECK: ![[One]] = !{i32 1, ptr @One, !"One", i32 0, i32 1, i32 1, i32 10, i32 0, ![[Float:[0-9]+]]}
 ; CHECK: ![[Float]] = !{i32 0, i32 9}
-; CHECK: ![[Two]] = !{i32 2, ptr @Two, !"Two", i32 0, i32 2, i32 1, i32 10, i32 0, ![[Double:[0-9]+]]}
-; CHECK: ![[Double]] = !{i32 0, i32 10}
+; CHECK: ![[Two]] = !{i32 2, ptr @Two, !"Two", i32 0, i32 2, i32 1, i32 10, i32 0, ![[U32:[0-9]+]]}
+; CHECK: ![[U32]] = !{i32 0, i32 5}
 ; CHECK: ![[Three]] = !{i32 3, ptr @Three, !"Three", i32 0, i32 3, i32 1, i32 10, i32 0, ![[I32:[0-9]+]]}
 ; CHECK: ![[I32]] = !{i32 0, i32 4}
 ; CHECK: ![[Four]] = !{i32 4, ptr @Four, !"Four", i32 0, i32 5, i32 1, i32 11, i32 0, null}
 ; CHECK: ![[Five]] = !{i32 5, ptr @Five, !"Five", i32 0, i32 6, i32 1, i32 12, i32 0, ![[FiveStride:[0-9]+]]}
 ; CHECK: ![[FiveStride]] = !{i32 1, i32 2}
-; CHECK: ![[Six]] = !{i32 6, ptr @Six, !"Six", i32 2, i32 10, i32 1, i32 10, i32 0, ![[U64:[0-9]+]]}
-; CHECK: ![[U64]] = !{i32 0, i32 7}
+; CHECK: ![[Six]] = !{i32 6, ptr @Six, !"Six", i32 2, i32 10, i32 1, i32 10, i32 0, ![[U32:[0-9]+]]}
 ; CHECK: ![[Array]] = !{i32 7, ptr @Array, !"Array", i32 3, i32 4, i32 100, i32 10, i32 0, ![[Float]]}
-; CHECK: ![[Array2]] = !{i32 8, ptr @Array2, !"Array2", i32 4, i32 2, i32 -1, i32 10, i32 0, ![[Double]]}
-; CHECK: ![[Seven]] = !{i32 9, ptr @Seven, !"Seven", i32 5, i32 20, i32 1, i32 10, i32 0, ![[U64]]}
+; CHECK: ![[Array2]] = !{i32 8, ptr @Array2, !"Array2", i32 4, i32 2, i32 -1, i32 10, i32 0, ![[U32]]}
+; CHECK: ![[Seven]] = !{i32 9, ptr @Seven, !"Seven", i32 5, i32 20, i32 1, i32 10, i32 0, ![[U32]]}

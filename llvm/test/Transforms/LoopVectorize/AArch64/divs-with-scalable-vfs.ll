@@ -9,7 +9,7 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[CONV61:%.*]] = zext i32 [[X]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP10]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 8, i64 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 8)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
@@ -95,16 +95,16 @@ exit:
 define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-LABEL: define void @sdiv_feeding_gep_predicated(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X:%.*]], i64 [[M:%.*]], i64 [[CONV6:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CONV61:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
@@ -139,7 +139,7 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP31]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP32]] to i64
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP33]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> zeroinitializer, ptr [[TMP34]], i32 8, <vscale x 2 x i1> [[TMP23]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> zeroinitializer, ptr align 8 [[TMP34]], <vscale x 2 x i1> [[TMP23]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP14]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -149,10 +149,9 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[IV]], [[M]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[THEN]]:
@@ -209,17 +208,17 @@ exit:
 define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-LABEL: define void @udiv_urem_feeding_gep(
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MUL_1_I:%.*]] = mul i64 [[X]], [[X]]
 ; CHECK-NEXT:    [[MUL_2_I:%.*]] = mul i64 [[MUL_1_I]], [[X]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], 4294967295
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
@@ -242,12 +241,12 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP23:%.*]] = udiv <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 2 x i64> [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = urem i64 [[INDEX]], [[MUL_2_I]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = udiv i64 [[TMP24]], [[MUL_1_I]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = urem i64 [[TMP24]], [[MUL_1_I]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = udiv i64 [[TMP26]], [[X]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = urem i64 [[TMP26]], [[X]]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 2 x i64> [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP30:%.*]] = mul i64 [[X]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[TMP30]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = mul i64 [[TMP31]], [[X]]
@@ -257,7 +256,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = shl i64 [[TMP35]], 32
 ; CHECK-NEXT:    [[TMP37:%.*]] = ashr i64 [[TMP36]], 32
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP37]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP23]], ptr [[TMP38]], i32 4, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP23]], ptr align 4 [[TMP38]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP14]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -267,10 +266,9 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[DIV_I:%.*]] = udiv i64 [[IV]], [[MUL_2_I]]
 ; CHECK-NEXT:    [[REM_I:%.*]] = urem i64 [[IV]], [[MUL_2_I]]
 ; CHECK-NEXT:    [[DIV_1_I:%.*]] = udiv i64 [[REM_I]], [[MUL_1_I]]

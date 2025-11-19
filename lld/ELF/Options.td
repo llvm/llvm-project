@@ -388,6 +388,9 @@ defm pie: B<"pie",
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
     "Do not list removed unused sections (default)">;
+def print_gc_sections_eq: JJ<"print-gc-sections=">,
+  HelpText<"List removed unused sections to <file>">,
+  MetaVarName<"<file>">;
 
 defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
@@ -719,11 +722,14 @@ def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
   "ThinLTO backend compilations will be distributed">;
 defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
   "pass to the ThinLTO distributor">;
-def thinlto_compiler_eq: JJ<"thinlto-remote-compiler=">,
+def thinlto_remote_compiler_eq: JJ<"thinlto-remote-compiler=">,
   HelpText<"Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
-defm thinlto_compiler_arg: EEq<"thinlto-remote-compiler-arg", "Compiler "
-  "arguments for the ThinLTO distributor to pass for ThinLTO backend "
+defm thinlto_remote_compiler_prepend_arg: EEq<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
+defm thinlto_remote_compiler_arg: EEq<"thinlto-remote-compiler-arg",
+  "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",

@@ -180,11 +180,7 @@ CharUnits CodeGenModule::computeNonVirtualBaseClassOffset(
     // Get the layout.
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
-    const auto *BaseDecl =
-        cast<CXXRecordDecl>(
-            Base->getType()->castAs<RecordType>()->getOriginalDecl())
-            ->getDefinitionOrSelf();
-
+    const auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
     // Add the offset.
     Offset += Layout.getBaseClassOffset(BaseDecl);
 
@@ -302,9 +298,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
   // *start* with a step down to the correct virtual base subobject,
   // and hence will not require any further steps.
   if ((*Start)->isVirtual()) {
-    VBase = cast<CXXRecordDecl>(
-                (*Start)->getType()->castAs<RecordType>()->getOriginalDecl())
-                ->getDefinitionOrSelf();
+    VBase = (*Start)->getType()->castAsCXXRecordDecl();
     ++Start;
   }
 
@@ -559,10 +553,7 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
 
   Address ThisPtr = CGF.LoadCXXThisAddress();
 
-  const Type *BaseType = BaseInit->getBaseClass();
-  const auto *BaseClassDecl =
-      cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getOriginalDecl())
-          ->getDefinitionOrSelf();
+  const auto *BaseClassDecl = BaseInit->getBaseClass()->castAsCXXRecordDecl();
 
   bool isBaseVirtual = BaseInit->isBaseVirtual();
 
@@ -1267,10 +1258,7 @@ namespace {
 
 static bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit) {
   const Type *BaseType = BaseInit->getBaseClass();
-  const auto *BaseClassDecl =
-      cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getOriginalDecl())
-          ->getDefinitionOrSelf();
-  return BaseClassDecl->isDynamicClass();
+  return BaseType->castAsCXXRecordDecl()->isDynamicClass();
 }
 
 /// EmitCtorPrologue - This routine generates necessary code to initialize
@@ -1283,10 +1271,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
 
   const CXXRecordDecl *ClassDecl = CD->getParent();
 
-  CXXConstructorDecl::init_const_iterator B = CD->init_begin(),
-                                          E = CD->init_end();
-
-  // Virtual base initializers first, if any. They aren't needed if:
+  // Virtual base initializers aren't needed if:
   // - This is a base ctor variant
   // - There are no vbases
   // - The class is abstract, so a complete object of it cannot be constructed
@@ -1308,15 +1293,36 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(BaseCtorContinueBB);
   }
 
-  for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
-    if (!ConstructVBases)
-      continue;
-    SaveAndRestore ThisRAII(CXXThisValue);
-    if (CGM.getCodeGenOpts().StrictVTablePointers &&
-        CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(*B))
-      CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, *B);
+  // Create three separate ranges for the different types of initializers.
+  auto AllInits = CD->inits();
+
+  // Find the boundaries between the three groups.
+  auto VirtualBaseEnd = std::find_if(
+      AllInits.begin(), AllInits.end(), [](const CXXCtorInitializer *Init) {
+        return !(Init->isBaseInitializer() && Init->isBaseVirtual());
+      });
+
+  auto NonVirtualBaseEnd = std::find_if(VirtualBaseEnd, AllInits.end(),
+                                        [](const CXXCtorInitializer *Init) {
+                                          return !Init->isBaseInitializer();
+                                        });
+
+  // Create the three ranges.
+  auto VirtualBaseInits = llvm::make_range(AllInits.begin(), VirtualBaseEnd);
+  auto NonVirtualBaseInits =
+      llvm::make_range(VirtualBaseEnd, NonVirtualBaseEnd);
+  auto MemberInits = llvm::make_range(NonVirtualBaseEnd, AllInits.end());
+
+  // Process virtual base initializers, if necessary.
+  if (ConstructVBases) {
+    for (CXXCtorInitializer *Initializer : VirtualBaseInits) {
+      SaveAndRestore ThisRAII(CXXThisValue);
+      if (CGM.getCodeGenOpts().StrictVTablePointers &&
+          CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+          isInitializerOfDynamicClass(Initializer))
+        CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
+      EmitBaseInitializer(*this, ClassDecl, Initializer);
+    }
   }
 
   if (BaseCtorContinueBB) {
@@ -1326,14 +1332,14 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   }
 
   // Then, non-virtual base initializers.
-  for (; B != E && (*B)->isBaseInitializer(); B++) {
-    assert(!(*B)->isBaseVirtual());
+  for (CXXCtorInitializer *Initializer : NonVirtualBaseInits) {
+    assert(!Initializer->isBaseVirtual());
     SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(*B))
+        isInitializerOfDynamicClass(Initializer))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, *B);
+    EmitBaseInitializer(*this, ClassDecl, Initializer);
   }
 
   InitializeVTablePointers(ClassDecl);
@@ -1341,8 +1347,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   // And finally, initialize class members.
   FieldConstructionScope FCS(*this, LoadCXXThisAddress());
   ConstructorMemcpyizer CM(*this, CD, Args);
-  for (; B != E; B++) {
-    CXXCtorInitializer *Member = (*B);
+  for (CXXCtorInitializer *Member : MemberInits) {
     assert(!Member->isBaseInitializer());
     assert(Member->isAnyMemberInitializer() &&
            "Delegating initializer on non-delegating constructor");
@@ -1377,10 +1382,7 @@ HasTrivialDestructorBody(ASTContext &Context,
     if (I.isVirtual())
       continue;
 
-    const CXXRecordDecl *NonVirtualBase =
-        cast<CXXRecordDecl>(
-            I.getType()->castAs<RecordType>()->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *NonVirtualBase = I.getType()->castAsCXXRecordDecl();
     if (!HasTrivialDestructorBody(Context, NonVirtualBase,
                                   MostDerivedClassDecl))
       return false;
@@ -1389,10 +1391,7 @@ HasTrivialDestructorBody(ASTContext &Context,
   if (BaseClassDecl == MostDerivedClassDecl) {
     // Check virtual bases.
     for (const auto &I : BaseClassDecl->vbases()) {
-      const auto *VirtualBase =
-          cast<CXXRecordDecl>(
-              I.getType()->castAs<RecordType>()->getOriginalDecl())
-              ->getDefinitionOrSelf();
+      const auto *VirtualBase = I.getType()->castAsCXXRecordDecl();
       if (!HasTrivialDestructorBody(Context, VirtualBase,
                                     MostDerivedClassDecl))
         return false;
@@ -1408,12 +1407,9 @@ FieldHasTrivialDestructorBody(ASTContext &Context,
 {
   QualType FieldBaseElementType = Context.getBaseElementType(Field->getType());
 
-  const RecordType *RT = FieldBaseElementType->getAs<RecordType>();
-  if (!RT)
+  auto *FieldClassDecl = FieldBaseElementType->getAsCXXRecordDecl();
+  if (!FieldClassDecl)
     return true;
-
-  auto *FieldClassDecl =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
 
   // The destructor for an implicit anonymous union member is never invoked.
   if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
@@ -1446,6 +1442,95 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
   return true;
 }
 
+static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
+                                         CodeGenFunction &CGF,
+                                         llvm::Value *ShouldDeleteCondition) {
+  Address ThisPtr = CGF.LoadCXXThisAddress();
+  llvm::BasicBlock *ScalarBB = CGF.createBasicBlock("dtor.scalar");
+  llvm::BasicBlock *callDeleteBB =
+      CGF.createBasicBlock("dtor.call_delete_after_array_destroy");
+  llvm::BasicBlock *VectorBB = CGF.createBasicBlock("dtor.vector");
+  auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
+  llvm::Value *CheckTheBitForArrayDestroy = CGF.Builder.CreateAnd(
+      ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 2));
+  llvm::Value *ShouldDestroyArray =
+      CGF.Builder.CreateIsNull(CheckTheBitForArrayDestroy);
+  CGF.Builder.CreateCondBr(ShouldDestroyArray, ScalarBB, VectorBB);
+
+  CGF.EmitBlock(VectorBB);
+
+  llvm::Value *numElements = nullptr;
+  llvm::Value *allocatedPtr = nullptr;
+  CharUnits cookieSize;
+  QualType EltTy = DD->getThisType()->getPointeeType();
+  CGF.CGM.getCXXABI().ReadArrayCookie(CGF, ThisPtr, EltTy, numElements,
+                                      allocatedPtr, cookieSize);
+
+  // Destroy the elements.
+  QualType::DestructionKind dtorKind = EltTy.isDestructedType();
+
+  assert(dtorKind);
+  assert(numElements && "no element count for a type with a destructor!");
+
+  CharUnits elementSize = CGF.getContext().getTypeSizeInChars(EltTy);
+  CharUnits elementAlign =
+      ThisPtr.getAlignment().alignmentOfArrayElement(elementSize);
+
+  llvm::Value *arrayBegin = ThisPtr.emitRawPointer(CGF);
+  llvm::Value *arrayEnd = CGF.Builder.CreateInBoundsGEP(
+      ThisPtr.getElementType(), arrayBegin, numElements, "delete.end");
+
+  // We already checked that the array is not 0-length before entering vector
+  // deleting dtor.
+  CGF.emitArrayDestroy(arrayBegin, arrayEnd, EltTy, elementAlign,
+                       CGF.getDestroyer(dtorKind),
+                       /*checkZeroLength*/ false, CGF.needsEHCleanup(dtorKind));
+
+  llvm::BasicBlock *VectorBBCont = CGF.createBasicBlock("dtor.vector.cont");
+  CGF.EmitBlock(VectorBBCont);
+
+  llvm::Value *CheckTheBitForDeleteCall = CGF.Builder.CreateAnd(
+      ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 1));
+
+  llvm::Value *ShouldCallDelete =
+      CGF.Builder.CreateIsNull(CheckTheBitForDeleteCall);
+  CGF.Builder.CreateCondBr(ShouldCallDelete, CGF.ReturnBlock.getBlock(),
+                           callDeleteBB);
+  CGF.EmitBlock(callDeleteBB);
+  const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
+  const CXXRecordDecl *ClassDecl = Dtor->getParent();
+  assert(Dtor->getArrayOperatorDelete());
+  if (!Dtor->getGlobalArrayOperatorDelete()) {
+    CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
+                       CGF.getContext().getCanonicalTagType(ClassDecl));
+  } else {
+    // If global operator[] is set, the class had its own operator delete[].
+    // In that case, check the 4th bit. If it is set, we need to call
+    // ::delete[].
+    llvm::Value *CheckTheBitForGlobDeleteCall = CGF.Builder.CreateAnd(
+        ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 4));
+
+    llvm::Value *ShouldCallGlobDelete =
+        CGF.Builder.CreateIsNull(CheckTheBitForGlobDeleteCall);
+    llvm::BasicBlock *GlobDelete =
+        CGF.createBasicBlock("dtor.call_glob_delete_after_array_destroy");
+    llvm::BasicBlock *ClassDelete =
+        CGF.createBasicBlock("dtor.call_class_delete_after_array_destroy");
+    CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
+    CGF.EmitBlock(ClassDelete);
+    CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
+                       CGF.getContext().getCanonicalTagType(ClassDecl));
+    CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+
+    CGF.EmitBlock(GlobDelete);
+    CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
+                       CGF.getContext().getCanonicalTagType(ClassDecl));
+  }
+
+  CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+  CGF.EmitBlock(ScalarBB);
+}
+
 /// EmitDestructorBody - Emits the body of the current destructor.
 void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CurGD.getDecl());
@@ -1475,7 +1560,9 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (DtorType == Dtor_Deleting) {
+  if (DtorType == Dtor_Deleting || DtorType == Dtor_VectorDeleting) {
+    if (CXXStructorImplicitParamValue && DtorType == Dtor_VectorDeleting)
+      EmitConditionalArrayDtorCall(Dtor, *this, CXXStructorImplicitParamValue);
     RunCleanupsScope DtorEpilogue(*this);
     EnterDtorCleanups(Dtor, Dtor_Deleting);
     if (HaveInsertPoint()) {
@@ -1502,8 +1589,12 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
   // always delegate because we might not have a definition in this TU.
   switch (DtorType) {
+  case Dtor_Unified:
+    llvm_unreachable("not expecting a unified dtor");
   case Dtor_Comdat: llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting: llvm_unreachable("already handled deleting case");
+  case Dtor_VectorDeleting:
+    llvm_unreachable("already handled vector deleting case");
 
   case Dtor_Complete:
     assert((Body || getTarget().getCXXABI().isMicrosoft()) &&
@@ -1601,29 +1692,85 @@ namespace {
     }
   };
 
+  // This function implements generation of scalar deleting destructor body for
+  // the case when the destructor also accepts an implicit flag. Right now only
+  // Microsoft ABI requires deleting destructors to accept implicit flags.
+  // The flag indicates whether an operator delete should be called and whether
+  // it should be a class-specific operator delete or a global one.
   void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
                                      llvm::Value *ShouldDeleteCondition,
                                      bool ReturnAfterDelete) {
+    const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
+    const CXXRecordDecl *ClassDecl = Dtor->getParent();
+    const FunctionDecl *OD = Dtor->getOperatorDelete();
+    assert(OD->isDestroyingOperatorDelete() == ReturnAfterDelete &&
+           "unexpected value for ReturnAfterDelete");
+    auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
+    // MSVC calls global operator delete inside of the dtor body, but clang
+    // aligned with this behavior only after a particular version. This is not
+    // ABI-compatible with previous versions.
+    ASTContext &Context = CGF.getContext();
+    bool CallGlobDelete =
+        Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
+            Context.getLangOpts());
+    if (CallGlobDelete && OD->isDestroyingOperatorDelete()) {
+      llvm::BasicBlock *CallDtor = CGF.createBasicBlock("dtor.call_dtor");
+      llvm::BasicBlock *DontCallDtor = CGF.createBasicBlock("dtor.entry_cont");
+      // Third bit set signals that global operator delete is called. That means
+      // despite class having destroying operator delete which is responsible
+      // for calling dtor, we need to call dtor because global operator delete
+      // won't do that.
+      llvm::Value *Check3rdBit = CGF.Builder.CreateAnd(
+          ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 4));
+      llvm::Value *ShouldCallDtor = CGF.Builder.CreateIsNull(Check3rdBit);
+      CGF.Builder.CreateCondBr(ShouldCallDtor, DontCallDtor, CallDtor);
+      CGF.EmitBlock(CallDtor);
+      QualType ThisTy = Dtor->getFunctionObjectParameterType();
+      CGF.EmitCXXDestructorCall(Dtor, Dtor_Complete, /*ForVirtualBase=*/false,
+                                /*Delegating=*/false, CGF.LoadCXXThisAddress(),
+                                ThisTy);
+      CGF.Builder.CreateBr(DontCallDtor);
+      CGF.EmitBlock(DontCallDtor);
+    }
     llvm::BasicBlock *callDeleteBB = CGF.createBasicBlock("dtor.call_delete");
     llvm::BasicBlock *continueBB = CGF.createBasicBlock("dtor.continue");
-    llvm::Value *ShouldCallDelete
-      = CGF.Builder.CreateIsNull(ShouldDeleteCondition);
+    // First bit set signals that operator delete must be called.
+    llvm::Value *Check1stBit = CGF.Builder.CreateAnd(
+        ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 1));
+    llvm::Value *ShouldCallDelete = CGF.Builder.CreateIsNull(Check1stBit);
     CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
 
     CGF.EmitBlock(callDeleteBB);
-    const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
-    const CXXRecordDecl *ClassDecl = Dtor->getParent();
-    CGF.EmitDeleteCall(Dtor->getOperatorDelete(),
-                       LoadThisForDtorDelete(CGF, Dtor),
-                       CGF.getContext().getCanonicalTagType(ClassDecl));
-    assert(Dtor->getOperatorDelete()->isDestroyingOperatorDelete() ==
-               ReturnAfterDelete &&
-           "unexpected value for ReturnAfterDelete");
-    if (ReturnAfterDelete)
-      CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
-    else
-      CGF.Builder.CreateBr(continueBB);
+    auto EmitDeleteAndGoToEnd = [&](const FunctionDecl *DeleteOp) {
+      CGF.EmitDeleteCall(DeleteOp, LoadThisForDtorDelete(CGF, Dtor),
+                         Context.getCanonicalTagType(ClassDecl));
+      if (ReturnAfterDelete)
+        CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+      else
+        CGF.Builder.CreateBr(continueBB);
+    };
+    // If Sema only found a global operator delete previously, the dtor can
+    // always call it. Otherwise we need to check the third bit and call the
+    // appropriate operator delete, i.e. global or class-specific.
+    if (const FunctionDecl *GlobOD = Dtor->getOperatorGlobalDelete();
+        isa<CXXMethodDecl>(OD) && GlobOD && CallGlobDelete) {
+      // Third bit set signals that global operator delete is called, i.e.
+      // ::delete appears on the callsite.
+      llvm::Value *CheckTheBitForGlobDeleteCall = CGF.Builder.CreateAnd(
+          ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 4));
+      llvm::Value *ShouldCallGlobDelete =
+          CGF.Builder.CreateIsNull(CheckTheBitForGlobDeleteCall);
+      llvm::BasicBlock *GlobDelete =
+          CGF.createBasicBlock("dtor.call_glob_delete");
+      llvm::BasicBlock *ClassDelete =
+          CGF.createBasicBlock("dtor.call_class_delete");
+      CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
+      CGF.EmitBlock(GlobDelete);
 
+      EmitDeleteAndGoToEnd(GlobOD);
+      CGF.EmitBlock(ClassDelete);
+    }
+    EmitDeleteAndGoToEnd(OD);
     CGF.EmitBlock(continueBB);
   }
 
@@ -1907,11 +2054,7 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
     // We push them in the forward order so that they'll be popped in
     // the reverse order.
     for (const auto &Base : ClassDecl->vbases()) {
-      auto *BaseClassDecl =
-          cast<CXXRecordDecl>(
-              Base.getType()->castAs<RecordType>()->getOriginalDecl())
-              ->getDefinitionOrSelf();
-
+      auto *BaseClassDecl = Base.getType()->castAsCXXRecordDecl();
       if (BaseClassDecl->hasTrivialDestructor()) {
         // Under SanitizeMemoryUseAfterDtor, poison the trivial base class
         // memory. For non-trival base classes the same is done in the class
@@ -1976,7 +2119,7 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
 
     // Anonymous union members do not have their destructors called.
     const RecordType *RT = type->getAsUnionType();
-    if (RT && RT->getOriginalDecl()->isAnonymousStructOrUnion())
+    if (RT && RT->getDecl()->isAnonymousStructOrUnion())
       continue;
 
     CleanupKind cleanupKind = getCleanupKind(dtorKind);
@@ -2130,10 +2273,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
 void CodeGenFunction::destroyCXXObject(CodeGenFunction &CGF,
                                        Address addr,
                                        QualType type) {
-  const RecordType *rtype = type->castAs<RecordType>();
-  const auto *record =
-      cast<CXXRecordDecl>(rtype->getOriginalDecl())->getDefinitionOrSelf();
-  const CXXDestructorDecl *dtor = record->getDestructor();
+  const CXXDestructorDecl *dtor = type->castAsCXXRecordDecl()->getDestructor();
   assert(!dtor->isTrivial());
   CGF.EmitCXXDestructorCall(dtor, Dtor_Complete, /*for vbase*/ false,
                             /*Delegating=*/false, addr, type);
@@ -2652,10 +2792,7 @@ void CodeGenFunction::getVTablePointers(BaseSubobject Base,
 
   // Traverse bases.
   for (const auto &I : RD->bases()) {
-    auto *BaseDecl = cast<CXXRecordDecl>(
-                         I.getType()->castAs<RecordType>()->getOriginalDecl())
-                         ->getDefinitionOrSelf();
-
+    auto *BaseDecl = I.getType()->castAsCXXRecordDecl();
     // Ignore classes without a vtable.
     if (!BaseDecl->isDynamicClass())
       continue;
@@ -2850,12 +2987,9 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T, Address Derived,
   if (!getLangOpts().CPlusPlus)
     return;
 
-  auto *ClassTy = T->getAs<RecordType>();
-  if (!ClassTy)
+  const auto *ClassDecl = T->getAsCXXRecordDecl();
+  if (!ClassDecl)
     return;
-
-  const auto *ClassDecl =
-      cast<CXXRecordDecl>(ClassTy->getOriginalDecl())->getDefinitionOrSelf();
 
   if (!ClassDecl->isCompleteDefinition() || !ClassDecl->isDynamicClass())
     return;

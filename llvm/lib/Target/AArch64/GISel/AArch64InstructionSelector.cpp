@@ -310,6 +310,8 @@ private:
                          MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitSBCS(Register Dst, MachineOperand &LHS, MachineOperand &RHS,
                          MachineIRBuilder &MIRBuilder) const;
+  MachineInstr *emitCMP(MachineOperand &LHS, MachineOperand &RHS,
+                        MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                         MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitTST(MachineOperand &LHS, MachineOperand &RHS,
@@ -2914,10 +2916,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (OpFlags & AArch64II::MO_GOT) {
-      I.setDesc(TII.get(MF.getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
-                            ? AArch64::LOADgotAUTH
-                            : AArch64::LOADgot));
+      bool IsGOTSigned = MF.getInfo<AArch64FunctionInfo>()->hasELFSignedGOT();
+      I.setDesc(TII.get(IsGOTSigned ? AArch64::LOADgotAUTH : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
+      I.addImplicitDefUseOperands(MF);
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
       // Materialize the global using movz/movk instructions.
@@ -2957,9 +2959,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
-    if (Order != AtomicOrdering::NotAtomic &&
-        Order != AtomicOrdering::Unordered &&
-        Order != AtomicOrdering::Monotonic) {
+    if (isStrongerThanMonotonic(Order)) {
       assert(!isa<GZExtLoad>(LdSt));
       assert(MemSizeInBytes <= 8 &&
              "128-bit atomics should already be custom-legalized");
@@ -4415,6 +4415,15 @@ AArch64InstructionSelector::emitSBCS(Register Dst, MachineOperand &LHS,
 }
 
 MachineInstr *
+AArch64InstructionSelector::emitCMP(MachineOperand &LHS, MachineOperand &RHS,
+                                    MachineIRBuilder &MIRBuilder) const {
+  MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
+  bool Is32Bit = MRI.getType(LHS.getReg()).getSizeInBits() == 32;
+  auto RC = Is32Bit ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass;
+  return emitSUBS(MRI.createVirtualRegister(RC), LHS, RHS, MIRBuilder);
+}
+
+MachineInstr *
 AArch64InstructionSelector::emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
@@ -4466,8 +4475,7 @@ MachineInstr *AArch64InstructionSelector::emitIntegerCompare(
   // Fold the compare into a cmn or tst if possible.
   if (auto FoldCmp = tryFoldIntegerCompare(LHS, RHS, Predicate, MIRBuilder))
     return FoldCmp;
-  auto Dst = MRI.cloneVirtualRegister(LHS.getReg());
-  return emitSUBS(Dst, LHS, RHS, MIRBuilder);
+  return emitCMP(LHS, RHS, MIRBuilder);
 }
 
 MachineInstr *AArch64InstructionSelector::emitCSetForFCmp(
@@ -4872,9 +4880,8 @@ MachineInstr *AArch64InstructionSelector::emitConjunctionRec(
 
     // Produce a normal comparison if we are first in the chain
     if (!CCOp) {
-      auto Dst = MRI.cloneVirtualRegister(LHS);
       if (isa<GICmp>(Cmp))
-        return emitSUBS(Dst, Cmp->getOperand(2), Cmp->getOperand(3), MIB);
+        return emitCMP(Cmp->getOperand(2), Cmp->getOperand(3), MIB);
       return emitFPCompare(Cmp->getOperand(2).getReg(),
                            Cmp->getOperand(3).getReg(), MIB);
     }
@@ -5128,22 +5135,12 @@ bool AArch64InstructionSelector::selectShuffleVector(
     MachineInstr &I, MachineRegisterInfo &MRI) {
   const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
   Register Src1Reg = I.getOperand(1).getReg();
-  const LLT Src1Ty = MRI.getType(Src1Reg);
   Register Src2Reg = I.getOperand(2).getReg();
-  const LLT Src2Ty = MRI.getType(Src2Reg);
   ArrayRef<int> Mask = I.getOperand(3).getShuffleMask();
 
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   LLVMContext &Ctx = MF.getFunction().getContext();
-
-  // G_SHUFFLE_VECTOR is weird in that the source operands can be scalars, if
-  // it's originated from a <1 x T> type. Those should have been lowered into
-  // G_BUILD_VECTOR earlier.
-  if (!Src1Ty.isVector() || !Src2Ty.isVector()) {
-    LLVM_DEBUG(dbgs() << "Could not select a \"scalar\" G_SHUFFLE_VECTOR\n");
-    return false;
-  }
 
   unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
 
@@ -5678,6 +5675,9 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
                                                MachineRegisterInfo &MRI) {
   LLT DstTy = MRI.getType(Dst);
   unsigned DstSize = DstTy.getSizeInBits();
+  assert((DstSize == 64 || DstSize == 128) &&
+         "Unexpected vector constant size");
+
   if (CV->isNullValue()) {
     if (DstSize == 128) {
       auto Mov =
@@ -5747,17 +5747,24 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
       // Try to create the new constants with MOVI, and if so generate a fneg
       // for it.
       if (auto *NewOp = TryMOVIWithBits(NegBits)) {
-        Register NewDst = MRI.createVirtualRegister(&AArch64::FPR128RegClass);
+        Register NewDst = MRI.createVirtualRegister(
+            DstSize == 64 ? &AArch64::FPR64RegClass : &AArch64::FPR128RegClass);
         NewOp->getOperand(0).setReg(NewDst);
         return MIRBuilder.buildInstr(NegOpc, {Dst}, {NewDst});
       }
       return nullptr;
     };
     MachineInstr *R;
-    if ((R = TryWithFNeg(DefBits, 32, AArch64::FNEGv4f32)) ||
-        (R = TryWithFNeg(DefBits, 64, AArch64::FNEGv2f64)) ||
+    if ((R = TryWithFNeg(DefBits, 32,
+                         DstSize == 64 ? AArch64::FNEGv2f32
+                                       : AArch64::FNEGv4f32)) ||
+        (R = TryWithFNeg(DefBits, 64,
+                         DstSize == 64 ? AArch64::FNEGDr
+                                       : AArch64::FNEGv2f64)) ||
         (STI.hasFullFP16() &&
-         (R = TryWithFNeg(DefBits, 16, AArch64::FNEGv8f16))))
+         (R = TryWithFNeg(DefBits, 16,
+                          DstSize == 64 ? AArch64::FNEGv4f16
+                                        : AArch64::FNEGv8f16))))
       return R;
   }
 
@@ -6608,45 +6615,6 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
   switch (IntrinID) {
   default:
     break;
-  case Intrinsic::aarch64_crypto_sha1h: {
-    Register DstReg = I.getOperand(0).getReg();
-    Register SrcReg = I.getOperand(2).getReg();
-
-    // FIXME: Should this be an assert?
-    if (MRI.getType(DstReg).getSizeInBits() != 32 ||
-        MRI.getType(SrcReg).getSizeInBits() != 32)
-      return false;
-
-    // The operation has to happen on FPRs. Set up some new FPR registers for
-    // the source and destination if they are on GPRs.
-    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() != AArch64::FPRRegBankID) {
-      SrcReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
-      MIB.buildCopy({SrcReg}, {I.getOperand(2)});
-
-      // Make sure the copy ends up getting constrained properly.
-      RBI.constrainGenericRegister(I.getOperand(2).getReg(),
-                                   AArch64::GPR32RegClass, MRI);
-    }
-
-    if (RBI.getRegBank(DstReg, MRI, TRI)->getID() != AArch64::FPRRegBankID)
-      DstReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
-
-    // Actually insert the instruction.
-    auto SHA1Inst = MIB.buildInstr(AArch64::SHA1Hrr, {DstReg}, {SrcReg});
-    constrainSelectedInstRegOperands(*SHA1Inst, TII, TRI, RBI);
-
-    // Did we create a new register for the destination?
-    if (DstReg != I.getOperand(0).getReg()) {
-      // Yep. Copy the result of the instruction back into the original
-      // destination.
-      MIB.buildCopy({I.getOperand(0)}, {DstReg});
-      RBI.constrainGenericRegister(I.getOperand(0).getReg(),
-                                   AArch64::GPR32RegClass, MRI);
-    }
-
-    I.eraseFromParent();
-    return true;
-  }
   case Intrinsic::ptrauth_resign: {
     Register DstReg = I.getOperand(0).getReg();
     Register ValReg = I.getOperand(2).getReg();

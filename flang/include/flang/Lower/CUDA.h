@@ -27,6 +27,10 @@ class Location;
 class MLIRContext;
 } // namespace mlir
 
+namespace hlfir {
+class ElementalOp;
+} // namespace hlfir
+
 namespace Fortran::lower {
 
 class AbstractConverter;
@@ -47,10 +51,6 @@ static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   return kDefaultAllocator;
 }
 
-void initializeDeviceComponentAllocator(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::semantics::Symbol &sym, const fir::MutableBoxValue &box);
-
 mlir::Type gatherDeviceComponentCoordinatesAndType(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::semantics::Symbol &sym, fir::RecordType recTy,
@@ -62,7 +62,9 @@ cuf::DataAttributeAttr
 translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
                                 const Fortran::semantics::Symbol &sym);
 
-bool isTransferWithConversion(mlir::Value rhs);
+/// Check if the rhs has an implicit conversion. Return the elemental op if
+/// there is a conversion. Return null otherwise.
+hlfir::ElementalOp isTransferWithConversion(mlir::Value rhs);
 
 } // end namespace Fortran::lower
 

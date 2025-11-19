@@ -1079,6 +1079,11 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   getCheckerManager().runCheckersForDeadSymbols(CheckedSet, Pred, SymReaper,
                                                 DiagnosticStmt, *this, K);
 
+  // Extend lifetime of symbols used for dynamic extent while the parent region
+  // is live. In this way size information about memory allocations is not lost
+  // if the region remains live.
+  markAllDynamicExtentLive(CleanedState, SymReaper);
+
   // For each node in CheckedSet, generate CleanedNodes that have the
   // environment, the store, and the constraints cleaned up but have the
   // user-supplied states as the predecessors.
@@ -1814,6 +1819,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPStripeDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
     case Stmt::OMPInterchangeDirectiveClass:
+    case Stmt::OMPFuseDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
     case Stmt::OMPDispatchDirectiveClass:
     case Stmt::OMPMaskedDirectiveClass:
@@ -3165,7 +3171,7 @@ void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
   // feasible then it shouldn't be considered for making 'default:' reachable.
   const SwitchStmt *SS = builder.getSwitch();
   const Expr *CondExpr = SS->getCond()->IgnoreParenImpCasts();
-  if (CondExpr->getType()->getAs<EnumType>()) {
+  if (CondExpr->getType()->isEnumeralType()) {
     if (SS->isAllEnumCasesCovered())
       return;
   }

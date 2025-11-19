@@ -114,7 +114,6 @@
 ; CHECK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-O-NEXT: Running pass: LICM
 ; CHECK-O-NEXT: Running pass: SimpleLoopUnswitchPass
-; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
@@ -167,6 +166,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: RecomputeGlobalsAAPass
 ; CHECK-POST-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
+; CHECK-POSTLINK-O-NEXT: Running pass: DropUnnecessaryAssumesPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LowerConstantIntrinsicsPass
 ; CHECK-POSTLINK-O3-NEXT: Running pass: ControlHeightReductionPass
@@ -179,6 +179,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-POSTLINK-O-NEXT: Running pass: InjectTLIMappings
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopVectorizePass
+; CHECK-POSTLINK-O-NEXT: Running pass: DropUnnecessaryAssumesPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InferAlignmentPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopLoadEliminationPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass

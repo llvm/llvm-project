@@ -78,11 +78,9 @@ enum DAPBroadcasterBits {
 
 enum class ReplMode { Variable = 0, Command, Auto };
 
-using DAPTransport =
-    lldb_private::Transport<protocol::Request, protocol::Response,
-                            protocol::Event>;
+using DAPTransport = lldb_private::transport::JSONTransport<ProtocolDescriptor>;
 
-struct DAP final : private DAPTransport::MessageHandler {
+struct DAP final : public DAPTransport::MessageHandler {
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
@@ -138,7 +136,7 @@ struct DAP final : private DAPTransport::MessageHandler {
   /// unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
 
-  uint32_t reverse_request_seq = 0;
+  protocol::Id seq = 0;
   std::mutex call_mutex;
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
@@ -155,6 +153,9 @@ struct DAP final : private DAPTransport::MessageHandler {
 
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
+
+  /// Whether to disable sourcing .lldbinit files.
+  bool no_lldbinit;
 
   /// The initial thread list upon attaching.
   std::vector<protocol::Thread> initial_thread_list;
@@ -178,13 +179,16 @@ struct DAP final : private DAPTransport::MessageHandler {
   /// \param[in] pre_init_commands
   ///     LLDB commands to execute as soon as the debugger instance is
   ///     allocated.
+  /// \param[in] no_lldbinit
+  ///     Whether to disable sourcing .lldbinit files.
   /// \param[in] transport
   ///     Transport for this debug session.
   /// \param[in] loop
   ///     Main loop associated with this instance.
   DAP(Log *log, const ReplMode default_repl_mode,
-      std::vector<std::string> pre_init_commands, llvm::StringRef client_name,
-      DAPTransport &transport, lldb_private::MainLoop &loop);
+      std::vector<std::string> pre_init_commands, bool no_lldbinit,
+      llvm::StringRef client_name, DAPTransport &transport,
+      lldb_private::MainLoop &loop);
 
   ~DAP();
 
@@ -216,8 +220,8 @@ struct DAP final : private DAPTransport::MessageHandler {
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
-  /// Send the given message to the client
-  void Send(const protocol::Message &message);
+  /// Send the given message to the client.
+  protocol::Id Send(const protocol::Message &message);
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
@@ -349,19 +353,13 @@ struct DAP final : private DAPTransport::MessageHandler {
   template <typename Handler>
   void SendReverseRequest(llvm::StringRef command,
                           llvm::json::Value arguments) {
-    int64_t id;
-    {
-      std::lock_guard<std::mutex> locker(call_mutex);
-      id = ++reverse_request_seq;
-      inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
-    }
-
-    SendJSON(llvm::json::Object{
-        {"type", "request"},
-        {"seq", id},
-        {"command", command},
-        {"arguments", std::move(arguments)},
+    protocol::Id id = Send(protocol::Request{
+        command.str(),
+        std::move(arguments),
     });
+
+    std::lock_guard<std::mutex> locker(call_mutex);
+    inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
   }
 
   /// The set of capabilities supported by this adapter.
@@ -456,6 +454,11 @@ private:
   /// Event threads.
   /// @{
   void EventThread();
+  void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited);
+  void HandleTargetEvent(const lldb::SBEvent &event);
+  void HandleBreakpointEvent(const lldb::SBEvent &event);
+  void HandleThreadEvent(const lldb::SBEvent &event);
+  void HandleDiagnosticEvent(const lldb::SBEvent &event);
   void ProgressEventThread();
 
   std::thread event_thread;

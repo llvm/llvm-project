@@ -1,37 +1,31 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
-// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
-// RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks %s \
-// RUN:   -Wno-alloc-size \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
-// RUN:   -Wno-alloc-size \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
 // RUN:   -verify=expected,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
 // RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
-// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
-// RUN: %clang_analyze_cc1 -DLEAKS -std=c++17 -fblocks %s \
-// RUN:   -Wno-alloc-size \
+// RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++17 -fblocks -verify %s \
-// RUN:   -Wno-alloc-size \
+// RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
 // RUN:   -verify=expected,leak,inspection \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
@@ -509,3 +503,75 @@ namespace optional_union {
     custom_union_t a;
   } // leak-warning{{Potential leak of memory pointed to by 'a.present.q'}}
 }
+
+namespace gh153782 {
+
+// Ensure we do not regress on the following use case.
+
+namespace mutually_exclusive_test_case_1 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+void test_non_trivial_struct_assignment() {
+  StorageWrapper* object = new StorageWrapper[]{StorageWrapper()};
+  object[0] = StorageWrapper(); // This assignment leads to the double-free.
+}
+} // mutually_exclusive_test_case_1
+
+namespace mutually_exclusive_test_case_2 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; }
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+void test_non_trivial_struct_assignment() {
+  StorageWrapper* object = new StorageWrapper[]{StorageWrapper()};
+  // object[0] = StorageWrapper(); // Remove the source of double free to make the potential leak appear.
+} // leak-warning{{Potential leak of memory pointed to by 'object'}}
+} // mutually_exclusive_test_case_2
+
+namespace mutually_exclusive_test_case_3 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+struct TestDoubleFreeWithInitializerList {
+  StorageWrapper* Object;
+  TestDoubleFreeWithInitializerList()
+  : Object(new StorageWrapper[]{StorageWrapper()}) {
+    Object[0] = StorageWrapper(); // This assignment leads to the double-free.
+  }
+};
+} // mutually_exclusive_test_case_3
+
+} // namespace gh153782

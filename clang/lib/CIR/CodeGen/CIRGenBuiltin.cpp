@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCall.h"
-#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -22,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -46,9 +46,9 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   Op op;
   if constexpr (std::is_same_v<Op, cir::BitClzOp> ||
                 std::is_same_v<Op, cir::BitCtzOp>)
-    op = builder.create<Op>(cgf.getLoc(e->getSourceRange()), arg, poisonZero);
+    op = Op::create(builder, cgf.getLoc(e->getSourceRange()), arg, poisonZero);
   else
-    op = builder.create<Op>(cgf.getLoc(e->getSourceRange()), arg);
+    op = Op::create(builder, cgf.getLoc(e->getSourceRange()), arg);
 
   mlir::Value result = op.getResult();
   mlir::Type exprTy = cgf.convertType(e->getType());
@@ -67,8 +67,8 @@ RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   // to the type of input when necessary.
   assert(!cir::MissingFeatures::msvcBuiltins());
 
-  auto r = builder.create<cir::RotateOp>(getLoc(e->getSourceRange()), input,
-                                         amount, isRotateLeft);
+  auto r = cir::RotateOp::create(builder, getLoc(e->getSourceRange()), input,
+                                 amount, isRotateLeft);
   return RValue::get(r);
 }
 
@@ -80,6 +80,14 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   assert(!cir::MissingFeatures::cgFPOptionsRAII());
   assert(!cir::MissingFeatures::fpConstraints());
 
+  auto call =
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  return RValue::get(call->getResult(0));
+}
+
+template <class Operation>
+static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
+  mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
   auto call =
       Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
   return RValue::get(call->getResult(0));
@@ -141,6 +149,95 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
     return {};
 
+  case Builtin::BIalloca:
+  case Builtin::BI_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
+  case Builtin::BI__builtin_alloca: {
+    // Get alloca size input
+    mlir::Value size = emitScalarExpr(e->getArg(0));
+
+    // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
+    const TargetInfo &ti = getContext().getTargetInfo();
+    const CharUnits suitableAlignmentInBytes =
+        getContext().toCharUnitsFromBits(ti.getSuitableAlign());
+
+    // Emit the alloca op with type `u8 *` to match the semantics of
+    // `llvm.alloca`. We later bitcast the type to `void *` to match the
+    // semantics of C/C++
+    // FIXME(cir): It may make sense to allow AllocaOp of type `u8` to return a
+    // pointer of type `void *`. This will require a change to the allocaOp
+    // verifier.
+    mlir::Value allocaAddr = builder.createAlloca(
+        getLoc(e->getSourceRange()), builder.getUInt8PtrTy(),
+        builder.getUInt8Ty(), "bi_alloca", suitableAlignmentInBytes, size);
+
+    // Initialize the allocated buffer if required.
+    if (builtinID != Builtin::BI__builtin_alloca_uninitialized) {
+      // Initialize the alloca with the given size and alignment according to
+      // the lang opts. Only the trivial non-initialization is supported for
+      // now.
+
+      switch (getLangOpts().getTrivialAutoVarInit()) {
+      case LangOptions::TrivialAutoVarInitKind::Uninitialized:
+        // Nothing to initialize.
+        break;
+      case LangOptions::TrivialAutoVarInitKind::Zero:
+      case LangOptions::TrivialAutoVarInitKind::Pattern:
+        cgm.errorNYI("trivial auto var init");
+        break;
+      }
+    }
+
+    // An alloca will always return a pointer to the alloca (stack) address
+    // space. This address space need not be the same as the AST / Language
+    // default (e.g. in C / C++ auto vars are in the generic address space). At
+    // the AST level this is handled within CreateTempAlloca et al., but for the
+    // builtin / dynamic alloca we have to handle it here.
+
+    if (!cir::isMatchingAddressSpace(
+            getCIRAllocaAddressSpace(),
+            e->getType()->getPointeeType().getAddressSpace())) {
+      cgm.errorNYI(e->getSourceRange(), "Non-default address space for alloca");
+    }
+
+    // Bitcast the alloca to the expected type.
+    return RValue::get(builder.createBitcast(
+        allocaAddr, builder.getVoidPtrTy(getCIRAllocaAddressSpace())));
+  }
+
+  case Builtin::BIcos:
+  case Builtin::BIcosf:
+  case Builtin::BIcosl:
+  case Builtin::BI__builtin_cos:
+  case Builtin::BI__builtin_cosf:
+  case Builtin::BI__builtin_cosf16:
+  case Builtin::BI__builtin_cosl:
+  case Builtin::BI__builtin_cosf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CosOp>(*this, *e);
+
+  case Builtin::BIceil:
+  case Builtin::BIceilf:
+  case Builtin::BIceill:
+  case Builtin::BI__builtin_ceil:
+  case Builtin::BI__builtin_ceilf:
+  case Builtin::BI__builtin_ceilf16:
+  case Builtin::BI__builtin_ceill:
+  case Builtin::BI__builtin_ceilf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(*this, *e);
+
+  case Builtin::BIexp:
+  case Builtin::BIexpf:
+  case Builtin::BIexpl:
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *e);
+
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:
@@ -157,14 +254,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       return RValue::get(nullptr);
 
     mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
-    builder.create<cir::AssumeOp>(loc, argValue);
+    cir::AssumeOp::create(builder, loc, argValue);
     return RValue::get(nullptr);
   }
 
   case Builtin::BI__builtin_assume_separate_storage: {
     mlir::Value value0 = emitScalarExpr(e->getArg(0));
     mlir::Value value1 = emitScalarExpr(e->getArg(1));
-    builder.create<cir::AssumeSepStorageOp>(loc, value0, value1);
+    cir::AssumeSepStorageOp::create(builder, loc, value0, value1);
     return RValue::get(nullptr);
   }
 
@@ -293,8 +390,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                       probability);
     }
 
-    auto result = builder.create<cir::ExpectOp>(
-        loc, argValue.getType(), argValue, expectedValue, probAttr);
+    auto result = cir::ExpectOp::create(builder, loc, argValue.getType(),
+                                        argValue, expectedValue, probAttr);
     return RValue::get(result);
   }
 
@@ -305,7 +402,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI_byteswap_ulong:
   case Builtin::BI_byteswap_uint64: {
     mlir::Value arg = emitScalarExpr(e->getArg(0));
-    return RValue::get(builder.create<cir::ByteSwapOp>(loc, arg));
+    return RValue::get(cir::ByteSwapOp::create(builder, loc, arg));
   }
 
   case Builtin::BI__builtin_bitreverse8:
@@ -313,7 +410,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_bitreverse32:
   case Builtin::BI__builtin_bitreverse64: {
     mlir::Value arg = emitScalarExpr(e->getArg(0));
-    return RValue::get(builder.create<cir::BitReverseOp>(loc, arg));
+    return RValue::get(cir::BitReverseOp::create(builder, loc, arg));
   }
 
   case Builtin::BI__builtin_rotateleft8:
@@ -349,6 +446,80 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_unreachable:
     emitUnreachable(e->getExprLoc(), /*createNewBlock=*/true);
     return RValue::get(nullptr);
+
+  case Builtin::BI__builtin_elementwise_acos:
+    return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_asin:
+    return emitUnaryFPBuiltin<cir::ASinOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_atan:
+    return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_cos:
+    return emitUnaryFPBuiltin<cir::CosOp>(*this, *e);
+  case Builtin::BI__builtin_coro_id:
+  case Builtin::BI__builtin_coro_promise:
+  case Builtin::BI__builtin_coro_resume:
+  case Builtin::BI__builtin_coro_noop:
+  case Builtin::BI__builtin_coro_destroy:
+  case Builtin::BI__builtin_coro_done:
+  case Builtin::BI__builtin_coro_alloc:
+  case Builtin::BI__builtin_coro_begin:
+  case Builtin::BI__builtin_coro_end:
+  case Builtin::BI__builtin_coro_suspend:
+  case Builtin::BI__builtin_coro_align:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_id like NYI");
+    return getUndefRValue(e->getType());
+
+  case Builtin::BI__builtin_coro_frame: {
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_frame NYI");
+    assert(!cir::MissingFeatures::coroutineFrame());
+    return getUndefRValue(e->getType());
+  }
+  case Builtin::BI__builtin_coro_free:
+  case Builtin::BI__builtin_coro_size: {
+    GlobalDecl gd{fd};
+    mlir::Type ty = cgm.getTypes().getFunctionType(
+        cgm.getTypes().arrangeGlobalDeclaration(gd));
+    const auto *nd = cast<NamedDecl>(gd.getDecl());
+    cir::FuncOp fnOp =
+        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false);
+    fnOp.setBuiltin(true);
+    return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
+                    returnValue);
+  }
+  case Builtin::BI__builtin_dynamic_object_size:
+  case Builtin::BI__builtin_object_size: {
+    unsigned type =
+        e->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    auto resType = mlir::cast<cir::IntType>(convertType(e->getType()));
+
+    // We pass this builtin onto the optimizer so that it can figure out the
+    // object size in more complex cases.
+    bool isDynamic = builtinID == Builtin::BI__builtin_dynamic_object_size;
+    return RValue::get(emitBuiltinObjectSize(e->getArg(0), type, resType,
+                                             /*EmittedE=*/nullptr, isDynamic));
+  }
+
+  case Builtin::BI__builtin_prefetch: {
+    auto evaluateOperandAsInt = [&](const Expr *arg) {
+      Expr::EvalResult res;
+      [[maybe_unused]] bool evalSucceed =
+          arg->EvaluateAsInt(res, cgm.getASTContext());
+      assert(evalSucceed && "expression should be able to evaluate as int");
+      return res.Val.getInt().getZExtValue();
+    };
+
+    bool isWrite = false;
+    if (e->getNumArgs() > 1)
+      isWrite = evaluateOperandAsInt(e->getArg(1));
+
+    int locality = 3;
+    if (e->getNumArgs() > 2)
+      locality = evaluateOperandAsInt(e->getArg(2));
+
+    mlir::Value address = emitScalarExpr(e->getArg(0));
+    cir::PrefetchOp::create(builder, loc, address, locality, isWrite);
+    return RValue::get(nullptr);
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
@@ -358,8 +529,121 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
-  cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
+  // Some target-specific builtins can have aggregate return values, e.g.
+  // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force
+  // returnValue to be non-null, so that the target-specific emission code can
+  // always just emit into it.
+  cir::TypeEvaluationKind evalKind = getEvaluationKind(e->getType());
+  if (evalKind == cir::TEK_Aggregate && returnValue.isNull()) {
+    cgm.errorNYI(e->getSourceRange(), "aggregate return value from builtin");
+    return getUndefRValue(e->getType());
+  }
+
+  // Now see if we can emit a target-specific builtin.
+  if (mlir::Value v = emitTargetBuiltinExpr(builtinID, e, returnValue)) {
+    switch (evalKind) {
+    case cir::TEK_Scalar:
+      if (mlir::isa<cir::VoidType>(v.getType()))
+        return RValue::get(nullptr);
+      return RValue::get(v);
+    case cir::TEK_Aggregate:
+      cgm.errorNYI(e->getSourceRange(), "aggregate return value from builtin");
+      return getUndefRValue(e->getType());
+    case cir::TEK_Complex:
+      llvm_unreachable("No current target builtin returns complex");
+    }
+    llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
+  }
+
+  cgm.errorNYI(e->getSourceRange(),
+               std::string("unimplemented builtin call: ") +
+                   getContext().BuiltinInfo.getName(builtinID));
   return getUndefRValue(e->getType());
+}
+
+static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
+                                             unsigned builtinID,
+                                             const CallExpr *e,
+                                             ReturnValueSlot &returnValue,
+                                             llvm::Triple::ArchType arch) {
+  // When compiling in HipStdPar mode we have to be conservative in rejecting
+  // target specific features in the FE, and defer the possible error to the
+  // AcceleratorCodeSelection pass, wherein iff an unsupported target builtin is
+  // referenced by an accelerator executable function, we emit an error.
+  // Returning nullptr here leads to the builtin being handled in
+  // EmitStdParUnsupportedBuiltin.
+  if (cgf->getLangOpts().HIPStdPar && cgf->getLangOpts().CUDAIsDevice &&
+      arch != cgf->getTarget().getTriple().getArch())
+    return {};
+
+  switch (arch) {
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be:
+  case llvm::Triple::bpfeb:
+  case llvm::Triple::bpfel:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return nullptr;
+
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    return cgf->emitX86BuiltinExpr(builtinID, e);
+
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppcle:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+  case llvm::Triple::r600:
+  case llvm::Triple::amdgcn:
+  case llvm::Triple::systemz:
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+  case llvm::Triple::wasm32:
+  case llvm::Triple::wasm64:
+  case llvm::Triple::hexagon:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return {};
+  default:
+    return {};
+  }
+}
+
+mlir::Value
+CIRGenFunction::emitTargetBuiltinExpr(unsigned builtinID, const CallExpr *e,
+                                      ReturnValueSlot &returnValue) {
+  if (getContext().BuiltinInfo.isAuxBuiltinID(builtinID)) {
+    assert(getContext().getAuxTargetInfo() && "Missing aux target info");
+    return emitTargetArchBuiltinExpr(
+        this, getContext().BuiltinInfo.getAuxBuiltinID(builtinID), e,
+        returnValue, getContext().getAuxTargetInfo()->getTriple().getArch());
+  }
+
+  return emitTargetArchBuiltinExpr(this, builtinID, e, returnValue,
+                                   getTarget().getTriple().getArch());
+}
+
+mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(
+    const unsigned iceArguments, const unsigned idx, const Expr *argExpr) {
+  mlir::Value arg = {};
+  if ((iceArguments & (1 << idx)) == 0) {
+    arg = emitScalarExpr(argExpr);
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    const std::optional<llvm::APSInt> result =
+        argExpr->getIntegerConstantExpr(getContext());
+    assert(result && "Expected argument to be a constant");
+    arg = builder.getConstInt(getLoc(argExpr->getSourceRange()), *result);
+  }
+  return arg;
 }
 
 /// Given a builtin id for a function like "__builtin_fabsf", return a Function*
@@ -412,4 +696,43 @@ mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
   mlir::Type type = convertType(ve->getType());
   mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
   return cir::VAArgOp::create(builder, loc, type, vaList);
+}
+
+mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
+                                                  cir::IntType resType,
+                                                  mlir::Value emittedE,
+                                                  bool isDynamic) {
+  assert(!cir::MissingFeatures::opCallImplicitObjectSizeArgs());
+
+  // LLVM can't handle type=3 appropriately, and __builtin_object_size shouldn't
+  // evaluate e for side-effects. In either case, just like original LLVM
+  // lowering, we shouldn't lower to `cir.objsize` but to a constant instead.
+  if (type == 3 || (!emittedE && e->HasSideEffects(getContext())))
+    return builder.getConstInt(getLoc(e->getSourceRange()), resType,
+                               (type & 2) ? 0 : -1);
+
+  mlir::Value ptr = emittedE ? emittedE : emitScalarExpr(e);
+  assert(mlir::isa<cir::PointerType>(ptr.getType()) &&
+         "Non-pointer passed to __builtin_object_size?");
+
+  assert(!cir::MissingFeatures::countedBySize());
+
+  // Extract the min/max mode from type. CIR only supports type 0
+  // (max, whole object) and type 2 (min, whole object), not type 1 or 3
+  // (closest subobject variants).
+  const bool min = ((type & 2) != 0);
+  // For GCC compatibility, __builtin_object_size treats NULL as unknown size.
+  auto op =
+      cir::ObjSizeOp::create(builder, getLoc(e->getSourceRange()), resType, ptr,
+                             min, /*nullUnknown=*/true, isDynamic);
+  return op.getResult();
+}
+
+mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
+    const Expr *e, unsigned type, cir::IntType resType, mlir::Value emittedE,
+    bool isDynamic) {
+  uint64_t objectSize;
+  if (!e->tryEvaluateObjectSize(objectSize, getContext(), type))
+    return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
+  return builder.getConstInt(getLoc(e->getSourceRange()), resType, objectSize);
 }

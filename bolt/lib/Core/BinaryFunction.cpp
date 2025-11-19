@@ -61,6 +61,8 @@ extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<bool> Instrument;
+extern cl::list<std::string> PrintOnly;
+extern cl::opt<std::string> PrintOnlyFile;
 extern cl::opt<bool> StrictMode;
 extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
@@ -133,14 +135,6 @@ PrintDynoStatsOnly("print-dyno-stats-only",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-static cl::list<std::string>
-PrintOnly("print-only",
-  cl::CommaSeparated,
-  cl::desc("list of functions to print"),
-  cl::value_desc("func1,func2,func3,..."),
-  cl::Hidden,
-  cl::cat(BoltCategory));
-
 cl::opt<bool>
     TimeBuild("time-build",
               cl::desc("print time spent constructing binary functions"),
@@ -179,37 +173,29 @@ template <typename R> static bool emptyRange(const R &Range) {
 }
 
 /// Gets debug line information for the instruction located at the given
-/// address in the original binary. The SMLoc's pointer is used
-/// to point to this information, which is represented by a
-/// DebugLineTableRowRef. The returned pointer is null if no debug line
-/// information for this instruction was found.
-static SMLoc findDebugLineInformationForInstructionAt(
+/// address in the original binary. Returns an optional DebugLineTableRowRef
+/// that references the corresponding row in the DWARF line table. Since binary
+/// functions can span multiple compilation units, this function helps
+/// associate instructions with their debug line information from the
+/// appropriate CU. Returns std::nullopt if no debug line information for
+/// this instruction was found.
+static std::optional<DebugLineTableRowRef>
+findDebugLineInformationForInstructionAt(
     uint64_t Address, DWARFUnit *Unit,
     const DWARFDebugLine::LineTable *LineTable) {
-  // We use the pointer in SMLoc to store an instance of DebugLineTableRowRef,
-  // which occupies 64 bits. Thus, we can only proceed if the struct fits into
-  // the pointer itself.
-  static_assert(
-      sizeof(decltype(SMLoc().getPointer())) >= sizeof(DebugLineTableRowRef),
-      "Cannot fit instruction debug line information into SMLoc's pointer");
-
-  SMLoc NullResult = DebugLineTableRowRef::NULL_ROW.toSMLoc();
   uint32_t RowIndex = LineTable->lookupAddress(
       {Address, object::SectionedAddress::UndefSection});
   if (RowIndex == LineTable->UnknownRowIndex)
-    return NullResult;
+    return std::nullopt;
 
   assert(RowIndex < LineTable->Rows.size() &&
          "Line Table lookup returned invalid index.");
 
-  decltype(SMLoc().getPointer()) Ptr;
-  DebugLineTableRowRef *InstructionLocation =
-      reinterpret_cast<DebugLineTableRowRef *>(&Ptr);
+  DebugLineTableRowRef InstructionLocation;
+  InstructionLocation.DwCompileUnitIndex = Unit->getOffset();
+  InstructionLocation.RowIndex = RowIndex + 1;
 
-  InstructionLocation->DwCompileUnitIndex = Unit->getOffset();
-  InstructionLocation->RowIndex = RowIndex + 1;
-
-  return SMLoc::getFromPointer(Ptr);
+  return InstructionLocation;
 }
 
 static std::string buildSectionName(StringRef Prefix, StringRef Name,
@@ -290,6 +276,33 @@ BinaryFunction::getBasicBlockContainingOffset(uint64_t Offset) {
   --I;
   BinaryBasicBlock *BB = I->second;
   return (Offset < BB->getOffset() + BB->getOriginalSize()) ? BB : nullptr;
+}
+
+uint16_t BinaryFunction::getConstantIslandAlignment() const {
+  if (Islands == nullptr)
+    return 1;
+
+  // For constant island inside a function, the default 8-byte alignment is
+  // probably good enough.
+  const uint16_t DefaultAlignment = sizeof(uint64_t);
+  if (!isDataObject())
+    return DefaultAlignment;
+
+  // If the constant island itself is a binary function, get its alignment
+  // based on its size, original address, and its owning section's alignment.
+  const uint64_t MaxAlignment =
+      std::min(uint64_t(1) << llvm::countr_zero(getAddress()),
+               OriginSection->getAlignment());
+  const uint64_t MinAlignment =
+      std::max((uint64_t)DefaultAlignment,
+               uint64_t(1) << (63 - llvm::countl_zero(getSize())));
+  uint64_t Alignment = std::min(MinAlignment, MaxAlignment);
+  if (Alignment >> 16) {
+    BC.errs() << "BOLT-ERROR: the constant island's alignment is too big: 0x"
+              << Twine::utohexstr(Alignment) << "\n";
+    exit(1);
+  }
+  return (uint16_t)Alignment;
 }
 
 void BinaryFunction::markUnreachableBlocks() {
@@ -1016,12 +1029,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   return BranchType;
 }
 
-MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
-                                                bool CreatePastEnd) {
+MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address) {
   const uint64_t Offset = Address - getAddress();
-
-  if ((Offset == getSize()) && CreatePastEnd)
-    return getFunctionEndLabel();
 
   auto LI = Labels.find(Offset);
   if (LI != Labels.end())
@@ -1032,6 +1041,9 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
     if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address))
       return IslandSym;
   }
+
+  if (Offset == getSize())
+    return getFunctionEndLabel();
 
   MCSymbol *Label = BC.Ctx->createNamedTempSymbol();
   Labels[Offset] = Label;
@@ -1408,10 +1420,9 @@ Error BinaryFunction::disassemble() {
                 !(BC.isAArch64() &&
                   BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
               // Result of __builtin_unreachable().
-              LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump past end detected at 0x"
-                                << Twine::utohexstr(AbsoluteInstrAddr)
-                                << " in function " << *this
-                                << " : replacing with nop.\n");
+              errs() << "BOLT-WARNING: jump past end detected at 0x"
+                     << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
+                     << *this << " : replacing with nop.\n";
               BC.MIB->createNoop(Instruction);
               if (IsCondBranch) {
                 // Register branch offset for profile validation.
@@ -1496,9 +1507,24 @@ Error BinaryFunction::disassemble() {
     }
 
 add_instruction:
-    if (getDWARFLineTable()) {
-      Instruction.setLoc(findDebugLineInformationForInstructionAt(
-          AbsoluteInstrAddr, getDWARFUnit(), getDWARFLineTable()));
+    if (!getDWARFUnits().empty()) {
+      SmallVector<DebugLineTableRowRef, 1> Rows;
+      for (const auto &[_, Unit] : getDWARFUnits()) {
+        const DWARFDebugLine::LineTable *LineTable =
+            getDWARFLineTableForUnit(Unit);
+        if (!LineTable)
+          continue;
+        if (std::optional<DebugLineTableRowRef> RowRef =
+                findDebugLineInformationForInstructionAt(AbsoluteInstrAddr,
+                                                         Unit, LineTable))
+          Rows.emplace_back(*RowRef);
+      }
+      if (!Rows.empty()) {
+        ClusteredRows *Cluster =
+            BC.ClusteredRows.createClusteredRows(Rows.size());
+        Cluster->populate(Rows);
+        Instruction.setLoc(Cluster->toSMLoc());
+      }
     }
 
     // Record offset of the instruction for profile matching.
@@ -1665,11 +1691,12 @@ bool BinaryFunction::scanExternalRefs() {
       if (!TargetFunction || ignoreFunctionRef(*TargetFunction))
         continue;
 
-      const uint64_t FunctionOffset =
-          TargetAddress - TargetFunction->getAddress();
+      // Get a reference symbol for the function when address is a valid code
+      // reference.
       BranchTargetSymbol =
-          FunctionOffset ? TargetFunction->addEntryPointAtOffset(FunctionOffset)
-                         : TargetFunction->getSymbol();
+          BC.handleExternalBranchTarget(TargetAddress, *TargetFunction);
+      if (!BranchTargetSymbol)
+        continue;
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1863,16 +1890,6 @@ bool BinaryFunction::scanExternalRefs() {
     }
   }
 
-  // Inform BinaryContext that this function symbols will not be defined and
-  // relocations should not be created against them.
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
-  }
-
   clearList(Relocations);
   clearList(ExternallyReferencedOffsets);
 
@@ -1959,7 +1976,9 @@ void BinaryFunction::postProcessJumpTables() {
             return EntryAddress == Parent->getAddress() + Parent->getSize();
           });
       if (IsBuiltinUnreachable) {
-        MCSymbol *Label = getOrCreateLocalLabel(EntryAddress, true);
+        BinaryFunction *TargetBF = BC.getBinaryFunctionAtAddress(EntryAddress);
+        MCSymbol *Label = TargetBF ? TargetBF->getSymbol()
+                                   : getOrCreateLocalLabel(EntryAddress);
         JT.Entries.push_back(Label);
         continue;
       }
@@ -1970,7 +1989,7 @@ void BinaryFunction::postProcessJumpTables() {
           BC.getBinaryFunctionContainingAddress(EntryAddress);
       MCSymbol *Label;
       if (HasOneParent && TargetBF == this) {
-        Label = getOrCreateLocalLabel(EntryAddress, true);
+        Label = getOrCreateLocalLabel(EntryAddress);
       } else {
         const uint64_t Offset = EntryAddress - TargetBF->getAddress();
         Label = Offset ? TargetBF->addEntryPointAtOffset(Offset)
@@ -2142,13 +2161,10 @@ bool BinaryFunction::postProcessIndirectBranches(
         continue;
       }
 
-      // If this block contains an epilogue code and has an indirect branch,
-      // then most likely it's a tail call. Otherwise, we cannot tell for sure
-      // what it is and conservatively reject the function's CFG.
-      bool IsEpilogue = llvm::any_of(BB, [&](const MCInst &Instr) {
-        return BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr);
-      });
-      if (IsEpilogue) {
+      // If this block contains epilogue code and has an indirect branch,
+      // then most likely it's a tail call. Otherwise, we cannot tell for
+      // sure what it is and conservatively reject the function's CFG.
+      if (BC.MIB->isEpilogue(BB)) {
         BC.MIB->convertJmpToTailCall(Instr);
         BB.removeAllSuccessors();
         continue;
@@ -2778,14 +2794,8 @@ private:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
     case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
+      llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -2800,6 +2810,7 @@ public:
   void advanceTo(int32_t State) {
     for (int32_t I = CurState, E = State; I != E; ++I) {
       const MCCFIInstruction &Instr = FDE[I];
+      assert(Instr.getOperation() != MCCFIInstruction::OpNegateRAState);
       if (Instr.getOperation() != MCCFIInstruction::OpRestoreState) {
         update(Instr, I);
         continue;
@@ -2924,15 +2935,9 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
+    case MCCFIInstruction::OpNegateRAState:
       llvm_unreachable("unsupported CFI opcode");
       return false;
-    case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
-      break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3081,14 +3086,8 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
     case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
+      llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
@@ -3216,14 +3215,6 @@ void BinaryFunction::clearDisasmState() {
   clearList(Instructions);
   clearList(IgnoredBranches);
   clearList(TakenBranches);
-
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
-  }
 }
 
 void BinaryFunction::setTrapOnEntry() {
@@ -3589,7 +3580,9 @@ void BinaryFunction::fixBranches() {
   auto &MIB = BC.MIB;
   MCContext *Ctx = BC.Ctx.get();
 
-  for (BinaryBasicBlock *BB : BasicBlocks) {
+  for (auto BBI = Layout.block_begin(), BBE = Layout.block_end(); BBI != BBE;
+       ++BBI) {
+    BinaryBasicBlock *BB = *BBI;
     const MCSymbol *TBB = nullptr;
     const MCSymbol *FBB = nullptr;
     MCInst *CondBranch = nullptr;
@@ -3603,7 +3596,7 @@ void BinaryFunction::fixBranches() {
 
     // Basic block that follows the current one in the final layout.
     const BinaryBasicBlock *const NextBB =
-        Layout.getBasicBlockAfter(BB, /*IgnoreSplits=*/false);
+        Layout.getBasicBlockAfter(BBI, /*IgnoreSplits*/ false);
 
     if (BB->succ_size() == 1) {
       // __builtin_unreachable() could create a conditional branch that
@@ -3771,6 +3764,8 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   assert(Offset && "cannot add primary entry point");
 
   const uint64_t EntryPointAddress = getAddress() + Offset;
+  assert(!isInConstantIsland(EntryPointAddress) &&
+         "cannot add entry point that points to constant data");
   MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress);
 
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(LocalSymbol);
@@ -3852,7 +3847,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
     if (FunctionSymbol == Symbol)
       return 0;
 
-  // Check all secondary entries available as either basic blocks or lables.
+  // Check all secondary entries available as either basic blocks or labels.
   uint64_t NumEntries = 1;
   for (const BinaryBasicBlock *BB : BasicBlocks) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);

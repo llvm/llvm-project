@@ -173,6 +173,10 @@ _Static_assert(CTB3, ""); // pedantic-ref-warning {{GNU extension}} \
                           // pedantic-expected-warning {{GNU extension}}
 
 
+void nonComplexToComplexCast(void) {
+  _Complex double z = *(_Complex double *)&(struct { double r, i; }){0.0, 1.0};
+}
+
 int t1 = sizeof(int);
 void test4(void) {
   t1 = sizeof(int);
@@ -345,5 +349,46 @@ const unsigned char _str2[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
 const int compared = strcmp(_str, (const char *)_str2); // all-error {{initializer element is not a compile-time constant}}
 
 
-const int compared2 = strcmp(strcmp, _str); // all-warning {{incompatible pointer types}} \
+const int compared2 = strcmp(strcmp, _str); // all-error {{incompatible pointer types}} \
                                             // all-error {{initializer element is not a compile-time constant}}
+
+int foo(x) // all-warning {{a function definition without a prototype is deprecated in all versions of C}}
+int x;
+{
+  return x;
+}
+
+void bar() { // pedantic-warning {{a function declaration without a prototype}}
+  int x;
+  x = foo(); // all-warning {{too few arguments}}
+}
+
+int *_b = &a;
+void discardedCmp(void)
+{
+    (*_b) = ((&a == &a) , a); // all-warning {{left operand of comma operator has no effect}}
+}
+
+/// ArraySubscriptExpr that's not an lvalue
+typedef unsigned char U __attribute__((vector_size(1)));
+void nonLValueASE(U f) { f[0] = f[((U)(U){0})[0]]; }
+
+static char foo_(a) // all-warning {{definition without a prototype}}
+  char a;
+{
+  return 'a';
+}
+static void bar_(void) {
+  foo_(foo_(1));
+}
+
+void foo2(void*);
+void bar2(void) {
+  int a[2][3][4][5]; // all-note {{array 'a' declared here}}
+  foo2(&a[0][4]); // all-warning {{array index 4 is past the end of the array}}
+}
+
+void plainComplex(void) {
+  _Complex cd; // all-warning {{_Complex double}}
+  cd = *(_Complex *)&(struct { double r, i; }){0.0, 0.0}; // all-warning {{_Complex double}}
+}

@@ -26,7 +26,7 @@ define amdgpu_kernel void @flat_last_use_load_0(ptr %in, ptr %out) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_LU
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
@@ -45,8 +45,6 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX12-NEXT:    s_mov_b32 s2, 2
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX12-NEXT:    s_mov_b32 s2, 0
-; GFX12-NEXT:    ; implicit-def: $sgpr2
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v0
@@ -80,7 +78,7 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v1, s[2:3] scale_offset th:TH_LOAD_LU
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -115,10 +113,8 @@ define amdgpu_kernel void @flat_last_use_and_volatile_load(ptr %in, ptr %out) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_BYPASS scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_bvhcnt 0x0
-; GFX1250-NEXT:    s_wait_samplecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %val = load volatile i32, ptr %in, align 4, !amdgpu.last.use !{}
@@ -149,7 +145,7 @@ define amdgpu_kernel void @flat_last_use_and_nontemporal_load(ptr %in, ptr %out)
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_LU
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}, !nontemporal !0

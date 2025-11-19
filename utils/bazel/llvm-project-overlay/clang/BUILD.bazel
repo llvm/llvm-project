@@ -58,6 +58,7 @@ gentbl_cc_library(
         "Refactoring",
         "Sema",
         "Serialization",
+        "Trap",
     ] for out in [
         (
             "include/clang/Basic/Diagnostic%sKinds.inc" % c,
@@ -278,6 +279,12 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsRISCVXMIPSTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsRISCVXMIPS.td"],
+    includes = ["include"],
+)
+
+td_library(
     name = "BuiltinsX86BaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsX86Base.td"],
     includes = ["include"],
@@ -357,6 +364,7 @@ gentbl_cc_library(
         ":BuiltinsBaseTdFiles",
         ":BuiltinsRISCVXAndesTdFiles",
         ":BuiltinsRISCVXCVTdFiles",
+        ":BuiltinsRISCVXMIPSTdFiles",
     ],
 )
 
@@ -988,6 +996,8 @@ cc_library(
     srcs = glob([
         "lib/Analysis/FlowSensitive/Models/*.cpp",
         "lib/Analysis/FlowSensitive/*.cpp",
+        "lib/Analysis/LifetimeSafety/*.cpp",
+        "lib/Analysis/LifetimeSafety/*.h",
         "lib/Analysis/*.cpp",
     ]) + [
         ":analysis_htmllogger_gen",
@@ -1015,6 +1025,7 @@ cc_library(
 gentbl_cc_library(
     name = "sema_attr_gen",
     tbl_outs = {
+        "include/clang/Sema/AttrIsTypeDependent.inc": ["-gen-clang-attr-is-type-dependent"],
         "include/clang/Sema/AttrParsedAttrImpl.inc": ["-gen-clang-attr-parsed-attr-impl"],
         "include/clang/Sema/AttrParsedAttrKinds.inc": ["-gen-clang-attr-parsed-attr-kinds"],
         "include/clang/Sema/AttrSpellingListIndex.inc": ["-gen-clang-attr-spelling-index"],
@@ -1221,6 +1232,7 @@ cc_library(
         ":format",
         ":frontend",
         ":lex",
+        ":options",
         ":rewrite",
         ":support",
         ":tooling_core",
@@ -1305,7 +1317,10 @@ cc_library(
 
 cc_library(
     name = "tooling_dependency_scanning",
-    srcs = glob(["lib/Tooling/DependencyScanning/**/*.cpp"]),
+    srcs = glob([
+        "lib/Tooling/DependencyScanning/**/*.h",
+        "lib/Tooling/DependencyScanning/**/*.cpp",
+    ]),
     hdrs = glob(["include/clang/Tooling/DependencyScanning/**/*.h"]),
     deps = [
         ":basic",
@@ -1434,6 +1449,7 @@ cc_library(
         ":crosstu",
         ":driver",
         ":frontend",
+        ":index",
         ":lex",
         ":rewrite",
         ":static_analyzer_checkers_gen",
@@ -1487,10 +1503,23 @@ cc_library(
 
 gentbl_cc_library(
     name = "driver_options_inc_gen",
-    tbl_outs = {"include/clang/Driver/Options.inc": ["-gen-opt-parser-defs"]},
+    tbl_outs = {"include/clang/Options/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
-    td_file = "include/clang/Driver/Options.td",
+    td_file = "include/clang/Options/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_library(
+    name = "options",
+    srcs = glob(["lib/Options/*.cpp"]),
+    hdrs = glob(["include/clang/Options/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":basic",
+        ":driver_options_inc_gen",
+        ":static_analyzer_checkers_gen",
+        "//llvm:Option",
+    ],
 )
 
 cc_library(
@@ -1530,6 +1559,7 @@ cc_library(
         ":config",
         ":driver_options_inc_gen",
         ":lex",
+        ":options",
         ":parse",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -1686,6 +1716,7 @@ cc_library(
         ":driver_options_inc_gen",
         ":edit",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -1755,6 +1786,7 @@ cc_library(
         ":frontend",
         ":frontend_tool",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -1987,6 +2019,7 @@ cc_library(
         ":extract_api",
         ":frontend",
         ":frontend_rewrite",
+        ":options",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2162,6 +2195,7 @@ cc_library(
         ":frontend_rewrite",
         ":frontend_tool",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -2244,6 +2278,7 @@ cc_binary(
         ":driver",
         ":frontend",
         ":frontend_rewrite",
+        ":options",
         ":serialization",
         ":static_analyzer_frontend",
         ":tooling",
@@ -2293,18 +2328,6 @@ cc_binary(
         "//llvm:Object",
         "//llvm:Support",
         "//llvm:TargetParser",
-    ],
-)
-
-cc_binary(
-    name = "clang-offload-packager",
-    srcs = glob(["tools/clang-offload-packager/*.cpp"]),
-    stamp = 0,
-    deps = [
-        ":basic",
-        "//llvm:BinaryFormat",
-        "//llvm:Object",
-        "//llvm:Support",
     ],
 )
 

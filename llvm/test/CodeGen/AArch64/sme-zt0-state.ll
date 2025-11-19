@@ -33,20 +33,17 @@ define void @za_zt0_shared_caller_no_state_callee(ptr %callee) "aarch64_inout_za
 ; CHECK-LABEL: za_zt0_shared_caller_no_state_callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    stur x9, [x29, #-16]
-; CHECK-NEXT:    sub x9, x29, #16
+; CHECK-NEXT:    sub x10, x29, #16
 ; CHECK-NEXT:    sub x19, x29, #80
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur wzr, [x29, #-4]
-; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    str zt0, [x19]
 ; CHECK-NEXT:    blr x0
 ; CHECK-NEXT:    smstart za
@@ -59,14 +56,14 @@ define void @za_zt0_shared_caller_no_state_callee(ptr %callee) "aarch64_inout_za
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: za_zt0_shared_caller_no_state_callee:
 ; CHECK-NEWLOWERING:       // %bb.0:
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mov x29, sp
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #80
 ; CHECK-NEWLOWERING-NEXT:    rdsvl x8, #1
@@ -89,7 +86,7 @@ define void @za_zt0_shared_caller_no_state_callee(ptr %callee) "aarch64_inout_za
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    ldr zt0, [x19]
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
   call void %callee();
@@ -388,4 +385,62 @@ define void @shared_za_new_zt0(ptr %callee) "aarch64_inout_za" "aarch64_new_zt0"
 ; CHECK-COMMON-NEXT:    ret
   call void %callee() "aarch64_inout_za" "aarch64_in_zt0";
   ret void;
+}
+
+
+define void @zt0_multiple_private_za_calls(ptr %callee) "aarch64_in_zt0" nounwind {
+; CHECK-COMMON-LABEL: zt0_multiple_private_za_calls:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sub sp, sp, #96
+; CHECK-COMMON-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    mov x20, sp
+; CHECK-COMMON-NEXT:    mov x19, x0
+; CHECK-COMMON-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-COMMON-NEXT:    str zt0, [x20]
+; CHECK-COMMON-NEXT:    smstop za
+; CHECK-COMMON-NEXT:    blr x0
+; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    ldr zt0, [x20]
+; CHECK-COMMON-NEXT:    str zt0, [x20]
+; CHECK-COMMON-NEXT:    smstop za
+; CHECK-COMMON-NEXT:    blr x19
+; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    ldr zt0, [x20]
+; CHECK-COMMON-NEXT:    str zt0, [x20]
+; CHECK-COMMON-NEXT:    smstop za
+; CHECK-COMMON-NEXT:    blr x19
+; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    ldr zt0, [x20]
+; CHECK-COMMON-NEXT:    str zt0, [x20]
+; CHECK-COMMON-NEXT:    smstop za
+; CHECK-COMMON-NEXT:    blr x19
+; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    ldr zt0, [x20]
+; CHECK-COMMON-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-COMMON-NEXT:    add sp, sp, #96
+; CHECK-COMMON-NEXT:    ret
+  call void %callee()
+  call void %callee()
+  call void %callee()
+  call void %callee()
+  ret void
+}
+
+define void @disable_tailcallopt(ptr %callee) "aarch64_inout_zt0" nounwind {
+; CHECK-COMMON-LABEL: disable_tailcallopt:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sub sp, sp, #80
+; CHECK-COMMON-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    mov x19, sp
+; CHECK-COMMON-NEXT:    str zt0, [x19]
+; CHECK-COMMON-NEXT:    smstop za
+; CHECK-COMMON-NEXT:    blr x0
+; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    ldr zt0, [x19]
+; CHECK-COMMON-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    add sp, sp, #80
+; CHECK-COMMON-NEXT:    ret
+  tail call void %callee()
+  ret void
 }

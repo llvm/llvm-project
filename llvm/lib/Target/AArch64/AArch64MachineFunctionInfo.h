@@ -13,8 +13,8 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -74,13 +74,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Amount of stack frame size, not including callee-saved registers.
   uint64_t LocalStackSize = 0;
 
-  /// The start and end frame indices for the SVE callee saves.
-  int MinSVECSFrameIndex = 0;
-  int MaxSVECSFrameIndex = 0;
-
   /// Amount of stack frame size used for saving callee-saved registers.
   unsigned CalleeSavedStackSize = 0;
-  unsigned SVECalleeSavedStackSize = 0;
+  unsigned ZPRCalleeSavedStackSize = 0;
+  unsigned PPRCalleeSavedStackSize = 0;
   bool HasCalleeSavedStackSize = false;
   bool HasSVECalleeSavedStackSize = false;
 
@@ -137,9 +134,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SVE stack size (for predicates and data vectors) are maintained here
   /// rather than in FrameInfo, as the placement and Stack IDs are target
   /// specific.
-  uint64_t StackSizeSVE = 0;
+  uint64_t StackSizeZPR = 0;
+  uint64_t StackSizePPR = 0;
 
-  /// HasCalculatedStackSizeSVE indicates whether StackSizeSVE is valid.
+  /// Are SVE objects (vectors and predicates) split into separate regions on
+  /// the stack.
+  bool SplitSVEObjects = false;
+
+  /// HasCalculatedStackSizeSVE indicates whether StackSizeZPR/PPR is valid.
   bool HasCalculatedStackSizeSVE = false;
 
   /// Has a value when it is known whether or not the function uses a
@@ -228,15 +230,19 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
-  // true if PStateSMReg is used.
-  bool PStateSMRegUsed = false;
-
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
 
   // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
   SMEAttrs SMEFnAttrs;
+
+  // Holds the TPIDR2 block if allocated early (for Windows/stack probes
+  // support).
+  Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
+
+  // Holds the spill slot for ZT0.
+  int ZT0SpillSlotIndex = std::numeric_limits<int>::max();
 
   // Note: The following properties are only used for the old SME ABI lowering:
   /// The frame-index for the TPIDR2 object used for lazy saves.
@@ -256,6 +262,23 @@ public:
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
 
+  void setEarlyAllocSMESaveBuffer(Register Ptr) {
+    EarlyAllocSMESaveBuffer = Ptr;
+  }
+
+  Register getEarlyAllocSMESaveBuffer() const {
+    return EarlyAllocSMESaveBuffer;
+  }
+
+  void setZT0SpillSlotIndex(int FI) { ZT0SpillSlotIndex = FI; }
+  int getZT0SpillSlotIndex() const {
+    assert(hasZT0SpillSlotIndex() && "ZT0 spill slot index not set!");
+    return ZT0SpillSlotIndex;
+  }
+  bool hasZT0SpillSlotIndex() const {
+    return ZT0SpillSlotIndex != std::numeric_limits<int>::max();
+  }
+
   // Old SME ABI lowering state getters/setters:
   Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
   void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
@@ -272,9 +295,6 @@ public:
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
-
-  unsigned isPStateSMRegUsed() const { return PStateSMRegUsed; };
-  void setPStateSMRegUsed(bool Used = true) { PStateSMRegUsed = Used; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
@@ -294,16 +314,27 @@ public:
     TailCallReservedStack = bytes;
   }
 
-  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
-
-  void setStackSizeSVE(uint64_t S) {
+  void setStackSizeSVE(uint64_t ZPR, uint64_t PPR) {
+    assert(isAligned(Align(16), ZPR) && isAligned(Align(16), PPR) &&
+           "expected SVE stack sizes to be aligned to 16-bytes");
+    StackSizeZPR = ZPR;
+    StackSizePPR = PPR;
     HasCalculatedStackSizeSVE = true;
-    StackSizeSVE = S;
   }
 
-  uint64_t getStackSizeSVE() const {
+  uint64_t getStackSizeZPR() const {
     assert(hasCalculatedStackSizeSVE());
-    return StackSizeSVE;
+    return StackSizeZPR;
+  }
+  uint64_t getStackSizePPR() const {
+    assert(hasCalculatedStackSizeSVE());
+    return StackSizePPR;
+  }
+
+  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
+
+  bool hasSVEStackSize() const {
+    return getStackSizeZPR() > 0 || getStackSizePPR() > 0;
   }
 
   bool hasStackFrame() const { return HasStackFrame; }
@@ -311,7 +342,6 @@ public:
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
-
   bool hasCalleeSaveStackFreeSpace() const {
     return CalleeSaveStackHasFreeSpace;
   }
@@ -396,27 +426,37 @@ public:
   }
 
   // Saves the CalleeSavedStackSize for SVE vectors in 'scalable bytes'
-  void setSVECalleeSavedStackSize(unsigned Size) {
-    SVECalleeSavedStackSize = Size;
+  void setSVECalleeSavedStackSize(unsigned ZPR, unsigned PPR) {
+    assert(isAligned(Align(16), ZPR) && isAligned(Align(16), PPR) &&
+           "expected SVE callee-save sizes to be aligned to 16-bytes");
+    ZPRCalleeSavedStackSize = ZPR;
+    PPRCalleeSavedStackSize = PPR;
     HasSVECalleeSavedStackSize = true;
   }
-  unsigned getSVECalleeSavedStackSize() const {
+  unsigned getZPRCalleeSavedStackSize() const {
     assert(HasSVECalleeSavedStackSize &&
-           "SVECalleeSavedStackSize has not been calculated");
-    return SVECalleeSavedStackSize;
+           "ZPRCalleeSavedStackSize has not been calculated");
+    return ZPRCalleeSavedStackSize;
+  }
+  unsigned getPPRCalleeSavedStackSize() const {
+    assert(HasSVECalleeSavedStackSize &&
+           "PPRCalleeSavedStackSize has not been calculated");
+    return PPRCalleeSavedStackSize;
   }
 
-  void setMinMaxSVECSFrameIndex(int Min, int Max) {
-    MinSVECSFrameIndex = Min;
-    MaxSVECSFrameIndex = Max;
+  unsigned getSVECalleeSavedStackSize() const {
+    assert(!hasSplitSVEObjects() &&
+           "ZPRs and PPRs are split. Use get[ZPR|PPR]CalleeSavedStackSize()");
+    return getZPRCalleeSavedStackSize() + getPPRCalleeSavedStackSize();
   }
-
-  int getMinSVECSFrameIndex() const { return MinSVECSFrameIndex; }
-  int getMaxSVECSFrameIndex() const { return MaxSVECSFrameIndex; }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {
     return NumLocalDynamicTLSAccesses;
+  }
+
+  bool isStackHazardIncludedInCalleeSaveArea() const {
+    return hasStackHazardSlotIndex() && !hasSplitSVEObjects();
   }
 
   std::optional<bool> hasRedZone() const { return HasRedZone; }
@@ -452,6 +492,15 @@ public:
   void setStackHazardCSRSlotIndex(int Index) {
     assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
     StackHazardCSRSlotIndex = Index;
+  }
+
+  bool hasSplitSVEObjects() const { return SplitSVEObjects; }
+  void setSplitSVEObjects(bool s) { SplitSVEObjects = s; }
+
+  bool hasSVE_AAPCS(const MachineFunction &MF) const {
+    return hasSplitSVEObjects() || isSVECC() ||
+           MF.getFunction().getCallingConv() ==
+               CallingConv::AArch64_SVE_VectorCall;
   }
 
   SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
@@ -593,19 +642,25 @@ private:
 namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<bool> HasRedZone;
-  std::optional<uint64_t> StackSizeSVE;
+  std::optional<uint64_t> StackSizeZPR;
+  std::optional<uint64_t> StackSizePPR;
+  std::optional<bool> HasStackFrame;
+  std::optional<bool> HasStreamingModeChanges;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~AArch64FunctionInfo() = default;
+  ~AArch64FunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<AArch64FunctionInfo> {
   static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
     YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
-    YamlIO.mapOptional("stackSizeSVE", MFI.StackSizeSVE);
+    YamlIO.mapOptional("stackSizeZPR", MFI.StackSizeZPR);
+    YamlIO.mapOptional("stackSizePPR", MFI.StackSizePPR);
+    YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
+    YamlIO.mapOptional("hasStreamingModeChanges", MFI.HasStreamingModeChanges);
   }
 };
 

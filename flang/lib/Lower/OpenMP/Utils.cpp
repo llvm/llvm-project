@@ -13,20 +13,50 @@
 #include "Utils.h"
 
 #include "ClauseFinder.h"
-#include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
+#include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
+#include <flang/Lower/Support/PrivateReductionUtils.h>
+#include <flang/Optimizer/Builder/BoxValue.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
+#include <flang/Optimizer/HLFIR/HLFIROps.h>
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
+#include <flang/Semantics/type.h>
+#include <flang/Utils/OpenMP.h>
+#include <llvm/ADT/SmallPtrSet.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
 
+#include <functional>
 #include <iterator>
+
+template <typename T>
+Fortran::semantics::MaybeIntExpr
+EvaluateIntExpr(Fortran::semantics::SemanticsContext &context, const T &expr) {
+  if (Fortran::semantics::MaybeExpr maybeExpr{
+          Fold(context.foldingContext(), AnalyzeExpr(context, expr))}) {
+    if (auto *intExpr{
+            Fortran::evaluate::UnwrapExpr<Fortran::semantics::SomeIntExpr>(
+                *maybeExpr)}) {
+      return std::move(*intExpr);
+    }
+  }
+  return std::nullopt;
+}
+
+template <typename T>
+std::optional<std::int64_t>
+EvaluateInt64(Fortran::semantics::SemanticsContext &context, const T &expr) {
+  return Fortran::evaluate::ToInt64(EvaluateIntExpr(context, expr));
+}
 
 llvm::cl::opt<bool> treatIndexAsSection(
     "openmp-treat-index-as-section",
@@ -36,6 +66,142 @@ llvm::cl::opt<bool> treatIndexAsSection(
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
+    lower::AbstractConverter &converter, mlir::Location loc,
+    fir::RecordType recordType, llvm::StringRef mapperNameStr) {
+  if (mapperNameStr.empty())
+    return {};
+
+  if (converter.getModuleOp().lookupSymbol(mapperNameStr))
+    return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                        mapperNameStr);
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+
+  firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
+  auto declMapperOp = mlir::omp::DeclareMapperOp::create(
+      firOpBuilder, loc, mapperNameStr, recordType);
+  auto &region = declMapperOp.getRegion();
+  firOpBuilder.createBlock(&region);
+  auto mapperArg = region.addArgument(firOpBuilder.getRefType(recordType), loc);
+
+  auto declareOp = hlfir::DeclareOp::create(firOpBuilder, loc, mapperArg,
+                                            /*uniq_name=*/"");
+
+  const auto genBoundsOps = [&](mlir::Value mapVal,
+                                llvm::SmallVectorImpl<mlir::Value> &bounds) {
+    fir::ExtendedValue extVal =
+        hlfir::translateToExtendedValue(mapVal.getLoc(), firOpBuilder,
+                                        hlfir::Entity{mapVal},
+                                        /*contiguousHint=*/true)
+            .first;
+    fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(
+        firOpBuilder, mapVal, /*isOptional=*/false, mapVal.getLoc());
+    bounds = fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                                mlir::omp::MapBoundsType>(
+        firOpBuilder, info, extVal,
+        /*dataExvIsAssumedSize=*/false, mapVal.getLoc());
+  };
+
+  const auto getFieldRef = [&](mlir::Value rec, llvm::StringRef fieldName,
+                               mlir::Type fieldTy, mlir::Type recType) {
+    mlir::Value field = fir::FieldIndexOp::create(
+        firOpBuilder, loc, fir::FieldType::get(recType.getContext()), fieldName,
+        recType, fir::getTypeParams(rec));
+    return fir::CoordinateOp::create(
+        firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
+  };
+
+  llvm::SmallVector<mlir::Value> clauseMapVars;
+  llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
+  llvm::SmallVector<mlir::Value> memberMapOps;
+
+  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::to |
+                                      mlir::omp::ClauseMapFlags::from |
+                                      mlir::omp::ClauseMapFlags::implicit;
+  mlir::omp::VariableCaptureKind captureKind =
+      mlir::omp::VariableCaptureKind::ByRef;
+
+  for (const auto &entry : llvm::enumerate(recordType.getTypeList())) {
+    const auto &memberName = entry.value().first;
+    const auto &memberType = entry.value().second;
+    mlir::FlatSymbolRefAttr mapperId;
+    if (auto recType = mlir::dyn_cast<fir::RecordType>(
+            fir::getFortranElementType(memberType))) {
+      std::string mapperIdName =
+          recType.getName().str() + llvm::omp::OmpDefaultMapperName;
+      if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+        mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+      else if (auto *memberSym =
+                   converter.getCurrentScope().FindSymbol(memberName))
+        mapperIdName = converter.mangleName(mapperIdName, memberSym->owner());
+
+      mapperId = getOrGenImplicitDefaultDeclareMapper(converter, loc, recType,
+                                                      mapperIdName);
+    }
+
+    auto ref =
+        getFieldRef(declareOp.getBase(), memberName, memberType, recordType);
+    llvm::SmallVector<mlir::Value> bounds;
+    genBoundsOps(ref, bounds);
+    mlir::Value mapOp = Fortran::utils::openmp::createMapInfoOp(
+        firOpBuilder, loc, ref, /*varPtrPtr=*/mlir::Value{}, /*name=*/"",
+        bounds,
+        /*members=*/{},
+        /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind, ref.getType(),
+        /*partialMap=*/false, mapperId);
+    memberMapOps.emplace_back(mapOp);
+    memberPlacementIndices.emplace_back(
+        llvm::SmallVector<int64_t>{(int64_t)entry.index()});
+  }
+
+  llvm::SmallVector<mlir::Value> bounds;
+  genBoundsOps(declareOp.getOriginalBase(), bounds);
+  mlir::omp::ClauseMapFlags parentMapFlag = mlir::omp::ClauseMapFlags::implicit;
+  mlir::omp::MapInfoOp mapOp = Fortran::utils::openmp::createMapInfoOp(
+      firOpBuilder, loc, declareOp.getOriginalBase(),
+      /*varPtrPtr=*/mlir::Value(), /*name=*/"", bounds, memberMapOps,
+      firOpBuilder.create2DI64ArrayAttr(memberPlacementIndices), parentMapFlag,
+      captureKind, declareOp.getType(0),
+      /*partialMap=*/true);
+
+  clauseMapVars.emplace_back(mapOp);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseMapVars);
+  return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                      mapperNameStr);
+}
+
+bool requiresImplicitDefaultDeclareMapper(
+    const semantics::DerivedTypeSpec &typeSpec) {
+  // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have implicit
+  // default mappers available so that OpenMP offloading can correctly map them.
+  if (semantics::IsIsoCType(&typeSpec))
+    return true;
+
+  llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
+
+  std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
+      [&](const semantics::DerivedTypeSpec &spec) -> bool {
+    if (!visited.insert(&spec).second)
+      return false;
+
+    semantics::DirectComponentIterator directComponents{spec};
+    for (const semantics::Symbol &component : directComponents) {
+      if (semantics::IsAllocatableOrPointer(component))
+        return true;
+
+      if (const semantics::DeclTypeSpec *declType = component.GetType())
+        if (const auto *nested = declType->AsDerived())
+          if (requiresMapper(*nested))
+            return true;
+    }
+    return false;
+  };
+
+  return requiresMapper(typeSpec);
+}
 
 int64_t getCollapseValue(const List<Clause> &clauses) {
   auto iter = llvm::find_if(clauses, [](const Clause &clause) {
@@ -108,38 +274,6 @@ void gatherFuncAndVarSyms(
     symbolAndClause.emplace_back(clause, *object.sym(), automap);
 }
 
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr,
-                llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
-                llvm::ArrayRef<mlir::Value> members,
-                mlir::ArrayAttr membersIndex, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
-  if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
-    baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
-    retTy = baseAddr.getType();
-  }
-
-  mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
-
-  // For types with unknown extents such as <2x?xi32> we discard the incomplete
-  // type info and only retain the base type. The correct dimensions are later
-  // recovered through the bounds info.
-  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
-    if (seqType.hasDynamicExtents())
-      varType = mlir::TypeAttr::get(seqType.getEleTy());
-
-  mlir::omp::MapInfoOp op = mlir::omp::MapInfoOp::create(
-      builder, loc, retTy, baseAddr, varType,
-      builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-      varPtrPtr, members, membersIndex, bounds, mapperId,
-      builder.getStringAttr(name), builder.getBoolAttr(partialMap));
-  return op;
-}
-
 // This function gathers the individual omp::Object's that make up a
 // larger omp::Object symbol.
 //
@@ -189,16 +323,11 @@ static void generateArrayIndices(lower::AbstractConverter &converter,
   for (auto v : arr->subscript()) {
     if (std::holds_alternative<Triplet>(v.u))
       TODO(clauseLocation, "Triplet indexing in map clause is unsupported");
-
     auto expr = std::get<Fortran::evaluate::IndirectSubscriptIntegerExpr>(v.u);
     mlir::Value subscript =
         fir::getBase(converter.genExprValue(toEvExpr(expr.value()), stmtCtx));
-    mlir::Value one = firOpBuilder.createIntegerConstant(
-        clauseLocation, firOpBuilder.getIndexType(), 1);
-    subscript = firOpBuilder.createConvert(
-        clauseLocation, firOpBuilder.getIndexType(), subscript);
-    indices.push_back(mlir::arith::SubIOp::create(firOpBuilder, clauseLocation,
-                                                  subscript, one));
+    indices.push_back(firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getIndexType(), subscript));
   }
 }
 
@@ -286,7 +415,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
     omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
-    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits) {
+    mlir::omp::ClauseMapFlags mapTypeBits) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   /// Checks if an omp::Object is an array expression with a subscript, e.g.
@@ -331,10 +460,42 @@ mlir::Value createParentSymAndGenIntermediateMaps(
                              subscriptIndices, objectList[i]);
         assert(!subscriptIndices.empty() &&
                "missing expected indices for map clause");
-        curValue = fir::CoordinateOp::create(
-            firOpBuilder, clauseLocation,
-            firOpBuilder.getRefType(arrType.getEleTy()), curValue,
-            subscriptIndices);
+        if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(curValue.getType())) {
+          // To accommodate indexing into box types of all dimensions including
+          // negative dimensions we have to take into consideration the lower
+          // bounds and extents of the data (stored in the box) and convey it
+          // to the ArrayCoorOp so that it can appropriately access the element
+          // utilising the subscript we provide and the runtime sizes stored in
+          // the Box. To do so we need to generate a ShapeShiftOp which combines
+          // both the lb (ShiftOp) and extent (ShapeOp) of the Box, giving the
+          // ArrayCoorOp the spatial information it needs to calculate the
+          // underlying address.
+          mlir::Value shapeShift = Fortran::lower::getShapeShift(
+              firOpBuilder, clauseLocation, curValue);
+          auto addrOp =
+              fir::BoxAddrOp::create(firOpBuilder, clauseLocation, curValue);
+          curValue = fir::ArrayCoorOp::create(
+              firOpBuilder, clauseLocation,
+              firOpBuilder.getRefType(arrType.getEleTy()), addrOp, shapeShift,
+              /*slice=*/mlir::Value{}, subscriptIndices,
+              /*typeparms=*/mlir::ValueRange{});
+        } else {
+          // We're required to negate by one in the non-Box case as I believe
+          // we do not have the shape generated from the dimensions to help
+          // adjust the indexing.
+          // TODO/FIXME: This may need adjusted to support bounds of unusual
+          // dimensions, if that's the case then it is likely best to fold this
+          // branch into the above.
+          mlir::Value one = firOpBuilder.createIntegerConstant(
+              clauseLocation, firOpBuilder.getIndexType(), 1);
+          for (auto &v : subscriptIndices)
+            v = mlir::arith::SubIOp::create(firOpBuilder, clauseLocation, v,
+                                            one);
+          curValue = fir::CoordinateOp::create(
+              firOpBuilder, clauseLocation,
+              firOpBuilder.getRefType(arrType.getEleTy()), curValue,
+              subscriptIndices);
+        }
       }
     }
 
@@ -395,23 +556,19 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         // be safer to just pass OMP_MAP_NONE as the map type, but we may still
         // need some of the other map types the mapped member utilises, so for
         // now it's good to keep an eye on this.
-        llvm::omp::OpenMPOffloadMappingFlags interimMapType = mapTypeBits;
-        interimMapType &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-        interimMapType &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-        interimMapType &=
-            ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+        mlir::omp::ClauseMapFlags interimMapType = mapTypeBits;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::to;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::from;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
-        mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+        mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
             firOpBuilder, clauseLocation, curValue,
             /*varPtrPtr=*/mlir::Value{}, asFortran,
             /*bounds=*/interimBounds,
             /*members=*/{},
-            /*membersIndex=*/mlir::ArrayAttr{},
-            static_cast<
-                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                interimMapType),
+            /*membersIndex=*/mlir::ArrayAttr{}, interimMapType,
             mlir::omp::VariableCaptureKind::ByRef, curValue.getType());
 
         parentMemberIndices.memberPlacementIndices.push_back(interimIndices);
@@ -424,7 +581,6 @@ mlir::Value createParentSymAndGenIntermediateMaps(
       currentIndicesIdx++;
     }
   }
-
   return curValue;
 }
 
@@ -523,6 +679,12 @@ void insertChildMapInfoIntoParent(
           mapOperands[std::distance(mapSyms.begin(), parentIter)]
               .getDefiningOp());
 
+      // Once explicit members are attached to a parent map, do not also invoke
+      // a declare mapper on it, otherwise the mapper would remap the same
+      // components leading to duplicate mappings at runtime.
+      if (!indices.second.memberMap.empty() && mapOp.getMapperIdAttr())
+        mapOp.setMapperIdAttr(nullptr);
+
       // NOTE: To maintain appropriate SSA ordering, we move the parent map
       // which will now have references to its children after the last
       // of its members to be generated. This is necessary when a user
@@ -545,7 +707,8 @@ void insertChildMapInfoIntoParent(
       // it allows this to work with enter and exit without causing MLIR
       // verification issues. The more appropriate thing may be to take
       // the "main" map type clause from the directive being used.
-      uint64_t mapType = indices.second.memberMap[0].getMapType();
+      mlir::omp::ClauseMapFlags mapType =
+          indices.second.memberMap[0].getMapType();
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());
@@ -563,7 +726,7 @@ void insertChildMapInfoIntoParent(
               converter.getCurrentLocation(), asFortran, bounds,
               treatIndexAsSection);
 
-      mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+      mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
           firOpBuilder, info.rawInput.getLoc(), info.rawInput,
           /*varPtrPtr=*/mlir::Value(), asFortran.str(), bounds, members,
           firOpBuilder.create2DI64ArrayAttr(
@@ -608,13 +771,51 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
   }
 }
 
-bool collectLoopRelatedInfo(
+// Helper function that finds the sizes clause in a inner OMPD_tile directive
+// and passes the sizes clause to the callback function if found.
+static void processTileSizesFromOpenMPConstruct(
+    const parser::OpenMPConstruct *ompCons,
+    std::function<void(const parser::OmpClause::Sizes *)> processFun) {
+  if (!ompCons)
+    return;
+  if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
+    if (auto *innerConstruct = ompLoop->GetNestedConstruct()) {
+      const parser::OmpDirectiveSpecification &innerBeginSpec =
+          innerConstruct->BeginDir();
+      if (innerBeginSpec.DirId() == llvm::omp::Directive::OMPD_tile) {
+        // Get the size values from parse tree and convert to a vector.
+        for (const auto &clause : innerBeginSpec.Clauses().v) {
+          if (const auto tclause{
+                  std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
+            processFun(tclause);
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+/// Populates the sizes vector with values if the given OpenMPConstruct
+/// contains a loop construct with an inner tiling construct.
+void collectTileSizesFromOpenMPConstruct(
+    const parser::OpenMPConstruct *ompCons,
+    llvm::SmallVectorImpl<int64_t> &tileSizes,
+    Fortran::semantics::SemanticsContext &semaCtx) {
+  processTileSizesFromOpenMPConstruct(
+      ompCons, [&](const parser::OmpClause::Sizes *tclause) {
+        for (auto &tval : tclause->v)
+          if (const auto v{EvaluateInt64(semaCtx, tval)})
+            tileSizes.push_back(*v);
+      });
+}
+
+int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
-  bool found = false;
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  int64_t numCollapse = 1;
 
   // Collect the loops to collapse.
   lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
@@ -626,9 +827,38 @@ bool collectLoopRelatedInfo(
   if (auto *clause =
           ClauseFinder::findUniqueClause<omp::clause::Collapse>(clauses)) {
     collapseValue = evaluate::ToInt64(clause->v).value();
-    found = true;
+    numCollapse = collapseValue;
   }
 
+  collectLoopRelatedInfo(converter, currentLocation, eval, numCollapse, result,
+                         iv);
+  return numCollapse;
+}
+
+void collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, int64_t numCollapse,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // Collect the loops to collapse.
+  lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
+  if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
+    TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
+  }
+
+  // Collect sizes from tile directive if present.
+  std::int64_t sizesLengthValue = 0l;
+  if (auto *ompCons{eval.getIf<parser::OpenMPConstruct>()}) {
+    processTileSizesFromOpenMPConstruct(
+        ompCons, [&](const parser::OmpClause::Sizes *tclause) {
+          sizesLengthValue = tclause->v.size();
+        });
+  }
+
+  std::int64_t collapseValue = std::max(numCollapse, sizesLengthValue);
   std::size_t loopVarTypeSize = 0;
   do {
     lower::pft::Evaluation *doLoop =
@@ -661,8 +891,6 @@ bool collectLoopRelatedInfo(
   } while (collapseValue > 0);
 
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
-
-  return found;
 }
 
 } // namespace omp

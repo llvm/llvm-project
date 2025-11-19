@@ -44,6 +44,34 @@ adds `FOO=1` and `bar` to the environment:
 }
 ```
 
+#### Launch in integrated terminal
+
+This will launch process in IDE's integrated terminal.
+
+```javascript
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug",
+  "program": "/tmp/a.out",
+  "console": "integratedTerminal"
+}
+```
+
+#### Setup IO redirection
+
+This will launch process and connect `stdin` to `in.txt`, both of `stdout` and `stderr` to `out.txt`.
+
+```javascript
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug",
+  "program": "/tmp/a.out",
+  "stdio": ["in.txt", "out.txt"]
+}
+```
+
 ### Attaching to a process
 
 When attaching to a process using LLDB, you can attach in multiple ways:
@@ -237,6 +265,7 @@ contain the following key/value pairs:
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
 | **runInTerminal** (deprecated)    | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
 | **console**                       | string      |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.
+| **stdio**                         | [string]    |     | The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.). Supported from lldb-dap 22.0 version.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain
@@ -275,9 +304,9 @@ User settings can set the default value for the following supported
 | **exitCommands**                  | [string] |  `[]`   |
 | **terminateCommands**             | [string] |  `[]`   |
 
-To adjust your settings, open the Settings editor via the 
-`File > Preferences > Settings` menu or press `Ctrl+`, on Windows/Linux and
-`Cmd+`, on Mac.
+To adjust your settings, open the Settings editor
+via the `File > Preferences > Settings` menu or press `Ctrl+,` on Windows/Linux,
+and the `VS Code > Settings... > Settings` menu or press `Cmd+,` on Mac.
 
 ## Debug Console
 
@@ -371,6 +400,19 @@ For example you can use a launch configuration hook to trigger custom events lik
 for more details on Debug Adapter Protocol events and the VS Code
 [debug.onDidReceiveDebugSessionCustomEvent](https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent)
 API for handling a custom event from an extension.
+
+## Server Mode
+
+lldb-dap supports a server mode that can be enabled via the following user settings.
+
+| Setting                    | Type     | Default |           |
+| -------------------------- | -------- | :-----: | --------- |
+| **Server Mode**            | string   | `False` | Run lldb-dap in server mode. When enabled, lldb-dap will start a background server that will be reused between debug sessions. This allows caching of debug symbols between sessions and improves launch performance.
+| **Connection Timeout**     | number   |   `0`   | When running lldb-dap in server mode, the time in seconds to wait for new connections after the server has started and after all clients have disconnected. Each new connection will reset the timeout. When the timeout is reached, the server will be closed and the process will exit. Specifying non-positive values will cause the server to wait for new connections indefinitely.
+
+To adjust your settings, open the Settings editor
+via the `File > Preferences > Settings` menu or press `Ctrl+,` on Windows/Linux,
+and the `VS Code > Settings... > Settings` menu or press `Cmd+,` on Mac.
 
 ## Contributing
 

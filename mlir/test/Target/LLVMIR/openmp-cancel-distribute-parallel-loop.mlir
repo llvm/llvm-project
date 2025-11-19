@@ -32,7 +32,7 @@ llvm.func @cancel_distribute_parallel_do(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:       omp.region.cont6:
 // CHECK:         br label %omp.region.cont4
 // CHECK:       omp.region.cont4:
-// CHECK:         br label %distribute.exit.exitStub
+// CHECK:         br label %omp.par.exit.exitStub
 // CHECK:       omp_loop.body:
 // CHECK:         %[[VAL_111:.*]] = add i32 %{{.*}}, %{{.*}}
 // CHECK:         %[[VAL_112:.*]] = mul i32 %[[VAL_111]], %{{.*}}
@@ -52,6 +52,6 @@ llvm.func @cancel_distribute_parallel_do(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:       omp_loop.inc:
 // CHECK:         %[[VAL_100:.*]] = add nuw i32 %{{.*}}, 1
 // CHECK:         br label %omp_loop.header
-// CHECK:       distribute.exit.exitStub:
+// CHECK:       omp.par.exit.exitStub:
 // CHECK:         ret void
 

@@ -1,6 +1,11 @@
 set(files
-  orc-rt-executor.cpp
+  AllocAction.cpp
+  ResourceManager.cpp
   RTTI.cpp
+  Session.cpp
+  SimpleNativeMemoryMap.cpp
+  TaskDispatcher.cpp
+  ThreadPoolTaskDispatcher.cpp
   )
 
 add_library(orc-rt-executor STATIC ${files})

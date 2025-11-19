@@ -169,7 +169,7 @@ public:
 
   virtual bool IsAuthenticated() = 0;
 
-  bool CanSetBreakpoint ();
+  bool CanSetBreakpoint();
 
   virtual size_t Decode(const Disassembler &disassembler,
                         const DataExtractor &data,
@@ -282,7 +282,7 @@ std::function<bool(const Instruction::Operand &)> FetchImmOp(int64_t &imm);
 
 std::function<bool(const Instruction::Operand &)>
 MatchOpType(Instruction::Operand::Type type);
-}
+} // namespace OperandMatchers
 
 class InstructionList {
 public:
@@ -296,6 +296,10 @@ public:
   uint32_t GetMaxOpcocdeByteSize() const;
 
   lldb::InstructionSP GetInstructionAtIndex(size_t idx) const;
+
+  llvm::ArrayRef<lldb::InstructionSP> Instructions() const {
+    return m_instructions;
+  }
 
   /// Get the instruction at the given address.
   ///
@@ -316,20 +320,19 @@ public:
   /// @param[in] ignore_calls
   ///     It true, then fine the first branch instruction that isn't
   ///     a function call (a branch that calls and returns to the next
-  ///     instruction). If false, find the instruction index of any 
+  ///     instruction). If false, find the instruction index of any
   ///     branch in the list.
-  ///     
+  ///
   /// @param[out] found_calls
-  ///     If non-null, this will be set to true if any calls were found in 
+  ///     If non-null, this will be set to true if any calls were found in
   ///     extending the range.
-  ///    
+  ///
   /// @return
   ///     The instruction index of the first branch that is at or past
-  ///     \a start. Returns UINT32_MAX if no matching branches are 
+  ///     \a start. Returns UINT32_MAX if no matching branches are
   ///     found.
   //------------------------------------------------------------------
-  uint32_t GetIndexOfNextBranchInstruction(uint32_t start,
-                                           bool ignore_calls,
+  uint32_t GetIndexOfNextBranchInstruction(uint32_t start, bool ignore_calls,
                                            bool *found_calls) const;
 
   uint32_t GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
@@ -399,6 +402,7 @@ public:
     eOptionMarkPCAddress =
         (1u << 3), // Mark the disassembly line the contains the PC
     eOptionShowControlFlowKind = (1u << 4),
+    eOptionVariableAnnotations = (1u << 5),
   };
 
   enum HexImmediateStyle {
@@ -564,6 +568,26 @@ private:
   // For Disassembler only
   Disassembler(const Disassembler &) = delete;
   const Disassembler &operator=(const Disassembler &) = delete;
+};
+
+/// Tracks live variable annotations across instructions and produces
+/// per-instruction "events" like `name = RDI` or `name = <undef>`.
+class VariableAnnotator {
+  struct VarState {
+    /// Display name.
+    std::string name;
+    /// Last printed location (empty means <undef>).
+    std::string last_loc;
+  };
+
+  // Live state from the previous instruction, keyed by Variable::GetID().
+  llvm::DenseMap<lldb::user_id_t, VarState> Live_;
+
+public:
+  /// Compute annotation strings for a single instruction and update `Live_`.
+  /// Returns only the events that should be printed *at this instruction*.
+  std::vector<std::string> annotate(Instruction &inst, Target &target,
+                                    const lldb::ModuleSP &module_sp);
 };
 
 } // namespace lldb_private

@@ -244,11 +244,8 @@ void getInterestingMemoryOperands(
       // Masked store has an initial operand for the value.
       unsigned OpOffset = IsWrite ? 1 : 0;
       Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
-      MaybeAlign Alignment = Align(1);
-      // Otherwise no alignment guarantees. We probably got Undef.
-      if (auto *Op = dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
-        Alignment = Op->getMaybeAlignValue();
-      Value *Mask = CI->getOperand(2 + OpOffset);
+      MaybeAlign Alignment = CI->getParamAlign(OpOffset);
+      Value *Mask = CI->getOperand(1 + OpOffset);
       Interesting.emplace_back(I, OpOffset, IsWrite, Ty, Alignment, Mask);
       break;
     }

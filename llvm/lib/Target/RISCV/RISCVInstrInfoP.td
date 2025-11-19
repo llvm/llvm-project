@@ -18,15 +18,15 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def simm10 : RISCVSImmOp<10>;
+def simm10 : RISCVSImmOp<10>, TImmLeaf<XLenVT, "return isInt<10>(Imm);">;
 
 def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
   let RenderMethod = "addSImm8UnsignedOperands";
 }
 
 // A 8-bit signed immediate allowing range [-128, 255]
-// but represented as [-128, 255].
-def simm8_unsigned : RISCVOp {
+// but represented as [-128, 127].
+def simm8_unsigned : RISCVOp, TImmLeaf<XLenVT, "return isInt<8>(Imm);"> {
   let ParserMatchClass = SImm8UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<8>";
@@ -98,6 +98,71 @@ class PLUI_i<bits<7> funct7, string opcodestr>
   let Inst{23-15} = imm10{9-1};
 }
 
+// Common base for widening Binary/Ternary ops
+class RVPWideningBase<bits<2> w, bit arith_shift, dag outs, dag ins,
+                      string opcodestr>
+  : RVInst<outs, ins, opcodestr, "$rd, $rs1, $rs2", [], InstFormatOther> {
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31}    = 0b0;
+  let Inst{26-25} = w;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b010;
+  let Inst{11-8}  = rd{4-1};
+  let Inst{7}     = arith_shift;
+  let Inst{6-0}   = OPC_OP_IMM_32.Value;
+}
+
+// Common base for narrowing ops
+class RVPNarrowingBase<bits<3> f, bit r, bits<4> funct4, dag outs, dag ins,
+                      string opcodestr, string argstr>
+  : RVInst<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31}    = 0b0;
+  let Inst{30-28} = f;
+  let Inst{27}    = r;
+  let Inst{19-16} = rs1{4-1};
+  let Inst{15-12} = funct4;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = OPC_OP_IMM_32.Value;
+}
+
+// Common base for pair ops (non-widening nor narrowing)
+class RVPPairBase<bits<3> f, bit r, bit direction, dag outs, dag ins,
+                  string opcodestr, string argstr>
+  : RVInst<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{30-28} = f;
+  let Inst{27}    = r;
+  let Inst{19-16} = rs1{4-1};
+  let Inst{15}    = direction;
+  let Inst{14-12} = 0b110;
+  let Inst{11-8}  = rd{4-1};
+  let Inst{7}     = 0b0;
+  let Inst{6-0}   = OPC_OP_IMM_32.Value;
+}
+
+// Common base for pair binary ops
+class RVPPairBinaryBase_rr<bits<3> f, bit r, bits<2> w, bit pack, bit direction,
+                           string opcodestr>
+    : RVPPairBase<f, r, direction, (outs GPRPairRV32:$rd),
+                  (ins GPRPairRV32:$rs1, GPRPairRV32:$rs2), opcodestr,
+                  "$rd, $rs1, $rs2"> {
+  bits<5> rs2;
+
+  let Inst{31}    = 0b1;
+  let Inst{26-25} = w;
+  let Inst{24-21} = rs2{4-1};
+  let Inst{20}    = pack;
+}
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPShift_ri<bits<3> f, bits<3> funct3, string opcodestr, Operand ImmType>
     : RVInstIBase<funct3, OPC_OP_IMM_32, (outs GPR:$rd),
@@ -141,10 +206,158 @@ class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPWideningShift_ri<bits<3> f, string opcodestr, Operand ImmType>
+    : RVInst<(outs GPRPairRV32:$rd), (ins GPR:$rs1, ImmType:$shamt), opcodestr,
+             "$rd, $rs1, $shamt", [], InstFormatOther> {
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31}    = 0b0;
+  let Inst{30-28} = f;
+  let Inst{27}    = 0b0;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b010;
+  let Inst{11-8}  = rd{4-1};
+  let Inst{7}     = 0b0;
+  let Inst{6-0}   = OPC_OP_IMM_32.Value;
+
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+class RVPWideningShiftW_ri<bits<3> f, string opcodestr>
+    : RVPWideningShift_ri<f, opcodestr, uimm6> {
+  bits<6> shamt;
+
+  let Inst{26} = 0b1;
+  let Inst{25-20} = shamt;
+}
+
+class RVPWideningShiftH_ri<bits<3> f, string opcodestr>
+    : RVPWideningShift_ri<f, opcodestr, uimm5> {
+  bits<5> shamt;
+
+  let Inst{26-25} = 0b01;
+  let Inst{24-20} = shamt;
+}
+
+class RVPWideningShiftB_ri<bits<3> f, string opcodestr>
+    : RVPWideningShift_ri<f, opcodestr, uimm4> {
+  bits<4> shamt;
+
+  let Inst{26-24} = 0b001;
+  let Inst{23-20} = shamt;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPNarrowingShift_ri<bits<3> f, string opcodestr, Operand ImmType>
+    : RVPNarrowingBase<f, 0b0, 0b1100, (outs GPR:$rd),
+                       (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
+                       "$rd, $rs1, $shamt">;
+
+class RVPNarrowingShiftW_ri<bits<3> f, string opcodestr>
+    : RVPNarrowingShift_ri<f, opcodestr, uimm6> {
+  bits<6> shamt;
+
+  let Inst{26} = 0b1;
+  let Inst{25-20} = shamt;
+}
+
+class RVPNarrowingShiftH_ri<bits<3> f, string opcodestr>
+    : RVPNarrowingShift_ri<f, opcodestr, uimm5> {
+  bits<5> shamt;
+
+  let Inst{26-25} = 0b01;
+  let Inst{24-20} = shamt;
+}
+
+class RVPNarrowingShiftB_ri<bits<3> f, string opcodestr>
+    : RVPNarrowingShift_ri<f, opcodestr, uimm4> {
+  bits<4> shamt;
+
+  let Inst{26-24} = 0b001;
+  let Inst{23-20} = shamt;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPPairShift_ri<bits<3> f, string opcodestr, Operand ImmType, 
+                      bit direction>
+    : RVPPairBase<f, 0b0, direction, (outs GPRPairRV32:$rd),
+                  (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
+                  "$rd, $rs1, $shamt"> {
+  let Inst{31}    = 0b0;
+}
+
+class RVPPairShiftW_ri<bits<3> f, string opcodestr, bit direction = 0b0>
+    : RVPPairShift_ri<f, opcodestr, uimm5, direction> {
+  bits<5> shamt;
+
+  let Inst{26-25} = 0b01;
+  let Inst{24-20} = shamt;
+}
+
+class RVPPairShiftH_ri<bits<3> f, string opcodestr, bit direction = 0b0>
+    : RVPPairShift_ri<f, opcodestr, uimm4, direction> {
+  bits<4> shamt;
+
+  let Inst{26-24} = 0b001;
+  let Inst{23-20} = shamt;
+}
+
+class RVPPairShiftB_ri<bits<3> f, string opcodestr, bit direction = 0b0>
+    : RVPPairShift_ri<f, opcodestr, uimm3, direction> {
+  bits<3> shamt;
+
+  let Inst{26-23} = 0b0001;
+  let Inst{22-20} = shamt;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPNarrowingShift_rr<bits<3> f, bits<2> w, string opcodestr>
+    : RVPNarrowingBase<f, 0b1, 0b1100, (outs GPR:$rd),
+                       (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
+                       "$rd, $rs1, $rs2"> {
+  bits<5> rs2;
+
+  let Inst{26-25} = w;
+  let Inst{24-20} = rs2;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPWideningShift_rr<bits<3> f, bits<2> w, string opcodestr>
+    : RVPWideningBase<w, 0b0, (outs GPRPairRV32:$rd), (ins GPR:$rs1, GPR:$rs2),
+                      opcodestr> {
+  let Inst{30-28} = f;
+  let Inst{27} = 0b1;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPPairShift_rr<bits<3> f, bits<2> w, string opcodestr,
+                      bit direction = 0b0>
+    : RVPPairBase<f, 0b1, direction, (outs GPRPairRV32:$rd),
+                  (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
+                  "$rd, $rs1, $rs2"> {
+  bits<5> rs2;
+
+  let Inst{26-25} = w;
+  let Inst{24-20} = rs2;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
     : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins GPR:$rs1),
                   opcodestr, "$rd, $rs1">  {
   let Inst{31-27} = 0b11100;
+  let Inst{26-25} = w;
+  let Inst{24-20} = uf;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPPairUnary_r<bits<2> w, bits<5> uf, string opcodestr>
+    : RVPPairBase<0b110, 0b0, 0b0, (outs GPRPairRV32:$rd),
+                  (ins GPRPairRV32:$rs1), opcodestr, "$rd, $rs1"> {
+  let Inst{31}    = 0b0;
   let Inst{26-25} = w;
   let Inst{24-20} = uf;
 }
@@ -169,6 +382,40 @@ class RVPBinary_rr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPWideningBinary_rr<bits<4> f, bits<2> w, string opcodestr>
+    : RVPWideningBase<w, 0b1, (outs GPRPairRV32:$rd), (ins GPR:$rs1, GPR:$rs2),
+                      opcodestr> {
+  let Inst{30-27} = f;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPNarrowingBinary_rr<bits<3> f, bits<2> w, string opcodestr>
+    : RVPNarrowingBase<f, 0b1, 0b0100, (outs GPR:$rd),
+                       (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
+                       "$rd, $rs1, $rs2"> {
+  bits<5> rs2;
+
+  let Inst{26-25} = w;
+  let Inst{24-20} = rs2;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPPairBinary_rr<bits<4> f, bits<2> w, string opcodestr>
+    : RVPPairBinaryBase_rr<f{3-1}, f{0}, w, 0b0, 0b0, opcodestr>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPPairBinaryShift_rr<bits<3> f, bits<2> w, string opcodestr>
+    : RVPPairBinaryBase_rr<f, 0b0, w, 0b1, 0b0, opcodestr>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPPairBinaryPack_rr<bits<3> f, bits<2> w, string opcodestr>
+    : RVPPairBinaryBase_rr<f, 0b0, w, 0b0, 0b1, opcodestr>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPPairBinaryExchanged_rr<bits<4> f, bits<2> w, string opcodestr>
+    : RVPPairBinaryBase_rr<f{3-1}, f{0}, w, 0b1, 0b1, opcodestr>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPTernary_rrr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
     : RVInstRBase<funct3, OPC_OP_32, (outs GPR:$rd_wb),
                   (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr,
@@ -176,6 +423,15 @@ class RVPTernary_rrr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
   let Inst{31} = 0b1;
   let Inst{30-27} = f;
   let Inst{26-25} = w;
+
+  let Constraints = "$rd = $rd_wb";
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPWideningTernary_rrr<bits<4> f, bits<2> w, string opcodestr>
+    : RVPWideningBase<w, 0b1, (outs GPRPairRV32:$rd_wb),
+                     (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr> {
+  let Inst{30-27} = f;
 
   let Constraints = "$rd = $rd_wb";
 }
@@ -889,3 +1145,423 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{23-15} = imm10{9-1};
   }
 }
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  def PWSLLI_B     : RVPWideningShiftB_ri<0b000, "pwslli.b">;
+  def PWSLLI_H     : RVPWideningShiftH_ri<0b000, "pwslli.h">;
+  def WSLLI        : RVPWideningShiftW_ri<0b000, "wslli">;
+
+  def PWSLAI_B     : RVPWideningShiftB_ri<0b100, "pwslai.b">;
+  def PWSLAI_H     : RVPWideningShiftH_ri<0b100, "pwslai.h">;
+  def WSLAI        : RVPWideningShiftW_ri<0b100, "wslai">;
+
+  def PWSLL_BS     : RVPWideningShift_rr<0b000, 0b00, "pwsll.bs">;
+  def PWSLL_HS     : RVPWideningShift_rr<0b000, 0b01, "pwsll.hs">;
+  def WSLL         : RVPWideningShift_rr<0b000, 0b11, "wsll">;
+
+  def PWSLA_BS     : RVPWideningShift_rr<0b100, 0b00, "pwsla.bs">;
+  def PWSLA_HS     : RVPWideningShift_rr<0b100, 0b01, "pwsla.hs">;
+  def WSLA         : RVPWideningShift_rr<0b100, 0b11, "wsla">;
+
+  def WZIP8P       : RVPWideningShift_rr<0b111, 0b00, "wzip8p">;
+  def WZIP16P      : RVPWideningShift_rr<0b111, 0b01, "wzip16p">;
+
+  def PWADD_H      : RVPWideningBinary_rr<0b0000, 0b00, "pwadd.h">;
+  def WADD         : RVPWideningBinary_rr<0b0000, 0b01, "wadd">;
+  def PWADD_B      : RVPWideningBinary_rr<0b0000, 0b10, "pwadd.b">;
+  def PM2WADD_H    : RVPWideningBinary_rr<0b0000, 0b11, "pm2wadd.h">;
+
+  def PWADDA_H     : RVPWideningTernary_rrr<0b0001, 0b00, "pwadda.h">;
+  def WADDA        : RVPWideningTernary_rrr<0b0001, 0b01, "wadda">;
+  def PWADDA_B     : RVPWideningTernary_rrr<0b0001, 0b10, "pwadda.b">;
+  def PM2WADDA_H   : RVPWideningTernary_rrr<0b0001, 0b11, "pm2wadda.h">;
+
+  def PWADDU_H     : RVPWideningBinary_rr<0b0010, 0b00, "pwaddu.h">;
+  def WADDU        : RVPWideningBinary_rr<0b0010, 0b01, "waddu">;
+  def PWADDU_B     : RVPWideningBinary_rr<0b0010, 0b10, "pwaddu.b">;
+  def PM2WADD_HX   : RVPWideningBinary_rr<0b0010, 0b11, "pm2wadd.hx">;
+
+  def PWADDAU_H    : RVPWideningTernary_rrr<0b0011, 0b00, "pwaddau.h">;
+  def WADDAU       : RVPWideningTernary_rrr<0b0011, 0b01, "waddau">;
+  def PWADDAU_B    : RVPWideningTernary_rrr<0b0011, 0b10, "pwaddau.b">;
+  def PM2WADDA_HX  : RVPWideningTernary_rrr<0b0011, 0b11, "pm2wadda.hx">;
+
+  def PWMUL_H      : RVPWideningBinary_rr<0b0100, 0b00, "pwmul.h">;
+  def WMUL         : RVPWideningBinary_rr<0b0100, 0b01, "wmul">;
+  def PWMUL_B      : RVPWideningBinary_rr<0b0100, 0b10, "pwmul.b">;
+  def PM2WADDU_H   : RVPWideningBinary_rr<0b0100, 0b11, "pm2waddu.h">;
+
+  def PWMACC_H     : RVPWideningTernary_rrr<0b0101, 0b00, "pwmacc.h">;
+  def WMACC        : RVPWideningTernary_rrr<0b0101, 0b01, "wmacc">;
+  def PM2WADDAU_H  : RVPWideningTernary_rrr<0b0101, 0b11, "pm2waddau.h">;
+
+  def PWMULU_H     : RVPWideningBinary_rr<0b0110, 0b00, "pwmulu.h">;
+  def WMULU        : RVPWideningBinary_rr<0b0110, 0b01, "wmulu">;
+  def PWMULU_B     : RVPWideningBinary_rr<0b0110, 0b10, "pwmulu.b">;
+
+  def PWMACCU_H    : RVPWideningTernary_rrr<0b0111, 0b00, "pwmaccu.h">;
+  def WMACCU       : RVPWideningTernary_rrr<0b0111, 0b01, "wmaccu">;
+
+  def PWSUB_H      : RVPWideningBinary_rr<0b1000, 0b00, "pwsub.h">;
+  def WSUB         : RVPWideningBinary_rr<0b1000, 0b01, "wsub">;
+  def PWSUB_B      : RVPWideningBinary_rr<0b1000, 0b10, "pwsub.b">;
+  def PM2WSUB_H    : RVPWideningBinary_rr<0b1000, 0b11, "pm2wsub.h">;
+
+  def PWSUBA_H     : RVPWideningTernary_rrr<0b1001, 0b00, "pwsuba.h">;
+  def WSUBA        : RVPWideningTernary_rrr<0b1001, 0b01, "wsuba">;
+  def PWSUBA_B     : RVPWideningTernary_rrr<0b1001, 0b10, "pwsuba.b">;
+  def PM2WSUBA_H   : RVPWideningTernary_rrr<0b1001, 0b11, "pm2wsuba.h">;
+
+  def PWSUBU_H     : RVPWideningBinary_rr<0b1010, 0b00, "pwsubu.h">;
+  def WSUBU        : RVPWideningBinary_rr<0b1010, 0b01, "wsubu">;
+  def PWSUBU_B     : RVPWideningBinary_rr<0b1010, 0b10, "pwsubu.b">;
+  def PM2WSUB_HX   : RVPWideningBinary_rr<0b1010, 0b11, "pm2wsub.hx">;
+
+  def PWSUBAU_H    : RVPWideningTernary_rrr<0b1011, 0b00, "pwsubau.h">;
+  def WSUBAU       : RVPWideningTernary_rrr<0b1011, 0b01, "wsubau">;
+  def PWSUBAU_B    : RVPWideningTernary_rrr<0b1011, 0b10, "pwsubau.b">;
+  def PM2WSUBA_HX  : RVPWideningTernary_rrr<0b1011, 0b11, "pm2wsuba.hx">;
+  
+  def PWMULSU_H    : RVPWideningBinary_rr<0b1100, 0b00, "pwmulsu.h">;
+  def WMULSU       : RVPWideningBinary_rr<0b1100, 0b01, "wmulsu">;
+  def PWMULSU_B    : RVPWideningBinary_rr<0b1100, 0b10, "pwmulsu.b">;
+  def PM2WADDSU_H  : RVPWideningBinary_rr<0b1100, 0b11, "pm2waddsu.h">;
+
+  def PWMACCSU_H   : RVPWideningTernary_rrr<0b1101, 0b00, "pwmaccsu.h">;
+  def WMACCSU      : RVPWideningTernary_rrr<0b1101, 0b01, "wmaccsu">;
+  def PM2WADDASU_H : RVPWideningTernary_rrr<0b1101, 0b11, "pm2waddasu.h">;
+
+  def PMQWACC_H    : RVPWideningTernary_rrr<0b1111, 0b00, "pmqwacc.h">;
+  def PMQWACC      : RVPWideningTernary_rrr<0b1111, 0b01, "pmqwacc">;
+  def PMQRWACC_H   : RVPWideningTernary_rrr<0b1111, 0b10, "pmqrwacc.h">;
+  def PMQRWACC     : RVPWideningTernary_rrr<0b1111, 0b11, "pmqrwacc">;
+
+  def PREDSUM_DHS  : RVPNarrowingBinary_rr<0b001, 0b00, "predsum.dhs">;
+  def PREDSUM_DBS  : RVPNarrowingBinary_rr<0b001, 0b10, "predsum.dbs">;
+
+  def PREDSUMU_DHS : RVPNarrowingBinary_rr<0b011, 0b00, "predsumu.dhs">;
+  def PREDSUMU_DBS : RVPNarrowingBinary_rr<0b011, 0b10, "predsumu.dbs">;
+
+  def PNSRLI_B     : RVPNarrowingShiftB_ri<0b000, "pnsrli.b">;
+  def PNSRLI_H     : RVPNarrowingShiftH_ri<0b000, "pnsrli.h">;
+  def NSRLI        : RVPNarrowingShiftW_ri<0b000, "nsrli">;
+
+  def PNCLIPIU_B   : RVPNarrowingShiftB_ri<0b010, "pnclipiu.b">;
+  def PNCLIPIU_H   : RVPNarrowingShiftH_ri<0b010, "pnclipiu.h">;
+  def NCLIPIU      : RVPNarrowingShiftW_ri<0b010, "nclipiu">;
+
+  def PNCLIPRIU_B  : RVPNarrowingShiftB_ri<0b011, "pnclipriu.b">;
+  def PNCLIPRIU_H  : RVPNarrowingShiftH_ri<0b011, "pnclipriu.h">;
+  def NCLIPRIU     : RVPNarrowingShiftW_ri<0b011, "nclipriu">;
+
+  def PNSRAI_B     : RVPNarrowingShiftB_ri<0b100, "pnsrai.b">;
+  def PNSRAI_H     : RVPNarrowingShiftH_ri<0b100, "pnsrai.h">;
+  def NSRAI        : RVPNarrowingShiftW_ri<0b100, "nsrai">;
+
+  def PNSARI_B     : RVPNarrowingShiftB_ri<0b101, "pnsari.b">;
+  def PNSARI_H     : RVPNarrowingShiftH_ri<0b101, "pnsari.h">;
+  def NSARI        : RVPNarrowingShiftW_ri<0b101, "nsari">;
+
+  def PNCLIPI_B    : RVPNarrowingShiftB_ri<0b110, "pnclipi.b">;
+  def PNCLIPI_H    : RVPNarrowingShiftH_ri<0b110, "pnclipi.h">;
+  def NCLIPI       : RVPNarrowingShiftW_ri<0b110, "nclipi">;
+
+  def PNCLIPRI_B   : RVPNarrowingShiftB_ri<0b111, "pnclipri.b">;
+  def PNCLIPRI_H   : RVPNarrowingShiftH_ri<0b111, "pnclipri.h">;
+  def NCLIPRI      : RVPNarrowingShiftW_ri<0b111, "nclipri">;
+
+  def PNSRL_BS     : RVPNarrowingShift_rr<0b000, 0b00, "pnsrl.bs">;
+  def PNSRL_HS     : RVPNarrowingShift_rr<0b000, 0b01, "pnsrl.hs">;
+  def NSRL         : RVPNarrowingShift_rr<0b000, 0b11, "nsrl">;
+
+  def PNCLIPU_BS   : RVPNarrowingShift_rr<0b010, 0b00, "pnclipu.bs">;
+  def PNCLIPU_HS   : RVPNarrowingShift_rr<0b010, 0b01, "pnclipu.hs">;
+  def NCLIPU       : RVPNarrowingShift_rr<0b010, 0b11, "nclipu">;
+
+  def PNCLIPRU_BS  : RVPNarrowingShift_rr<0b011, 0b00, "pnclipru.bs">;
+  def PNCLIPRU_HS  : RVPNarrowingShift_rr<0b011, 0b01, "pnclipru.hs">;
+  def NCLIPRU      : RVPNarrowingShift_rr<0b011, 0b11, "nclipru">;
+
+  def PNSRA_BS     : RVPNarrowingShift_rr<0b100, 0b00, "pnsra.bs">;
+  def PNSRA_HS     : RVPNarrowingShift_rr<0b100, 0b01, "pnsra.hs">;
+  def NSRA         : RVPNarrowingShift_rr<0b100, 0b11, "nsra">;
+
+  def PNSRAR_BS    : RVPNarrowingShift_rr<0b101, 0b00, "pnsrar.bs">;
+  def PNSRAR_HS    : RVPNarrowingShift_rr<0b101, 0b01, "pnsrar.hs">;
+  def NSRAR        : RVPNarrowingShift_rr<0b101, 0b11, "nsrar">;
+
+  def PNCLIP_BS    : RVPNarrowingShift_rr<0b110, 0b00, "pnclip.bs">;
+  def PNCLIP_HS    : RVPNarrowingShift_rr<0b110, 0b01, "pnclip.hs">;
+  def NCLIP        : RVPNarrowingShift_rr<0b110, 0b11, "nclip">;
+
+  def PNCLIPR_BS   : RVPNarrowingShift_rr<0b111, 0b00, "pnclipr.bs">;
+  def PNCLIPR_HS   : RVPNarrowingShift_rr<0b111, 0b01, "pnclipr.hs">;
+  def NCLIPR       : RVPNarrowingShift_rr<0b111, 0b11, "nclipr">;
+
+  def PSLLI_DB     : RVPPairShiftB_ri<0b000, "pslli.db">;
+  def PSLLI_DH     : RVPPairShiftH_ri<0b000, "pslli.dh">;
+  def PSLLI_DW     : RVPPairShiftW_ri<0b000, "pslli.dw">;
+
+  def PSSLAI_DH    : RVPPairShiftH_ri<0b101, "psslai.dh">;
+  def PSSLAI_DW    : RVPPairShiftW_ri<0b101, "psslai.dw">;
+
+  def PSEXT_DH_B   : RVPPairUnary_r<0b00, 0b00100, "psext.dh.b">;
+  def PSEXT_DW_B   : RVPPairUnary_r<0b01, 0b00100, "psext.dw.b">;
+
+  def PSEXT_DW_H   : RVPPairUnary_r<0b01, 0b00101, "psext.dw.h">;
+
+  def PSABS_DH     : RVPPairUnary_r<0b00, 0b00111, "psabs.dh">;
+  def PSABS_DB     : RVPPairUnary_r<0b10, 0b00111, "psabs.db">;
+
+  def PSLL_DHS     : RVPPairShift_rr<0b000, 0b00, "psll.dhs">;
+  def PSLL_DWS     : RVPPairShift_rr<0b000, 0b01, "psll.dws">;
+  def PSLL_DBS     : RVPPairShift_rr<0b000, 0b10, "psll.dbs">;
+
+  def PADD_DHS     : RVPPairShift_rr<0b001, 0b00, "padd.dhs">;
+  def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, "padd.dws">;
+  def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, "padd.dbs">;
+
+  def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, "pssha.dhs">;
+  def PSSHA_DWS    : RVPPairShift_rr<0b110, 0b01, "pssha.dws">;
+
+  def PSSHAR_DHS   : RVPPairShift_rr<0b111, 0b00, "psshar.dhs">;
+  def PSSHAR_DWS   : RVPPairShift_rr<0b111, 0b01, "psshar.dws">;
+
+  def PSRLI_DB     : RVPPairShiftB_ri<0b000, "psrli.db",  0b1>;
+  def PSRLI_DH     : RVPPairShiftH_ri<0b000, "psrli.dh",  0b1>;
+  def PSRLI_DW     : RVPPairShiftW_ri<0b000, "psrli.dw",  0b1>;
+
+  def PUSATI_DH    : RVPPairShiftH_ri<0b010, "pusati.dh", 0b1>;
+  def PUSATI_DW    : RVPPairShiftW_ri<0b010, "pusati.dw", 0b1>;
+
+  def PSRAI_DB     : RVPPairShiftB_ri<0b100, "psrai.db",  0b1>;
+  def PSRAI_DH     : RVPPairShiftH_ri<0b100, "psrai.dh",  0b1>;
+  def PSRAI_DW     : RVPPairShiftW_ri<0b100, "psrai.dw",  0b1>;
+
+  def PSRARI_DH    : RVPPairShiftH_ri<0b101, "psrari.dh", 0b1>;
+  def PSRARI_DW    : RVPPairShiftW_ri<0b101, "psrari.dw", 0b1>;
+
+  def PSATI_DH     : RVPPairShiftH_ri<0b110, "psati.dh",  0b1>;
+  def PSATI_DW     : RVPPairShiftW_ri<0b110, "psati.dw",  0b1>;
+
+  def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, "psrl.dhs", 0b1>;
+  def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, "psrl.dws", 0b1>;
+  def PSRL_DBS     : RVPPairShift_rr<0b000, 0b10, "psrl.dbs", 0b1>;
+
+  def PSRA_DHS     : RVPPairShift_rr<0b100, 0b00, "psra.dhs", 0b1>;
+  def PSRA_DWS     : RVPPairShift_rr<0b100, 0b01, "psra.dws", 0b1>;
+  def PSRA_DBS     : RVPPairShift_rr<0b100, 0b10, "psra.dbs", 0b1>;
+
+  def PADD_DH      : RVPPairBinary_rr<0b0000, 0b00, "padd.dh">;
+  def PADD_DW      : RVPPairBinary_rr<0b0000, 0b01, "padd.dw">;
+  def PADD_DB      : RVPPairBinary_rr<0b0000, 0b10, "padd.db">;
+  def ADDD         : RVPPairBinary_rr<0b0000, 0b11, "addd">;
+
+  def PSADD_DH     : RVPPairBinary_rr<0b0010, 0b00, "psadd.dh">;
+  def PSADD_DW     : RVPPairBinary_rr<0b0010, 0b01, "psadd.dw">;
+  def PSADD_DB     : RVPPairBinary_rr<0b0010, 0b10, "psadd.db">;
+
+  def PAADD_DH     : RVPPairBinary_rr<0b0011, 0b00, "paadd.dh">;
+  def PAADD_DW     : RVPPairBinary_rr<0b0011, 0b01, "paadd.dw">;
+  def PAADD_DB     : RVPPairBinary_rr<0b0011, 0b10, "paadd.db">;
+
+  def PSADDU_DH    : RVPPairBinary_rr<0b0110, 0b00, "psaddu.dh">;
+  def PSADDU_DW    : RVPPairBinary_rr<0b0110, 0b01, "psaddu.dw">;
+  def PSADDU_DB    : RVPPairBinary_rr<0b0110, 0b10, "psaddu.db">;
+
+  def PAADDU_DH    : RVPPairBinary_rr<0b0111, 0b00, "paaddu.dh">;
+  def PAADDU_DW    : RVPPairBinary_rr<0b0111, 0b01, "paaddu.dw">;
+  def PAADDU_DB    : RVPPairBinary_rr<0b0111, 0b10, "paaddu.db">;
+
+  def PSUB_DH      : RVPPairBinary_rr<0b1000, 0b00, "psub.dh">;
+  def PSUB_DW      : RVPPairBinary_rr<0b1000, 0b01, "psub.dw">;
+  def PSUB_DB      : RVPPairBinary_rr<0b1000, 0b10, "psub.db">;
+  def SUBD         : RVPPairBinary_rr<0b1000, 0b11, "subd">;
+
+  def PDIF_DH      : RVPPairBinary_rr<0b1001, 0b00, "pdif.dh">;
+  def PDIF_DB      : RVPPairBinary_rr<0b1001, 0b10, "pdif.db">;
+
+  def PSSUB_DH     : RVPPairBinary_rr<0b1010, 0b00, "pssub.dh">;
+  def PSSUB_DW     : RVPPairBinary_rr<0b1010, 0b01, "pssub.dw">;
+  def PSSUB_DB     : RVPPairBinary_rr<0b1010, 0b10, "pssub.db">;
+
+  def PASUB_DH     : RVPPairBinary_rr<0b1011, 0b00, "pasub.dh">;
+  def PASUB_DW     : RVPPairBinary_rr<0b1011, 0b01, "pasub.dw">;
+  def PASUB_DB     : RVPPairBinary_rr<0b1011, 0b10, "pasub.db">;
+
+  def PDIFU_DH     : RVPPairBinary_rr<0b1101, 0b00, "pdifu.dh">;
+  def PDIFU_DB     : RVPPairBinary_rr<0b1101, 0b10, "pdifu.db">;
+
+  def PSSUBU_DH    : RVPPairBinary_rr<0b1110, 0b00, "pssubu.dh">;
+  def PSSUBU_DW    : RVPPairBinary_rr<0b1110, 0b01, "pssubu.dw">;
+  def PSSUBU_DB    : RVPPairBinary_rr<0b1110, 0b10, "pssubu.db">;
+
+  def PASUBU_DH    : RVPPairBinary_rr<0b1111, 0b00, "pasubu.dh">;
+  def PASUBU_DW    : RVPPairBinary_rr<0b1111, 0b01, "pasubu.dw">;
+  def PASUBU_DB    : RVPPairBinary_rr<0b1111, 0b10, "pasubu.db">;
+
+  def PSH1ADD_DH   : RVPPairBinaryShift_rr<0b010, 0b00, "psh1add.dh">;
+  def PSH1ADD_DW   : RVPPairBinaryShift_rr<0b010, 0b01, "psh1add.dw">;
+
+  def PSSH1SADD_DH : RVPPairBinaryShift_rr<0b011, 0b00, "pssh1sadd.dh">;
+  def PSSH1SADD_DW : RVPPairBinaryShift_rr<0b011, 0b01, "pssh1sadd.dw">;
+
+  def PPACK_DH     : RVPPairBinaryPack_rr<0b000, 0b00, "ppack.dh">;
+  def PPACK_DW     : RVPPairBinaryPack_rr<0b000, 0b01, "ppack.dw">;
+
+  def PPACKBT_DH   : RVPPairBinaryPack_rr<0b001, 0b00, "ppackbt.dh">;
+  def PPACKBT_DW   : RVPPairBinaryPack_rr<0b001, 0b01, "ppackbt.dw">;
+
+  def PPACKTB_DH   : RVPPairBinaryPack_rr<0b010, 0b00, "ppacktb.dh">;
+  def PPACKTB_DW   : RVPPairBinaryPack_rr<0b010, 0b01, "ppacktb.dw">;
+
+  def PPACKT_DH    : RVPPairBinaryPack_rr<0b011, 0b00, "ppackt.dh">;
+  def PPACKT_DW    : RVPPairBinaryPack_rr<0b011, 0b01, "ppackt.dw">;
+
+  def PAS_DHX      : RVPPairBinaryExchanged_rr<0b0000, 0b00, "pas.dhx">;
+  def PSA_DHX      : RVPPairBinaryExchanged_rr<0b0000, 0b10, "psa.dhx">;
+
+  def PSAS_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b00, "psas.dhx">;
+  def PSSA_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b10, "pssa.dhx">;
+
+  def PAAX_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b00, "paax.dhx">;
+  def PASA_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b10, "pasa.dhx">;
+
+  def PMSEQ_DH     : RVPPairBinaryExchanged_rr<0b1000, 0b00, "pmseq.dh">;
+  def PMSEQ_DW     : RVPPairBinaryExchanged_rr<0b1000, 0b01, "pmseq.dw">;
+  def PMSEQ_DB     : RVPPairBinaryExchanged_rr<0b1000, 0b10, "pmseq.db">;
+
+  def PMSLT_DH     : RVPPairBinaryExchanged_rr<0b1010, 0b00, "pmslt.dh">;
+  def PMSLT_DW     : RVPPairBinaryExchanged_rr<0b1010, 0b01, "pmslt.dw">;
+  def PMSLT_DB     : RVPPairBinaryExchanged_rr<0b1010, 0b10, "pmslt.db">;
+
+  def PMSLTU_DH    : RVPPairBinaryExchanged_rr<0b1011, 0b00, "pmsltu.dh">;
+  def PMSLTU_DW    : RVPPairBinaryExchanged_rr<0b1011, 0b01, "pmsltu.dw">;
+  def PMSLTU_DB    : RVPPairBinaryExchanged_rr<0b1011, 0b10, "pmsltu.db">;
+
+  def PMIN_DH      : RVPPairBinaryExchanged_rr<0b1100, 0b00, "pmin.dh">;
+  def PMIN_DW      : RVPPairBinaryExchanged_rr<0b1100, 0b01, "pmin.dw">;
+  def PMIN_DB      : RVPPairBinaryExchanged_rr<0b1100, 0b10, "pmin.db">;
+
+  def PMINU_DH     : RVPPairBinaryExchanged_rr<0b1101, 0b00, "pminu.dh">;
+  def PMINU_DW     : RVPPairBinaryExchanged_rr<0b1101, 0b01, "pminu.dw">;
+  def PMINU_DB     : RVPPairBinaryExchanged_rr<0b1101, 0b10, "pminu.db">;
+
+  def PMAX_DH      : RVPPairBinaryExchanged_rr<0b1110, 0b00, "pmax.dh">;
+  def PMAX_DW      : RVPPairBinaryExchanged_rr<0b1110, 0b01, "pmax.dw">;
+  def PMAX_DB      : RVPPairBinaryExchanged_rr<0b1110, 0b10, "pmax.db">;
+
+  def PMAXU_DH     : RVPPairBinaryExchanged_rr<0b1111, 0b00, "pmaxu.dh">;
+  def PMAXU_DW     : RVPPairBinaryExchanged_rr<0b1111, 0b01, "pmaxu.dw">;
+  def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db">;
+} // Predicates = [HasStdExtP, IsRV32]
+
+
+//===----------------------------------------------------------------------===//
+// Codegen patterns
+//===----------------------------------------------------------------------===//
+
+def riscv_absw : RVSDNode<"ABSW", SDTIntUnaryOp>;
+
+def SDT_RISCVPLI : SDTypeProfile<1, 1, [SDTCisVec<0>,
+                                        SDTCisInt<0>,
+                                        SDTCisInt<1>]>;
+def riscv_pli : RVSDNode<"PLI", SDT_RISCVPLI>;
+def SDT_RISCVPASUB : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                          SDTCisInt<0>,
+                                          SDTCisSameAs<0, 1>,
+                                          SDTCisSameAs<0, 2>]>;
+def riscv_pasub : RVSDNode<"PASUB", SDT_RISCVPASUB>;
+def riscv_pasubu : RVSDNode<"PASUBU", SDT_RISCVPASUB>;
+
+let Predicates = [HasStdExtP] in {
+  def : PatGpr<abs, ABS>;
+
+  // Basic 8-bit arithmetic patterns
+  def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_B GPR:$rs1, GPR:$rs2)>;
+
+  // Basic 16-bit arithmetic patterns
+  def: Pat<(XLenVecI16VT (add GPR:$rs1, GPR:$rs2)), (PADD_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_H GPR:$rs1, GPR:$rs2)>;
+
+  // 8-bit saturating add/sub patterns
+  def: Pat<(XLenVecI8VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_B GPR:$rs1, GPR:$rs2)>;
+
+  // 16-bit saturating add/sub patterns
+  def: Pat<(XLenVecI16VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_H GPR:$rs1, GPR:$rs2)>;
+
+  // 8-bit averaging patterns
+  def: Pat<(XLenVecI8VT (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_B GPR:$rs1, GPR:$rs2)>;
+
+  // 16-bit averaging patterns
+  def: Pat<(XLenVecI16VT (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_H GPR:$rs1, GPR:$rs2)>;
+  
+  // 8-bit absolute difference patterns
+  def: Pat<(XLenVecI8VT (abds GPR:$rs1, GPR:$rs2)), (PDIF_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (abdu GPR:$rs1, GPR:$rs2)), (PDIFU_B GPR:$rs1, GPR:$rs2)>;
+  
+  // 16-bit absolute difference patterns
+  def: Pat<(XLenVecI16VT (abds GPR:$rs1, GPR:$rs2)), (PDIF_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (abdu GPR:$rs1, GPR:$rs2)), (PDIFU_H GPR:$rs1, GPR:$rs2)>;
+  
+
+  // 8-bit PLI SD node pattern
+  def: Pat<(XLenVecI8VT (riscv_pli simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
+  // 16-bit PLI SD node pattern
+  def: Pat<(XLenVecI16VT (riscv_pli simm10:$imm10)), (PLI_H simm10:$imm10)>;
+
+} // Predicates = [HasStdExtP]
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  // Load/Store patterns
+  def : StPat<store, SW, GPR, v4i8>;
+  def : StPat<store, SW, GPR, v2i16>;
+  def : LdPat<load, LW, v4i8>;
+  def : LdPat<load, LW, v2i16>;
+} // Predicates = [HasStdExtP, IsRV32]
+
+let Predicates = [HasStdExtP, IsRV64] in {
+  def : PatGpr<riscv_absw, ABSW>;
+
+  // 32-bit PLI SD node pattern
+  def: Pat<(v2i32 (riscv_pli simm10:$imm10)), (PLI_W simm10:$imm10)>;
+
+  // Basic 32-bit arithmetic patterns
+  def: Pat<(v2i32 (add GPR:$rs1, GPR:$rs2)), (PADD_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (sub GPR:$rs1, GPR:$rs2)), (PSUB_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit saturating add/sub patterns
+  def: Pat<(v2i32 (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit averaging patterns
+  def: Pat<(v2i32 (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit averaging-sub patterns
+  def: Pat<(v2i32 (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_W GPR:$rs1, GPR:$rs2)>;
+
+  // Load/Store patterns
+  def : StPat<store, SD, GPR, v8i8>;
+  def : StPat<store, SD, GPR, v4i16>;
+  def : StPat<store, SD, GPR, v2i32>;
+  def : LdPat<load, LD, v8i8>;
+  def : LdPat<load, LD, v4i16>;
+  def : LdPat<load, LD, v2i32>;
+} // Predicates = [HasStdExtP, IsRV64]

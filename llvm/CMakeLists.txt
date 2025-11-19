@@ -666,7 +666,7 @@ if(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD STREQUAL "all")
   set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${LLVM_ALL_EXPERIMENTAL_TARGETS})
 endif()
 
-if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND 
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND
    "AArch64" IN_LIST LLVM_TARGETS_TO_BUILD AND
    NOT ("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS))
   message(STATUS "Enabling compiler-rt as a dependency of Flang")
@@ -705,18 +705,6 @@ else()
 endif()
 
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
-
-# While adding scalable vector support to LLVM, we temporarily want to
-# allow an implicit conversion of TypeSize to uint64_t, and to allow
-# code to get the fixed number of elements from a possibly scalable vector.
-# This CMake flag enables a more strict mode where it asserts that the type
-# is not a scalable vector type.
-#
-# Enabling this flag makes it easier to find cases where the compiler makes
-# assumptions on the size being 'fixed size', when building tests for
-# SVE/SVE2 or other scalable vector architectures.
-option(LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS
-       "Enable assertions that type is not scalable in implicit conversion from TypeSize to uint64_t and calls to getNumElements" OFF)
 
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
@@ -964,7 +952,8 @@ if (LLVM_LINK_LLVM_DYLIB AND BUILD_SHARED_LIBS)
 endif()
 
 option(LLVM_OPTIMIZED_TABLEGEN "Force TableGen to be built with optimization" OFF)
-if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS OR CMAKE_CONFIGURATION_TYPES)))
+if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS
+  OR CMAKE_CONFIGURATION_TYPES OR LLVM_USE_SANITIZER)))
   set(LLVM_USE_HOST_TOOLS ON)
 endif()
 
@@ -1029,6 +1018,9 @@ set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_defa
 
 set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
   "Profiling data file to use when compiling in order to improve runtime performance.")
+
+set(LLVM_SPROFDATA_FILE "" CACHE FILEPATH
+  "Sampling profiling data file to use when compiling in order to improve runtime performance.")
 
 if(LLVM_INCLUDE_TESTS)
   # All LLVM Python files should be compatible down to this minimum version.
@@ -1280,10 +1272,10 @@ endif()
 # Build with _XOPEN_SOURCE on z/OS.
 if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
+  add_compile_definitions(_XPLATFORM_SOURCE) # Needed e.g. for O_CLOEXEC.
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
   add_compile_definitions(_OPEN_SYS_FILE_EXT) # Needed for EBCDIC I/O.
   add_compile_definitions(_EXT) # Needed for file data.
-  add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
   # Need to build LLVM as ASCII application.
   # This can't be a global setting because other projects may
   # need to be built in EBCDIC mode.
@@ -1308,6 +1300,11 @@ endif(LLVM_USE_HOST_TOOLS)
 if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 # Dummy use to avoid CMake Warning: Manually-specified variables were not used
 # (this is a variable that CrossCompile sets on recursive invocations)
+endif()
+
+# Special hack for z/OS for missing POSIX functions
+if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+  include_directories(SYSTEM "${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/SystemZ/zos_wrappers" )
 endif()
 
 if( "${CMAKE_SYSTEM_NAME}" MATCHES SunOS )
@@ -1356,9 +1353,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/mlgo-utils)
   add_subdirectory(utils/llvm-test-mustache-spec)
   if( LLVM_INCLUDE_TESTS )
-    set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-    set(LLVM_SUBPROJECT_TITLE)
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )

@@ -56,6 +56,13 @@ public:
   }
 };
 
+static cl::list<std::string> SPVAllowUnknownIntrinsics(
+    "spv-allow-unknown-intrinsics", cl::CommaSeparated,
+    cl::desc("Emit unknown intrinsics as calls to external functions. A "
+             "comma-separated input list of intrinsic prefixes must be "
+             "provided, and only intrinsics carrying a listed prefix get "
+             "emitted as described."),
+    cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
 char SPIRVPrepareFunctions::ID = 0;
@@ -335,6 +342,21 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   FSHIntrinsic->setCalledFunction(FSHFunc);
 }
 
+static void lowerConstrainedFPCmpIntrinsic(
+    ConstrainedFPCmpIntrinsic *ConstrainedCmpIntrinsic,
+    SmallVector<Instruction *> &EraseFromParent) {
+  if (!ConstrainedCmpIntrinsic)
+    return;
+  // Extract the floating-point values being compared
+  Value *LHS = ConstrainedCmpIntrinsic->getArgOperand(0);
+  Value *RHS = ConstrainedCmpIntrinsic->getArgOperand(1);
+  FCmpInst::Predicate Pred = ConstrainedCmpIntrinsic->getPredicate();
+  IRBuilder<> Builder(ConstrainedCmpIntrinsic);
+  Value *FCmp = Builder.CreateFCmp(Pred, LHS, RHS);
+  ConstrainedCmpIntrinsic->replaceAllUsesWith(FCmp);
+  EraseFromParent.push_back(dyn_cast<Instruction>(ConstrainedCmpIntrinsic));
+}
+
 static void lowerExpectAssume(IntrinsicInst *II) {
   // If we cannot use the SPV_KHR_expect_assume extension, then we need to
   // ignore the intrinsic and move on. It should be removed later on by LLVM.
@@ -376,6 +398,7 @@ static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+  SmallVector<Instruction *> EraseFromParent;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
@@ -423,9 +446,26 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerPtrAnnotation(II);
         Changed = true;
         break;
+      case Intrinsic::experimental_constrained_fcmp:
+      case Intrinsic::experimental_constrained_fcmps:
+        lowerConstrainedFPCmpIntrinsic(dyn_cast<ConstrainedFPCmpIntrinsic>(II),
+                                       EraseFromParent);
+        Changed = true;
+        break;
+      default:
+        if (TM.getTargetTriple().getVendor() == Triple::AMD ||
+            any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
+              if (Prefix.empty())
+                return false;
+              return II->getCalledFunction()->getName().starts_with(Prefix);
+            }))
+          Changed |= lowerIntrinsicToFunction(II);
+        break;
       }
     }
   }
+  for (auto *I : EraseFromParent)
+    I->eraseFromParent();
   return Changed;
 }
 

@@ -94,7 +94,7 @@ private:
   /// where the C code specifies const char*.
   llvm::Constant *makeConstantString(const std::string &Str,
                                      const std::string &Name = "") {
-    return CGM.GetAddrOfConstantCString(Str, Name.c_str()).getPointer();
+    return CGM.GetAddrOfConstantCString(Str, Name).getPointer();
   }
 
   /// Helper function which generates an initialized constant array from Str,
@@ -230,7 +230,7 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   IntTy = CGM.IntTy;
   SizeTy = CGM.SizeTy;
   VoidTy = CGM.VoidTy;
-  PtrTy = CGM.UnqualPtrTy;
+  PtrTy = CGM.DefaultPtrTy;
 
   if (CGM.getLangOpts().OffloadViaLLVM)
     Prefix = "llvm";
@@ -1131,8 +1131,7 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
     // Builtin surfaces and textures and their template arguments are
     // also registered with CUDA runtime.
     const auto *TD = cast<ClassTemplateSpecializationDecl>(
-                         D->getType()->castAs<RecordType>()->getOriginalDecl())
-                         ->getDefinitionOrSelf();
+        D->getType()->castAsCXXRecordDecl());
     const TemplateArgumentList &Args = TD->getTemplateArgs();
     if (TD->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>()) {
       assert(Args.size() == 2 &&
@@ -1281,8 +1280,7 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     return nullptr;
   }
   if (CGM.getLangOpts().OffloadViaLLVM ||
-      (CGM.getLangOpts().OffloadingNewDriver &&
-       (CGM.getLangOpts().HIP || RelocatableDeviceCode)))
+      (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();

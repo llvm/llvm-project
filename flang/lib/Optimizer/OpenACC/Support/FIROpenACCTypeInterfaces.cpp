@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -192,6 +193,28 @@ OpenACCMappableModel<fir::PointerType>::getOffsetInBytes(
     mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
     const mlir::DataLayout &dataLayout) const;
 
+template <typename Ty>
+bool OpenACCMappableModel<Ty>::hasUnknownDimensions(mlir::Type type) const {
+  assert(fir::isa_ref_type(type) && "expected FIR reference type");
+  return fir::hasDynamicSize(fir::unwrapRefType(type));
+}
+
+template bool OpenACCMappableModel<fir::ReferenceType>::hasUnknownDimensions(
+    mlir::Type type) const;
+
+template bool OpenACCMappableModel<fir::HeapType>::hasUnknownDimensions(
+    mlir::Type type) const;
+
+template bool OpenACCMappableModel<fir::PointerType>::hasUnknownDimensions(
+    mlir::Type type) const;
+
+template <>
+bool OpenACCMappableModel<fir::BaseBoxType>::hasUnknownDimensions(
+    mlir::Type type) const {
+  // Descriptor-based entities have dimensions encoded.
+  return false;
+}
+
 static llvm::SmallVector<mlir::Value>
 generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
                        mlir::OpBuilder &builder) {
@@ -271,8 +294,6 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
             mlir::Value extent = val;
             mlir::Value upperbound =
                 mlir::arith::SubIOp::create(builder, loc, extent, one);
-            upperbound = mlir::arith::AddIOp::create(builder, loc, lowerbound,
-                                                     upperbound);
             mlir::Value stride = one;
             if (strideIncludeLowerExtent) {
               stride = cummulativeExtent;
@@ -354,6 +375,14 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
   // calculation op.
   mlir::Value baseRef =
       llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
+          .Case<fir::DeclareOp>([&](auto op) {
+            // If this declare binds a view with an underlying storage operand,
+            // treat that storage as the base reference. Otherwise, fall back
+            // to the declared memref.
+            if (auto storage = op.getStorage())
+              return storage;
+            return mlir::Value(varPtr);
+          })
           .Case<hlfir::DesignateOp>([&](auto op) {
             // Get the base object.
             return op.getMemref();
@@ -366,6 +395,14 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
             // For coordinate operation which is applied on derived type
             // object, get the base object.
             return op.getRef();
+          })
+          .Case<fir::ConvertOp>([&](auto op) -> mlir::Value {
+            // Strip the conversion and recursively check the operand
+            if (auto ptrLikeOperand = mlir::dyn_cast_if_present<
+                    mlir::TypedValue<mlir::acc::PointerLikeType>>(
+                    op.getValue()))
+              return getBaseRef(ptrLikeOperand);
+            return varPtr;
           })
           .Default([&](mlir::Operation *) { return varPtr; });
 
@@ -542,31 +579,33 @@ template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const {
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const {
+  needsDestroy = false;
   mlir::Value retVal;
   mlir::Type unwrappedTy = fir::unwrapRefType(type);
   mlir::ModuleOp mod = builder.getInsertionBlock()
                            ->getParent()
                            ->getParentOfType<mlir::ModuleOp>();
-  fir::FirOpBuilder firBuilder(builder, mod);
 
+  if (auto recType = llvm::dyn_cast<fir::RecordType>(
+          fir::getFortranElementType(unwrappedTy))) {
+    // Need to make deep copies of allocatable components.
+    if (fir::isRecordWithAllocatableMember(recType))
+      TODO(loc,
+           "OpenACC: privatizing derived type with allocatable components");
+    // Need to decide if user assignment/final routine should be called.
+    if (fir::isRecordWithFinalRoutine(recType, mod).value_or(false))
+      TODO(loc, "OpenACC: privatizing derived type with user assignment or "
+                "final routine ");
+  }
+
+  fir::FirOpBuilder firBuilder(builder, mod);
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = fir::AllocaOp::create(firBuilder, loc, ty);
-    return hlfir::DeclareOp::create(
-        firBuilder, loc, alloca, varName, /*shape=*/nullptr,
-        llvm::ArrayRef<mlir::Value>{},
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+    return hlfir::DeclareOp::create(firBuilder, loc, alloca, varName);
   };
 
-  if (fir::isa_trivial(unwrappedTy)) {
-    auto declareOp = getDeclareOpForType(unwrappedTy);
-    if (initVal) {
-      auto convert = firBuilder.createConvert(loc, unwrappedTy, initVal);
-      fir::StoreOp::create(firBuilder, loc, convert, declareOp.getBase());
-    }
-    retVal = declareOp.getBase();
-  } else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
+  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value shape;
       if (seqTy.hasDynamicExtents()) {
@@ -576,10 +615,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       }
       auto alloca = fir::AllocaOp::create(
           firBuilder, loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
-      auto declareOp = hlfir::DeclareOp::create(
-          firBuilder, loc, alloca, varName, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      auto declareOp =
+          hlfir::DeclareOp::create(firBuilder, loc, alloca, varName, shape);
 
       if (initVal) {
         mlir::Type idxTy = firBuilder.getIndexType();
@@ -602,6 +639,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
             loops.push_back(loop);
             ivs.push_back(loop.getInductionVar());
           }
+          // Reverse IVs to match CoordinateOp's canonical index order.
+          std::reverse(ivs.begin(), ivs.end());
           auto coord = fir::CoordinateOp::create(firBuilder, loc, refTy,
                                                  declareOp.getBase(), ivs);
           fir::StoreOp::create(firBuilder, loc, initVal, coord);
@@ -620,9 +659,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       mlir::Value firClass =
           fir::EmboxOp::create(builder, loc, boxTy, allocatedScalar);
       fir::StoreOp::create(builder, loc, firClass, retVal);
+      needsDestroy = true;
     } else if (mlir::isa<fir::SequenceType>(innerTy)) {
       hlfir::Entity source = hlfir::Entity{var};
-      auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
+      auto [temp, cleanupFlag] =
+          hlfir::createTempFromMold(loc, firBuilder, source);
       if (fir::isa_ref_type(type)) {
         // When the temp is created - it is not a reference - thus we can
         // end up with a type inconsistency. Therefore ensure storage is created
@@ -641,12 +682,32 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       } else {
         retVal = temp;
       }
+      // If heap was allocated, a destroy is required later.
+      if (cleanupFlag)
+        needsDestroy = true;
     } else {
       TODO(loc, "Unsupported boxed type for OpenACC private-like recipe");
     }
     if (initVal) {
       hlfir::AssignOp::create(builder, loc, initVal, retVal);
     }
+  } else if (llvm::isa<fir::BoxCharType, fir::CharacterType>(unwrappedTy)) {
+    TODO(loc, "Character type for OpenACC private-like recipe");
+  } else {
+    assert((fir::isa_trivial(unwrappedTy) ||
+            llvm::isa<fir::RecordType>(unwrappedTy)) &&
+           "expected numerical, logical, and derived type without length "
+           "parameters");
+    auto declareOp = getDeclareOpForType(unwrappedTy);
+    if (initVal && fir::isa_trivial(unwrappedTy)) {
+      auto convert = firBuilder.createConvert(loc, unwrappedTy, initVal);
+      fir::StoreOp::create(firBuilder, loc, convert, declareOp.getBase());
+    } else if (initVal) {
+      // hlfir.assign with temporary LHS flag should just do it. Not implemented
+      // because not clear it is needed, so cannot be tested.
+      TODO(loc, "initial value for derived type in private-like recipe");
+    }
+    retVal = declareOp.getBase();
   }
   return retVal;
 }
@@ -655,23 +716,302 @@ template mlir::Value
 OpenACCMappableModel<fir::BaseBoxType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::ReferenceType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::PointerType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
+
+template <typename Ty>
+bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const {
+  mlir::Type unwrappedTy = fir::unwrapRefType(type);
+  // For boxed scalars allocated with AllocMem during init, free the heap.
+  if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(unwrappedTy)) {
+    mlir::Value boxVal = privatized;
+    if (fir::isa_ref_type(boxVal.getType()))
+      boxVal = fir::LoadOp::create(builder, loc, boxVal);
+    mlir::Value addr = fir::BoxAddrOp::create(builder, loc, boxVal);
+    // FreeMem only accepts fir.heap and this may not be represented in the box
+    // type if the privatized entity is not an allocatable.
+    mlir::Type heapType =
+        fir::HeapType::get(fir::unwrapRefType(addr.getType()));
+    if (heapType != addr.getType())
+      addr = fir::ConvertOp::create(builder, loc, heapType, addr);
+    fir::FreeMemOp::create(builder, loc, addr);
+    return true;
+  }
+
+  // Nothing to do for other categories by default, they are stack allocated.
+  return true;
+}
+
+template bool OpenACCMappableModel<fir::BaseBoxType>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const;
+template bool OpenACCMappableModel<fir::ReferenceType>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const;
+template bool OpenACCMappableModel<fir::HeapType>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const;
+template bool OpenACCMappableModel<fir::PointerType>::generatePrivateDestroy(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value privatized) const;
+
+template <typename Ty>
+mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const {
+
+  // Unwrap to get the pointee type.
+  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  assert(pointeeTy && "expected pointee type to be extractable");
+
+  // Box types are descriptors that contain both metadata and a pointer to data.
+  // The `genAllocate` API is designed for simple allocations and cannot
+  // properly handle the dual nature of boxes. Using `generatePrivateInit`
+  // instead can allocate both the descriptor and its referenced data. For use
+  // cases that require an empty descriptor storage, potentially this could be
+  // implemented here.
+  if (fir::isa_box_type(pointeeTy))
+    return {};
+
+  // Unlimited polymorphic (class(*)) cannot be handled - size unknown
+  if (fir::isUnlimitedPolymorphicType(pointeeTy))
+    return {};
+
+  // Return null for dynamic size types because the size of the
+  // allocation cannot be determined simply from the type.
+  if (fir::hasDynamicSize(pointeeTy))
+    return {};
+
+  // Use heap allocation for fir.heap, stack allocation for others (fir.ref,
+  // fir.ptr, fir.llvm_ptr). For fir.ptr, which is supposed to represent a
+  // Fortran pointer type, it feels a bit odd to "allocate" since it is meant
+  // to point to an existing entity - but one can imagine where a pointee is
+  // privatized - thus it makes sense to issue an allocate.
+  mlir::Value allocation;
+  if (std::is_same_v<Ty, fir::HeapType>) {
+    needsFree = true;
+    allocation = fir::AllocMemOp::create(builder, loc, pointeeTy);
+  } else {
+    needsFree = false;
+    allocation = fir::AllocaOp::create(builder, loc, pointeeTy);
+  }
+
+  // Convert to the requested pointer type if needed.
+  // This means converting from a fir.ref to either a fir.llvm_ptr or a fir.ptr.
+  // fir.heap is already correct type in this case.
+  if (allocation.getType() != pointer) {
+    assert(!(std::is_same_v<Ty, fir::HeapType>) &&
+           "fir.heap is already correct type because of allocmem");
+    return fir::ConvertOp::create(builder, loc, pointer, allocation);
+  }
+
+  return allocation;
+}
+
+template mlir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::PointerType>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::HeapType>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genAllocate(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+    bool &needsFree) const;
+
+static mlir::Value stripCasts(mlir::Value value, bool stripDeclare = true) {
+  mlir::Value currentValue = value;
+
+  while (currentValue) {
+    auto *definingOp = currentValue.getDefiningOp();
+    if (!definingOp)
+      break;
+
+    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(definingOp)) {
+      currentValue = convertOp.getValue();
+      continue;
+    }
+
+    if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
+      currentValue = viewLike.getViewSource();
+      continue;
+    }
+
+    if (stripDeclare) {
+      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+
+      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+    }
+    break;
+  }
+
+  return currentValue;
+}
+
+template <typename Ty>
+bool OpenACCPointerLikeModel<Ty>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const {
+
+  // Unwrap to get the pointee type.
+  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  assert(pointeeTy && "expected pointee type to be extractable");
+
+  // Box types contain both a descriptor and data. The `genFree` API
+  // handles simple deallocations and cannot properly manage both parts.
+  // Using `generatePrivateDestroy` instead can free both the descriptor and
+  // its referenced data.
+  if (fir::isa_box_type(pointeeTy))
+    return false;
+
+  // If pointer type is HeapType, assume it's a heap allocation
+  if (std::is_same_v<Ty, fir::HeapType>) {
+    fir::FreeMemOp::create(builder, loc, varToFree);
+    return true;
+  }
+
+  // Use allocRes if provided to determine the allocation type
+  mlir::Value valueToInspect = allocRes ? allocRes : varToFree;
+
+  // Strip casts and declare operations to find the original allocation
+  mlir::Value strippedValue = stripCasts(valueToInspect);
+  mlir::Operation *originalAlloc = strippedValue.getDefiningOp();
+
+  // If we found an AllocMemOp (heap allocation), free it
+  if (mlir::isa_and_nonnull<fir::AllocMemOp>(originalAlloc)) {
+    mlir::Value toFree = varToFree;
+    if (!mlir::isa<fir::HeapType>(valueToInspect.getType()))
+      toFree = fir::ConvertOp::create(
+          builder, loc,
+          fir::HeapType::get(varToFree.getType().getElementType()), toFree);
+    fir::FreeMemOp::create(builder, loc, toFree);
+    return true;
+  }
+
+  // If we found an AllocaOp (stack allocation), no deallocation needed
+  if (mlir::isa_and_nonnull<fir::AllocaOp>(originalAlloc))
+    return true;
+
+  // Unable to determine allocation type
+  return false;
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::PointerType>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::HeapType>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genFree(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
+    mlir::Value allocRes, mlir::Type varType) const;
+
+template <typename Ty>
+bool OpenACCPointerLikeModel<Ty>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const {
+
+  // Check that source and destination types match
+  if (source.getType() != destination.getType())
+    return false;
+
+  // Unwrap to get the pointee type.
+  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  assert(pointeeTy && "expected pointee type to be extractable");
+
+  // Box types contain both a descriptor and referenced data. The genCopy API
+  // handles simple copies and cannot properly manage both parts.
+  if (fir::isa_box_type(pointeeTy))
+    return false;
+
+  // Unlimited polymorphic (class(*)) cannot be handled because source and
+  // destination types are not known.
+  if (fir::isUnlimitedPolymorphicType(pointeeTy))
+    return false;
+
+  // Return false for dynamic size types because the copy logic
+  // cannot be determined simply from the type.
+  if (fir::hasDynamicSize(pointeeTy))
+    return false;
+
+  if (fir::isa_trivial(pointeeTy)) {
+    auto loadVal = fir::LoadOp::create(builder, loc, source);
+    fir::StoreOp::create(builder, loc, loadVal, destination);
+  } else {
+    hlfir::AssignOp::create(builder, loc, source, destination);
+  }
+  return true;
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::PointerType>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::HeapType>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const;
+
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genCopy(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
+    mlir::TypedValue<mlir::acc::PointerLikeType> source,
+    mlir::Type varType) const;
 
 } // namespace fir::acc

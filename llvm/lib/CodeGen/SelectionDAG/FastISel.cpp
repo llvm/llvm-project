@@ -1843,7 +1843,8 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return selectCast(I, ISD::SINT_TO_FP);
 
   case Instruction::IntToPtr: // Deliberate fall-through.
-  case Instruction::PtrToInt: {
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr: {
     EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType());
     EVT DstVT = TLI.getValueType(DL, I->getType());
     if (DstVT.bitsGT(SrcVT))
@@ -1964,8 +1965,7 @@ Register FastISel::createResultReg(const TargetRegisterClass *RC) {
 Register FastISel::constrainOperandRegClass(const MCInstrDesc &II, Register Op,
                                             unsigned OpNum) {
   if (Op.isVirtual()) {
-    const TargetRegisterClass *RegClass =
-        TII.getRegClass(II, OpNum, &TRI, *FuncInfo.MF);
+    const TargetRegisterClass *RegClass = TII.getRegClass(II, OpNum);
     if (!MRI.constrainRegClass(Op, RegClass)) {
       // If it's not legal to COPY between the register classes, something
       // has gone very wrong before we got here.

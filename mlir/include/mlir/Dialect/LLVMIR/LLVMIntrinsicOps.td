@@ -181,9 +181,30 @@ def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
 
+class LLVM_CmpIntrOp<string func>
+    : LLVM_OneResultIntrOp<func, [0], [0], [Pure, SameTypeOperands]> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$a,
+      LLVM_ScalarOrVectorOf<AnySignlessInteger>:$b);
+  let results = (outs LLVM_ScalarOrVectorOf<AnySignlessInteger>:$res);
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
+
+def LLVM_SCmpOp : LLVM_CmpIntrOp<"scmp">;
+def LLVM_UCmpOp : LLVM_CmpIntrOp<"ucmp">;
+
 def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
+def LLVM_SincosOp : LLVM_TwoResultIntrOp<"sincos", [], [0],
+  [Pure], /*requiresFastmath=*/1> {
+  let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+      DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+      "functional-type(operands, results)";
+  let hasVerifier = 1;
+}
 
 def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
 def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
@@ -673,22 +694,6 @@ def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
 
 class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     : LLVM_IntrOp<name, [], [], traits, 0> {
-  let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
-    if(!builder.getCurrentDebugLocation())
-      return success();
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::LLVMContext &ctx = module->getContext();
-    llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::}]
-       # !subst(".", "_", name) # [{);
-    builder.CreateCall(fn, {
-        llvm::MetadataAsValue::get(ctx,
-            llvm::ValueAsMetadata::get(moduleTranslation.lookupValue(opInst.getOperand(0)))),
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($varInfo)),
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateExpression($locationExpr)),
-      });
-  }];
   let mlirBuilder = [{
     // Add debug intrindic to the list of intrinsics that need to be converted once the
     // full function was converted.
@@ -711,6 +716,22 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
     LLVM_DILocalVariableAttr:$varInfo,
     DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
+  let llvmBuilder = [{
+    // Debug records without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertDeclare(moduleTranslation.lookupValue(opInst.getOperand(0)),
+                     llvm::cast<llvm::DILocalVariable>(
+                         moduleTranslation.translateDebugInfo($varInfo)),
+                     moduleTranslation.translateExpression($locationExpr),
+                     moduleTranslation.translateLoc(opInst.getLoc(), scope),
+                     builder.GetInsertPoint());
+  }];
 }
 
 def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
@@ -721,22 +742,41 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
     LLVM_DILocalVariableAttr:$varInfo,
     DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
+  let llvmBuilder = [{
+    // Debug records without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertDbgValueIntrinsic(
+        moduleTranslation.lookupValue(opInst.getOperand(0)),
+        llvm::cast<llvm::DILocalVariable>(
+            moduleTranslation.translateDebugInfo($varInfo)),
+        moduleTranslation.translateExpression($locationExpr),
+        moduleTranslation.translateLoc(opInst.getLoc(), scope),
+        builder.GetInsertPoint());
+  }];
 }
 
 def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
   let summary = "Relates the program to a debug information label.";
   let arguments = (ins LLVM_DILabelAttr:$label);
   let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
+    // Debug records without debug locations are invalid.
     if(!builder.getCurrentDebugLocation())
       return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
     llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::LLVMContext &ctx = module->getContext();
-    llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::dbg_label);
-    builder.CreateCall(fn, {
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($label))
-      });
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertLabel(
+        llvm::cast<llvm::DILabel>(moduleTranslation.translateDebugInfo($label)),
+        moduleTranslation.translateLoc(opInst.getLoc(), scope),
+        builder.GetInsertPoint());
   }];
   let mlirBuilder = [{
     DILabelAttr labelAttr = $_label_attr($label);
@@ -981,27 +1021,29 @@ def LLVM_GetActiveLaneMaskOp
 /// Create a call to Masked Load intrinsic.
 def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   let arguments = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
-                   Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
+                   Optional<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_AnyVector:$res);
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
 
   string llvmBuilder = [{
-    auto *inst = $pass_thru.empty() ? builder.CreateMaskedLoad(
-        $_resultType, $data, llvm::Align($alignment), $mask) :
+    auto *inst = $pass_thru ? builder.CreateMaskedLoad(
+        $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru) :
       builder.CreateMaskedLoad(
-        $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
+        $_resultType, $data, llvm::Align($alignment), $mask);
     $res = inst;
   }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
     bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
+    llvm::Align alignment = intrinInst->getParamAlign(0).valueOrOne();
     $res = LLVM::MaskedLoadOp::create($_builder, $_location,
-      $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment),
-        nontemporal ? $_builder.getUnitAttr() : nullptr);
+      $_resultType, $data, $mask, $pass_thru,
+      $_builder.getI32IntegerAttr(alignment.value()),
+      nontemporal ? $_builder.getUnitAttr() : nullptr);
   }];
-  list<int> llvmArgIndices = [0, 2, 3, 1, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1];
 }
 
 /// Create a call to Masked Store intrinsic.
@@ -1017,10 +1059,12 @@ def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
       $value, $data, llvm::Align($alignment), $mask);
   }];
   string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
     $_op = LLVM::MaskedStoreOp::create($_builder, $_location,
-      $value, $data, $mask, $_int_attr($alignment));
+      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()));
   }];
-  list<int> llvmArgIndices = [0, 1, 3, 2];
+  list<int> llvmArgIndices = [0, 1, 2, -1];
 }
 
 /// Create a call to Masked Gather intrinsic.
@@ -1040,10 +1084,13 @@ def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
         $_resultType, $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
   string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    llvm::Align alignment = intrinInst->getParamAlign(0).valueOrOne();
     $res = LLVM::masked_gather::create($_builder, $_location,
-      $_resultType, $ptrs, $mask, $pass_thru, $_int_attr($alignment));
+      $_resultType, $ptrs, $mask, $pass_thru,
+      $_builder.getI32IntegerAttr(alignment.value()));
   }];
-  list<int> llvmArgIndices = [0, 2, 3, 1];
+  list<int> llvmArgIndices = [0, 1, 2, -1];
 
   let hasVerifier = 1;
 }
@@ -1061,10 +1108,12 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
       $value, $ptrs, llvm::Align($alignment), $mask);
   }];
   string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
     $_op = LLVM::masked_scatter::create($_builder, $_location,
-      $value, $ptrs, $mask, $_int_attr($alignment));
+      $value, $ptrs, $mask, $_builder.getI32IntegerAttr(alignment.value()));
   }];
-  list<int> llvmArgIndices = [0, 1, 3, 2];
+  list<int> llvmArgIndices = [0, 1, 2, -1];
 
   let hasVerifier = 1;
 }
@@ -1143,9 +1192,13 @@ def LLVM_Annotation
 // Trap intrinsics.
 //
 
-def LLVM_Trap : LLVM_ZeroResultIntrOp<"trap">;
+def LLVM_Trap : LLVM_ZeroResultIntrOp<"trap"> {
+  let assemblyFormat = "attr-dict";
+}
 
-def LLVM_DebugTrap : LLVM_ZeroResultIntrOp<"debugtrap">;
+def LLVM_DebugTrap : LLVM_ZeroResultIntrOp<"debugtrap"> {
+  let assemblyFormat = "attr-dict";
+}
 
 def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   /*overloadedOperands=*/[], /*traits=*/[],
@@ -1153,6 +1206,8 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   /*requiresArgAndResultAttrs=*/0, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[0], /*immArgAttrNames=*/["failureKind"]> {
   let arguments = (ins I8Attr:$failureKind);
+
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 /// Create a call to vscale intrinsic.

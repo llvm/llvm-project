@@ -17,11 +17,11 @@
 ; CL:      OpFunction
 ; CL:      %[[#FooVar:]] = OpVariable
 ; CL-NEXT: %[[#Casted1:]] = OpBitcast %[[#PtrChar]] %[[#FooVar]]
-; CL-NEXT: OpLifetimeStart %[[#Casted1]], 16
+; CL-NEXT: OpLifetimeStart %[[#Casted1]] 16
 ; CL-NEXT: OpBitcast
 ; CL-NEXT: OpInBoundsPtrAccessChain
 ; CL-NEXT: %[[#Casted2:]] = OpBitcast %[[#PtrChar]] %[[#FooVar]]
-; CL-NEXT: OpLifetimeStop %[[#Casted2]], 16
+; CL-NEXT: OpLifetimeStop %[[#Casted2]] 16
 
 ; VK:      OpFunction
 ; VK:      %[[#FooVar:]] = OpVariable
@@ -38,11 +38,11 @@ define spir_func void @foo(ptr noundef byval(%tprange) align 8 %_arg_UserRange) 
 ; CL: OpFunction
 ; CL: %[[#BarVar:]] = OpVariable
 ; CL-NEXT: %[[#Casted1:]] = OpBitcast %[[#PtrChar]] %[[#BarVar]]
-; CL-NEXT: OpLifetimeStart %[[#Casted1]], 16
+; CL-NEXT: OpLifetimeStart %[[#Casted1]] 16
 ; CL-NEXT: OpBitcast
 ; CL-NEXT: OpInBoundsPtrAccessChain
 ; CL-NEXT: %[[#Casted2:]] = OpBitcast %[[#PtrChar]] %[[#BarVar]]
-; CL-NEXT: OpLifetimeStop %[[#Casted2]], 16
+; CL-NEXT: OpLifetimeStop %[[#Casted2]] 16
 
 ; VK:      OpFunction
 ; VK:      %[[#BarVar:]] = OpVariable
@@ -58,9 +58,9 @@ define spir_func void @bar(ptr noundef byval(%tprange) align 8 %_arg_UserRange) 
 
 ; CL: OpFunction
 ; CL: %[[#TestVar:]] = OpVariable
-; CL-NEXT: OpLifetimeStart %[[#TestVar]], 1
+; CL-NEXT: OpLifetimeStart %[[#TestVar]] 1
 ; CL-NEXT: OpInBoundsPtrAccessChain
-; CL-NEXT: OpLifetimeStop %[[#TestVar]], 1
+; CL-NEXT: OpLifetimeStop %[[#TestVar]] 1
 
 ; VK:      OpFunction
 ; VK:      %[[#Test:]] = OpVariable

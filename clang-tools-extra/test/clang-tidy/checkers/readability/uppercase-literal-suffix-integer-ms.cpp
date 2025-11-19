@@ -1,14 +1,9 @@
 // RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -target x86_64-pc-linux-gnu -I %clang_tidy_headers -fms-extensions
-// RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
-// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -fix -- -target x86_64-pc-linux-gnu -I %clang_tidy_headers -fms-extensions
-// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -warnings-as-errors='-*,readability-uppercase-literal-suffix' -- -target x86_64-pc-linux-gnu -I %clang_tidy_headers -fms-extensions
 
 #include "integral_constant.h"
 
 void integer_suffix() {
   static constexpr auto v0 = __LINE__; // synthetic
-  static_assert(v0 == 9 || v0 == 5, "");
-
   static constexpr auto v1 = __cplusplus; // synthetic, long
 
   static constexpr auto v2 = 1; // no literal
@@ -19,9 +14,6 @@ void integer_suffix() {
 
   static constexpr auto v3 = 1i32;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'i32', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v3 = 1i32;
-  // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: I32{{$}}
   // CHECK-FIXES: static constexpr auto v3 = 1I32;
   static_assert(is_same<decltype(v3), const int>::value, "");
   static_assert(v3 == 1I32, "");
@@ -34,9 +26,6 @@ void integer_suffix() {
 
   static constexpr auto v5 = 1i64;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'i64', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v5 = 1i64;
-  // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: I64{{$}}
   // CHECK-FIXES: static constexpr auto v5 = 1I64;
   static_assert(is_same<decltype(v5), const long int>::value, "");
   static_assert(v5 == 1I64, "");
@@ -49,9 +38,6 @@ void integer_suffix() {
 
   static constexpr auto v7 = 1i16;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'i16', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v7 = 1i16;
-  // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: I16{{$}}
   // CHECK-FIXES: static constexpr auto v7 = 1I16;
   static_assert(is_same<decltype(v7), const short>::value, "");
   static_assert(v7 == 1I16, "");
@@ -64,9 +50,6 @@ void integer_suffix() {
 
   static constexpr auto v9 = 1i8;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'i8', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v9 = 1i8;
-  // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: I8{{$}}
   // CHECK-FIXES: static constexpr auto v9 = 1I8;
   static_assert(is_same<decltype(v9), const char>::value, "");
   static_assert(v9 == 1I8, "");

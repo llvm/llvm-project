@@ -28,7 +28,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
-#include <iterator>
 
 namespace llvm {
 
@@ -87,72 +86,54 @@ public:
   SetVector(llvm::from_range_t, Range &&R)
       : SetVector(adl_begin(R), adl_end(R)) {}
 
-  ArrayRef<value_type> getArrayRef() const { return vector_; }
+  [[nodiscard]] ArrayRef<value_type> getArrayRef() const { return vector_; }
 
   /// Clear the SetVector and return the underlying vector.
-  Vector takeVector() {
+  [[nodiscard]] Vector takeVector() {
     set_.clear();
     return std::move(vector_);
   }
 
   /// Determine if the SetVector is empty or not.
-  bool empty() const {
-    return vector_.empty();
-  }
+  [[nodiscard]] bool empty() const { return vector_.empty(); }
 
   /// Determine the number of elements in the SetVector.
-  size_type size() const {
-    return vector_.size();
-  }
+  [[nodiscard]] size_type size() const { return vector_.size(); }
 
   /// Get an iterator to the beginning of the SetVector.
-  iterator begin() {
-    return vector_.begin();
-  }
+  [[nodiscard]] iterator begin() { return vector_.begin(); }
 
   /// Get a const_iterator to the beginning of the SetVector.
-  const_iterator begin() const {
-    return vector_.begin();
-  }
+  [[nodiscard]] const_iterator begin() const { return vector_.begin(); }
 
   /// Get an iterator to the end of the SetVector.
-  iterator end() {
-    return vector_.end();
-  }
+  [[nodiscard]] iterator end() { return vector_.end(); }
 
   /// Get a const_iterator to the end of the SetVector.
-  const_iterator end() const {
-    return vector_.end();
-  }
+  [[nodiscard]] const_iterator end() const { return vector_.end(); }
 
   /// Get an reverse_iterator to the end of the SetVector.
-  reverse_iterator rbegin() {
-    return vector_.rbegin();
-  }
+  [[nodiscard]] reverse_iterator rbegin() { return vector_.rbegin(); }
 
   /// Get a const_reverse_iterator to the end of the SetVector.
-  const_reverse_iterator rbegin() const {
+  [[nodiscard]] const_reverse_iterator rbegin() const {
     return vector_.rbegin();
   }
 
   /// Get a reverse_iterator to the beginning of the SetVector.
-  reverse_iterator rend() {
-    return vector_.rend();
-  }
+  [[nodiscard]] reverse_iterator rend() { return vector_.rend(); }
 
   /// Get a const_reverse_iterator to the beginning of the SetVector.
-  const_reverse_iterator rend() const {
-    return vector_.rend();
-  }
+  [[nodiscard]] const_reverse_iterator rend() const { return vector_.rend(); }
 
   /// Return the first element of the SetVector.
-  const value_type &front() const {
+  [[nodiscard]] const value_type &front() const {
     assert(!empty() && "Cannot call front() on empty SetVector!");
     return vector_.front();
   }
 
   /// Return the last element of the SetVector.
-  const value_type &back() const {
+  [[nodiscard]] const value_type &back() const {
     assert(!empty() && "Cannot call back() on empty SetVector!");
     return vector_.back();
   }
@@ -250,8 +231,13 @@ public:
         if (isSmall())
           return llvm::remove_if(vector_, P);
 
-      return llvm::remove_if(vector_,
-                             TestAndEraseFromSet<UnaryPredicate>(P, set_));
+      return llvm::remove_if(vector_, [&](const value_type &V) {
+        if (P(V)) {
+          set_.erase(V);
+          return true;
+        }
+        return false;
+      });
     }();
 
     if (I == vector_.end())
@@ -261,7 +247,7 @@ public:
   }
 
   /// Check if the SetVector contains the given key.
-  bool contains(const key_type &key) const {
+  [[nodiscard]] bool contains(const key_type &key) const {
     if constexpr (canBeSmall())
       if (isSmall())
         return is_contained(vector_, key);
@@ -271,12 +257,8 @@ public:
 
   /// Count the number of elements of a given key in the SetVector.
   /// \returns 0 if the element is not in the SetVector, 1 if it is.
-  size_type count(const key_type &key) const {
-    if constexpr (canBeSmall())
-      if (isSmall())
-        return is_contained(vector_, key);
-
-    return set_.count(key);
+  [[nodiscard]] size_type count(const key_type &key) const {
+    return contains(key) ? 1 : 0;
   }
 
   /// Completely clear the SetVector
@@ -298,11 +280,11 @@ public:
     return Ret;
   }
 
-  bool operator==(const SetVector &that) const {
+  [[nodiscard]] bool operator==(const SetVector &that) const {
     return vector_ == that.vector_;
   }
 
-  bool operator!=(const SetVector &that) const {
+  [[nodiscard]] bool operator!=(const SetVector &that) const {
     return vector_ != that.vector_;
   }
 
@@ -335,29 +317,6 @@ public:
   }
 
 private:
-  /// A wrapper predicate designed for use with std::remove_if.
-  ///
-  /// This predicate wraps a predicate suitable for use with std::remove_if to
-  /// call set_.erase(x) on each element which is slated for removal.
-  template <typename UnaryPredicate>
-  class TestAndEraseFromSet {
-    UnaryPredicate P;
-    set_type &set_;
-
-  public:
-    TestAndEraseFromSet(UnaryPredicate P, set_type &set_)
-        : P(std::move(P)), set_(set_) {}
-
-    template <typename ArgumentT>
-    bool operator()(const ArgumentT &Arg) {
-      if (P(Arg)) {
-        set_.erase(Arg);
-        return true;
-      }
-      return false;
-    }
-  };
-
   [[nodiscard]] static constexpr bool canBeSmall() { return N != 0; }
 
   [[nodiscard]] bool isSmall() const { return set_.empty(); }
@@ -377,17 +336,7 @@ private:
 template <typename T, unsigned N>
 class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
 public:
-  SmallSetVector() = default;
-
-  /// Initialize a SmallSetVector with a range of elements
-  template<typename It>
-  SmallSetVector(It Start, It End) {
-    this->insert(Start, End);
-  }
-
-  template <typename Range>
-  SmallSetVector(llvm::from_range_t, Range &&R)
-      : SmallSetVector(adl_begin(R), adl_end(R)) {}
+  using SetVector<T, SmallVector<T, N>, DenseSet<T>, N>::SetVector;
 };
 
 } // end namespace llvm

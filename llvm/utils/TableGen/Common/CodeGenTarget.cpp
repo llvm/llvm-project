@@ -23,7 +23,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <iterator>
 #include <tuple>
 using namespace llvm;
 
@@ -80,7 +79,7 @@ CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
   MacroFusions = Records.getAllDerivedDefinitions("Fusion");
 }
 
-CodeGenTarget::~CodeGenTarget() {}
+CodeGenTarget::~CodeGenTarget() = default;
 
 StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 
@@ -197,6 +196,38 @@ void CodeGenTarget::ReadLegalValueTypes() const {
   LegalValueTypes.erase(llvm::unique(LegalValueTypes), LegalValueTypes.end());
 }
 
+const Record *CodeGenTarget::getInitValueAsRegClass(
+    const Init *V, bool AssumeRegClassByHwModeIsDefault) const {
+  const Record *RegClassLike = getInitValueAsRegClassLike(V);
+  if (!RegClassLike || RegClassLike->isSubClassOf("RegisterClass"))
+    return RegClassLike;
+
+  // FIXME: We should figure out the hwmode and dispatch. But this interface
+  // is broken, we should be returning a register class. The expected uses
+  // will use the same RegBanks in all modes.
+  if (AssumeRegClassByHwModeIsDefault &&
+      RegClassLike->isSubClassOf("RegClassByHwMode")) {
+    const HwModeSelect &ModeSelect = getHwModes().getHwModeSelect(RegClassLike);
+    if (ModeSelect.Items.empty())
+      return nullptr;
+    return ModeSelect.Items.front().second;
+  }
+
+  return nullptr;
+}
+
+const Record *CodeGenTarget::getInitValueAsRegClassLike(const Init *V) const {
+  const DefInit *VDefInit = dyn_cast<DefInit>(V);
+  if (!VDefInit)
+    return nullptr;
+
+  const Record *RegClass = VDefInit->getDef();
+  if (RegClass->isSubClassOf("RegisterOperand"))
+    return RegClass->getValueAsDef("RegClass");
+
+  return RegClass->isSubClassOf("RegisterClassLike") ? RegClass : nullptr;
+}
+
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
   if (!SchedModels)
     SchedModels = std::make_unique<CodeGenSchedModels>(Records, *this);
@@ -252,15 +283,25 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
   assert(EndOfPredefines == getNumFixedInstructions() &&
          "Missing generic opcode");
 
+  [[maybe_unused]] unsigned SkippedInsts = 0;
+
   for (const auto &[_, CGIUp] : InstMap) {
     const CodeGenInstruction *CGI = CGIUp.get();
     if (CGI->Namespace != "TargetOpcode") {
+
+      if (CGI->TheDef->isSubClassOf(
+              "TargetSpecializedStandardPseudoInstruction")) {
+        ++SkippedInsts;
+        continue;
+      }
+
       InstrsByEnum.push_back(CGI);
       NumPseudoInstructions += CGI->TheDef->getValueAsBit("isPseudo");
     }
   }
 
-  assert(InstrsByEnum.size() == InstMap.size() && "Missing predefined instr");
+  assert(InstrsByEnum.size() + SkippedInsts == InstMap.size() &&
+         "Missing predefined instr");
 
   // All of the instructions are now in random order based on the map iteration.
   llvm::sort(

@@ -148,6 +148,64 @@ define <8 x double> @merge_8f64_f64_1u3u5zu8(ptr %ptr) nounwind uwtable noinline
   ret <8 x double> %res7
 }
 
+define <8 x double> @merge_8f64_f64_76543210(ptr %ptr) nounwind uwtable noinline ssp {
+; ALL-LABEL: merge_8f64_f64_76543210:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; ALL-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; ALL-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    vmovhps {{.*#+}} xmm1 = xmm2[0,1],mem[0,1]
+; ALL-NEXT:    vmovhps {{.*#+}} xmm2 = xmm3[0,1],mem[0,1]
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; ALL-NEXT:    retq
+;
+; X86-AVX512F-LABEL: merge_8f64_f64_76543210:
+; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX512F-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-AVX512F-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
+; X86-AVX512F-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX512F-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
+; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-AVX512F-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
+; X86-AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; X86-AVX512F-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; X86-AVX512F-NEXT:    retl
+  %ptr0 = getelementptr inbounds double, ptr %ptr, i64 7
+  %ptr1 = getelementptr inbounds double, ptr %ptr, i64 6
+  %ptr2 = getelementptr inbounds double, ptr %ptr, i64 5
+  %ptr3 = getelementptr inbounds double, ptr %ptr, i64 4
+  %ptr4 = getelementptr inbounds double, ptr %ptr, i64 3
+  %ptr5 = getelementptr inbounds double, ptr %ptr, i64 2
+  %ptr6 = getelementptr inbounds double, ptr %ptr, i64 1
+  %ptr7 = getelementptr inbounds double, ptr %ptr, i64 0
+  %val0 = load double, ptr %ptr0
+  %val1 = load double, ptr %ptr1
+  %val2 = load double, ptr %ptr2
+  %val3 = load double, ptr %ptr3
+  %val4 = load double, ptr %ptr4
+  %val5 = load double, ptr %ptr5
+  %val6 = load double, ptr %ptr6
+  %val7 = load double, ptr %ptr7
+  %res0 = insertelement <8 x double> poison, double %val0, i64 0
+  %res1 = insertelement <8 x double> %res0, double %val1, i64 1
+  %res2 = insertelement <8 x double> %res1, double %val2, i64 2
+  %res3 = insertelement <8 x double> %res2, double %val3, i64 3
+  %res4 = insertelement <8 x double> %res3, double %val4, i64 4
+  %res5 = insertelement <8 x double> %res4, double %val5, i64 5
+  %res6 = insertelement <8 x double> %res5, double %val6, i64 6
+  %res7 = insertelement <8 x double> %res6, double %val7, i64 7
+  ret <8 x double> %res7
+}
+
 define <8 x i64> @merge_8i64_4i64_z3(ptr %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8i64_4i64_z3:
 ; ALL:       # %bb.0:
@@ -224,6 +282,76 @@ define <8 x i64> @merge_8i64_i64_1u3u5zu8(ptr %ptr) nounwind uwtable noinline ss
   %res4 = insertelement <8 x i64> %res2, i64 %val4, i32 4
   %res5 = insertelement <8 x i64> %res4, i64     0, i32 5
   %res7 = insertelement <8 x i64> %res5, i64 %val7, i32 7
+  ret <8 x i64> %res7
+}
+
+define <8 x i64> @merge_8i64_i64_76543210(ptr %ptr) nounwind uwtable noinline ssp {
+; ALL-LABEL: merge_8i64_i64_76543210:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; ALL-NEXT:    retq
+;
+; X86-AVX512F-LABEL: merge_8i64_i64_76543210:
+; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512F-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vpinsrd $1, 12(%eax), %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpinsrd $2, (%eax), %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpinsrd $3, 4(%eax), %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vpinsrd $1, 28(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vpinsrd $2, 16(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vpinsrd $3, 20(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX512F-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vpinsrd $1, 44(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vpinsrd $2, 32(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vpinsrd $3, 36(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vpinsrd $1, 60(%eax), %xmm2, %xmm2
+; X86-AVX512F-NEXT:    vpinsrd $2, 48(%eax), %xmm2, %xmm2
+; X86-AVX512F-NEXT:    vpinsrd $3, 52(%eax), %xmm2, %xmm2
+; X86-AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; X86-AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; X86-AVX512F-NEXT:    retl
+  %ptr0 = getelementptr inbounds i64, ptr %ptr, i64 7
+  %ptr1 = getelementptr inbounds i64, ptr %ptr, i64 6
+  %ptr2 = getelementptr inbounds i64, ptr %ptr, i64 5
+  %ptr3 = getelementptr inbounds i64, ptr %ptr, i64 4
+  %ptr4 = getelementptr inbounds i64, ptr %ptr, i64 3
+  %ptr5 = getelementptr inbounds i64, ptr %ptr, i64 2
+  %ptr6 = getelementptr inbounds i64, ptr %ptr, i64 1
+  %ptr7 = getelementptr inbounds i64, ptr %ptr, i64 0
+  %val0 = load i64, ptr %ptr0
+  %val1 = load i64, ptr %ptr1
+  %val2 = load i64, ptr %ptr2
+  %val3 = load i64, ptr %ptr3
+  %val4 = load i64, ptr %ptr4
+  %val5 = load i64, ptr %ptr5
+  %val6 = load i64, ptr %ptr6
+  %val7 = load i64, ptr %ptr7
+  %res0 = insertelement <8 x i64> poison, i64 %val0, i64 0
+  %res1 = insertelement <8 x i64> %res0, i64 %val1, i64 1
+  %res2 = insertelement <8 x i64> %res1, i64 %val2, i64 2
+  %res3 = insertelement <8 x i64> %res2, i64 %val3, i64 3
+  %res4 = insertelement <8 x i64> %res3, i64 %val4, i64 4
+  %res5 = insertelement <8 x i64> %res4, i64 %val5, i64 5
+  %res6 = insertelement <8 x i64> %res5, i64 %val6, i64 6
+  %res7 = insertelement <8 x i64> %res6, i64 %val7, i64 7
   ret <8 x i64> %res7
 }
 
@@ -335,6 +463,104 @@ define <16 x float> @merge_16f32_f32_0uu3zzuuuuuzCuEF(ptr %ptr) nounwind uwtable
   ret <16 x float> %resF
 }
 
+define <16 x float> @merge_16f32_f32_FEDCBA9876543210(ptr %ptr) nounwind uwtable noinline ssp {
+; ALL-LABEL: merge_16f32_f32_FEDCBA9876543210:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ALL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ALL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; ALL-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],mem[0],xmm2[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],mem[0],xmm3[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; ALL-NEXT:    retq
+;
+; X86-AVX512F-LABEL: merge_16f32_f32_FEDCBA9876543210:
+; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; X86-AVX512F-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX512F-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; X86-AVX512F-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
+; X86-AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
+; X86-AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; X86-AVX512F-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; X86-AVX512F-NEXT:    retl
+  %ptr0 = getelementptr inbounds float, ptr %ptr, i64 15
+  %ptr1 = getelementptr inbounds float, ptr %ptr, i64 14
+  %ptr2 = getelementptr inbounds float, ptr %ptr, i64 13
+  %ptr3 = getelementptr inbounds float, ptr %ptr, i64 12
+  %ptr4 = getelementptr inbounds float, ptr %ptr, i64 11
+  %ptr5 = getelementptr inbounds float, ptr %ptr, i64 10
+  %ptr6 = getelementptr inbounds float, ptr %ptr, i64 9
+  %ptr7 = getelementptr inbounds float, ptr %ptr, i64 8
+  %ptr8 = getelementptr inbounds float, ptr %ptr, i64 7
+  %ptr9 = getelementptr inbounds float, ptr %ptr, i64 6
+  %ptrA = getelementptr inbounds float, ptr %ptr, i64 5
+  %ptrB = getelementptr inbounds float, ptr %ptr, i64 4
+  %ptrC = getelementptr inbounds float, ptr %ptr, i64 3
+  %ptrD = getelementptr inbounds float, ptr %ptr, i64 2
+  %ptrE = getelementptr inbounds float, ptr %ptr, i64 1
+  %ptrF = getelementptr inbounds float, ptr %ptr, i64 0
+  %val0 = load float, ptr %ptr0
+  %val1 = load float, ptr %ptr1
+  %val2 = load float, ptr %ptr2
+  %val3 = load float, ptr %ptr3
+  %val4 = load float, ptr %ptr4
+  %val5 = load float, ptr %ptr5
+  %val6 = load float, ptr %ptr6
+  %val7 = load float, ptr %ptr7
+  %val8 = load float, ptr %ptr8
+  %val9 = load float, ptr %ptr9
+  %valA = load float, ptr %ptrA
+  %valB = load float, ptr %ptrB
+  %valC = load float, ptr %ptrC
+  %valD = load float, ptr %ptrD
+  %valE = load float, ptr %ptrE
+  %valF = load float, ptr %ptrF
+  %res0 = insertelement <16 x float> poison, float %val0, i64 0
+  %res1 = insertelement <16 x float> %res0, float %val1, i64 1
+  %res2 = insertelement <16 x float> %res1, float %val2, i64 2
+  %res3 = insertelement <16 x float> %res2, float %val3, i64 3
+  %res4 = insertelement <16 x float> %res3, float %val4, i64 4
+  %res5 = insertelement <16 x float> %res4, float %val5, i64 5
+  %res6 = insertelement <16 x float> %res5, float %val6, i64 6
+  %res7 = insertelement <16 x float> %res6, float %val7, i64 7
+  %res8 = insertelement <16 x float> %res7, float %val8, i64 8
+  %res9 = insertelement <16 x float> %res8, float %val9, i64 9
+  %resA = insertelement <16 x float> %res9, float %valA, i64 10
+  %resB = insertelement <16 x float> %resA, float %valB, i64 11
+  %resC = insertelement <16 x float> %resB, float %valC, i64 12
+  %resD = insertelement <16 x float> %resC, float %valD, i64 13
+  %resE = insertelement <16 x float> %resD, float %valE, i64 14
+  %resF = insertelement <16 x float> %resE, float %valF, i64 15
+  ret <16 x float> %resF
+}
+
 define <16 x i32> @merge_16i32_i32_12zzzuuuuuuuuuuuz(ptr %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_16i32_i32_12zzzuuuuuuuuuuuz:
 ; ALL:       # %bb.0:
@@ -440,6 +666,104 @@ define <16 x i32> @merge_16i32_i32_0uu3zzuuuuuzCuEF(ptr %ptr) nounwind uwtable n
   %resD = insertelement <16 x i32> %resC, i32     0, i32 13
   %resE = insertelement <16 x i32> %resD, i32 %valE, i32 14
   %resF = insertelement <16 x i32> %resE, i32 %valF, i32 15
+  ret <16 x i32> %resF
+}
+
+define <16 x i32> @merge_16i32_i32_FEDCBA9876543210(ptr %ptr) nounwind uwtable noinline ssp {
+; ALL-LABEL: merge_16i32_i32_FEDCBA9876543210:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ALL-NEXT:    vpinsrd $1, 8(%rdi), %xmm0, %xmm0
+; ALL-NEXT:    vpinsrd $2, 4(%rdi), %xmm0, %xmm0
+; ALL-NEXT:    vpinsrd $3, (%rdi), %xmm0, %xmm0
+; ALL-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ALL-NEXT:    vpinsrd $1, 24(%rdi), %xmm1, %xmm1
+; ALL-NEXT:    vpinsrd $2, 20(%rdi), %xmm1, %xmm1
+; ALL-NEXT:    vpinsrd $3, 16(%rdi), %xmm1, %xmm1
+; ALL-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ALL-NEXT:    vpinsrd $1, 40(%rdi), %xmm1, %xmm1
+; ALL-NEXT:    vpinsrd $2, 36(%rdi), %xmm1, %xmm1
+; ALL-NEXT:    vpinsrd $3, 32(%rdi), %xmm1, %xmm1
+; ALL-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; ALL-NEXT:    vpinsrd $1, 56(%rdi), %xmm2, %xmm2
+; ALL-NEXT:    vpinsrd $2, 52(%rdi), %xmm2, %xmm2
+; ALL-NEXT:    vpinsrd $3, 48(%rdi), %xmm2, %xmm2
+; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; ALL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; ALL-NEXT:    retq
+;
+; X86-AVX512F-LABEL: merge_16i32_i32_FEDCBA9876543210:
+; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512F-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vpinsrd $1, 8(%eax), %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpinsrd $2, 4(%eax), %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpinsrd $3, (%eax), %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vpinsrd $1, 24(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vpinsrd $2, 20(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vpinsrd $3, 16(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX512F-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vpinsrd $1, 40(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vpinsrd $2, 36(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vpinsrd $3, 32(%eax), %xmm1, %xmm1
+; X86-AVX512F-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-AVX512F-NEXT:    vpinsrd $1, 56(%eax), %xmm2, %xmm2
+; X86-AVX512F-NEXT:    vpinsrd $2, 52(%eax), %xmm2, %xmm2
+; X86-AVX512F-NEXT:    vpinsrd $3, 48(%eax), %xmm2, %xmm2
+; X86-AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; X86-AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; X86-AVX512F-NEXT:    retl
+  %ptr0 = getelementptr inbounds i32, ptr %ptr, i64 15
+  %ptr1 = getelementptr inbounds i32, ptr %ptr, i64 14
+  %ptr2 = getelementptr inbounds i32, ptr %ptr, i64 13
+  %ptr3 = getelementptr inbounds i32, ptr %ptr, i64 12
+  %ptr4 = getelementptr inbounds i32, ptr %ptr, i64 11
+  %ptr5 = getelementptr inbounds i32, ptr %ptr, i64 10
+  %ptr6 = getelementptr inbounds i32, ptr %ptr, i64 9
+  %ptr7 = getelementptr inbounds i32, ptr %ptr, i64 8
+  %ptr8 = getelementptr inbounds i32, ptr %ptr, i64 7
+  %ptr9 = getelementptr inbounds i32, ptr %ptr, i64 6
+  %ptrA = getelementptr inbounds i32, ptr %ptr, i64 5
+  %ptrB = getelementptr inbounds i32, ptr %ptr, i64 4
+  %ptrC = getelementptr inbounds i32, ptr %ptr, i64 3
+  %ptrD = getelementptr inbounds i32, ptr %ptr, i64 2
+  %ptrE = getelementptr inbounds i32, ptr %ptr, i64 1
+  %ptrF = getelementptr inbounds i32, ptr %ptr, i64 0
+  %val0 = load i32, ptr %ptr0
+  %val1 = load i32, ptr %ptr1
+  %val2 = load i32, ptr %ptr2
+  %val3 = load i32, ptr %ptr3
+  %val4 = load i32, ptr %ptr4
+  %val5 = load i32, ptr %ptr5
+  %val6 = load i32, ptr %ptr6
+  %val7 = load i32, ptr %ptr7
+  %val8 = load i32, ptr %ptr8
+  %val9 = load i32, ptr %ptr9
+  %valA = load i32, ptr %ptrA
+  %valB = load i32, ptr %ptrB
+  %valC = load i32, ptr %ptrC
+  %valD = load i32, ptr %ptrD
+  %valE = load i32, ptr %ptrE
+  %valF = load i32, ptr %ptrF
+  %res0 = insertelement <16 x i32> poison, i32 %val0, i64 0
+  %res1 = insertelement <16 x i32> %res0, i32 %val1, i64 1
+  %res2 = insertelement <16 x i32> %res1, i32 %val2, i64 2
+  %res3 = insertelement <16 x i32> %res2, i32 %val3, i64 3
+  %res4 = insertelement <16 x i32> %res3, i32 %val4, i64 4
+  %res5 = insertelement <16 x i32> %res4, i32 %val5, i64 5
+  %res6 = insertelement <16 x i32> %res5, i32 %val6, i64 6
+  %res7 = insertelement <16 x i32> %res6, i32 %val7, i64 7
+  %res8 = insertelement <16 x i32> %res7, i32 %val8, i64 8
+  %res9 = insertelement <16 x i32> %res8, i32 %val9, i64 9
+  %resA = insertelement <16 x i32> %res9, i32 %valA, i64 10
+  %resB = insertelement <16 x i32> %resA, i32 %valB, i64 11
+  %resC = insertelement <16 x i32> %resB, i32 %valC, i64 12
+  %resD = insertelement <16 x i32> %resC, i32 %valD, i64 13
+  %resE = insertelement <16 x i32> %resD, i32 %valE, i64 14
+  %resF = insertelement <16 x i32> %resE, i32 %valF, i64 15
   ret <16 x i32> %resF
 }
 

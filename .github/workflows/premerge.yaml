@@ -24,17 +24,49 @@ concurrency:
 
 jobs:
   premerge-checks-linux:
-    name: Build and Test Linux
+    name: Build and Test Linux${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && ' AArch64') || '' }}
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: llvm-premerge-linux-runners
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - depot-ubuntu-24.04-arm-16
+          - llvm-premerge-linux-runners
+    runs-on: ${{ matrix.runs-on }}
+    container:
+      # The llvm-premerge agents are already containers and running the
+      # this same image, so we can't use a container for the github action
+      # job.  The depot containers are running on VMs, so we can use a
+      # container.  This helps ensure the build environment is as close
+      # as possible on both the depot runners and the llvm-premerge runners.
+      image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
+      # --privileged is needed to run the lldb tests that disable aslr.
+      # The SCCACHE environment variables are need to be copied from the host
+      # to the container to make sure it is configured correctly to use the
+      # depot cache.
+      options: >-
+         --privileged
+         --env SCCACHE_WEBDAV_ENDPOINT
+         --env SCCACHE_WEBDAV_TOKEN
+    defaults:
+      run:
+        # The run step defaults to using sh as the shell when running in a
+        # container, so make bash the default to ensure consistency between
+        # container and non-container jobs.
+        shell: bash
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
       - name: Build and Test
+        timeout-minutes: 120
+        continue-on-error: ${{ runner.arch == 'ARM64' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           git config --global --add safe.directory '*'
 
@@ -54,18 +86,24 @@ jobs:
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 
-          # This environment variable is passes into the container through the
-          # runner pod definition. This differs between our two clusters which
-          # why we do not hardcode it.
-          export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET
-          export SCCACHE_GCS_RW_MODE=READ_WRITE
+          # The linux-premerge runners are hosted on GCP and have a different
+          # cache setup than the depot runners.
+          if [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
+            # This environment variable is passes into the container through the
+            # runner pod definition. This differs between our two clusters which
+            # why we do not hardcode it.
+            export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET
+            export SCCACHE_GCS_RW_MODE=READ_WRITE
+          fi
+          env
 
           # Set the idle timeout to zero to ensure sccache runs for the
           # entire duration of the job. Otherwise it might stop if we run
           # several test suites in a row and discard statistics that we want
           # to save in the end.
           export SCCACHE_IDLE_TIMEOUT=0
-          sccache --start-server
+          mkdir artifacts
+          SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
 
           ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}" "${enable_cir}"
       - name: Upload Artifacts
@@ -75,12 +113,20 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: Premerge Artifacts (Linux)
+          name: Premerge Artifacts (Linux ${{ runner.arch }})
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
+      - name: Upload Comment
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ always() && !startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') }}
+        continue-on-error: true
+        with:
+          name: workflow-args
+          path: |
+            comments
 
   premerge-checks-windows:
     name: Build and Test Windows
@@ -107,17 +153,25 @@ jobs:
 
           echo "Building projects: ${projects_to_build}"
           echo "Running project checks targets: ${project_check_targets}"
+          echo "Building runtimes: ${runtimes_to_build}"
+          echo "Running runtimes checks targets: ${runtimes_check_targets}"
 
           echo "windows-projects=${projects_to_build}" >> $GITHUB_OUTPUT
           echo "windows-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
+          echo "windows-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
+          echo "windows-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
       - name: Build and Test
+        timeout-minutes: 180
         if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of
           # these environment variables.
-          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\""
+          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; mkdir artifacts; SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\" \"${{ steps.vars.outputs.windows-runtimes }}\" \"${{ steps.vars.outputs.windows-runtimes-check-targets }}\""
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not
@@ -125,7 +179,7 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: Premerge Artifacts (Windows)
           path: artifacts/
@@ -146,14 +200,15 @@ jobs:
         with:
           fetch-depth: 2
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+        uses: hendrikmuhs/ccache-action@bfa03e1de4d7f7c3e80ad9109feedd05c4f5a716 # v1.2.19
         with:
           max-size: "2000M"
       - name: Install Ninja
-        uses: llvm/actions/install-ninja@main
+        run: |
+          brew install ninja
       - name: Build and Test
         run: |
-          source <(git diff --name-only HEAD~2..HEAD | python3 .ci/compute_projects.py)
+          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
 
           if [[ "${projects_to_build}" == "" ]]; then
             echo "No projects to build"

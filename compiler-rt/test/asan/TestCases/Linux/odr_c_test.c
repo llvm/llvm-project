@@ -4,12 +4,12 @@
 // RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clang_asan -fcommon %s -fPIC -shared -mllvm -asan-use-private-alias=0 -o %dynamiclib1  -DFILE1
 // RUN: %clang_asan -fcommon %s -fPIC -shared -mllvm -asan-use-private-alias=0 -o %dynamiclib2  -DFILE2
-// RUN: %clang_asan -fcommon %s -fPIE %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t
-// RUN: not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_asan -fcommon %s -fPIE %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t.dir/exe
+// RUN: not %run %t.dir/exe 2>&1 | FileCheck %s
 
 // RUN: %clang_asan -fcommon %s -fPIC -shared -mllvm -asan-use-private-alias=1 -o %dynamiclib1  -DFILE1
 // RUN: %clang_asan -fcommon %s -fPIC -shared -mllvm -asan-use-private-alias=1 -o %dynamiclib2  -DFILE2
-// RUN: %run %t 2>&1 | count 0
+// RUN: %run %t.dir/exe 2>&1 | count 0
 
 // Unaligned accesses don't work on strict-alignment targets like SPARC.
 // UNSUPPORTED: sparc-target-arch

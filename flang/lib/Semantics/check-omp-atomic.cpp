@@ -19,6 +19,7 @@
 #include "flang/Evaluate/rewrite.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
@@ -41,6 +42,7 @@
 
 namespace Fortran::semantics {
 
+using namespace Fortran::parser::omp;
 using namespace Fortran::semantics::omp;
 
 namespace operation = Fortran::evaluate::operation;
@@ -61,16 +63,46 @@ template <common::TypeCategory C, int K>
 struct IsIntegral<evaluate::Type<C, K>> {
   static constexpr bool value{//
       C == common::TypeCategory::Integer ||
-      C == common::TypeCategory::Unsigned ||
-      C == common::TypeCategory::Logical};
+      C == common::TypeCategory::Unsigned};
 };
 
 template <typename T> constexpr bool is_integral_v{IsIntegral<T>::value};
 
+template <typename...> struct IsFloatingPoint {
+  static constexpr bool value{false};
+};
+
+template <common::TypeCategory C, int K>
+struct IsFloatingPoint<evaluate::Type<C, K>> {
+  static constexpr bool value{//
+      C == common::TypeCategory::Real || C == common::TypeCategory::Complex};
+};
+
+template <typename T>
+constexpr bool is_floating_point_v{IsFloatingPoint<T>::value};
+
+template <typename T>
+constexpr bool is_numeric_v{is_integral_v<T> || is_floating_point_v<T>};
+
+template <typename...> struct IsLogical {
+  static constexpr bool value{false};
+};
+
+template <common::TypeCategory C, int K>
+struct IsLogical<evaluate::Type<C, K>> {
+  static constexpr bool value{C == common::TypeCategory::Logical};
+};
+
+template <typename T> constexpr bool is_logical_v{IsLogical<T>::value};
+
 template <typename T, typename Op0, typename Op1>
 using ReassocOpBase = evaluate::match::AnyOfPattern< //
     evaluate::match::Add<T, Op0, Op1>, //
-    evaluate::match::Mul<T, Op0, Op1>>;
+    evaluate::match::Mul<T, Op0, Op1>, //
+    evaluate::match::LogicalOp<common::LogicalOperator::And, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Or, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Eqv, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Neqv, T, Op0, Op1>>;
 
 template <typename T, typename Op0, typename Op1>
 struct ReassocOp : public ReassocOpBase<T, Op0, Op1> {
@@ -88,13 +120,14 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   using Id = evaluate::rewrite::Identity;
   struct NonIntegralTag {};
 
-  ReassocRewriter(const SomeExpr &atom) : atom_(atom) {}
+  ReassocRewriter(const SomeExpr &atom, const SemanticsContext &context)
+      : atom_(atom), context_(context) {}
 
   // Try to find cases where the input expression is of the form
   // (1) (a . b) . c, or
   // (2) a . (b . c),
-  // where . denotes an associative operation (currently + or *), and a, b, c
-  // are some subexpresions.
+  // where . denotes an associative operation, and a, b, c are some
+  // subexpresions.
   // If one of the operands in the nested operation is the atomic variable
   // (with some possible type conversions applied to it), bring it to the
   // top-level operation, and move the top-level operand into the nested
@@ -102,8 +135,13 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   // For example, assuming x is the atomic variable:
   //   (a + x) + b  ->  (a + b) + x,  i.e. (conceptually) swap x and b.
   template <typename T, typename U,
-      typename = std::enable_if_t<is_integral_v<T>>>
+      typename = std::enable_if_t<is_numeric_v<T> || is_logical_v<T>>>
   evaluate::Expr<T> operator()(evaluate::Expr<T> &&x, const U &u) {
+    if constexpr (is_floating_point_v<T>) {
+      if (!context_.langOptions().AssociativeMath) {
+        return Id::operator()(std::move(x), u);
+      }
+    }
     // As per the above comment, there are 3 subexpressions involved in this
     // transformation. A match::Expr<T> will match evaluate::Expr<U> when T is
     // same as U, plus it will store a pointer (ref) to the matched expression.
@@ -111,8 +149,8 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // some order) from the example above.
     evaluate::match::Expr<T> sub[3];
     auto inner{reassocOp<T>(sub[0], sub[1])};
-    auto outer1{reassocOp<T>(inner, sub[2])}; // inner + something
-    auto outer2{reassocOp<T>(sub[2], inner)}; // something + inner
+    auto outer1{reassocOp<T>(inner, sub[2])}; // inner . something
+    auto outer2{reassocOp<T>(sub[2], inner)}; // something . inner
 #if !defined(__clang__) && !defined(_MSC_VER) && \
     (__GNUC__ < 8 || (__GNUC__ == 8 && __GNUC_MINOR__ < 5))
     // If GCC version < 8.5, use this definition. For the other definition
@@ -121,7 +159,8 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // inside of the visitor function in common::visit.
     // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
     // that this is some kind of a GCC issue.
-    using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>>;
+    using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>,
+        evaluate::LogicalOperation<T::kind>>;
 #else
     using MatchTypes = typename decltype(outer1)::MatchTypes;
 #endif
@@ -145,23 +184,9 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
       }
       return common::visit(
           [&](auto &&s) {
-            using Expr = evaluate::Expr<T>;
-            using TypeS = llvm::remove_cvref_t<decltype(s)>;
-            // This visitor has to be semantically correct for all possible
-            // types of s even though at runtime s will only be one of the
-            // matched types.
-            // Limit the construction to the operation types that we tried
-            // to match (otherwise TypeS(op1, op2) would fail for non-binary
-            // operations).
-            if constexpr (common::HasMember<TypeS, MatchTypes>) {
-              Expr atom{*sub[atomIdx].ref};
-              Expr op1{*sub[(atomIdx + 1) % 3].ref};
-              Expr op2{*sub[(atomIdx + 2) % 3].ref};
-              return Expr(
-                  TypeS(atom, Expr(TypeS(std::move(op1), std::move(op2)))));
-            } else {
-              return Expr(TypeS(s));
-            }
+            // Build the new expression from the matched components.
+            return Reconstruct<T, MatchTypes>(s, *sub[atomIdx].ref,
+                *sub[(atomIdx + 1) % 3].ref, *sub[(atomIdx + 2) % 3].ref);
           },
           evaluate::match::deparen(x).u);
     }
@@ -169,18 +194,49 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   }
 
   template <typename T, typename U,
-      typename = std::enable_if_t<!is_integral_v<T>>>
+      typename = std::enable_if_t<!is_numeric_v<T> && !is_logical_v<T>>>
   evaluate::Expr<T> operator()(
       evaluate::Expr<T> &&x, const U &u, NonIntegralTag = {}) {
     return Id::operator()(std::move(x), u);
   }
 
 private:
+  template <typename T, typename MatchTypes, typename S>
+  evaluate::Expr<T> Reconstruct(const S &op, evaluate::Expr<T> atom,
+      evaluate::Expr<T> op1, evaluate::Expr<T> op2) {
+    using TypeS = llvm::remove_cvref_t<decltype(op)>;
+    // This function has to be semantically correct for all possible types
+    // of S even though at runtime s will only be one of the matched types.
+    // Limit the construction to the operation types that we tried to match
+    // (otherwise TypeS(op1, op2) would fail for non-binary operations).
+    if constexpr (!common::HasMember<TypeS, MatchTypes>) {
+      return evaluate::Expr<T>(TypeS(op));
+    } else if constexpr (is_logical_v<T>) {
+      constexpr int K{T::kind};
+      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation<K>>) {
+        // Logical operators take an extra argument in their constructor,
+        // so they need their own reconstruction code.
+        common::LogicalOperator opCode{op.logicalOperator};
+        return evaluate::Expr<T>(TypeS( //
+            opCode, std::move(atom),
+            evaluate::Expr<T>(TypeS( //
+                opCode, std::move(op1), std::move(op2)))));
+      }
+    } else {
+      // Generic reconstruction.
+      return evaluate::Expr<T>(TypeS( //
+          std::move(atom),
+          evaluate::Expr<T>(TypeS( //
+              std::move(op1), std::move(op2)))));
+    }
+  }
+
   template <typename T> bool IsAtom(const evaluate::Expr<T> &x) const {
     return IsSameOrConvertOf(evaluate::AsGenericExpr(AsRvalue(x)), atom_);
   }
 
   const SomeExpr &atom_;
+  const SemanticsContext &context_;
 };
 
 struct AnalyzedCondStmt {
@@ -232,7 +288,7 @@ static std::optional<AnalyzedCondStmt> AnalyzeConditionalStmt(
   // Extract the evaluate::Expr from ScalarLogicalExpr.
   auto getFromLogical{[](const parser::ScalarLogicalExpr &logical) {
     // ScalarLogicalExpr is Scalar<Logical<common::Indirection<Expr>>>
-    const parser::Expr &expr{logical.thing.thing.value()};
+    auto &expr{parser::UnwrapRef<parser::Expr>(logical)};
     return GetEvaluateExpr(expr);
   }};
 
@@ -465,8 +521,8 @@ private:
 ///   function references with scalar data pointer result of non-character
 ///   intrinsic type or variables that are non-polymorphic scalar pointers
 ///   and any length type parameter must be constant.
-void OmpStructureChecker::CheckAtomicType(
-    SymbolRef sym, parser::CharBlock source, std::string_view name) {
+void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
+    parser::CharBlock source, std::string_view name, bool checkTypeOnPointer) {
   const DeclTypeSpec *typeSpec{sym->GetType()};
   if (!typeSpec) {
     return;
@@ -493,6 +549,22 @@ void OmpStructureChecker::CheckAtomicType(
     return;
   }
 
+  // Apply pointer-to-non-intrinsic rule only for intrinsic-assignment paths.
+  if (checkTypeOnPointer) {
+    using Category = DeclTypeSpec::Category;
+    Category cat{typeSpec->category()};
+    if (cat != Category::Numeric && cat != Category::Logical) {
+      std::string details = " has the POINTER attribute";
+      if (const auto *derived{typeSpec->AsDerived()}) {
+        details += " and derived type '"s + derived->name().ToString() + "'";
+      }
+      context_.Say(source,
+          "ATOMIC operation requires an intrinsic scalar variable; '%s'%s"_err_en_US,
+          sym->name(), details);
+      return;
+    }
+  }
+
   // Go over all length parameters, if any, and check if they are
   // explicit.
   if (const DerivedTypeSpec *derived{typeSpec->AsDerived()}) {
@@ -508,7 +580,7 @@ void OmpStructureChecker::CheckAtomicType(
 }
 
 void OmpStructureChecker::CheckAtomicVariable(
-    const SomeExpr &atom, parser::CharBlock source) {
+    const SomeExpr &atom, parser::CharBlock source, bool checkTypeOnPointer) {
   if (atom.Rank() != 0) {
     context_.Say(source, "Atomic variable %s should be a scalar"_err_en_US,
         atom.AsFortran());
@@ -518,11 +590,13 @@ void OmpStructureChecker::CheckAtomicVariable(
   assert(dsgs.size() == 1 && "Should have a single top-level designator");
   evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
 
-  CheckAtomicType(syms.back(), source, atom.AsFortran());
+  CheckAtomicType(syms.back(), source, atom.AsFortran(), checkTypeOnPointer);
 
-  if (IsAllocatable(syms.back()) && !IsArrayElement(atom)) {
-    context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
-        atom.AsFortran());
+  if (!IsArrayElement(atom) && !ExtractComplexPart(atom)) {
+    if (IsAllocatable(syms.back())) {
+      context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
+          atom.AsFortran());
+    }
   }
 }
 
@@ -735,7 +809,8 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
-    CheckAtomicVariable(atom, rsrc);
+    CheckAtomicVariable(
+        atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(capture));
     // This part should have been checked prior to calling this function.
     assert(*GetConvertInput(capture.rhs) == atom &&
         "This cannot be a capture assignment");
@@ -754,7 +829,8 @@ void OmpStructureChecker::CheckAtomicReadAssignment(
     if (!IsVarOrFunctionRef(atom)) {
       ErrorShouldBeVariable(atom, rsrc);
     } else {
-      CheckAtomicVariable(atom, rsrc);
+      CheckAtomicVariable(
+          atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(read));
       CheckStorageOverlap(atom, {read.lhs}, source);
     }
   } else {
@@ -775,7 +851,8 @@ void OmpStructureChecker::CheckAtomicWriteAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
-    CheckAtomicVariable(atom, lsrc);
+    CheckAtomicVariable(
+        atom, lsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(write));
     CheckStorageOverlap(atom, {write.rhs}, source);
   }
 }
@@ -800,7 +877,8 @@ OmpStructureChecker::CheckAtomicUpdateAssignment(
     return std::nullopt;
   }
 
-  CheckAtomicVariable(atom, lsrc);
+  CheckAtomicVariable(
+      atom, lsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(update));
 
   auto [hasErrors, tryReassoc]{CheckAtomicUpdateAssignmentRhs(
       atom, update.rhs, source, /*suppressDiagnostics=*/true)};
@@ -809,7 +887,7 @@ OmpStructureChecker::CheckAtomicUpdateAssignment(
     CheckStorageOverlap(atom, GetNonAtomArguments(atom, update.rhs), source);
     return std::nullopt;
   } else if (tryReassoc) {
-    ReassocRewriter ra(atom);
+    ReassocRewriter ra(atom, context_);
     SomeExpr raRhs{evaluate::rewrite::Mutator(ra)(update.rhs)};
 
     std::tie(hasErrors, tryReassoc) = CheckAtomicUpdateAssignmentRhs(
@@ -963,7 +1041,8 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
     return;
   }
 
-  CheckAtomicVariable(atom, alsrc);
+  CheckAtomicVariable(
+      atom, alsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(assign));
 
   auto top{GetTopLevelOperationIgnoreResizing(cond)};
   // Missing arguments to operations would have been diagnosed by now.

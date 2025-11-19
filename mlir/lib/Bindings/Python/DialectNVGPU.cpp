@@ -31,7 +31,7 @@ static void populateDialectNVGPUSubmodule(const nb::module_ &m) {
       "Gets an instance of TensorMapDescriptorType in the same context",
       nb::arg("cls"), nb::arg("tensor_type"), nb::arg("swizzle"),
       nb::arg("l2promo"), nb::arg("oob_fill"), nb::arg("interleave"),
-      nb::arg("ctx").none() = nb::none());
+      nb::arg("ctx") = nb::none());
 }
 
 NB_MODULE(_mlirDialectsNVGPU, m) {

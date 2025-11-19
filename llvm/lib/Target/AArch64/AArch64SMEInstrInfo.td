@@ -48,6 +48,17 @@ let usesCustomInserter = 1 in {
 }
 def : Pat<(i64 (AArch64EntryPStateSM)), (EntryPStateSM)>;
 
+// Pseudo-instruction that compares the current SVE vector length (VL) with the
+// streaming vector length (SVL). If the two lengths do not match, the check
+// lowers to a `brk`, causing a trap.
+let hasSideEffects = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in
+def CHECK_MATCHING_VL_PSEUDO : Pseudo<(outs), (ins), []>, Sched<[]>;
+
+def AArch64_check_matching_vl
+  : SDNode<"AArch64ISD::CHECK_MATCHING_VL", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_check_matching_vl), (CHECK_MATCHING_VL_PSEUDO)>;
+
 //===----------------------------------------------------------------------===//
 // Old SME ABI lowering ISD nodes/pseudos (deprecated)
 //===----------------------------------------------------------------------===//
@@ -61,10 +72,10 @@ let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
 def : Pat<(i64 (AArch64AllocateZABuffer GPR64:$size)),
           (AllocateZABuffer $size)>;
 
-def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 1,
-                              [SDTCisInt<0>]>, [SDNPHasChain, SDNPMayStore]>;
+def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 2,
+                              [SDTCisInt<0>, SDTCisInt<1>]>, [SDNPHasChain, SDNPMayStore]>;
 let usesCustomInserter = 1 in {
-  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer), [(AArch64InitTPIDR2Obj GPR64:$buffer)]>, Sched<[WriteI]> {}
+  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer, GPR64:$save_slices), [(AArch64InitTPIDR2Obj GPR64:$buffer, GPR64:$save_slices)]>, Sched<[WriteI]> {}
 }
 
 // Nodes to allocate a save buffer for SME.
@@ -93,20 +104,28 @@ let hasSideEffects = 1, isMeta = 1 in {
   def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
+def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+
 def CommitZASavePseudo
   : Pseudo<(outs),
-           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i64imm:$commit_routine, variable_ops), []>,
+           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i1imm:$zero_zt0,
+                i64imm:$commit_routine, variable_ops), []>,
            Sched<[]>;
 
 def AArch64_inout_za_use
   : SDNode<"AArch64ISD::INOUT_ZA_USE", SDTypeProfile<0, 0,[]>,
-           [SDNPHasChain, SDNPInGlue]>;
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 def : Pat<(AArch64_inout_za_use), (InOutZAUsePseudo)>;
 
 def AArch64_requires_za_save
   : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
-           [SDNPHasChain, SDNPInGlue]>;
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
+
+def AArch64_sme_state_alloc
+  : SDNode<"AArch64ISD::SME_STATE_ALLOC", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain]>;
+def : Pat<(AArch64_sme_state_alloc), (SMEStateAllocPseudo)>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
@@ -127,10 +146,15 @@ def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
 def SDT_AArch64RDSVL  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
 def AArch64rdsvl : SDNode<"AArch64ISD::RDSVL", SDT_AArch64RDSVL>;
 
+def sme_rdsvl_shl_imm : ComplexPattern<i64, 1, "SelectRDSVLShiftImm<1, 31>">;
+
 let Predicates = [HasSMEandIsNonStreamingSafe] in {
 def RDSVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdsvl", /*streaming_sve=*/0b1>;
 def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
 def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
+
+def : Pat<(i64 (shl (AArch64rdsvl (i32 1)), (sme_rdsvl_shl_imm i64:$imm))),
+          (RDSVLI_XI (!cast<SDNodeXForm>("trunc_imm") $imm))>;
 
 def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
 }
@@ -1150,3 +1174,14 @@ let Predicates = [HasSME_MOP4, HasSMEF64F64] in {
   defm FMOP4A : sme2_fmop4as_fp64_non_widening<0, "fmop4a", "int_aarch64_sme_mop4a">;
   defm FMOP4S : sme2_fmop4as_fp64_non_widening<1, "fmop4s", "int_aarch64_sme_mop4s">;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2.3 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSME2p3] in {
+  def LUTI6_ZTZ       : sme2_lut_single<"luti6">;
+  def LUTI6_4ZT3Z     : sme2_luti6_zt_consecutive<"luti6">;
+  def LUTI6_S_4ZT3Z   : sme2_luti6_zt_strided<"luti6">;
+  def LUTI6_4Z2Z2ZI   : sme2_luti6_vector_vg4_consecutive<"luti6">;
+  def LUTI6_S_4Z2Z2ZI : sme2_luti6_vector_vg4_strided<"luti6">;
+} // [HasSME2p3]

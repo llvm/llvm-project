@@ -1,4 +1,4 @@
-//===--- RawStringLiteralCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,11 +51,11 @@ static bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
     if (DisallowedChars.test(C))
       return false;
 
-  CharSourceRange CharRange = Lexer::makeFileCharRange(
+  const CharSourceRange CharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Literal->getSourceRange()),
       *Result.SourceManager, Result.Context->getLangOpts());
-  StringRef Text = Lexer::getSourceText(CharRange, *Result.SourceManager,
-                                        Result.Context->getLangOpts());
+  const StringRef Text = Lexer::getSourceText(CharRange, *Result.SourceManager,
+                                              Result.Context->getLangOpts());
   if (Text.empty() || isRawStringLiteral(Text))
     return false;
 
@@ -116,7 +116,7 @@ createUserDefinedSuffix(const StringLiteral *Literal, const SourceManager &SM,
   const CharSourceRange CharRange =
       Lexer::makeFileCharRange(TokenRange, SM, LangOpts);
   if (T.hasUDSuffix()) {
-    StringRef Text = Lexer::getSourceText(CharRange, SM, LangOpts);
+    const StringRef Text = Lexer::getSourceText(CharRange, SM, LangOpts);
     const size_t UDSuffixPos = Text.find_last_of('"');
     if (UDSuffixPos == StringRef::npos)
       return std::nullopt;
@@ -135,7 +135,7 @@ static std::string createRawStringLiteral(const StringLiteral *Literal,
     Delimiter = (I == 0) ? DelimiterStem : DelimiterStem + std::to_string(I);
   }
 
-  std::optional<StringRef> UserDefinedSuffix =
+  const std::optional<StringRef> UserDefinedSuffix =
       createUserDefinedSuffix(Literal, SM, LangOpts);
 
   if (Delimiter.empty())

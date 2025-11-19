@@ -31,8 +31,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
-
 _LIBCPP_EXPORTED_FROM_ABI path __absolute(const path&, error_code* __ec = nullptr);
 _LIBCPP_EXPORTED_FROM_ABI path __canonical(const path&, error_code* __ec = nullptr);
 _LIBCPP_EXPORTED_FROM_ABI bool
@@ -300,8 +298,6 @@ inline _LIBCPP_HIDE_FROM_ABI path weakly_canonical(path const& __p) { return __w
 inline _LIBCPP_HIDE_FROM_ABI path weakly_canonical(path const& __p, error_code& __ec) {
   return __weakly_canonical(__p, &__ec);
 }
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
