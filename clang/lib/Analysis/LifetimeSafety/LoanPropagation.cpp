@@ -62,7 +62,6 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
         CheckOrigin(F->getAs<UseFact>()->getUsedOrigin());
         break;
       case Fact::Kind::OriginEscapes:
-        break;
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
         break;
