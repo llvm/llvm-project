@@ -205,6 +205,8 @@ private:
   unsigned parseVerilogHierarchyHeader();
   void parseVerilogTable();
   void parseVerilogCaseLabel();
+  // For import, export, and extern.
+  void parseVerilogExtern();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 
@@ -396,6 +398,13 @@ private:
 
   // Current state of include guard search.
   IncludeGuardState IncludeGuard;
+
+  IncludeGuardState
+  getIncludeGuardState(FormatStyle::PPDirectiveIndentStyle Style) const {
+    return Style == FormatStyle::PPDIS_None || Style == FormatStyle::PPDIS_Leave
+               ? IG_Rejected
+               : IG_Inited;
+  }
 
   // Points to the #ifndef condition for a potential include guard. Null unless
   // IncludeGuardState == IG_IfNdefed.

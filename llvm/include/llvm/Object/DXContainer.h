@@ -228,11 +228,11 @@ private:
   uint32_t Flags;
   ViewArray<dxbc::RTS0::v1::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
-  ViewArray<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
+  ViewArray<dxbc::RTS0::v3::StaticSampler> StaticSamplers;
 
   using param_header_iterator =
       ViewArray<dxbc::RTS0::v1::RootParameterHeader>::iterator;
-  using samplers_iterator = ViewArray<dxbc::RTS0::v1::StaticSampler>::iterator;
+  using samplers_iterator = ViewArray<dxbc::RTS0::v3::StaticSampler>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
@@ -245,10 +245,10 @@ public:
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
   uint32_t getNumRootParameters() const { return ParametersHeaders.size(); }
   llvm::iterator_range<param_header_iterator> param_headers() const {
-    return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
+    return ParametersHeaders;
   }
   llvm::iterator_range<samplers_iterator> samplers() const {
-    return llvm::make_range(StaticSamplers.begin(), StaticSamplers.end());
+    return StaticSamplers;
   }
   uint32_t getFlags() const { return Flags; }
 
@@ -603,7 +603,11 @@ private:
   }
 
 public:
+  const DXContainer &getDXContainer() const { return Container; }
+
   static bool classof(const Binary *v) { return v->isDXContainer(); }
+
+  const dxbc::Header &getHeader() const { return Container.getHeader(); }
 
   Expected<StringRef> getSymbolName(DataRefImpl) const override;
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;

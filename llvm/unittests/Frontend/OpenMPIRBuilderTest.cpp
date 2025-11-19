@@ -11,6 +11,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -23,6 +24,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstdlib>
 #include <optional>
 
 using namespace llvm;
@@ -211,8 +213,8 @@ protected:
     DIBuilder DIB(*M);
     auto File = DIB.createFile("test.dbg", "/src", std::nullopt,
                                std::optional<StringRef>("/src/test.dbg"));
-    auto CU =
-        DIB.createCompileUnit(dwarf::DW_LANG_C, File, "llvm-C", true, "", 0);
+    auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C),
+                                    File, "llvm-C", true, "", 0);
     auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
@@ -4532,6 +4534,85 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, OMPAtomicRWStructType) {
+  // Test for issue #165184: atomic read/write on struct types should use
+  // element type size, not pointer size.
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  BasicBlock *EntryBB = BB;
+  OpenMPIRBuilder::InsertPointTy AllocaIP(EntryBB,
+                                          EntryBB->getFirstInsertionPt());
+
+  LLVMContext &Ctx = M->getContext();
+
+  // Create a struct type {double, double} to simulate complex(8) - 16 bytes
+  StructType *Complex8Ty = StructType::create(
+      Ctx, {Type::getDoubleTy(Ctx), Type::getDoubleTy(Ctx)}, "complex");
+
+  AllocaInst *XVal = Builder.CreateAlloca(Complex8Ty);
+  XVal->setName("AtomicVar");
+  OpenMPIRBuilder::AtomicOpValue X = {XVal, Complex8Ty, false, false};
+  AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent;
+
+  // Create value to write: {1.0, 1.0}
+  Constant *Real = ConstantFP::get(Type::getDoubleTy(Ctx), 1.0);
+  Constant *Imag = ConstantFP::get(Type::getDoubleTy(Ctx), 1.0);
+  Constant *ValToWrite = ConstantStruct::get(Complex8Ty, {Real, Imag});
+
+  // Test atomic write
+  Builder.restoreIP(
+      OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO, AllocaIP));
+
+  // Test atomic read
+  AllocaInst *VVal = Builder.CreateAlloca(Complex8Ty);
+  VVal->setName("ReadDest");
+  OpenMPIRBuilder::AtomicOpValue V = {VVal, Complex8Ty, false, false};
+
+  Builder.restoreIP(OMPBuilder.createAtomicRead(Loc, X, V, AO, AllocaIP));
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // Verify that __atomic_store and __atomic_load are called with size 16
+  bool FoundAtomicStore = false;
+  bool FoundAtomicLoad = false;
+
+  for (Function &Fn : *M) {
+    if (Fn.getName().starts_with("__atomic_store")) {
+      // Check that first call to __atomic_store has size argument = 16
+      for (User *U : Fn.users()) {
+        if (auto *CB = dyn_cast<CallBase>(U)) {
+          if (auto *SizeArg = dyn_cast<ConstantInt>(CB->getArgOperand(0))) {
+            EXPECT_EQ(SizeArg->getZExtValue(), 16U);
+            FoundAtomicStore = true;
+            break;
+          }
+        }
+      }
+    }
+    if (Fn.getName().starts_with("__atomic_load")) {
+      // Check that first call to __atomic_load has size argument = 16
+      for (User *U : Fn.users()) {
+        if (auto *CB = dyn_cast<CallBase>(U)) {
+          if (auto *SizeArg = dyn_cast<ConstantInt>(CB->getArgOperand(0))) {
+            EXPECT_EQ(SizeArg->getZExtValue(), 16U);
+            FoundAtomicLoad = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  EXPECT_TRUE(FoundAtomicStore) << "Did not find __atomic_store call";
+  EXPECT_TRUE(FoundAtomicLoad) << "Did not find __atomic_load call";
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTeams) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -5358,6 +5439,144 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   Value *FirstRHS;
   Value *SecondRHS;
   EXPECT_TRUE(findGEPZeroOne(ReductionFn->getArg(1), FirstRHS, SecondRHS));
+}
+
+static void createScan(llvm::Value *scanVar, llvm::Type *scanType,
+                       OpenMPIRBuilder &OMPBuilder, IRBuilder<> &Builder,
+                       OpenMPIRBuilder::LocationDescription Loc,
+                       OpenMPIRBuilder::InsertPointTy &allocaIP,
+                       ScanInfo *&ScanRedInfo) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  ASSERT_EXPECTED_INIT(InsertPointTy, retIp,
+                       OMPBuilder.createScan(Loc, allocaIP, {scanVar},
+                                             {scanType}, true, ScanRedInfo));
+  Builder.restoreIP(retIp);
+}
+/*
+ Following is the pseudocode of the code generated by the test case
+ <declare pointer to buffer> ptr
+  size num_iters = 100
+  // temp buffer allocation
+  omp masked {
+    buff = malloc(num_iters*scanvarstype)
+    *ptr = buff
+  }
+ barrier;
+  // input phase loop
+  for (i: 0..<num_iters>) {
+    <input phase>;
+    buffer = *ptr;
+    buffer[i] = red;
+  }
+  // scan reduction
+  omp masked
+  {
+    for (int k = 0; k != ceil(log2(num_iters)); ++k) {
+      i=pow(2,k)
+      for (size cnt = last_iter; cnt >= i; --cnt) {
+        buffer = *ptr;
+        buffer[cnt] op= buffer[cnt-i];
+      }
+    }
+  }
+ barrier;
+ // scan phase loop
+  for (0..<num_iters>) {
+    buffer = *ptr;
+    red = buffer[i] ;
+    <scan phase>;
+  }
+  // temp buffer deletion
+  omp masked {
+    free(*ptr)
+  }
+  barrier;
+*/
+TEST_F(OpenMPIRBuilderTest, ScanReduction) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Value *TripCount = F->getArg(0);
+  Type *LCTy = TripCount->getType();
+  Value *StartVal = ConstantInt::get(LCTy, 1);
+  Value *StopVal = ConstantInt::get(LCTy, 100);
+  Value *Step = ConstantInt::get(LCTy, 1);
+  auto AllocaIP = Builder.saveIP();
+
+  llvm::Value *ScanVar = Builder.CreateAlloca(Builder.getFloatTy());
+  llvm::Value *OrigVar = Builder.CreateAlloca(Builder.getFloatTy());
+  unsigned NumBodiesGenerated = 0;
+  ScanInfo *ScanRedInfo;
+  ASSERT_EXPECTED_INIT(ScanInfo *, ScanInformation,
+                       OMPBuilder.scanInfoInitialize());
+  ScanRedInfo = ScanInformation;
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
+    NumBodiesGenerated += 1;
+    Builder.restoreIP(CodeGenIP);
+    createScan(ScanVar, Builder.getFloatTy(), OMPBuilder, Builder, Loc,
+               AllocaIP, ScanRedInfo);
+    return Error::success();
+  };
+  llvm::SmallVector<CanonicalLoopInfo *> loops;
+  ASSERT_EXPECTED_INIT(llvm::SmallVector<CanonicalLoopInfo *>, loopvec,
+                       OMPBuilder.createCanonicalScanLoops(
+                           Loc, LoopBodyGenCB, StartVal, StopVal, Step, false,
+                           false, Builder.saveIP(), "scan", ScanRedInfo));
+  loops = loopvec;
+  CanonicalLoopInfo *InputLoop = loops.front();
+  CanonicalLoopInfo *ScanLoop = loops.back();
+  Builder.restoreIP(ScanLoop->getAfterIP());
+  InputLoop->assertOK();
+  ScanLoop->assertOK();
+
+  EXPECT_EQ(ScanLoop->getAfter(), Builder.GetInsertBlock());
+  EXPECT_EQ(NumBodiesGenerated, 2U);
+  SmallVector<OpenMPIRBuilder::ReductionInfo> ReductionInfos = {
+      {Builder.getFloatTy(), OrigVar, ScanVar,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
+       /*ReductionGenClang=*/nullptr, sumAtomicReduction}};
+  OpenMPIRBuilder::LocationDescription RedLoc({InputLoop->getAfterIP(), DL});
+  llvm::BasicBlock *Cont = splitBB(Builder, false, "omp.scan.loop.cont");
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, retIp,
+      OMPBuilder.emitScanReduction(RedLoc, ReductionInfos, ScanRedInfo));
+  Builder.restoreIP(retIp);
+  Builder.CreateBr(Cont);
+  Builder.SetInsertPoint(Cont);
+  unsigned NumMallocs = 0;
+  unsigned NumFrees = 0;
+  unsigned NumMasked = 0;
+  unsigned NumEndMasked = 0;
+  unsigned NumLog = 0;
+  unsigned NumCeil = 0;
+  for (Instruction &I : instructions(F)) {
+    if (!isa<CallInst>(I))
+      continue;
+    CallInst *Call = dyn_cast<CallInst>(&I);
+    StringRef Name = Call->getCalledFunction()->getName();
+    if (Name.equals_insensitive("malloc")) {
+      NumMallocs += 1;
+    } else if (Name.equals_insensitive("free")) {
+      NumFrees += 1;
+    } else if (Name.equals_insensitive("__kmpc_masked")) {
+      NumMasked += 1;
+    } else if (Name.equals_insensitive("__kmpc_end_masked")) {
+      NumEndMasked += 1;
+    } else if (Name.equals_insensitive("llvm.log2.f64")) {
+      NumLog += 1;
+    } else if (Name.equals_insensitive("llvm.ceil.f64")) {
+      NumCeil += 1;
+    }
+  }
+  EXPECT_EQ(NumBodiesGenerated, 2U);
+  EXPECT_EQ(NumMasked, 3U);
+  EXPECT_EQ(NumEndMasked, 3U);
+  EXPECT_EQ(NumMallocs, 1U);
+  EXPECT_EQ(NumFrees, 1U);
+  EXPECT_EQ(NumLog, 1U);
+  EXPECT_EQ(NumCeil, 1U);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
@@ -7436,8 +7655,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
   // Checking the general structure of the IR generated is same as expected.
   Instruction *GeneratedStoreInst = TaskgroupCall->getNextNode();
   EXPECT_EQ(GeneratedStoreInst, InternalStoreInst);
-  Instruction *GeneratedLoad32 =
-      GeneratedStoreInst->getNextNode();
+  Instruction *GeneratedLoad32 = GeneratedStoreInst->getNextNode();
   EXPECT_EQ(GeneratedLoad32, InternalLoad32);
   Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNode();
   EXPECT_EQ(GeneratedLoad128, InternalLoad128);
@@ -7711,6 +7929,30 @@ TEST_F(OpenMPIRBuilderTest, splitBB) {
   splitBB(Builder, /*CreateBranch=*/true, "test");
   if (AllocaBB->getTerminator())
     EXPECT_TRUE(DL == AllocaBB->getTerminator()->getStableDebugLoc());
+}
+
+TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // Test calling spliceBB with an empty Block (but having trailing debug
+  // records).
+  DIBuilder DIB(*M);
+  DISubprogram *SP = F->getSubprogram();
+  DIType *VoidPtrTy =
+      DIB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
+  DILocalVariable *Var = DIB.createParameterVariable(
+      SP, "test", /*ArgNo*/ 1, SP->getFile(), /*LineNo=*/0, VoidPtrTy);
+  DIB.insertDeclare(F->getArg(0), Var, DIB.createExpression(), DL,
+                    Builder.GetInsertPoint());
+  BasicBlock *New = BasicBlock::Create(Ctx, "", F);
+  spliceBB(Builder.saveIP(), New, true, DL);
+  Instruction *Terminator = BB->getTerminator();
+  EXPECT_NE(Terminator, nullptr);
+  EXPECT_FALSE(Terminator->getDbgRecordRange().empty());
 }
 
 } // namespace

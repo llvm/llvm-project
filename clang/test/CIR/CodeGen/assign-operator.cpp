@@ -17,10 +17,10 @@ void a() {
 // CIR: cir.func{{.*}} @_Z1av()
 // CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_x, !cir.ptr<!rec_x>, ["a"]
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
-// CIR:   %[[ONE_CAST:.*]] = cir.cast(integral, %[[ONE]] : !u32i), !s32i
+// CIR:   %[[ONE_CAST:.*]] = cir.cast integral %[[ONE]] : !u32i -> !s32i
 // CIR:   %[[RET:.*]] = cir.call @_ZN1xaSEi(%[[A_ADDR]], %[[ONE_CAST]]) : (!cir.ptr<!rec_x>, !s32i) -> !s32i
 
-// LLVM: define{{.*}} @_Z1av()
+// LLVM: define{{.*}} @_Z1av(){{.*}}
 // OGCG: define{{.*}} @_Z1av()
 
 void f(int i, int j) {
@@ -75,10 +75,10 @@ void copy_c(C &c1, C &c2) {
 // CIR:   %[[A_MEMBER_2:.*]] = cir.get_member %[[ARG1_LOAD]][0] {name = "a"}
 // CIR:   %[[C_A:.*]] = cir.call @_ZN1AaSERKS_(%[[A_MEMBER]], %[[A_MEMBER_2]])
 // CIR:   %[[B_MEMBER:.*]] = cir.get_member %[[THIS]][1] {name = "b"}
-// CIR:   %[[B_VOID_PTR:.*]] = cir.cast(bitcast, %[[B_MEMBER]] : !cir.ptr<!cir.array<!rec_B x 16>>), !cir.ptr<!void>
+// CIR:   %[[B_VOID_PTR:.*]] = cir.cast bitcast %[[B_MEMBER]] : !cir.ptr<!cir.array<!rec_B x 16>> -> !cir.ptr<!void>
 // CIR:   %[[RET_LOAD:.*]] = cir.load %[[ARG1_ADDR]]
 // CIR:   %[[B_MEMBER_2:.*]] = cir.get_member %[[RET_LOAD]][1] {name = "b"}
-// CIR:   %[[B_VOID_PTR_2:.*]] = cir.cast(bitcast, %[[B_MEMBER_2]] : !cir.ptr<!cir.array<!rec_B x 16>>), !cir.ptr<!void>
+// CIR:   %[[B_VOID_PTR_2:.*]] = cir.cast bitcast %[[B_MEMBER_2]] : !cir.ptr<!cir.array<!rec_B x 16>> -> !cir.ptr<!void>
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<64> : !u64i
 // CIR:   %[[COUNT:.*]] = cir.call @memcpy(%[[B_VOID_PTR]], %[[B_VOID_PTR_2]], %[[SIZE]])
 // CIR:   cir.store %[[THIS]], %[[RET_ADDR]]
@@ -121,7 +121,7 @@ void copy_ref_to_ref(E &e1, E &e2) {
 // CIR:   %[[D1_REF_2:.*]] = cir.call @_ZN1DaSERKS_(%[[D1_REF]], %[[D2_REF]])
 // CIR:   cir.return
 
-// LLVM: define{{.*}} void @_Z15copy_ref_to_refR1ES0_(ptr %[[ARG0:.*]], ptr %[[ARG1:.*]]) {
+// LLVM: define{{.*}} void @_Z15copy_ref_to_refR1ES0_(ptr %[[ARG0:.*]], ptr %[[ARG1:.*]]){{.*}} {
 // LLVM:   %[[E1_ADDR:.*]] = alloca ptr
 // LLVM:   %[[E2_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG0]], ptr %[[E1_ADDR]]

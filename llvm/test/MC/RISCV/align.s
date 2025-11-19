@@ -46,20 +46,21 @@
 # type for .align N directive when linker relaxation enabled.
 # Linker could satisfy alignment by removing NOPs after linker relaxation.
 
-# The first R_RISCV_ALIGN come from
-# MCELFStreamer::InitSections() emitCodeAlignment(getTextSectionAligntment()).
-# C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x2
-# C-OR-ZCA-EXT-RELAX-INST:  c.nop
 test:
+## Start with a linker-relaxable instruction so that the following alignment can be relaxable.
+	call foo
+# NORELAX-RELOC:              R_RISCV_CALL_PLT
+# C-OR-ZCA-EXT-NORELAX-RELOC: R_RISCV_CALL_PLT
+
 	.p2align 2
 # If the +c extension is enabled, the text section will be 2-byte aligned, so
 # one c.nop instruction is sufficient.
-# C-OR-ZCA-EXT-RELAX-RELOC-NOT: R_RISCV_ALIGN - 0x2
-# C-OR-ZCA-EXT-RELAX-INST-NOT:  c.nop
+# C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x2
+# C-OR-ZCA-EXT-RELAX-INST:  c.nop
 	bne     zero, a0, .LBB0_2
 	mv	a0, zero
 	.p2align 3
-# RELAX-RELOC: R_RISCV_ALIGN - 0x4
+# RELAX-RELOC: R_RISCV_ALIGN - 0x6
 # RELAX-INST:  addi    zero, zero, 0
 # C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x6
 # C-OR-ZCA-EXT-RELAX-INST:  c.nop
@@ -68,7 +69,7 @@ test:
 	add	a0, a0, a1
 	.align 4
 .LBB0_2:
-# RELAX-RELOC: R_RISCV_ALIGN - 0xC
+# RELAX-RELOC: R_RISCV_ALIGN - 0xE
 # RELAX-INST:  addi    zero, zero, 0
 # RELAX-INST:  addi    zero, zero, 0
 # RELAX-INST:  addi    zero, zero, 0
@@ -84,7 +85,7 @@ test:
 	.p2align 3
 .constant_pool:
 .long	3126770193
-# RELAX-RELOC: R_RISCV_ALIGN - 0x4
+# RELAX-RELOC: R_RISCV_ALIGN - 0x6
 # RELAX-INST:  addi    zero, zero, 0
 # NORELAX-INST: addi    zero, zero, 0
 # C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x6
@@ -136,16 +137,8 @@ data2:
 	add	a0, a0, a1
 
 ## Branches crossing the linker-relaxable R_RISCV_ALIGN need relocations.
-# RELAX-RELOC:      .rela.text3 {
-# RELAX-RELOC-NEXT:    0x4 R_RISCV_BRANCH .Ltmp[[#]] 0x0
-# RELAX-RELOC-NEXT:    0x8 R_RISCV_ALIGN - 0x4
-# RELAX-RELOC-NEXT:    0xC R_RISCV_BRANCH .Ltmp[[#]] 0x0
-# RELAX-RELOC-NEXT: }
-# C-OR-ZCA-EXT-RELAX-RELOC:      .rela.text3 {
-# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0x4 R_RISCV_BRANCH .Ltmp[[#]] 0x0
-# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0x8 R_RISCV_ALIGN - 0x4
-# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0xC R_RISCV_BRANCH .Ltmp[[#]] 0x0
-# C-OR-ZCA-EXT-RELAX-RELOC-NEXT: }
+# RELAX-RELOC-NOT:  .rela.text3 {
+# C-OR-ZCA-EXT-RELAX-RELOC-NOT:  .rela.text3 {
 	.section .text3, "ax"
 	bnez t1, 1f
 	bnez t2, 2f
@@ -157,14 +150,15 @@ data2:
 
 ## .text3 with a call at the start
 # NORELAX-RELOC:    .rela.text3a
-# C-OR-ZCA-EXT-NORELAX-RELOC: .rela.text3a
 # RELAX-RELOC:      .rela.text3a {
 # RELAX-RELOC-NEXT:    0x0  R_RISCV_CALL_PLT foo 0x0
 # RELAX-RELOC-NEXT:    0x0  R_RISCV_RELAX - 0x0
 # RELAX-RELOC-NEXT:    0xC  R_RISCV_BRANCH .Ltmp[[#]] 0x0
-# RELAX-RELOC-NEXT:    0x10 R_RISCV_ALIGN - 0x4
-# RELAX-RELOC-NEXT:    0x14 R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT:    0x10 R_RISCV_ALIGN - 0x6
+# RELAX-RELOC-NEXT:    0x16 R_RISCV_BRANCH .Ltmp[[#]] 0x0
 # RELAX-RELOC-NEXT: }
+# C-OR-ZCA-EXT-NORELAX-RELOC: .rela.text3a
+# C-OR-ZCA-EXT-RELAX-RELOC: .rela.text3a
 .section .text3a, "ax"
 call foo
 bnez t1, 1f
@@ -177,11 +171,8 @@ bnez t1, 2b
 
 ## .text3 with a call at the end
 # RELAX-RELOC:      .rela.text3b {
-# RELAX-RELOC-NEXT:    0x4  R_RISCV_BRANCH .Ltmp[[#]] 0x0
-# RELAX-RELOC-NEXT:    0x8  R_RISCV_ALIGN - 0x4
-# RELAX-RELOC-NEXT:    0xC  R_RISCV_BRANCH .Ltmp[[#]] 0x0
-# RELAX-RELOC-NEXT:    0x14 R_RISCV_CALL_PLT foo 0x0
-# RELAX-RELOC-NEXT:    0x14 R_RISCV_RELAX - 0x0
+# RELAX-RELOC-NEXT:    0x10 R_RISCV_CALL_PLT foo 0x0
+# RELAX-RELOC-NEXT:    0x10 R_RISCV_RELAX - 0x0
 # RELAX-RELOC-NEXT: }
 .section .text3b, "ax"
 bnez t1, 1f

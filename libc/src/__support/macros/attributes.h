@@ -17,6 +17,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
 
+#include "config.h"
 #include "properties/architectures.h"
 
 #ifndef __has_attribute
@@ -71,6 +72,23 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_PREFERED_TYPE(TYPE) [[clang::preferred_type(TYPE)]]
 #else
 #define LIBC_PREFERED_TYPE(TYPE)
+#endif
+
+#if __has_attribute(ext_vector_type) &&                                        \
+    LIBC_HAS_FEATURE(ext_vector_type_boolean)
+#define LIBC_HAS_VECTOR_TYPE 1
+#else
+#define LIBC_HAS_VECTOR_TYPE 0
+#endif
+
+#if __has_attribute(no_sanitize)
+// Disable regular and hardware-supported ASan for functions that may
+// intentionally make out-of-bounds access. Disable TSan as well, as it detects
+// out-of-bounds accesses to heap memory.
+#define LIBC_NO_SANITIZE_OOB_ACCESS                                            \
+  __attribute__((no_sanitize("address", "hwaddress", "thread")))
+#else
+#define LIBC_NO_SANITIZE_OOB_ACCESS
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H

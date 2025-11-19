@@ -4,11 +4,11 @@
 ; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a15 | FileCheck %s -check-prefix=CHECK-LINUXA15
 ; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=swift | FileCheck %s -check-prefix=CHECK-LINUXSWIFT
 
-; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a5 --enable-unsafe-fp-math | FileCheck %s -check-prefix=CHECK-UNSAFEA5
-; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a8 --enable-unsafe-fp-math | FileCheck %s -check-prefix=CHECK-UNSAFEA8
-; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a9 --enable-unsafe-fp-math | FileCheck %s -check-prefix=CHECK-UNSAFEA9
-; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a15 --enable-unsafe-fp-math | FileCheck %s -check-prefix=CHECK-UNSAFEA15
-; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=swift --enable-unsafe-fp-math | FileCheck %s -check-prefix=CHECK-UNSAFESWIFT
+; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a5 --denormal-fp-math=preserve-sign | FileCheck %s -check-prefix=CHECK-UNSAFEA5
+; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a8 --denormal-fp-math=preserve-sign | FileCheck %s -check-prefix=CHECK-UNSAFEA8
+; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a9 --denormal-fp-math=preserve-sign | FileCheck %s -check-prefix=CHECK-UNSAFEA9
+; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=cortex-a15 --denormal-fp-math=preserve-sign| FileCheck %s -check-prefix=CHECK-UNSAFEA15
+; RUN: llc < %s -mtriple armv7a-none-linux-gnueabihf -mcpu=swift --denormal-fp-math=preserve-sign | FileCheck %s -check-prefix=CHECK-UNSAFESWIFT
 
 ; RUN: llc < %s -mtriple armv7a-none-darwin -mcpu=cortex-a5 | FileCheck %s -check-prefix=CHECK-DARWINA5
 ; RUN: llc < %s -mtriple armv7a-none-darwin -mcpu=cortex-a8 | FileCheck %s -check-prefix=CHECK-DARWINA8

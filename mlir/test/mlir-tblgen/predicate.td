@@ -55,7 +55,7 @@ def OpF : NS_Op<"op_for_int_min_val", []> {
 
 // CHECK-LABEL: OpFAdaptor::verify
 // CHECK:       (::llvm::cast<::mlir::IntegerAttr>(tblgen_attr).getInt() >= 10)
-// CHECK-NEXT:  "attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 10"
+// CHECK-NEXT:  attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 10"
 
 def OpFX : NS_Op<"op_for_int_max_val", []> {
   let arguments = (ins ConfinedAttr<I32Attr, [IntMaxValue<10>]>:$attr);
@@ -63,7 +63,7 @@ def OpFX : NS_Op<"op_for_int_max_val", []> {
 
 // CHECK-LABEL: OpFXAdaptor::verify
 // CHECK:       (::llvm::cast<::mlir::IntegerAttr>(tblgen_attr).getInt() <= 10)
-// CHECK-NEXT:  "attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose maximum value is 10"
+// CHECK-NEXT:  attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose maximum value is 10"
 
 def OpG : NS_Op<"op_for_arr_min_count", []> {
   let arguments = (ins ConfinedAttr<ArrayAttr, [ArrayMinCount<8>]>:$attr);
@@ -71,7 +71,7 @@ def OpG : NS_Op<"op_for_arr_min_count", []> {
 
 // CHECK-LABEL: OpGAdaptor::verify
 // CHECK:       (::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() >= 8)
-// CHECK-NEXT:  "attribute 'attr' failed to satisfy constraint: array attribute with at least 8 elements"
+// CHECK-NEXT:  attribute 'attr' failed to satisfy constraint: array attribute with at least 8 elements"
 
 def OpH : NS_Op<"op_for_arr_value_at_index", []> {
   let arguments = (ins ConfinedAttr<ArrayAttr, [IntArrayNthElemEq<0, 8>]>:$attr);
@@ -79,7 +79,7 @@ def OpH : NS_Op<"op_for_arr_value_at_index", []> {
 
 // CHECK-LABEL: OpHAdaptor::verify
 // CHECK: (((::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() > 0)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() == 8)))))
-// CHECK-NEXT:  "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be 8"
+// CHECK-NEXT:  attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be 8"
 
 def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
   let arguments = (ins ConfinedAttr<ArrayAttr, [IntArrayNthElemMinValue<0, 8>]>:$attr);
@@ -87,7 +87,7 @@ def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
 
 // CHECK-LABEL: OpIAdaptor::verify
 // CHECK: (((::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() > 0)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() >= 8)))))
-// CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 8"
+// CHECK-NEXT: attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 8"
 
 def OpJ: NS_Op<"op_for_arr_max_value_at_index", []> {
   let arguments = (ins ConfinedAttr<ArrayAttr, [IntArrayNthElemMaxValue<0, 8>]>:$attr);
@@ -95,7 +95,7 @@ def OpJ: NS_Op<"op_for_arr_max_value_at_index", []> {
 
 // CHECK-LABEL: OpJAdaptor::verify
 // CHECK: (((::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() > 0)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() <= 8)))))
-// CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at most 8"
+// CHECK-NEXT: attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at most 8"
 
 def OpK: NS_Op<"op_for_arr_in_range_at_index", []> {
   let arguments = (ins ConfinedAttr<ArrayAttr, [IntArrayNthElemInRange<0, 4, 8>]>:$attr);
@@ -103,7 +103,7 @@ def OpK: NS_Op<"op_for_arr_in_range_at_index", []> {
 
 // CHECK-LABEL: OpKAdaptor::verify
 // CHECK: (((::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() > 0)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() >= 4)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() <= 8)))))
-// CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 4 and at most 8"
+// CHECK-NEXT: attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 4 and at most 8"
 
 def OpL: NS_Op<"op_for_TCopVTEtAreSameAt", [
                 PredOpTrait<"operands indexed at 0, 2, 3 should all have "
@@ -121,7 +121,7 @@ def OpL: NS_Op<"op_for_TCopVTEtAreSameAt", [
 // CHECK:      ::llvm::all_equal(::llvm::map_range(
 // CHECK-SAME:   ::mlir::ArrayRef<unsigned>({0, 2, 3}),
 // CHECK-SAME:   [this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); }))
-// CHECK: "failed to verify that operands indexed at 0, 2, 3 should all have the same type"
+// CHECK: failed to verify that operands indexed at 0, 2, 3 should all have the same type"
 
 def OpM : NS_Op<"op_for_AnyTensorOf", []> {
   let arguments = (ins TensorOf<[F32, I32]>:$x);

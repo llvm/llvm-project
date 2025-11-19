@@ -9,7 +9,7 @@
 #include <clc/integer/clc_add_sat.h>
 #include <clc/opencl/integer/add_sat.h>
 
-#define FUNCTION add_sat
+#define __CLC_FUNCTION add_sat
 #define __CLC_BODY <clc/shared/binary_def.inc>
 
 #include <clc/integer/gentype.inc>

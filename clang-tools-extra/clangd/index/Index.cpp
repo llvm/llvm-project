@@ -77,6 +77,12 @@ void SwapIndex::relations(
   return snapshot()->relations(R, CB);
 }
 
+void SwapIndex::reverseRelations(
+    const RelationsRequest &R,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> CB) const {
+  return snapshot()->reverseRelations(R, CB);
+}
+
 llvm::unique_function<IndexContents(llvm::StringRef) const>
 SwapIndex::indexedFiles() const {
   // The index snapshot should outlive this method return value.

@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 
@@ -130,7 +131,7 @@ public:
                      << " on StorageLocation " << this << " of type "
                      << getType() << "\n";
         llvm::dbgs() << "Existing children:\n";
-        for ([[maybe_unused]] auto [Field, Loc] : Children) {
+        for (const auto &Field : Children.keys()) {
           llvm::dbgs() << Field->getNameAsString() << "\n";
         }
       }
@@ -143,6 +144,17 @@ public:
   /// The synthetic field must exist.
   StorageLocation &getSyntheticField(llvm::StringRef Name) const {
     StorageLocation *Loc = SyntheticFields.lookup(Name);
+    LLVM_DEBUG({
+      if (Loc == nullptr) {
+        llvm::dbgs() << "Couldn't find synthetic field " << Name
+                     << " on StorageLocation " << this << " of type "
+                     << getType() << "\n";
+        llvm::dbgs() << "Existing synthetic fields:\n";
+        for ([[maybe_unused]] const auto &[Name, Loc] : SyntheticFields) {
+          llvm::dbgs() << Name << "\n";
+        }
+      }
+    });
     assert(Loc != nullptr);
     return *Loc;
   }
@@ -150,6 +162,11 @@ public:
   llvm::iterator_range<SyntheticFieldMap::const_iterator>
   synthetic_fields() const {
     return {SyntheticFields.begin(), SyntheticFields.end()};
+  }
+
+  /// Add a synthetic field, if none by that name is already present.
+  void addSyntheticField(llvm::StringRef Name, StorageLocation &Loc) {
+    SyntheticFields.insert({Name, &Loc});
   }
 
   /// Changes the child storage location for a field `D` of reference type.
@@ -162,6 +179,11 @@ public:
   void setChild(const ValueDecl &D, StorageLocation *Loc) {
     assert(D.getType()->isReferenceType());
     Children[&D] = Loc;
+  }
+
+  /// Add a child storage location for a field `D`, if not already present.
+  void addChild(const ValueDecl &D, StorageLocation *Loc) {
+    Children.insert({&D, Loc});
   }
 
   llvm::iterator_range<FieldToLoc::const_iterator> children() const {

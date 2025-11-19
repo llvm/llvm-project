@@ -11,7 +11,6 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_CVT_F16_U16_fake16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F16_U16_fake16_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_CMP_LT_F16_fake16_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F16_fake16_e64 0, [[V_CVT_F16_U16_fake16_e64_]], 0, [[DEF1]], 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed [[V_CMP_LT_F16_fake16_e64_]], implicit $exec
     %0:vgpr_32 = IMPLICIT_DEF
@@ -31,7 +30,6 @@ body:             |
     ; GCN-LABEL: name: cvt_hi_f32_f16
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_CVT_F16_U16_fake16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F16_U16_fake16_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[V_CVT_F16_U16_fake16_e64_]], implicit $exec
     ; GCN-NEXT: [[V_CVT_F32_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_F16_fake16_e64 0, [[V_LSHRREV_B32_e64_]], 0, 0, implicit $mode, implicit $exec
     %0:vgpr_32 = IMPLICIT_DEF

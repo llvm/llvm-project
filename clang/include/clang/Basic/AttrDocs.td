@@ -13,16 +13,16 @@
 // version control.
 //
 // To run clang-tblgen to generate the .rst file:
-// clang-tblgen -gen-attr-docs -I <root>/llvm/tools/clang/include
-//   <root>/llvm/tools/clang/include/clang/Basic/Attr.td -o
-//   <root>/llvm/tools/clang/docs/AttributeReference.rst
+// clang-tblgen -gen-attr-docs -I <root>/clang/include
+//   <root>/clang/include/clang/Basic/Attr.td -o
+//   <root>/clang/docs/AttributeReference.rst
 //
 // To run sphinx to generate the .html files (note that sphinx-build must be
 // available on the PATH):
 // Windows (from within the clang\docs directory):
 //   make.bat html
-// Non-Windows (from within the clang\docs directory):
-//   sphinx-build -b html _build/html
+// Non-Windows (from within the clang/docs directory):
+//   sphinx-build -b html . _build/html
 
 def GlobalDocumentation {
   code Intro =[{..
@@ -396,13 +396,10 @@ any option of a multiversioned function is undefined.
   }];
 }
 
-def DeviceKernelDocs : Documentation {
+def SYCLKernelDocs : Documentation {
   let Category = DocCatFunction;
-  let Heading = "device_kernel, sycl_kernel, nvptx_kernel, amdgpu_kernel, "
-                "kernel, __kernel";
+  let Heading = "sycl_kernel";
   let Content = [{
-These attributes specify that the function represents a kernel for device offloading.
-The specific semantics depend on the offloading language, target, and attribute spelling.
 The ``sycl_kernel`` attribute specifies that a function template will be used
 to outline device code and to generate an OpenCL kernel.
 Here is a code example of the SYCL program, which demonstrates the compiler's
@@ -473,6 +470,62 @@ function marked with the ``sycl_kernel`` attribute:
   generate the OpenCL kernel body, and the OpenCL kernel must return ``void``.
 
 The SYCL kernel in the previous code sample meets these expectations.
+  }];
+}
+
+def DeviceKernelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "device_kernel, nvptx_kernel, amdgpu_kernel, "
+                "kernel, __kernel";
+  let Content = [{
+These attributes specify that the function represents a kernel for device offloading.
+The specific semantics depend on the offloading language, target, and attribute spelling.
+Here is a code example using the attribute to mark a function as a kernel:
+
+.. code-block:: c++
+
+  [[clang::device_kernel]] int foo(int x) { return ++x; }
+  }];
+}
+
+def SYCLExternalDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "sycl_external";
+  let Content = [{
+The ``sycl_external`` attribute indicates that a function defined in another
+translation unit may be called by a device function defined in the current
+translation unit or, if defined in the current translation unit, the function
+may be called by device functions defined in other translation units.
+The attribute is intended for use in the implementation of the ``SYCL_EXTERNAL``
+macro as specified in section 5.10.1, "SYCL functions and member functions
+linkage", of the SYCL 2020 specification.
+
+The attribute only appertains to functions and only those that meet the
+following requirements:
+
+* Has external linkage
+* Is not explicitly defined as deleted (the function may be an explicitly
+  defaulted function that is defined as deleted)
+
+The attribute shall be present on the first declaration of a function and
+may optionally be present on subsequent declarations.
+
+When compiling for a SYCL device target that does not support the generic
+address space, the function shall not specify a raw pointer or reference type
+as the return type or as a parameter type.
+See section 5.10, "SYCL offline linking", of the SYCL 2020 specification.
+The following examples demonstrate the use of this attribute:
+
+.. code-block:: c++
+
+  [[clang::sycl_external]] void Foo(); // Ok.
+
+  [[clang::sycl_external]] void Bar() { /* ... */ } // Ok.
+
+  [[clang::sycl_external]] extern void Baz(); // Ok.
+
+  [[clang::sycl_external]] static void Quux() { /* ... */ } // error:  Quux() has internal linkage.
+
   }];
 }
 
@@ -930,6 +983,21 @@ An example of how to use ``alloc_size``
     assert(__builtin_object_size(p, 0) == 100);
     void *const a = my_calloc(20, 5);
     assert(__builtin_object_size(a, 0) == 100);
+  }
+
+When ``-Walloc-size`` is enabled, this attribute allows the compiler to
+diagnose cases when the allocated memory is insufficient for the size of the
+type the returned pointer is cast to.
+
+.. code-block:: c
+
+  void *my_malloc(int a) __attribute__((alloc_size(1)));
+  void consumer_func(int *);
+
+  int main() {
+    int *ptr = my_malloc(sizeof(int)); // no warning
+    int *w = my_malloc(1); // warning: allocation of insufficient size '1' for type 'int' with size '4'
+    consumer_func(my_malloc(1)); // warning: allocation of insufficient size '1' for type 'int' with size '4'
   }
 
 .. Note:: This attribute works differently in clang than it does in GCC.
@@ -3382,9 +3450,9 @@ Mac, and BSD. This attribute has no effect on other targets.
 def MSABIDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On non-Windows x86_64 targets, this attribute changes the calling convention of
-a function to match the default convention used on Windows x86_64. This
-attribute has no effect on Windows targets or non-x86_64 targets.
+On non-Windows x86_64 and aarch64 targets, this attribute changes the calling convention of
+a function to match the default convention used on Windows. This
+attribute has no effect on Windows targets or non-x86_64, non-aarch64 targets.
   }];
 }
 
@@ -3573,6 +3641,7 @@ instrumentations should not be applied.
 
 The attribute takes a list of string literals with the following accepted
 values:
+
 * all values accepted by ``-fno-sanitize=``;
 * ``coverage``, to disable SanitizerCoverage instrumentation.
 
@@ -3643,6 +3712,99 @@ def CFICanonicalJumpTableDocs : Documentation {
 Use ``__attribute__((cfi_canonical_jump_table))`` on a function declaration to
 make the function's CFI jump table canonical. See :ref:`the CFI documentation
 <cfi-canonical-jump-tables>` for more details.
+  }];
+}
+
+def CFISaltDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "cfi_salt";
+  let Label = "langext-cfi_salt";
+  let Content = [{
+The ``cfi_salt`` attribute specifies a string literal that is used as a salt
+for Control-Flow Integrity (CFI) checks to distinguish between functions with
+the same type signature. This attribute can be applied to function declarations,
+function definitions, and function pointer typedefs.
+
+The attribute prevents function pointers from being replaced with pointers to
+functions that have a compatible type, which can be a CFI bypass vector.
+
+**Syntax:**
+
+* GNU-style: ``__attribute__((cfi_salt("<salt_string>")))``
+* C++11-style: ``[[clang::cfi_salt("<salt_string>")]]``
+
+**Usage:**
+
+The attribute takes a single string literal argument that serves as the salt.
+Functions or function types with different salt values will have different CFI
+hashes, even if they have identical type signatures.
+
+**Motivation:**
+
+In large codebases like the Linux kernel, there are often hundreds of functions
+with identical type signatures that are called indirectly:
+
+.. code-block::
+
+  1662 functions with void (*)(void)
+  1179 functions with int (*)(void)
+   ...
+
+By salting the CFI hashes, you can make CFI more robust by ensuring that
+functions intended for different purposes have distinct CFI identities.
+
+**Type Compatibility:**
+
+* Functions with different salt values are considered to have incompatible types
+* Function pointers with different salt values cannot be assigned to each other
+* All declarations of the same function must use the same salt value
+
+**Example:**
+
+.. code-block:: c
+
+  // Header file - define convenience macros
+  #define __cfi_salt(s) __attribute__((cfi_salt(s)))
+
+  // Typedef for regular function pointers
+  typedef int (*fptr_t)(void);
+
+  // Typedef for salted function pointers
+  typedef int (*fptr_salted_t)(void) __cfi_salt("pepper");
+
+  struct widget_ops {
+    fptr_t init;          // Regular CFI
+    fptr_salted_t exec;   // Salted CFI
+    fptr_t cleanup;       // Regular CFI
+  };
+
+  // Function implementations
+  static int widget_init(void) { return 0; }
+  static int widget_exec(void) __cfi_salt("pepper") { return 1; }
+  static int widget_cleanup(void) { return 0; }
+
+  static struct widget_ops ops = {
+    .init = widget_init,      // OK - compatible types
+    .exec = widget_exec,      // OK - both use "pepper" salt
+    .cleanup = widget_cleanup // OK - compatible types
+  };
+
+  // Using C++11 attribute syntax
+  void secure_callback(void) [[clang::cfi_salt("secure")]];
+
+  // This would cause a compilation error:
+  // fptr_t bad_ptr = widget_exec;  // Error: incompatible types
+
+**Notes:**
+
+* The salt string can contain non-NULL ASCII characters, including spaces and
+  quotes
+* This attribute only applies to function types; using it on non-function
+  types will generate a warning
+* All declarations and definitions of the same function must use identical
+  salt values
+* The attribute affects type compatibility during compilation and CFI hash
+  generation during code generation
   }];
 }
 
@@ -4133,17 +4295,17 @@ used by other languages. (This prefix is also added to the standard Itanium
 C++ ABI prefix on "mangled" symbol names, so that e.g. on such targets the true
 symbol name for a C++ variable declared as ``int cppvar;`` would be
 ``__Z6cppvar``; note the two underscores.)  This prefix is *not* added to the
-symbol names specified by the ``asm`` attribute; programmers wishing to match a
-C symbol name must compensate for this.
+symbol names specified by the ``__asm`` attribute; programmers wishing to match
+a C symbol name must compensate for this.
 
 For example, consider the following C code:
 
 .. code-block:: c
 
-  int var1 asm("altvar") = 1;  // "altvar" in symbol table.
+  int var1 __asm("altvar") = 1;  // "altvar" in symbol table.
   int var2 = 1; // "_var2" in symbol table.
 
-  void func1(void) asm("altfunc");
+  void func1(void) __asm("altfunc");
   void func1(void) {} // "altfunc" in symbol table.
   void func2(void) {} // "_func2" in symbol table.
 
@@ -6570,7 +6732,7 @@ if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section n
 set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le targets.
 For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
@@ -7380,6 +7542,45 @@ A managed variable is emitted as an undefined global symbol in the device binary
 registered by ``__hipRegisterManagedVariable`` in init functions. The HIP runtime allocates
 managed memory and uses it to define the symbol when loading the device binary.
 A managed variable can be accessed in both device and host code.
+  }];
+}
+
+def CUDAClusterDimsAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, the ``cluster_dims`` attribute, conventionally exposed as the
+``__cluster_dims__`` macro, can be applied to a kernel function to set the dimensions of a
+thread block cluster, which is an optional level of hierarchy and made up of thread blocks.
+``__cluster_dims__`` defines the cluster size as ``(X, Y, Z)``, where each value is the number
+of thread blocks in that dimension. The ``cluster_dims`` and `no_cluster`` attributes are
+mutually exclusive.
+
+.. code::
+
+  __global__ __cluster_dims__(2, 1, 1) void kernel(...) {
+    ...
+  }
+
+  }];
+}
+
+def CUDANoClusterAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, a kernel function can still be launched with the cluster feature enabled
+at runtime, even without being annotated with ``__cluster_dims__``. The LLVM/Clang-exclusive
+``no_cluster`` attribute, conventionally exposed as the ``__no_cluster__`` macro, can be applied to
+a kernel function to explicitly indicate that the cluster feature will not be enabled either at
+compile time or at kernel launch time. This allows the compiler to apply certain optimizations
+without assuming that clustering could be enabled at runtime. It is undefined behavior to launch a
+kernel annotated with ``__no_cluster__`` if the cluster feature is enabled at runtime.
+The ``cluster_dims`` and ``no_cluster`` attributes are mutually exclusive.
+
+.. code::
+
+  __global__ __no_cluster__ void kernel(...) {
+    ...
+  }
   }];
 }
 
@@ -8218,6 +8419,23 @@ flag.
   }];
 }
 
+def DocHLSLSemantics : DocumentationCategory<"HLSL Semantics"> {
+  let Content = [{
+A semantic is a string attached to a shader input or output that conveys
+information about the intended use of a parameter. Semantics are required on
+all variables passed between shader stages. The syntax for adding a semantic
+to a shader variable is shown here (Variable Syntax (DirectX HLSL)).
+
+In general, data passed between pipeline stages is completely generic and is
+not uniquely interpreted by the system; arbitrary semantics are allowed which
+have no special meaning. Parameters (in Direct3D 10 and later) which contain
+these special semantics are referred to as System-Value Semantics.
+
+More information is available here:
+https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
+  }];
+}
+
 def WaveSizeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8454,38 +8672,6 @@ randomized.
   }];
 }
 
-def HLSLSV_GroupThreadIDDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
-individual thread within a thread group is executing in. This attribute is
-only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
-  }];
-}
-
-def HLSLSV_GroupIDDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
-thread group a shader is executing in. This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
-  }];
-}
-
-def HLSLSV_GroupIndexDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_GroupIndex`` semantic, when applied to an input parameter, specifies a
-data binding to map the group index to the specified parameter. This attribute
-is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
-  }];
-}
-
 def HLSLResourceBindingDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8529,35 +8715,6 @@ Examples:
   }
 
 The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
-  }];
-}
-
-def HLSLSV_DispatchThreadIDDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_DispatchThreadID`` semantic, when applied to an input parameter,
-specifies a data binding to map the global thread offset within the Dispatch
-call (per dimension of the group) to the specified parameter.
-When applied to a field of a struct, the data binding is specified to the field
-when the struct is used as a parameter type.
-The semantic on the field is ignored when not used as a parameter.
-This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-dispatchthreadid
-  }];
-}
-
-def HLSLSV_PositionDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_Position`` semantic, when applied to an input parameter in a pixel
-shader, contains the location of the pixel center (x, y) in screen space.
-This semantic can be applied to the parameter, or a field in a struct used
-as an input parameter.
-This attribute is supported as an input in pixel, hull, domain and mesh shaders.
-This attribute is supported as an output in vertex, geometry and domain shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
   }];
 }
 

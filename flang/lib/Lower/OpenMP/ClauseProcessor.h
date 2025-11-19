@@ -63,8 +63,11 @@ public:
       mlir::omp::CancelDirectiveNameClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                  mlir::omp::LoopRelatedClauseOps &result,
+                  mlir::omp::LoopRelatedClauseOps &loopResult,
+                  mlir::omp::CollapseClauseOps &collapseResult,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
+  bool processSizes(StatementContext &stmtCtx,
+                    mlir::omp::SizesClauseOps &result) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
@@ -86,6 +89,7 @@ public:
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
+  bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTasks(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTasksClauseOps &result) const;
@@ -98,6 +102,8 @@ public:
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
   bool processProcBind(mlir::omp::ProcBindClauseOps &result) const;
+  bool processTileSizes(lower::pft::Evaluation &eval,
+                        mlir::omp::LoopNestOperands &result) const;
   bool processSafelen(mlir::omp::SafelenClauseOps &result) const;
   bool processSchedule(lower::StatementContext &stmtCtx,
                        mlir::omp::ScheduleClauseOps &result) const;
@@ -118,7 +124,7 @@ public:
   bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
                      mlir::omp::DependClauseOps &result) const;
   bool
-  processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  processEnter(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
   bool processInReduction(
@@ -129,7 +135,7 @@ public:
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processLinear(mlir::omp::LinearClauseOps &result) const;
   bool
-  processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
 
   // This method is used to process a map clause.
   // The optional parameter mapSyms is used to store the original Fortran symbol
@@ -150,7 +156,7 @@ public:
   bool processTaskReduction(
       mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
-  bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  bool processTo(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processUseDeviceAddr(
       lower::StatementContext &stmtCtx,
       mlir::omp::UseDeviceAddrClauseOps &result,
@@ -189,8 +195,7 @@ private:
 
   void processMapObjects(
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
-      const omp::ObjectList &objects,
-      llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
+      const omp::ObjectList &objects, mlir::omp::ClauseMapFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
@@ -208,11 +213,15 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
     if (!x)
       return;
     unsigned version = semaCtx.langOptions().OpenMPVersion;
-    TODO(currentLocation,
-         "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
-             " in " +
-             llvm::omp::getOpenMPDirectiveName(directive, version).upper() +
-             " construct");
+    bool isSimdDirective = llvm::omp::getOpenMPDirectiveName(directive, version)
+                               .upper()
+                               .find("SIMD") != llvm::StringRef::npos;
+    if (!semaCtx.langOptions().OpenMPSimd || isSimdDirective)
+      TODO(currentLocation,
+           "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
+               " in " +
+               llvm::omp::getOpenMPDirectiveName(directive, version).upper() +
+               " construct");
   };
 
   for (ClauseIterator it = clauses.begin(); it != clauses.end(); ++it)

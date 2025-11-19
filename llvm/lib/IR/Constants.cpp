@@ -183,6 +183,23 @@ bool Constant::isMinSignedValue() const {
   return false;
 }
 
+bool Constant::isMaxSignedValue() const {
+  // Check for INT_MAX integers
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
+    return CI->isMaxValue(/*isSigned=*/true);
+
+  // Check for FP which are bitcasted from INT_MAX integers
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
+    return CFP->getValueAPF().bitcastToAPInt().isMaxSignedValue();
+
+  // Check for splats of INT_MAX values.
+  if (getType()->isVectorTy())
+    if (const auto *SplatVal = getSplatValue())
+      return SplatVal->isMaxSignedValue();
+
+  return false;
+}
+
 bool Constant::isNotMinSignedValue() const {
   // Check for INT_MIN integers
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
@@ -667,8 +684,11 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
     if (CE->getOpcode() == Instruction::Sub) {
       ConstantExpr *LHS = dyn_cast<ConstantExpr>(CE->getOperand(0));
       ConstantExpr *RHS = dyn_cast<ConstantExpr>(CE->getOperand(1));
-      if (LHS && RHS && LHS->getOpcode() == Instruction::PtrToInt &&
-          RHS->getOpcode() == Instruction::PtrToInt) {
+      if (LHS && RHS &&
+          (LHS->getOpcode() == Instruction::PtrToInt ||
+           LHS->getOpcode() == Instruction::PtrToAddr) &&
+          (RHS->getOpcode() == Instruction::PtrToInt ||
+           RHS->getOpcode() == Instruction::PtrToAddr)) {
         Constant *LHSOp0 = LHS->getOperand(0);
         Constant *RHSOp0 = RHS->getOperand(0);
 
@@ -1567,6 +1587,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::SIToFP:
   case Instruction::FPToUI:
   case Instruction::FPToSI:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2223,6 +2244,8 @@ Constant *ConstantExpr::getCast(unsigned oc, Constant *C, Type *Ty,
     llvm_unreachable("Invalid cast opcode");
   case Instruction::Trunc:
     return getTrunc(C, Ty, OnlyIfReduced);
+  case Instruction::PtrToAddr:
+    return getPtrToAddr(C, Ty, OnlyIfReduced);
   case Instruction::PtrToInt:
     return getPtrToInt(C, Ty, OnlyIfReduced);
   case Instruction::IntToPtr:
@@ -2278,6 +2301,20 @@ Constant *ConstantExpr::getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced) {
          "SrcTy must be larger than DestTy for Trunc!");
 
   return getFoldedCast(Instruction::Trunc, C, Ty, OnlyIfReduced);
+}
+
+Constant *ConstantExpr::getPtrToAddr(Constant *C, Type *DstTy,
+                                     bool OnlyIfReduced) {
+  assert(C->getType()->isPtrOrPtrVectorTy() &&
+         "PtrToAddr source must be pointer or pointer vector");
+  assert(DstTy->isIntOrIntVectorTy() &&
+         "PtrToAddr destination must be integer or integer vector");
+  assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
+  if (isa<VectorType>(C->getType()))
+    assert(cast<VectorType>(C->getType())->getElementCount() ==
+               cast<VectorType>(DstTy)->getElementCount() &&
+           "Invalid cast between a different number of vector elements");
+  return getFoldedCast(Instruction::PtrToAddr, C, DstTy, OnlyIfReduced);
 }
 
 Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
@@ -2435,6 +2472,7 @@ bool ConstantExpr::isDesirableCastOp(unsigned Opcode) {
   case Instruction::FPToSI:
     return false;
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2457,6 +2495,7 @@ bool ConstantExpr::isSupportedCastOp(unsigned Opcode) {
   case Instruction::FPToSI:
     return false;
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2845,7 +2884,7 @@ uint64_t ConstantDataSequential::getNumElements() const {
 }
 
 uint64_t ConstantDataSequential::getElementByteSize() const {
-  return getElementType()->getPrimitiveSizeInBits() / 8;
+  return getElementType()->getPrimitiveSizeInBits().getFixedValue() / 8;
 }
 
 /// Return the start of the specified element.
@@ -3401,6 +3440,7 @@ Instruction *ConstantExpr::getAsInstruction() const {
 
   switch (getOpcode()) {
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:

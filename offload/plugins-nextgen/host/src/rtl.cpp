@@ -114,6 +114,14 @@ struct GenELF64KernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
+  /// Return maximum block size for maximum occupancy
+  Expected<uint64_t> maxGroupSize(GenericDeviceTy &Device,
+                                  uint64_t DynamicMemSize) const override {
+    return Plugin::error(
+        ErrorCode::UNSUPPORTED,
+        "occupancy calculations are not implemented for the host device");
+  }
+
 private:
   /// The kernel function to execute.
   void (*Func)(void);
@@ -123,8 +131,8 @@ private:
 struct GenELF64DeviceImageTy : public DeviceImageTy {
   /// Create the GenELF64 image with the id and the target image pointer.
   GenELF64DeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
-                        const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, Device, TgtImage), DynLib() {}
+                        std::unique_ptr<MemoryBuffer> &&TgtImage)
+      : DeviceImageTy(ImageId, Device, std::move(TgtImage)), DynLib() {}
 
   /// Getter and setter for the dynamic library.
   DynamicLibrary &getDynamicLibrary() { return DynLib; }
@@ -181,11 +189,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error setContext() override { return Plugin::success(); }
 
   /// Load the binary image into the device and allocate an image object.
-  Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
-                                           int32_t ImageId) override {
+  Expected<DeviceImageTy *>
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
+                 int32_t ImageId) override {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
-    new (Image) GenELF64DeviceImageTy(ImageId, *this, TgtImage);
+    new (Image) GenELF64DeviceImageTy(ImageId, *this, std::move(TgtImage));
 
     // Create a temporary file.
     char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
@@ -231,7 +240,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
     if (Size == 0)
       return nullptr;
 
@@ -241,7 +250,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_DEVICE:
     case TARGET_ALLOC_HOST:
     case TARGET_ALLOC_SHARED:
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemAlloc = std::malloc(Size);
       break;
     }
@@ -249,9 +257,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Free the memory. Use std::free in all cases.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, TargetAllocTy Kind) override {
     std::free(TgtPtr);
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -295,9 +303,32 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "dataExchangeImpl not supported");
   }
 
+  /// Insert a data fence between previous data operations and the following
+  /// operations. This is a no-op for Host devices as operations inserted into
+  /// a queue are in-order.
+  Error dataFence(__tgt_async_info *Async) override {
+    return Plugin::success();
+  }
+
+  Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
+                     int64_t Size,
+                     AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (PatternSize == 1) {
+      std::memset(TgtPtr, *static_cast<const char *>(PatternPtr), Size);
+    } else {
+      for (unsigned int Step = 0; Step < Size; Step += PatternSize) {
+        auto *Dst = static_cast<char *>(TgtPtr) + Step;
+        std::memcpy(Dst, PatternPtr, PatternSize);
+      }
+    }
+
+    return Plugin::success();
+  }
+
   /// All functions are already synchronous. No need to do anything on this
   /// synchronization function.
-  Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool ReleaseQueue) override {
     return Plugin::success();
   }
 
@@ -313,11 +344,11 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "initAsyncInfoImpl not supported");
   }
 
-  /// This plugin does not support interoperability
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "initDeviceInfoImpl not supported");
-  }
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
+    Callback(UserData);
+    return Plugin::success();
+  };
 
   /// This plugin does not support the event API. Do nothing without failing.
   Error createEventImpl(void **EventPtrStorage) override {
@@ -336,6 +367,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
     return true;
   }
+  Expected<bool> isEventCompleteImpl(void *Event,
+                                     AsyncInfoWrapperTy &AsyncInfo) override {
+    return true;
+  }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 
   /// Print information about the device.
@@ -345,10 +380,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Info;
   }
 
-  /// This plugin should not setup the device environment or memory pool.
-  virtual bool shouldSetupDeviceEnvironment() const override { return false; };
-  virtual bool shouldSetupDeviceMemoryPool() const override { return false; };
-
   /// Getters and setters for stack size and heap size not relevant.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = 0;
@@ -357,11 +388,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return Plugin::success();
   }
-  Error getDeviceHeapSize(uint64_t &Value) override {
-    Value = 0;
-    return Plugin::success();
-  }
-  Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
 
 private:
   /// Grid values for Generic ELF64 plugins.

@@ -35,17 +35,6 @@ struct TLSImage {
   uintptr_t align;
 };
 
-// Linux manpage on `proc(5)` says that the aux vector is an array of
-// unsigned long pairs.
-// (see: https://man7.org/linux/man-pages/man5/proc.5.html)
-using AuxEntryType = unsigned long;
-// Using the naming convention from `proc(5)`.
-// TODO: Would be nice to use the aux entry structure from elf.h when available.
-struct AuxEntry {
-  AuxEntryType id;
-  AuxEntryType value;
-};
-
 struct Args {
   uintptr_t argc;
 
@@ -70,9 +59,6 @@ struct AppProperties {
 
   // Environment data.
   uintptr_t *env_ptr;
-
-  // Auxiliary vector data.
-  AuxEntry *auxv_ptr;
 };
 
 [[gnu::weak]] extern AppProperties app;

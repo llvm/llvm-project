@@ -1440,3 +1440,50 @@ body:             |
     %freeze:_(<4 x s32>) = G_FREEZE %extract
     $q0 = COPY %freeze(<4 x s32>)
     RET_ReallyLR implicit $x0
+...
+---
+name:            ubfx_does_not_generate_poison
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: ubfx_does_not_generate_poison
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c1:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: [[UBFX:%[0-9]+]]:_(s64) = G_UBFX [[FREEZE]], %c1(s64), %c1
+    ; CHECK-NEXT: $x0 = COPY [[UBFX]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %c1:_(s64) = G_CONSTANT i64 1
+    %1:_(s64) = G_UBFX %0, %c1, %c1
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            sbfx_does_not_generate_poison
+body:             |
+  bb.1:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: sbfx_does_not_generate_poison
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c1:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: [[SBFX:%[0-9]+]]:_(s64) = G_SBFX [[FREEZE]], %c1(s64), %c1
+    ; CHECK-NEXT: $x0 = COPY [[SBFX]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %c1:_(s64) = G_CONSTANT i64 1
+    %1:_(s64) = G_SBFX %0, %c1, %c1
+    %2:_(s64) = G_FREEZE %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+
+...

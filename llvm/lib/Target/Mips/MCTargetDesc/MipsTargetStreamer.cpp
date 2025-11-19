@@ -26,7 +26,6 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -127,9 +126,9 @@ void MipsTargetStreamer::emitDirectiveSetDspr2() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetMips3D() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoMips3D() { forbidModuleDirective(); }
-void MipsTargetStreamer::emitDirectiveCpAdd(unsigned RegNo) {}
-void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
-void MipsTargetStreamer::emitDirectiveCpLocal(unsigned RegNo) {
+void MipsTargetStreamer::emitDirectiveCpAdd(MCRegister Reg) {}
+void MipsTargetStreamer::emitDirectiveCpLoad(MCRegister Reg) {}
+void MipsTargetStreamer::emitDirectiveCpLocal(MCRegister Reg) {
   // .cplocal $reg
   // This directive forces to use the alternate register for context pointer.
   // For example
@@ -142,17 +141,17 @@ void MipsTargetStreamer::emitDirectiveCpLocal(unsigned RegNo) {
   if (!getABI().IsN32() && !getABI().IsN64())
     return;
 
-  GPReg = RegNo;
+  GPReg = Reg;
 
   forbidModuleDirective();
 }
 bool MipsTargetStreamer::emitDirectiveCpRestore(
-    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   forbidModuleDirective();
   return true;
 }
-void MipsTargetStreamer::emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
+void MipsTargetStreamer::emitDirectiveCpsetup(MCRegister Reg, int RegOrOffset,
                                               const MCSymbol &Sym, bool IsReg) {
 }
 void MipsTargetStreamer::emitDirectiveCpreturn(unsigned SaveLocation,
@@ -325,7 +324,7 @@ void MipsTargetStreamer::emitGPRestore(int Offset, SMLoc IDLoc,
 /// Emit a store instruction with an immediate offset.
 void MipsTargetStreamer::emitStoreWithImmOffset(
     unsigned Opcode, MCRegister SrcReg, MCRegister BaseReg, int64_t Offset,
-    function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+    function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   if (isInt<16>(Offset)) {
     emitRRI(Opcode, SrcReg, BaseReg, Offset, IDLoc, STI);
@@ -730,38 +729,38 @@ void MipsTargetAsmStreamer::emitFMask(unsigned FPUBitmask,
   OS << "," << FPUTopSavedRegOff << '\n';
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpAdd(unsigned RegNo) {
+void MipsTargetAsmStreamer::emitDirectiveCpAdd(MCRegister Reg) {
   OS << "\t.cpadd\t$"
-     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << "\n";
+     << StringRef(MipsInstPrinter::getRegisterName(Reg)).lower() << "\n";
   forbidModuleDirective();
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpLoad(unsigned RegNo) {
+void MipsTargetAsmStreamer::emitDirectiveCpLoad(MCRegister Reg) {
   OS << "\t.cpload\t$"
-     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << "\n";
+     << StringRef(MipsInstPrinter::getRegisterName(Reg)).lower() << "\n";
   forbidModuleDirective();
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpLocal(unsigned RegNo) {
+void MipsTargetAsmStreamer::emitDirectiveCpLocal(MCRegister Reg) {
   OS << "\t.cplocal\t$"
-     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << "\n";
-  MipsTargetStreamer::emitDirectiveCpLocal(RegNo);
+     << StringRef(MipsInstPrinter::getRegisterName(Reg)).lower() << "\n";
+  MipsTargetStreamer::emitDirectiveCpLocal(Reg);
 }
 
 bool MipsTargetAsmStreamer::emitDirectiveCpRestore(
-    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   MipsTargetStreamer::emitDirectiveCpRestore(Offset, GetATReg, IDLoc, STI);
   OS << "\t.cprestore\t" << Offset << "\n";
   return true;
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpsetup(unsigned RegNo,
+void MipsTargetAsmStreamer::emitDirectiveCpsetup(MCRegister Reg,
                                                  int RegOrOffset,
                                                  const MCSymbol &Sym,
                                                  bool IsReg) {
   OS << "\t.cpsetup\t$"
-     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << ", ";
+     << StringRef(MipsInstPrinter::getRegisterName(Reg)).lower() << ", ";
 
   if (IsReg)
     OS << "$"
@@ -1230,18 +1229,18 @@ void MipsTargetELFStreamer::emitFMask(unsigned FPUBitmask,
   FPROffset = FPUTopSavedRegOff;
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpAdd(unsigned RegNo) {
+void MipsTargetELFStreamer::emitDirectiveCpAdd(MCRegister Reg) {
   // .cpadd $reg
   // This directive inserts code to add $gp to the argument's register
   // when support for position independent code is enabled.
   if (!Pic)
     return;
 
-  emitAddu(RegNo, RegNo, GPReg, getABI().IsN64(), &STI);
+  emitAddu(Reg, Reg, GPReg, getABI().IsN64(), &STI);
   forbidModuleDirective();
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
+void MipsTargetELFStreamer::emitDirectiveCpLoad(MCRegister Reg) {
   // .cpload $reg
   // This directive expands to:
   // lui   $gp, %hi(_gp_disp)
@@ -1284,19 +1283,19 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   TmpInst.setOpcode(Mips::ADDu);
   TmpInst.addOperand(MCOperand::createReg(GPReg));
   TmpInst.addOperand(MCOperand::createReg(GPReg));
-  TmpInst.addOperand(MCOperand::createReg(RegNo));
+  TmpInst.addOperand(MCOperand::createReg(Reg));
   getStreamer().emitInstruction(TmpInst, STI);
 
   forbidModuleDirective();
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpLocal(unsigned RegNo) {
+void MipsTargetELFStreamer::emitDirectiveCpLocal(MCRegister Reg) {
   if (Pic)
-    MipsTargetStreamer::emitDirectiveCpLocal(RegNo);
+    MipsTargetStreamer::emitDirectiveCpLocal(Reg);
 }
 
 bool MipsTargetELFStreamer::emitDirectiveCpRestore(
-    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   MipsTargetStreamer::emitDirectiveCpRestore(Offset, GetATReg, IDLoc, STI);
   // .cprestore offset
@@ -1316,7 +1315,7 @@ bool MipsTargetELFStreamer::emitDirectiveCpRestore(
   return true;
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
+void MipsTargetELFStreamer::emitDirectiveCpsetup(MCRegister Reg,
                                                  int RegOrOffset,
                                                  const MCSymbol &Sym,
                                                  bool IsReg) {
@@ -1354,9 +1353,9 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
 
   // (d)addu  $gp, $gp, $funcreg
   if (getABI().IsN32())
-    emitRRR(Mips::ADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
+    emitRRR(Mips::ADDu, GPReg, GPReg, Reg, SMLoc(), &STI);
   else
-    emitRRR(Mips::DADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
+    emitRRR(Mips::DADDu, GPReg, GPReg, Reg, SMLoc(), &STI);
 }
 
 void MipsTargetELFStreamer::emitDirectiveCpreturn(unsigned SaveLocation,

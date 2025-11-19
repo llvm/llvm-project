@@ -263,28 +263,6 @@ static bool inDeviceContext(mlir::Operation *op) {
   return false;
 }
 
-static int computeWidth(mlir::Location loc, mlir::Type type,
-                        fir::KindMapping &kindMap) {
-  auto eleTy = fir::unwrapSequenceType(type);
-  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)})
-    return t.getWidth() / 8;
-  if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)})
-    return t.getWidth() / 8;
-  if (eleTy.isInteger(1))
-    return 1;
-  if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)})
-    return kindMap.getLogicalBitsize(t.getFKind()) / 8;
-  if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
-    int elemSize =
-        mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
-    return 2 * elemSize;
-  }
-  if (auto t{mlir::dyn_cast_or_null<fir::CharacterType>(eleTy)})
-    return kindMap.getCharacterBitsize(t.getFKind()) / 8;
-  mlir::emitError(loc, "unsupported type");
-  return 0;
-}
-
 struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -320,7 +298,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
       mlir::Value bytes;
       fir::KindMapping kindMap{fir::getKindMapping(mod)};
       if (fir::isa_trivial(op.getInType())) {
-        int width = computeWidth(loc, op.getInType(), kindMap);
+        int width = cuf::computeElementByteSize(loc, op.getInType(), kindMap);
         bytes =
             builder.createIntegerConstant(loc, builder.getIndexType(), width);
       } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
@@ -330,7 +308,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
           mlir::Type structTy = typeConverter->convertType(seqTy.getEleTy());
           size = dl->getTypeSizeInBits(structTy) / 8;
         } else {
-          size = computeWidth(loc, seqTy.getEleTy(), kindMap);
+          size = cuf::computeElementByteSize(loc, seqTy.getEleTy(), kindMap);
         }
         mlir::Value width =
             builder.createIntegerConstant(loc, builder.getIndexType(), size);
@@ -454,6 +432,8 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::DeclareOp op,
                   mlir::PatternRewriter &rewriter) const override {
+    if (op.getResult().getUsers().empty())
+      return success();
     if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
       if (auto global = symTab.lookup<fir::GlobalOp>(
               addrOfOp.getSymbol().getRootReference().getValue())) {
@@ -557,8 +537,9 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
     mlir::Value src = op.getSrc();
     if (srcTy.isInteger(1)) {
       // i1 is not a supported type in the descriptor and it is actually coming
-      // from a LOGICAL constant. Store it as a fir.logical.
-      srcTy = fir::LogicalType::get(rewriter.getContext(), 4);
+      // from a LOGICAL constant. Use the destination type to avoid mismatch.
+      assert(dstEleTy && "expect dst element type to be set");
+      srcTy = dstEleTy;
       src = createConvertOp(rewriter, loc, srcTy, src);
       addr = builder.createTemporary(loc, srcTy);
       fir::StoreOp::create(builder, loc, src, addr);
@@ -650,9 +631,10 @@ struct CUFDataTransferOpConversion
 
       if (fir::isa_trivial(srcTy) && !fir::isa_trivial(dstTy)) {
         // Initialization of an array from a scalar value should be implemented
-        // via a kernel launch. Use the flan runtime via the Assign function
+        // via a kernel launch. Use the flang runtime via the Assign function
         // until we have more infrastructure.
-        mlir::Value src = emboxSrc(rewriter, op, symtab);
+        mlir::Type dstEleTy = fir::unwrapInnerType(fir::unwrapRefType(dstTy));
+        mlir::Value src = emboxSrc(rewriter, op, symtab, dstEleTy);
         mlir::Value dst = emboxDst(rewriter, op, symtab);
         mlir::func::FuncOp func =
             fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
@@ -700,7 +682,7 @@ struct CUFDataTransferOpConversion
             typeConverter->convertType(fir::unwrapSequenceType(dstTy));
         width = dl->getTypeSizeInBits(structTy) / 8;
       } else {
-        width = computeWidth(loc, dstTy, kindMap);
+        width = cuf::computeElementByteSize(loc, dstTy, kindMap);
       }
       mlir::Value widthValue = mlir::arith::ConstantOp::create(
           rewriter, loc, i64Ty, rewriter.getIntegerAttr(i64Ty, width));
@@ -739,6 +721,9 @@ struct CUFDataTransferOpConversion
         fir::StoreOp::create(builder, loc, val, box);
         return box;
       }
+      if (mlir::isa<fir::BaseBoxType>(val.getType()))
+        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(val.getDefiningOp()))
+          return loadOp.getMemref();
       return val;
     };
 
@@ -928,34 +913,6 @@ struct CUFSyncDescriptorOpConversion
   }
 };
 
-struct CUFSetAllocatorIndexOpConversion
-    : public mlir::OpRewritePattern<cuf::SetAllocatorIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cuf::SetAllocatorIndexOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
-    int idx = kDefaultAllocator;
-    if (op.getDataAttr() == cuf::DataAttribute::Device) {
-      idx = kDeviceAllocatorPos;
-    } else if (op.getDataAttr() == cuf::DataAttribute::Managed) {
-      idx = kManagedAllocatorPos;
-    } else if (op.getDataAttr() == cuf::DataAttribute::Unified) {
-      idx = kUnifiedAllocatorPos;
-    } else if (op.getDataAttr() == cuf::DataAttribute::Pinned) {
-      idx = kPinnedAllocatorPos;
-    }
-    mlir::Value index =
-        builder.createIntegerConstant(loc, builder.getI32Type(), idx);
-    fir::runtime::cuda::genSetAllocatorIndex(builder, loc, op.getBox(), index);
-    op.erase();
-    return mlir::success();
-  }
-};
-
 class CUFOpConversion : public fir::impl::CUFOpConversionBase<CUFOpConversion> {
 public:
   void runOnOperation() override {
@@ -986,6 +943,8 @@ public:
     }
 
     target.addDynamicallyLegalOp<fir::DeclareOp>([&](fir::DeclareOp op) {
+      if (op.getResult().getUsers().empty())
+        return true;
       if (inDeviceContext(op))
         return true;
       if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
@@ -1017,8 +976,8 @@ void cuf::populateCUFToFIRConversionPatterns(
     const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns) {
   patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CUFAllocateOpConversion, CUFDeallocateOpConversion,
-                  CUFFreeOpConversion, CUFSyncDescriptorOpConversion,
-                  CUFSetAllocatorIndexOpConversion>(patterns.getContext());
+                  CUFFreeOpConversion, CUFSyncDescriptorOpConversion>(
+      patterns.getContext());
   patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
                                                &dl, &converter);
   patterns.insert<CUFLaunchOpConversion, CUFDeviceAddressOpConversion>(

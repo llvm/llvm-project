@@ -38,16 +38,18 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
                    TypeIndex func_type_index,
                    clang::FunctionDecl *&function_decl,
                    lldb::opaque_compiler_type_t parent_ty,
-                   llvm::StringRef proc_name, CompilerType func_ct)
+                   llvm::StringRef proc_name, ConstString mangled_name,
+                   CompilerType func_ct)
       : m_index(m_index), m_clang(m_clang), func_type_index(func_type_index),
         function_decl(function_decl), parent_ty(parent_ty),
-        proc_name(proc_name), func_ct(func_ct) {}
+        proc_name(proc_name), mangled_name(mangled_name), func_ct(func_ct) {}
   PdbIndex &m_index;
   TypeSystemClang &m_clang;
   TypeIndex func_type_index;
   clang::FunctionDecl *&function_decl;
   lldb::opaque_compiler_type_t parent_ty;
   llvm::StringRef proc_name;
+  ConstString mangled_name;
   CompilerType func_ct;
 
   llvm::Error visitKnownMember(CVMemberRecord &cvr,
@@ -87,8 +89,7 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
     bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                          MethodOptions::CompilerGenerated;
     function_decl = m_clang.AddMethodToCXXRecordType(
-        parent_ty, proc_name,
-        /*asm_label=*/{}, func_ct, /*access=*/access_type,
+        parent_ty, proc_name, mangled_name, func_ct, /*access=*/access_type,
         /*is_virtual=*/is_virtual, /*is_static=*/is_static,
         /*is_inline=*/false, /*is_explicit=*/false,
         /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
@@ -449,7 +450,7 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
                         ->GetIndex();
   lldbassert(IsTagRecord(type_id, index.tpi()));
 
-  clang::QualType tag_qt = m_clang.getASTContext().getTypeDeclType(&tag);
+  clang::QualType tag_qt = m_clang.getASTContext().getCanonicalTagType(&tag);
   TypeSystemClang::SetHasExternalStorage(tag_qt.getAsOpaquePtr(), false);
 
   TypeIndex tag_ti = type_id.index;
@@ -562,7 +563,8 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
           m_clang.getASTContext(), spelling));
     }
     return m_clang.getASTContext().getMemberPointerType(
-        pointee_type, /*Qualifier=*/nullptr, class_type->getAsCXXRecordDecl());
+        pointee_type, /*Qualifier=*/std::nullopt,
+        class_type->getAsCXXRecordDecl());
   }
 
   clang::QualType pointer_type;
@@ -862,9 +864,9 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
     SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
         m_clang.GetSymbolFile()->GetBackingSymbolFile());
     PdbIndex &index = pdb->GetIndex();
-    clang::QualType parent_qt = llvm::cast<clang::TypeDecl>(parent)
-                                    ->getTypeForDecl()
-                                    ->getCanonicalTypeInternal();
+    clang::CanQualType parent_qt =
+        m_clang.getASTContext().getCanonicalTypeDeclType(
+            llvm::cast<clang::TypeDecl>(parent));
     lldb::opaque_compiler_type_t parent_opaque_ty =
         ToCompilerType(parent_qt).GetOpaqueQualType();
     // FIXME: Remove this workaround.
@@ -891,6 +893,10 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
         tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
       }
     }
+
+    ConstString mangled_name(
+        pdb->FindMangledFunctionName(func_id).value_or(llvm::StringRef()));
+
     if (!tag_record.FieldList.isSimple()) {
       CVType field_list_cvt = index.tpi().getType(tag_record.FieldList);
       FieldListRecord field_list;
@@ -898,15 +904,15 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
               field_list_cvt, field_list))
         llvm::consumeError(std::move(error));
       CreateMethodDecl process(index, m_clang, func_ti, function_decl,
-                               parent_opaque_ty, func_name, func_ct);
+                               parent_opaque_ty, func_name, mangled_name,
+                               func_ct);
       if (llvm::Error err = visitMemberRecordStream(field_list.Data, process))
         llvm::consumeError(std::move(err));
     }
 
     if (!function_decl) {
       function_decl = m_clang.AddMethodToCXXRecordType(
-          parent_opaque_ty, func_name,
-          /*asm_label=*/{}, func_ct,
+          parent_opaque_ty, func_name, mangled_name, func_ct,
           /*access=*/lldb::AccessType::eAccessPublic,
           /*is_virtual=*/false, /*is_static=*/false,
           /*is_inline=*/false, /*is_explicit=*/false,
@@ -1168,6 +1174,7 @@ clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
 
 clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
   clang::QualType element_type = GetOrCreateType(ar.ElementType);
+  TypeSystemClang::RequireCompleteType(ToCompilerType(element_type));
 
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
@@ -1452,8 +1459,9 @@ PdbAstBuilder::FromCompilerDeclContext(CompilerDeclContext context) {
   return static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
 }
 
-void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter) {
-  m_clang.Dump(stream.AsRawOstream(), filter);
+void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter,
+                         bool show_color) {
+  m_clang.Dump(stream.AsRawOstream(), filter, show_color);
 }
 
 clang::NamespaceDecl *

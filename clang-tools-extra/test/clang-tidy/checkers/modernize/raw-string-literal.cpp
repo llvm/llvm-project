@@ -2,7 +2,7 @@
 
 char const *const BackSlash("goink\\frob");
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: escaped string literal can be written as a raw string literal [modernize-raw-string-literal]
-// CHECK-FIXES: {{^}}char const *const BackSlash(R"(goink\frob)");{{$}}
+// CHECK-FIXES: char const *const BackSlash(R"(goink\frob)");
 
 char const *const PlainLiteral("plain literal");
 
@@ -41,7 +41,7 @@ char const *const Us("goink\\\037");
 char const *const HexNonPrintable("\\\x03");
 char const *const Delete("\\\177");
 char const *const MultibyteSnowman("\xE2\x98\x83");
-// CHECK-FIXES: {{^}}char const *const MultibyteSnowman("\xE2\x98\x83");{{$}}
+// CHECK-FIXES: char const *const MultibyteSnowman("\xE2\x98\x83");
 
 char const *const TrailingSpace("A line \\with space. \n");
 char const *const TrailingNewLine("A single \\line.\n");
@@ -59,39 +59,39 @@ wchar_t const *const WideRawLiteral(LR"(foobie\\bletch)");
 
 char const *const SingleQuote("goink\'frob");
 // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: {{.*}} can be written as a raw string literal
-// CHECK-XFIXES: {{^}}char const *const SingleQuote(R"(goink'frob)");{{$}}
+// CHECK-XFIXES: char const *const SingleQuote(R"(goink'frob)");
 
 char const *const DoubleQuote("goink\"frob");
 // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const DoubleQuote(R"(goink"frob)");{{$}}
+// CHECK-FIXES: char const *const DoubleQuote(R"(goink"frob)");
 
 char const *const QuestionMark("goink\?frob");
 // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const QuestionMark(R"(goink?frob)");{{$}}
+// CHECK-FIXES: char const *const QuestionMark(R"(goink?frob)");
 
 char const *const RegEx("goink\\(one|two\\)\\\\\\?.*\\nfrob");
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const RegEx(R"(goink\(one|two\)\\\?.*\nfrob)");{{$}}
+// CHECK-FIXES: char const *const RegEx(R"(goink\(one|two\)\\\?.*\nfrob)");
 
 char const *const Path("C:\\Program Files\\Vendor\\Application\\Application.exe");
 // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const Path(R"(C:\Program Files\Vendor\Application\Application.exe)");{{$}}
+// CHECK-FIXES: char const *const Path(R"(C:\Program Files\Vendor\Application\Application.exe)");
 
 char const *const ContainsSentinel("who\\ops)\"");
 // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const ContainsSentinel(R"lit(who\ops)")lit");{{$}}
+// CHECK-FIXES: char const *const ContainsSentinel(R"lit(who\ops)")lit");
 
 char const *const ContainsDelim("whoops)\")lit\"");
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const ContainsDelim(R"lit1(whoops)")lit")lit1");{{$}}
+// CHECK-FIXES: char const *const ContainsDelim(R"lit1(whoops)")lit")lit1");
 
 char const *const OctalPrintable("\100\\");
 // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const OctalPrintable(R"(@\)");{{$}}
+// CHECK-FIXES: char const *const OctalPrintable(R"(@\)");
 
 char const *const HexPrintable("\x40\\");
 // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const HexPrintable(R"(@\)");{{$}}
+// CHECK-FIXES: char const *const HexPrintable(R"(@\)");
 
 char const *const prettyFunction(__PRETTY_FUNCTION__);
 char const *const function(__FUNCTION__);
@@ -111,23 +111,23 @@ template <typename T>
 void fn(char const *const Arg) {
   char const *const Str("foo\\bar");
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: {{.*}} can be written as a raw string literal
-  // CHECK-FIXES: {{^}}  char const *const Str(R"(foo\bar)");{{$}}
+  // CHECK-FIXES: char const *const Str(R"(foo\bar)");
 }
 
 template <>
 void fn<int>(char const *const Arg) {
   char const *const Str("foo\\bar");
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: {{.*}} can be written as a raw string literal
-  // CHECK-FIXES: {{^}}  char const *const Str(R"(foo\bar)");{{$}}
+  // CHECK-FIXES: char const *const Str(R"(foo\bar)");
 }
 
 void callFn() {
   fn<int>("foo\\bar");
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}} can be written as a raw string literal
-  // CHECK-FIXES: {{^}}  fn<int>(R"(foo\bar)");{{$}}
+  // CHECK-FIXES: fn<int>(R"(foo\bar)");
   fn<double>("foo\\bar");
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}} can be written as a raw string literal
-  // CHECK-FIXES: {{^}}  fn<double>(R"(foo\bar)");{{$}}
+  // CHECK-FIXES: fn<double>(R"(foo\bar)");
 }
 
 namespace std {
@@ -140,5 +140,5 @@ namespace gh97243 {
 using namespace std::ud;
 auto UserDefinedLiteral = "foo\\bar"_abc;
 // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}auto UserDefinedLiteral = R"(foo\bar)"_abc;
+// CHECK-FIXES: auto UserDefinedLiteral = R"(foo\bar)"_abc;
 } // namespace gh97243

@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace clang {
 class Decl;
@@ -119,6 +120,11 @@ protected:
 
     LLVM_PREFERRED_TYPE(CommandTraits::KnownCommandIDs)
     unsigned CommandID : CommandInfo::NumCommandIDBits;
+
+    /// Describes the syntax that was used in a documentation command.
+    /// Contains values from CommandMarkerKind enum.
+    LLVM_PREFERRED_TYPE(CommandMarkerKind)
+    unsigned CommandMarker : 1;
   };
   enum { NumInlineCommandCommentBits = NumInlineContentCommentBits + 3 +
                                        CommandInfo::NumCommandIDBits };
@@ -347,6 +353,16 @@ public:
     InlineCommandCommentBits.RenderKind = llvm::to_underlying(RK);
     InlineCommandCommentBits.CommandID = CommandID;
   }
+  InlineCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
+                       unsigned CommandID, InlineCommandRenderKind RK,
+                       CommandMarkerKind CommandMarker, ArrayRef<Argument> Args)
+      : InlineContentComment(CommentKind::InlineCommandComment, LocBegin,
+                             LocEnd),
+        Args(Args) {
+    InlineCommandCommentBits.RenderKind = llvm::to_underlying(RK);
+    InlineCommandCommentBits.CommandID = CommandID;
+    InlineCommandCommentBits.CommandMarker = llvm::to_underlying(CommandMarker);
+  }
 
   static bool classof(const Comment *C) {
     return C->getCommentKind() == CommentKind::InlineCommandComment;
@@ -383,6 +399,11 @@ public:
 
   SourceRange getArgRange(unsigned Idx) const {
     return Args[Idx].Range;
+  }
+
+  CommandMarkerKind getCommandMarker() const {
+    return static_cast<CommandMarkerKind>(
+        InlineCommandCommentBits.CommandMarker);
   }
 };
 

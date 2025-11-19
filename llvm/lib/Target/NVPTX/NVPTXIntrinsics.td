@@ -6,44 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-def immFloat0 : PatLeaf<(fpimm), [{
-    float f = (float)N->getValueAPF().convertToFloat();
-    return (f==0.0f);
-}]>;
-
-def immFloat1 : PatLeaf<(fpimm), [{
-    float f = (float)N->getValueAPF().convertToFloat();
-    return (f==1.0f);
-}]>;
-
-def immDouble0 : PatLeaf<(fpimm), [{
-    double d = (double)N->getValueAPF().convertToDouble();
-    return (d==0.0);
-}]>;
-
-def immDouble1 : PatLeaf<(fpimm), [{
-    double d = (double)N->getValueAPF().convertToDouble();
-    return (d==1.0);
-}]>;
-
 def AS_match {
   code generic = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GENERIC);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_GENERIC;
   }];
   code shared = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_SHARED;
   }];
   code shared_cluster = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED_CLUSTER);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_SHARED_CLUSTER;
   }];
   code global = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_GLOBAL;
   }];
   code const = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_CONST);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_CONST;
   }];
   code param = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_PARAM);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_PARAM;
   }];
 }
 
@@ -384,7 +364,42 @@ def INT_FENCE_SC_CLUSTER:
        NullaryInst<"fence.sc.cluster", int_nvvm_fence_sc_cluster>,
        Requires<[hasPTX<78>, hasSM<90>]>;
 
+def INT_FENCE_MBARRIER_INIT_RELEASE_CLUSTER:
+       NullaryInst<"fence.mbarrier_init.release.cluster",
+        int_nvvm_fence_mbarrier_init_release_cluster>,
+       Requires<[hasPTX<80>, hasSM<90>]>;
+
+let Predicates = [hasPTX<86>, hasSM<90>] in {
+def INT_FENCE_ACQUIRE_SYNC_RESTRICT_CLUSTER_CLUSTER:
+       NullaryInst<"fence.acquire.sync_restrict::shared::cluster.cluster",
+        int_nvvm_fence_acquire_sync_restrict_space_cluster_scope_cluster>;
+
+def INT_FENCE_RELEASE_SYNC_RESTRICT_CTA_CLUSTER:
+       NullaryInst<"fence.release.sync_restrict::shared::cta.cluster",
+        int_nvvm_fence_release_sync_restrict_space_cta_scope_cluster>;
+}
+
 // Proxy fence (uni-directional)
+let Predicates = [hasPTX<86>, hasSM<90>] in {
+def INT_NVVM_FENCE_PROXY_ASYNC_GENERIC_ACQUIRE_SYNC_RESTRICT_SPACE_CLUSTER_SCOPE_CLUSTER:
+       NullaryInst<"fence.proxy.async::generic.acquire.sync_restrict::shared::cluster.cluster",
+        int_nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster>;
+
+def INT_NVVM_FENCE_PROXY_ASYNC_GENERIC_RELEASE_SYNC_RESTRICT_SPACE_CTA_SCOPE_CLUSTER:
+       NullaryInst<"fence.proxy.async::generic.release.sync_restrict::shared::cta.cluster",
+        int_nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster>;
+}
+
+// Proxy fence (bi-directional)
+foreach proxykind = ["alias", "async", "async.global", "async.shared_cta",
+                      "async.shared_cluster"] in {
+  defvar Preds = !if(!eq(proxykind, "alias"), [hasPTX<75>, hasSM<70>],
+                                              [hasPTX<80>, hasSM<90>]);
+  defvar Intr = IntrinsicName<"llvm.nvvm.fence.proxy." # proxykind>;
+  def : NullaryInst<"fence.proxy." # !subst("_", "::", proxykind),
+          !cast<Intrinsic>(Intr.record_name)>, Requires<Preds>;
+}
+
 class FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<string Scope, Intrinsic Intr> :
         NullaryInst<"fence.proxy.tensormap::generic.release." # Scope, Intr>,
         Requires<[hasPTX<83>, hasSM<90>]>;
@@ -517,6 +532,10 @@ class CpAsyncBulkStr<bit mc, bit ch, bit mask = 0> {
                # !if(mc, ".multicast::cluster", "")
                # !if(ch, ".L2::cache_hint", "");
 
+  // Global to Shared CTA memory
+  string G2S_CTA = "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes"
+                   # !if(ch, ".L2::cache_hint", "");
+
   // Shared CTA to Cluster memory
   string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
 }
@@ -562,6 +581,21 @@ multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch> {
 }
 defm CP_ASYNC_BULK_G2S    : CP_ASYNC_BULK_G2S_INTR<has_ch = 0>;
 defm CP_ASYNC_BULK_G2S_CH : CP_ASYNC_BULK_G2S_INTR<has_ch = 1>;
+
+multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch> {
+  defvar Intr = int_nvvm_cp_async_bulk_global_to_shared_cta;
+
+  def "" : NVPTXInst<(outs),
+      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
+           B32:$size, B64:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<0, 1>.G2S_CTA # " [$dst], [$src], $size, [$mbar], $ch;",
+          CpAsyncBulkStr<0, 0>.G2S_CTA # " [$dst], [$src], $size, [$mbar];"),
+      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<86>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_G2S_CTA    : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_G2S_CTA_CH : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 1>;
 
 def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
   (ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
@@ -619,75 +653,15 @@ class TMA_IM2COL_UTIL<int dim, string mode> {
   string base_str = !interleave(!foreach(i, !range(offsets), "$im2col" # i), ", ");
 }
 
-// From Global to Shared memory (G2S)
-class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
-  string prefix = "cp.async.bulk.tensor";
-  string dir = "shared::cluster.global";
-  string completion = "mbarrier::complete_tx::bytes";
-  string inst_name = prefix
-                     # "." # dim # "d"
-                     # "." # dir
-                     # "." # mode
-                     # "." # completion
-                     # !if(mc, ".multicast::cluster", "")
-                     # !if(ch, ".L2::cache_hint", "");
-  string intr_name = "CP_ASYNC_BULK_TENSOR_G2S_"
-                     # dim # "D"
-                     # !if(is_shared32, "_SHARED32", "")
-                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
-}
-
 def CTAGroupFlags : Operand<i32> {
   let PrintMethod = "printCTAGroup";
 }
 
-multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> {
-  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
-  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
-  defvar asm_str_default = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
-  defvar rc = !if(is_shared32, B32, B64);
+def tma_cta_group_imm0 : TImmLeaf<i32, [{return Imm == 0;}]>;
+def tma_cta_group_imm_any : TImmLeaf<i32, [{return Imm >= 0;}]>;
 
-  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
-  defvar im2col_dag = !if(!eq(mode, "im2col"),
-    !dag(ins, !listsplat(B16, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
-    (ins));
-  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
-  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
-
-  defvar asm_str = !if(!eq(mode, "im2col"),
-    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
-
-  def "" : NVPTXInst<(outs),
-            !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag, (ins CTAGroupFlags:$cg)),
-            !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";"), []>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
-  def _MC : NVPTXInst<(outs),
-                  !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
-                       (ins B16:$mc, CTAGroupFlags:$cg)),
-                  !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-  def _CH : NVPTXInst<(outs),
-                  !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
-                       (ins B64:$ch, CTAGroupFlags:$cg)),
-                  !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-  def _MC_CH : NVPTXInst<(outs),
-                     !con((ins rc:$dst, rc:$mbar, B64:$tmap), dims_dag, im2col_dag,
-                          (ins B16:$mc, B64:$ch, CTAGroupFlags:$cg)),
-                     !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;"), []>,
-                     Requires<[hasPTX<80>, hasSM<90>]>;
-}
-
-foreach dim = [1, 2, 3, 4, 5] in {
-  foreach shared32 = [true, false] in {
-    foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-      defm G2S_STRINGS<dim, mode, 0, 0, shared32>.intr_name :
-        CP_ASYNC_BULK_TENSOR_G2S_INTR<dim, shared32, mode>;
-    }
-  }
-}
-
-multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred = []> {
+multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred,
+                               TImmLeaf cta_group_type = tma_cta_group_imm_any> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str_base = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
@@ -717,10 +691,10 @@ multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred = []> 
                          !setdagop(dims_dag, intr),
                          !setdagop(im2col_dag, intr),
                          (intr B16:$mc, B64:$ch));
-  defvar intr_dag_no_hints   = !con(intr_dag_base, (intr 0,  0,  timm:$cg));
-  defvar intr_dag_with_mc    = !con(intr_dag_base, (intr -1, 0,  timm:$cg));
-  defvar intr_dag_with_ch    = !con(intr_dag_base, (intr 0, -1,  timm:$cg));
-  defvar intr_dag_with_mc_ch = !con(intr_dag_base, (intr -1, -1, timm:$cg));
+  defvar intr_dag_no_hints   = !con(intr_dag_base, (intr 0,  0,  cta_group_type:$cg));
+  defvar intr_dag_with_mc    = !con(intr_dag_base, (intr -1, 0,  cta_group_type:$cg));
+  defvar intr_dag_with_ch    = !con(intr_dag_base, (intr 0, -1,  cta_group_type:$cg));
+  defvar intr_dag_with_mc_ch = !con(intr_dag_base, (intr -1, -1, cta_group_type:$cg));
 
   def "" : NVPTXInst<(outs), ins_dag,
              inst_name # asm_str # ";",
@@ -739,14 +713,30 @@ multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred = []> 
                  [intr_dag_with_mc_ch]>,
                  Requires<pred>;
 }
+
+foreach dim = 1...5 in {
+  defm TMA_G2S_TILE_CG0_ # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, "tile", [hasPTX<80>, hasSM<90>],
+                            tma_cta_group_imm0>;
+  defm TMA_G2S_TILE_ # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, "tile",
+                            [callSubtarget<"hasTMABlackwellSupport">]>;
+}
 foreach dim = 3...5 in {
+  defm TMA_G2S_IM2COL_CG0_ # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, "im2col", [hasPTX<80>, hasSM<90>],
+                            tma_cta_group_imm0>;
+  defm TMA_G2S_IM2COL_ # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, "im2col",
+                            [callSubtarget<"hasTMABlackwellSupport">]>;
   foreach mode = ["im2col_w", "im2col_w_128"] in {
     defm TMA_G2S_ # !toupper(mode) # "_" # dim # "D"
-      : TMA_TENSOR_G2S_INTR<dim, mode, [hasTMACTAGroupSupport]>;
+        : TMA_TENSOR_G2S_INTR<dim, mode,
+                              [callSubtarget<"hasTMABlackwellSupport">]>;
   }
 }
 defm TMA_G2S_TILE_GATHER4_2D : TMA_TENSOR_G2S_INTR<5, "tile_gather4",
-                               [hasTMACTAGroupSupport]>;
+                               [callSubtarget<"hasTMABlackwellSupport">]>;
 
 multiclass TMA_TENSOR_G2S_CTA_INTR<int dim, string mode, list<Predicate> pred = []> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
@@ -804,7 +794,8 @@ foreach dim = 3...5 in {
     : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col_w", [hasPTX<86>, hasSM<100>]>;
 
   defm TMA_G2S_CTA_IM2COL_W_128_ # dim # "D"
-    : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col_w_128", [hasTMACTAGroupSupport]>;
+    : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col_w_128",
+                              [callSubtarget<"hasTMABlackwellSupport">]>;
 }
 defm TMA_G2S_CTA_TILE_GATHER4_2D : TMA_TENSOR_G2S_CTA_INTR<5, "tile_gather4",
                                    [hasPTX<86>, hasSM<100>]>;
@@ -855,7 +846,7 @@ foreach dim = 1...5 in {
   }
 }
 defm TMA_S2G_TILE_SCATTER4_2D : TMA_TENSOR_S2G_INTR<5, "tile_scatter4",
-                                [hasTMACTAGroupSupport]>;
+                                [callSubtarget<"hasTMABlackwellSupport">]>;
 
 def TMAReductionFlags : Operand<i32> {
   let PrintMethod = "printTmaReductionMode";
@@ -876,11 +867,11 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, bit shared32, string mode> 
 
   def "" : NVPTXInst<(outs),
             !con((ins rc:$src, B64:$tmap), dims_dag, (ins TMAReductionFlags:$red_op)),
-            !strconcat(prefix, "${red_op}", suffix, asm_str, ";"), []>,
+            !strconcat(prefix, "${red_op}", suffix, asm_str, ";")>,
             Requires<[hasPTX<80>, hasSM<90>]>;
   def _CH : NVPTXInst<(outs),
                   !con((ins rc:$src, B64:$tmap), dims_dag, (ins B64:$ch, TMAReductionFlags:$red_op)),
-                  !strconcat(prefix, "${red_op}", suffix, ".L2::cache_hint", asm_str, ", $ch;"), []>,
+                  !strconcat(prefix, "${red_op}", suffix, ".L2::cache_hint", asm_str, ", $ch;")>,
                   Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
@@ -950,11 +941,11 @@ foreach dim = 3...5 in {
   foreach mode = ["im2col_w", "im2col_w_128"] in {
     defvar suffix = !toupper(mode) # "_" # dim # "D";
     defm TMA_TENSOR_PF_ # suffix : TMA_TENSOR_PREFETCH_INTR<dim, mode,
-                                   [hasTMACTAGroupSupport]>;
+                                   [callSubtarget<"hasTMABlackwellSupport">]>;
   }
 }
 defm TMA_TENSOR_PF_TILE_GATHER4_2D : TMA_TENSOR_PREFETCH_INTR<5, "tile_gather4",
-                                     [hasTMACTAGroupSupport]>;
+                                     [callSubtarget<"hasTMABlackwellSupport">]>;
 
 //Prefetchu and Prefetch
 
@@ -1102,6 +1093,161 @@ let Predicates = [hasPTX<70>, hasSM<80>] in {
             "mbarrier.pending_count.b64",
             [(set i32:$res, (int_nvvm_mbarrier_pending_count i64:$state))]>;
 }
+
+class MBAR_UTIL<string op, string scope,
+                string space = "", string sem = "",
+                bit tl = 0, bit parity = 0> {
+  // The mbarrier instructions in PTX ISA are of the general form:
+  // mbarrier.op.semantics.scope.space.b64 arg1, arg2 ...
+  // where:
+  // op -> arrive, expect_tx, complete_tx, arrive.expect_tx etc.
+  // semantics -> acquire, release, relaxed (default depends on the op)
+  // scope -> cta or cluster (default is cta-scope)
+  // space -> shared::cta or shared::cluster (default is shared::cta)
+  //
+  // The 'semantics' and 'scope' go together. If one is specified,
+  // then the other _must_ be specified. For example:
+  // (A) mbarrier.arrive             <args> (valid, release and cta are default)
+  // (B) mbarrier.arrive.release.cta <args> (valid, sem/scope mentioned explicitly)
+  // (C) mbarrier.arrive.release     <args> (invalid, needs scope)
+  // (D) mbarrier.arrive.cta         <args> (invalid, needs order)
+  //
+  // Wherever possible, we prefer form (A) to (B) since it is available
+  // from early PTX versions. In most cases, explicitly specifying the
+  // scope requires a later version of PTX.
+  string _scope_asm = !cond(
+                      !eq(scope, "scope_cluster") : "cluster",
+                      !eq(scope, "scope_cta") : !if(!empty(sem), "", "cta"),
+                      true : scope);
+  string _space_asm = !cond(
+                      !eq(space, "space_cta") : "shared",
+                      !eq(space, "space_cluster") : "shared::cluster",
+                      true : space);
+
+  string _parity = !if(parity, "parity", "");
+  string asm_str = StrJoin<".", ["mbarrier", op, _parity,
+                                  sem, _scope_asm, _space_asm, "b64"]>.ret;
+
+  string _intr_suffix = StrJoin<"_", [!subst(".", "_", op), _parity,
+                                      !if(tl, "tl", ""),
+                                      sem, scope, space]>.ret;
+  string intr_name = "int_nvvm_mbarrier_" # _intr_suffix;
+
+  // Predicate checks:
+  // These are used only for the "test_wait/try_wait" variants as they
+  // have evolved since sm80 and are complex. The predicates for the
+  // remaining instructions are straightforward and have already been
+  // applied directly.
+  Predicate _sm_pred = !cond(!or(
+                       !eq(op, "try_wait"),
+                       !eq(scope, "scope_cluster"),
+                       !eq(sem, "relaxed")) : hasSM<90>,
+                       true : hasSM<80>);
+  Predicate _ptx_pred = !cond(
+                        !eq(sem, "relaxed") : hasPTX<86>,
+                        !ne(_scope_asm, "") : hasPTX<80>,
+                        !eq(op, "try_wait") : hasPTX<78>,
+                        parity : hasPTX<71>,
+                        true   : hasPTX<70>);
+  list<Predicate> preds = [_ptx_pred, _sm_pred];
+}
+
+foreach op = ["expect_tx", "complete_tx"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach space = ["space_cta", "space_cluster"] in {
+      defvar intr = !cast<Intrinsic>(MBAR_UTIL<op, scope, space>.intr_name);
+      defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
+                           MBAR_UTIL<op, scope, space, "relaxed">.asm_str,
+                           [(intr addr:$addr, i32:$tx_count)]>,
+                           Requires<[hasPTX<80>, hasSM<90>]>;
+    } // space
+  } // scope
+} // op
+
+multiclass MBAR_ARR_INTR<string op, string scope, string sem,
+                         list<Predicate> pred = []> {
+  // When either of sem or scope is non-default, both have to
+  // be explicitly specified. So, explicitly state that
+  // sem is `release` when scope is `cluster`.
+  defvar asm_sem = !if(!and(!empty(sem), !eq(scope, "scope_cluster")),
+                    "release", sem);
+
+  defvar asm_cta  = MBAR_UTIL<op, scope, "space_cta", asm_sem>.asm_str;
+  defvar intr_cta = !cast<Intrinsic>(MBAR_UTIL<op, scope,
+                                     "space_cta", sem>.intr_name);
+
+  defvar asm_cluster  = MBAR_UTIL<op, scope, "space_cluster", asm_sem>.asm_str;
+  defvar intr_cluster = !cast<Intrinsic>(MBAR_UTIL<op, scope,
+                                         "space_cluster", sem>.intr_name);
+
+  def _CTA : NVPTXInst<(outs B64:$state),
+             (ins ADDR:$addr, B32:$tx_count),
+             asm_cta # " $state, [$addr], $tx_count;",
+             [(set i64:$state, (intr_cta addr:$addr, i32:$tx_count))]>,
+             Requires<pred>;
+  def _CLUSTER : NVPTXInst<(outs),
+                 (ins ADDR:$addr, B32:$tx_count),
+                 asm_cluster # " _, [$addr], $tx_count;",
+                 [(intr_cluster addr:$addr, i32:$tx_count)]>,
+                 Requires<pred>;
+}
+foreach op = ["arrive", "arrive.expect_tx",
+              "arrive_drop", "arrive_drop.expect_tx"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    defvar suffix = !subst(".", "_", op) # scope;
+    defm mbar_ # suffix # _release : MBAR_ARR_INTR<op, scope, "", [hasPTX<80>, hasSM<90>]>;
+    defm mbar_ # suffix # _relaxed : MBAR_ARR_INTR<op, scope, "relaxed", [hasPTX<86>, hasSM<90>]>;
+  } // scope
+} // op
+
+multiclass MBAR_WAIT_INTR<string op, string scope, string sem, bit time_limit> {
+  // When either of sem or scope is non-default, both have to
+  // be explicitly specified. So, explicitly state that the
+  // semantics is `acquire` when the scope is `cluster`.
+  defvar asm_sem = !if(!and(!empty(sem), !eq(scope, "scope_cluster")),
+                    "acquire", sem);
+
+  defvar asm_parity  = MBAR_UTIL<op, scope, "space_cta", asm_sem,
+                                 time_limit, 1>.asm_str;
+  defvar pred_parity = MBAR_UTIL<op, scope, "space_cta", asm_sem,
+                                 time_limit, 1>.preds;
+  defvar intr_parity = !cast<Intrinsic>(MBAR_UTIL<op, scope, "space_cta",
+                                        sem, time_limit, 1>.intr_name);
+
+  defvar asm_state  = MBAR_UTIL<op, scope, "space_cta", asm_sem,
+                                time_limit>.asm_str;
+  defvar pred_state = MBAR_UTIL<op, scope, "space_cta", asm_sem,
+                                time_limit>.preds;
+  defvar intr_state = !cast<Intrinsic>(MBAR_UTIL<op, scope, "space_cta",
+                                       sem, time_limit>.intr_name);
+
+  defvar ins_tl_dag = !if(time_limit, (ins B32:$tl), (ins));
+  defvar tl_suffix = !if(time_limit, ", $tl;", ";");
+  defvar intr_state_dag = !con((intr_state addr:$addr, i64:$state),
+                               !if(time_limit, (intr_state i32:$tl), (intr_state)));
+  defvar intr_parity_dag = !con((intr_parity addr:$addr, i32:$phase),
+                               !if(time_limit, (intr_parity i32:$tl), (intr_parity)));
+
+  def _STATE : NVPTXInst<(outs B1:$res), !con((ins ADDR:$addr, B64:$state), ins_tl_dag),
+               asm_state # " $res, [$addr], $state" # tl_suffix,
+               [(set i1:$res, intr_state_dag)]>,
+               Requires<pred_state>;
+  def _PARITY : NVPTXInst<(outs B1:$res), !con((ins ADDR:$addr, B32:$phase), ins_tl_dag),
+                asm_parity # " $res, [$addr], $phase" # tl_suffix,
+                [(set i1:$res, intr_parity_dag)]>,
+                Requires<pred_parity>;
+}
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+      defvar suffix = StrJoin<"_", [op, scope, !if(time_limit, "tl", "")]>.ret;
+      defm mbar_ # suffix # "_acquire" : MBAR_WAIT_INTR<op, scope, "", time_limit>;
+      defm mbar_ # suffix # "_relaxed" : MBAR_WAIT_INTR<op, scope, "relaxed", time_limit>;
+    } // time_limit
+  } // scope
+} // op
+
 //-----------------------------------
 // Math Functions
 //-----------------------------------
@@ -1112,30 +1258,30 @@ let Predicates = [hasPTX<70>, hasSM<80>] in {
 // max(0.0, min(x, 1.0)) is 1.0 while sat(x) is 0.
 // Same story for fmax, fmin.
 
-def : Pat<(int_nvvm_fmin_f immFloat1,
-            (int_nvvm_fmax_f immFloat0, f32:$a)),
+def : Pat<(int_nvvm_fmin_f fpimm_1,
+            (int_nvvm_fmax_f fpimm_0, f32:$a)),
           (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f immFloat1,
-            (int_nvvm_fmax_f f32:$a, immFloat0)),
-          (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f immFloat0, f32:$a), immFloat1),
+def : Pat<(int_nvvm_fmin_f fpimm_1,
+            (int_nvvm_fmax_f f32:$a, fpimm_0)),
           (CVT_f32_f32 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f f32:$a, immFloat0), immFloat1),
+            (int_nvvm_fmax_f fpimm_0, f32:$a), fpimm_1),
+          (CVT_f32_f32 $a, CvtSAT)>;
+def : Pat<(int_nvvm_fmin_f
+            (int_nvvm_fmax_f f32:$a, fpimm_0), fpimm_1),
           (CVT_f32_f32 $a, CvtSAT)>;
 
-def : Pat<(int_nvvm_fmin_d immDouble1,
-            (int_nvvm_fmax_d immDouble0, f64:$a)),
+def : Pat<(int_nvvm_fmin_d fpimm_1,
+            (int_nvvm_fmax_d fpimm_0, f64:$a)),
           (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d immDouble1,
-            (int_nvvm_fmax_d f64:$a, immDouble0)),
-          (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d immDouble0, f64:$a), immDouble1),
+def : Pat<(int_nvvm_fmin_d fpimm_1,
+            (int_nvvm_fmax_d f64:$a, fpimm_0)),
           (CVT_f64_f64 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d f64:$a, immDouble0), immDouble1),
+            (int_nvvm_fmax_d fpimm_0, f64:$a), fpimm_1),
+          (CVT_f64_f64 $a, CvtSAT)>;
+def : Pat<(int_nvvm_fmin_d
+            (int_nvvm_fmax_d f64:$a, fpimm_0), fpimm_1),
           (CVT_f64_f64 $a, CvtSAT)>;
 
 
@@ -1329,12 +1475,12 @@ defm INT_NVVM_FMAN : MIN_MAX<"max">;
 // Multiplication
 //
 
-def INT_NVVM_MULHI_S : F_MATH_2<"mul.hi.s16", B16, B16, B16, int_nvvm_mulhi_s>;
-def INT_NVVM_MULHI_US : F_MATH_2<"mul.hi.u16", B16, B16, B16, int_nvvm_mulhi_us>;
-def INT_NVVM_MULHI_I : F_MATH_2<"mul.hi.s32", B32, B32, B32, int_nvvm_mulhi_i>;
-def INT_NVVM_MULHI_UI : F_MATH_2<"mul.hi.u32", B32, B32, B32, int_nvvm_mulhi_ui>;
-def INT_NVVM_MULHI_LL : F_MATH_2<"mul.hi.s64", B64, B64, B64, int_nvvm_mulhi_ll>;
-def INT_NVVM_MULHI_ULL : F_MATH_2<"mul.hi.u64", B64, B64, B64, int_nvvm_mulhi_ull>;
+def : Pat<(int_nvvm_mulhi_s i16:$a, i16:$b), (MUL_HI_S16rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_us i16:$a, i16:$b), (MUL_HI_U16rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_i i32:$a, i32:$b), (MUL_HI_S32rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_ui i32:$a, i32:$b), (MUL_HI_U32rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_ll i64:$a, i64:$b), (MUL_HI_S64rr $a, $b)>;
+def : Pat<(int_nvvm_mulhi_ull i64:$a, i64:$b), (MUL_HI_U64rr $a, $b)>;
 
 def INT_NVVM_MUL_RN_FTZ_F : F_MATH_2<"mul.rn.ftz.f32", B32, B32, B32, int_nvvm_mul_rn_ftz_f>;
 def INT_NVVM_MUL_RN_F : F_MATH_2<"mul.rn.f32", B32, B32, B32, int_nvvm_mul_rn_f>;
@@ -1357,8 +1503,8 @@ def INT_NVVM_MUL24_UI : F_MATH_2<"mul24.lo.u32", B32, B32, B32, int_nvvm_mul24_u
 // Div
 //
 
-def INT_NVVM_DIV_APPROX_FTZ_F : F_MATH_2<"div.approx.ftz.f32", B32, B32, B32, int_nvvm_div_approx_ftz_f>;
-def INT_NVVM_DIV_APPROX_F : F_MATH_2<"div.approx.f32", B32, B32, B32, int_nvvm_div_approx_f>;
+def : Pat<(int_nvvm_div_approx_ftz_f f32:$a, f32:$b), (DIV_APPROX_F32_rr $a, $b, FTZ)>;
+def : Pat<(int_nvvm_div_approx_f f32:$a, f32:$b), (DIV_APPROX_F32_rr $a, $b, NoFTZ)>;
 
 def INT_NVVM_DIV_RN_FTZ_F : F_MATH_2<"div.rn.ftz.f32", B32, B32, B32, int_nvvm_div_rn_ftz_f>;
 def INT_NVVM_DIV_RN_F     : F_MATH_2<"div.rn.f32", B32, B32, B32, int_nvvm_div_rn_f>;
@@ -1470,12 +1616,17 @@ def : Pat<(int_nvvm_saturate_d f64:$a),     (CVT_f64_f64 $a, CvtSAT)>;
 // Exp2  Log2
 //
 
-def : Pat<(int_nvvm_ex2_approx_ftz_f f32:$a), (EX2_APPROX_f32 $a, FTZ)>;
-def : Pat<(int_nvvm_ex2_approx_f f32:$a), (EX2_APPROX_f32 $a, NoFTZ)>;
+def : Pat<(f32 (int_nvvm_ex2_approx_ftz f32:$a)), (EX2_APPROX_f32 $a, FTZ)>;
+def : Pat<(f32 (int_nvvm_ex2_approx f32:$a)), (EX2_APPROX_f32 $a, NoFTZ)>;
 
 let Predicates = [hasPTX<70>, hasSM<75>] in {
-  def : Pat<(int_nvvm_ex2_approx_f16 f16:$a), (EX2_APPROX_f16 $a)>;
-  def : Pat<(int_nvvm_ex2_approx_f16x2 v2f16:$a), (EX2_APPROX_f16x2 $a)>;
+  def : Pat<(f16 (int_nvvm_ex2_approx f16:$a)), (EX2_APPROX_f16 $a)>;
+  def : Pat<(v2f16 (int_nvvm_ex2_approx v2f16:$a)), (EX2_APPROX_f16x2 $a)>;
+}
+
+let Predicates = [hasPTX<78>, hasSM<90>] in {
+  def : Pat<(bf16 (int_nvvm_ex2_approx_ftz bf16:$a)), (EX2_APPROX_bf16 $a)>;
+  def : Pat<(v2bf16 (int_nvvm_ex2_approx_ftz v2bf16:$a)), (EX2_APPROX_bf16x2 $a)>;
 }
 
 def LG2_APPROX_f32 :
@@ -1663,13 +1814,13 @@ def : Pat<(int_nvvm_rsqrt_approx_d f64:$a), (RSQRT_APPROX_f64 $a, NoFTZ)>;
 
 // 1.0f / sqrt_approx -> rsqrt_approx
 let Predicates = [doRsqrtOpt] in {
-  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_f f32:$a)),
+  def : Pat<(fdiv fpimm_1, (int_nvvm_sqrt_approx_f f32:$a)),
           (RSQRT_APPROX_f32 $a, NoFTZ)>;
-  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
+  def : Pat<(fdiv fpimm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
           (RSQRT_APPROX_f32 $a, FTZ)>;
 
   // same for int_nvvm_sqrt_f when non-precision sqrt is requested
-  def : Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
+  def : Pat<(fdiv fpimm_1, (fsqrt_approx f32:$a)),
           (RSQRT_APPROX_f32 $a)>;
 }
 //
@@ -1801,16 +1952,65 @@ def : Pat<(int_nvvm_ff2bf16x2_rn f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, C
 def : Pat<(int_nvvm_ff2bf16x2_rn_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRN_RELU)>;
 def : Pat<(int_nvvm_ff2bf16x2_rz f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, CvtRZ)>;
 def : Pat<(int_nvvm_ff2bf16x2_rz_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRZ_RELU)>;
+let Predicates = [hasPTX<81>, hasSM<80>] in {
+  def : Pat<(int_nvvm_ff2bf16x2_rn_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff2bf16x2_rn_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_ff2bf16x2_rz_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ)>;
+  def : Pat<(int_nvvm_ff2bf16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ_RELU)>;
+}
+let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+def : Pat<(int_nvvm_ff2bf16x2_rs f32:$a, f32:$b, i32:$c),
+          (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS)>;
+def : Pat<(int_nvvm_ff2bf16x2_rs_relu f32:$a, f32:$b, i32:$c),
+          (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS_RELU)>;
+def : Pat<(int_nvvm_ff2bf16x2_rs_satfinite f32:$a, f32:$b, i32:$c), 
+          (CVT_bf16x2_f32_rs_sf $a, $b, $c, CvtRS)>;
+def : Pat<(int_nvvm_ff2bf16x2_rs_relu_satfinite f32:$a, f32:$b, i32:$c),  
+          (CVT_bf16x2_f32_rs_sf $a, $b, $c, CvtRS_RELU)>;
+}
 
 def : Pat<(int_nvvm_ff2f16x2_rn f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRN)>;
 def : Pat<(int_nvvm_ff2f16x2_rn_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRN_RELU)>;
 def : Pat<(int_nvvm_ff2f16x2_rz f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRZ)>;
 def : Pat<(int_nvvm_ff2f16x2_rz_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRZ_RELU)>;
+let Predicates = [hasPTX<81>, hasSM<80>] in {
+  def : Pat<(int_nvvm_ff2f16x2_rn_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff2f16x2_rn_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_ff2f16x2_rz_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ)>;
+  def : Pat<(int_nvvm_ff2f16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ_RELU)>;
+}
 
+let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+def : Pat<(int_nvvm_ff2f16x2_rs f32:$a, f32:$b, i32:$c),
+          (CVT_f16x2_f32_rs $a, $b, $c, CvtRS)>;
+def : Pat<(int_nvvm_ff2f16x2_rs_relu f32:$a, f32:$b, i32:$c),
+          (CVT_f16x2_f32_rs $a, $b, $c, CvtRS_RELU)>;
+def : Pat<(int_nvvm_ff2f16x2_rs_satfinite f32:$a, f32:$b, i32:$c), 
+          (CVT_f16x2_f32_rs_sf $a, $b, $c, CvtRS)>;
+def : Pat<(int_nvvm_ff2f16x2_rs_relu_satfinite f32:$a, f32:$b, i32:$c), 
+          (CVT_f16x2_f32_rs_sf $a, $b, $c, CvtRS_RELU)>;
+}
 def : Pat<(int_nvvm_f2bf16_rn f32:$a),      (CVT_bf16_f32 $a, CvtRN)>;
 def : Pat<(int_nvvm_f2bf16_rn_relu f32:$a), (CVT_bf16_f32 $a, CvtRN_RELU)>;
 def : Pat<(int_nvvm_f2bf16_rz f32:$a),      (CVT_bf16_f32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_f2bf16_rz_relu f32:$a), (CVT_bf16_f32 $a, CvtRZ_RELU)>;
+let Predicates = [hasPTX<81>, hasSM<80>] in {
+  def : Pat<(int_nvvm_f2bf16_rz_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRZ)>;
+  def : Pat<(int_nvvm_f2bf16_rz_relu_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRZ_RELU)>;
+  def : Pat<(int_nvvm_f2bf16_rn_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRN)>;
+  def : Pat<(int_nvvm_f2bf16_rn_relu_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRN_RELU)>;
+}
+
+def : Pat<(int_nvvm_f2f16_rn f32:$a),      (CVT_f16_f32 $a, CvtRN)>;
+def : Pat<(int_nvvm_f2f16_rn_relu f32:$a), (CVT_f16_f32 $a, CvtRN_RELU)>;
+def : Pat<(int_nvvm_f2f16_rz f32:$a),      (CVT_f16_f32 $a, CvtRZ)>;
+def : Pat<(int_nvvm_f2f16_rz_relu f32:$a), (CVT_f16_f32 $a, CvtRZ_RELU)>;
+let Predicates = [hasPTX<81>, hasSM<80>] in {
+  def : Pat<(int_nvvm_f2f16_rz_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRZ)>;
+  def : Pat<(int_nvvm_f2f16_rz_relu_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRZ_RELU)>;
+  def : Pat<(int_nvvm_f2f16_rn_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRN)>;
+  def : Pat<(int_nvvm_f2f16_rn_relu_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRN_RELU)>;
+}
 
 def : Pat<(int_nvvm_lohi_i2d i32:$a, i32:$b), (V2I32toI64 $a, $b)>;
 def : Pat<(int_nvvm_d2i_lo f64:$a), (I64toI32L $a)>;
@@ -1949,6 +2149,52 @@ let Predicates = [hasPTX<86>, hasSM<100>, hasArchAccelFeatures] in {
             (CVT_bf16x2_ue8m0x2 $a)>;
 }
 
+def SDT_CVT_F32X4_TO_FPX4_RS_VEC :
+  SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
+                       SDTCisFP<4>, SDTCisInt<5>, SDTCisInt<6>]>;
+
+def SDT_CVT_F32X4_TO_FPX4_RS_INT :
+  SDTypeProfile<1, 6, [SDTCisInt<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
+                       SDTCisFP<4>, SDTCisInt<5>, SDTCisInt<6>]>;
+
+class CVT_F32X4_TO_FPX4_RS_SF_NODE<string FPName, SDTypeProfile SDT> :
+  SDNode<"NVPTXISD::CVT_" # FPName # "X4_F32X4_RS_SF", SDT, []>;
+  
+multiclass CVT_F32X4_TO_FPX4_RS_SF_VEC<string FPName, VTVec RetTy> {
+  def : Pat<(RetTy (CVT_F32X4_TO_FPX4_RS_SF_NODE<!toupper(FPName),
+                      SDT_CVT_F32X4_TO_FPX4_RS_VEC>
+                   f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
+            (!cast<NVPTXInst>("CVT_" # FPName # "x4_f32x4_rs_sf") 
+              $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
+  
+  def : Pat<(RetTy (CVT_F32X4_TO_FPX4_RS_SF_NODE<!toupper(FPName), 
+                      SDT_CVT_F32X4_TO_FPX4_RS_VEC>
+                   f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
+            (!cast<NVPTXInst>("CVT_" # FPName # "x4_f32x4_rs_sf") 
+              $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
+}
+
+// RS rounding mode conversions
+let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+// FP8x4 conversions
+defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e4m3", v4i8>;
+defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e5m2", v4i8>;
+
+// FP6x4 conversions
+defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e2m3", v4i8>;
+defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e3m2", v4i8>;
+
+// FP4x4 conversions
+def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1", 
+                  SDT_CVT_F32X4_TO_FPX4_RS_INT>
+                f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
+          (CVT_e2m1x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
+def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1", 
+                  SDT_CVT_F32X4_TO_FPX4_RS_INT>
+                f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
+          (CVT_e2m1x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
+}
+
 //
 // FNS
 //
@@ -2010,19 +2256,23 @@ multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode a
 
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
     def _rr : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b, t.RC:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      (ins ADDR:$addr, t.RC:$b, t.RC:$c),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str>;
 
     def _ir : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.Imm:$b, t.RC:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      (ins ADDR:$addr, t.Imm:$b, t.RC:$c),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str>;
 
     def _ri : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b, t.Imm:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      (ins ADDR:$addr, t.RC:$b, t.Imm:$c),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str>;
 
     def _ii : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.Imm:$b, t.Imm:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      (ins ADDR:$addr, t.Imm:$b, t.Imm:$c),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str>;
   }
 
@@ -2220,6 +2470,37 @@ defm INT_PTX_SATOM_MIN  : ATOM2_minmax_impl<"min">;
 defm INT_PTX_SATOM_OR   : ATOM2_bitwise_impl<"or">;
 defm INT_PTX_SATOM_XOR  : ATOM2_bitwise_impl<"xor">;
 
+// atom.*.b128
+
+let mayLoad = true, mayStore = true, hasSideEffects = true,
+    Predicates = [hasAtomSwap128] in {
+  def ATOM_CAS_B128 :
+    NVPTXInst<
+        (outs B64:$dst0, B64:$dst1),
+        (ins ADDR:$addr, B64:$cmp0, B64:$cmp1, B64:$swap0, B64:$swap1,
+             AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+        "{{\n\t"
+        ".reg .b128 cmp, swap, dst;\n\t"
+        "mov.b128 cmp, {$cmp0, $cmp1};\n\t"
+        "mov.b128 swap, {$swap0, $swap1};\n\t"
+        "atom${sem:sem}${scope:scope}${addsp:addsp}.cas.b128 dst, [$addr], cmp, swap;\n\t"
+        "mov.b128 {$dst0, $dst1}, dst;\n\t"
+        "}}">;
+
+  def ATOM_EXCH_B128 :
+    NVPTXInst<
+        (outs B64:$dst0, B64:$dst1),
+        (ins ADDR:$addr, B64:$amt0, B64:$amt1,
+             AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+        "{{\n\t"
+        ".reg .b128 amt, dst;\n\t"
+        "mov.b128 amt, {$amt0, $amt1};\n\t"
+        "atom${sem:sem}${scope:scope}${addsp:addsp}.exch.b128 dst, [$addr], amt;\n\t"
+        "mov.b128 {$dst0, $dst1}, dst;\n\t"
+        "}}">;
+}
+
+
 //-----------------------------------
 // Support for ldu on sm_20 or later
 //-----------------------------------
@@ -2231,7 +2512,7 @@ defm INT_PTX_SATOM_XOR  : ATOM2_bitwise_impl<"xor">;
 
 class LDU_G<NVPTXRegClass regclass>
   :  NVPTXInst<(outs regclass:$result), (ins i32imm:$fromWidth, ADDR:$src),
-               "ldu.global.b$fromWidth \t$result, [$src];", []>;
+               "ldu.global.b$fromWidth \t$result, [$src];">;
 
 def LDU_GLOBAL_i16 : LDU_G<B16>;
 def LDU_GLOBAL_i32 : LDU_G<B32>;
@@ -2243,13 +2524,13 @@ def LDU_GLOBAL_i64 : LDU_G<B64>;
 class VLDU_G_ELE_V2<NVPTXRegClass regclass>
   : NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
               (ins i32imm:$fromWidth, ADDR:$src),
-              "ldu.global.v2.b$fromWidth \t{{$dst1, $dst2}}, [$src];", []>;
+              "ldu.global.v2.b$fromWidth \t{{$dst1, $dst2}}, [$src];">;
 
 
 class VLDU_G_ELE_V4<NVPTXRegClass regclass>
   : NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
               (ins i32imm:$fromWidth, ADDR:$src),
-               "ldu.global.v4.b$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+               "ldu.global.v4.b$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];">;
 
 
 def LDU_GLOBAL_v2i16 : VLDU_G_ELE_V2<B16>;
@@ -2270,9 +2551,8 @@ def LDU_GLOBAL_v4i32 : VLDU_G_ELE_V4<B32>;
 
 class LDG_G<NVPTXRegClass regclass>
   : NVPTXInst<(outs regclass:$result), (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
-               "ld.global.nc.${Sign:sign}$fromWidth \t$result, [$src];", []>;
+               "ld.global.nc.${Sign:sign}$fromWidth \t$result, [$src];">;
 
-def LD_GLOBAL_NC_i8  : LDG_G<B16>;
 def LD_GLOBAL_NC_i16 : LDG_G<B16>;
 def LD_GLOBAL_NC_i32 : LDG_G<B32>;
 def LD_GLOBAL_NC_i64 : LDG_G<B64>;
@@ -2283,19 +2563,19 @@ def LD_GLOBAL_NC_i64 : LDG_G<B64>;
 class VLDG_G_ELE_V2<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
             (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
-            "ld.global.nc.v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src];", []>;
+            "ld.global.nc.v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src];">;
 
 
 class VLDG_G_ELE_V4<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4), 
             (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
-            "ld.global.nc.v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+            "ld.global.nc.v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];">;
 
 class VLDG_G_ELE_V8<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
                   regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
              (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
-             "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];", []>;
+             "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];">;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
 def LD_GLOBAL_NC_v2i16 : VLDG_G_ELE_V2<B16>;
@@ -3540,20 +3820,13 @@ multiclass SULD_1D<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_I8_CLAMP : SULD_1D<"suld.b.1d.b8.clamp", B16>;
-defm SULD_1D_I16_CLAMP : SULD_1D<"suld.b.1d.b16.clamp", B16>;
-defm SULD_1D_I32_CLAMP : SULD_1D<"suld.b.1d.b32.clamp", B32>;
-defm SULD_1D_I64_CLAMP : SULD_1D<"suld.b.1d.b64.clamp", B64>;
-
-defm SULD_1D_I8_TRAP : SULD_1D<"suld.b.1d.b8.trap", B16>;
-defm SULD_1D_I16_TRAP : SULD_1D<"suld.b.1d.b16.trap", B16>;
-defm SULD_1D_I32_TRAP : SULD_1D<"suld.b.1d.b32.trap", B32>;
-defm SULD_1D_I64_TRAP : SULD_1D<"suld.b.1d.b64.trap", B64>;
-
-defm SULD_1D_I8_ZERO : SULD_1D<"suld.b.1d.b8.zero", B16>;
-defm SULD_1D_I16_ZERO : SULD_1D<"suld.b.1d.b16.zero", B16>;
-defm SULD_1D_I32_ZERO : SULD_1D<"suld.b.1d.b32.zero", B32>;
-defm SULD_1D_I64_ZERO : SULD_1D<"suld.b.1d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_I8_ # op_upper : SULD_1D<"suld.b.1d.b8." # op, B16>;
+  defm SULD_1D_I16_ # op_upper : SULD_1D<"suld.b.1d.b16." # op, B16>;
+  defm SULD_1D_I32_ # op_upper : SULD_1D<"suld.b.1d.b32." # op, B32>;
+  defm SULD_1D_I64_ # op_upper : SULD_1D<"suld.b.1d.b64." # op, B64>;
+}
 
 class SULD_1D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf,
                          list<dag> pattern = []>
@@ -3570,20 +3843,13 @@ multiclass SULD_1D_ARRAY<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_ARRAY_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_ARRAY_I8_CLAMP : SULD_1D_ARRAY<"suld.b.a1d.b8.clamp", B16>;
-defm SULD_1D_ARRAY_I16_CLAMP : SULD_1D_ARRAY<"suld.b.a1d.b16.clamp", B16>;
-defm SULD_1D_ARRAY_I32_CLAMP : SULD_1D_ARRAY<"suld.b.a1d.b32.clamp", B32>;
-defm SULD_1D_ARRAY_I64_CLAMP : SULD_1D_ARRAY<"suld.b.a1d.b64.clamp", B64>;
-
-defm SULD_1D_ARRAY_I8_TRAP : SULD_1D_ARRAY<"suld.b.a1d.b8.trap", B16>;
-defm SULD_1D_ARRAY_I16_TRAP : SULD_1D_ARRAY<"suld.b.a1d.b16.trap", B16>;
-defm SULD_1D_ARRAY_I32_TRAP : SULD_1D_ARRAY<"suld.b.a1d.b32.trap", B32>;
-defm SULD_1D_ARRAY_I64_TRAP : SULD_1D_ARRAY<"suld.b.a1d.b64.trap", B64>;
-
-defm SULD_1D_ARRAY_I8_ZERO : SULD_1D_ARRAY<"suld.b.a1d.b8.zero", B16>;
-defm SULD_1D_ARRAY_I16_ZERO : SULD_1D_ARRAY<"suld.b.a1d.b16.zero", B16>;
-defm SULD_1D_ARRAY_I32_ZERO : SULD_1D_ARRAY<"suld.b.a1d.b32.zero", B32>;
-defm SULD_1D_ARRAY_I64_ZERO : SULD_1D_ARRAY<"suld.b.a1d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_ARRAY_I8_ # op_upper : SULD_1D_ARRAY<"suld.b.a1d.b8." # op, B16>;
+  defm SULD_1D_ARRAY_I16_ # op_upper : SULD_1D_ARRAY<"suld.b.a1d.b16." # op, B16>;
+  defm SULD_1D_ARRAY_I32_ # op_upper : SULD_1D_ARRAY<"suld.b.a1d.b32." # op, B32>;
+  defm SULD_1D_ARRAY_I64_ # op_upper : SULD_1D_ARRAY<"suld.b.a1d.b64." # op, B64>;
+}
 
 class SULD_2D_base<string inst, NVPTXRegClass outtype, dag surf,
                    list<dag> pattern = []>
@@ -3599,20 +3865,13 @@ multiclass SULD_2D<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_I8_CLAMP : SULD_2D<"suld.b.2d.b8.clamp", B16>;
-defm SULD_2D_I16_CLAMP : SULD_2D<"suld.b.2d.b16.clamp", B16>;
-defm SULD_2D_I32_CLAMP : SULD_2D<"suld.b.2d.b32.clamp", B32>;
-defm SULD_2D_I64_CLAMP : SULD_2D<"suld.b.2d.b64.clamp", B64>;
-
-defm SULD_2D_I8_TRAP : SULD_2D<"suld.b.2d.b8.trap", B16>;
-defm SULD_2D_I16_TRAP : SULD_2D<"suld.b.2d.b16.trap", B16>;
-defm SULD_2D_I32_TRAP : SULD_2D<"suld.b.2d.b32.trap", B32>;
-defm SULD_2D_I64_TRAP : SULD_2D<"suld.b.2d.b64.trap", B64>;
-
-defm SULD_2D_I8_ZERO : SULD_2D<"suld.b.2d.b8.zero", B16>;
-defm SULD_2D_I16_ZERO : SULD_2D<"suld.b.2d.b16.zero", B16>;
-defm SULD_2D_I32_ZERO : SULD_2D<"suld.b.2d.b32.zero", B32>;
-defm SULD_2D_I64_ZERO : SULD_2D<"suld.b.2d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_I8_ # op_upper : SULD_2D<"suld.b.2d.b8." # op, B16>;
+  defm SULD_2D_I16_ # op_upper : SULD_2D<"suld.b.2d.b16." # op, B16>;
+  defm SULD_2D_I32_ # op_upper : SULD_2D<"suld.b.2d.b32." # op, B32>;
+  defm SULD_2D_I64_ # op_upper : SULD_2D<"suld.b.2d.b64." # op, B64>;
+}
 
 class SULD_2D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf,
                          list<dag> pattern = []>
@@ -3629,20 +3888,13 @@ multiclass SULD_2D_ARRAY<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_ARRAY_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_ARRAY_I8_CLAMP : SULD_2D_ARRAY<"suld.b.a2d.b8.clamp", B16>;
-defm SULD_2D_ARRAY_I16_CLAMP : SULD_2D_ARRAY<"suld.b.a2d.b16.clamp", B16>;
-defm SULD_2D_ARRAY_I32_CLAMP : SULD_2D_ARRAY<"suld.b.a2d.b32.clamp", B32>;
-defm SULD_2D_ARRAY_I64_CLAMP : SULD_2D_ARRAY<"suld.b.a2d.b64.clamp", B64>;
-
-defm SULD_2D_ARRAY_I8_TRAP : SULD_2D_ARRAY<"suld.b.a2d.b8.trap", B16>;
-defm SULD_2D_ARRAY_I16_TRAP : SULD_2D_ARRAY<"suld.b.a2d.b16.trap", B16>;
-defm SULD_2D_ARRAY_I32_TRAP : SULD_2D_ARRAY<"suld.b.a2d.b32.trap", B32>;
-defm SULD_2D_ARRAY_I64_TRAP : SULD_2D_ARRAY<"suld.b.a2d.b64.trap", B64>;
-
-defm SULD_2D_ARRAY_I8_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b8.zero", B16>;
-defm SULD_2D_ARRAY_I16_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b16.zero", B16>;
-defm SULD_2D_ARRAY_I32_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b32.zero", B32>;
-defm SULD_2D_ARRAY_I64_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_ARRAY_I8_ # op_upper : SULD_2D_ARRAY<"suld.b.a2d.b8." # op, B16>;
+  defm SULD_2D_ARRAY_I16_ # op_upper : SULD_2D_ARRAY<"suld.b.a2d.b16." # op, B16>;
+  defm SULD_2D_ARRAY_I32_ # op_upper : SULD_2D_ARRAY<"suld.b.a2d.b32." # op, B32>;
+  defm SULD_2D_ARRAY_I64_ # op_upper : SULD_2D_ARRAY<"suld.b.a2d.b64." # op, B64>;
+}
 
 class SULD_3D_base<string inst, NVPTXRegClass outtype, dag surf,
                    list<dag> pattern = []>
@@ -3659,20 +3911,13 @@ multiclass SULD_3D<string inst, NVPTXRegClass outtype> {
   def _I : SULD_3D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_3D_I8_CLAMP : SULD_3D<"suld.b.3d.b8.clamp", B16>;
-defm SULD_3D_I16_CLAMP : SULD_3D<"suld.b.3d.b16.clamp", B16>;
-defm SULD_3D_I32_CLAMP : SULD_3D<"suld.b.3d.b32.clamp", B32>;
-defm SULD_3D_I64_CLAMP : SULD_3D<"suld.b.3d.b64.clamp", B64>;
-
-defm SULD_3D_I8_TRAP : SULD_3D<"suld.b.3d.b8.trap", B16>;
-defm SULD_3D_I16_TRAP : SULD_3D<"suld.b.3d.b16.trap", B16>;
-defm SULD_3D_I32_TRAP : SULD_3D<"suld.b.3d.b32.trap", B32>;
-defm SULD_3D_I64_TRAP : SULD_3D<"suld.b.3d.b64.trap", B64>;
-
-defm SULD_3D_I8_ZERO : SULD_3D<"suld.b.3d.b8.zero", B16>;
-defm SULD_3D_I16_ZERO : SULD_3D<"suld.b.3d.b16.zero", B16>;
-defm SULD_3D_I32_ZERO : SULD_3D<"suld.b.3d.b32.zero", B32>;
-defm SULD_3D_I64_ZERO : SULD_3D<"suld.b.3d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_3D_I8_ # op_upper : SULD_3D<"suld.b.3d.b8." # op, B16>;
+  defm SULD_3D_I16_ # op_upper : SULD_3D<"suld.b.3d.b16." # op, B16>;
+  defm SULD_3D_I32_ # op_upper : SULD_3D<"suld.b.3d.b32." # op, B32>;
+  defm SULD_3D_I64_ # op_upper : SULD_3D<"suld.b.3d.b64." # op, B64>;
+}
 }
 
 let IsSuld = 2 in {
@@ -3692,20 +3937,13 @@ multiclass SULD_1D_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_V2I8_CLAMP : SULD_1D_V2<"suld.b.1d.v2.b8.clamp", B16>;
-defm SULD_1D_V2I16_CLAMP : SULD_1D_V2<"suld.b.1d.v2.b16.clamp", B16>;
-defm SULD_1D_V2I32_CLAMP : SULD_1D_V2<"suld.b.1d.v2.b32.clamp", B32>;
-defm SULD_1D_V2I64_CLAMP : SULD_1D_V2<"suld.b.1d.v2.b64.clamp", B64>;
-
-defm SULD_1D_V2I8_TRAP : SULD_1D_V2<"suld.b.1d.v2.b8.trap", B16>;
-defm SULD_1D_V2I16_TRAP : SULD_1D_V2<"suld.b.1d.v2.b16.trap", B16>;
-defm SULD_1D_V2I32_TRAP : SULD_1D_V2<"suld.b.1d.v2.b32.trap", B32>;
-defm SULD_1D_V2I64_TRAP : SULD_1D_V2<"suld.b.1d.v2.b64.trap", B64>;
-
-defm SULD_1D_V2I8_ZERO : SULD_1D_V2<"suld.b.1d.v2.b8.zero", B16>;
-defm SULD_1D_V2I16_ZERO : SULD_1D_V2<"suld.b.1d.v2.b16.zero", B16>;
-defm SULD_1D_V2I32_ZERO : SULD_1D_V2<"suld.b.1d.v2.b32.zero", B32>;
-defm SULD_1D_V2I64_ZERO : SULD_1D_V2<"suld.b.1d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_V2I8_ # op_upper : SULD_1D_V2<"suld.b.1d.v2.b8." # op, B16>;
+  defm SULD_1D_V2I16_ # op_upper : SULD_1D_V2<"suld.b.1d.v2.b16." # op, B16>;
+  defm SULD_1D_V2I32_ # op_upper : SULD_1D_V2<"suld.b.1d.v2.b32." # op, B32>;
+  defm SULD_1D_V2I64_ # op_upper : SULD_1D_V2<"suld.b.1d.v2.b64." # op, B64>;
+}
 
 class SULD_1D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf,
                             list<dag> pattern = []>
@@ -3722,20 +3960,13 @@ multiclass SULD_1D_ARRAY_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_ARRAY_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_ARRAY_V2I8_CLAMP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b8.clamp", B16>;
-defm SULD_1D_ARRAY_V2I16_CLAMP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b16.clamp", B16>;
-defm SULD_1D_ARRAY_V2I32_CLAMP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b32.clamp", B32>;
-defm SULD_1D_ARRAY_V2I64_CLAMP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64.clamp", B64>;
-
-defm SULD_1D_ARRAY_V2I8_TRAP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b8.trap", B16>;
-defm SULD_1D_ARRAY_V2I16_TRAP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b16.trap", B16>;
-defm SULD_1D_ARRAY_V2I32_TRAP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b32.trap", B32>;
-defm SULD_1D_ARRAY_V2I64_TRAP : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64.trap", B64>;
-
-defm SULD_1D_ARRAY_V2I8_ZERO : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b8.zero", B16>;
-defm SULD_1D_ARRAY_V2I16_ZERO : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b16.zero", B16>;
-defm SULD_1D_ARRAY_V2I32_ZERO : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b32.zero", B32>;
-defm SULD_1D_ARRAY_V2I64_ZERO : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_ARRAY_V2I8_ # op_upper : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b8." # op, B16>;
+  defm SULD_1D_ARRAY_V2I16_ # op_upper : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b16." # op, B16>;
+  defm SULD_1D_ARRAY_V2I32_ # op_upper : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b32." # op, B32>;
+  defm SULD_1D_ARRAY_V2I64_ # op_upper : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64." # op, B64>;
+}
 
 class SULD_2D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
                       list<dag> pattern = []>
@@ -3752,20 +3983,13 @@ multiclass SULD_2D_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_V2I8_CLAMP : SULD_2D_V2<"suld.b.2d.v2.b8.clamp", B16>;
-defm SULD_2D_V2I16_CLAMP : SULD_2D_V2<"suld.b.2d.v2.b16.clamp", B16>;
-defm SULD_2D_V2I32_CLAMP : SULD_2D_V2<"suld.b.2d.v2.b32.clamp", B32>;
-defm SULD_2D_V2I64_CLAMP : SULD_2D_V2<"suld.b.2d.v2.b64.clamp", B64>;
-
-defm SULD_2D_V2I8_TRAP : SULD_2D_V2<"suld.b.2d.v2.b8.trap", B16>;
-defm SULD_2D_V2I16_TRAP : SULD_2D_V2<"suld.b.2d.v2.b16.trap", B16>;
-defm SULD_2D_V2I32_TRAP : SULD_2D_V2<"suld.b.2d.v2.b32.trap", B32>;
-defm SULD_2D_V2I64_TRAP : SULD_2D_V2<"suld.b.2d.v2.b64.trap", B64>;
-
-defm SULD_2D_V2I8_ZERO : SULD_2D_V2<"suld.b.2d.v2.b8.zero", B16>;
-defm SULD_2D_V2I16_ZERO : SULD_2D_V2<"suld.b.2d.v2.b16.zero", B16>;
-defm SULD_2D_V2I32_ZERO : SULD_2D_V2<"suld.b.2d.v2.b32.zero", B32>;
-defm SULD_2D_V2I64_ZERO : SULD_2D_V2<"suld.b.2d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_V2I8_ # op_upper : SULD_2D_V2<"suld.b.2d.v2.b8." # op, B16>;
+  defm SULD_2D_V2I16_ # op_upper : SULD_2D_V2<"suld.b.2d.v2.b16." # op, B16>;
+  defm SULD_2D_V2I32_ # op_upper : SULD_2D_V2<"suld.b.2d.v2.b32." # op, B32>;
+  defm SULD_2D_V2I64_ # op_upper : SULD_2D_V2<"suld.b.2d.v2.b64." # op, B64>;
+}
 
 class SULD_2D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf,
                             list<dag> pattern = []>
@@ -3782,20 +4006,13 @@ multiclass SULD_2D_ARRAY_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_ARRAY_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_ARRAY_V2I8_CLAMP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b8.clamp", B16>;
-defm SULD_2D_ARRAY_V2I16_CLAMP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b16.clamp", B16>;
-defm SULD_2D_ARRAY_V2I32_CLAMP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b32.clamp", B32>;
-defm SULD_2D_ARRAY_V2I64_CLAMP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64.clamp", B64>;
-
-defm SULD_2D_ARRAY_V2I8_TRAP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b8.trap", B16>;
-defm SULD_2D_ARRAY_V2I16_TRAP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b16.trap", B16>;
-defm SULD_2D_ARRAY_V2I32_TRAP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b32.trap", B32>;
-defm SULD_2D_ARRAY_V2I64_TRAP : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64.trap", B64>;
-
-defm SULD_2D_ARRAY_V2I8_ZERO : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b8.zero", B16>;
-defm SULD_2D_ARRAY_V2I16_ZERO : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b16.zero", B16>;
-defm SULD_2D_ARRAY_V2I32_ZERO : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b32.zero", B32>;
-defm SULD_2D_ARRAY_V2I64_ZERO : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_ARRAY_V2I8_ # op_upper : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b8." # op, B16>;
+  defm SULD_2D_ARRAY_V2I16_ # op_upper : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b16." # op, B16>;
+  defm SULD_2D_ARRAY_V2I32_ # op_upper : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b32." # op, B32>;
+  defm SULD_2D_ARRAY_V2I64_ # op_upper : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64." # op, B64>;
+}
 
 class SULD_3D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
                       list<dag> pattern = []>
@@ -3812,20 +4029,13 @@ multiclass SULD_3D_V2<string inst, NVPTXRegClass outtype> {
   def _I : SULD_3D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_3D_V2I8_CLAMP : SULD_3D_V2<"suld.b.3d.v2.b8.clamp", B16>;
-defm SULD_3D_V2I16_CLAMP : SULD_3D_V2<"suld.b.3d.v2.b16.clamp", B16>;
-defm SULD_3D_V2I32_CLAMP : SULD_3D_V2<"suld.b.3d.v2.b32.clamp", B32>;
-defm SULD_3D_V2I64_CLAMP : SULD_3D_V2<"suld.b.3d.v2.b64.clamp", B64>;
-
-defm SULD_3D_V2I8_TRAP : SULD_3D_V2<"suld.b.3d.v2.b8.trap", B16>;
-defm SULD_3D_V2I16_TRAP : SULD_3D_V2<"suld.b.3d.v2.b16.trap", B16>;
-defm SULD_3D_V2I32_TRAP : SULD_3D_V2<"suld.b.3d.v2.b32.trap", B32>;
-defm SULD_3D_V2I64_TRAP : SULD_3D_V2<"suld.b.3d.v2.b64.trap", B64>;
-
-defm SULD_3D_V2I8_ZERO : SULD_3D_V2<"suld.b.3d.v2.b8.zero", B16>;
-defm SULD_3D_V2I16_ZERO : SULD_3D_V2<"suld.b.3d.v2.b16.zero", B16>;
-defm SULD_3D_V2I32_ZERO : SULD_3D_V2<"suld.b.3d.v2.b32.zero", B32>;
-defm SULD_3D_V2I64_ZERO : SULD_3D_V2<"suld.b.3d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_3D_V2I8_ # op_upper : SULD_3D_V2<"suld.b.3d.v2.b8." # op, B16>;
+  defm SULD_3D_V2I16_ # op_upper : SULD_3D_V2<"suld.b.3d.v2.b16." # op, B16>;
+  defm SULD_3D_V2I32_ # op_upper : SULD_3D_V2<"suld.b.3d.v2.b32." # op, B32>;
+  defm SULD_3D_V2I64_ # op_upper : SULD_3D_V2<"suld.b.3d.v2.b64." # op, B64>;
+}
 
 }
 
@@ -3846,17 +4056,12 @@ multiclass SULD_1D_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_V4I8_CLAMP : SULD_1D_V4<"suld.b.1d.v4.b8.clamp", B16>;
-defm SULD_1D_V4I16_CLAMP : SULD_1D_V4<"suld.b.1d.v4.b16.clamp", B16>;
-defm SULD_1D_V4I32_CLAMP : SULD_1D_V4<"suld.b.1d.v4.b32.clamp", B32>;
-
-defm SULD_1D_V4I8_TRAP : SULD_1D_V4<"suld.b.1d.v4.b8.trap", B16>;
-defm SULD_1D_V4I16_TRAP : SULD_1D_V4<"suld.b.1d.v4.b16.trap", B16>;
-defm SULD_1D_V4I32_TRAP : SULD_1D_V4<"suld.b.1d.v4.b32.trap", B32>;
-
-defm SULD_1D_V4I8_ZERO : SULD_1D_V4<"suld.b.1d.v4.b8.zero", B16>;
-defm SULD_1D_V4I16_ZERO : SULD_1D_V4<"suld.b.1d.v4.b16.zero", B16>;
-defm SULD_1D_V4I32_ZERO : SULD_1D_V4<"suld.b.1d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_V4I8_ # op_upper : SULD_1D_V4<"suld.b.1d.v4.b8." # op, B16>;
+  defm SULD_1D_V4I16_ # op_upper : SULD_1D_V4<"suld.b.1d.v4.b16." # op, B16>;
+  defm SULD_1D_V4I32_ # op_upper : SULD_1D_V4<"suld.b.1d.v4.b32." # op, B32>;
+}
 
 class SULD_1D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf,
                             list<dag> pattern = []>
@@ -3874,17 +4079,12 @@ multiclass SULD_1D_ARRAY_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_1D_ARRAY_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_1D_ARRAY_V4I8_CLAMP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b8.clamp", B16>;
-defm SULD_1D_ARRAY_V4I16_CLAMP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b16.clamp", B16>;
-defm SULD_1D_ARRAY_V4I32_CLAMP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32.clamp", B32>;
-
-defm SULD_1D_ARRAY_V4I8_TRAP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b8.trap", B16>;
-defm SULD_1D_ARRAY_V4I16_TRAP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b16.trap", B16>;
-defm SULD_1D_ARRAY_V4I32_TRAP : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32.trap", B32>;
-
-defm SULD_1D_ARRAY_V4I8_ZERO : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b8.zero", B16>;
-defm SULD_1D_ARRAY_V4I16_ZERO : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b16.zero", B16>;
-defm SULD_1D_ARRAY_V4I32_ZERO : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_1D_ARRAY_V4I8_ # op_upper : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b8." # op, B16>;
+  defm SULD_1D_ARRAY_V4I16_ # op_upper : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b16." # op, B16>;
+  defm SULD_1D_ARRAY_V4I32_ # op_upper : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32." # op, B32>;
+}
 
 class SULD_2D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
                       list<dag> pattern = []>
@@ -3901,17 +4101,12 @@ multiclass SULD_2D_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_V4I8_CLAMP : SULD_2D_V4<"suld.b.2d.v4.b8.clamp", B16>;
-defm SULD_2D_V4I16_CLAMP : SULD_2D_V4<"suld.b.2d.v4.b16.clamp", B16>;
-defm SULD_2D_V4I32_CLAMP : SULD_2D_V4<"suld.b.2d.v4.b32.clamp", B32>;
-
-defm SULD_2D_V4I8_TRAP : SULD_2D_V4<"suld.b.2d.v4.b8.trap", B16>;
-defm SULD_2D_V4I16_TRAP : SULD_2D_V4<"suld.b.2d.v4.b16.trap", B16>;
-defm SULD_2D_V4I32_TRAP : SULD_2D_V4<"suld.b.2d.v4.b32.trap", B32>;
-
-defm SULD_2D_V4I8_ZERO : SULD_2D_V4<"suld.b.2d.v4.b8.zero", B16>;
-defm SULD_2D_V4I16_ZERO : SULD_2D_V4<"suld.b.2d.v4.b16.zero", B16>;
-defm SULD_2D_V4I32_ZERO : SULD_2D_V4<"suld.b.2d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_V4I8_ # op_upper : SULD_2D_V4<"suld.b.2d.v4.b8." # op, B16>;
+  defm SULD_2D_V4I16_ # op_upper : SULD_2D_V4<"suld.b.2d.v4.b16." # op, B16>;
+  defm SULD_2D_V4I32_ # op_upper : SULD_2D_V4<"suld.b.2d.v4.b32." # op, B32>;
+}
 
 class SULD_2D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf,
                             list<dag> pattern = []>
@@ -3929,17 +4124,12 @@ multiclass SULD_2D_ARRAY_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_2D_ARRAY_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_2D_ARRAY_V4I8_CLAMP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b8.clamp", B16>;
-defm SULD_2D_ARRAY_V4I16_CLAMP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b16.clamp", B16>;
-defm SULD_2D_ARRAY_V4I32_CLAMP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32.clamp", B32>;
-
-defm SULD_2D_ARRAY_V4I8_TRAP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b8.trap", B16>;
-defm SULD_2D_ARRAY_V4I16_TRAP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b16.trap", B16>;
-defm SULD_2D_ARRAY_V4I32_TRAP : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32.trap", B32>;
-
-defm SULD_2D_ARRAY_V4I8_ZERO : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b8.zero", B16>;
-defm SULD_2D_ARRAY_V4I16_ZERO : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b16.zero", B16>;
-defm SULD_2D_ARRAY_V4I32_ZERO : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_2D_ARRAY_V4I8_ # op_upper : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b8." # op, B16>;
+  defm SULD_2D_ARRAY_V4I16_ # op_upper : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b16." # op, B16>;
+  defm SULD_2D_ARRAY_V4I32_ # op_upper : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32." # op, B32>;
+}
 
 class SULD_3D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
                       list<dag> pattern = []>
@@ -3956,17 +4146,12 @@ multiclass SULD_3D_V4<string inst, NVPTXRegClass outtype> {
   def _I : SULD_3D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
-defm SULD_3D_V4I8_CLAMP : SULD_3D_V4<"suld.b.3d.v4.b8.clamp", B16>;
-defm SULD_3D_V4I16_CLAMP : SULD_3D_V4<"suld.b.3d.v4.b16.clamp", B16>;
-defm SULD_3D_V4I32_CLAMP : SULD_3D_V4<"suld.b.3d.v4.b32.clamp", B32>;
-
-defm SULD_3D_V4I8_TRAP : SULD_3D_V4<"suld.b.3d.v4.b8.trap", B16>;
-defm SULD_3D_V4I16_TRAP : SULD_3D_V4<"suld.b.3d.v4.b16.trap", B16>;
-defm SULD_3D_V4I32_TRAP : SULD_3D_V4<"suld.b.3d.v4.b32.trap", B32>;
-
-defm SULD_3D_V4I8_ZERO : SULD_3D_V4<"suld.b.3d.v4.b8.zero", B16>;
-defm SULD_3D_V4I16_ZERO : SULD_3D_V4<"suld.b.3d.v4.b16.zero", B16>;
-defm SULD_3D_V4I32_ZERO : SULD_3D_V4<"suld.b.3d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SULD_3D_V4I8_ # op_upper : SULD_3D_V4<"suld.b.3d.v4.b8." # op, B16>;
+  defm SULD_3D_V4I16_ # op_upper : SULD_3D_V4<"suld.b.3d.v4.b16." # op, B16>;
+  defm SULD_3D_V4I32_ # op_upper : SULD_3D_V4<"suld.b.3d.v4.b32." # op, B32>;
+}
 
 }
 
@@ -4037,20 +4222,13 @@ multiclass SUST_1D<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_I8_CLAMP : SUST_1D<"sust.b.1d.b8.clamp", B16>;
-defm SUST_B_1D_I16_CLAMP : SUST_1D<"sust.b.1d.b16.clamp", B16>;
-defm SUST_B_1D_I32_CLAMP : SUST_1D<"sust.b.1d.b32.clamp", B32>;
-defm SUST_B_1D_I64_CLAMP : SUST_1D<"sust.b.1d.b64.clamp", B64>;
-
-defm SUST_B_1D_I8_TRAP : SUST_1D<"sust.b.1d.b8.trap", B16>;
-defm SUST_B_1D_I16_TRAP : SUST_1D<"sust.b.1d.b16.trap", B16>;
-defm SUST_B_1D_I32_TRAP : SUST_1D<"sust.b.1d.b32.trap", B32>;
-defm SUST_B_1D_I64_TRAP : SUST_1D<"sust.b.1d.b64.trap", B64>;
-
-defm SUST_B_1D_I8_ZERO : SUST_1D<"sust.b.1d.b8.zero", B16>;
-defm SUST_B_1D_I16_ZERO : SUST_1D<"sust.b.1d.b16.zero", B16>;
-defm SUST_B_1D_I32_ZERO : SUST_1D<"sust.b.1d.b32.zero", B32>;
-defm SUST_B_1D_I64_ZERO : SUST_1D<"sust.b.1d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_I8_ # op_upper : SUST_1D<"sust.b.1d.b8." # op, B16>;
+  defm SUST_B_1D_I16_ # op_upper : SUST_1D<"sust.b.1d.b16." # op, B16>;
+  defm SUST_B_1D_I32_ # op_upper : SUST_1D<"sust.b.1d.b32." # op, B32>;
+  defm SUST_B_1D_I64_ # op_upper : SUST_1D<"sust.b.1d.b64." # op, B64>;
+}
 
 defm SUST_P_1D_I8_TRAP : SUST_1D<"sust.p.1d.b8.trap", B16>;
 defm SUST_P_1D_I16_TRAP : SUST_1D<"sust.p.1d.b16.trap", B16>;
@@ -4068,23 +4246,13 @@ multiclass SUST_1D_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-// int_nvvm_sust_b_1d_v2i8_clamp
-
-defm SUST_B_1D_V2I8_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b8.clamp", B16>;
-defm SUST_B_1D_V2I16_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b16.clamp", B16>;
-defm SUST_B_1D_V2I32_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b32.clamp", B32>;
-defm SUST_B_1D_V2I64_CLAMP : SUST_1D_V2<"sust.b.1d.v2.b64.clamp", B64>;
-
-defm SUST_B_1D_V2I8_TRAP : SUST_1D_V2<"sust.b.1d.v2.b8.trap", B16>;
-defm SUST_B_1D_V2I16_TRAP : SUST_1D_V2<"sust.b.1d.v2.b16.trap", B16>;
-defm SUST_B_1D_V2I32_TRAP : SUST_1D_V2<"sust.b.1d.v2.b32.trap", B32>;
-defm SUST_B_1D_V2I64_TRAP : SUST_1D_V2<"sust.b.1d.v2.b64.trap", B64>;
-
-defm SUST_B_1D_V2I8_ZERO : SUST_1D_V2<"sust.b.1d.v2.b8.zero", B16>;
-defm SUST_B_1D_V2I16_ZERO : SUST_1D_V2<"sust.b.1d.v2.b16.zero", B16>;
-defm SUST_B_1D_V2I32_ZERO : SUST_1D_V2<"sust.b.1d.v2.b32.zero", B32>;
-defm SUST_B_1D_V2I64_ZERO : SUST_1D_V2<"sust.b.1d.v2.b64.zero", B64>;
-
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_V2I8_ # op_upper : SUST_1D_V2<"sust.b.1d.v2.b8." # op, B16>;
+  defm SUST_B_1D_V2I16_ # op_upper : SUST_1D_V2<"sust.b.1d.v2.b16." # op, B16>;
+  defm SUST_B_1D_V2I32_ # op_upper : SUST_1D_V2<"sust.b.1d.v2.b32." # op, B32>;
+  defm SUST_B_1D_V2I64_ # op_upper : SUST_1D_V2<"sust.b.1d.v2.b64." # op, B64>;
+}
 defm SUST_P_1D_V2I8_TRAP : SUST_1D_V2<"sust.p.1d.v2.b8.trap", B16>;
 defm SUST_P_1D_V2I16_TRAP : SUST_1D_V2<"sust.p.1d.v2.b16.trap", B16>;
 defm SUST_P_1D_V2I32_TRAP : SUST_1D_V2<"sust.p.1d.v2.b32.trap", B32>;
@@ -4103,17 +4271,12 @@ multiclass SUST_1D_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_V4I8_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b8.clamp", B16>;
-defm SUST_B_1D_V4I16_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b16.clamp", B16>;
-defm SUST_B_1D_V4I32_CLAMP : SUST_1D_V4<"sust.b.1d.v4.b32.clamp", B32>;
-
-defm SUST_B_1D_V4I8_TRAP : SUST_1D_V4<"sust.b.1d.v4.b8.trap", B16>;
-defm SUST_B_1D_V4I16_TRAP : SUST_1D_V4<"sust.b.1d.v4.b16.trap", B16>;
-defm SUST_B_1D_V4I32_TRAP : SUST_1D_V4<"sust.b.1d.v4.b32.trap", B32>;
-
-defm SUST_B_1D_V4I8_ZERO : SUST_1D_V4<"sust.b.1d.v4.b8.zero", B16>;
-defm SUST_B_1D_V4I16_ZERO : SUST_1D_V4<"sust.b.1d.v4.b16.zero", B16>;
-defm SUST_B_1D_V4I32_ZERO : SUST_1D_V4<"sust.b.1d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_V4I8_ # op_upper : SUST_1D_V4<"sust.b.1d.v4.b8." # op, B16>;
+  defm SUST_B_1D_V4I16_ # op_upper : SUST_1D_V4<"sust.b.1d.v4.b16." # op, B16>;
+  defm SUST_B_1D_V4I32_ # op_upper : SUST_1D_V4<"sust.b.1d.v4.b32." # op, B32>;
+}
 
 defm SUST_P_1D_V4I8_TRAP : SUST_1D_V4<"sust.p.1d.v4.b8.trap", B16>;
 defm SUST_P_1D_V4I16_TRAP : SUST_1D_V4<"sust.p.1d.v4.b16.trap", B16>;
@@ -4131,20 +4294,13 @@ multiclass SUST_1D_ARRAY<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_ARRAY_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_I8_CLAMP : SUST_1D_ARRAY<"sust.b.a1d.b8.clamp", B16>;
-defm SUST_B_1D_ARRAY_I16_CLAMP : SUST_1D_ARRAY<"sust.b.a1d.b16.clamp", B16>;
-defm SUST_B_1D_ARRAY_I32_CLAMP : SUST_1D_ARRAY<"sust.b.a1d.b32.clamp", B32>;
-defm SUST_B_1D_ARRAY_I64_CLAMP : SUST_1D_ARRAY<"sust.b.a1d.b64.clamp", B64>;
-
-defm SUST_B_1D_ARRAY_I8_TRAP : SUST_1D_ARRAY<"sust.b.a1d.b8.trap", B16>;
-defm SUST_B_1D_ARRAY_I16_TRAP : SUST_1D_ARRAY<"sust.b.a1d.b16.trap", B16>;
-defm SUST_B_1D_ARRAY_I32_TRAP : SUST_1D_ARRAY<"sust.b.a1d.b32.trap", B32>;
-defm SUST_B_1D_ARRAY_I64_TRAP : SUST_1D_ARRAY<"sust.b.a1d.b64.trap", B64>;
-
-defm SUST_B_1D_ARRAY_I8_ZERO : SUST_1D_ARRAY<"sust.b.a1d.b8.zero", B16>;
-defm SUST_B_1D_ARRAY_I16_ZERO : SUST_1D_ARRAY<"sust.b.a1d.b16.zero", B16>;
-defm SUST_B_1D_ARRAY_I32_ZERO : SUST_1D_ARRAY<"sust.b.a1d.b32.zero", B32>;
-defm SUST_B_1D_ARRAY_I64_ZERO : SUST_1D_ARRAY<"sust.b.a1d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_ARRAY_I8_ # op_upper : SUST_1D_ARRAY<"sust.b.a1d.b8." # op, B16>;
+  defm SUST_B_1D_ARRAY_I16_ # op_upper : SUST_1D_ARRAY<"sust.b.a1d.b16." # op, B16>;
+  defm SUST_B_1D_ARRAY_I32_ # op_upper : SUST_1D_ARRAY<"sust.b.a1d.b32." # op, B32>;
+  defm SUST_B_1D_ARRAY_I64_ # op_upper : SUST_1D_ARRAY<"sust.b.a1d.b64." # op, B64>;
+}
 
 defm SUST_P_1D_ARRAY_I8_TRAP : SUST_1D_ARRAY<"sust.p.a1d.b8.trap", B16>;
 defm SUST_P_1D_ARRAY_I16_TRAP : SUST_1D_ARRAY<"sust.p.a1d.b16.trap", B16>;
@@ -4164,20 +4320,13 @@ multiclass SUST_1D_ARRAY_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_ARRAY_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_V2I8_CLAMP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.clamp", B16>;
-defm SUST_B_1D_ARRAY_V2I16_CLAMP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.clamp", B16>;
-defm SUST_B_1D_ARRAY_V2I32_CLAMP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.clamp", B32>;
-defm SUST_B_1D_ARRAY_V2I64_CLAMP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.clamp", B64>;
-
-defm SUST_B_1D_ARRAY_V2I8_TRAP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.trap", B16>;
-defm SUST_B_1D_ARRAY_V2I16_TRAP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.trap", B16>;
-defm SUST_B_1D_ARRAY_V2I32_TRAP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.trap", B32>;
-defm SUST_B_1D_ARRAY_V2I64_TRAP : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.trap", B64>;
-
-defm SUST_B_1D_ARRAY_V2I8_ZERO : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8.zero", B16>;
-defm SUST_B_1D_ARRAY_V2I16_ZERO : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16.zero", B16>;
-defm SUST_B_1D_ARRAY_V2I32_ZERO : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32.zero", B32>;
-defm SUST_B_1D_ARRAY_V2I64_ZERO : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_ARRAY_V2I8_ # op_upper : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b8." # op, B16>;
+  defm SUST_B_1D_ARRAY_V2I16_ # op_upper : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b16." # op, B16>;
+  defm SUST_B_1D_ARRAY_V2I32_ # op_upper : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b32." # op, B32>;
+  defm SUST_B_1D_ARRAY_V2I64_ # op_upper : SUST_1D_ARRAY_V2<"sust.b.a1d.v2.b64." # op, B64>;
+}
 
 defm SUST_P_1D_ARRAY_V2I8_TRAP : SUST_1D_ARRAY_V2<"sust.p.a1d.v2.b8.trap", B16>;
 defm SUST_P_1D_ARRAY_V2I16_TRAP : SUST_1D_ARRAY_V2<"sust.p.a1d.v2.b16.trap", B16>;
@@ -4197,33 +4346,16 @@ multiclass SUST_1D_ARRAY_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_1D_ARRAY_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_1D_ARRAY_V4I8_CLAMP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.clamp", B16>;
-defm SUST_B_1D_ARRAY_V4I16_CLAMP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.clamp", B16>;
-defm SUST_B_1D_ARRAY_V4I32_CLAMP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.clamp", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_1D_ARRAY_V4I8_ # op_upper : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8." # op, B16>;
+  defm SUST_B_1D_ARRAY_V4I16_ # op_upper : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16." # op, B16>;
+  defm SUST_B_1D_ARRAY_V4I32_ # op_upper : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32." # op, B32>;
+}
 
-defm SUST_B_1D_ARRAY_V4I8_TRAP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.trap", B16>;
-defm SUST_B_1D_ARRAY_V4I16_TRAP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.trap", B16>;
-defm SUST_B_1D_ARRAY_V4I32_TRAP
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.trap", B32>;
-
-defm SUST_B_1D_ARRAY_V4I8_ZERO
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b8.zero", B16>;
-defm SUST_B_1D_ARRAY_V4I16_ZERO
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b16.zero", B16>;
-defm SUST_B_1D_ARRAY_V4I32_ZERO
-  : SUST_1D_ARRAY_V4<"sust.b.a1d.v4.b32.zero", B32>;
-
-defm SUST_P_1D_ARRAY_V4I8_TRAP
-  : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b8.trap", B16>;
-defm SUST_P_1D_ARRAY_V4I16_TRAP
-  : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b16.trap", B16>;
-defm SUST_P_1D_ARRAY_V4I32_TRAP
-  : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b32.trap", B32>;
+defm SUST_P_1D_ARRAY_V4I8_TRAP : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b8.trap", B16>;
+defm SUST_P_1D_ARRAY_V4I16_TRAP : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b16.trap", B16>;
+defm SUST_P_1D_ARRAY_V4I32_TRAP : SUST_1D_ARRAY_V4<"sust.p.a1d.v4.b32.trap", B32>;
 
 class SUST_2D_base<string inst, NVPTXRegClass intype, dag surf, list<dag> pat>
     : NVPTXInst<(outs),
@@ -4237,20 +4369,13 @@ multiclass SUST_2D<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_I8_CLAMP : SUST_2D<"sust.b.2d.b8.clamp", B16>;
-defm SUST_B_2D_I16_CLAMP : SUST_2D<"sust.b.2d.b16.clamp", B16>;
-defm SUST_B_2D_I32_CLAMP : SUST_2D<"sust.b.2d.b32.clamp", B32>;
-defm SUST_B_2D_I64_CLAMP : SUST_2D<"sust.b.2d.b64.clamp", B64>;
-
-defm SUST_B_2D_I8_TRAP : SUST_2D<"sust.b.2d.b8.trap", B16>;
-defm SUST_B_2D_I16_TRAP : SUST_2D<"sust.b.2d.b16.trap", B16>;
-defm SUST_B_2D_I32_TRAP : SUST_2D<"sust.b.2d.b32.trap", B32>;
-defm SUST_B_2D_I64_TRAP : SUST_2D<"sust.b.2d.b64.trap", B64>;
-
-defm SUST_B_2D_I8_ZERO : SUST_2D<"sust.b.2d.b8.zero", B16>;
-defm SUST_B_2D_I16_ZERO : SUST_2D<"sust.b.2d.b16.zero", B16>;
-defm SUST_B_2D_I32_ZERO : SUST_2D<"sust.b.2d.b32.zero", B32>;
-defm SUST_B_2D_I64_ZERO : SUST_2D<"sust.b.2d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_I8_ # op_upper : SUST_2D<"sust.b.2d.b8." # op, B16>;
+  defm SUST_B_2D_I16_ # op_upper : SUST_2D<"sust.b.2d.b16." # op, B16>;
+  defm SUST_B_2D_I32_ # op_upper : SUST_2D<"sust.b.2d.b32." # op, B32>;
+  defm SUST_B_2D_I64_ # op_upper : SUST_2D<"sust.b.2d.b64." # op, B64>;
+}
 
 defm SUST_P_2D_I8_TRAP : SUST_2D<"sust.p.2d.b8.trap", B16>;
 defm SUST_P_2D_I16_TRAP : SUST_2D<"sust.p.2d.b16.trap", B16>;
@@ -4270,20 +4395,13 @@ multiclass SUST_2D_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_V2I8_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b8.clamp", B16>;
-defm SUST_B_2D_V2I16_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b16.clamp", B16>;
-defm SUST_B_2D_V2I32_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b32.clamp", B32>;
-defm SUST_B_2D_V2I64_CLAMP : SUST_2D_V2<"sust.b.2d.v2.b64.clamp", B64>;
-
-defm SUST_B_2D_V2I8_TRAP : SUST_2D_V2<"sust.b.2d.v2.b8.trap", B16>;
-defm SUST_B_2D_V2I16_TRAP : SUST_2D_V2<"sust.b.2d.v2.b16.trap", B16>;
-defm SUST_B_2D_V2I32_TRAP : SUST_2D_V2<"sust.b.2d.v2.b32.trap", B32>;
-defm SUST_B_2D_V2I64_TRAP : SUST_2D_V2<"sust.b.2d.v2.b64.trap", B64>;
-
-defm SUST_B_2D_V2I8_ZERO : SUST_2D_V2<"sust.b.2d.v2.b8.zero", B16>;
-defm SUST_B_2D_V2I16_ZERO : SUST_2D_V2<"sust.b.2d.v2.b16.zero", B16>;
-defm SUST_B_2D_V2I32_ZERO : SUST_2D_V2<"sust.b.2d.v2.b32.zero", B32>;
-defm SUST_B_2D_V2I64_ZERO : SUST_2D_V2<"sust.b.2d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_V2I8_ # op_upper : SUST_2D_V2<"sust.b.2d.v2.b8." # op, B16>;
+  defm SUST_B_2D_V2I16_ # op_upper : SUST_2D_V2<"sust.b.2d.v2.b16." # op, B16>;
+  defm SUST_B_2D_V2I32_ # op_upper : SUST_2D_V2<"sust.b.2d.v2.b32." # op, B32>;
+  defm SUST_B_2D_V2I64_ # op_upper : SUST_2D_V2<"sust.b.2d.v2.b64." # op, B64>;
+}
 
 defm SUST_P_2D_V2I8_TRAP : SUST_2D_V2<"sust.p.2d.v2.b8.trap", B16>;
 defm SUST_P_2D_V2I16_TRAP : SUST_2D_V2<"sust.p.2d.v2.b16.trap", B16>;
@@ -4303,17 +4421,12 @@ multiclass SUST_2D_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_V4I8_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b8.clamp", B16>;
-defm SUST_B_2D_V4I16_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b16.clamp", B16>;
-defm SUST_B_2D_V4I32_CLAMP : SUST_2D_V4<"sust.b.2d.v4.b32.clamp", B32>;
-
-defm SUST_B_2D_V4I8_TRAP : SUST_2D_V4<"sust.b.2d.v4.b8.trap", B16>;
-defm SUST_B_2D_V4I16_TRAP : SUST_2D_V4<"sust.b.2d.v4.b16.trap", B16>;
-defm SUST_B_2D_V4I32_TRAP : SUST_2D_V4<"sust.b.2d.v4.b32.trap", B32>;
-
-defm SUST_B_2D_V4I8_ZERO : SUST_2D_V4<"sust.b.2d.v4.b8.zero", B16>;
-defm SUST_B_2D_V4I16_ZERO : SUST_2D_V4<"sust.b.2d.v4.b16.zero", B16>;
-defm SUST_B_2D_V4I32_ZERO : SUST_2D_V4<"sust.b.2d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_V4I8_ # op_upper : SUST_2D_V4<"sust.b.2d.v4.b8." # op, B16>;
+  defm SUST_B_2D_V4I16_ # op_upper : SUST_2D_V4<"sust.b.2d.v4.b16." # op, B16>;
+  defm SUST_B_2D_V4I32_ # op_upper : SUST_2D_V4<"sust.b.2d.v4.b32." # op, B32>;
+}
 
 defm SUST_P_2D_V4I8_TRAP : SUST_2D_V4<"sust.p.2d.v4.b8.trap", B16>;
 defm SUST_P_2D_V4I16_TRAP : SUST_2D_V4<"sust.p.2d.v4.b16.trap", B16>;
@@ -4333,20 +4446,13 @@ multiclass SUST_2D_ARRAY<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_ARRAY_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_I8_CLAMP : SUST_2D_ARRAY<"sust.b.a2d.b8.clamp", B16>;
-defm SUST_B_2D_ARRAY_I16_CLAMP : SUST_2D_ARRAY<"sust.b.a2d.b16.clamp", B16>;
-defm SUST_B_2D_ARRAY_I32_CLAMP : SUST_2D_ARRAY<"sust.b.a2d.b32.clamp", B32>;
-defm SUST_B_2D_ARRAY_I64_CLAMP : SUST_2D_ARRAY<"sust.b.a2d.b64.clamp", B64>;
-
-defm SUST_B_2D_ARRAY_I8_TRAP : SUST_2D_ARRAY<"sust.b.a2d.b8.trap", B16>;
-defm SUST_B_2D_ARRAY_I16_TRAP : SUST_2D_ARRAY<"sust.b.a2d.b16.trap", B16>;
-defm SUST_B_2D_ARRAY_I32_TRAP : SUST_2D_ARRAY<"sust.b.a2d.b32.trap", B32>;
-defm SUST_B_2D_ARRAY_I64_TRAP : SUST_2D_ARRAY<"sust.b.a2d.b64.trap", B64>;
-
-defm SUST_B_2D_ARRAY_I8_ZERO : SUST_2D_ARRAY<"sust.b.a2d.b8.zero", B16>;
-defm SUST_B_2D_ARRAY_I16_ZERO : SUST_2D_ARRAY<"sust.b.a2d.b16.zero", B16>;
-defm SUST_B_2D_ARRAY_I32_ZERO : SUST_2D_ARRAY<"sust.b.a2d.b32.zero", B32>;
-defm SUST_B_2D_ARRAY_I64_ZERO : SUST_2D_ARRAY<"sust.b.a2d.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_ARRAY_I8_ # op_upper : SUST_2D_ARRAY<"sust.b.a2d.b8." # op, B16>;
+  defm SUST_B_2D_ARRAY_I16_ # op_upper : SUST_2D_ARRAY<"sust.b.a2d.b16." # op, B16>;
+  defm SUST_B_2D_ARRAY_I32_ # op_upper : SUST_2D_ARRAY<"sust.b.a2d.b32." # op, B32>;
+  defm SUST_B_2D_ARRAY_I64_ # op_upper : SUST_2D_ARRAY<"sust.b.a2d.b64." # op, B64>;
+}
 
 defm SUST_P_2D_ARRAY_I8_TRAP : SUST_2D_ARRAY<"sust.p.a2d.b8.trap", B16>;
 defm SUST_P_2D_ARRAY_I16_TRAP : SUST_2D_ARRAY<"sust.p.a2d.b16.trap", B16>;
@@ -4366,20 +4472,13 @@ multiclass SUST_2D_ARRAY_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_ARRAY_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_V2I8_CLAMP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.clamp", B16>;
-defm SUST_B_2D_ARRAY_V2I16_CLAMP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.clamp", B16>;
-defm SUST_B_2D_ARRAY_V2I32_CLAMP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.clamp", B32>;
-defm SUST_B_2D_ARRAY_V2I64_CLAMP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.clamp", B64>;
-
-defm SUST_B_2D_ARRAY_V2I8_TRAP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.trap", B16>;
-defm SUST_B_2D_ARRAY_V2I16_TRAP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.trap", B16>;
-defm SUST_B_2D_ARRAY_V2I32_TRAP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.trap", B32>;
-defm SUST_B_2D_ARRAY_V2I64_TRAP : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.trap", B64>;
-
-defm SUST_B_2D_ARRAY_V2I8_ZERO : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8.zero", B16>;
-defm SUST_B_2D_ARRAY_V2I16_ZERO : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16.zero", B16>;
-defm SUST_B_2D_ARRAY_V2I32_ZERO : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32.zero", B32>;
-defm SUST_B_2D_ARRAY_V2I64_ZERO : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64.zero", B64>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_ARRAY_V2I8_ # op_upper : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b8." # op, B16>;
+  defm SUST_B_2D_ARRAY_V2I16_ # op_upper : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b16." # op, B16>;
+  defm SUST_B_2D_ARRAY_V2I32_ # op_upper : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b32." # op, B32>;
+  defm SUST_B_2D_ARRAY_V2I64_ # op_upper : SUST_2D_ARRAY_V2<"sust.b.a2d.v2.b64." # op, B64>;
+}
 
 defm SUST_P_2D_ARRAY_V2I8_TRAP : SUST_2D_ARRAY_V2<"sust.p.a2d.v2.b8.trap", B16>;
 defm SUST_P_2D_ARRAY_V2I16_TRAP : SUST_2D_ARRAY_V2<"sust.p.a2d.v2.b16.trap", B16>;
@@ -4399,17 +4498,12 @@ multiclass SUST_2D_ARRAY_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_2D_ARRAY_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_2D_ARRAY_V4I8_CLAMP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.clamp", B16>;
-defm SUST_B_2D_ARRAY_V4I16_CLAMP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.clamp", B16>;
-defm SUST_B_2D_ARRAY_V4I32_CLAMP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.clamp", B32>;
-
-defm SUST_B_2D_ARRAY_V4I8_TRAP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.trap", B16>;
-defm SUST_B_2D_ARRAY_V4I16_TRAP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.trap", B16>;
-defm SUST_B_2D_ARRAY_V4I32_TRAP : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.trap", B32>;
-
-defm SUST_B_2D_ARRAY_V4I8_ZERO : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8.zero", B16>;
-defm SUST_B_2D_ARRAY_V4I16_ZERO : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16.zero", B16>;
-defm SUST_B_2D_ARRAY_V4I32_ZERO : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_2D_ARRAY_V4I8_ # op_upper : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b8." # op, B16>;
+  defm SUST_B_2D_ARRAY_V4I16_ # op_upper : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b16." # op, B16>;
+  defm SUST_B_2D_ARRAY_V4I32_ # op_upper : SUST_2D_ARRAY_V4<"sust.b.a2d.v4.b32." # op, B32>;
+}
 
 defm SUST_P_2D_ARRAY_V4I8_TRAP : SUST_2D_ARRAY_V4<"sust.p.a2d.v4.b8.trap", B16>;
 defm SUST_P_2D_ARRAY_V4I16_TRAP : SUST_2D_ARRAY_V4<"sust.p.a2d.v4.b16.trap", B16>;
@@ -4429,21 +4523,13 @@ multiclass SUST_3D<string inst, NVPTXRegClass intype> {
   def _I : SUST_3D_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_I8_CLAMP : SUST_3D<"sust.b.3d.b8.clamp", B16>;
-defm SUST_B_3D_I16_CLAMP : SUST_3D<"sust.b.3d.b16.clamp", B16>;
-defm SUST_B_3D_I32_CLAMP : SUST_3D<"sust.b.3d.b32.clamp", B32>;
-defm SUST_B_3D_I64_CLAMP : SUST_3D<"sust.b.3d.b64.clamp", B64>;
-
-defm SUST_B_3D_I8_TRAP : SUST_3D<"sust.b.3d.b8.trap", B16>;
-defm SUST_B_3D_I16_TRAP : SUST_3D<"sust.b.3d.b16.trap", B16>;
-defm SUST_B_3D_I32_TRAP : SUST_3D<"sust.b.3d.b32.trap", B32>;
-defm SUST_B_3D_I64_TRAP : SUST_3D<"sust.b.3d.b64.trap", B64>;
-
-defm SUST_B_3D_I8_ZERO : SUST_3D<"sust.b.3d.b8.zero", B16>;
-defm SUST_B_3D_I16_ZERO : SUST_3D<"sust.b.3d.b16.zero", B16>;
-defm SUST_B_3D_I32_ZERO : SUST_3D<"sust.b.3d.b32.zero", B32>;
-defm SUST_B_3D_I64_ZERO : SUST_3D<"sust.b.3d.b64.zero", B64>;
-
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_3D_I8_ # op_upper : SUST_3D<"sust.b.3d.b8." # op, B16>;
+  defm SUST_B_3D_I16_ # op_upper : SUST_3D<"sust.b.3d.b16." # op, B16>;
+  defm SUST_B_3D_I32_ # op_upper : SUST_3D<"sust.b.3d.b32." # op, B32>;
+  defm SUST_B_3D_I64_ # op_upper : SUST_3D<"sust.b.3d.b64." # op, B64>;
+}
 defm SUST_P_3D_I8_TRAP : SUST_3D<"sust.p.3d.b8.trap", B16>;
 defm SUST_P_3D_I16_TRAP : SUST_3D<"sust.p.3d.b16.trap", B16>;
 defm SUST_P_3D_I32_TRAP : SUST_3D<"sust.p.3d.b32.trap", B32>;
@@ -4462,21 +4548,13 @@ multiclass SUST_3D_V2<string inst, NVPTXRegClass intype> {
   def _I : SUST_3D_V2_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_V2I8_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b8.clamp", B16>;
-defm SUST_B_3D_V2I16_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b16.clamp", B16>;
-defm SUST_B_3D_V2I32_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b32.clamp", B32>;
-defm SUST_B_3D_V2I64_CLAMP : SUST_3D_V2<"sust.b.3d.v2.b64.clamp", B64>;
-
-defm SUST_B_3D_V2I8_TRAP : SUST_3D_V2<"sust.b.3d.v2.b8.trap", B16>;
-defm SUST_B_3D_V2I16_TRAP : SUST_3D_V2<"sust.b.3d.v2.b16.trap", B16>;
-defm SUST_B_3D_V2I32_TRAP : SUST_3D_V2<"sust.b.3d.v2.b32.trap", B32>;
-defm SUST_B_3D_V2I64_TRAP : SUST_3D_V2<"sust.b.3d.v2.b64.trap", B64>;
-
-defm SUST_B_3D_V2I8_ZERO : SUST_3D_V2<"sust.b.3d.v2.b8.zero", B16>;
-defm SUST_B_3D_V2I16_ZERO : SUST_3D_V2<"sust.b.3d.v2.b16.zero", B16>;
-defm SUST_B_3D_V2I32_ZERO : SUST_3D_V2<"sust.b.3d.v2.b32.zero", B32>;
-defm SUST_B_3D_V2I64_ZERO : SUST_3D_V2<"sust.b.3d.v2.b64.zero", B64>;
-
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_3D_V2I8_ # op_upper : SUST_3D_V2<"sust.b.3d.v2.b8." # op, B16>;
+  defm SUST_B_3D_V2I16_ # op_upper : SUST_3D_V2<"sust.b.3d.v2.b16." # op, B16>;
+  defm SUST_B_3D_V2I32_ # op_upper : SUST_3D_V2<"sust.b.3d.v2.b32." # op, B32>;
+  defm SUST_B_3D_V2I64_ # op_upper : SUST_3D_V2<"sust.b.3d.v2.b64." # op, B64>;
+}
 defm SUST_P_3D_V2I8_TRAP : SUST_3D_V2<"sust.p.3d.v2.b8.trap", B16>;
 defm SUST_P_3D_V2I16_TRAP : SUST_3D_V2<"sust.p.3d.v2.b16.trap", B16>;
 defm SUST_P_3D_V2I32_TRAP : SUST_3D_V2<"sust.p.3d.v2.b32.trap", B32>;
@@ -4495,17 +4573,12 @@ multiclass SUST_3D_V4<string inst, NVPTXRegClass intype> {
   def _I : SUST_3D_V4_base<inst, intype, (ins i64imm:$s), []>;
 }
 
-defm SUST_B_3D_V4I8_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b8.clamp", B16>;
-defm SUST_B_3D_V4I16_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b16.clamp", B16>;
-defm SUST_B_3D_V4I32_CLAMP : SUST_3D_V4<"sust.b.3d.v4.b32.clamp", B32>;
-
-defm SUST_B_3D_V4I8_TRAP : SUST_3D_V4<"sust.b.3d.v4.b8.trap", B16>;
-defm SUST_B_3D_V4I16_TRAP : SUST_3D_V4<"sust.b.3d.v4.b16.trap", B16>;
-defm SUST_B_3D_V4I32_TRAP : SUST_3D_V4<"sust.b.3d.v4.b32.trap", B32>;
-
-defm SUST_B_3D_V4I8_ZERO : SUST_3D_V4<"sust.b.3d.v4.b8.zero", B16>;
-defm SUST_B_3D_V4I16_ZERO : SUST_3D_V4<"sust.b.3d.v4.b16.zero", B16>;
-defm SUST_B_3D_V4I32_ZERO : SUST_3D_V4<"sust.b.3d.v4.b32.zero", B32>;
+foreach op = ["clamp", "trap", "zero"] in {
+  defvar op_upper = !toupper(op);
+  defm SUST_B_3D_V4I8_ # op_upper : SUST_3D_V4<"sust.b.3d.v4.b8." # op, B16>;
+  defm SUST_B_3D_V4I16_ # op_upper : SUST_3D_V4<"sust.b.3d.v4.b16." # op, B16>;
+  defm SUST_B_3D_V4I32_ # op_upper : SUST_3D_V4<"sust.b.3d.v4.b32." # op, B32>;
+}
 
 defm SUST_P_3D_V4I8_TRAP : SUST_3D_V4<"sust.p.3d.v4.b8.trap", B16>;
 defm SUST_P_3D_V4I16_TRAP : SUST_3D_V4<"sust.p.3d.v4.b16.trap", B16>;
@@ -4586,10 +4659,12 @@ let hasSideEffects = 1 in {
   def SREG_CLOCK : PTX_READ_SREG_R32<"clock", int_nvvm_read_ptx_sreg_clock>;
   def SREG_CLOCK64 : PTX_READ_SREG_R64<"clock64", int_nvvm_read_ptx_sreg_clock64>;
   def SREG_GLOBALTIMER : PTX_READ_SREG_R64<"globaltimer", int_nvvm_read_ptx_sreg_globaltimer>;
+  def SREG_GLOBALTIMER_LO : PTX_READ_SREG_R32<"globaltimer_lo", int_nvvm_read_ptx_sreg_globaltimer_lo>;
 }
 
 def: Pat <(i64 (readcyclecounter)), (SREG_CLOCK64)>;
 def: Pat <(i64 (readsteadycounter)), (SREG_GLOBALTIMER)>;
+def: Pat <(i32 (readsteadycounter)), (SREG_GLOBALTIMER_LO)>;
 
 def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
 def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
@@ -4606,10 +4681,15 @@ def INT_PTX_SREG_WARPSIZE :
 // In addition to target-independent fields provided by WMMA_REGS, it adds
 // the fields commonly used to implement specific PTX instruction -- register
 // types and names, constraints, parts of assembly, etc.
-class WMMA_REGINFO<WMMA_REGS r, string op>
-      : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type> {
+class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "">
+      : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type, !eq(op, "mma.sp")> {
   // NVPTX register types used to carry fragment data.
   NVPTXRegClass regclass = !cond(
+    !eq(ptx_elt_type, "e4m3") : B32,
+    !eq(ptx_elt_type, "e5m2") : B32,
+    !eq(ptx_elt_type, "e3m2") : B32,
+    !eq(ptx_elt_type, "e2m3") : B32,
+    !eq(ptx_elt_type, "e2m1") : B32,
     !eq(ptx_elt_type, "f16") : B32,
     !eq(ptx_elt_type, "f32") : B32,
     !eq(ptx_elt_type, "f64") : B64,
@@ -4642,6 +4722,22 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
   // longer the case, we can concat all per-fragment predicates to enforce that
   // all fragments of the instruction are viable.
   list<Predicate> Predicates = !cond(
+    !or(!eq(ptx_elt_type, "e3m2"),
+        !eq(ptx_elt_type, "e2m3"),
+        !eq(ptx_elt_type, "e2m1"),
+        !ne(kind, "")) : [hasSM120a, hasPTX<87>],
+
+    !and(!or(!eq(ptx_elt_type,"e4m3"),
+             !eq(ptx_elt_type,"e5m2")),
+         !eq(geom, "m16n8k16")) : [hasSM<89>, hasPTX<87>],
+
+    !or(!eq(ptx_elt_type, "e4m3"),
+        !eq(ptx_elt_type, "e5m2")) : [hasSM<89>, hasPTX<84>],
+
+    !and(!eq(op, "mma.sp"),
+         !ne(metadata, "sp")) : [hasSM<80>, hasPTX<85>],
+    !eq(op, "mma.sp") : [hasSM<80>, hasPTX<71>],
+
     // fp16 -> fp16/fp32 @ m16n16k16
     !and(!eq(geom, "m16n16k16"),
          !or(!eq(ptx_elt_type, "f16"),
@@ -4649,6 +4745,11 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
 
     !and(!eq(geom, "m8n8k4"),
          !eq(ptx_elt_type, "f64")) : [hasSM<80>, hasPTX<70>],
+
+    !and(!or(!eq(geom, "m16n8k4"),
+             !eq(geom, "m16n8k8"),
+             !eq(geom, "m16n8k16")),
+         !eq(ptx_elt_type, "f64")) : [hasSM<90>, hasPTX<78>],
 
     // fp16 -> fp16/fp32 @ m8n32k16/m32n8k16
     !and(!or(!eq(geom, "m8n32k16"),
@@ -4746,7 +4847,8 @@ class BuildPatternI<Intrinsic Intr, dag Ins> {
   // Build a dag pattern that matches the intrinsic call.
   dag ret = !foreach(tmp, Ins,
                           !subst(ADDR, addr,
-                          !subst(ins, Intr, tmp)));
+                          !subst(ins, Intr,
+                          !subst(i32imm, timm, tmp))));
 }
 
 // Same as above, but uses PatFrag instead of an Intrinsic.
@@ -4772,7 +4874,7 @@ class WMMA_INSTR<string _Intr, list<dag> _Args>
 //
 
 class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride>
-  : WMMA_INSTR<WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.record,
+  : WMMA_INSTR<WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.record_name,
                               [!con((ins ADDR:$src),
                                     !if(WithStride, (ins B32:$ldm), (ins)))]>,
     Requires<Frag.Predicates> {
@@ -4811,7 +4913,7 @@ class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride>
 //
 class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, string Space,
                    bit WithStride>
-  : WMMA_INSTR<WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.record,
+  : WMMA_INSTR<WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.record_name,
                [!con((ins ADDR:$dst),
                      Frag.Ins,
                      !if(WithStride, (ins B32:$ldm), (ins)))]>,
@@ -4875,7 +4977,7 @@ class MMA_OP_PREDICATES<WMMA_REGINFO FragA, string b1op> {
 class WMMA_MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                WMMA_REGINFO FragC, WMMA_REGINFO FragD,
                string ALayout, string BLayout, int Satfinite, string rnd, string b1op>
-  : WMMA_INSTR<WMMA_NAME<ALayout, BLayout, Satfinite, rnd, b1op, FragA, FragB, FragC, FragD>.record,
+  : WMMA_INSTR<WMMA_NAME<ALayout, BLayout, Satfinite, rnd, b1op, FragA, FragB, FragC, FragD>.record_name,
                          [FragA.Ins, FragB.Ins, FragC.Ins]>,
     // Requires does not seem to have effect on Instruction w/o Patterns.
     // We set it here anyways and propagate to the Pat<> we construct below.
@@ -4933,8 +5035,8 @@ defset list<WMMA_INSTR> WMMAs  = {
 // MMA
 class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                WMMA_REGINFO FragC, WMMA_REGINFO FragD,
-               string ALayout, string BLayout, int Satfinite, string b1op>
-  : WMMA_INSTR<MMA_NAME<ALayout, BLayout, Satfinite, b1op, FragA, FragB, FragC, FragD>.record,
+               string ALayout, string BLayout, int Satfinite, string b1op, string Kind>
+  : WMMA_INSTR<MMA_NAME<ALayout, BLayout, Satfinite, b1op, Kind, FragA, FragB, FragC, FragD>.record_name,
                         [FragA.Ins, FragB.Ins, FragC.Ins]>,
     // Requires does not seem to have effect on Instruction w/o Patterns.
     // We set it here anyways and propagate to the Pat<> we construct below.
@@ -4949,6 +5051,7 @@ class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                   # FragA.geom
                   # "." # ALayout
                   # "." # BLayout
+                  # !if(!ne(Kind, ""), "." # Kind, "")
                   # !if(Satfinite, ".satfinite", "")
                   # TypeList
                   # b1op # "\n\t\t"
@@ -4965,13 +5068,15 @@ defset list<WMMA_INSTR> MMAs  = {
       foreach satf = [0, 1] in {
         foreach op = NVVM_MMA_OPS.all_mma_ops in {
           foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
-            if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret then {
-              def : MMA<WMMA_REGINFO<op[0], "mma">,
-                        WMMA_REGINFO<op[1], "mma">,
-                        WMMA_REGINFO<op[2], "mma">,
-                        WMMA_REGINFO<op[3], "mma">,
-                        layout_a, layout_b, satf, b1op>;
-            }
+            foreach kind = ["", "kind::f8f6f4"] in {
+              if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, kind, satf>.ret then {
+                def : MMA<WMMA_REGINFO<op[0], "mma", "", kind>,
+                          WMMA_REGINFO<op[1], "mma", "", kind>,
+                          WMMA_REGINFO<op[2], "mma", "", kind>,
+                          WMMA_REGINFO<op[3], "mma", "", kind>,
+                          layout_a, layout_b, satf, b1op, kind>;
+              }
+            } // kind
           } // b1op
         } // op
       } // satf
@@ -4980,11 +5085,67 @@ defset list<WMMA_INSTR> MMAs  = {
 } // defset
 }
 
+// MMA SP
+class MMA_SP<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
+             WMMA_REGINFO FragC, WMMA_REGINFO FragD,
+             string Metadata, string Kind, int Satfinite>
+  : WMMA_INSTR<MMA_SP_NAME<Metadata, Kind, Satfinite,
+                           FragA, FragB, FragC, FragD>.record_name,
+               [FragA.Ins, FragB.Ins, FragC.Ins,
+                (ins B32:$metadata, i32imm:$selector)]>,
+    // Requires does not seem to have effect on Instruction w/o Patterns.
+    // We set it here anyways and propagate to the Pat<> we construct below.
+    Requires<!listconcat(FragA.Predicates,
+                         FragB.Predicates,
+                         FragC.Predicates,
+                         FragD.Predicates)> {
+  let OutOperandList = FragD.Outs;
+  let InOperandList = !con(Args, (ins MmaCode:$ptx));
+  string TypeList = "." # FragD.ptx_elt_type
+                    # "." # FragA.ptx_elt_type
+                    # "." # FragB.ptx_elt_type
+                    # "." # FragC.ptx_elt_type;
+  let AsmString = "mma"
+                  # "." # Metadata
+                  # ".sync.aligned."
+                  # FragA.geom
+                  # ".row.col"
+                  # !if(!ne(Kind, ""), "." # Kind, "")
+                  # !if(Satfinite, ".satfinite", "")
+                  # TypeList # "\n\t\t"
+                  # FragD.regstring # ",\n\t\t"
+                  # FragA.regstring # ",\n\t\t"
+                  # FragB.regstring # ",\n\t\t"
+                  # FragC.regstring # ",\n\t\t"
+                  # "$metadata" # ",\n\t\t"
+                  # "$selector" # ";";
+}
+
+let isConvergent = true in {
+defset list<WMMA_INSTR> MMA_SPs = {
+  foreach metadata = ["sp", "sp::ordered_metadata"] in {
+    foreach kind = ["", "kind::f8f6f4"] in {
+      foreach satf = [0, 1] in {
+        foreach op = NVVM_MMA_OPS.all_mma_sp_ops in {
+          if NVVM_MMA_SP_SUPPORTED<op, metadata, kind, satf>.ret then {
+            def : MMA_SP<WMMA_REGINFO<op[0], "mma.sp", metadata, kind>,
+                         WMMA_REGINFO<op[1], "mma.sp", metadata, kind>,
+                         WMMA_REGINFO<op[2], "mma.sp", metadata, kind>,
+                         WMMA_REGINFO<op[3], "mma.sp", metadata, kind>,
+                         metadata, kind, satf>;
+          }
+        } // op
+      } // satf
+    } // kind
+  } // metadata
+} // defset
+}
+
 //
 // ldmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
 class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
-  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record, [(ins ADDR:$src)]>,
+  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record_name, [(ins ADDR:$src)]>,
     Requires<Frag.Predicates> {
   // Build PatFrag that only matches particular address space.
   PatFrag IntrFrag = PatFrag<(ops node:$src), (Intr node:$src),
@@ -5019,7 +5180,7 @@ defset list<WMMA_INSTR> LDMATRIXs  = {
 // stmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
 class STMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
-  : WMMA_INSTR<STMATRIX_NAME<Frag, Transposed>.record, [!con((ins ADDR:$dst), Frag.Ins)]>,
+  : WMMA_INSTR<STMATRIX_NAME<Frag, Transposed>.record_name, [!con((ins ADDR:$dst), Frag.Ins)]>,
     Requires<Frag.Predicates> {
   // Build PatFrag that only matches particular address space.
   dag PFOperands = !con((ops node:$dst),
@@ -5061,7 +5222,7 @@ class MMA_PAT<WMMA_INSTR wi>
         Requires<wi.Predicates>;
 
 // Build intrinsic->instruction patterns for all MMA instructions.
-foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs, STMATRIXs) in
+foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs, STMATRIXs, MMA_SPs) in
   def : MMA_PAT<mma>;
 
 multiclass MAPA<string suffix, Intrinsic Intr> {
@@ -5122,31 +5283,27 @@ defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_align
 //
 // WGMMA fence instructions
 //
-let isConvergent = true in {
-def INT_NVVM_WGMMA_FENCE_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins), "wgmma.fence.sync.aligned",
-                             [(int_nvvm_wgmma_fence_sync_aligned)]>, Requires<[hasSM90a, hasPTX<80>]>;
+let isConvergent = true, Predicates = [hasSM90a, hasPTX<80>] in {
+  def WGMMA_FENCE_SYNC_ALIGNED : NullaryInst<"wgmma.fence.sync.aligned", int_nvvm_wgmma_fence_sync_aligned>;
 
-def INT_NVVM_WGMMA_COMMIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins), "wgmma.commit_group.sync.aligned",
-                             [(int_nvvm_wgmma_commit_group_sync_aligned)]>, Requires<[hasSM90a, hasPTX<80>]>;
+  def WGMMA_COMMIT_GROUP_SYNC_ALIGNED : NullaryInst<"wgmma.commit_group.sync.aligned", int_nvvm_wgmma_commit_group_sync_aligned>;
 
-def INT_NVVM_WGMMA_WAIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned",
-                             [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>, Requires<[hasSM90a, hasPTX<80>]>;
-} // isConvergent = true
+  def WGMMA_WAIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned",
+                              [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>;
+}
 
 let Predicates = [hasSM<90>, hasPTX<78>] in {
   def GRIDDEPCONTROL_LAUNCH_DEPENDENTS :
-        BasicNVPTXInst<(outs), (ins), "griddepcontrol.launch_dependents",
-                  [(int_nvvm_griddepcontrol_launch_dependents)]>;
+        NullaryInst<"griddepcontrol.launch_dependents", int_nvvm_griddepcontrol_launch_dependents>;
   def GRIDDEPCONTROL_WAIT :
-        BasicNVPTXInst<(outs), (ins), "griddepcontrol.wait",
-                  [(int_nvvm_griddepcontrol_wait)]>;
+        NullaryInst<"griddepcontrol.wait", int_nvvm_griddepcontrol_wait>;
 }
 
-def INT_EXIT : BasicNVPTXInst<(outs), (ins), "exit", [(int_nvvm_exit)]>;
+def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
-let isConvergent = true, Predicates = [hasTcgen05Instructions] in {
-
+let isConvergent = true in {
+let Predicates = [callSubtarget<"hasTcgen05InstSupport">] in {
 multiclass TCGEN05_ALLOC_INTR<string AS, string num, Intrinsic Intr> {
   def "" : BasicNVPTXInst<(outs),
              (ins ADDR:$dst, B32:$ncols),
@@ -5170,9 +5327,7 @@ defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1
 defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
 
 multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs), (ins),
-             "tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned",
-             [(Intr)]>;
+  def "" : NullaryInst<"tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned", Intr>;
 }
 defm TCGEN05_RELINQ_CG1: TCGEN05_RELINQ_PERMIT_INTR<"1", int_nvvm_tcgen05_relinq_alloc_permit_cg1>;
 defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq_alloc_permit_cg2>;
@@ -5199,15 +5354,6 @@ defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<"", "1">;
 defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"", "2">;
 defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<"shared", "1">;
 defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<"shared", "2">;
-
-multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins ADDR:$tmem_addr),
-             "tcgen05.shift.cta_group::" # num # ".down",
-             [(Intr addr:$tmem_addr)]>;
-}
-defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
-defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
 
 multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
   defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
@@ -5239,9 +5385,22 @@ foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
   defm TCGEN05_CP_64x128_2 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::01_23">;
   defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
 }
+} // Predicates
+
+let Predicates = [callSubtarget<"hasTcgen05ShiftSupport">] in {
+multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
+  def "" : BasicNVPTXInst<(outs),
+             (ins ADDR:$tmem_addr),
+             "tcgen05.shift.cta_group::" # num # ".down",
+             [(Intr addr:$tmem_addr)]>;
+}
+defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
+defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
+} // Predicates
+
 } // isConvergent
 
-let hasSideEffects = 1, Predicates = [hasTcgen05Instructions] in {
+let hasSideEffects = 1, Predicates = [callSubtarget<"hasTcgen05InstSupport">] in {
 
   def tcgen05_fence_before_thread_sync: NullaryInst<
     "tcgen05.fence::before_thread_sync", int_nvvm_tcgen05_fence_before_thread_sync>;
@@ -5275,8 +5434,7 @@ class TCGEN05_LDST_REGINFO<int Veclen> {
 //
 
 class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
-        NVPTXInst<(outs), (ins), "?", []>,
-        Requires<[hasTcgen05Instructions]> {
+        NVPTXInst<(outs), (ins), "?", []> {
 
   TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
@@ -5300,8 +5458,7 @@ class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
 //
 
 class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
-        NVPTXInst<(outs), (ins), "?", []>,
-        Requires<[hasTcgen05Instructions]> {
+        NVPTXInst<(outs), (ins), "?", []> {
 
   TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
@@ -5404,4 +5561,421 @@ foreach dim = ["x", "y", "z"] in {
 
   def CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_ # dim:
         CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID<dim>;
+}
+
+//
+// tcgen05.mma Instructions
+//
+
+class Tcgen05MMAInst<bit Sp, string KindStr, string ASpace,
+                     int CtaGroup, string CollectorUsage,
+                     bit ScaleInputD, bit AShift,
+                     list<Predicate> PTXPredicates> :
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<PTXPredicates> {
+
+  Intrinsic Intrin = !cast<Intrinsic>(
+                        NVVM_TCGEN05_MMA<Sp, ASpace, AShift, ScaleInputD>.record_name
+                     );
+
+  dag ScaleInpIns = !if(!eq(ScaleInputD, 1), (ins i64imm:$scale_input_d), (ins));
+  string ScaleInpStr = !if(!eq(ScaleInputD, 1), ", $scale_input_d", "");
+  dag ScaleInpInput = !if(!eq(ScaleInputD, 1), (Intrin i64:$scale_input_d), (Intrin));
+
+  dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
+  dag SparseMetadataIntr = !if(!eq(Sp, 1), (Intrin B32:$spmetadata), (Intrin));
+  string SparseMetadataStr = !if(!eq(Sp, 1), ", [$spmetadata]", "");
+
+  int KindVal = !cond(
+                  !eq(KindStr, "f16"): 0,
+                  !eq(KindStr, "tf32"): 1,
+                  !eq(KindStr, "f8f6f4"): 2,
+                  !eq(KindStr, "i8"): 3,
+                );
+
+  int CollectorUsageVal = !cond(
+    !eq(CollectorUsage, "discard"): 0,
+    !eq(CollectorUsage, "lastuse"): 1,
+    !eq(CollectorUsage, "fill"): 2,
+    !eq(CollectorUsage, "use"): 3
+  );
+
+  string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
+
+  NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
+
+  dag input = !con((ins B32:$dtmem,
+                        ARegClass:$a, ADDR:$b,
+                        B32:$idesc,
+                        B1:$enable_inp_d),
+                        SparseMetadataIns,
+                        ScaleInpIns);
+
+  let InOperandList = input;
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.mma"
+                   # !if(!eq(Sp, 1), ".sp", "")
+                   # ".cta_group::" # CtaGroup
+                   # ".kind::" # KindStr
+                   # ".collector::a::" # CollectorUsage
+                   # !if(!eq(AShift, 1), ".ashift", "")
+                   # " [$dtmem], " # AOperandStr # ", $b"
+                   # SparseMetadataStr
+                   # ", $idesc, $enable_inp_d"
+                   # ScaleInpStr
+                   # ";";
+
+  dag IntrinsicPattern = !con((Intrin i32:$dtmem,
+                               ARegClass:$a, addr:$b,
+                               i32:$idesc,
+                               i1:$enable_inp_d),
+                               SparseMetadataIntr,
+                               ScaleInpInput);
+
+  dag FlagOperands = (Intrin (i32 KindVal), (i32 CtaGroup),
+                             (i32 CollectorUsageVal));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma
+foreach sp = [0, 1] in {
+  foreach space = ["tensor", "shared"] in {
+    foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
+      foreach cta_group = [1, 2] in {
+        foreach collector_usage = ["discard", "lastuse", "fill", "use"] in {
+          foreach scale_input_d = !if(!or(!eq(kind, "f16"),
+                                          !eq(kind, "tf32")), [0, 1], [0]) in {
+            foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
+
+              def : Tcgen05MMAInst<sp, kind, space, cta_group, collector_usage,
+                                    scale_input_d, ashift,
+                                    !if(!eq(scale_input_d, 1),
+                                            [hasTcgen05MMAScaleInputDImm],
+                                            [hasTcgen05Instructions])>;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+class Tcgen05MMADisableOutputLaneTypeProfile<bit Sp, string ASpace,
+                                             int CtaGroup, bit ScaleInputD>:
+        SDTypeProfile<0, 0, []> {
+  int DisableOutputLaneVecSize = !mul(4, CtaGroup);
+
+  list<ValueType> VTs = !listconcat(
+    [i32],                                      // d
+    !if(!eq(ASpace, "tensor"), [i32], [i64]),   // a
+    [i64, i32, i1],                             // b, idesc, enable_inp_d
+    !if(!eq(Sp, 1), [i32], []),                 // spmetadata
+    !if(!eq(ScaleInputD, 1), [i64], []),        // scale_input_d
+    !listsplat(i32, DisableOutputLaneVecSize),  // disable_output_lane
+    [i32, i32]                                  // kind, collector_usage
+  );
+  let Constraints = !foreach(x, !range(!size(VTs)), SDTCisVT<x, VTs[x]>);
+  let NumOperands = !size(Constraints);
+}
+
+class Tcgen05MMADisableOutputLaneSDNode<bit Sp, string ASpace,
+                                        int CtaGroup, bit ScaleInput, bit AShift>:
+        SDNode<"NVPTXISD::TCGEN05_MMA"
+                # !if(!eq(Sp, 1), "_SP", "")
+                # "_" # !toupper(ASpace)
+                # !if(!eq(ScaleInput, 1), "_SCALE_D", "")
+                # "_DISABLE_OUTPUT_LANE_CG" # CtaGroup
+                # !if(!eq(AShift, 1), "_ASHIFT", ""),
+        Tcgen05MMADisableOutputLaneTypeProfile<Sp, ASpace, CtaGroup, ScaleInput>,
+                    [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
+
+class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace,
+                     string Kind, int CtaGroup, string CollectorUsageStr,
+                     bit ScaleInputD, bit AShift,
+                     list<Predicate> PTXPredicates> :
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<PTXPredicates> {
+
+  SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode<Sp, ASpace, CtaGroup,
+                                                    ScaleInputD, AShift>;
+
+
+  dag ScaleInpIns = !if(!eq(ScaleInputD, 1), (ins i64imm:$scale_input_d), (ins));
+  string ScaleInpStr = !if(!eq(ScaleInputD, 1), ", $scale_input_d", "");
+  dag ScaleInpInput = !if(!eq(ScaleInputD, 1), (Opcode i64:$scale_input_d), (Opcode));
+
+  // disable output lane
+  int DisableOutputLaneVecSize = !mul(4, CtaGroup);
+
+  dag DisableOutputLaneIns = !dag(ins,
+                              !listsplat(B32, DisableOutputLaneVecSize),
+                              !foreach(x,
+                                      !range(DisableOutputLaneVecSize),
+                                      "disable_output_lane" # x));
+
+  dag DisableOutputLaneInput = !dag(Opcode,
+                                !listsplat(i32, DisableOutputLaneVecSize),
+                                !foreach(x,
+                                         !range(DisableOutputLaneVecSize),
+                                         "disable_output_lane" # x));
+
+  string DisableOutputLaneStr = "{{" #
+                                  !interleave(
+                                    !foreach(x,
+                                      !range(DisableOutputLaneVecSize),
+                                              "$disable_output_lane" # x),
+                                    ", ")
+                                # "}}";
+
+  dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
+  dag SparseMetadataIntr = !if(!eq(Sp, 1), (Opcode i32:$spmetadata), (Opcode));
+  string SparseMetadataStr = !if(!eq(Sp, 1), ", [$spmetadata]", "");
+
+  int KindVal = !cond(
+                  !eq(Kind, "f16"): 0,
+                  !eq(Kind, "tf32"): 1,
+                  !eq(Kind, "f8f6f4"): 2,
+                  !eq(Kind, "i8"): 3,
+                );
+
+  int CollectorUsage = !cond(
+    !eq(CollectorUsageStr, "discard"): 0,
+    !eq(CollectorUsageStr, "lastuse"): 1,
+    !eq(CollectorUsageStr, "fill"): 2,
+    !eq(CollectorUsageStr, "use"): 3,
+  );
+
+  string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
+
+  NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
+
+  dag InOperandList = !con((ins B32:$dtmem,
+                            ARegClass:$a, B64:$b,
+                            B32:$idesc,
+                            B1:$enable_inp_d),
+                            SparseMetadataIns,
+                            ScaleInpIns,
+                            DisableOutputLaneIns);
+
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.mma"
+                   # !if(!eq(Sp, 1), ".sp", "")
+                   # ".cta_group::" # CtaGroup
+                   # ".kind::" # Kind
+                   # !if(!eq(AShift, 1), ".ashift", "")
+                   # ".collector::a::" # CollectorUsageStr
+                   # " " # "[$dtmem], " # AOperandStr # ", $b"
+                   # SparseMetadataStr
+                   # ", " # "$idesc"
+                   # ", " # DisableOutputLaneStr
+                   # ", $enable_inp_d"
+                   # ScaleInpStr
+                   # ";";
+
+  dag IntrinsicPattern = !con((Opcode i32:$dtmem,
+                               ARegClass:$a, i64:$b,
+                               i32:$idesc,
+                               i1:$enable_inp_d),
+                               SparseMetadataIntr,
+                               ScaleInpInput,
+                               DisableOutputLaneInput);
+
+  dag FlagOperands = (Opcode (i32 KindVal), (i32 CollectorUsage));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma.disable_output_lane
+foreach sp = [0, 1] in {
+  foreach space = ["tensor", "shared"] in {
+    foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
+      foreach cta_group = [1, 2] in {
+        foreach collector_usage = ["fill", "use", "lastuse", "discard"] in {
+          foreach scale_input_d = !if(!or(!eq(kind, "f16"),
+                                          !eq(kind, "tf32")), [0, 1], [0]) in {
+            foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
+              def :
+                Tcgen05MMADisableOutputLaneInst<sp, space, kind, cta_group,
+                                               collector_usage, scale_input_d,
+                                               ashift,
+                                               !if(!eq(scale_input_d, 1),
+                                                    [hasTcgen05MMAScaleInputDImm],
+                                                    [hasTcgen05Instructions])>;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+class Tcgen05MMABlockScaleInst<bit Sp, string ASpace, string KindStr,
+                     int CtaGroup, string ScaleVecSize, string CollectorUsageStr,
+                     Predicate PTXPredicate>:
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<[hasTcgen05Instructions, PTXPredicate]> {
+
+  Intrinsic Intrin = !cast<Intrinsic>(
+                             NVVM_TCGEN05_MMA_BLOCKSCALE<Sp, ASpace, KindStr, ScaleVecSize>.record_name);
+
+  dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
+  dag SparseMetadataIntr = !if(!eq(Sp, 1), (Intrin i32:$spmetadata), (Intrin));
+  string SparseMetadataStr = !if(!eq(Sp, 1), ", [$spmetadata]", "");
+
+  int KindVal = !cond(
+                  !eq(KindStr, "mxf8f6f4") : 0,
+                  !eq(KindStr, "mxf4")     : 1,
+                  !eq(KindStr, "mxf4nvf4") : 2,
+                );
+
+  int CollectorUsage = !cond(
+    !eq(CollectorUsageStr, "discard") : 0,
+    !eq(CollectorUsageStr, "lastuse") : 1,
+    !eq(CollectorUsageStr, "fill")    : 2,
+    !eq(CollectorUsageStr, "use")     : 3,
+  );
+
+  string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
+  NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
+
+  dag input = !con((ins B32:$dtmem, ARegClass:$a, B64:$b,
+                        B32:$idesc, B1:$enable_inp_d),
+                    SparseMetadataIns,
+                    (ins B32:$scale_a,
+                         B32:$scale_b));
+
+  let InOperandList = input;
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.mma"
+                   # !if(!eq(Sp, 1), ".sp", "")
+                   # ".cta_group::" # CtaGroup
+                   # ".kind::" # KindStr
+                   # ".block_scale" # ScaleVecSize
+                   # ".collector::a::" # CollectorUsageStr
+                   # " [$dtmem], " # AOperandStr # ", $b"
+                   # SparseMetadataStr
+                   # ", $idesc, [$scale_a], [$scale_b], $enable_inp_d;";
+
+  dag IntrinsicPattern = !con((Intrin i32:$dtmem,
+                                      ARegClass:$a, i64:$b,
+                                      i32:$idesc,
+                                      i1:$enable_inp_d),
+                               SparseMetadataIntr,
+                               (Intrin i32:$scale_a,
+                                       i32:$scale_b));
+
+  dag FlagOperands = (Intrin (i32 CtaGroup), (i32 CollectorUsage));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma.block_scale
+foreach sp = [0, 1] in {
+  foreach space = ["tensor", "shared"] in {
+    foreach kind = ["mxf8f6f4", "mxf4", "mxf4nvf4"] in {
+      foreach scale_vec_size = ["", ".block16", ".block32"] in {
+        foreach cta_group = [1, 2] in {
+          foreach collector_usage = ["fill", "use", "lastuse", "discard"] in {
+            if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
+              def : Tcgen05MMABlockScaleInst<sp, space, kind, cta_group, scale_vec_size,
+                                             collector_usage,
+                                             !if(!ne(scale_vec_size, ""),
+                                                  hasPTX<88>, hasPTX<86>)>;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+//
+// tcgen05.mma.ws Instructions
+//
+
+class Tcgen05MMAWSInst<bit Sp, string ASpace, string KindStr,
+                       int CollectorBufferB, string CollectorUsageOpStr,
+                       bit HasZeroColMask> :
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<[hasTcgen05Instructions]> {
+
+  Intrinsic Intrin = !cast<Intrinsic>(
+                            NVVM_TCGEN05_MMA_WS<Sp, ASpace, HasZeroColMask>.record_name);
+
+  dag ZeroColMaskIns = !if(!eq(HasZeroColMask, 1),
+                              (ins B64:$zero_col_mask), (ins));
+  string ZeroColMaskStr = !if(!eq(HasZeroColMask, 1), ", $zero_col_mask", "");
+  dag ZeroColMaskIntr = !if(!eq(HasZeroColMask, 1),
+                               (Intrin i64:$zero_col_mask), (Intrin));
+
+  dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
+  dag SparseMetadataIntr = !if(!eq(Sp, 1), (Intrin B32:$spmetadata), (Intrin));
+  string SparseMetadataStr = !if(!eq(Sp, 1), ", [$spmetadata]", "");
+
+  int KindVal = !cond(
+                  !eq(KindStr, "f16")   : 0,
+                  !eq(KindStr, "tf32")  : 1,
+                  !eq(KindStr, "f8f6f4"): 2,
+                  !eq(KindStr, "i8")    : 3,
+                );
+
+  int CollectorUsageOp = !cond(
+    !eq(CollectorUsageOpStr, "discard"): 0,
+    !eq(CollectorUsageOpStr, "lastuse"): 1,
+    !eq(CollectorUsageOpStr, "fill")   : 2,
+    !eq(CollectorUsageOpStr, "use")    : 3,
+  );
+
+  string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
+  NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
+
+  dag input = !con((ins B32:$dtmem,
+                        ARegClass:$a, B64:$b,
+                        B32:$idesc,
+                        B1:$enable_inp_d),
+                        SparseMetadataIns,
+                        ZeroColMaskIns);
+
+  let InOperandList = input;
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.mma.ws"
+                   # !if(!eq(Sp, 1), ".sp", "")
+                   # ".cta_group::1"
+                   # ".kind::" # KindStr
+                   # ".collector::b" # CollectorBufferB
+                   # "::" # CollectorUsageOpStr
+                   # " [$dtmem], " # AOperandStr # ", $b"
+                   # SparseMetadataStr
+                   # ", $idesc, $enable_inp_d"
+                   # ZeroColMaskStr
+                   # ";";
+
+  dag IntrinsicPattern = !con((Intrin i32:$dtmem,
+                                      ARegClass:$a, i64:$b,
+                                      i32:$idesc,
+                                      i1:$enable_inp_d),
+                               SparseMetadataIntr,
+                               ZeroColMaskIntr);
+
+  dag FlagOperands = (Intrin (i32 KindVal), (i32 CollectorBufferB),
+                             (i32 CollectorUsageOp));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma.ws
+foreach sp = [0, 1] in {
+  foreach space = ["shared", "tensor"] in {
+    foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
+      foreach collector_buffer_b = [0, 1, 2, 3] in {
+        foreach collector_usage_op = ["discard", "fill", "use", "lastuse"] in {
+          foreach zero_col_mask = [0, 1] in {
+              def : Tcgen05MMAWSInst<sp, space, kind, collector_buffer_b,
+                                     collector_usage_op, zero_col_mask>;
+          }
+        }
+      }
+    }
+  }
 }

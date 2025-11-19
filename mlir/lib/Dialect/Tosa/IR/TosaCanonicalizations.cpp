@@ -38,7 +38,7 @@ using namespace mlir::tosa;
 //===----------------------------------------------------------------------===//
 
 // Check that the zero point of the tensor and padding operations are aligned.
-bool checkMatchingPadConstAndZp(Value padConst, Value zp) {
+static bool checkMatchingPadConstAndZp(Value padConst, Value zp) {
   // Check that padConst is a constant value and a scalar tensor
   DenseElementsAttr padConstAttr;
   if (!matchPattern(padConst, m_Constant(&padConstAttr)) ||
@@ -76,28 +76,6 @@ template <typename OpTy>
 struct PoolPadFoldAdaptor;
 
 template <>
-struct PoolPadFoldAdaptor<tosa::AvgPool2dOp> {
-  using OpTy = tosa::AvgPool2dOp;
-  static bool checkKernelCompliance(OpTy op, const ArrayRef<int64_t> newPad) {
-    const llvm::ArrayRef<int64_t> kernel = op.getKernel();
-    if (newPad[2] >= kernel[1] || newPad[3] >= kernel[1] ||
-        newPad[0] >= kernel[0] || newPad[1] >= kernel[0])
-      return false;
-    return true;
-  }
-  static bool checkPadConstCompliance(OpTy op, Value padConst) {
-    return checkMatchingPadConstAndZp(padConst, op.getInputZp());
-  }
-  static void replaceOpWithNewPad(PatternRewriter &rewriter, OpTy op,
-                                  Value padInput, ArrayRef<int64_t> newPad) {
-    rewriter.replaceOpWithNewOp<tosa::AvgPool2dOp>(
-        op, op.getType(), padInput, op.getInputZp(), op.getOutputZp(),
-        op.getKernel(), op.getStride(), rewriter.getDenseI64ArrayAttr(newPad),
-        op.getAccType());
-  }
-};
-
-template <>
 struct PoolPadFoldAdaptor<tosa::MaxPool2dOp> {
   using OpTy = tosa::MaxPool2dOp;
   static bool checkKernelCompliance(OpTy op, const ArrayRef<int64_t> newPad) {
@@ -122,8 +100,9 @@ struct PoolPadFoldAdaptor<tosa::MaxPool2dOp> {
       const APFloat lowestVal =
           APFloat::getLargest(padConstVal.getSemantics(), true);
       return padConstVal == lowestVal;
-    } else if (auto padConstIntAttr =
-                   mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
+    }
+    if (auto padConstIntAttr =
+            mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
       const APInt padConstVal = *padConstIntAttr.begin();
       const unsigned int bitWidth = padConstVal.getBitWidth();
       const APInt lowestVal =
@@ -243,13 +222,6 @@ struct FoldPadToTensorOp : public OpRewritePattern<OpTy> {
   }
 };
 } // namespace
-
-void AvgPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                              MLIRContext *context) {
-  results.add<FoldPadToTensorOp<tosa::AvgPool2dOp,
-                                PoolPadFoldAdaptor<tosa::AvgPool2dOp>>>(
-      context);
-}
 
 void Conv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
@@ -555,7 +527,8 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     // Check we have a valid NaN propagation combination.
     const auto opNanMode = op.getNanMode();
     const auto clampNanMode = clampOp.getNanMode();
-    if (opNanMode == "IGNORE" && clampNanMode == "PROPAGATE")
+    if (opNanMode == NanPropagationMode::IGNORE &&
+        clampNanMode == NanPropagationMode::PROPAGATE)
       return failure();
 
     auto maxValAttr = op.getMaxValAttr();
@@ -636,10 +609,16 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
       }
     }
 
+    auto newMode = (opNanMode != clampNanMode)
+                       ? tosa::NanPropagationMode::IGNORE
+                       : opNanMode;
+
+    auto newModeAttr =
+        NanPropagationModeAttr::get(rewriter.getContext(), newMode);
+
     rewriter.replaceOpWithNewOp<tosa::ClampOp>(
         op, op.getType(), clampOp.getInput(), newMinValAttr, newMaxValAttr,
-        rewriter.getStringAttr((opNanMode != clampNanMode) ? "IGNORE"
-                                                           : opNanMode));
+        newModeAttr);
     return success();
   }
 };
@@ -910,8 +889,9 @@ void SliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 template <typename IntFolder, typename FloatFolder>
-DenseElementsAttr binaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
-                               RankedTensorType returnTy) {
+static DenseElementsAttr binaryFolder(DenseElementsAttr lhs,
+                                      DenseElementsAttr rhs,
+                                      RankedTensorType returnTy) {
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
     auto lETy = llvm::cast<ShapedType>(lhs.getType()).getElementType();
     auto rETy = llvm::cast<ShapedType>(rhs.getType()).getElementType();
@@ -993,8 +973,12 @@ OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
       !outputTy.hasStaticShape())
     return {};
 
-  if (inputTy.getDimSize(getAxis()) == 1)
-    return DenseElementsAttr::get(outputTy, 0);
+  const Type outputElementTy = getElementTypeOrSelf(outputTy);
+  if (inputTy.getDimSize(getAxis()) == 1 && outputElementTy.isInteger()) {
+    const auto outputElemIntTy = cast<IntegerType>(outputElementTy);
+    const APInt zero = APInt::getZero(outputElemIntTy.getWidth());
+    return DenseElementsAttr::get(outputTy, zero);
+  }
 
   return {};
 }
@@ -1120,13 +1104,14 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   }
 
   if (rhsTy == resultTy) {
-    if (isSplatZero(resultETy, lhsAttr))
+    if (isSplatZero(resultETy, lhsAttr) && resultTy.hasStaticShape())
+      // constant values can only be resized if resulting type is static
       return lhsAttr.resizeSplat(resultTy);
     if (isSplatOne(resultETy, lhsAttr, shift))
       return rhs;
   }
   if (lhsTy == resultTy) {
-    if (isSplatZero(resultETy, rhsAttr))
+    if (isSplatZero(resultETy, rhsAttr) && resultTy.hasStaticShape())
       return rhsAttr.resizeSplat(resultTy);
     if (isSplatOne(resultETy, rhsAttr, shift))
       return lhs;
@@ -1551,26 +1536,6 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return getInput1();
-}
-
-OpFoldResult tosa::LogOp::fold(FoldAdaptor adaptor) {
-  auto input = getInput1();
-  // Element-wise log(exp(x)) = x
-  if (auto op = input.getDefiningOp<tosa::ExpOp>()) {
-    return op.getInput1();
-  }
-
-  return {};
-}
-
-OpFoldResult tosa::ExpOp::fold(FoldAdaptor adaptor) {
-  auto input = getInput1();
-  // Element-wise exp(log(x)) = x
-  if (auto op = input.getDefiningOp<tosa::LogOp>()) {
-    return op.getInput1();
-  }
-
-  return {};
 }
 
 OpFoldResult tosa::NegateOp::fold(FoldAdaptor adaptor) {

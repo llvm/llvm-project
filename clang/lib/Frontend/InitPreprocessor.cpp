@@ -399,7 +399,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HLSL_202y",
                         Twine((unsigned)LangOptions::HLSLLangStd::HLSL_202y));
 
-    if (LangOpts.NativeHalfType)
+    if (LangOpts.NativeHalfType && LangOpts.NativeInt16Type)
       Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
 
     // Shader target information
@@ -459,43 +459,12 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //      value is, are implementation-defined.
   // (Removed in C++20.)
   if (!LangOpts.CPlusPlus) {
-    if (LangOpts.C2y)
-      Builder.defineMacro("__STDC_VERSION__", "202400L");
-    else if (LangOpts.C23)
-      Builder.defineMacro("__STDC_VERSION__", "202311L");
-    else if (LangOpts.C17)
-      Builder.defineMacro("__STDC_VERSION__", "201710L");
-    else if (LangOpts.C11)
-      Builder.defineMacro("__STDC_VERSION__", "201112L");
-    else if (LangOpts.C99)
-      Builder.defineMacro("__STDC_VERSION__", "199901L");
-    else if (!LangOpts.GNUMode && LangOpts.Digraphs)
-      Builder.defineMacro("__STDC_VERSION__", "199409L");
+    if (std::optional<uint32_t> Lang = LangOpts.getCLangStd())
+      Builder.defineMacro("__STDC_VERSION__", Twine(*Lang) + "L");
   } else {
     //   -- __cplusplus
-    if (LangOpts.CPlusPlus26)
-      // FIXME: Use correct value for C++26.
-      Builder.defineMacro("__cplusplus", "202400L");
-    else if (LangOpts.CPlusPlus23)
-      Builder.defineMacro("__cplusplus", "202302L");
-    //      [C++20] The integer literal 202002L.
-    else if (LangOpts.CPlusPlus20)
-      Builder.defineMacro("__cplusplus", "202002L");
-    //      [C++17] The integer literal 201703L.
-    else if (LangOpts.CPlusPlus17)
-      Builder.defineMacro("__cplusplus", "201703L");
-    //      [C++14] The name __cplusplus is defined to the value 201402L when
-    //      compiling a C++ translation unit.
-    else if (LangOpts.CPlusPlus14)
-      Builder.defineMacro("__cplusplus", "201402L");
-    //      [C++11] The name __cplusplus is defined to the value 201103L when
-    //      compiling a C++ translation unit.
-    else if (LangOpts.CPlusPlus11)
-      Builder.defineMacro("__cplusplus", "201103L");
-    //      [C++03] The name __cplusplus is defined to the value 199711L when
-    //      compiling a C++ translation unit.
-    else
-      Builder.defineMacro("__cplusplus", "199711L");
+    Builder.defineMacro("__cplusplus",
+                        Twine(*LangOpts.getCPlusPlusLangStd()) + "L");
 
     //   -- __STDCPP_DEFAULT_NEW_ALIGNMENT__
     //      [C++17] An integer literal of type std::size_t whose value is the
@@ -616,6 +585,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_WORKGROUP", "3");
     Builder.defineMacro("__HIP_MEMORY_SCOPE_AGENT", "4");
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
+    Builder.defineMacro("__HIP_MEMORY_SCOPE_CLUSTER", "6");
     if (LangOpts.HIPStdPar) {
       Builder.defineMacro("__HIPSTDPAR__");
       if (LangOpts.HIPStdParInterposeAlloc) {
@@ -742,7 +712,10 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_impl_coroutine", "201902L");
     Builder.defineMacro("__cpp_designated_initializers", "201707L");
     Builder.defineMacro("__cpp_impl_three_way_comparison", "201907L");
-    //Builder.defineMacro("__cpp_modules", "201907L");
+    // Intentionally to set __cpp_modules to 1.
+    // See https://github.com/llvm/llvm-project/issues/71364 for details.
+    // Builder.defineMacro("__cpp_modules", "201907L");
+    Builder.defineMacro("__cpp_modules", "1");
     Builder.defineMacro("__cpp_using_enum", "201907L");
   }
   // C++23 features.
@@ -766,7 +739,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_pack_indexing", "202311L");
   Builder.defineMacro("__cpp_deleted_function", "202403L");
   Builder.defineMacro("__cpp_variadic_friend", "202403L");
-  // Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
+  Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
@@ -901,6 +874,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__MEMORY_SCOPE_WRKGRP", "2");
   Builder.defineMacro("__MEMORY_SCOPE_WVFRNT", "3");
   Builder.defineMacro("__MEMORY_SCOPE_SINGLE", "4");
+  Builder.defineMacro("__MEMORY_SCOPE_CLUSTR", "5");
 
   // Define macros for the OpenCL memory scope.
   // The values should match AtomicScopeOpenCLModel::ID enum.
@@ -1519,6 +1493,17 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
+  if (LangOpts.Sanitize.hasOneOf(SanitizerKind::Address |
+                                 SanitizerKind::KernelAddress))
+    Builder.defineMacro("__SANITIZE_ADDRESS__");
+  if (LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
+                                 SanitizerKind::KernelHWAddress))
+    Builder.defineMacro("__SANITIZE_HWADDRESS__");
+  if (LangOpts.Sanitize.has(SanitizerKind::Thread))
+    Builder.defineMacro("__SANITIZE_THREAD__");
+  if (LangOpts.Sanitize.has(SanitizerKind::AllocToken))
+    Builder.defineMacro("__SANITIZE_ALLOC_TOKEN__");
+
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {
     const llvm::Triple &Triple = TI.getTriple();
@@ -1527,6 +1512,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #include "clang/Basic/TargetOSMacros.def"
 #undef TARGET_OS
   }
+
+  if (LangOpts.PointerAuthIntrinsics)
+    Builder.defineMacro("__PTRAUTH__");
+
+  if (CGOpts.Dwarf2CFIAsm)
+    Builder.defineMacro("__GCC_HAVE_DWARF2_CFI_ASM");
 
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
@@ -1553,6 +1544,9 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   PredefineBuffer.reserve(4080);
   llvm::raw_string_ostream Predefines(PredefineBuffer);
   MacroBuilder Builder(Predefines);
+
+  // Ensure that the initial value of __COUNTER__ is hooked up.
+  PP.setCounterValue(InitOpts.InitialCounterValue);
 
   // Emit line markers for various builtin sections of the file. The 3 here
   // marks <built-in> as being a system header, which suppresses warnings when

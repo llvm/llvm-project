@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name:            select_cfb_vec512
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: vecr, preferred-register: '', flags: [  ] }
+  - { id: 1, class: vecr, preferred-register: '', flags: [  ] }
+body:             |
+  bb.0:
+    liveins: $zmm0
+
+    ; CHECK-LABEL: name:            select_cfb_vec512
+    ; CHECK: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
+    ; CHECK-NOT: G_CONSTANT_FOLD_BARRIER
+    ; CHECK-NEXT: $zmm1 = COPY [[COPY]]
+    ; CHECK-NEXT: RET 0, implicit $zmm1
+    %0:vecr(<8 x s64>) = COPY $zmm0
+    %1:vecr(<8 x s64>) = G_CONSTANT_FOLD_BARRIER %0
+    $zmm1 = COPY %1(<8 x s64>)
+    RET 0, implicit $zmm1
+...

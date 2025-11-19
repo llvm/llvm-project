@@ -1,0 +1,230 @@
+=================
+Allocation Tokens
+=================
+
+.. contents::
+   :local:
+
+Introduction
+============
+
+Clang provides support for allocation tokens to enable allocator-level heap
+organization strategies. Clang assigns mode-dependent token IDs to allocation
+calls; the runtime behavior depends entirely on the implementation of a
+compatible memory allocator.
+
+Possible allocator strategies include:
+
+* **Security Hardening**: Placing allocations into separate, isolated heap
+  partitions. For example, separating pointer-containing types from raw data
+  can mitigate exploits that rely on overflowing a primitive buffer to corrupt
+  object metadata.
+
+* **Memory Layout Optimization**: Grouping related allocations to improve data
+  locality and cache utilization.
+
+* **Custom Allocation Policies**: Applying different management strategies to
+  different partitions.
+
+Token Assignment Mode
+=====================
+
+The default mode to calculate tokens is:
+
+* ``typehashpointersplit``: This mode assigns a token ID based on the hash of
+  the allocated type's name, where the top half ID-space is reserved for types
+  that contain pointers and the bottom half for types that do not contain
+  pointers.
+
+Other token ID assignment modes are supported, but they may be subject to
+change or removal. These may (experimentally) be selected with ``-Xclang
+-falloc-token-mode=<mode>``:
+
+* ``typehash``: This mode assigns a token ID based on the hash of the allocated
+  type's name.
+
+* ``random``: This mode assigns a statically-determined random token ID to each
+  allocation site.
+
+* ``increment``: This mode assigns a simple, incrementally increasing token ID
+  to each allocation site.
+
+The following command-line options affect generated token IDs:
+
+* ``-falloc-token-max=<N>``
+    Configures the maximum number of token IDs. By default the number of tokens
+    is bounded by ``SIZE_MAX``.
+
+Querying Token IDs with ``__builtin_infer_alloc_token``
+=======================================================
+
+For use cases where the token ID must be known at compile time, Clang provides
+a builtin function:
+
+.. code-block:: c
+
+    size_t __builtin_infer_alloc_token(<args>, ...);
+
+This builtin returns the token ID inferred from its argument expressions, which
+mirror arguments normally passed to any allocation function. The argument
+expressions are **unevaluated**, so it can be used with expressions that would
+have side effects without any runtime impact.
+
+For example, it can be used as follows:
+
+.. code-block:: c
+
+    struct MyType { ... };
+    void *__partition_alloc(size_t size, size_t partition);
+    #define partition_alloc(...) __partition_alloc(__VA_ARGS__, __builtin_infer_alloc_token(__VA_ARGS__))
+
+    void foo(void) {
+        MyType *x = partition_alloc(sizeof(*x));
+    }
+
+Allocation Token Instrumentation
+================================
+
+To enable instrumentation of allocation functions, code can be compiled with
+the ``-fsanitize=alloc-token`` flag:
+
+.. code-block:: console
+
+    % clang++ -fsanitize=alloc-token example.cc
+
+The instrumentation transforms allocation calls to include a token ID. For
+example:
+
+.. code-block:: c
+
+    // Original:
+    ptr = malloc(size);
+
+    // Instrumented:
+    ptr = __alloc_token_malloc(size, <token id>);
+
+Runtime Interface
+-----------------
+
+A compatible runtime must be provided that implements the token-enabled
+allocation functions. The instrumentation generates calls to functions that
+take a final ``size_t token_id`` argument.
+
+.. code-block:: c
+
+    // C standard library functions
+    void *__alloc_token_malloc(size_t size, size_t token_id);
+    void *__alloc_token_calloc(size_t count, size_t size, size_t token_id);
+    void *__alloc_token_realloc(void *ptr, size_t size, size_t token_id);
+    // ...
+
+    // C++ operators (mangled names)
+    // operator new(size_t, size_t)
+    void *__alloc_token__Znwm(size_t size, size_t token_id);
+    // operator new[](size_t, size_t)
+    void *__alloc_token__Znam(size_t size, size_t token_id);
+    // ... other variants like nothrow, etc., are also instrumented.
+
+Fast ABI
+--------
+
+An alternative ABI can be enabled with ``-fsanitize-alloc-token-fast-abi``,
+which encodes the token ID in the allocation function name.
+
+.. code-block:: c
+
+    void *__alloc_token_0_malloc(size_t size);
+    void *__alloc_token_1_malloc(size_t size);
+    void *__alloc_token_2_malloc(size_t size);
+    ...
+    void *__alloc_token_0_Znwm(size_t size);
+    void *__alloc_token_1_Znwm(size_t size);
+    void *__alloc_token_2_Znwm(size_t size);
+    ...
+
+This ABI provides a more efficient alternative where
+``-falloc-token-max`` is small.
+
+Instrumenting Non-Standard Allocation Functions
+-----------------------------------------------
+
+By default, AllocToken only instruments standard library allocation functions.
+This simplifies adoption, as a compatible allocator only needs to provide
+token-enabled variants for a well-defined set of standard functions.
+
+To extend instrumentation to custom allocation functions, enable broader
+coverage with ``-fsanitize-alloc-token-extended``. Such functions require being
+marked with the `malloc
+<https://clang.llvm.org/docs/AttributeReference.html#malloc>`_ or `alloc_size
+<https://clang.llvm.org/docs/AttributeReference.html#alloc-size>`_ attributes
+(or a combination).
+
+For example:
+
+.. code-block:: c
+
+    void *custom_malloc(size_t size) __attribute__((malloc));
+    void *my_malloc(size_t size) __attribute__((alloc_size(1)));
+
+    // Original:
+    ptr1 = custom_malloc(size);
+    ptr2 = my_malloc(size);
+
+    // Instrumented:
+    ptr1 = __alloc_token_custom_malloc(size, token_id);
+    ptr2 = __alloc_token_my_malloc(size, token_id);
+
+Disabling Instrumentation
+-------------------------
+
+To exclude specific functions from instrumentation, you can use the
+``no_sanitize("alloc-token")`` attribute:
+
+.. code-block:: c
+
+    __attribute__((no_sanitize("alloc-token")))
+    void* custom_allocator(size_t size) {
+        return malloc(size);  // Uses original malloc
+    }
+
+Note: Independent of any given allocator support, the instrumentation aims to
+remain performance neutral. As such, ``no_sanitize("alloc-token")``
+functions may be inlined into instrumented functions and vice-versa. If
+correctness is affected, such functions should explicitly be marked
+``noinline``.
+
+The ``__attribute__((disable_sanitizer_instrumentation))`` is also supported to
+disable this and other sanitizer instrumentations.
+
+Suppressions File (Ignorelist)
+------------------------------
+
+AllocToken respects the ``src`` and ``fun`` entity types in the
+:doc:`SanitizerSpecialCaseList`, which can be used to omit specified source
+files or functions from instrumentation.
+
+.. code-block:: bash
+
+    [alloc-token]
+    # Exclude specific source files
+    src:third_party/allocator.c
+    # Exclude function name patterns
+    fun:*custom_malloc*
+    fun:LowLevel::*
+
+.. code-block:: console
+
+    % clang++ -fsanitize=alloc-token -fsanitize-ignorelist=my_ignorelist.txt example.cc
+
+Conditional Compilation with ``__SANITIZE_ALLOC_TOKEN__``
+-----------------------------------------------------------
+
+In some cases, one may need to execute different code depending on whether
+AllocToken instrumentation is enabled. The ``__SANITIZE_ALLOC_TOKEN__`` macro
+can be used for this purpose.
+
+.. code-block:: c
+
+    #ifdef __SANITIZE_ALLOC_TOKEN__
+    // Code specific to -fsanitize=alloc-token builds
+    #endif

@@ -69,7 +69,7 @@ define external i32 @scalar_vulkan_buffer_load() {
 ; CHECK-NEXT: OpLabel
 entry:
 ; CHECK: [[handle:%[0-9]+]] = OpCopyObject [[ScalarBlock_ptr]] [[ScalarBlock_var]]
-  %handle = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str.scalarblock)
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str.scalarblock)
 
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_int_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %handle, i32 1)
@@ -117,7 +117,7 @@ define external %struct.S @vulkan_buffer_load() {
 ; CHECK-NEXT: OpLabel
 entry:
 ; CHECK: [[handle:%[0-9]+]] = OpCopyObject [[buffer_ptr]] [[buffer_var]]
-  %handle = tail call target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str.buffervar)
+  %handle = tail call target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str.buffervar)
 
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_S_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) %handle, i32 1)
@@ -138,7 +138,7 @@ define external %struct.S @array_of_vulkan_buffers_load() {
 entry:
 ; CHECK: [[h:%[0-9]+]] = OpAccessChain [[buffer_ptr]] [[array_buffer_var]] [[one]]
 ; CHECK: [[handle:%[0-9]+]] = OpCopyObject [[buffer_ptr]] [[h]]
-  %handle = tail call target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 10, i32 1, i1 false, ptr nonnull @.str.arraybuffervar)
+  %handle = tail call target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 10, i32 1, ptr nonnull @.str.arraybuffervar)
 
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_S_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) %handle, i32 1)

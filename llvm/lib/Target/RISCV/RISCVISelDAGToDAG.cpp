@@ -18,6 +18,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -370,8 +371,8 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked,
   RISCVVType::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
   unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
   if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
-    report_fatal_error("The V extension does not support EEW=64 for index "
-                       "values when XLEN=32");
+    reportFatalUsageError("The V extension does not support EEW=64 for index "
+                          "values when XLEN=32");
   }
   const RISCV::VLXSEGPseudo *P = RISCV::getVLXSEGPseudo(
       NF, IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
@@ -443,8 +444,8 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
   RISCVVType::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
   unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
   if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
-    report_fatal_error("The V extension does not support EEW=64 for index "
-                       "values when XLEN=32");
+    reportFatalUsageError("The V extension does not support EEW=64 for index "
+                          "values when XLEN=32");
   }
   const RISCV::VSXSEGPseudo *P = RISCV::getVSXSEGPseudo(
       NF, IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
@@ -513,6 +514,44 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
 
   ReplaceNode(Node,
               CurDAG->getMachineNode(Opcode, DL, XLenVT, VLOperand, VTypeIOp));
+}
+
+void RISCVDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
+  if (!Subtarget->hasVendorXSfmmbase())
+    return;
+
+  assert(Node->getOpcode() == ISD::INTRINSIC_WO_CHAIN && "Unexpected opcode");
+
+  SDLoc DL(Node);
+  MVT XLenVT = Subtarget->getXLenVT();
+
+  unsigned IntNo = Node->getConstantOperandVal(0);
+
+  assert((IntNo == Intrinsic::riscv_sf_vsettnt ||
+          IntNo == Intrinsic::riscv_sf_vsettm ||
+          IntNo == Intrinsic::riscv_sf_vsettk) &&
+         "Unexpected XSfmm vset intrinsic");
+
+  unsigned SEW = RISCVVType::decodeVSEW(Node->getConstantOperandVal(2));
+  unsigned Widen = RISCVVType::decodeTWiden(Node->getConstantOperandVal(3));
+  unsigned PseudoOpCode =
+      IntNo == Intrinsic::riscv_sf_vsettnt  ? RISCV::PseudoSF_VSETTNT
+      : IntNo == Intrinsic::riscv_sf_vsettm ? RISCV::PseudoSF_VSETTM
+                                            : RISCV::PseudoSF_VSETTK;
+
+  if (IntNo == Intrinsic::riscv_sf_vsettnt) {
+    unsigned VTypeI = RISCVVType::encodeXSfmmVType(SEW, Widen, 0);
+    SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
+
+    ReplaceNode(Node, CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
+                                             Node->getOperand(1), VTypeIOp));
+  } else {
+    SDValue Log2SEW = CurDAG->getTargetConstant(Log2_32(SEW), DL, XLenVT);
+    SDValue TWiden = CurDAG->getTargetConstant(Widen, DL, XLenVT);
+    ReplaceNode(Node,
+                CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
+                                       Node->getOperand(1), Log2SEW, TWiden));
+  }
 }
 
 bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
@@ -674,49 +713,6 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   }
 
   return false;
-}
-
-bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
-  // Supported only in Xqcibm for now.
-  if (!Subtarget->hasVendorXqcibm())
-    return false;
-
-  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
-  if (!N1C)
-    return false;
-
-  int32_t C1 = N1C->getSExtValue();
-  if (!isShiftedMask_32(C1) || isInt<12>(C1))
-    return false;
-
-  // INSBI will clobber the input register in N0. Bail out if we need a copy to
-  // preserve this value.
-  SDValue N0 = Node->getOperand(0);
-  if (!N0.hasOneUse())
-    return false;
-
-  // If C1 is a shifted mask (but can't be formed as an ORI),
-  // use a bitfield insert of -1.
-  // Transform (or x, C1)
-  //        -> (qc.insbi x, -1, width, shift)
-  const unsigned Leading = llvm::countl_zero((uint32_t)C1);
-  const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
-  const unsigned Width = 32 - Leading - Trailing;
-
-  // If Zbs is enabled and it is a single bit set we can use BSETI which
-  // can be compressed to C_BSETI when Xqcibm in enabled.
-  if (Width == 1 && Subtarget->hasStdExtZbs())
-    return false;
-
-  SDLoc DL(Node);
-  MVT VT = Node->getSimpleValueType(0);
-
-  SDValue Ops[] = {N0, CurDAG->getSignedTargetConstant(-1, DL, VT),
-                   CurDAG->getTargetConstant(Width, DL, VT),
-                   CurDAG->getTargetConstant(Trailing, DL, VT)};
-  SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
-  ReplaceNode(Node, BitIns);
-  return true;
 }
 
 bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
@@ -889,6 +885,11 @@ bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
   return true;
 }
 
+static Register getTileReg(uint64_t TileNum) {
+  assert(TileNum <= 15 && "Invalid tile number");
+  return RISCV::T0 + TileNum;
+}
+
 void RISCVDAGToDAGISel::selectSF_VC_X_SE(SDNode *Node) {
   if (!Subtarget->hasVInstructions())
     return;
@@ -990,6 +991,18 @@ static unsigned getSegInstNF(unsigned Intrinsic) {
   }
 }
 
+static bool isApplicableToPLI(int Val) {
+  // Check if the immediate is packed i8 or i10
+  int16_t Bit31To16 = Val >> 16;
+  int16_t Bit15To0 = Val;
+  int8_t Bit15To8 = Bit15To0 >> 8;
+  int8_t Bit7To0 = Val;
+  if (Bit31To16 != Bit15To0)
+    return false;
+
+  return isInt<10>(Bit31To16) || Bit15To8 == Bit7To0;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1005,7 +1018,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  bool HasBitTest = Subtarget->hasStdExtZbs() || Subtarget->hasVendorXTHeadBs();
+  bool HasBitTest = Subtarget->hasBEXTILike();
 
   switch (Opcode) {
   case ISD::Constant: {
@@ -1032,6 +1045,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // sign extending bit 32.
     if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64<32>(Imm);
+
+    if (Subtarget->enablePExtCodeGen() && isApplicableToPLI(Imm) &&
+        hasAllWUsers(Node)) {
+      // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
+      // can simply copy lower 32 bits to higher 32 bits to make it able to
+      // rematerialize to PLI_B or PLI_H
+      Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
+    }
 
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
     return;
@@ -1337,9 +1358,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::OR: {
-    if (trySignedBitfieldInsertInMask(Node))
-      return;
-
     if (tryShrinkShlLogicImm(Node))
       return;
 
@@ -1644,7 +1662,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // available.
     // Transform (and x, C1)
     //        -> (<bfextract> x, msb, lsb)
-    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue())) {
+    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue()) &&
+        !(C1 == 0xffff && Subtarget->hasStdExtZbb()) &&
+        !(C1 == 0xffffffff && Subtarget->hasStdExtZba())) {
       const unsigned Msb = llvm::bit_width(C1) - 1;
       if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
         return;
@@ -2078,6 +2098,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vsetvli:
     case Intrinsic::riscv_vsetvlimax:
       return selectVSETVLI(Node);
+    case Intrinsic::riscv_sf_vsettnt:
+    case Intrinsic::riscv_sf_vsettm:
+    case Intrinsic::riscv_sf_vsettk:
+      return selectXSfmmVSET(Node);
     }
     break;
   }
@@ -2219,8 +2243,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       RISCVVType::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
       unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
       if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
-        report_fatal_error("The V extension does not support EEW=64 for index "
-                           "values when XLEN=32");
+        reportFatalUsageError("The V extension does not support EEW=64 for "
+                              "index values when XLEN=32");
       }
       const RISCV::VLX_VSXPseudo *P = RISCV::getVLXPseudo(
           IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
@@ -2453,8 +2477,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       RISCVVType::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
       unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
       if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
-        report_fatal_error("The V extension does not support EEW=64 for index "
-                           "values when XLEN=32");
+        reportFatalUsageError("The V extension does not support EEW=64 for "
+                              "index values when XLEN=32");
       }
       const RISCV::VLX_VSXPseudo *P = RISCV::getVSXPseudo(
           IsMasked, IsOrdered, IndexLog2EEW,
@@ -2501,6 +2525,142 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_sf_vc_i_se:
       selectSF_VC_X_SE(Node);
       return;
+    case Intrinsic::riscv_sf_vlte8:
+    case Intrinsic::riscv_sf_vlte16:
+    case Intrinsic::riscv_sf_vlte32:
+    case Intrinsic::riscv_sf_vlte64: {
+      unsigned Log2SEW;
+      unsigned PseudoInst;
+      switch (IntNo) {
+      case Intrinsic::riscv_sf_vlte8:
+        PseudoInst = RISCV::PseudoSF_VLTE8;
+        Log2SEW = 3;
+        break;
+      case Intrinsic::riscv_sf_vlte16:
+        PseudoInst = RISCV::PseudoSF_VLTE16;
+        Log2SEW = 4;
+        break;
+      case Intrinsic::riscv_sf_vlte32:
+        PseudoInst = RISCV::PseudoSF_VLTE32;
+        Log2SEW = 5;
+        break;
+      case Intrinsic::riscv_sf_vlte64:
+        PseudoInst = RISCV::PseudoSF_VLTE64;
+        Log2SEW = 6;
+        break;
+      }
+
+      SDValue SEWOp = CurDAG->getTargetConstant(Log2SEW, DL, XLenVT);
+      SDValue TWidenOp = CurDAG->getTargetConstant(1, DL, XLenVT);
+      SDValue Operands[] = {Node->getOperand(2),
+                            Node->getOperand(3),
+                            Node->getOperand(4),
+                            SEWOp,
+                            TWidenOp,
+                            Node->getOperand(0)};
+
+      MachineSDNode *TileLoad =
+          CurDAG->getMachineNode(PseudoInst, DL, Node->getVTList(), Operands);
+      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
+        CurDAG->setNodeMemRefs(TileLoad, {MemOp->getMemOperand()});
+
+      ReplaceNode(Node, TileLoad);
+      return;
+    }
+    case Intrinsic::riscv_sf_mm_s_s:
+    case Intrinsic::riscv_sf_mm_s_u:
+    case Intrinsic::riscv_sf_mm_u_s:
+    case Intrinsic::riscv_sf_mm_u_u:
+    case Intrinsic::riscv_sf_mm_e5m2_e5m2:
+    case Intrinsic::riscv_sf_mm_e5m2_e4m3:
+    case Intrinsic::riscv_sf_mm_e4m3_e5m2:
+    case Intrinsic::riscv_sf_mm_e4m3_e4m3:
+    case Intrinsic::riscv_sf_mm_f_f: {
+      bool HasFRM = false;
+      unsigned PseudoInst;
+      switch (IntNo) {
+      case Intrinsic::riscv_sf_mm_s_s:
+        PseudoInst = RISCV::PseudoSF_MM_S_S;
+        break;
+      case Intrinsic::riscv_sf_mm_s_u:
+        PseudoInst = RISCV::PseudoSF_MM_S_U;
+        break;
+      case Intrinsic::riscv_sf_mm_u_s:
+        PseudoInst = RISCV::PseudoSF_MM_U_S;
+        break;
+      case Intrinsic::riscv_sf_mm_u_u:
+        PseudoInst = RISCV::PseudoSF_MM_U_U;
+        break;
+      case Intrinsic::riscv_sf_mm_e5m2_e5m2:
+        PseudoInst = RISCV::PseudoSF_MM_E5M2_E5M2;
+        HasFRM = true;
+        break;
+      case Intrinsic::riscv_sf_mm_e5m2_e4m3:
+        PseudoInst = RISCV::PseudoSF_MM_E5M2_E4M3;
+        HasFRM = true;
+        break;
+      case Intrinsic::riscv_sf_mm_e4m3_e5m2:
+        PseudoInst = RISCV::PseudoSF_MM_E4M3_E5M2;
+        HasFRM = true;
+        break;
+      case Intrinsic::riscv_sf_mm_e4m3_e4m3:
+        PseudoInst = RISCV::PseudoSF_MM_E4M3_E4M3;
+        HasFRM = true;
+        break;
+      case Intrinsic::riscv_sf_mm_f_f:
+        if (Node->getOperand(3).getValueType().getScalarType() == MVT::bf16)
+          PseudoInst = RISCV::PseudoSF_MM_F_F_ALT;
+        else
+          PseudoInst = RISCV::PseudoSF_MM_F_F;
+        HasFRM = true;
+        break;
+      }
+      uint64_t TileNum = Node->getConstantOperandVal(2);
+      SDValue Op1 = Node->getOperand(3);
+      SDValue Op2 = Node->getOperand(4);
+      MVT VT = Op1->getSimpleValueType(0);
+      unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
+      SDValue TmOp = Node->getOperand(5);
+      SDValue TnOp = Node->getOperand(6);
+      SDValue TkOp = Node->getOperand(7);
+      SDValue TWidenOp = Node->getOperand(8);
+      SDValue Chain = Node->getOperand(0);
+
+      // sf.mm.f.f with sew=32, twiden=2 is invalid
+      if (IntNo == Intrinsic::riscv_sf_mm_f_f && Log2SEW == 5 &&
+          TWidenOp->getAsZExtVal() == 2)
+        reportFatalUsageError("sf.mm.f.f doesn't support (sew=32, twiden=2)");
+
+      SmallVector<SDValue, 10> Operands(
+          {CurDAG->getRegister(getTileReg(TileNum), XLenVT), Op1, Op2});
+      if (HasFRM)
+        Operands.push_back(
+            CurDAG->getTargetConstant(RISCVFPRndMode::DYN, DL, XLenVT));
+      Operands.append({TmOp, TnOp, TkOp,
+                       CurDAG->getTargetConstant(Log2SEW, DL, XLenVT), TWidenOp,
+                       Chain});
+
+      auto *NewNode =
+          CurDAG->getMachineNode(PseudoInst, DL, Node->getVTList(), Operands);
+
+      ReplaceNode(Node, NewNode);
+      return;
+    }
+    case Intrinsic::riscv_sf_vtzero_t: {
+      uint64_t TileNum = Node->getConstantOperandVal(2);
+      SDValue Tm = Node->getOperand(3);
+      SDValue Tn = Node->getOperand(4);
+      SDValue Log2SEW = Node->getOperand(5);
+      SDValue TWiden = Node->getOperand(6);
+      SDValue Chain = Node->getOperand(0);
+      auto *NewNode = CurDAG->getMachineNode(
+          RISCV::PseudoSF_VTZERO_T, DL, Node->getVTList(),
+          {CurDAG->getRegister(getTileReg(TileNum), XLenVT), Tm, Tn, Log2SEW,
+           TWiden, Chain});
+
+      ReplaceNode(Node, NewNode);
+      return;
+    }
     }
     break;
   }
@@ -2514,8 +2674,33 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
+    if (Subtarget->enablePExtCodeGen()) {
+      bool Is32BitCast =
+          (VT == MVT::i32 && (SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16)) ||
+          (SrcVT == MVT::i32 && (VT == MVT::v4i8 || VT == MVT::v2i16));
+      bool Is64BitCast =
+          (VT == MVT::i64 && (SrcVT == MVT::v8i8 || SrcVT == MVT::v4i16 ||
+                              SrcVT == MVT::v2i32)) ||
+          (SrcVT == MVT::i64 &&
+           (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32));
+      if (Is32BitCast || Is64BitCast) {
+        ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+        CurDAG->RemoveDeadNode(Node);
+        return;
+      }
+    }
     break;
   }
+  case ISD::SCALAR_TO_VECTOR:
+    if (Subtarget->enablePExtCodeGen()) {
+      MVT SrcVT = Node->getOperand(0).getSimpleValueType();
+      if (VT == MVT::v2i32 && SrcVT == MVT::i64) {
+        ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+        CurDAG->RemoveDeadNode(Node);
+        return;
+      }
+    }
+    break;
   case ISD::INSERT_SUBVECTOR:
   case RISCVISD::TUPLE_INSERT: {
     SDValue V = Node->getOperand(0);
@@ -2853,6 +3038,65 @@ static bool isWorthFoldingAdd(SDValue Add) {
   return true;
 }
 
+bool isRegImmLoadOrStore(SDNode *User, SDValue Add) {
+  switch (User->getOpcode()) {
+  default:
+    return false;
+  case ISD::LOAD:
+  case RISCVISD::LD_RV32:
+  case ISD::ATOMIC_LOAD:
+    break;
+  case ISD::STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<StoreSDNode>(User)->getValue() == Add)
+      return false;
+    break;
+  case RISCVISD::SD_RV32:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (User->getOperand(0) == Add || User->getOperand(1) == Add)
+      return false;
+    break;
+  case ISD::ATOMIC_STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    break;
+  }
+
+  return true;
+}
+
+// To prevent SelectAddrRegImm from folding offsets that conflict with the
+// fusion of PseudoMovAddr, check if the offset of every use of a given address
+// is within the alignment.
+bool RISCVDAGToDAGISel::areOffsetsWithinAlignment(SDValue Addr,
+                                                  Align Alignment) {
+  assert(Addr->getOpcode() == RISCVISD::ADD_LO);
+  for (auto *User : Addr->users()) {
+    // If the user is a load or store, then the offset is 0 which is always
+    // within alignment.
+    if (isRegImmLoadOrStore(User, Addr))
+      continue;
+
+    if (CurDAG->isBaseWithConstantOffset(SDValue(User, 0))) {
+      int64_t CVal = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
+      if (!isInt<12>(CVal) || Alignment <= CVal)
+        return false;
+
+      // Make sure all uses are foldable load/stores.
+      for (auto *AddUser : User->users())
+        if (!isRegImmLoadOrStore(AddUser, SDValue(User, 0)))
+          return false;
+
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2862,9 +3106,21 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    Base = Addr.getOperand(0);
-    Offset = Addr.getOperand(1);
-    return true;
+    bool CanFold = true;
+    // Unconditionally fold if operand 1 is not a global address (e.g.
+    // externsymbol)
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
+      const DataLayout &DL = CurDAG->getDataLayout();
+      Align Alignment = commonAlignment(
+          GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
+      if (!areOffsetsWithinAlignment(Addr, Alignment))
+        CanFold = false;
+    }
+    if (CanFold) {
+      Base = Addr.getOperand(0);
+      Offset = Addr.getOperand(1);
+      return true;
+    }
   }
 
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
@@ -2882,7 +3138,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           const DataLayout &DL = CurDAG->getDataLayout();
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          if ((CVal == 0 || Alignment > CVal)) {
+          if ((CVal == 0 || Alignment > CVal) &&
+              areOffsetsWithinAlignment(Base, Alignment)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
@@ -3080,9 +3337,7 @@ static bool isWorthFoldingIntoRegRegScale(const RISCVSubtarget &Subtarget,
     // If we have a SHXADD instruction, prefer that over reassociating an ADDI.
     assert(Shift.getOpcode() == ISD::SHL);
     unsigned ShiftAmt = Shift.getConstantOperandVal(1);
-    if ((ShiftAmt <= 3 &&
-         (Subtarget.hasStdExtZba() || Subtarget.hasVendorXTHeadBa())) ||
-        (ShiftAmt >= 4 && ShiftAmt <= 7 && Subtarget.hasVendorXqciac()))
+    if (Subtarget.hasShlAdd(ShiftAmt))
       return false;
 
     // All users of the ADDI should be load/store.
@@ -3326,14 +3581,20 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
           0);
       return true;
     }
-    // If the RHS is [-2047,2048], we can use addi with -RHS to produce 0 if the
-    // LHS is equal to the RHS and non-zero otherwise.
+    // If the RHS is [-2047,2048], we can use addi/addiw with -RHS to produce 0
+    // if the LHS is equal to the RHS and non-zero otherwise.
     if (isInt<12>(CVal) || CVal == 2048) {
-      Val = SDValue(
-          CurDAG->getMachineNode(
-              RISCV::ADDI, DL, N->getValueType(0), LHS,
-              CurDAG->getSignedTargetConstant(-CVal, DL, N->getValueType(0))),
-          0);
+      unsigned Opc = RISCV::ADDI;
+      if (LHS.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+          cast<VTSDNode>(LHS.getOperand(1))->getVT() == MVT::i32) {
+        Opc = RISCV::ADDIW;
+        LHS = LHS.getOperand(0);
+      }
+
+      Val = SDValue(CurDAG->getMachineNode(Opc, DL, N->getValueType(0), LHS,
+                                           CurDAG->getSignedTargetConstant(
+                                               -CVal, DL, N->getValueType(0))),
+                    0);
       return true;
     }
     if (isPowerOf2_64(CVal) && Subtarget->hasStdExtZbs()) {
@@ -3779,6 +4040,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::CTZW:
     case RISCV::CPOPW:
     case RISCV::SLLI_UW:
+    case RISCV::ABSW:
     case RISCV::FMV_W_X:
     case RISCV::FCVT_H_W:
     case RISCV::FCVT_H_W_INX:
@@ -3885,6 +4147,15 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
+    case RISCV::TH_EXT:
+    case RISCV::TH_EXTU: {
+      unsigned Msb = User->getConstantOperandVal(1);
+      unsigned Lsb = User->getConstantOperandVal(2);
+      // Behavior of Msb < Lsb is not well documented.
+      if (Msb >= Lsb && Bits > Msb)
+        break;
+      return false;
+    }
     }
   }
 

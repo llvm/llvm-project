@@ -656,6 +656,12 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
+      case IRMemLocation::TargetMem0:
+        OS << "target_mem0: ";
+        break;
+      case IRMemLocation::TargetMem1:
+        OS << "target_mem1: ";
+        break;
       }
       OS << getModRefStr(MR);
     }
@@ -952,6 +958,19 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C,
   AttrBuilder B(C, *this);
   B.merge(AttrBuilder(C, AS));
   return get(C, B);
+}
+
+AttributeSet AttributeSet::addAttributes(LLVMContext &C,
+                                         const AttrBuilder &B) const {
+  if (!hasAttributes())
+    return get(C, B);
+
+  if (!B.hasAttributes())
+    return *this;
+
+  AttrBuilder Merged(C, *this);
+  Merged.merge(B);
+  return get(C, Merged);
 }
 
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C,

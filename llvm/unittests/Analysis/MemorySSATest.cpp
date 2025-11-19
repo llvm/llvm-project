@@ -1092,8 +1092,8 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   //   %baz = getelementptr i8, ptr %foo, i64 2
   //   store i8 0, ptr %foo
   //   store i8 0, ptr %bar
-  //   call void @llvm.lifetime.end.p0(i64 3, ptr %foo)
-  //   call void @llvm.lifetime.start.p0(i64 3, ptr %foo)
+  //   call void @llvm.lifetime.end.p0(ptr %foo)
+  //   call void @llvm.lifetime.start.p0(ptr %foo)
   //   store i8 0, ptr %foo
   //   store i8 0, ptr %bar
   //   call void @llvm.memset.p0i8(ptr %baz, i8 0, i64 1)

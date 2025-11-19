@@ -540,16 +540,33 @@ foreach mx = SchedMxListW in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVSALUV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUI", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = Get4458Latency<mx>.c, ReleaseAtCycles = [ConstOneUntilM1ThenDouble<mx>.c] in {
+    defm "" : LMULWriteResMX<"WriteVSALUV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  // Latency of vsmul: e8/e16 = 4/4/5/8, e32 = 5/5/5/8, e64 = 7/8/16/32
+  // We use the worst-case until we can split the SEW.
+  defvar VSMulLat = ConstValueUntilLMULThenDoubleBase<"M2", 7, 8, mx>.c;
+  // Latency of vsmul: e8/e16/e32 = 1/2/4/8, e64 = 4/8/16/32
+  // We use the worst-case until we can split the SEW.
+  defvar VSMulOcc = ConstValueUntilLMULThenDoubleBase<"M1", 1, 4, mx>.c;
+  // TODO: change WriteVSMulV/X to be defined with LMULSEWSchedWrites
+  let Latency = VSMulLat, ReleaseAtCycles = [VSMulOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSMulV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSMulX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  defvar VSShiftLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
+  defvar VSShiftOcc = ConstOneUntilMF2ThenDouble<mx>.c;
+  let Latency = VSShiftLat, ReleaseAtCycles = [VSShiftOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // 13. Vector Floating-Point Instructions
@@ -653,8 +670,17 @@ foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    defvar VIRedLat = GetLMULValue<[5, 5, 5, 7, 11, 19, 35], mx>.c;
+    defvar VIRedOcc = GetLMULValue<[1, 1, 2, 2, 4, 10, 35], mx>.c;
+    let Latency = VIRedLat, ReleaseAtCycles = [VIRedOcc] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+
+      // Pattern for vredsum:                  5/5/5/7/11/19/35
+      // Pattern for vredand, vredor, vredxor: 4/4/4/6/10/18/34
+      // They are grouped together, so we use the worst-case vredsum latency.
+      // TODO: split vredand, vredor, vredxor into separate scheduling classe.
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -662,7 +688,11 @@ foreach mx = SchedMxListWRed in {
   foreach sew = SchedSEWSet<mx, 0, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListWRed>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    defvar VIRedLat = GetLMULValue<[5, 5, 5, 7, 11, 19, 35], mx>.c;
+    defvar VIRedOcc = GetLMULValue<[1, 1, 2, 2, 4, 10, 35], mx>.c;
+    let Latency = VIRedLat, ReleaseAtCycles = [VIRedOcc] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -670,9 +700,36 @@ foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    // Latency for vfredmax.vs, vfredmin.vs: 12/12/15/21/33/57
+    // Latency for vfredusum.vs is slightly lower for e16/e32
+    // We use the worst-case
+    defvar VFRedLat = GetLMULValue<[12, 12, 12, 15, 21, 33, 57], mx>.c;
+    defvar VFRedOcc = GetLMULValue<[8, 8, 8, 8, 14, 20, 57], mx>.c;
+    let Latency = VFRedLat, ReleaseAtCycles = [VFRedOcc] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    }
+  }
+}
+
+foreach mx = SchedMxListF in {
+  foreach sew = SchedSEWSet<mx, 1>.val in {
+    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
+
+    // Compute latency based on SEW
+    defvar VFRedOV_FromLat = !cond(
+      !eq(sew, 16) : ConstValueUntilLMULThenDouble<"MF4", 12, mx>.c,
+      !eq(sew, 32) : ConstValueUntilLMULThenDouble<"MF2", 12, mx>.c,
+      !eq(sew, 64) : ConstValueUntilLMULThenDouble<"M1", 12, mx>.c
+    );
+    defvar VFRedOV_FromOcc = !cond(
+      !eq(sew, 16) : GetLMULValue<[8, 8, 20, 24, 48, 96, 384], mx>.c,
+      !eq(sew, 32) : GetLMULValue<[8, 8,  8, 12, 24, 48, 192], mx>.c,
+      !eq(sew, 64) : GetLMULValue<[6, 6,  6,  6, 12, 24,  96], mx>.c
+    );
+    let Latency = VFRedOV_FromLat, ReleaseAtCycles = [VFRedOV_FromOcc] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -680,8 +737,18 @@ foreach mx = SchedMxListFWRed in {
   foreach sew = SchedSEWSet<mx, 1, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFWRed, 1>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    defvar VFRedOVLat = !cond(
+      !eq(sew, 16) : ConstValueUntilLMULThenDouble<"MF4", 16, mx>.c,
+      !eq(sew, 32) : ConstValueUntilLMULThenDouble<"MF2", 16, mx>.c,
+    );
+    defvar VFRedOVOcc = !cond(
+      !eq(sew, 16) : GetLMULValue<[11, 11, 27, 32, 64, 128, 512], mx>.c,
+      !eq(sew, 32) : GetLMULValue<[11, 11, 11, 16, 32,  64, 256], mx>.c,
+    );
+    let Latency = VFRedOVLat, ReleaseAtCycles = [VFRedOVOcc] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -699,39 +766,82 @@ foreach mx = SchedMxList in {
 }
 
 // 16. Vector Permutation Instructions
+// Slide
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVSlideI", [SMX60_VIEU], mx, IsWorstCase>;
+  // Latency for slide up: 4/4/8/16, ReleaseAtCycles is 2/4/8/16
+  defvar VSlideUpLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
+  defvar VSlideUpOcc = ConstOneUntilMF2ThenDouble<mx>.c;
+  let Latency = VSlideUpLat, ReleaseAtCycles =[VSlideUpOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSlideUpX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 
-  defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVFSlide1F", [SMX60_VFP], mx, IsWorstCase>;
+  // Latency for slide down: 4/5/9/17, ReleaseAtCycles is 3/5/9/17
+  defvar VSlideDownLat = GetLMULValue<[4, 4, 4, 4, 5, 9, 17], mx>.c;
+  defvar VSlideDownOcc = GetLMULValue<[1, 1, 1, 3, 5, 9, 17], mx>.c;
+  let Latency = VSlideDownLat, ReleaseAtCycles =[VSlideDownOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSlideDownX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+  // The following group slide up and down together, so we use the worst-case
+  // (slide down) for all.
+  let Latency = VSlideDownLat, ReleaseAtCycles =[VSlideDownOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSlideI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
 
-  defm "" : LMULWriteResMX<"WriteVSlideUpX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSlideDownX", [SMX60_VIEU], mx, IsWorstCase>;
-}
-
-def : WriteRes<WriteVMovXS, [SMX60_VIEU]>;
-def : WriteRes<WriteVMovSX, [SMX60_VIEU]>;
-
-def : WriteRes<WriteVMovFS, [SMX60_VIEU]>;
-def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
-
-// Gather and Compress
-foreach mx = SchedMxList in {
-  foreach sew = SchedSEWSet<mx>.val in {
-    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1F", [SMX60_VFP], mx, IsWorstCase>;
   }
 }
 
+// ReleaseAtCycles is 2/2/2/2/2/3/6, but we can't set based on MX for now
+// TODO: Split this into separate WriteRes for each MX
+let Latency = 6, ReleaseAtCycles = [6] in {
+  def : WriteRes<WriteVMovXS, [SMX60_VIEU]>;
+}
+
+// ReleaseAtCycles is 1/1/1/1/1/2/4, but we can't set based on MX for now
+// TODO: Split this into separate WriteRes for each MX
+let Latency = 4, ReleaseAtCycles = [4] in {
+  def : WriteRes<WriteVMovSX, [SMX60_VIEU]>;
+  def : WriteRes<WriteVMovFS, [SMX60_VIEU]>;
+  def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
+}
+
+// Integer LMUL Gather and Compress
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
+  defvar VRGatherLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
+  let Latency = VRGatherLat, ReleaseAtCycles = [ConstOneUntilMF2ThenDouble<mx>.c] in {
+    defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  foreach sew = SchedSEWSet<mx>.val in {
+    defvar IsWorstCaseSEW = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
+
+    defvar VRGatherVVLat = GetLMULValue<[4, 4, 4, 4, 16, 64, 256], mx>.c;
+    defvar VRGatherVVOcc = GetLMULValue<[1, 1, 1, 4, 16, 64, 256], mx>.c;
+    let Latency = VRGatherVVLat, ReleaseAtCycles = [VRGatherVVOcc] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
+    }
+    // For sew == 8, latency is half of the other cases, except for the fractional LMULs (const 4 cycles)
+    defvar VRGatherEI16Lat = !if(!eq(sew, 8),
+      GetLMULValue<[4, 4, 4, 8, 32, 128, 256], mx>.c,
+      GetLMULValue<[4, 4, 4, 4, 16,  64, 256], mx>.c);
+    defvar VRGatherEI16Occ = !if(!eq(sew, 8),
+      GetLMULValue<[1, 1, 2, 8, 32, 128, 256], mx>.c,
+      GetLMULValue<[1, 1, 1, 4, 16,  64, 256], mx>.c);
+    let Latency = VRGatherEI16Lat, ReleaseAtCycles = [VRGatherEI16Occ] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
+    }
+
+    defvar VCompressVLat = GetLMULValue<[4, 4, 4, 4, 10, 36, 136], mx>.c;
+    defvar VCompressVOcc = GetLMULValue<[1, 1, 1, 3, 10, 36, 136], mx>.c;
+    let Latency = VCompressVLat, ReleaseAtCycles = [VCompressVOcc] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
+    }
+  }
 }
 
 // Others

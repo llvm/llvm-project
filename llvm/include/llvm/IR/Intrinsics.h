@@ -30,6 +30,8 @@ class LLVMContext;
 class Module;
 class AttributeList;
 class AttributeSet;
+class raw_ostream;
+class Constant;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -81,6 +83,9 @@ namespace Intrinsic {
   /// Returns true if the intrinsic can be overloaded.
   LLVM_ABI bool isOverloaded(ID id);
 
+  /// Returns true if the intrinsic has pretty printed immediate arguments.
+  LLVM_ABI bool hasPrettyPrintedArgs(ID id);
+
   /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
   /// certain target. If it is a generic intrinsic false is returned.
   LLVM_ABI bool isTargetIntrinsic(ID IID);
@@ -103,12 +108,6 @@ namespace Intrinsic {
   /// the intrinsic.
   LLVM_ABI Function *getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys = {});
-
-  LLVM_DEPRECATED("Use getOrInsertDeclaration instead",
-                  "getOrInsertDeclaration")
-  inline Function *getDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {}) {
-    return getOrInsertDeclaration(M, id, Tys);
-  }
 
   /// Look up the Function declaration of the intrinsic \p id in the Module
   /// \p M and return it if it exists. Otherwise, return nullptr. This version
@@ -289,6 +288,10 @@ namespace Intrinsic {
   /// Returns the corresponding llvm.vector.deinterleaveN intrinsic for factor
   /// N.
   LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
+
+  /// Print the argument info for the arguments with ArgInfo.
+  LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
+                            const Constant *ImmArgVal);
 
   } // namespace Intrinsic
 

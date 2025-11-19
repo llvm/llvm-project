@@ -1,13 +1,11 @@
 # We need to include the llvm components we depend on manually, as liblldb does
 # not re-export those.
 set(LLVM_LINK_COMPONENTS Support)
-set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
-add_public_tablegen_target(LLDBDAPOptionsTableGen)
 
 add_lldb_library(lldbDAP
   Breakpoint.cpp
   BreakpointBase.cpp
+  ClientLauncher.cpp
   CommandPlugins.cpp
   DAP.cpp
   DAPError.cpp
@@ -45,6 +43,7 @@ add_lldb_library(lldbDAP
   Handler/LaunchRequestHandler.cpp
   Handler/LocationsRequestHandler.cpp
   Handler/ModulesRequestHandler.cpp
+  Handler/ModuleSymbolsRequestHandler.cpp
   Handler/NextRequestHandler.cpp
   Handler/PauseRequestHandler.cpp
   Handler/ReadMemoryRequestHandler.cpp
@@ -66,7 +65,8 @@ add_lldb_library(lldbDAP
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
   Handler/WriteMemoryRequestHandler.cpp
-  
+
+  Protocol/DAPTypes.cpp
   Protocol/ProtocolBase.cpp
   Protocol/ProtocolEvents.cpp
   Protocol/ProtocolTypes.cpp

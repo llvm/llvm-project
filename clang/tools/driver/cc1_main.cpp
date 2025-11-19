@@ -17,7 +17,6 @@
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -25,6 +24,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Options/Options.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -271,8 +271,11 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     Clang->getHeaderSearchOpts().ResourceDir =
       CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
+  /// Create the actual file system.
+  Clang->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DiagsBuffer);
+
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Clang->createDiagnostics();
   if (!Clang->hasDiagnostics())
     return 1;
 
@@ -310,18 +313,6 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
-    // It is possible that the compiler instance doesn't own a file manager here
-    // if we're compiling a module unit. Since the file manager are owned by AST
-    // when we're compiling a module unit. So the file manager may be invalid
-    // here.
-    //
-    // It should be fine to create file manager here since the file system
-    // options are stored in the compiler invocation and we can recreate the VFS
-    // from the compiler invocation.
-    if (!Clang->hasFileManager())
-      Clang->createFileManager(createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics()));
-
     if (auto profilerOutput = Clang->createOutputFile(
             Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
             /*RemoveFileOnSignal=*/false,

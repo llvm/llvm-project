@@ -20,7 +20,7 @@ functions:
       - type: const cpu_set_t *
   - name: getcpu
     standards:
-      - POSIX
+      - Linux
     return_type: int
     arguments:
       - type: unsigned int *

@@ -20,19 +20,31 @@ using namespace clang::interp;
 InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
     : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame) {}
+      Current(&BottomFrame) {
+  InConstantContext = Parent.InConstantContext;
+  CheckingPotentialConstantExpression =
+      Parent.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
+  EvalMode = Parent.EvalMode;
+}
 
 InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
     : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame) {}
+      Current(&BottomFrame) {
+  InConstantContext = Parent.InConstantContext;
+  CheckingPotentialConstantExpression =
+      Parent.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
+  EvalMode = Parent.EvalMode;
+}
 
 bool InterpState::inConstantContext() const {
   if (ConstantContextOverride)
     return *ConstantContextOverride;
 
-  return Parent.InConstantContext;
+  return InConstantContext;
 }
 
 InterpState::~InterpState() {
@@ -45,6 +57,12 @@ InterpState::~InterpState() {
 
   while (DeadBlocks) {
     DeadBlock *Next = DeadBlocks->Next;
+
+    // There might be a pointer in a global structure pointing to the dead
+    // block.
+    for (Pointer *P = DeadBlocks->B.Pointers; P; P = P->asBlockPointer().Next)
+      DeadBlocks->B.removePointer(P);
+
     std::free(DeadBlocks);
     DeadBlocks = Next;
   }
@@ -53,29 +71,18 @@ InterpState::~InterpState() {
 void InterpState::cleanup() {
   // As a last resort, make sure all pointers still pointing to a dead block
   // don't point to it anymore.
-  for (DeadBlock *DB = DeadBlocks; DB; DB = DB->Next) {
-    for (Pointer *P = DB->B.Pointers; P; P = P->asBlockPointer().Next) {
-      P->PointeeStorage.BS.Pointee = nullptr;
-    }
-  }
-
-  Alloc.cleanup();
+  if (Alloc)
+    Alloc->cleanup();
 }
 
-Frame *InterpState::getCurrentFrame() {
-  if (Current && Current->Caller)
-    return Current;
-  return Parent.getCurrentFrame();
-}
-
-bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
-  QualType Type = E->getType();
-  CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-  return noteUndefinedBehavior();
-}
+Frame *InterpState::getCurrentFrame() { return Current; }
 
 void InterpState::deallocate(Block *B) {
   assert(B);
+  assert(!B->isDynamic());
+  assert(!B->isStatic());
+  assert(!B->isDead());
+
   // The block might have a pointer saved in a field in its data
   // that points to the block itself. We call the dtor first,
   // which will destroy all the data but leave InlineDescriptors
@@ -84,6 +91,7 @@ void InterpState::deallocate(Block *B) {
   if (B->IsInitialized)
     B->invokeDtor();
 
+  assert(!B->isInitialized());
   if (B->hasPointers()) {
     size_t Size = B->getSize();
     // Allocate a new block, transferring over pointers.
@@ -92,19 +100,19 @@ void InterpState::deallocate(Block *B) {
     auto *D = new (Memory) DeadBlock(DeadBlocks, B);
     // Since the block doesn't hold any actual data anymore, we can just
     // memcpy() everything over.
-    std::memcpy(D->rawData(), B->rawData(), B->getSize());
-    D->B.IsInitialized = B->IsInitialized;
-
-    // We moved the contents over to the DeadBlock.
-    B->IsInitialized = false;
+    std::memcpy(D->rawData(), B->rawData(), Size);
+    D->B.IsInitialized = false;
   }
 }
 
 bool InterpState::maybeDiagnoseDanglingAllocations() {
-  bool NoAllocationsLeft = !Alloc.hasAllocations();
+  if (!Alloc)
+    return true;
+
+  bool NoAllocationsLeft = !Alloc->hasAllocations();
 
   if (!checkingPotentialConstantExpression()) {
-    for (const auto &[Source, Site] : Alloc.allocation_sites()) {
+    for (const auto &[Source, Site] : Alloc->allocation_sites()) {
       assert(!Site.empty());
 
       CCEDiag(Source->getExprLoc(), diag::note_constexpr_memory_leak)

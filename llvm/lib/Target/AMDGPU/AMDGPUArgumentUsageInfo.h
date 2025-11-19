@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Pass.h"
+#include <variant>
 
 namespace llvm {
 
@@ -27,55 +28,44 @@ private:
   friend struct AMDGPUFunctionArgInfo;
   friend class AMDGPUArgumentUsageInfo;
 
-  union {
-    MCRegister Reg;
-    unsigned StackOffset;
-  };
+  std::variant<std::monostate, MCRegister, unsigned> Val;
 
   // Bitmask to locate argument within the register.
   unsigned Mask;
 
-  bool IsStack : 1;
-  bool IsSet : 1;
-
 public:
-  ArgDescriptor(unsigned Val = 0, unsigned Mask = ~0u, bool IsStack = false,
-                bool IsSet = false)
-      : Reg(Val), Mask(Mask), IsStack(IsStack), IsSet(IsSet) {}
+  ArgDescriptor(unsigned Mask = ~0u) : Mask(Mask) {}
 
   static ArgDescriptor createRegister(Register Reg, unsigned Mask = ~0u) {
-    return ArgDescriptor(Reg, Mask, false, true);
+    ArgDescriptor Ret(Mask);
+    Ret.Val = Reg.asMCReg();
+    return Ret;
   }
 
   static ArgDescriptor createStack(unsigned Offset, unsigned Mask = ~0u) {
-    return ArgDescriptor(Offset, Mask, true, true);
+    ArgDescriptor Ret(Mask);
+    Ret.Val = Offset;
+    return Ret;
   }
 
   static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {
-    return ArgDescriptor(Arg.Reg, Mask, Arg.IsStack, Arg.IsSet);
+    // Copy the descriptor, then change the mask.
+    ArgDescriptor Ret(Arg);
+    Ret.Mask = Mask;
+    return Ret;
   }
 
-  bool isSet() const {
-    return IsSet;
-  }
+  bool isSet() const { return !std::holds_alternative<std::monostate>(Val); }
 
   explicit operator bool() const {
     return isSet();
   }
 
-  bool isRegister() const {
-    return !IsStack;
-  }
+  bool isRegister() const { return std::holds_alternative<MCRegister>(Val); }
 
-  MCRegister getRegister() const {
-    assert(!IsStack);
-    return Reg;
-  }
+  MCRegister getRegister() const { return std::get<MCRegister>(Val); }
 
-  unsigned getStackOffset() const {
-    assert(IsStack);
-    return StackOffset;
-  }
+  unsigned getStackOffset() const { return std::get<unsigned>(Val); }
 
   unsigned getMask() const {
     // None of the target SGPRs or VGPRs are expected to have a 'zero' mask.
@@ -96,7 +86,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ArgDescriptor &Arg) {
 }
 
 struct KernArgPreloadDescriptor : public ArgDescriptor {
-  KernArgPreloadDescriptor() {}
+  KernArgPreloadDescriptor() = default;
   SmallVector<MCRegister> Regs;
 };
 
@@ -111,18 +101,25 @@ struct AMDGPUFunctionArgInfo {
     DISPATCH_ID         =  4,
     FLAT_SCRATCH_INIT   =  5,
     LDS_KERNEL_ID       =  6, // LLVM internal, not part of the ABI
-    WORKGROUP_ID_X      = 10,
-    WORKGROUP_ID_Y      = 11,
-    WORKGROUP_ID_Z      = 12,
+    WORKGROUP_ID_X      = 10, // Also used for cluster ID X.
+    WORKGROUP_ID_Y      = 11, // Also used for cluster ID Y.
+    WORKGROUP_ID_Z      = 12, // Also used for cluster ID Z.
     PRIVATE_SEGMENT_WAVE_BYTE_OFFSET = 14,
     IMPLICIT_BUFFER_PTR = 15,
     IMPLICIT_ARG_PTR = 16,
     PRIVATE_SEGMENT_SIZE = 17,
+    CLUSTER_WORKGROUP_ID_X = 21,
+    CLUSTER_WORKGROUP_ID_Y = 22,
+    CLUSTER_WORKGROUP_ID_Z = 23,
+    CLUSTER_WORKGROUP_MAX_ID_X = 24,
+    CLUSTER_WORKGROUP_MAX_ID_Y = 25,
+    CLUSTER_WORKGROUP_MAX_ID_Z = 26,
+    CLUSTER_WORKGROUP_MAX_FLAT_ID = 27,
 
     // VGPRS:
-    WORKITEM_ID_X       = 18,
-    WORKITEM_ID_Y       = 19,
-    WORKITEM_ID_Z       = 20,
+    WORKITEM_ID_X       = 28,
+    WORKITEM_ID_Y       = 29,
+    WORKITEM_ID_Z       = 30,
     FIRST_VGPR_VALUE    = WORKITEM_ID_X
   };
   // clang-format on

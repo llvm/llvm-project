@@ -13,9 +13,13 @@
 #include "check-omp-structure.h"
 
 #include "flang/Common/indirection.h"
+#include "flang/Common/template.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/match.h"
+#include "flang/Evaluate/rewrite.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
@@ -38,14 +42,202 @@
 
 namespace Fortran::semantics {
 
+using namespace Fortran::parser::omp;
 using namespace Fortran::semantics::omp;
 
 namespace operation = Fortran::evaluate::operation;
+
+static MaybeExpr PostSemaRewrite(const SomeExpr &atom, const SomeExpr &expr);
 
 template <typename T, typename U>
 static bool operator!=(const evaluate::Expr<T> &e, const evaluate::Expr<U> &f) {
   return !(e == f);
 }
+
+namespace {
+template <typename...> struct IsIntegral {
+  static constexpr bool value{false};
+};
+
+template <common::TypeCategory C, int K>
+struct IsIntegral<evaluate::Type<C, K>> {
+  static constexpr bool value{//
+      C == common::TypeCategory::Integer ||
+      C == common::TypeCategory::Unsigned};
+};
+
+template <typename T> constexpr bool is_integral_v{IsIntegral<T>::value};
+
+template <typename...> struct IsFloatingPoint {
+  static constexpr bool value{false};
+};
+
+template <common::TypeCategory C, int K>
+struct IsFloatingPoint<evaluate::Type<C, K>> {
+  static constexpr bool value{//
+      C == common::TypeCategory::Real || C == common::TypeCategory::Complex};
+};
+
+template <typename T>
+constexpr bool is_floating_point_v{IsFloatingPoint<T>::value};
+
+template <typename T>
+constexpr bool is_numeric_v{is_integral_v<T> || is_floating_point_v<T>};
+
+template <typename...> struct IsLogical {
+  static constexpr bool value{false};
+};
+
+template <common::TypeCategory C, int K>
+struct IsLogical<evaluate::Type<C, K>> {
+  static constexpr bool value{C == common::TypeCategory::Logical};
+};
+
+template <typename T> constexpr bool is_logical_v{IsLogical<T>::value};
+
+template <typename T, typename Op0, typename Op1>
+using ReassocOpBase = evaluate::match::AnyOfPattern< //
+    evaluate::match::Add<T, Op0, Op1>, //
+    evaluate::match::Mul<T, Op0, Op1>, //
+    evaluate::match::LogicalOp<common::LogicalOperator::And, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Or, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Eqv, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Neqv, T, Op0, Op1>>;
+
+template <typename T, typename Op0, typename Op1>
+struct ReassocOp : public ReassocOpBase<T, Op0, Op1> {
+  using Base = ReassocOpBase<T, Op0, Op1>;
+  using Base::Base;
+};
+
+template <typename T, typename Op0, typename Op1>
+ReassocOp<T, Op0, Op1> reassocOp(const Op0 &op0, const Op1 &op1) {
+  return ReassocOp<T, Op0, Op1>(op0, op1);
+}
+} // namespace
+
+struct ReassocRewriter : public evaluate::rewrite::Identity {
+  using Id = evaluate::rewrite::Identity;
+  struct NonIntegralTag {};
+
+  ReassocRewriter(const SomeExpr &atom, const SemanticsContext &context)
+      : atom_(atom), context_(context) {}
+
+  // Try to find cases where the input expression is of the form
+  // (1) (a . b) . c, or
+  // (2) a . (b . c),
+  // where . denotes an associative operation, and a, b, c are some
+  // subexpresions.
+  // If one of the operands in the nested operation is the atomic variable
+  // (with some possible type conversions applied to it), bring it to the
+  // top-level operation, and move the top-level operand into the nested
+  // operation.
+  // For example, assuming x is the atomic variable:
+  //   (a + x) + b  ->  (a + b) + x,  i.e. (conceptually) swap x and b.
+  template <typename T, typename U,
+      typename = std::enable_if_t<is_numeric_v<T> || is_logical_v<T>>>
+  evaluate::Expr<T> operator()(evaluate::Expr<T> &&x, const U &u) {
+    if constexpr (is_floating_point_v<T>) {
+      if (!context_.langOptions().AssociativeMath) {
+        return Id::operator()(std::move(x), u);
+      }
+    }
+    // As per the above comment, there are 3 subexpressions involved in this
+    // transformation. A match::Expr<T> will match evaluate::Expr<U> when T is
+    // same as U, plus it will store a pointer (ref) to the matched expression.
+    // When the match is successful, the sub[i].ref will point to a, b, x (in
+    // some order) from the example above.
+    evaluate::match::Expr<T> sub[3];
+    auto inner{reassocOp<T>(sub[0], sub[1])};
+    auto outer1{reassocOp<T>(inner, sub[2])}; // inner . something
+    auto outer2{reassocOp<T>(sub[2], inner)}; // something . inner
+#if !defined(__clang__) && !defined(_MSC_VER) && \
+    (__GNUC__ < 8 || (__GNUC__ == 8 && __GNUC_MINOR__ < 5))
+    // If GCC version < 8.5, use this definition. For the other definition
+    // (which is equivalent), GCC 7.5 emits a somewhat cryptic error:
+    //    use of ‘outer1’ before deduction of ‘auto’
+    // inside of the visitor function in common::visit.
+    // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
+    // that this is some kind of a GCC issue.
+    using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>,
+        evaluate::LogicalOperation<T::kind>>;
+#else
+    using MatchTypes = typename decltype(outer1)::MatchTypes;
+#endif
+    // There is no way to ensure that the outer operation is the same as
+    // the inner one. They are matched independently, so we need to compare
+    // the index in the member variant that represents the matched type.
+    if ((match(outer1, x) && outer1.ref.index() == inner.ref.index()) ||
+        (match(outer2, x) && outer2.ref.index() == inner.ref.index())) {
+      size_t atomIdx{[&]() { // sub[atomIdx] will be the atom.
+        size_t idx;
+        for (idx = 0; idx != 3; ++idx) {
+          if (IsAtom(*sub[idx].ref)) {
+            break;
+          }
+        }
+        return idx;
+      }()};
+
+      if (atomIdx > 2) {
+        return Id::operator()(std::move(x), u);
+      }
+      return common::visit(
+          [&](auto &&s) {
+            // Build the new expression from the matched components.
+            return Reconstruct<T, MatchTypes>(s, *sub[atomIdx].ref,
+                *sub[(atomIdx + 1) % 3].ref, *sub[(atomIdx + 2) % 3].ref);
+          },
+          evaluate::match::deparen(x).u);
+    }
+    return Id::operator()(std::move(x), u);
+  }
+
+  template <typename T, typename U,
+      typename = std::enable_if_t<!is_numeric_v<T> && !is_logical_v<T>>>
+  evaluate::Expr<T> operator()(
+      evaluate::Expr<T> &&x, const U &u, NonIntegralTag = {}) {
+    return Id::operator()(std::move(x), u);
+  }
+
+private:
+  template <typename T, typename MatchTypes, typename S>
+  evaluate::Expr<T> Reconstruct(const S &op, evaluate::Expr<T> atom,
+      evaluate::Expr<T> op1, evaluate::Expr<T> op2) {
+    using TypeS = llvm::remove_cvref_t<decltype(op)>;
+    // This function has to be semantically correct for all possible types
+    // of S even though at runtime s will only be one of the matched types.
+    // Limit the construction to the operation types that we tried to match
+    // (otherwise TypeS(op1, op2) would fail for non-binary operations).
+    if constexpr (!common::HasMember<TypeS, MatchTypes>) {
+      return evaluate::Expr<T>(TypeS(op));
+    } else if constexpr (is_logical_v<T>) {
+      constexpr int K{T::kind};
+      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation<K>>) {
+        // Logical operators take an extra argument in their constructor,
+        // so they need their own reconstruction code.
+        common::LogicalOperator opCode{op.logicalOperator};
+        return evaluate::Expr<T>(TypeS( //
+            opCode, std::move(atom),
+            evaluate::Expr<T>(TypeS( //
+                opCode, std::move(op1), std::move(op2)))));
+      }
+    } else {
+      // Generic reconstruction.
+      return evaluate::Expr<T>(TypeS( //
+          std::move(atom),
+          evaluate::Expr<T>(TypeS( //
+              std::move(op1), std::move(op2)))));
+    }
+  }
+
+  template <typename T> bool IsAtom(const evaluate::Expr<T> &x) const {
+    return IsSameOrConvertOf(evaluate::AsGenericExpr(AsRvalue(x)), atom_);
+  }
+
+  const SomeExpr &atom_;
+  const SemanticsContext &context_;
+};
 
 struct AnalyzedCondStmt {
   SomeExpr cond{evaluate::NullPointer{}}; // Default ctor is deleted
@@ -96,7 +288,7 @@ static std::optional<AnalyzedCondStmt> AnalyzeConditionalStmt(
   // Extract the evaluate::Expr from ScalarLogicalExpr.
   auto getFromLogical{[](const parser::ScalarLogicalExpr &logical) {
     // ScalarLogicalExpr is Scalar<Logical<common::Indirection<Expr>>>
-    const parser::Expr &expr{logical.thing.thing.value()};
+    auto &expr{parser::UnwrapRef<parser::Expr>(logical)};
     return GetEvaluateExpr(expr);
   }};
 
@@ -196,6 +388,26 @@ static std::pair<parser::CharBlock, parser::CharBlock> SplitAssignmentSource(
   llvm_unreachable("Could not find assignment operator");
 }
 
+static std::vector<SomeExpr> GetNonAtomExpressions(
+    const SomeExpr &atom, const std::vector<SomeExpr> &exprs) {
+  std::vector<SomeExpr> nonAtom;
+  for (const SomeExpr &e : exprs) {
+    if (!IsSameOrConvertOf(e, atom)) {
+      nonAtom.push_back(e);
+    }
+  }
+  return nonAtom;
+}
+
+static std::vector<SomeExpr> GetNonAtomArguments(
+    const SomeExpr &atom, const SomeExpr &expr) {
+  if (auto &&maybe{GetConvertInput(expr)}) {
+    return GetNonAtomExpressions(
+        atom, GetTopLevelOperationIgnoreResizing(*maybe).second);
+  }
+  return {};
+}
+
 static bool IsCheckForAssociated(const SomeExpr &cond) {
   return GetTopLevelOperationIgnoreResizing(cond).first ==
       operation::Operator::Associated;
@@ -222,47 +434,85 @@ static void SetAssignment(parser::AssignmentStmt::TypedAssignment &assign,
   }
 }
 
-static parser::OpenMPAtomicConstruct::Analysis::Op MakeAtomicAnalysisOp(
-    int what,
-    const std::optional<evaluate::Assignment> &maybeAssign = std::nullopt) {
-  parser::OpenMPAtomicConstruct::Analysis::Op operation;
-  operation.what = what;
-  SetAssignment(operation.assign, maybeAssign);
-  return operation;
-}
+namespace {
+struct AtomicAnalysis {
+  AtomicAnalysis(const SomeExpr &atom, const MaybeExpr &cond = std::nullopt)
+      : atom_(atom), cond_(cond) {}
 
-static parser::OpenMPAtomicConstruct::Analysis MakeAtomicAnalysis(
-    const SomeExpr &atom, const MaybeExpr &cond,
-    parser::OpenMPAtomicConstruct::Analysis::Op &&op0,
-    parser::OpenMPAtomicConstruct::Analysis::Op &&op1) {
-  // Defined in flang/include/flang/Parser/parse-tree.h
-  //
-  // struct Analysis {
-  //   struct Kind {
-  //     static constexpr int None = 0;
-  //     static constexpr int Read = 1;
-  //     static constexpr int Write = 2;
-  //     static constexpr int Update = Read | Write;
-  //     static constexpr int Action = 3; // Bits containing N, R, W, U
-  //     static constexpr int IfTrue = 4;
-  //     static constexpr int IfFalse = 8;
-  //     static constexpr int Condition = 12; // Bits containing IfTrue, IfFalse
-  //   };
-  //   struct Op {
-  //     int what;
-  //     TypedAssignment assign;
-  //   };
-  //   TypedExpr atom, cond;
-  //   Op op0, op1;
-  // };
+  AtomicAnalysis &addOp0(int what,
+      const std::optional<evaluate::Assignment> &maybeAssign = std::nullopt) {
+    return addOp(op0_, what, maybeAssign);
+  }
+  AtomicAnalysis &addOp1(int what,
+      const std::optional<evaluate::Assignment> &maybeAssign = std::nullopt) {
+    return addOp(op1_, what, maybeAssign);
+  }
 
-  parser::OpenMPAtomicConstruct::Analysis an;
-  SetExpr(an.atom, atom);
-  SetExpr(an.cond, cond);
-  an.op0 = std::move(op0);
-  an.op1 = std::move(op1);
-  return an;
-}
+  operator parser::OpenMPAtomicConstruct::Analysis() const {
+    // Defined in flang/include/flang/Parser/parse-tree.h
+    //
+    // struct Analysis {
+    //   struct Kind {
+    //     static constexpr int None = 0;
+    //     static constexpr int Read = 1;
+    //     static constexpr int Write = 2;
+    //     static constexpr int Update = Read | Write;
+    //     static constexpr int Action = 3; // Bits containing None, Read,
+    //                                      // Write, Update
+    //     static constexpr int IfTrue = 4;
+    //     static constexpr int IfFalse = 8;
+    //     static constexpr int Condition = 12; // Bits containing IfTrue,
+    //                                          // IfFalse
+    //   };
+    //   struct Op {
+    //     int what;
+    //     TypedAssignment assign;
+    //   };
+    //   TypedExpr atom, cond;
+    //   Op op0, op1;
+    // };
+
+    parser::OpenMPAtomicConstruct::Analysis an;
+    SetExpr(an.atom, atom_);
+    SetExpr(an.cond, cond_);
+    an.op0 = std::move(op0_);
+    an.op1 = std::move(op1_);
+    return an;
+  }
+
+private:
+  struct Op {
+    operator parser::OpenMPAtomicConstruct::Analysis::Op() const {
+      parser::OpenMPAtomicConstruct::Analysis::Op op;
+      op.what = what;
+      SetAssignment(op.assign, assign);
+      return op;
+    }
+
+    int what;
+    std::optional<evaluate::Assignment> assign;
+  };
+
+  AtomicAnalysis &addOp(Op &op, int what,
+      const std::optional<evaluate::Assignment> &maybeAssign) {
+    op.what = what;
+    if (maybeAssign) {
+      if (MaybeExpr rewritten{PostSemaRewrite(atom_, maybeAssign->rhs)}) {
+        op.assign = evaluate::Assignment(
+            AsRvalue(maybeAssign->lhs), std::move(*rewritten));
+        op.assign->u = std::move(maybeAssign->u);
+      } else {
+        op.assign = *maybeAssign;
+      }
+    }
+    return *this;
+  }
+
+  const SomeExpr &atom_;
+  const MaybeExpr &cond_;
+  Op op0_, op1_;
+};
+} // namespace
 
 /// Check if `expr` satisfies the following conditions for x and v:
 ///
@@ -271,8 +521,8 @@ static parser::OpenMPAtomicConstruct::Analysis MakeAtomicAnalysis(
 ///   function references with scalar data pointer result of non-character
 ///   intrinsic type or variables that are non-polymorphic scalar pointers
 ///   and any length type parameter must be constant.
-void OmpStructureChecker::CheckAtomicType(
-    SymbolRef sym, parser::CharBlock source, std::string_view name) {
+void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
+    parser::CharBlock source, std::string_view name, bool checkTypeOnPointer) {
   const DeclTypeSpec *typeSpec{sym->GetType()};
   if (!typeSpec) {
     return;
@@ -299,6 +549,22 @@ void OmpStructureChecker::CheckAtomicType(
     return;
   }
 
+  // Apply pointer-to-non-intrinsic rule only for intrinsic-assignment paths.
+  if (checkTypeOnPointer) {
+    using Category = DeclTypeSpec::Category;
+    Category cat{typeSpec->category()};
+    if (cat != Category::Numeric && cat != Category::Logical) {
+      std::string details = " has the POINTER attribute";
+      if (const auto *derived{typeSpec->AsDerived()}) {
+        details += " and derived type '"s + derived->name().ToString() + "'";
+      }
+      context_.Say(source,
+          "ATOMIC operation requires an intrinsic scalar variable; '%s'%s"_err_en_US,
+          sym->name(), details);
+      return;
+    }
+  }
+
   // Go over all length parameters, if any, and check if they are
   // explicit.
   if (const DerivedTypeSpec *derived{typeSpec->AsDerived()}) {
@@ -314,7 +580,7 @@ void OmpStructureChecker::CheckAtomicType(
 }
 
 void OmpStructureChecker::CheckAtomicVariable(
-    const SomeExpr &atom, parser::CharBlock source) {
+    const SomeExpr &atom, parser::CharBlock source, bool checkTypeOnPointer) {
   if (atom.Rank() != 0) {
     context_.Say(source, "Atomic variable %s should be a scalar"_err_en_US,
         atom.AsFortran());
@@ -324,11 +590,13 @@ void OmpStructureChecker::CheckAtomicVariable(
   assert(dsgs.size() == 1 && "Should have a single top-level designator");
   evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
 
-  CheckAtomicType(syms.back(), source, atom.AsFortran());
+  CheckAtomicType(syms.back(), source, atom.AsFortran(), checkTypeOnPointer);
 
-  if (IsAllocatable(syms.back()) && !IsArrayElement(atom)) {
-    context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
-        atom.AsFortran());
+  if (!IsArrayElement(atom) && !ExtractComplexPart(atom)) {
+    if (IsAllocatable(syms.back())) {
+      context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
+          atom.AsFortran());
+    }
   }
 }
 
@@ -535,12 +803,14 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
     const evaluate::Assignment &capture, const SomeExpr &atom,
     parser::CharBlock source) {
   auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  (void)lsrc;
   const SomeExpr &cap{capture.lhs};
 
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
-    CheckAtomicVariable(atom, rsrc);
+    CheckAtomicVariable(
+        atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(capture));
     // This part should have been checked prior to calling this function.
     assert(*GetConvertInput(capture.rhs) == atom &&
         "This cannot be a capture assignment");
@@ -551,6 +821,7 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
 void OmpStructureChecker::CheckAtomicReadAssignment(
     const evaluate::Assignment &read, parser::CharBlock source) {
   auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  (void)lsrc;
 
   if (auto maybe{GetConvertInput(read.rhs)}) {
     const SomeExpr &atom{*maybe};
@@ -558,7 +829,8 @@ void OmpStructureChecker::CheckAtomicReadAssignment(
     if (!IsVarOrFunctionRef(atom)) {
       ErrorShouldBeVariable(atom, rsrc);
     } else {
-      CheckAtomicVariable(atom, rsrc);
+      CheckAtomicVariable(
+          atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(read));
       CheckStorageOverlap(atom, {read.lhs}, source);
     }
   } else {
@@ -579,12 +851,14 @@ void OmpStructureChecker::CheckAtomicWriteAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
-    CheckAtomicVariable(atom, lsrc);
+    CheckAtomicVariable(
+        atom, lsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(write));
     CheckStorageOverlap(atom, {write.rhs}, source);
   }
 }
 
-void OmpStructureChecker::CheckAtomicUpdateAssignment(
+std::optional<evaluate::Assignment>
+OmpStructureChecker::CheckAtomicUpdateAssignment(
     const evaluate::Assignment &update, parser::CharBlock source) {
   // [6.0:191:1-7]
   // An update structured block is update-statement, an update statement
@@ -600,14 +874,48 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
     // Skip other checks.
-    return;
+    return std::nullopt;
   }
 
-  CheckAtomicVariable(atom, lsrc);
+  CheckAtomicVariable(
+      atom, lsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(update));
+
+  auto [hasErrors, tryReassoc]{CheckAtomicUpdateAssignmentRhs(
+      atom, update.rhs, source, /*suppressDiagnostics=*/true)};
+
+  if (!hasErrors) {
+    CheckStorageOverlap(atom, GetNonAtomArguments(atom, update.rhs), source);
+    return std::nullopt;
+  } else if (tryReassoc) {
+    ReassocRewriter ra(atom, context_);
+    SomeExpr raRhs{evaluate::rewrite::Mutator(ra)(update.rhs)};
+
+    std::tie(hasErrors, tryReassoc) = CheckAtomicUpdateAssignmentRhs(
+        atom, raRhs, source, /*suppressDiagnostics=*/true);
+    if (!hasErrors) {
+      CheckStorageOverlap(atom, GetNonAtomArguments(atom, raRhs), source);
+
+      evaluate::Assignment raAssign(update);
+      raAssign.rhs = raRhs;
+      return raAssign;
+    }
+  }
+
+  // This is guaranteed to report errors.
+  CheckAtomicUpdateAssignmentRhs(
+      atom, update.rhs, source, /*suppressDiagnostics=*/false);
+  return std::nullopt;
+}
+
+std::pair<bool, bool> OmpStructureChecker::CheckAtomicUpdateAssignmentRhs(
+    const SomeExpr &atom, const SomeExpr &rhs, parser::CharBlock source,
+    bool suppressDiagnostics) {
+  auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  (void)lsrc;
 
   std::pair<operation::Operator, std::vector<SomeExpr>> top{
       operation::Operator::Unknown, {}};
-  if (auto &&maybeInput{GetConvertInput(update.rhs)}) {
+  if (auto &&maybeInput{GetConvertInput(rhs)}) {
     top = GetTopLevelOperationIgnoreResizing(*maybeInput);
   }
   switch (top.first) {
@@ -624,29 +932,39 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
   case operation::Operator::Identity:
     break;
   case operation::Operator::Call:
-    context_.Say(source,
-        "A call to this function is not a valid ATOMIC UPDATE operation"_err_en_US);
-    return;
+    if (!suppressDiagnostics) {
+      context_.Say(source,
+          "A call to this function is not a valid ATOMIC UPDATE operation"_err_en_US);
+    }
+    return std::make_pair(true, false);
   case operation::Operator::Convert:
-    context_.Say(source,
-        "An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation"_err_en_US);
-    return;
+    if (!suppressDiagnostics) {
+      context_.Say(source,
+          "An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation"_err_en_US);
+    }
+    return std::make_pair(true, false);
   case operation::Operator::Intrinsic:
-    context_.Say(source,
-        "This intrinsic function is not a valid ATOMIC UPDATE operation"_err_en_US);
-    return;
+    if (!suppressDiagnostics) {
+      context_.Say(source,
+          "This intrinsic function is not a valid ATOMIC UPDATE operation"_err_en_US);
+    }
+    return std::make_pair(true, false);
   case operation::Operator::Constant:
   case operation::Operator::Unknown:
-    context_.Say(
-        source, "This is not a valid ATOMIC UPDATE operation"_err_en_US);
-    return;
+    if (!suppressDiagnostics) {
+      context_.Say(
+          source, "This is not a valid ATOMIC UPDATE operation"_err_en_US);
+    }
+    return std::make_pair(true, false);
   default:
     assert(
         top.first != operation::Operator::Identity && "Handle this separately");
-    context_.Say(source,
-        "The %s operator is not a valid ATOMIC UPDATE operation"_err_en_US,
-        operation::ToString(top.first));
-    return;
+    if (!suppressDiagnostics) {
+      context_.Say(source,
+          "The %s operator is not a valid ATOMIC UPDATE operation"_err_en_US,
+          operation::ToString(top.first));
+    }
+    return std::make_pair(true, false);
   }
   // Check how many times `atom` occurs as an argument, if it's a subexpression
   // of an argument, and collect the non-atom arguments.
@@ -667,39 +985,48 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
     return count;
   }()};
 
-  bool hasError{false};
+  bool hasError{false}, tryReassoc{false};
   if (subExpr) {
-    context_.Say(rsrc,
-        "The atomic variable %s cannot be a proper subexpression of an argument (here: %s) in the update operation"_err_en_US,
-        atom.AsFortran(), subExpr->AsFortran());
+    if (!suppressDiagnostics) {
+      context_.Say(rsrc,
+          "The atomic variable %s cannot be a proper subexpression of an argument (here: %s) in the update operation"_err_en_US,
+          atom.AsFortran(), subExpr->AsFortran());
+    }
     hasError = true;
   }
   if (top.first == operation::Operator::Identity) {
     // This is "x = y".
     assert((atomCount == 0 || atomCount == 1) && "Unexpected count");
     if (atomCount == 0) {
-      context_.Say(rsrc,
-          "The atomic variable %s should appear as an argument in the update operation"_err_en_US,
-          atom.AsFortran());
+      if (!suppressDiagnostics) {
+        context_.Say(rsrc,
+            "The atomic variable %s should appear as an argument in the update operation"_err_en_US,
+            atom.AsFortran());
+      }
       hasError = true;
     }
   } else {
     if (atomCount == 0) {
-      context_.Say(rsrc,
-          "The atomic variable %s should appear as an argument of the top-level %s operator"_err_en_US,
-          atom.AsFortran(), operation::ToString(top.first));
+      if (!suppressDiagnostics) {
+        context_.Say(rsrc,
+            "The atomic variable %s should appear as an argument of the top-level %s operator"_err_en_US,
+            atom.AsFortran(), operation::ToString(top.first));
+      }
+      // If `atom` is a proper subexpression, and it not present as an
+      // argument on its own, reassociation may be able to help.
+      tryReassoc = subExpr.has_value();
       hasError = true;
     } else if (atomCount > 1) {
-      context_.Say(rsrc,
-          "The atomic variable %s should be exactly one of the arguments of the top-level %s operator"_err_en_US,
-          atom.AsFortran(), operation::ToString(top.first));
+      if (!suppressDiagnostics) {
+        context_.Say(rsrc,
+            "The atomic variable %s should be exactly one of the arguments of the top-level %s operator"_err_en_US,
+            atom.AsFortran(), operation::ToString(top.first));
+      }
       hasError = true;
     }
   }
 
-  if (!hasError) {
-    CheckStorageOverlap(atom, nonAtom, source);
-  }
+  return std::make_pair(hasError, tryReassoc);
 }
 
 void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
@@ -714,7 +1041,8 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
     return;
   }
 
-  CheckAtomicVariable(atom, alsrc);
+  CheckAtomicVariable(
+      atom, alsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(assign));
 
   auto top{GetTopLevelOperationIgnoreResizing(cond)};
   // Missing arguments to operations would have been diagnosed by now.
@@ -802,12 +1130,14 @@ void OmpStructureChecker::CheckAtomicUpdateOnly(
     SourcedActionStmt action{GetActionStmt(&body.front())};
     if (auto maybeUpdate{GetEvaluateAssignment(action.stmt)}) {
       const SomeExpr &atom{maybeUpdate->lhs};
-      CheckAtomicUpdateAssignment(*maybeUpdate, action.source);
+      auto maybeAssign{
+          CheckAtomicUpdateAssignment(*maybeUpdate, action.source)};
+      auto &updateAssign{maybeAssign.has_value() ? maybeAssign : maybeUpdate};
 
       using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-      x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-          MakeAtomicAnalysisOp(Analysis::Update, maybeUpdate),
-          MakeAtomicAnalysisOp(Analysis::None));
+      x.analysis = AtomicAnalysis(atom)
+                       .addOp0(Analysis::Update, updateAssign)
+                       .addOp1(Analysis::None);
     } else if (!IsAssignment(action.stmt)) {
       context_.Say(
           source, "ATOMIC UPDATE operation should be an assignment"_err_en_US);
@@ -889,9 +1219,11 @@ void OmpStructureChecker::CheckAtomicConditionalUpdate(
   }
 
   using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-  x.analysis = MakeAtomicAnalysis(assign.lhs, update.cond,
-      MakeAtomicAnalysisOp(Analysis::Update | Analysis::IfTrue, assign),
-      MakeAtomicAnalysisOp(Analysis::None));
+  const SomeExpr &atom{assign.lhs};
+
+  x.analysis = AtomicAnalysis(atom, update.cond)
+                   .addOp0(Analysis::Update | Analysis::IfTrue, assign)
+                   .addOp1(Analysis::None);
 }
 
 void OmpStructureChecker::CheckAtomicUpdateCapture(
@@ -920,29 +1252,32 @@ void OmpStructureChecker::CheckAtomicUpdateCapture(
   using Analysis = parser::OpenMPAtomicConstruct::Analysis;
   int action;
 
+  std::optional<evaluate::Assignment> updateAssign{update};
   if (IsMaybeAtomicWrite(update)) {
     action = Analysis::Write;
     CheckAtomicWriteAssignment(update, uact.source);
   } else {
     action = Analysis::Update;
-    CheckAtomicUpdateAssignment(update, uact.source);
+    if (auto &&maybe{CheckAtomicUpdateAssignment(update, uact.source)}) {
+      updateAssign = maybe;
+    }
   }
   CheckAtomicCaptureAssignment(capture, atom, cact.source);
 
-  if (IsPointerAssignment(update) != IsPointerAssignment(capture)) {
+  if (IsPointerAssignment(*updateAssign) != IsPointerAssignment(capture)) {
     context_.Say(cact.source,
         "The update and capture assignments should both be pointer-assignments or both be non-pointer-assignments"_err_en_US);
     return;
   }
 
   if (GetActionStmt(&body.front()).stmt == uact.stmt) {
-    x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-        MakeAtomicAnalysisOp(action, update),
-        MakeAtomicAnalysisOp(Analysis::Read, capture));
+    x.analysis = AtomicAnalysis(atom)
+                     .addOp0(action, updateAssign)
+                     .addOp1(Analysis::Read, capture);
   } else {
-    x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-        MakeAtomicAnalysisOp(Analysis::Read, capture),
-        MakeAtomicAnalysisOp(action, update));
+    x.analysis = AtomicAnalysis(atom)
+                     .addOp0(Analysis::Read, capture)
+                     .addOp1(action, updateAssign);
   }
 }
 
@@ -1087,15 +1422,16 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
 
   evaluate::Assignment updAssign{*GetEvaluateAssignment(update.ift.stmt)};
   evaluate::Assignment capAssign{*GetEvaluateAssignment(capture.stmt)};
+  const SomeExpr &atom{updAssign.lhs};
 
   if (captureFirst) {
-    x.analysis = MakeAtomicAnalysis(updAssign.lhs, update.cond,
-        MakeAtomicAnalysisOp(Analysis::Read | captureWhen, capAssign),
-        MakeAtomicAnalysisOp(Analysis::Write | updateWhen, updAssign));
+    x.analysis = AtomicAnalysis(atom, update.cond)
+                     .addOp0(Analysis::Read | captureWhen, capAssign)
+                     .addOp1(Analysis::Write | updateWhen, updAssign);
   } else {
-    x.analysis = MakeAtomicAnalysis(updAssign.lhs, update.cond,
-        MakeAtomicAnalysisOp(Analysis::Write | updateWhen, updAssign),
-        MakeAtomicAnalysisOp(Analysis::Read | captureWhen, capAssign));
+    x.analysis = AtomicAnalysis(atom, update.cond)
+                     .addOp0(Analysis::Write | updateWhen, updAssign)
+                     .addOp1(Analysis::Read | captureWhen, capAssign);
   }
 }
 
@@ -1125,9 +1461,9 @@ void OmpStructureChecker::CheckAtomicRead(
       if (auto maybe{GetConvertInput(maybeRead->rhs)}) {
         const SomeExpr &atom{*maybe};
         using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-        x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-            MakeAtomicAnalysisOp(Analysis::Read, maybeRead),
-            MakeAtomicAnalysisOp(Analysis::None));
+        x.analysis = AtomicAnalysis(atom)
+                         .addOp0(Analysis::Read, maybeRead)
+                         .addOp1(Analysis::None);
       }
     } else if (!IsAssignment(action.stmt)) {
       context_.Say(
@@ -1159,9 +1495,9 @@ void OmpStructureChecker::CheckAtomicWrite(
       CheckAtomicWriteAssignment(*maybeWrite, action.source);
 
       using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-      x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-          MakeAtomicAnalysisOp(Analysis::Write, maybeWrite),
-          MakeAtomicAnalysisOp(Analysis::None));
+      x.analysis = AtomicAnalysis(atom)
+                       .addOp0(Analysis::Write, maybeWrite)
+                       .addOp1(Analysis::None);
     } else if (!IsAssignment(action.stmt)) {
       context_.Say(
           x.source, "ATOMIC WRITE operation should be an assignment"_err_en_US);
@@ -1258,6 +1594,120 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
 
 void OmpStructureChecker::Leave(const parser::OpenMPAtomicConstruct &) {
   dirContext_.pop_back();
+}
+
+// Rewrite min/max:
+// Min and max intrinsics in Fortran take an arbitrary number of arguments
+// (two or more). The first two are mandatory, the rest is optional. That
+// means that arguments beyond the first two may be optional dummy argument
+// from the caller. In that case, a reference to such an argument will
+// cause presence test to be emitted, which cannot go inside of the atomic
+// operation. Since the atom operand must be present, rewrite the min/max
+// operation in a way that avoid the presence tests in the atomic code.
+// For example, in
+//   subroutine f(atom, x, y, z)
+//     integer :: atom, x
+//     integer, optional :: y, z
+//     !$omp atomic update
+//     atom = min(atom, x, y, z)
+//   end
+// the min operation will become
+//   atom = min(atom, min(x, y, z))
+// and in the final code
+//   // Presence check is fine here.
+//   tmp = min(x, y, z)
+//   atomic update {
+//     // Both operands are mandatory, no presence check needed.
+//     atom = min(atom, tmp)
+//   }
+struct MinMaxRewriter : public evaluate::rewrite::Identity {
+  using Id = evaluate::rewrite::Identity;
+  using Id::operator();
+
+  MinMaxRewriter(const SomeExpr &atom) : atom_(atom) {}
+
+  static bool IsMinMax(const evaluate::ProcedureDesignator &p) {
+    if (auto *intrin{p.GetSpecificIntrinsic()}) {
+      return intrin->name == "min" || intrin->name == "max";
+    }
+    return false;
+  }
+
+  // Take a list of arguments to a min/max operation, e.g. [a0, a1, ...]
+  // One of the a_i's, say a_t, must be the atom.
+  // Generate
+  //   min/max(a_t, min/max(a0, a1, ... [except a_t]))
+  template <typename T>
+  evaluate::Expr<T> operator()(
+      evaluate::Expr<T> &&x, const evaluate::FunctionRef<T> &f) {
+    const evaluate::ProcedureDesignator &proc = f.proc();
+    if (!IsMinMax(proc) || f.arguments().size() <= 2) {
+      return Id::operator()(std::move(x), f);
+    }
+
+    // Collect arguments as SomeExpr's and find out which argument
+    // corresponds to atom.
+    const SomeExpr *atomArg{nullptr};
+    std::vector<const SomeExpr *> args;
+    for (const std::optional<evaluate::ActualArgument> &a : f.arguments()) {
+      if (!a) {
+        continue;
+      }
+      if (const SomeExpr *e{a->UnwrapExpr()}) {
+        if (evaluate::IsSameOrConvertOf(*e, atom_)) {
+          atomArg = e;
+        }
+        args.push_back(e);
+      }
+    }
+    if (!atomArg) {
+      return Id::operator()(std::move(x), f);
+    }
+
+    evaluate::ActualArguments nonAtoms;
+
+    auto AsActual = [](const SomeExpr &z) {
+      SomeExpr copy = z;
+      return evaluate::ActualArgument(std::move(copy));
+    };
+    // Semantic checks guarantee that the "atom" shows exactly once in the
+    // argument list (with potential conversions around it).
+    // For the first two (non-optional) arguments, if "atom" is among them,
+    // replace it with another occurrence of the other non-optional argument.
+    if (atomArg == args[0]) {
+      // (atom, x, y...) -> (x, x, y...)
+      nonAtoms.push_back(AsActual(*args[1]));
+      nonAtoms.push_back(AsActual(*args[1]));
+    } else if (atomArg == args[1]) {
+      // (x, atom, y...) -> (x, x, y...)
+      nonAtoms.push_back(AsActual(*args[0]));
+      nonAtoms.push_back(AsActual(*args[0]));
+    } else {
+      // (x, y, z...) -> unchanged
+      nonAtoms.push_back(AsActual(*args[0]));
+      nonAtoms.push_back(AsActual(*args[1]));
+    }
+
+    // The rest of arguments are optional, so we can just skip "atom".
+    for (size_t i = 2, e = args.size(); i != e; ++i) {
+      if (atomArg != args[i])
+        nonAtoms.push_back(AsActual(*args[i]));
+    }
+
+    SomeExpr tmp = evaluate::AsGenericExpr(
+        evaluate::FunctionRef<T>(AsRvalue(proc), AsRvalue(nonAtoms)));
+
+    return evaluate::Expr<T>(evaluate::FunctionRef<T>(
+        AsRvalue(proc), {AsActual(*atomArg), AsActual(tmp)}));
+  }
+
+private:
+  const SomeExpr &atom_;
+};
+
+static MaybeExpr PostSemaRewrite(const SomeExpr &atom, const SomeExpr &expr) {
+  MinMaxRewriter rewriter(atom);
+  return evaluate::rewrite::Mutator(rewriter)(expr);
 }
 
 } // namespace Fortran::semantics

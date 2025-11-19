@@ -83,8 +83,8 @@ for.end:
 define void @pr47390(ptr %a) {
 ; CHECK-LABEL: define void @pr47390(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -94,23 +94,8 @@ define void @pr47390(ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ -1, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ 1, %[[ENTRY]] ]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PRIMARY:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[PRIMARY_ADD:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[USE_PRIMARY:%.*]] = phi i32 [ -1, %[[SCALAR_PH]] ], [ [[PRIMARY]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SECONDARY:%.*]] = phi i32 [ 1, %[[SCALAR_PH]] ], [ [[SECONDARY_ADD:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PRIMARY_ADD]] = add i32 [[PRIMARY]], 1
-; CHECK-NEXT:    [[SECONDARY_ADD]] = add i32 [[SECONDARY]], 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[SECONDARY]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SECONDARY]], 5
-; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ;
 entry:
   br label %loop
@@ -134,34 +119,34 @@ loop:
 define void @dead_load_and_vector_pointer(ptr %a, ptr %b) {
 ; CHECK-LABEL: define void @dead_load_and_vector_pointer(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 516
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B]], i64 516
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 8, !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP5]], align 8, !alias.scope [[META6]], !noalias [[META9]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 8, !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP5]], align 8, !alias.scope [[META5]], !noalias [[META8]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[WIDE_LOAD2]], splat (i32 1)
-; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[TMP2]], align 4, !alias.scope [[META6]], !noalias [[META9]]
-; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP5]], align 4, !alias.scope [[META6]], !noalias [[META9]]
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[TMP2]], align 4, !alias.scope [[META5]], !noalias [[META8]]
+; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP5]], align 4, !alias.scope [[META5]], !noalias [[META8]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 128, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 128, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[EXIT:.*]]:
 ; CHECK-NEXT:    ret void
@@ -175,7 +160,7 @@ define void @dead_load_and_vector_pointer(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[PRIMARY]]
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PRIMARY]], 128
-; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
 ;
 entry:
   br label %loop
@@ -201,12 +186,11 @@ loop:
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
-; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
-; CHECK: [[META9]] = !{[[META10:![0-9]+]]}
-; CHECK: [[META10]] = distinct !{[[META10]], [[META8]]}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]]}
+; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
+; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], !"LVerDomain"}
+; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
+; CHECK: [[META9]] = distinct !{[[META9]], [[META7]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
 ;.

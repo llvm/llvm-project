@@ -12,9 +12,12 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolEvents.h"
+#include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBPlatform.h"
 #include "llvm/Support/Error.h"
+#include <utility>
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -38,25 +41,37 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
-void SendTargetBasedCapabilities(DAP &dap) {
+/// Get capabilities based on the configured target.
+static llvm::DenseSet<AdapterFeature> GetTargetBasedCapabilities(DAP &dap) {
+  llvm::DenseSet<AdapterFeature> capabilities;
   if (!dap.target.IsValid())
-    return;
-
-  protocol::CapabilitiesEventBody body;
+    return capabilities;
 
   const llvm::StringRef target_triple = dap.target.GetTriple();
   if (target_triple.starts_with("x86"))
-    body.capabilities.supportedFeatures.insert(
-        protocol::eAdapterFeatureStepInTargetsRequest);
+    capabilities.insert(protocol::eAdapterFeatureStepInTargetsRequest);
 
   // We only support restarting launch requests not attach requests.
   if (dap.last_launch_request)
-    body.capabilities.supportedFeatures.insert(
-        protocol::eAdapterFeatureRestartRequest);
+    capabilities.insert(protocol::eAdapterFeatureRestartRequest);
+
+  return capabilities;
+}
+
+void SendExtraCapabilities(DAP &dap) {
+  protocol::Capabilities capabilities = dap.GetCustomCapabilities();
+  llvm::DenseSet<AdapterFeature> target_capabilities =
+      GetTargetBasedCapabilities(dap);
+
+  capabilities.supportedFeatures.insert(target_capabilities.begin(),
+                                        target_capabilities.end());
+
+  protocol::CapabilitiesEventBody body;
+  body.capabilities = std::move(capabilities);
 
   // Only notify the client if supportedFeatures changed.
   if (!body.capabilities.supportedFeatures.empty())
-    dap.Send(protocol::Event{"capabilities", body});
+    dap.Send(protocol::Event{"capabilities", std::move(body)});
 }
 
 // "ProcessEvent": {
@@ -64,11 +79,9 @@ void SendTargetBasedCapabilities(DAP &dap) {
 //     { "$ref": "#/definitions/Event" },
 //     {
 //       "type": "object",
-//       "description": "Event message for 'process' event type. The event
-//                       indicates that the debugger has begun debugging a
-//                       new process. Either one that it has launched, or one
-//                       that it has attached to.",
-//       "properties": {
+//       "description": "The event indicates that the debugger has begun
+//       debugging a new process. Either one that it has launched, or one that
+//       it has attached to.", "properties": {
 //         "event": {
 //           "type": "string",
 //           "enum": [ "process" ]
@@ -79,31 +92,37 @@ void SendTargetBasedCapabilities(DAP &dap) {
 //             "name": {
 //               "type": "string",
 //               "description": "The logical name of the process. This is
-//                               usually the full path to process's executable
-//                               file. Example: /home/myproj/program.js."
+//               usually the full path to process's executable file. Example:
+//               /home/example/myproj/program.js."
 //             },
 //             "systemProcessId": {
 //               "type": "integer",
-//               "description": "The system process id of the debugged process.
-//                               This property will be missing for non-system
-//                               processes."
+//               "description": "The process ID of the debugged process, as
+//               assigned by the operating system. This property should be
+//               omitted for logical processes that do not map to operating
+//               system processes on the machine."
 //             },
 //             "isLocalProcess": {
 //               "type": "boolean",
 //               "description": "If true, the process is running on the same
-//                               computer as the debug adapter."
+//               computer as the debug adapter."
 //             },
 //             "startMethod": {
 //               "type": "string",
 //               "enum": [ "launch", "attach", "attachForSuspendedLaunch" ],
 //               "description": "Describes how the debug engine started
-//                               debugging this process.",
-//               "enumDescriptions": [
+//               debugging this process.", "enumDescriptions": [
 //                 "Process was launched under the debugger.",
 //                 "Debugger attached to an existing process.",
-//                 "A project launcher component has launched a new process in
-//                  a suspended state and then asked the debugger to attach."
+//                 "A project launcher component has launched a new process in a
+//                 suspended state and then asked the debugger to attach."
 //               ]
+//             },
+//             "pointerSize": {
+//               "type": "integer",
+//               "description": "The size of a pointer or address for this
+//               process, in bits. This value may be used by clients when
+//               formatting addresses for display."
 //             }
 //           },
 //           "required": [ "name" ]
@@ -112,7 +131,7 @@ void SendTargetBasedCapabilities(DAP &dap) {
 //       "required": [ "event", "body" ]
 //     }
 //   ]
-// }
+// },
 void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   lldb::SBFileSpec exe_fspec = dap.target.GetExecutable();
   char exe_path[PATH_MAX];
@@ -122,7 +141,8 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   EmplaceSafeString(body, "name", exe_path);
   const auto pid = dap.target.GetProcess().GetProcessID();
   body.try_emplace("systemProcessId", (int64_t)pid);
-  body.try_emplace("isLocalProcess", true);
+  body.try_emplace("isLocalProcess", dap.target.GetPlatform().IsHost());
+  body.try_emplace("pointerSize", dap.target.GetAddressByteSize() * 8);
   const char *startMethod = nullptr;
   switch (launch_method) {
   case Launch:
@@ -156,7 +176,7 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
 
   llvm::DenseSet<lldb::tid_t> old_thread_ids;
   old_thread_ids.swap(dap.thread_ids);
-  uint32_t stop_id = process.GetStopID();
+  uint32_t stop_id = on_entry ? 0 : process.GetStopID();
   const uint32_t num_threads = process.GetNumThreads();
 
   // First make a pass through the threads to see if the focused thread
@@ -218,15 +238,7 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
 
 // Send a "terminated" event to indicate the process is done being
 // debugged.
-void SendTerminatedEvent(DAP &dap) {
-  // Prevent races if the process exits while we're being asked to disconnect.
-  llvm::call_once(dap.terminated_event_flag, [&] {
-    dap.RunTerminateCommands();
-    // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject(dap.target));
-    dap.SendJSON(llvm::json::Value(std::move(event)));
-  });
-}
+void SendTerminatedEvent(DAP &dap) { dap.SendTerminatedEvent(); }
 
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
@@ -267,6 +279,31 @@ void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
   body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
+}
+
+void SendInvalidatedEvent(
+    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas,
+    lldb::tid_t tid) {
+  if (!dap.clientFeatures.contains(protocol::eClientFeatureInvalidatedEvent))
+    return;
+  protocol::InvalidatedEventBody body;
+  body.areas = areas;
+
+  if (tid != LLDB_INVALID_THREAD_ID)
+    body.threadId = tid;
+
+  dap.Send(protocol::Event{"invalidated", std::move(body)});
+}
+
+void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
+  if (!dap.clientFeatures.contains(protocol::eClientFeatureMemoryEvent))
+    return;
+  protocol::MemoryEventBody body;
+  body.memoryReference = variable.GetLoadAddress();
+  body.count = variable.GetByteSize();
+  if (body.memoryReference == LLDB_INVALID_ADDRESS)
+    return;
+  dap.Send(protocol::Event{"memory", std::move(body)});
 }
 
 } // namespace lldb_dap
