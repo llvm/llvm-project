@@ -488,7 +488,7 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
   if (error.Success()) {
     // Hook up process PTY if we have one (which we should for local debugging
     // with llgs).
-    int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
+    int pty_fd = launch_info.GetPTY()->ReleasePrimaryFileDescriptor();
     if (pty_fd != PseudoTerminal::invalid_fd) {
       process_sp->SetSTDIOFileDescriptor(pty_fd);
       LLDB_LOG(log, "hooked up STDIO pty to process");

@@ -399,18 +399,18 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
     case FileAction::eFileActionOpen: {
       FileSpec file_spec = file_action->GetFileSpec();
       if (file_spec) {
-        const int primary_fd = launch_info.GetPTY().GetPrimaryFileDescriptor();
+        const int primary_fd = launch_info.GetPTY()->GetPrimaryFileDescriptor();
         if (primary_fd != PseudoTerminal::invalid_fd) {
           // Check in case our file action open wants to open the secondary
-          FileSpec secondary_spec(launch_info.GetPTY().GetSecondaryName());
+          FileSpec secondary_spec(launch_info.GetPTY()->GetSecondaryName());
           if (file_spec == secondary_spec) {
             int secondary_fd =
-                launch_info.GetPTY().GetSecondaryFileDescriptor();
+                launch_info.GetPTY()->GetSecondaryFileDescriptor();
             if (secondary_fd == PseudoTerminal::invalid_fd) {
-              if (llvm::Error Err = launch_info.GetPTY().OpenSecondary(O_RDWR))
+              if (llvm::Error Err = launch_info.GetPTY()->OpenSecondary(O_RDWR))
                 return Status::FromError(std::move(Err));
             }
-            secondary_fd = launch_info.GetPTY().GetSecondaryFileDescriptor();
+            secondary_fd = launch_info.GetPTY()->GetSecondaryFileDescriptor();
             assert(secondary_fd != PseudoTerminal::invalid_fd);
             [options setValue:[NSNumber numberWithInteger:secondary_fd]
                        forKey:key];

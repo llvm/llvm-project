@@ -304,8 +304,8 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
     return arch_or.takeError();
 
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
-      pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      *arch_or, *this, {pid}));
+      pid, launch_info.GetPTY()->ReleasePrimaryFileDescriptor(),
+      native_delegate, *arch_or, *this, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>

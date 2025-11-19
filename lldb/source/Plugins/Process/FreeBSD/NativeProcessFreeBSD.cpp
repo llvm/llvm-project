@@ -108,8 +108,8 @@ NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
            Info.GetArchitecture().GetArchitectureName());
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
-      pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), m_mainloop));
+      pid, launch_info.GetPTY()->ReleasePrimaryFileDescriptor(),
+      native_delegate, Info.GetArchitecture(), m_mainloop));
 
   status = process_up->SetupTrace();
   if (status.Fail())

@@ -94,8 +94,8 @@ NativeProcessNetBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
            Info.GetArchitecture().GetArchitectureName());
 
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
-      pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), m_mainloop));
+      pid, launch_info.GetPTY()->ReleasePrimaryFileDescriptor(),
+      native_delegate, Info.GetArchitecture(), m_mainloop));
 
   status = process_up->SetupTrace();
   if (status.Fail())

@@ -86,8 +86,9 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
   LLDB_LOG(log, "inferior started, now in stopped state");
 
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
-      pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      HostInfo::GetArchitecture(HostInfo::eArchKind64), *this, {pid}));
+      pid, launch_info.GetPTY()->ReleasePrimaryFileDescriptor(),
+      native_delegate, HostInfo::GetArchitecture(HostInfo::eArchKind64), *this,
+      {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
