@@ -35,6 +35,7 @@ libc_test_library(
     srcs = [
         "BazelFilePath.cpp",
         "ExecuteFunctionUnix.cpp",
+        "LibcDeathTestExecutors.cpp",
         "LibcTest.cpp",
         "LibcTestMain.cpp",
     ],
