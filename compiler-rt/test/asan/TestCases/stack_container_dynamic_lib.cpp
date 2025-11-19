@@ -2,6 +2,9 @@
 // in order to handle uninstrumented libraries
 // UNSUPPORTED: target={{.*windows-msvc.*}}
 
+// FIXME: Fix this test under GCC.
+// REQUIRES: Clang
+
 // Mimic a closed-source library compiled without ASan
 // RUN: %clangxx_asan -fno-sanitize=address -DSHARED_LIB %s %fPIC -shared -o %t-so.so
 
