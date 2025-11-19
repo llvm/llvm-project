@@ -14,6 +14,9 @@ __m128bh test_mm_undefined_pbh(void) {
   // CIR: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<2 x !cir.double> -> !cir.vector<8 x !cir.bf16>
   // CIR: cir.return %{{.*}} : !cir.vector<8 x !cir.bf16>
 
+  // CIR-LABEL: cir.func {{.*}}test_mm_undefined_pbh
+  // CIR: call @_mm_undefined_pbh
+
   // LLVM-LABEL: @test_mm_undefined_pbh
   // LLVM: store <8 x bfloat> zeroinitializer, ptr %[[A:.*]], align 16
   // LLVM: %{{.*}} = load <8 x bfloat>, ptr %[[A]], align 16
@@ -29,6 +32,9 @@ __m256bh test_mm256_undefined_pbh(void) {
   // CIR: %[[A:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.double>
   // CIR: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<4 x !cir.double> -> !cir.vector<16 x !cir.bf16>
   // CIR: cir.return %{{.*}} : !cir.vector<16 x !cir.bf16>
+
+  // CIR-LABEL: cir.func {{.*}}test_mm256_undefined_pbh
+  // CIR: call @_mm256_undefined_pbh
 
   // LLVM-LABEL: @test_mm256_undefined_pbh
   // LLVM: store <16 x bfloat> zeroinitializer, ptr %[[A:.*]], align 32

@@ -9,11 +9,13 @@
 #include <immintrin.h>
 
 __m512bh test_mm512_undefined_pbh(void) {
-
   // CIR-LABEL: _mm512_undefined_pbh
   // CIR: %[[A:.*]] = cir.const #cir.zero : !cir.vector<8 x !cir.double>
   // CIR: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<8 x !cir.double> -> !cir.vector<32 x !cir.bf16>
   // CIR: cir.return %{{.*}} : !cir.vector<32 x !cir.bf16>
+
+  // CIR-LABEL: cir.func {{.*}}test_mm512_undefined_pbh
+  // CIR: call @_mm512_undefined_pbh
 
   // LLVM-LABEL: test_mm512_undefined_pbh
   // LLVM: store <32 x bfloat> zeroinitializer, ptr %[[A:.*]], align 64

@@ -16,7 +16,6 @@
 
 #include <immintrin.h>
 
-
 void test_mm_sfence(void) {
   // CIR-LABEL: test_mm_sfence
   // LLVM-LABEL: test_mm_sfence
