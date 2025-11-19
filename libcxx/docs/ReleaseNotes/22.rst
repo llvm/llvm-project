@@ -40,9 +40,12 @@ Implemented Papers
 
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
   is implemented in this release)
+- P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
 - P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)
+- P2641R4: Checking if a ``union`` alternative is active (``std::is_within_lifetime``)
+  (`Github <https://llvm.org/PR105381>`__)
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
 - P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
@@ -64,8 +67,8 @@ Improvements and New Features
   by up to 2.5x
 - The performance of ``erase(iterator, iterator)`` in the unordered containers has been improved by up to 1.9x
 - The performance of ``map::insert_or_assign`` has been improved by up to 2x
-- ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
-  in chunks into a buffer.
+- ``ofstream::write`` and ``ifstream::read`` have been optimized to pass through large reads and writes to system calls
+  directly instead of copying them in chunks.
 - Multiple internal types have been refactored to use ``[[no_unique_address]]``, resulting in faster compile times and
   reduced debug information.
 
@@ -76,8 +79,9 @@ Improvements and New Features
 - The ``std::{fill, fill_n}`` and ``std::ranges::{fill, fill_n}`` algorithms have been optimized for segmented iterators,
   resulting in a performance improvement of at least 10x for ``std::deque<int>`` iterators and
   ``std::join_view<std::vector<std::vector<int>>>`` iterators.
-- The ``std::generate`` and ``std::generate_n`` algorithms have been optimized for segmented iterators, resulting in a
-  performance improvement for ``std::deque<short>`` and ``std::join_view<vector<vector<short>>>`` iterators.
+- The ``std::{generate, generate_n}`` and ``std::ranges::generate_n`` algorithms have been optimized for segmented
+  iterators, resulting in a performance improvement for ``std::deque<short>`` and
+  ``std::join_view<vector<vector<short>>>`` iterators.
 
 Deprecations and Removals
 -------------------------
@@ -109,6 +113,9 @@ ABI Affecting Changes
   ``__hash_map_hasher`` and ``__hash_map_equal`` have been refactored to use ``_LIBCPP_COMPRESSED_ELEMENT`` instead of
   potentially inheriting from the types they wrap. At this point in time we are not aware of any ABI changes caused by
   this.
+
+- ``ranges::iota_view`` is now aware of ``__int128``. This causes ``iota_view::difference_type`` to change from
+  ``long long`` to ``__int128`` in some cases.
 
 Build System Changes
 --------------------

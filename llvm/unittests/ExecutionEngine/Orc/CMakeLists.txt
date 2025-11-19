@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   JITLink
   Object
+  ObjectYAML
   OrcDebugging
   OrcJIT
   OrcShared
@@ -25,6 +26,7 @@ add_llvm_unittest(OrcJITTests
   IndirectionUtilsTest.cpp
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
+  LibraryResolverTest.cpp
   LookupAndRecordAddrsTest.cpp
   MachOPlatformTest.cpp
   MapperJITLinkMemoryManagerTest.cpp

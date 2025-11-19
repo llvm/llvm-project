@@ -1028,16 +1028,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
     return EmitX86ConvertIntToFp(*this, E, Ops, /*IsSigned*/ false);
 
-  case X86::BI__builtin_ia32_vfmaddss3:
-  case X86::BI__builtin_ia32_vfmaddsd3:
   case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
     return EmitScalarFMAExpr(*this, E, Ops, Ops[0]);
-  case X86::BI__builtin_ia32_vfmaddss:
-  case X86::BI__builtin_ia32_vfmaddsd:
-    return EmitScalarFMAExpr(*this, E, Ops,
-                             Constant::getNullValue(Ops[0]->getType()));
   case X86::BI__builtin_ia32_vfmaddsh3_maskz:
   case X86::BI__builtin_ia32_vfmaddss3_maskz:
   case X86::BI__builtin_ia32_vfmaddsd3_maskz:
@@ -2930,74 +2924,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // We treat __stosb as a volatile memset - it may not generate "rep stosb"
     // instruction, but it will create a memset that won't be optimized away.
     return Builder.CreateMemSet(Ops[0], Ops[1], Ops[2], Align(1), true);
-  }
-  // Corresponding to intrisics which will return 2 tiles (tile0_tile1).
-  case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal: {
-    Intrinsic::ID IID;
-    switch (BuiltinID) {
-    default:
-      llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
-      IID = Intrinsic::x86_t2rpntlvwz0_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
-      IID = Intrinsic::x86_t2rpntlvwz0rs_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz0t1_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz0rst1_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz1_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
-      IID = Intrinsic::x86_t2rpntlvwz1rs_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz1t1_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz1rst1_internal;
-      break;
-    }
-
-    // Ops = (Row0, Col0, Col1, DstPtr0, DstPtr1, SrcPtr, Stride)
-    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID),
-                                     {Ops[0], Ops[1], Ops[2], Ops[5], Ops[6]});
-
-    auto *PtrTy = E->getArg(3)->getType()->getAs<PointerType>();
-    assert(PtrTy && "arg3 must be of pointer type");
-    QualType PtreeTy = PtrTy->getPointeeType();
-    llvm::Type *TyPtee = ConvertType(PtreeTy);
-
-    // Bitcast amx type (x86_amx) to vector type (256 x i32)
-    // Then store tile0 into DstPtr0
-    Value *T0 = Builder.CreateExtractValue(Call, 0);
-    Value *VecT0 = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
-                                           {TyPtee}, {T0});
-    Builder.CreateDefaultAlignedStore(VecT0, Ops[3]);
-
-    // Then store tile1 into DstPtr1
-    Value *T1 = Builder.CreateExtractValue(Call, 1);
-    Value *VecT1 = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
-                                           {TyPtee}, {T1});
-    Value *Store = Builder.CreateDefaultAlignedStore(VecT1, Ops[4]);
-
-    // Note: Here we escape directly use x86_tilestored64_internal to store
-    // the results due to it can't make sure the Mem written scope. This may
-    // cause shapes reloads after first amx intrinsic, which current amx reg-
-    // ister allocation has no ability to handle it.
-
-    return Store;
   }
   case X86::BI__ud2:
     // llvm.trap makes a ud2a instruction on x86.

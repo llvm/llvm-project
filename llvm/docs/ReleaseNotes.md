@@ -66,6 +66,14 @@ Changes to the LLVM IR
   `@llvm.masked.gather` and `@llvm.masked.scatter` intrinsics has been removed.
   Instead, the `align` attribute should be placed on the pointer (or vector of
   pointers) argument.
+* A `load atomic` may now be used with vector types on x86.
+* Added `@llvm.reloc.none` intrinsic to emit null relocations to symbols. This
+  emits an undefined symbol reference without adding any dedicated code or data to
+  to bear the relocation.
+* Added `modular-format` attribute to dynamically pull in aspects of libc
+  format string function implementations from statically-linked libc's based on
+  the requirements of each call. Currently only `float` is supported; this can
+  keep floating point support out of printf if it can be proven unused.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -92,6 +100,16 @@ Changes to Vectorizers
 
 Changes to the AArch64 Backend
 ------------------------------
+
+* Assembler/disassembler support has been added for Armv9.7-A (2025)
+  architecture extensions.
+
+* Assembler/disassembler support has been added for 'Virtual Tagging
+  Extension (vMTE)' and 'Permission Overlay Extension version 2 (POE2)'
+  Future Architecture Technologies extensions.
+
+* `FEAT_TME` support has been removed, as it has been withdrawn from
+   all future versions of the A-profile architecture.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -175,6 +193,12 @@ Changes to the LLVM tools
 * `llvm-readelf` now dumps all hex format values in lower-case mode.
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 * Support for `%T` in lit has been removed.
+* Add `--save-stats` option to `llc` to save LLVM statistics to a file. Compatible with the Clang option.
+* Add `--save-stats` option to `opt` to save LLVM statistics to a file. Compatible with the Clang option.
+
+* `llvm-config` gained a new flag `--quote-paths` which quotes and escapes paths
+  emitted on stdout, to account for spaces or other special characters in path.
+  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
 
 Changes to LLDB
 ---------------------------------
@@ -187,6 +211,10 @@ Changes to LLDB
 * The `show-progress` setting, which became a NOOP with the introduction of the
   statusline, now defaults to off and controls using OSC escape codes to show a
   native progress bar in supporting terminals like Ghostty and ConEmu.
+* The default PDB reader on Windows was changed from DIA to native, which uses 
+  LLVM's PDB and CodeView support. You can switch back to the DIA reader with
+  `settings set plugin.symbol-file.pdb.reader dia`. Note that support for the
+  DIA reader will be removed in a future version of LLDB.
 
 Changes to BOLT
 ---------------------------------

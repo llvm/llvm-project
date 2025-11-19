@@ -8,6 +8,7 @@
 
 #include "Protocol/ProtocolRequests.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -636,9 +637,57 @@ json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
                       {"breakMode", ERB.breakMode}};
 
   if (!ERB.description.empty())
-    result.insert({"description", ERB.description.c_str()});
+    result.insert({"description", ERB.description});
   if (ERB.details.has_value())
     result.insert({"details", *ERB.details});
+  return result;
+}
+
+static bool fromJSON(const llvm::json::Value &Params, EvaluateContext &C,
+                     llvm::json::Path P) {
+  auto rawContext = Params.getAsString();
+  if (!rawContext) {
+    P.report("expected a string");
+    return false;
+  }
+  C = StringSwitch<EvaluateContext>(*rawContext)
+          .Case("watch", EvaluateContext::eEvaluateContextWatch)
+          .Case("repl", EvaluateContext::eEvaluateContextRepl)
+          .Case("hover", EvaluateContext::eEvaluateContextHover)
+          .Case("clipboard", EvaluateContext::eEvaluateContextClipboard)
+          .Case("variables", EvaluateContext::eEvaluateContextVariables)
+          .Default(eEvaluateContextUnknown);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, EvaluateArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("expression", Args.expression) &&
+         O.mapOptional("frameId", Args.frameId) &&
+         O.mapOptional("line", Args.line) &&
+         O.mapOptional("column", Args.column) &&
+         O.mapOptional("source", Args.source) &&
+         O.mapOptional("context", Args.context) &&
+         O.mapOptional("format", Args.format);
+}
+
+llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
+  json::Object result{{"result", Body.result},
+                      {"variablesReference", Body.variablesReference}};
+
+  if (!Body.type.empty())
+    result.insert({"type", Body.type});
+  if (Body.presentationHint)
+    result.insert({"presentationHint", Body.presentationHint});
+  if (Body.namedVariables)
+    result.insert({"namedVariables", Body.namedVariables});
+  if (Body.indexedVariables)
+    result.insert({"indexedVariables", Body.indexedVariables});
+  if (!Body.memoryReference.empty())
+    result.insert({"memoryReference", Body.memoryReference});
+  if (Body.valueLocationReference != LLDB_DAP_INVALID_VALUE_LOC)
+    result.insert({"valueLocationReference", Body.valueLocationReference});
 
   return result;
 }

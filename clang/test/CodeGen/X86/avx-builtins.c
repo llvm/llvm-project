@@ -45,12 +45,14 @@ __m256d test_mm256_addsub_pd(__m256d A, __m256d B) {
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_addsub_pd(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_addsub_pd((__m256d){+1.0, +2.0, +3.0, +4.0}, (__m256d){+1.0, +1.0, +1.0, +1.0}), +0.0, +3.0, +2.0, +5.0));
 
 __m256 test_mm256_addsub_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_addsub_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_addsub_ps(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_addsub_ps((__m256){+1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}, (__m256){+1.0f, +1.0f, +1.0f, +1.0f, +1.0f, +1.0f, +1.0f, +1.0f}), +0.0f, +3.0f, +2.0f, +5.0f, +4.0f, +7.0f, +6.0f, +9.0f));
 
 __m256d test_mm256_and_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_and_pd
@@ -1398,18 +1400,21 @@ __m128d test_mm_permute_pd(__m128d A) {
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> <i32 1, i32 0>
   return _mm_permute_pd(A, 1);
 }
+TEST_CONSTEXPR(match_m128d(_mm_permute_pd(((__m128d){1.0, 2.0}), 1), 2.0, 1.0));
 
 __m256d test_mm256_permute_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_permute_pd
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   return _mm256_permute_pd(A, 5);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_permute_pd(((__m256d){1.0f, 2.0f, 3.0f, 4.0f}), 5), 2.0f, 1.0f, 4.0f, 3.0f));
 
 __m128 test_mm_permute_ps(__m128 A) {
   // CHECK-LABEL: test_mm_permute_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   return _mm_permute_ps(A, 0x1b);
 }
+TEST_CONSTEXPR(match_m128(_mm_permute_ps(((__m128){1.0, 2.0, 3.0, 4.0}), 0x1b), 4.0, 3.0, 2.0, 1.0));
 
 // Test case for PR12401
 __m128 test2_mm_permute_ps(__m128 a) {
@@ -1417,12 +1422,14 @@ __m128 test2_mm_permute_ps(__m128 a) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 2, i32 3>
   return _mm_permute_ps(a, 0xe6);
 }
+TEST_CONSTEXPR(match_m128(_mm_permute_ps(((__m128){1.0, 2.0, 3.0, 4.0}), 0xe6), 3.0, 2.0, 3.0, 4.0));
 
 __m256 test_mm256_permute_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_permute_ps
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
   return _mm256_permute_ps(A, 0x1b);
 }
+TEST_CONSTEXPR(match_m256(_mm256_permute_ps(((__m256){1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}), 0x1b), 4.0, 3.0, 2.0, 1.0, 8.0, 7.0, 6.0, 5.0));
 
 __m256d test_mm256_permute2f128_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_permute2f128_pd
@@ -1891,11 +1898,15 @@ __m256d test_mm256_shuffle_pd(__m256d A, __m256d B) {
   return _mm256_shuffle_pd(A, B, 0);
 }
 
+TEST_CONSTEXPR((match_m256d(_mm256_shuffle_pd(((__m256d)(__v4df){1.0, 2.0, 3.0, 4.0}), ((__m256d)(__v4df){5.0, 6.0, 7.0, 8.0}), 15), 2.0, 6.0, 4.0, 8.0)));
+
 __m256 test_mm256_shuffle_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_shuffle_ps
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 0, i32 8, i32 8, i32 4, i32 4, i32 12, i32 12>
   return _mm256_shuffle_ps(A, B, 0);
 }
+
+TEST_CONSTEXPR((match_m256(_mm256_shuffle_ps(((__m256)(__v8sf){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256)(__v8sf){9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f}), 4), 1.0f, 2.0f, 9.0f, 9.0f, 5.0f, 6.0f, 13.0f, 13.0f)));
 
 __m256d test_mm256_sqrt_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_sqrt_pd

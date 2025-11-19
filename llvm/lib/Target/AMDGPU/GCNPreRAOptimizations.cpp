@@ -143,7 +143,7 @@ bool GCNPreRAOptimizationsImpl::processReg(Register Reg) {
           continue;
 
         if (Def.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64) {
-          MachineOperand DefSrcMO = Def.getOperand(1);
+          const MachineOperand &DefSrcMO = Def.getOperand(1);
 
           // Immediates are not an issue and can be propagated in
           // postrapseudos pass. Only handle cases where defining
