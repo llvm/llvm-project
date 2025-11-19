@@ -89,12 +89,12 @@ computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
     higherRankDim = higherRankShape[i + rankDiff];
     lowerRankDim = lowerRankShape[i];
 
-    auto isKnownStaticShapeNotEqualToOne = [](int64_t dim) {
+    auto isStaticDimAndNotEqualToOne = [](int64_t dim) {
       return dim != 1 && dim != ShapedType::kDynamic;
     };
 
-    if (isKnownStaticShapeNotEqualToOne(lowerRankDim) &&
-        isKnownStaticShapeNotEqualToOne(higherRankDim) &&
+    if (isStaticDimAndNotEqualToOne(lowerRankDim) &&
+        isStaticDimAndNotEqualToOne(higherRankDim) &&
         lowerRankDim != higherRankDim)
       return failure();
 
