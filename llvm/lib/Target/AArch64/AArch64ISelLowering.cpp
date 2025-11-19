@@ -19473,7 +19473,7 @@ static ElementCount getMaxValueForSVECntIntrinsic(SDValue Op) {
   case Intrinsic::aarch64_sve_cntb:
     return ElementCount::getScalable(16);
   default:
-    llvm_unreachable("unexpected intrininc");
+    llvm_unreachable("Unexpected intrinsic");
   }
 }
 
