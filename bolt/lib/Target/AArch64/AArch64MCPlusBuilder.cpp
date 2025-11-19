@@ -314,10 +314,8 @@ public:
   }
 
   void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) override {
-    assert(isPAuthAndRet(AuthAndRet) &&
-           "Not a fused pauth-and-return instruction");
-
     Auth.clear();
+    Auth.setOperands(AuthAndRet.getOperands());
     switch (AuthAndRet.getOpcode()) {
     case AArch64::RETAA:
       Auth.setOpcode(AArch64::AUTIASP);
