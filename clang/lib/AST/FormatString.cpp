@@ -320,6 +320,70 @@ bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
 // Methods on ArgType.
 //===----------------------------------------------------------------------===//
 
+static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
+                                          LengthModifier::Kind &K) {
+  if (!Ctx.getLangOpts().C99 && !Ctx.getLangOpts().CPlusPlus)
+    return false;
+  for (/**/; const auto *TT = QT->getAs<TypedefType>(); QT = TT->desugar()) {
+    const auto *TD = TT->getDecl();
+    const auto *DC = TT->getDecl()->getDeclContext();
+    if (DC->isTranslationUnit() || DC->isStdNamespace()) {
+      StringRef Name = TD->getIdentifier()->getName();
+      if (Name == "size_t") {
+        K = LengthModifier::AsSizeT;
+        return true;
+      } else if (Name == "ssize_t" /*Not C99, but common in Unix.*/) {
+        K = LengthModifier::AsSizeT;
+        return true;
+      } else if (Name == "ptrdiff_t") {
+        K = LengthModifier::AsPtrDiff;
+        return true;
+      } else if (Name == "intmax_t") {
+        K = LengthModifier::AsIntMax;
+        return true;
+      } else if (Name == "uintmax_t") {
+        K = LengthModifier::AsIntMax;
+        return true;
+      }
+    }
+  }
+  if (const auto *PST = QT->getAs<PredefinedSugarType>()) {
+    using Kind = PredefinedSugarType::Kind;
+    switch (PST->getKind()) {
+    case Kind::SizeT:
+    case Kind::SignedSizeT:
+      K = LengthModifier::AsSizeT;
+      return true;
+    case Kind::PtrdiffT:
+      K = LengthModifier::AsPtrDiff;
+      return true;
+    }
+    llvm_unreachable("unexpected kind");
+  }
+  return false;
+}
+
+// Check whether T and E are compatible size_t/ptrdiff_t types. E must be
+// consistent with LE.
+// T is the type of the actual expression in the code to be checked, and E is
+// the expected type parsed from the format string.
+static clang::analyze_format_string::ArgType::MatchKind
+matchesSizeTPtrdiffT(ASTContext &C, QualType T, QualType E) {
+  using MatchKind = clang::analyze_format_string::ArgType::MatchKind;
+
+  if (!T->isIntegerType())
+    return MatchKind::NoMatch;
+
+  if (C.hasSameType(T, E))
+    return MatchKind::Match;
+
+  if (C.getCorrespondingSignedType(T.getCanonicalType()) !=
+      C.getCorrespondingSignedType(E.getCanonicalType()))
+    return MatchKind::NoMatch;
+
+  return MatchKind::NoMatchSignedness;
+}
+
 clang::analyze_format_string::ArgType::MatchKind
 ArgType::matchesType(ASTContext &C, QualType argTy) const {
   // When using the format attribute in C++, you can receive a function or an
@@ -349,14 +413,14 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       return Match;
 
     case AnyCharTy: {
-      if (const auto *ETy = argTy->getAs<EnumType>()) {
+      if (const auto *ED = argTy->getAsEnumDecl()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration.
-        if (!ETy->getDecl()->isComplete())
+        if (!ED->isComplete())
           return NoMatch;
-        if (ETy->isUnscopedEnumerationType())
-          argTy = ETy->getDecl()->getIntegerType();
+        if (!ED->isScoped())
+          argTy = ED->getIntegerType();
       }
 
       if (const auto *BT = argTy->getAs<BuiltinType>()) {
@@ -394,14 +458,18 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     }
 
     case SpecificTy: {
-      if (const EnumType *ETy = argTy->getAs<EnumType>()) {
+      if (TK != TypeKind::DontCare) {
+        return matchesSizeTPtrdiffT(C, argTy, T);
+      }
+
+      if (const auto *ED = argTy->getAsEnumDecl()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration as that needs an exact match.
-        if (!ETy->getDecl()->isComplete())
+        if (!ED->isComplete())
           argTy = C.IntTy;
-        else if (ETy->isUnscopedEnumerationType())
-          argTy = ETy->getDecl()->getIntegerType();
+        else if (!ED->isScoped())
+          argTy = ED->getIntegerType();
       }
 
       if (argTy->isSaturatedFixedPointType())
@@ -585,7 +653,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         // to Objective-C objects.  Since the compiler doesn't know which
         // structs can be toll-free bridged, we just accept them all.
         QualType pointee = PT->getPointeeType();
-        if (pointee->getAsStructureType() || pointee->isVoidType())
+        if (pointee->isStructureType() || pointee->isVoidType())
           return Match;
       }
       return NoMatch;
@@ -653,6 +721,12 @@ ArgType::matchesArgType(ASTContext &C, const ArgType &Other) const {
 
   if (Left.K == AK::SpecificTy) {
     if (Right.K == AK::SpecificTy) {
+      if (Left.TK != TypeKind::DontCare) {
+        return matchesSizeTPtrdiffT(C, Right.T, Left.T);
+      } else if (Right.TK != TypeKind::DontCare) {
+        return matchesSizeTPtrdiffT(C, Left.T, Right.T);
+      }
+
       auto Canon1 = C.getCanonicalType(Left.T);
       auto Canon2 = C.getCanonicalType(Right.T);
       if (Canon1 == Canon2)
@@ -706,7 +780,11 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
       Res = C.CharTy;
       break;
     case SpecificTy:
-      Res = T;
+      if (TK == TypeKind::PtrdiffT || TK == TypeKind::SizeT)
+        // Using Name as name, so no need to show the uglified name.
+        Res = T->getCanonicalTypeInternal();
+      else
+        Res = T;
       break;
     case CStrTy:
       Res = C.getPointerType(C.CharTy);
@@ -733,7 +811,6 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
 
 std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
   std::string S = getRepresentativeType(C).getAsString(C.getPrintingPolicy());
-
   std::string Alias;
   if (Name) {
     // Use a specific name for this type, e.g. "size_t".
@@ -1198,29 +1275,12 @@ FormatSpecifier::getCorrectedLengthModifier() const {
   return std::nullopt;
 }
 
-bool FormatSpecifier::namedTypeToLengthModifier(QualType QT,
+bool FormatSpecifier::namedTypeToLengthModifier(ASTContext &Ctx, QualType QT,
                                                 LengthModifier &LM) {
-  for (/**/; const auto *TT = QT->getAs<TypedefType>();
-       QT = TT->getDecl()->getUnderlyingType()) {
-    const TypedefNameDecl *Typedef = TT->getDecl();
-    const IdentifierInfo *Identifier = Typedef->getIdentifier();
-    if (Identifier->getName() == "size_t") {
-      LM.setKind(LengthModifier::AsSizeT);
-      return true;
-    } else if (Identifier->getName() == "ssize_t") {
-      // Not C99, but common in Unix.
-      LM.setKind(LengthModifier::AsSizeT);
-      return true;
-    } else if (Identifier->getName() == "intmax_t") {
-      LM.setKind(LengthModifier::AsIntMax);
-      return true;
-    } else if (Identifier->getName() == "uintmax_t") {
-      LM.setKind(LengthModifier::AsIntMax);
-      return true;
-    } else if (Identifier->getName() == "ptrdiff_t") {
-      LM.setKind(LengthModifier::AsPtrDiff);
-      return true;
-    }
+  if (LengthModifier::Kind Out = LengthModifier::Kind::None;
+      namedTypeToLengthModifierKind(Ctx, QT, Out)) {
+    LM.setKind(Out);
+    return true;
   }
   return false;
 }

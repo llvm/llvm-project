@@ -216,6 +216,7 @@ set(files
   __atomic/check_memory_order.h
   __atomic/contention_t.h
   __atomic/fence.h
+  __atomic/floating_point_helper.h
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
@@ -261,6 +262,7 @@ set(files
   __chrono/gps_clock.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/is_clock.h
   __chrono/leap_second.h
   __chrono/literals.h
   __chrono/local_info.h
@@ -326,6 +328,8 @@ set(files
   __configuration/abi.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/experimental.h
+  __configuration/hardening.h
   __configuration/language.h
   __configuration/platform.h
   __coroutine/coroutine_handle.h
@@ -381,6 +385,7 @@ set(files
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h
@@ -403,6 +408,7 @@ set(files
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
+  __format/range_format.h
   __format/range_formatter.h
   __format/unicode.h
   __format/width_estimation_table.h
@@ -445,14 +451,12 @@ set(files
   __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
-  __fwd/map.h
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
   __fwd/queue.h
-  __fwd/set.h
   __fwd/span.h
   __fwd/sstream.h
   __fwd/stack.h
@@ -514,7 +518,6 @@ set(files
   __locale_dir/check_grouping.h
   __locale_dir/get_c_locale.h
   __locale_dir/locale_base_api.h
-  __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
@@ -529,12 +532,14 @@ set(files
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
+  __locale_dir/support/netbsd.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
   __locale_dir/wstring_convert.h
+  __log_hardening_failure
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -737,6 +742,7 @@ set(files
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
+  __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __split_buffer
   __std_mbstate_t.h
@@ -777,22 +783,17 @@ set(files
   __tree
   __tuple/find_index.h
   __tuple/ignore.h
-  __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
-  __tuple/tuple_indices.h
   __tuple/tuple_like.h
-  __tuple/tuple_like_ext.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
-  __tuple/tuple_types.h
   __type_traits/add_cv_quals.h
   __type_traits/add_pointer.h
   __type_traits/add_reference.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
   __type_traits/conditional.h
@@ -821,7 +822,6 @@ set(files
   __type_traits/is_array.h
   __type_traits/is_assignable.h
   __type_traits/is_base_of.h
-  __type_traits/is_bounded_array.h
   __type_traits/is_callable.h
   __type_traits/is_char_like_type.h
   __type_traits/is_class.h
@@ -840,6 +840,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_generic_transparent_comparator.h
   __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
@@ -857,7 +858,6 @@ set(files
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
   __type_traits/is_referenceable.h
-  __type_traits/is_replaceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -871,16 +871,18 @@ set(files
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_relocatable.h
-  __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
+  __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
   __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
+  __type_traits/is_within_lifetime.h
   __type_traits/lazy.h
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
+  __type_traits/make_transparent.h
   __type_traits/make_unsigned.h
   __type_traits/maybe_const.h
   __type_traits/nat.h
@@ -912,6 +914,7 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/default_three_way_comparator.h
   __utility/element_count.h
   __utility/empty.h
   __utility/exception_guard.h
@@ -922,6 +925,7 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/is_valid_range.h
+  __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
   __utility/pair.h
@@ -933,6 +937,7 @@ set(files
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
+  __utility/try_key_extraction.h
   __utility/unreachable.h
   __variant/monostate.h
   __vector/comparison.h
@@ -1059,7 +1064,6 @@ set(files
   sstream
   stack
   stdatomic.h
-  stdbool.h
   stddef.h
   stdexcept
   stdio.h
@@ -1589,7 +1593,6 @@ set(files
   __cxx03/cmath
   __cxx03/codecvt
   __cxx03/complex
-  __cxx03/complex.h
   __cxx03/condition_variable
   __cxx03/csetjmp
   __cxx03/csignal
@@ -1602,25 +1605,20 @@ set(files
   __cxx03/cstring
   __cxx03/ctgmath
   __cxx03/ctime
-  __cxx03/ctype.h
   __cxx03/cuchar
   __cxx03/cwchar
   __cxx03/cwctype
   __cxx03/deque
-  __cxx03/errno.h
   __cxx03/exception
   __cxx03/experimental/__config
   __cxx03/experimental/utility
   __cxx03/ext/__hash
   __cxx03/ext/hash_map
   __cxx03/ext/hash_set
-  __cxx03/fenv.h
-  __cxx03/float.h
   __cxx03/forward_list
   __cxx03/fstream
   __cxx03/functional
   __cxx03/future
-  __cxx03/inttypes.h
   __cxx03/iomanip
   __cxx03/ios
   __cxx03/iosfwd
@@ -1647,11 +1645,8 @@ set(files
   __cxx03/sstream
   __cxx03/stack
   __cxx03/stdatomic.h
-  __cxx03/stdbool.h
-  __cxx03/stddef.h
   __cxx03/stdexcept
   __cxx03/stdint.h
-  __cxx03/stdio.h
   __cxx03/stdlib.h
   __cxx03/streambuf
   __cxx03/string
@@ -1659,7 +1654,6 @@ set(files
   __cxx03/string_view
   __cxx03/strstream
   __cxx03/system_error
-  __cxx03/tgmath.h
   __cxx03/thread
   __cxx03/type_traits
   __cxx03/typeindex
@@ -1672,7 +1666,6 @@ set(files
   __cxx03/vector
   __cxx03/version
   __cxx03/wchar.h
-  __cxx03/wctype.h
   )
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)

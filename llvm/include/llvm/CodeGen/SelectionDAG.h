@@ -238,8 +238,6 @@ class SelectionDAG {
   LLVMContext *Context;
   CodeGenOptLevel OptLevel;
 
-  bool DivergentTarget = false;
-
   UniformityInfo *UA = nullptr;
   FunctionLoweringInfo * FLI = nullptr;
 
@@ -473,16 +471,14 @@ public:
                      Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
                      BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
-                     FunctionVarLocs const *FnVarLocs, bool HasDivergency);
+                     FunctionVarLocs const *FnVarLocs);
 
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             MachineFunctionAnalysisManager &AM,
             const TargetLibraryInfo *LibraryInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
-            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs,
-            bool HasDivergency) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs,
-         HasDivergency);
+            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
+    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs);
     MFAM = &AM;
   }
 
@@ -1117,7 +1113,8 @@ public:
                                       SDValue Mask, SDValue EVL);
 
   /// Returns sum of the base pointer and offset.
-  /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap by default.
+  /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap and InBounds by
+  /// default.
   LLVM_ABI SDValue
   getMemBasePlusOffset(SDValue Base, TypeSize Offset, const SDLoc &DL,
                        const SDNodeFlags Flags = SDNodeFlags());
@@ -1127,15 +1124,18 @@ public:
 
   /// Create an add instruction with appropriate flags when used for
   /// addressing some offset of an object. i.e. if a load is split into multiple
-  /// components, create an add nuw from the base pointer to the offset.
+  /// components, create an add nuw (or ptradd nuw inbounds) from the base
+  /// pointer to the offset.
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, TypeSize Offset) {
-    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
+    return getMemBasePlusOffset(
+        Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap | SDNodeFlags::InBounds);
   }
 
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, SDValue Offset) {
     // The object itself can't wrap around the address space, so it shouldn't be
     // possible for the adds of the offsets to the split parts to overflow.
-    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
+    return getMemBasePlusOffset(
+        Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap | SDNodeFlags::InBounds);
   }
 
   /// Return a new CALLSEQ_START node, that starts new call frame, in which
@@ -1202,13 +1202,16 @@ public:
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                            ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL,
-                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
+                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops,
+                           const SDNodeFlags Flags);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                            ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
 
   // Use flags from current flag inserter.
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                            ArrayRef<SDValue> Ops);
+  LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL,
+                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                            ArrayRef<SDValue> Ops);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -1256,6 +1259,18 @@ public:
   /// loaded from the stack. This is used in tail call lowering to protect
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
+
+  /// Lower a memcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue Dst, SDValue Src,
+                                                 SDValue Size,
+                                                 const CallInst *CI);
+
+  /// Lower a strlen operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue>
+  getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
@@ -1346,9 +1361,10 @@ public:
   /// Helper function to make it easier to build SelectCC's if you just have an
   /// ISD::CondCode instead of an SDValue.
   SDValue getSelectCC(const SDLoc &DL, SDValue LHS, SDValue RHS, SDValue True,
-                      SDValue False, ISD::CondCode Cond) {
+                      SDValue False, ISD::CondCode Cond,
+                      SDNodeFlags Flags = SDNodeFlags()) {
     return getNode(ISD::SELECT_CC, DL, True.getValueType(), LHS, RHS, True,
-                   False, getCondCode(Cond));
+                   False, getCondCode(Cond), Flags);
   }
 
   /// Try to simplify a select/vselect into 1 of its operands or a constant.
@@ -1424,11 +1440,9 @@ public:
                                        EVT MemVT, MachineMemOperand *MMO);
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
-  /// (`IsStart==false`) the lifetime of the portion of `FrameIndex` between
-  /// offsets `Offset` and `Offset + Size`.
+  /// (`IsStart==false`) the lifetime of the `FrameIndex`.
   LLVM_ABI SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
-                                   int FrameIndex, int64_t Size,
-                                   int64_t Offset = -1);
+                                   int FrameIndex);
 
   /// Creates a PseudoProbeSDNode with function GUID `Guid` and
   /// the index of the block `Index` it is probing, as well as the attributes
@@ -1666,6 +1680,9 @@ public:
                                       ArrayRef<SDValue> Ops,
                                       MachineMemOperand *MMO,
                                       ISD::MemIndexType IndexType);
+  LLVM_ABI SDValue getLoadFFVP(EVT VT, const SDLoc &DL, SDValue Chain,
+                               SDValue Ptr, SDValue Mask, SDValue EVL,
+                               MachineMemOperand *MMO);
 
   LLVM_ABI SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
                                EVT MemVT, MachineMemOperand *MMO);
@@ -1700,16 +1717,6 @@ public:
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   LLVM_ABI SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
-
-  /// Expands a node with multiple results to an FP or vector libcall. The
-  /// libcall is expected to take all the operands of the \p Node followed by
-  /// output pointers for each of the results. \p CallRetResNo can be optionally
-  /// set to indicate that one of the results comes from the libcall's return
-  /// value.
-  LLVM_ABI bool
-  expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
-                                SmallVectorImpl<SDValue> &Results,
-                                std::optional<unsigned> CallRetResNo = {});
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   LLVM_ABI SDValue expandVAArg(SDNode *Node);
@@ -1843,9 +1850,11 @@ public:
   /// Get the specified node if it's already available, or else return NULL.
   LLVM_ABI SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
                                    ArrayRef<SDValue> Ops,
-                                   const SDNodeFlags Flags);
+                                   const SDNodeFlags Flags,
+                                   bool AllowCommute = false);
   LLVM_ABI SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
-                                   ArrayRef<SDValue> Ops);
+                                   ArrayRef<SDValue> Ops,
+                                   bool AllowCommute = false);
 
   /// Check if a node exists without modifying its flags.
   LLVM_ABI bool doesNodeExist(unsigned Opcode, SDVTList VTList,
@@ -1952,6 +1961,10 @@ public:
   LLVM_ABI SDValue makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
                                                 SDValue NewMemOp);
 
+  /// Get all the nodes in their topological order without modifying any states.
+  LLVM_ABI void getTopologicallyOrderedNodes(
+      SmallVectorImpl<const SDNode *> &SortedNodes) const;
+
   /// Topological-sort the AllNodes list and a
   /// assign a unique node id for each node in the DAG based on their
   /// topological order. Returns the number of nodes.
@@ -2002,7 +2015,9 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
-  LLVM_ABI void dump() const;
+  /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
+  /// Sorted is true.
+  LLVM_ABI void dump(bool Sorted = false) const;
 
   /// In most cases this function returns the ABI alignment for a given type,
   /// except for illegal vector types where the alignment exceeds that of the
@@ -2046,6 +2061,10 @@ public:
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
   LLVM_ABI bool SignBitIsZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Return true if the sign bit of Op is known to be zero, for a
+  /// floating-point value.
+  LLVM_ABI bool SignBitIsZeroFP(SDValue Op, unsigned Depth = 0) const;
 
   /// Return true if 'Op & Mask' is known to be zero.  We
   /// use this predicate to simplify operations downstream.  Op and Mask are
@@ -2346,35 +2365,35 @@ public:
 
   /// If a SHL/SRA/SRL node \p V has a uniform shift amount
   /// that is less than the element bit-width of the shift node, return it.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidShiftAmount(SDValue V, const APInt &DemandedElts,
                       unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has a uniform shift amount
   /// that is less than the element bit-width of the shift node, return it.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the minimum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMinimumShiftAmount(SDValue V, const APInt &DemandedElts,
                              unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the minimum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMinimumShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the maximum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMaximumShiftAmount(SDValue V, const APInt &DemandedElts,
                              unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the maximum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMaximumShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// Match a binop + shuffle pyramid that represents a horizontal reduction

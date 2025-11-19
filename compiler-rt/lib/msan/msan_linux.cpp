@@ -190,7 +190,15 @@ bool InitShadowWithReExec(bool init_origins) {
               "possibly due to high-entropy ASLR.\n"
               "Re-execing with fixed virtual address space.\n"
               "N.B. reducing ASLR entropy is preferable.\n");
-      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+
+      if (personality(old_personality | ADDR_NO_RANDOMIZE) == -1) {
+        Printf(
+            "FATAL: MemorySanitizer: unable to disable ASLR (perhaps "
+            "sandboxing is enabled?).\n");
+        Printf("FATAL: Please rerun without sandboxing and/or ASLR.\n");
+        Die();
+      }
+
       ReExec();
     }
 #  endif

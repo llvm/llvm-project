@@ -1,4 +1,4 @@
-//===--- DuplicateIncludeCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,6 +64,8 @@ private:
   const SourceManager &SM;
 };
 
+} // namespace
+
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
                                             FileChangeReason Reason,
                                             SrcMgr::CharacteristicKind FileType,
@@ -86,9 +88,9 @@ void DuplicateIncludeCallbacks::InclusionDirective(
   if (llvm::is_contained(Files.back(), FileName)) {
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.
-    SourceLocation Start =
+    const SourceLocation Start =
         advanceBeyondCurrentLine(SM, HashLoc, -1).getLocWithOffset(-1);
-    SourceLocation End =
+    const SourceLocation End =
         advanceBeyondCurrentLine(SM, FilenameRange.getEnd(), 1);
     Check.diag(HashLoc, "duplicate include")
         << FixItHint::CreateRemoval(SourceRange{Start, End});
@@ -106,8 +108,6 @@ void DuplicateIncludeCallbacks::MacroUndefined(const Token &MacroNameTok,
                                                const MacroDirective *Undef) {
   Files.back().clear();
 }
-
-} // namespace
 
 void DuplicateIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {

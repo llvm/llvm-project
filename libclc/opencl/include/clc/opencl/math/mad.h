@@ -10,10 +10,10 @@
 #define __CLC_OPENCL_MATH_MAD_H__
 
 #define __CLC_BODY <clc/shared/ternary_decl.inc>
-#define FUNCTION mad
+#define __CLC_FUNCTION mad
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_MATH_MAD_H__

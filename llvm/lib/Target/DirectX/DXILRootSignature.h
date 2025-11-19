@@ -21,21 +21,9 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
-#include <optional>
 
 namespace llvm {
 namespace dxil {
-
-enum class RootSignatureElementKind {
-  Error = 0,
-  RootFlags = 1,
-  RootConstants = 2,
-  SRV = 3,
-  UAV = 4,
-  CBV = 5,
-  DescriptorTable = 6,
-  StaticSamplers = 7
-};
 
 class RootSignatureBindingInfo {
 private:
@@ -54,13 +42,11 @@ public:
 
   iterator end() { return FuncToRsMap.end(); }
 
-  std::optional<mcdxbc::RootSignatureDesc>
-  getDescForFunction(const Function *F) {
+  mcdxbc::RootSignatureDesc *getDescForFunction(const Function *F) {
     const auto FuncRs = find(F);
     if (FuncRs == end())
-      return std::nullopt;
-
-    return FuncRs->second;
+      return nullptr;
+    return &FuncRs->second;
   }
 };
 

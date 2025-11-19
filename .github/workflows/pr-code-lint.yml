@@ -1,0 +1,99 @@
+name: "Code lint"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'users/**'
+    paths:
+      - 'clang-tools-extra/clang-tidy/**'
+      - '.github/workflows/pr-code-lint.yml'
+
+jobs:
+  code_linter:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint'
+    timeout-minutes: 60
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 2
+      
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
+        with:
+          separator: ","
+          skip_initial_fetch: true
+          base_sha: 'HEAD~1'
+          sha: 'HEAD'
+      
+      - name: Listed files
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+      
+      # TODO: create special mapping for 'codegen' targets, for now build predefined set
+      # TODO: add entrypoint in 'compute_projects.py' that only adds a project and its direct dependencies
+      - name: Configure and CodeGen
+        run: |
+          git config --global --add safe.directory '*'
+
+          . <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
+
+          if [[ "${projects_to_build}" == "" ]]; then
+            echo "No projects to analyze"
+            exit 0
+          fi
+
+          cmake -G Ninja \
+                -B build \
+                -S llvm \
+                -DLLVM_ENABLE_ASSERTIONS=OFF \
+                -DLLVM_ENABLE_PROJECTS="${projects_to_build}" \
+                -DCMAKE_CXX_COMPILER=clang++ \
+                -DCMAKE_C_COMPILER=clang \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DLLVM_INCLUDE_TESTS=OFF \
+                -DCLANG_INCLUDE_TESTS=OFF \
+                -DCMAKE_BUILD_TYPE=Release
+          
+          ninja -C build \
+                clang-tablegen-targets \
+                genconfusable               # for "ConfusableIdentifierCheck.h"
+
+      - name: Run code linter
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          echo "[]" > comments &&
+          python3 llvm/utils/git/code-lint-helper.py \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --start-rev HEAD~1 \
+            --end-rev HEAD \
+            --verbose \
+            --changed-files "$CHANGED_FILES"
+      
+      - name: Upload results
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: workflow-args
+          path: |
+            comments

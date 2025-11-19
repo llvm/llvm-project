@@ -148,37 +148,37 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
 
 mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
                           mlir::Type typ, const llvm::APInt &val) {
-  return bld.create<mlir::LLVM::ConstantOp>(loc, typ, val);
+  return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);
 }
 
 mlir::Value getConst(mlir::OpBuilder &bld, mlir::Location loc, mlir::Type typ,
                      unsigned val) {
-  return bld.create<mlir::LLVM::ConstantOp>(loc, typ, val);
+  return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);
 }
 
 mlir::Value createShL(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
   if (!rhs)
     return lhs;
   mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
-  return bld.create<mlir::LLVM::ShlOp>(lhs.getLoc(), lhs, rhsVal);
+  return mlir::LLVM::ShlOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }
 
 mlir::Value createAShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
   if (!rhs)
     return lhs;
   mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
-  return bld.create<mlir::LLVM::AShrOp>(lhs.getLoc(), lhs, rhsVal);
+  return mlir::LLVM::AShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }
 
 mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
                       const llvm::APInt &rhs) {
   mlir::Value rhsVal = getConstAPInt(bld, lhs.getLoc(), lhs.getType(), rhs);
-  return bld.create<mlir::LLVM::AndOp>(lhs.getLoc(), lhs, rhsVal);
+  return mlir::LLVM::AndOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }
 
 mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
   if (!rhs)
     return lhs;
   mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
-  return bld.create<mlir::LLVM::LShrOp>(lhs.getLoc(), lhs, rhsVal);
+  return mlir::LLVM::LShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }

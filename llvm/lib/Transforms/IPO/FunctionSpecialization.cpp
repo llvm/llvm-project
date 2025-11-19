@@ -16,7 +16,6 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -29,10 +28,13 @@ using namespace llvm;
 
 STATISTIC(NumSpecsCreated, "Number of specializations created");
 
+namespace llvm {
+
 static cl::opt<bool> ForceSpecialization(
-    "force-specialization", cl::init(false), cl::Hidden, cl::desc(
-    "Force function specialization for every call site with a constant "
-    "argument"));
+    "force-specialization", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Force function specialization for every call site with a constant "
+        "argument"));
 
 static cl::opt<unsigned> MaxClones(
     "funcspec-max-clones", cl::init(3), cl::Hidden, cl::desc(
@@ -89,6 +91,10 @@ static cl::opt<bool> SpecializeLiteralConstant(
     cl::desc(
         "Enable specialization of functions that take a literal constant as an "
         "argument"));
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // end namespace llvm
 
 bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB,
                                             BasicBlock *Succ) const {
@@ -400,12 +406,6 @@ Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
 Constant *InstCostVisitor::visitCallBase(CallBase &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
-  // Look through calls to ssa_copy intrinsics.
-  if (auto *II = dyn_cast<IntrinsicInst>(&I);
-      II && II->getIntrinsicID() == Intrinsic::ssa_copy) {
-    return LastVisited->second;
-  }
-
   Function *F = I.getCalledFunction();
   if (!F || !canConstantFoldCallTo(&I, F))
     return nullptr;
@@ -611,17 +611,15 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
   }
 }
 
-// ssa_copy intrinsics are introduced by the SCCP solver. These intrinsics
-// interfere with the promoteConstantStackValues() optimization.
+// The SCCP solver inserts bitcasts for PredicateInfo. These interfere with the
+// promoteConstantStackValues() optimization.
 static void removeSSACopy(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-      auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (!II)
+      auto *BC = dyn_cast<BitCastInst>(&Inst);
+      if (!BC || BC->getType() != BC->getOperand(0)->getType())
         continue;
-      if (II->getIntrinsicID() != Intrinsic::ssa_copy)
-        continue;
-      Inst.replaceAllUsesWith(II->getOperand(0));
+      Inst.replaceAllUsesWith(BC->getOperand(0));
       Inst.eraseFromParent();
     }
   }
@@ -793,9 +791,32 @@ bool FunctionSpecializer::run() {
 
     // Update the known call sites to call the clone.
     for (CallBase *Call : S.CallSites) {
+      Function *Clone = S.Clone;
       LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
-                        << " to call " << S.Clone->getName() << "\n");
+                        << " to call " << Clone->getName() << "\n");
       Call->setCalledFunction(S.Clone);
+      auto &BFI = GetBFI(*Call->getFunction());
+      std::optional<uint64_t> Count =
+          BFI.getBlockProfileCount(Call->getParent());
+      if (Count && !ProfcheckDisableMetadataFixes) {
+        std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
+            Clone->getEntryCount();
+        if (MaybeCloneCount) {
+          uint64_t CallCount = *Count + MaybeCloneCount->getCount();
+          Clone->setEntryCount(CallCount);
+          if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
+                  S.F->getEntryCount()) {
+            uint64_t OriginalCount = MaybeOriginalCount->getCount();
+            if (OriginalCount >= *Count) {
+              S.F->setEntryCount(OriginalCount - *Count);
+            } else {
+              // This should generally not happen as that would mean there are
+              // more computed calls to the function than what was recorded.
+              LLVM_DEBUG(S.F->setEntryCount(0));
+            }
+          }
+        }
+      }
     }
 
     Clones.push_back(S.Clone);
@@ -847,14 +868,24 @@ bool FunctionSpecializer::run() {
 }
 
 void FunctionSpecializer::removeDeadFunctions() {
-  for (Function *F : FullySpecialized) {
+  for (Function *F : DeadFunctions) {
     LLVM_DEBUG(dbgs() << "FnSpecialization: Removing dead function "
                       << F->getName() << "\n");
     if (FAM)
       FAM->clear(*F, F->getName());
+
+    // Remove all the callsites that were proven unreachable once, and replace
+    // them with poison.
+    for (User *U : make_early_inc_range(F->users())) {
+      assert((isa<CallInst>(U) || isa<InvokeInst>(U)) &&
+             "User of dead function must be call or invoke");
+      Instruction *CS = cast<Instruction>(U);
+      CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
+      CS->eraseFromParent();
+    }
     F->eraseFromParent();
   }
-  FullySpecialized.clear();
+  DeadFunctions.clear();
 }
 
 /// Clone the function \p F and remove the ssa_copy intrinsics added by
@@ -1042,6 +1073,9 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   // clone must.
   Clone->setLinkage(GlobalValue::InternalLinkage);
 
+  if (F->getEntryCount() && !ProfcheckDisableMetadataFixes)
+    Clone->setEntryCount(0);
+
   // Initialize the lattice state of the arguments of the function clone,
   // marking the argument on which we specialized the function constant
   // with the given value.
@@ -1215,8 +1249,11 @@ void FunctionSpecializer::updateCallSites(Function *F, const Spec *Begin,
 
   // If the function has been completely specialized, the original function
   // is no longer needed. Mark it unreachable.
-  if (NCallsLeft == 0 && Solver.isArgumentTrackedFunction(F)) {
+  // NOTE: If the address of a function is taken, we cannot treat it as dead
+  // function.
+  if (NCallsLeft == 0 && Solver.isArgumentTrackedFunction(F) &&
+      !F->hasAddressTaken()) {
     Solver.markFunctionUnreachable(F);
-    FullySpecialized.insert(F);
+    DeadFunctions.insert(F);
   }
 }

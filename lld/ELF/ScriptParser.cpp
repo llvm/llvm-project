@@ -450,7 +450,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf64-powerpc", {ELF64BEKind, EM_PPC64})
       .Case("elf64-powerpcle", {ELF64LEKind, EM_PPC64})
       .Case("elf64-x86-64", {ELF64LEKind, EM_X86_64})
-      .Cases("elf32-tradbigmips", "elf32-bigmips", {ELF32BEKind, EM_MIPS})
+      .Cases({"elf32-tradbigmips", "elf32-bigmips"}, {ELF32BEKind, EM_MIPS})
       .Case("elf32-ntradbigmips", {ELF32BEKind, EM_MIPS})
       .Case("elf32-tradlittlemips", {ELF32LEKind, EM_MIPS})
       .Case("elf32-ntradlittlemips", {ELF32LEKind, EM_MIPS})
@@ -463,7 +463,8 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-loongarch", {ELF32LEKind, EM_LOONGARCH})
       .Case("elf64-loongarch", {ELF64LEKind, EM_LOONGARCH})
       .Case("elf64-s390", {ELF64BEKind, EM_S390})
-      .Cases("elf32-hexagon", "elf32-littlehexagon", {ELF32LEKind, EM_HEXAGON})
+      .Cases({"elf32-hexagon", "elf32-littlehexagon"},
+             {ELF32LEKind, EM_HEXAGON})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -721,11 +722,11 @@ void ScriptParser::readTarget() {
 
 static int precedence(StringRef op) {
   return StringSwitch<int>(op)
-      .Cases("*", "/", "%", 11)
-      .Cases("+", "-", 10)
-      .Cases("<<", ">>", 9)
-      .Cases("<", "<=", ">", ">=", 8)
-      .Cases("==", "!=", 7)
+      .Cases({"*", "/", "%"}, 11)
+      .Cases({"+", "-"}, 10)
+      .Cases({"<<", ">>"}, 9)
+      .Cases({"<", "<=", ">", ">="}, 8)
+      .Cases({"==", "!="}, 7)
       .Case("&", 6)
       .Case("^", 5)
       .Case("|", 4)
@@ -745,7 +746,7 @@ StringMatcher ScriptParser::readFilePatterns() {
 SortSectionPolicy ScriptParser::peekSortKind() {
   return StringSwitch<SortSectionPolicy>(peek())
       .Case("REVERSE", SortSectionPolicy::Reverse)
-      .Cases("SORT", "SORT_BY_NAME", SortSectionPolicy::Name)
+      .Cases({"SORT", "SORT_BY_NAME"}, SortSectionPolicy::Name)
       .Case("SORT_BY_ALIGNMENT", SortSectionPolicy::Alignment)
       .Case("SORT_BY_INIT_PRIORITY", SortSectionPolicy::Priority)
       .Case("SORT_NONE", SortSectionPolicy::None)

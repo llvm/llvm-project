@@ -47,25 +47,25 @@ FailureOr<Operation *> mlir::linalg::transposeMatmul(RewriterBase &rewriter,
 
   SmallVector<Value> dynamicDims;
   if (type.isDynamicDim(1))
-    dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 1));
+    dynamicDims.push_back(tensor::DimOp::create(rewriter, loc, input, 1));
   if (type.isDynamicDim(0))
-    dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 0));
+    dynamicDims.push_back(tensor::DimOp::create(rewriter, loc, input, 0));
 
   ArrayRef<int64_t> shape = type.getShape();
-  Value empty = rewriter.create<tensor::EmptyOp>(
-      loc, ArrayRef<int64_t>{shape[1], shape[0]}, type.getElementType(),
-      dynamicDims);
-  auto transposeOp = rewriter.create<linalg::TransposeOp>(
-      loc, input, empty, ArrayRef<int64_t>{1, 0});
+  Value empty = tensor::EmptyOp::create(rewriter, loc,
+                                        ArrayRef<int64_t>{shape[1], shape[0]},
+                                        type.getElementType(), dynamicDims);
+  auto transposeOp = linalg::TransposeOp::create(rewriter, loc, input, empty,
+                                                 ArrayRef<int64_t>{1, 0});
   Operation *newMatmulOp;
   if (transposeLHS) {
-    newMatmulOp = rewriter.create<linalg::MatmulTransposeAOp>(
-        loc, matmulOp.getResultTypes(),
+    newMatmulOp = MatmulTransposeAOp::create(
+        rewriter, loc, matmulOp.getResultTypes(),
         ValueRange{transposeOp->getResult(0), matmulOp.getInputs()[1]},
         matmulOp.getOutputs());
   } else {
-    newMatmulOp = rewriter.create<linalg::MatmulTransposeBOp>(
-        loc, matmulOp.getResultTypes(),
+    newMatmulOp = MatmulTransposeBOp::create(
+        rewriter, loc, matmulOp.getResultTypes(),
         ValueRange{matmulOp.getInputs()[0], transposeOp->getResult(0)},
         matmulOp.getOutputs());
   }
@@ -102,27 +102,27 @@ mlir::linalg::transposeBatchMatmul(RewriterBase &rewriter,
 
   SmallVector<Value> dynamicDims;
   if (type.isDynamicDim(0))
-    dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 0));
+    dynamicDims.push_back(tensor::DimOp::create(rewriter, loc, input, 0));
   if (type.isDynamicDim(2))
-    dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 2));
+    dynamicDims.push_back(tensor::DimOp::create(rewriter, loc, input, 2));
   if (type.isDynamicDim(1))
-    dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 1));
+    dynamicDims.push_back(tensor::DimOp::create(rewriter, loc, input, 1));
 
   ArrayRef<int64_t> shape = type.getShape();
-  Value empty = rewriter.create<tensor::EmptyOp>(
-      loc, ArrayRef<int64_t>{shape[0], shape[2], shape[1]},
+  Value empty = tensor::EmptyOp::create(
+      rewriter, loc, ArrayRef<int64_t>{shape[0], shape[2], shape[1]},
       type.getElementType(), dynamicDims);
-  auto transposeOp = rewriter.create<linalg::TransposeOp>(
-      loc, input, empty, ArrayRef<int64_t>{0, 2, 1});
+  auto transposeOp = linalg::TransposeOp::create(rewriter, loc, input, empty,
+                                                 ArrayRef<int64_t>{0, 2, 1});
   Operation *newMatmulOp;
   if (transposeLHS) {
-    newMatmulOp = rewriter.create<linalg::BatchMatmulTransposeAOp>(
-        loc, batchMatmulOp.getResultTypes(),
+    newMatmulOp = BatchMatmulTransposeAOp::create(
+        rewriter, loc, batchMatmulOp.getResultTypes(),
         ValueRange{transposeOp->getResult(0), batchMatmulOp.getInputs()[1]},
         batchMatmulOp.getOutputs());
   } else {
-    newMatmulOp = rewriter.create<linalg::BatchMatmulTransposeBOp>(
-        loc, batchMatmulOp.getResultTypes(),
+    newMatmulOp = BatchMatmulTransposeBOp::create(
+        rewriter, loc, batchMatmulOp.getResultTypes(),
         ValueRange{batchMatmulOp.getInputs()[0], transposeOp->getResult(0)},
         batchMatmulOp.getOutputs());
   }

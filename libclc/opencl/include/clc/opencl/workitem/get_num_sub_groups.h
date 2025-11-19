@@ -11,6 +11,6 @@
 
 #include <clc/opencl/opencl-base.h>
 
-_CLC_OVERLOAD _CLC_DECL uint get_num_sub_groups();
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL uint get_num_sub_groups();
 
 #endif // __CLC_OPENCL_WORKITEM_GET_NUM_SUB_GROUPS_H__

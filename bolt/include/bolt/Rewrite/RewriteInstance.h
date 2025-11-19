@@ -139,6 +139,9 @@ private:
   void handleRelocation(const object::SectionRef &RelocatedSection,
                         const RelocationRef &Rel);
 
+  /// Collect functions that are specified to be bumped.
+  void selectFunctionsToPrint();
+
   /// Mark functions that are not meant for processing as ignored.
   void selectFunctionsToProcess();
 
@@ -241,7 +244,7 @@ private:
 
   /// Adjust function sizes and set proper maximum size values after the whole
   /// symbol table has been processed.
-  void adjustFunctionBoundaries();
+  void adjustFunctionBoundaries(DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
 
   /// Make .eh_frame section relocatable.
   void relocateEHFrameSection();
@@ -249,12 +252,11 @@ private:
   /// Analyze relocation \p Rel.
   /// Return true if the relocation was successfully processed, false otherwise.
   /// The \p SymbolName, \p SymbolAddress, \p Addend and \p ExtractedValue
-  /// parameters will be set on success. The \p Skip argument indicates
-  /// that the relocation was analyzed, but it must not be processed.
+  /// parameters will be set on success.
   bool analyzeRelocation(const object::RelocationRef &Rel, uint32_t &RType,
                          std::string &SymbolName, bool &IsSectionRelocation,
                          uint64_t &SymbolAddress, int64_t &Addend,
-                         uint64_t &ExtractedValue, bool &Skip) const;
+                         uint64_t &ExtractedValue) const;
 
   /// Rewrite non-allocatable sections with modifications.
   void rewriteNoteSections();

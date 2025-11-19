@@ -17,6 +17,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/StringExtras.h"
@@ -624,6 +625,96 @@ void SemaOpenACC::CheckDeclReference(SourceLocation Loc, Expr *E, Decl *D) {
   // loop (or we aren't in a loop!) so skip the diagnostic.
 }
 
+namespace {
+// Check whether the type of the thing we are referencing is OK for things like
+// private, firstprivate, and reduction, which require certain operators to be
+// available.
+ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
+                        SourceLocation InnerLoc, QualType InnerTy) {
+  // There is nothing to do here, only these three have these sorts of
+  // restrictions.
+  if (CK != OpenACCClauseKind::Private &&
+      CK != OpenACCClauseKind::FirstPrivate &&
+      CK != OpenACCClauseKind::Reduction)
+    return VarExpr;
+
+  // We can't test this if it isn't here, or if the type isn't clear yet.
+  if (InnerTy.isNull() || InnerTy->isDependentType())
+    return VarExpr;
+
+  InnerTy = InnerTy.getUnqualifiedType();
+  if (auto *RefTy = InnerTy->getAs<ReferenceType>())
+    InnerTy = RefTy->getPointeeType();
+
+  if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe()) {
+    // Non constant arrays decay to 'pointer', so warn and return that we're
+    // successful.
+    if (!ArrTy->isConstantArrayType()) {
+      S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_non_const_array)
+          << InnerTy << CK;
+      return VarExpr;
+    }
+
+    return CheckVarType(S, CK, VarExpr, InnerLoc, ArrTy->getElementType());
+  }
+
+  auto *RD = InnerTy->getAsCXXRecordDecl();
+
+  // if this isn't a C++ record decl, we can create/copy/destroy this thing at
+  // will without problem, so this is a success.
+  if (!RD)
+    return VarExpr;
+
+  if (CK == OpenACCClauseKind::Private) {
+    bool HasNonDeletedDefaultCtor =
+        llvm::find_if(RD->ctors(), [](const CXXConstructorDecl *CD) {
+          return CD->isDefaultConstructor() && !CD->isDeleted();
+        }) != RD->ctors().end();
+    if (!HasNonDeletedDefaultCtor && !RD->needsImplicitDefaultConstructor()) {
+      S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_lacks_op)
+          << InnerTy << CK << clang::diag::AccVarReferencedReason::DefCtor;
+      return ExprError();
+    }
+  } else if (CK == OpenACCClauseKind::FirstPrivate) {
+    if (!RD->hasSimpleCopyConstructor()) {
+      Sema::SpecialMemberOverloadResult SMOR = S.SemaRef.LookupSpecialMember(
+          RD, CXXSpecialMemberKind::CopyConstructor, /*ConstArg=*/true,
+          /*VolatileArg=*/false, /*RValueThis=*/false, /*ConstThis=*/false,
+          /*VolatileThis=*/false);
+
+      if (SMOR.getKind() != Sema::SpecialMemberOverloadResult::Success ||
+          SMOR.getMethod()->isDeleted()) {
+        S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_lacks_op)
+            << InnerTy << CK << clang::diag::AccVarReferencedReason::CopyCtor;
+        return ExprError();
+      }
+    }
+  } else if (CK == OpenACCClauseKind::Reduction) {
+    // TODO: Reduction needs to be an aggregate, which gets checked later, so
+    // construction here isn't a problem.  However, we need to make sure that we
+    // can compare it correctly still.
+  }
+
+  // All 3 things need to make sure they have a dtor.
+  bool DestructorDeleted =
+      RD->getDestructor() && RD->getDestructor()->isDeleted();
+  if (DestructorDeleted && !RD->needsImplicitDestructor()) {
+    S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_lacks_op)
+        << InnerTy << CK << clang::diag::AccVarReferencedReason::Dtor;
+    return ExprError();
+  }
+  return VarExpr;
+}
+
+ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
+                        Expr *InnerExpr) {
+  if (!InnerExpr)
+    return VarExpr;
+  return CheckVarType(S, CK, VarExpr, InnerExpr->getBeginLoc(),
+                      InnerExpr->getType());
+}
+} // namespace
+
 ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                  Expr *VarExpr) {
   // This has unique enough restrictions that we should split it to a separate
@@ -639,11 +730,19 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
   // OpenACC3.3 2.13:
   // A 'var' in a 'declare' directive must be a variable or array name.
   if ((CK == OpenACCClauseKind::UseDevice ||
-       DK == OpenACCDirectiveKind::Declare) &&
-      isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
-    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_use_device_declare)
-        << (DK == OpenACCDirectiveKind::Declare);
-    return ExprError();
+       DK == OpenACCDirectiveKind::Declare)) {
+    if (isa<ArraySubscriptExpr>(CurVarExpr)) {
+      Diag(VarExpr->getExprLoc(),
+           diag::err_acc_not_a_var_ref_use_device_declare)
+          << (DK == OpenACCDirectiveKind::Declare);
+      return ExprError();
+    }
+    // As an extension, we allow 'array sections'/'sub-arrays'  here, as that is
+    // effectively defining an array, and are in common use.
+    if (isa<ArraySectionExpr>(CurVarExpr))
+      Diag(VarExpr->getExprLoc(),
+           diag::ext_acc_array_section_use_device_declare)
+          << (DK == OpenACCDirectiveKind::Declare);
   }
 
   // Sub-arrays/subscript-exprs are fine as long as the base is a
@@ -660,7 +759,7 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
   if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
     if (isa<VarDecl, NonTypeTemplateParmDecl>(
             DRE->getFoundDecl()->getCanonicalDecl()))
-      return VarExpr;
+      return CheckVarType(*this, CK, VarExpr, CurVarExpr);
   }
 
   // If CK is a Reduction, this special cases for OpenACC3.3 2.5.15: "A var in a
@@ -679,9 +778,9 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
         // declare, reduction, and use_device.
         const auto *This = dyn_cast<CXXThisExpr>(ME->getBase());
         if (This && This->isImplicit())
-          return VarExpr;
+          return CheckVarType(*this, CK, VarExpr, CurVarExpr);
       } else {
-        return VarExpr;
+        return CheckVarType(*this, CK, VarExpr, CurVarExpr);
       }
     }
   }
@@ -690,14 +789,14 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
   // doesn't fall into 'variable or array name'
   if (CK != OpenACCClauseKind::UseDevice &&
       DK != OpenACCDirectiveKind::Declare && isa<CXXThisExpr>(CurVarExpr))
-    return VarExpr;
+    return CheckVarType(*this, CK, VarExpr, CurVarExpr);
 
   // Nothing really we can do here, as these are dependent.  So just return they
   // are valid.
   if (isa<DependentScopeDeclRefExpr>(CurVarExpr) ||
       (CK != OpenACCClauseKind::Reduction &&
        isa<CXXDependentScopeMemberExpr>(CurVarExpr)))
-    return VarExpr;
+    return CheckVarType(*this, CK, VarExpr, CurVarExpr);
 
   // There isn't really anything we can do in the case of a recovery expr, so
   // skip the diagnostic rather than produce a confusing diagnostic.
@@ -921,8 +1020,8 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   // If any part of the expression is dependent, return a dependent sub-array.
   QualType ArrayExprTy = Context.ArraySectionTy;
   if (Base->isTypeDependent() ||
-      (LowerBound && LowerBound->isInstantiationDependent()) ||
-      (Length && Length->isInstantiationDependent()))
+      (LowerBound && LowerBound->isTypeDependent()) ||
+      (Length && Length->isTypeDependent()))
     ArrayExprTy = Context.DependentTy;
 
   return new (Context)
@@ -1822,8 +1921,13 @@ void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
     return;
 
   // This cast should be safe, since a static-local can only happen in a
-  // function declaration.
-  auto *ContextDecl = cast<FunctionDecl>(getCurContext());
+  // function declaration. However, in error cases (or perhaps ObjC/C++?), this
+  // could possibly be something like a 'block' decl, so if this is NOT a
+  // function decl, just give up.
+  auto *ContextDecl = dyn_cast<FunctionDecl>(getCurContext());
+
+  if (!ContextDecl)
+      return;
 
   // OpenACC 3.3 2.15:
   // In C and C++, function static variables are not supported in functions to
@@ -2483,4 +2587,612 @@ SemaOpenACC::BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
 ExprResult
 SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
+}
+
+namespace {
+enum class InitKind { Invalid, Zero, One, AllOnes, Least, Largest };
+llvm::APFloat getInitFloatValue(ASTContext &Context, InitKind IK, QualType Ty) {
+  switch (IK) {
+  case InitKind::Invalid:
+    llvm_unreachable("invalid init kind");
+  case InitKind::Zero:
+    return llvm::APFloat::getZero(Context.getFloatTypeSemantics(Ty));
+  case InitKind::One:
+    return llvm::APFloat::getOne(Context.getFloatTypeSemantics(Ty));
+  case InitKind::AllOnes:
+    return llvm::APFloat::getAllOnesValue(Context.getFloatTypeSemantics(Ty));
+  case InitKind::Least:
+    return llvm::APFloat::getLargest(Context.getFloatTypeSemantics(Ty),
+                                     /*Negative=*/true);
+  case InitKind::Largest:
+    return llvm::APFloat::getLargest(Context.getFloatTypeSemantics(Ty));
+  }
+  llvm_unreachable("unknown init kind");
+}
+
+llvm::APInt getInitIntValue(ASTContext &Context, InitKind IK, QualType Ty) {
+  switch (IK) {
+  case InitKind::Invalid:
+    llvm_unreachable("invalid init kind");
+  case InitKind::Zero:
+    return llvm::APInt(Context.getIntWidth(Ty), 0);
+  case InitKind::One:
+    return llvm::APInt(Context.getIntWidth(Ty), 1);
+  case InitKind::AllOnes:
+    return llvm::APInt::getAllOnes(Context.getIntWidth(Ty));
+  case InitKind::Least:
+    if (Ty->isSignedIntegerOrEnumerationType())
+      return llvm::APInt::getSignedMinValue(Context.getIntWidth(Ty));
+    return llvm::APInt::getMinValue(Context.getIntWidth(Ty));
+  case InitKind::Largest:
+    if (Ty->isSignedIntegerOrEnumerationType())
+      return llvm::APInt::getSignedMaxValue(Context.getIntWidth(Ty));
+    return llvm::APInt::getMaxValue(Context.getIntWidth(Ty));
+  }
+  llvm_unreachable("unknown init kind");
+}
+
+/// Loops through a type and generates an appropriate InitListExpr to
+/// generate type initialization.
+Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
+                                      SourceRange ExprRange, QualType Ty,
+                                      InitKind IK) {
+  if (IK == InitKind::Invalid)
+    return nullptr;
+
+  if (IK == InitKind::Zero) {
+    Expr *InitExpr = new (Context)
+        InitListExpr(Context, ExprRange.getBegin(), {}, ExprRange.getEnd());
+    InitExpr->setType(Context.VoidTy);
+    return InitExpr;
+  }
+
+  Ty = Ty.getCanonicalType();
+  llvm::SmallVector<Expr *> Exprs;
+
+  if (const RecordDecl *RD = Ty->getAsRecordDecl()) {
+    for (auto *F : RD->fields()) {
+      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(Context, ExprRange,
+                                                          F->getType(), IK))
+        Exprs.push_back(NewExpr);
+      else
+        return nullptr;
+    }
+  } else if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
+    for (uint64_t Idx = 0; Idx < AT->getZExtSize(); ++Idx) {
+      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(
+              Context, ExprRange, AT->getElementType(), IK))
+        Exprs.push_back(NewExpr);
+      else
+        return nullptr;
+    }
+
+  } else if (Ty->isPointerType()) {
+    // For now, we are going to punt/not initialize pointer types, as
+    // discussions/designs are ongoing on how to express this behavior,
+    // particularly since they probably need the 'bounds' passed to them
+    // correctly.  A future patch/patch set will go through all of the pointer
+    // values for all of the recipes to make sure we have a sane behavior.
+
+    // For now, this will result in a NYI during code generation for
+    // no-initializer.
+    return nullptr;
+  } else {
+    assert(Ty->isScalarType());
+
+    if (const auto *Cplx = Ty->getAs<ComplexType>()) {
+      // we can get here in error cases, so make sure we generate something that
+      // will work if we find ourselves wanting to enable this, so emit '0,0'
+      // for both ints and floats.
+
+      QualType EltTy = Cplx->getElementType();
+      if (EltTy->isFloatingType()) {
+        Exprs.push_back(FloatingLiteral::Create(
+            Context, getInitFloatValue(Context, InitKind::Zero, EltTy),
+            /*isExact=*/true, EltTy, ExprRange.getBegin()));
+        Exprs.push_back(FloatingLiteral::Create(
+            Context, getInitFloatValue(Context, InitKind::Zero, EltTy),
+            /*isExact=*/true, EltTy, ExprRange.getBegin()));
+      } else {
+        Exprs.push_back(IntegerLiteral::Create(
+            Context, getInitIntValue(Context, InitKind::Zero, EltTy), EltTy,
+            ExprRange.getBegin()));
+        Exprs.push_back(IntegerLiteral::Create(
+            Context, getInitIntValue(Context, InitKind::Zero, EltTy), EltTy,
+            ExprRange.getBegin()));
+      }
+
+    } else if (Ty->isFloatingType()) {
+      Exprs.push_back(
+          FloatingLiteral::Create(Context, getInitFloatValue(Context, IK, Ty),
+                                  /*isExact=*/true, Ty, ExprRange.getBegin()));
+    } else if (Ty->isBooleanType()) {
+      Exprs.push_back(CXXBoolLiteralExpr::Create(Context,
+                                                 (IK == InitKind::One ||
+                                                  IK == InitKind::AllOnes ||
+                                                  IK == InitKind::Largest),
+                                                 Ty, ExprRange.getBegin()));
+    } else {
+      Exprs.push_back(IntegerLiteral::Create(
+          Context, getInitIntValue(Context, IK, Ty), Ty, ExprRange.getBegin()));
+    }
+  }
+
+  Expr *InitExpr = new (Context)
+      InitListExpr(Context, ExprRange.getBegin(), Exprs, ExprRange.getEnd());
+  InitExpr->setType(Ty);
+  return InitExpr;
+}
+
+VarDecl *CreateAllocaDecl(ASTContext &Ctx, DeclContext *DC,
+                          SourceLocation BeginLoc, IdentifierInfo *VarName,
+                          QualType VarTy) {
+  return VarDecl::Create(Ctx, DC, BeginLoc, BeginLoc, VarName, VarTy,
+                         Ctx.getTrivialTypeSourceInfo(VarTy), SC_Auto);
+}
+
+ExprResult FinishValueInit(Sema &S, InitializedEntity &Entity,
+                           SourceLocation Loc, QualType VarTy, Expr *InitExpr) {
+  if (!InitExpr)
+    return ExprEmpty();
+
+  InitializationKind Kind =
+      InitializationKind::CreateForInit(Loc, /*DirectInit=*/true, InitExpr);
+  InitializationSequence InitSeq(S, Entity, Kind, InitExpr,
+                                 /*TopLevelOfInitList=*/false,
+                                 /*TreatUnavailableAsInvalid=*/false);
+
+  return InitSeq.Perform(S, Entity, Kind, InitExpr, &VarTy);
+}
+
+} // namespace
+
+OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
+  if (!VarExpr || VarExpr->getType()->isDependentType())
+    return OpenACCPrivateRecipe::Empty();
+
+  QualType VarTy =
+      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
+
+  VarDecl *AllocaDecl = CreateAllocaDecl(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.private.init"), VarTy);
+
+  Sema::TentativeAnalysisScope Trap{SemaRef};
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(AllocaDecl);
+  InitializationKind Kind =
+      InitializationKind::CreateDefault(AllocaDecl->getLocation());
+  InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
+  ExprResult Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
+
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+
+  return OpenACCPrivateRecipe(AllocaDecl);
+}
+
+OpenACCFirstPrivateRecipe
+SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
+  if (!VarExpr || VarExpr->getType()->isDependentType())
+    return OpenACCFirstPrivateRecipe::Empty();
+
+  QualType VarTy =
+      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
+
+  VarDecl *AllocaDecl = CreateAllocaDecl(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.firstprivate.init"), VarTy);
+
+  VarDecl *Temporary = CreateAllocaDecl(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.temp"), VarTy);
+
+  auto *TemporaryDRE = DeclRefExpr::Create(
+      getASTContext(), NestedNameSpecifierLoc{}, SourceLocation{}, Temporary,
+      /*ReferstoEnclosingVariableOrCapture=*/false,
+      DeclarationNameInfo{DeclarationName{Temporary->getDeclName()},
+                          VarExpr->getBeginLoc()},
+      VarTy, clang::VK_LValue, Temporary, nullptr, NOUR_None);
+
+  Sema::TentativeAnalysisScope Trap{SemaRef};
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(AllocaDecl);
+
+  const auto *ArrTy = getASTContext().getAsConstantArrayType(VarTy);
+  if (!ArrTy) {
+    ExprResult Init = FinishValueInit(
+        SemaRef.SemaRef, Entity, VarExpr->getBeginLoc(), VarTy, TemporaryDRE);
+
+    // For 'no bounds' version, we can use this as a shortcut, so set the init
+    // anyway.
+    if (Init.isUsable()) {
+      AllocaDecl->setInit(Init.get());
+      AllocaDecl->setInitStyle(VarDecl::CallInit);
+    }
+    return OpenACCFirstPrivateRecipe(AllocaDecl, Temporary);
+  }
+
+  // Arrays need to have each individual element initialized as there
+  // isn't a normal 'equals' feature in C/C++. This section sets these up
+  // as an init list after 'initializing' each individual element.
+  llvm::SmallVector<Expr *> Args;
+  // Decay to pointer for the array subscript expression.
+  auto *CastToPtr = ImplicitCastExpr::Create(
+      getASTContext(), getASTContext().getPointerType(ArrTy->getElementType()),
+      CK_ArrayToPointerDecay, TemporaryDRE, /*BasePath=*/nullptr,
+      clang::VK_LValue, FPOptionsOverride{});
+
+  for (std::size_t I = 0; I < ArrTy->getLimitedSize(); ++I) {
+    // Each element needs to be some sort of copy initialization from an
+    // array-index of the original temporary (referenced via a
+    // DeclRefExpr).
+    auto *Idx = IntegerLiteral::Create(
+        getASTContext(),
+        llvm::APInt(getASTContext().getTypeSize(getASTContext().getSizeType()),
+                    I),
+        getASTContext().getSizeType(), VarExpr->getBeginLoc());
+
+    Expr *Subscript = new (getASTContext()) ArraySubscriptExpr(
+        CastToPtr, Idx, ArrTy->getElementType(), clang::VK_LValue, OK_Ordinary,
+        VarExpr->getBeginLoc());
+    // Generate a simple copy from the result of the subscript. This will
+    // do a bitwise copy or a copy-constructor, as necessary.
+    InitializedEntity CopyEntity =
+        InitializedEntity::InitializeElement(getASTContext(), I, Entity);
+    InitializationKind CopyKind =
+        InitializationKind::CreateCopy(VarExpr->getBeginLoc(), {});
+    InitializationSequence CopySeq(SemaRef.SemaRef, CopyEntity, CopyKind,
+                                   Subscript,
+                                   /*TopLevelOfInitList=*/true);
+    ExprResult ElemRes =
+        CopySeq.Perform(SemaRef.SemaRef, CopyEntity, CopyKind, Subscript);
+    Args.push_back(ElemRes.get());
+  }
+
+  Expr *InitExpr = new (getASTContext()) InitListExpr(
+      getASTContext(), VarExpr->getBeginLoc(), Args, VarExpr->getEndLoc());
+  InitExpr->setType(VarTy);
+
+  ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,
+                                    VarExpr->getBeginLoc(), VarTy, InitExpr);
+
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+
+  return OpenACCFirstPrivateRecipe(AllocaDecl, Temporary);
+}
+
+OpenACCReductionRecipeWithStorage SemaOpenACC::CreateReductionInitRecipe(
+    OpenACCReductionOperator ReductionOperator, const Expr *VarExpr) {
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
+  if (!VarExpr || VarExpr->getType()->isDependentType())
+    return OpenACCReductionRecipeWithStorage::Empty();
+
+  QualType VarTy =
+      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
+
+  llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe, 1> CombinerRecipes;
+
+  // We use the 'set-ness' of the alloca-decl to determine whether the combiner
+  // is 'set' or not, so we can skip any attempts at it if we're going to fail
+  // at any of the combiners.
+  if (CreateReductionCombinerRecipe(VarExpr->getBeginLoc(), ReductionOperator,
+                                    VarTy, CombinerRecipes))
+    return OpenACCReductionRecipeWithStorage::Empty();
+
+  VarDecl *AllocaDecl = CreateAllocaDecl(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.reduction.init"), VarTy);
+
+  Sema::TentativeAnalysisScope Trap{SemaRef};
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(AllocaDecl);
+
+  InitKind IK = InitKind::Invalid;
+  switch (ReductionOperator) {
+  case OpenACCReductionOperator::Invalid:
+    // This can only happen when there is an error, and since these inits
+    // are used for code generation, we can just ignore/not bother doing any
+    // initialization here.
+    IK = InitKind::Invalid;
+    break;
+  case OpenACCReductionOperator::Max:
+    IK = InitKind::Least;
+    break;
+  case OpenACCReductionOperator::Min:
+    IK = InitKind::Largest;
+    break;
+  case OpenACCReductionOperator::BitwiseAnd:
+    IK = InitKind::AllOnes;
+    break;
+  case OpenACCReductionOperator::Multiplication:
+  case OpenACCReductionOperator::And:
+    IK = InitKind::One;
+    break;
+  case OpenACCReductionOperator::Addition:
+  case OpenACCReductionOperator::BitwiseOr:
+  case OpenACCReductionOperator::BitwiseXOr:
+  case OpenACCReductionOperator::Or:
+    IK = InitKind::Zero;
+    break;
+  }
+
+  Expr *InitExpr = GenerateReductionInitRecipeExpr(
+      getASTContext(), VarExpr->getSourceRange(), VarTy, IK);
+
+  ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,
+                                    VarExpr->getBeginLoc(), VarTy, InitExpr);
+
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+
+  return OpenACCReductionRecipeWithStorage(AllocaDecl, CombinerRecipes);
+}
+
+bool SemaOpenACC::CreateReductionCombinerRecipe(
+    SourceLocation Loc, OpenACCReductionOperator ReductionOperator,
+    QualType VarTy,
+    llvm::SmallVectorImpl<OpenACCReductionRecipe::CombinerRecipe>
+        &CombinerRecipes) {
+  // Now we can try to generate the 'combiner' recipe. This is a little
+  // complicated in that if the 'VarTy' is an array type, we want to take its
+  // element type so we can generate that.  Additionally, if this is a struct,
+  // we have two options: If there is overloaded operators, we want to take
+  // THOSE, else we want to do the individual elements.
+
+  BinaryOperatorKind BinOp;
+  switch (ReductionOperator) {
+  case OpenACCReductionOperator::Invalid:
+    // This can only happen when there is an error, and since these inits
+    // are used for code generation, we can just ignore/not bother doing any
+    // initialization here.
+    CombinerRecipes.push_back({nullptr, nullptr, nullptr});
+    return false;
+  case OpenACCReductionOperator::Addition:
+    BinOp = BinaryOperatorKind::BO_AddAssign;
+    break;
+  case OpenACCReductionOperator::Multiplication:
+    BinOp = BinaryOperatorKind::BO_MulAssign;
+    break;
+  case OpenACCReductionOperator::BitwiseAnd:
+    BinOp = BinaryOperatorKind::BO_AndAssign;
+    break;
+  case OpenACCReductionOperator::BitwiseOr:
+    BinOp = BinaryOperatorKind::BO_OrAssign;
+    break;
+  case OpenACCReductionOperator::BitwiseXOr:
+    BinOp = BinaryOperatorKind::BO_XorAssign;
+    break;
+
+  case OpenACCReductionOperator::Max:
+  case OpenACCReductionOperator::Min:
+    BinOp = BinaryOperatorKind::BO_LT;
+    break;
+  case OpenACCReductionOperator::And:
+    BinOp = BinaryOperatorKind::BO_LAnd;
+    break;
+  case OpenACCReductionOperator::Or:
+    BinOp = BinaryOperatorKind::BO_LOr;
+    break;
+  }
+
+  // If VarTy is an array type, at the top level only, we want to do our
+  // compares/decomp/etc at the element level.
+  if (auto *AT = getASTContext().getAsArrayType(VarTy))
+    VarTy = AT->getElementType();
+
+  assert(!VarTy->isArrayType() && "Only 1 level of array allowed");
+
+  enum class CombinerFailureKind {
+    None = 0,
+    BinOp = 1,
+    Conditional = 2,
+    Assignment = 3,
+  };
+
+  auto genCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE)
+      -> std::pair<ExprResult, CombinerFailureKind> {
+    ExprResult BinOpRes =
+        SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc, BinOp, LHSDRE, RHSDRE,
+                           /*ForFoldExpr=*/false);
+    switch (ReductionOperator) {
+    case OpenACCReductionOperator::Addition:
+    case OpenACCReductionOperator::Multiplication:
+    case OpenACCReductionOperator::BitwiseAnd:
+    case OpenACCReductionOperator::BitwiseOr:
+    case OpenACCReductionOperator::BitwiseXOr:
+      // These 5 are simple and are being done  as compound operators, so we can
+      // immediately quit here.
+      return {BinOpRes, BinOpRes.isUsable() ? CombinerFailureKind::None
+                                            : CombinerFailureKind::BinOp};
+    case OpenACCReductionOperator::Max:
+    case OpenACCReductionOperator::Min: {
+      // These are done as:
+      // LHS = (LHS < RHS) ? LHS : RHS; and LHS = (LHS < RHS) ? RHS : LHS;
+      //
+      // The BinOpRes should have been created with the less-than, so we just
+      // have to build the conditional and assignment.
+      if (!BinOpRes.isUsable())
+        return {BinOpRes, CombinerFailureKind::BinOp};
+
+      // Create the correct conditional operator, swapping the results
+      // (true/false value) depending on min/max.
+      ExprResult CondRes;
+      if (ReductionOperator == OpenACCReductionOperator::Min)
+        CondRes = SemaRef.ActOnConditionalOp(Loc, Loc, BinOpRes.get(), LHSDRE,
+                                             RHSDRE);
+      else
+        CondRes = SemaRef.ActOnConditionalOp(Loc, Loc, BinOpRes.get(), RHSDRE,
+                                             LHSDRE);
+
+      if (!CondRes.isUsable())
+        return {CondRes, CombinerFailureKind::Conditional};
+
+      // Build assignment.
+      ExprResult Assignment = SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc,
+                                                 BinaryOperatorKind::BO_Assign,
+                                                 LHSDRE, CondRes.get(),
+                                                 /*ForFoldExpr=*/false);
+      return {Assignment, Assignment.isUsable()
+                              ? CombinerFailureKind::None
+                              : CombinerFailureKind::Assignment};
+    }
+    case OpenACCReductionOperator::And:
+    case OpenACCReductionOperator::Or: {
+      // These are done as LHS = LHS && RHS (or LHS = LHS || RHS). So after the
+      // binop, all we have to do is the assignment.
+      if (!BinOpRes.isUsable())
+        return {BinOpRes, CombinerFailureKind::BinOp};
+
+      // Build assignment.
+      ExprResult Assignment = SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc,
+                                                 BinaryOperatorKind::BO_Assign,
+                                                 LHSDRE, BinOpRes.get(),
+                                                 /*ForFoldExpr=*/false);
+      return {Assignment, Assignment.isUsable()
+                              ? CombinerFailureKind::None
+                              : CombinerFailureKind::Assignment};
+    }
+    case OpenACCReductionOperator::Invalid:
+      llvm_unreachable("Invalid should have been caught above");
+    }
+    llvm_unreachable("Unhandled case");
+  };
+
+  auto tryCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE,
+                               bool IncludeTrap) {
+    if (IncludeTrap) {
+      // Trap all of the errors here, we'll emit our own at the end.
+      Sema::TentativeAnalysisScope Trap{SemaRef};
+      return genCombiner(LHSDRE, RHSDRE);
+    }
+    return genCombiner(LHSDRE, RHSDRE);
+  };
+
+  struct CombinerAttemptTy {
+    CombinerFailureKind FailKind;
+    VarDecl *LHS;
+    DeclRefExpr *LHSDRE;
+    VarDecl *RHS;
+    DeclRefExpr *RHSDRE;
+    Expr *Op;
+  };
+
+  auto formCombiner = [&, this](QualType Ty) -> CombinerAttemptTy {
+    VarDecl *LHSDecl = CreateAllocaDecl(
+        getASTContext(), SemaRef.getCurContext(), Loc,
+        &getASTContext().Idents.get("openacc.reduction.combiner.lhs"), Ty);
+    auto *LHSDRE = DeclRefExpr::Create(
+        getASTContext(), NestedNameSpecifierLoc{}, SourceLocation{}, LHSDecl,
+        /*ReferstoEnclosingVariableOrCapture=*/false,
+        DeclarationNameInfo{DeclarationName{LHSDecl->getDeclName()},
+                            LHSDecl->getBeginLoc()},
+        Ty, clang::VK_LValue, LHSDecl, nullptr, NOUR_None);
+    VarDecl *RHSDecl = CreateAllocaDecl(
+        getASTContext(), SemaRef.getCurContext(), Loc,
+        &getASTContext().Idents.get("openacc.reduction.combiner.lhs"), Ty);
+    auto *RHSDRE = DeclRefExpr::Create(
+        getASTContext(), NestedNameSpecifierLoc{}, SourceLocation{}, RHSDecl,
+        /*ReferstoEnclosingVariableOrCapture=*/false,
+        DeclarationNameInfo{DeclarationName{RHSDecl->getDeclName()},
+                            RHSDecl->getBeginLoc()},
+        Ty, clang::VK_LValue, RHSDecl, nullptr, NOUR_None);
+
+    std::pair<ExprResult, CombinerFailureKind> BinOpResult =
+        tryCombiner(LHSDRE, RHSDRE, /*IncludeTrap=*/true);
+
+    return {BinOpResult.second,     LHSDecl, LHSDRE, RHSDecl, RHSDRE,
+            BinOpResult.first.get()};
+  };
+
+  CombinerAttemptTy TopLevelCombinerInfo = formCombiner(VarTy);
+
+  if (TopLevelCombinerInfo.Op) {
+    if (!TopLevelCombinerInfo.Op->containsErrors() &&
+        TopLevelCombinerInfo.Op->isInstantiationDependent()) {
+      // If this is instantiation dependent, we're just going to 'give up' here
+      // and count on us to get it right during instantaition.
+      CombinerRecipes.push_back({nullptr, nullptr, nullptr});
+      return false;
+    } else if (!TopLevelCombinerInfo.Op->containsErrors()) {
+      // Else, we succeeded, we can just return this combiner.
+      CombinerRecipes.push_back({TopLevelCombinerInfo.LHS,
+                                 TopLevelCombinerInfo.RHS,
+                                 TopLevelCombinerInfo.Op});
+      return false;
+    }
+  }
+
+  auto EmitFailureNote = [&](CombinerFailureKind CFK) {
+    if (CFK == CombinerFailureKind::BinOp)
+      return Diag(Loc, diag::note_acc_reduction_combiner_forming)
+             << CFK << BinaryOperator::getOpcodeStr(BinOp);
+    return Diag(Loc, diag::note_acc_reduction_combiner_forming) << CFK;
+  };
+
+  // Since the 'root' level didn't fail, the only thing that could be successful
+  // is a struct that we decompose on its individual fields.
+
+  RecordDecl *RD = VarTy->getAsRecordDecl();
+  if (!RD) {
+    Diag(Loc, diag::err_acc_reduction_recipe_no_op) << VarTy;
+    EmitFailureNote(TopLevelCombinerInfo.FailKind);
+    tryCombiner(TopLevelCombinerInfo.LHSDRE, TopLevelCombinerInfo.RHSDRE,
+                /*IncludeTrap=*/false);
+    return true;
+  }
+
+  for (const FieldDecl *FD : RD->fields()) {
+    CombinerAttemptTy FieldCombinerInfo = formCombiner(FD->getType());
+
+    if (!FieldCombinerInfo.Op || FieldCombinerInfo.Op->containsErrors()) {
+      Diag(Loc, diag::err_acc_reduction_recipe_no_op) << FD->getType();
+      Diag(FD->getBeginLoc(), diag::note_acc_reduction_recipe_noop_field) << RD;
+      EmitFailureNote(FieldCombinerInfo.FailKind);
+      tryCombiner(FieldCombinerInfo.LHSDRE, FieldCombinerInfo.RHSDRE,
+                  /*IncludeTrap=*/false);
+      return true;
+    }
+
+    if (FieldCombinerInfo.Op->isInstantiationDependent()) {
+      // If this is instantiation dependent, we're just going to 'give up' here
+      // and count on us to get it right during instantaition.
+      CombinerRecipes.push_back({nullptr, nullptr, nullptr});
+    } else {
+      CombinerRecipes.push_back(
+          {FieldCombinerInfo.LHS, FieldCombinerInfo.RHS, FieldCombinerInfo.Op});
+    }
+  }
+
+  return false;
 }

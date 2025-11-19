@@ -33,18 +33,18 @@ mlir::tosa::condenseValues(const SmallVector<Value> &values) {
 
 Value mlir::tosa::clampFloatHelper(Location loc, Value arg, Value min,
                                    Value max, OpBuilder &rewriter) {
-  Value minValue = rewriter.create<arith::MinimumFOp>(loc, arg, max);
-  return rewriter.create<arith::MaximumFOp>(loc, minValue, min);
+  Value minValue = arith::MinimumFOp::create(rewriter, loc, arg, max);
+  return arith::MaximumFOp::create(rewriter, loc, minValue, min);
 }
 
 Value mlir::tosa::clampIntHelper(Location loc, Value arg, Value min, Value max,
                                  OpBuilder &rewriter, bool isUnsigned) {
   if (isUnsigned) {
-    auto minOrArg = rewriter.create<arith::MaxUIOp>(loc, min, arg);
-    return rewriter.create<arith::MinUIOp>(loc, max, minOrArg);
+    auto minOrArg = arith::MaxUIOp::create(rewriter, loc, min, arg);
+    return arith::MinUIOp::create(rewriter, loc, max, minOrArg);
   }
-  auto minOrArg = rewriter.create<arith::MaxSIOp>(loc, min, arg);
-  return rewriter.create<arith::MinSIOp>(loc, max, minOrArg);
+  auto minOrArg = arith::MaxSIOp::create(rewriter, loc, min, arg);
+  return arith::MinSIOp::create(rewriter, loc, max, minOrArg);
 }
 
 bool mlir::tosa::validIntegerRange(IntegerType ty, int64_t value) {
@@ -144,8 +144,8 @@ LogicalResult mlir::tosa::EqualizeRanks(ImplicitLocOpBuilder &builder,
       ArrayRef<int64_t>(reshapeOutputShape), reshapeInputType.getElementType());
   auto reshapeOutputShapeValue = getTosaConstShape(builder, reshapeOutputShape);
 
-  auto reshapeLower = builder.create<tosa::ReshapeOp>(
-      reshapeOutputType, lowerTensorValue, reshapeOutputShapeValue);
+  auto reshapeLower = tosa::ReshapeOp::create(
+      builder, reshapeOutputType, lowerTensorValue, reshapeOutputShapeValue);
 
   if (input1Rank > input2Rank) {
     input1 = higherTensorValue;
@@ -162,8 +162,8 @@ Value mlir::tosa::getTosaConstShape(ImplicitLocOpBuilder &builder,
                                     llvm::ArrayRef<int64_t> shape) {
   auto attr = builder.getIndexTensorAttr(convertFromMlirShape(shape));
   auto type = mlir::tosa::shapeType::get(builder.getContext(), shape.size());
-  mlir::Operation *mlir_op = builder.create<tosa::ConstShapeOp>(type, attr);
-  return mlir_op->getResult(0);
+  mlir::Operation *mlirOp = tosa::ConstShapeOp::create(builder, type, attr);
+  return mlirOp->getResult(0);
 }
 
 Value mlir::tosa::getTosaConstShape(PatternRewriter &rewriter, Location loc,
@@ -179,7 +179,7 @@ SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
 }
 
 bool mlir::tosa::getConstShapeValues(Operation *op,
-                                     llvm::SmallVector<int64_t> &result_shape) {
+                                     llvm::SmallVector<int64_t> &resultShape) {
   if (!op) {
     return false;
   }
@@ -188,7 +188,7 @@ bool mlir::tosa::getConstShapeValues(Operation *op,
     DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
     for (int i = 0; i < elementsAttr.size(); i++) {
       int64_t val = elementsAttr.getValues<int64_t>()[i];
-      result_shape.push_back(val);
+      resultShape.push_back(val);
     }
     return true;
   }
@@ -204,9 +204,9 @@ mlir::tosa::convertFromIntAttr(const DenseElementsAttr &attr, const int rank) {
     return SmallVector<int64_t>(rank, v);
   }
 
-  if (auto int_array_attr = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
+  if (auto intArrayAttr = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
     SmallVector<int64_t> vec;
-    for (APInt val : int_array_attr.getValues<APInt>()) {
+    for (APInt val : intArrayAttr.getValues<APInt>()) {
       vec.push_back(val.getSExtValue());
     }
     return vec;
@@ -216,22 +216,23 @@ mlir::tosa::convertFromIntAttr(const DenseElementsAttr &attr, const int rank) {
 
 bool mlir::tosa::hasUniqueConstantScatterIndices(
     ShapedType indicesType, DenseIntElementsAttr indicesAttr) {
-  llvm::ArrayRef<int64_t> const indicesShape = indicesType.getShape();
+  const llvm::ArrayRef<int64_t> indicesShape = indicesType.getShape();
   const unsigned int indicesRank = indicesShape.size();
   const unsigned int lastDimSize = indicesShape[indicesRank - 1];
 
   // check each batch of indices from the flat indicesAttr values
   // for duplicates
-  auto const indicesValues = indicesAttr.getValues<int32_t>();
+  auto const indicesValues = indicesAttr.getValues<APInt>();
   assert(
       (indicesValues.size() % lastDimSize == 0) &&
       "Constant indices data length should be a multiple of indicesShape[-1]");
 
-  std::vector<uint64_t> indices(lastDimSize);
+  std::vector<APInt> indices(lastDimSize);
   for (auto beg = indicesValues.begin(); beg < indicesValues.end();
        beg += lastDimSize) {
     std::copy(beg, beg + lastDimSize, indices.begin());
-    std::sort(indices.begin(), indices.end());
+    std::sort(indices.begin(), indices.end(),
+              [](const APInt &a, const APInt &b) { return a.slt(b); });
     if (std::adjacent_find(indices.begin(), indices.end()) != indices.end()) {
       // found duplicate values in indices in batch
       return false;

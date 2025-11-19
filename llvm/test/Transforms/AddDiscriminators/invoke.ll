@@ -5,14 +5,14 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
 
 ; Function Attrs: ssp uwtable
-define void @_Z3foov() #0 personality ptr @__gxx_personality_v0 !dbg !8 {
+define void @_Z3foov() personality ptr @__gxx_personality_v0 !dbg !8 {
 entry:
   %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
   ; CHECK: call void @_Z12bar_noexceptv({{.*}} !dbg ![[CALL1:[0-9]+]]
-  call void @_Z12bar_noexceptv() #4, !dbg !11
+  call void @_Z12bar_noexceptv(), !dbg !11
   ; CHECK: call void @_Z12bar_noexceptv({{.*}} !dbg ![[CALL2:[0-9]+]]
-  call void @_Z12bar_noexceptv() #4, !dbg !13
+  call void @_Z12bar_noexceptv(), !dbg !13
   invoke void @_Z3barv()
   ; CHECK: unwind label {{.*}} !dbg ![[INVOKE:[0-9]+]]
           to label %invoke.cont unwind label %lpad, !dbg !14
@@ -31,8 +31,8 @@ lpad:                                             ; preds = %entry
 
 catch:                                            ; preds = %lpad
   %exn = load ptr, ptr %exn.slot, align 8, !dbg !15
-  %3 = call ptr @__cxa_begin_catch(ptr %exn) #4, !dbg !15
-  invoke void @__cxa_rethrow() #5
+  %3 = call ptr @__cxa_begin_catch(ptr %exn), !dbg !15
+  invoke void @__cxa_rethrow()
           to label %unreachable unwind label %lpad1, !dbg !17
 
 lpad1:                                            ; preds = %catch
@@ -62,7 +62,7 @@ terminate.lpad:                                   ; preds = %lpad1
   %7 = landingpad { ptr, i32 }
           catch ptr null, !dbg !20
   %8 = extractvalue { ptr, i32 } %7, 0, !dbg !20
-  call void @__clang_call_terminate(ptr %8) #6, !dbg !20
+  call void @__clang_call_terminate(ptr %8), !dbg !20
   unreachable, !dbg !20
 
 unreachable:                                      ; preds = %catch
@@ -70,9 +70,9 @@ unreachable:                                      ; preds = %catch
 }
 
 ; Function Attrs: nounwind
-declare void @_Z12bar_noexceptv() #1
+declare void @_Z12bar_noexceptv()
 
-declare void @_Z3barv() #2
+declare void @_Z3barv()
 
 declare i32 @__gxx_personality_v0(...)
 
@@ -83,21 +83,13 @@ declare void @__cxa_rethrow()
 declare void @__cxa_end_catch()
 
 ; Function Attrs: noinline noreturn nounwind
-define linkonce_odr hidden void @__clang_call_terminate(ptr) #3 {
-  %2 = call ptr @__cxa_begin_catch(ptr %0) #4
-  call void @_ZSt9terminatev() #6
+define linkonce_odr hidden void @__clang_call_terminate(ptr) {
+  %2 = call ptr @__cxa_begin_catch(ptr %0)
+  call void @_ZSt9terminatev()
   unreachable
 }
 
 declare void @_ZSt9terminatev()
-
-attributes #0 = { ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { noinline noreturn nounwind }
-attributes #4 = { nounwind }
-attributes #5 = { noreturn }
-attributes #6 = { noreturn nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

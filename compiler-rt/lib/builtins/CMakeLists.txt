@@ -6,7 +6,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20.0)
 
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  project(CompilerRTBuiltins C ASM)
+  project(CompilerRTBuiltins C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
   set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
 
@@ -60,9 +60,12 @@ endif()
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
+include(CheckAssemblerFlag)
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
+
+include_directories(../../../third-party/siphash/include)
 
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
@@ -387,6 +390,7 @@ if (NOT MSVC)
     set(i386_SOURCES
       ${i386_SOURCES}
       i386/chkstk.S
+      i386/chkstk2.S
     )
   endif()
 else () # MSVC
@@ -420,6 +424,40 @@ set(arm_or_thumb2_base_SOURCES
   ${GENERIC_SOURCES}
 )
 
+option(COMPILER_RT_ARM_OPTIMIZED_FP
+  "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
+
+set(arm_or_thumb2_optimized_fp_SOURCES)
+if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
+  check_assembler_flag(COMPILER_RT_HAS_MIMPLICIT_IT -mimplicit-it=always)
+  if(COMPILER_RT_HAS_MIMPLICIT_IT)
+    set(implicit_it_flag -mimplicit-it=always)
+  else()
+    check_assembler_flag(
+      COMPILER_RT_HAS_WA_MIMPLICIT_IT -Wa,-mimplicit-it=always)
+    if(COMPILER_RT_HAS_WA_MIMPLICIT_IT)
+      set(implicit_it_flag -Wa,-mimplicit-it=always)
+    else()
+      message(WARNING "Don't know how to set the -mimplicit-it=always flag in this assembler; not including Arm optimized implementations")
+      set(implicit_it_flag "")
+    endif()
+  endif()
+
+  if(implicit_it_flag)
+    set(assembly_files
+      arm/mulsf3.S
+      arm/divsf3.S)
+    set_source_files_properties(${assembly_files}
+      PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
+    set(arm_or_thumb2_optimized_fp_SOURCES
+      ${assembly_files}
+      arm/fnan2.c
+      arm/fnorm2.c
+      arm/funder.c
+      )
+  endif()
+endif()
+
 set(arm_sync_SOURCES
   arm/sync_fetch_and_add_4.S
   arm/sync_fetch_and_add_8.S
@@ -452,6 +490,16 @@ set(thumb1_base_SOURCES
   arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+
+if(COMPILER_RT_ARM_OPTIMIZED_FP)
+  set(thumb1_base_SOURCES
+    arm/thumb1/mulsf3.S
+    arm/fnan2.c
+    arm/fnorm2.c
+    arm/funder.c
+    ${thumb1_base_SOURCES}
+  )
+endif()
 
 set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
@@ -564,6 +612,7 @@ if(MINGW)
     arm/aeabi_uldivmod.S
     arm/chkstk.S
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
   )
 
@@ -574,6 +623,7 @@ elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
     ${arm_EABI_SOURCES}
     ${arm_Thumb1_SOURCES}
@@ -591,6 +641,13 @@ set(aarch64_SOURCES
   cpu_model/aarch64.c
   aarch64/fp_mode.c
 )
+
+# Append sources specific to AArch64 targets that aren't supported by cl.exe
+if(CLANG_CL OR NOT MSVC)
+  list(APPEND aarch64_SOURCES
+    aarch64/emupac.cpp
+  )
+endif()
 
 set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
 
@@ -663,6 +720,11 @@ if (MINGW)
     ${aarch64_SOURCES}
     aarch64/chkstk.S
   )
+endif()
+
+# Don't build enable_execute_stack on arm64 darwin.
+if (APPLE)
+  list(REMOVE_ITEM aarch64_SOURCES enable_execute_stack.c)
 endif()
 
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
@@ -802,14 +864,15 @@ set(s390x_SOURCES
   ${GENERIC_TF_SOURCES}
 )
 
-set(wasm32_SOURCES
+
+set(wasm_SOURCES
+  wasm/__c_longjmp.S
+  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
-set(wasm64_SOURCES
-  ${GENERIC_TF_SOURCES}
-  ${GENERIC_SOURCES}
-)
+set(wasm32_SOURCES ${wasm_SOURCES})
+set(wasm64_SOURCES ${wasm_SOURCES})
 
 set(ve_SOURCES
   ve/grow_stack.S
@@ -836,7 +899,7 @@ else ()
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full BUILTIN_CFLAGS)
   endif()
 
-  append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
   # Don't embed directives for picking any specific CRT
@@ -958,6 +1021,8 @@ else ()
                               SOURCES ${${arch}_SOURCES}
                               DEFS ${BUILTIN_DEFS}
                               CFLAGS ${BUILTIN_CFLAGS_${arch}}
+                              C_STANDARD 11
+                              CXX_STANDARD 17
                               PARENT_TARGET builtins)
       cmake_pop_check_state()
     endif ()

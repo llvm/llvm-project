@@ -33,8 +33,7 @@ public:
   static MipsABIInfo O32() { return MipsABIInfo(ABI::O32); }
   static MipsABIInfo N32() { return MipsABIInfo(ABI::N32); }
   static MipsABIInfo N64() { return MipsABIInfo(ABI::N64); }
-  static MipsABIInfo computeTargetABI(const Triple &TT, StringRef CPU,
-                                      const MCTargetOptions &Options);
+  static MipsABIInfo computeTargetABI(const Triple &TT, StringRef ABIName);
 
   bool IsKnown() const { return ThisABI != ABI::Unknown; }
   bool IsO32() const { return ThisABI == ABI::O32; }

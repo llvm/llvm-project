@@ -85,10 +85,10 @@ define i64 @simple_integers(i8, i16, i32, i64) nounwind {
   ret i64 0
 }
 
-; NOTE: Only float and double are supported.
-define double @simple_floats(float, double) nounwind {
-; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$fd;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$fd
+; NOTE: Only half, float, and double are supported.
+define double @simple_floats(half, float, double) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$__llvm_h__fd;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$__llvm_h__fd
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
@@ -236,7 +236,7 @@ define void @has_aligned_sret(ptr align 32 sret(%TSRet), i32) nounwind {
 ; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
 ; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
-; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Folded Spill
+; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Spill
 ; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     stp     x29, x30, [sp, #168]            // 16-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_fplr  168
@@ -253,7 +253,7 @@ define void @has_aligned_sret(ptr align 32 sret(%TSRet), i32) nounwind {
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr  168
-; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Folded Reload
+; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Reload
 ; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
@@ -339,7 +339,7 @@ define [3 x i64] @large_array([3 x i64] %0, [2 x double], [2 x [2 x i64]]) nounw
 ; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
 ; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
-; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Folded Spill
+; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Spill
 ; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     stp     x29, x30, [sp, #168]            // 16-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_fplr  168
@@ -362,7 +362,7 @@ define [3 x i64] @large_array([3 x i64] %0, [2 x double], [2 x [2 x i64]]) nounw
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr  168
-; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Folded Reload
+; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Reload
 ; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
@@ -555,7 +555,7 @@ define <8 x i16> @large_vector(<8 x i16> %0) {
 ; CHECK-NEXT:     .seh_save_any_reg_p	q12, 96
 ; CHECK-NEXT:     stp	q14, q15, [sp, #128]            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_p	q14, 128
-; CHECK-NEXT:     str	x19, [sp, #160]                 // 8-byte Folded Spill
+; CHECK-NEXT:     str	x19, [sp, #160]                 // 8-byte Spill
 ; CHECK-NEXT:     .seh_save_reg	x19, 160
 ; CHECK-NEXT:     stp	x29, x30, [sp, #168]            // 16-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_fplr	168
@@ -571,7 +571,7 @@ define <8 x i16> @large_vector(<8 x i16> %0) {
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp	x29, x30, [sp, #168]            // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr	168
-; CHECK-NEXT:     ldr	x19, [sp, #160]                 // 8-byte Folded Reload
+; CHECK-NEXT:     ldr	x19, [sp, #160]                 // 8-byte Reload
 ; CHECK-NEXT:     .seh_save_reg	x19, 160
 ; CHECK-NEXT:     ldp	q14, q15, [sp, #128]            // 32-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_any_reg_p	q14, 128
@@ -600,7 +600,7 @@ start:
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$i8$i8i8i8i8
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#simple_floats"
-; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$fd
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$__llvm_h__fd
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#has_varargs"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$v$varargs

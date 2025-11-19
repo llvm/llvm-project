@@ -40,6 +40,7 @@ protected:
                         bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
   bool isNonILP32reloc(const MCFixup &Fixup, AArch64::Specifier RefKind) const;
+  void sortRelocs(std::vector<ELFRelocationEntry> &Relocs) override;
 
   bool IsILP32;
 };
@@ -57,7 +58,7 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
 // assumes IsILP32 is true
 bool AArch64ELFObjectWriter::isNonILP32reloc(const MCFixup &Fixup,
                                              AArch64::Specifier RefKind) const {
-  if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
+  if (Fixup.getKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
   case AArch64::S_ABS_G3:
@@ -84,7 +85,7 @@ bool AArch64ELFObjectWriter::isNonILP32reloc(const MCFixup &Fixup,
 unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                               const MCValue &Target,
                                               bool IsPCRel) const {
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   AArch64::Specifier RefKind =
       static_cast<AArch64::Specifier>(Target.getSpecifier());
   AArch64::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
@@ -96,8 +97,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case AArch64::S_TPREL:
   case AArch64::S_TLSDESC:
   case AArch64::S_TLSDESC_AUTH:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -212,7 +213,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   } else {
     if (IsILP32 && isNonILP32reloc(Fixup, RefKind))
       return ELF::R_AARCH64_NONE;
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     case FK_Data_1:
       reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;
@@ -231,6 +232,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
       }
       if (RefKind == AArch64::S_AUTH || RefKind == AArch64::S_AUTHADDR)
         return ELF::R_AARCH64_AUTH_ABS64;
+      if (RefKind == AArch64::S_FUNCINIT)
+        return ELF::R_AARCH64_FUNCINIT64;
       return ELF::R_AARCH64_ABS64;
     }
     case AArch64::fixup_aarch64_add_imm12:
@@ -488,13 +491,25 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
   // this global needs to be tagged. In addition, the linker needs to know
   // whether to emit a special addend when relocating `end` symbols, and this
   // can only be determined by the attributes of the symbol itself.
-  if (Val.getAddSym() && cast<MCSymbolELF>(Val.getAddSym())->isMemtag())
+  if (Val.getAddSym() &&
+      static_cast<const MCSymbolELF *>(Val.getAddSym())->isMemtag())
     return true;
 
   if ((Val.getSpecifier() & AArch64::S_GOT) == AArch64::S_GOT)
     return true;
   return is_contained({AArch64::S_GOTPCREL, AArch64::S_PLT},
                       Val.getSpecifier());
+}
+
+void AArch64ELFObjectWriter::sortRelocs(
+    std::vector<ELFRelocationEntry> &Relocs) {
+  // PATCHINST relocations should be applied last because they may overwrite the
+  // whole instruction and so should take precedence over other relocations that
+  // modify operands of the original instruction.
+  std::stable_partition(Relocs.begin(), Relocs.end(),
+                        [](const ELFRelocationEntry &R) {
+                          return R.Type != ELF::R_AARCH64_PATCHINST;
+                        });
 }
 
 std::unique_ptr<MCObjectTargetWriter>

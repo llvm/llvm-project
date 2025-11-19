@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --format=mustache --output=%t --executor=standalone %s 
-// RUN: FileCheck %s < %t/GlobalNamespace/index.html
+// RUN: FileCheck %s < %t/html/GlobalNamespace/index.html
 
 enum Color {
   RED,
@@ -15,7 +15,7 @@ class Foo;
 // CHECK-NEXT:  </li>
 // CHECK-NEXT:  <ul>
 // CHECK-NEXT:      <li class="sidebar-item-container">
-// CHECK-NEXT:          <a class="sidebar-item" href="#{{[0-9A-F]*}}">enum Color</a>
+// CHECK-NEXT:          <a class="sidebar-item" href="#{{[0-9A-F]*}}">Color</a>
 // CHECK-NEXT:      </li>
 // CHECK-NEXT:  </ul>
 // CHECK:           <li class="sidebar-section">
@@ -69,7 +69,9 @@ class Foo;
 // CHECK-NEXT:      <h2>Inner Classes</h2>
 // CHECK-NEXT:      <ul class="class-container">
 // CHECK-NEXT:          <li id="{{[0-9A-F]*}}" style="max-height: 40px;">
-// CHECK-NEXT:              <a href="Foo.html"><pre><code class="language-cpp code-clang-doc" >class Foo</code></pre></a>
+// CHECK-NEXT:              <a href="_ZTV3Foo.html">
+// CHECK-NEXT:                  <pre><code class="language-cpp code-clang-doc">class Foo</code></pre>
+// CHECK-NEXT:              </a>
 // CHECK-NEXT:          </li>
 // CHECK-NEXT:      </ul>
 // CHECK-NEXT:  </section>

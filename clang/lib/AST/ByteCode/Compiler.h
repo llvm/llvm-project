@@ -21,7 +21,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 class QualType;
@@ -41,6 +40,7 @@ template <class Emitter> class LoopScope;
 template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
 template <class Emitter> class StmtExprScope;
+template <class Emitter> class LocOverrideScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -52,12 +52,14 @@ public:
     K_Decl = 3,
     K_Elem = 5,
     K_RVO = 6,
-    K_InitList = 7
+    K_InitList = 7,
+    K_DIE = 8,
   };
 
   static InitLink This() { return InitLink{K_This}; }
   static InitLink InitList() { return InitLink{K_InitList}; }
   static InitLink RVO() { return InitLink{K_RVO}; }
+  static InitLink DIE() { return InitLink{K_DIE}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
     IL.Offset = Offset;
@@ -112,8 +114,22 @@ protected:
   // Aliases for types defined in the emitter.
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
-  using OptLabelTy = std::optional<LabelTy>;
+  using OptLabelTy = UnsignedOrNone;
   using CaseMap = llvm::DenseMap<const SwitchCase *, LabelTy>;
+
+  struct LabelInfo {
+    const Stmt *Name;
+    const VariableScope<Emitter> *BreakOrContinueScope;
+    OptLabelTy BreakLabel;
+    OptLabelTy ContinueLabel;
+    OptLabelTy DefaultLabel;
+    LabelInfo(const Stmt *Name, OptLabelTy BreakLabel, OptLabelTy ContinueLabel,
+              OptLabelTy DefaultLabel,
+              const VariableScope<Emitter> *BreakOrContinueScope)
+        : Name(Name), BreakOrContinueScope(BreakOrContinueScope),
+          BreakLabel(BreakLabel), ContinueLabel(ContinueLabel),
+          DefaultLabel(DefaultLabel) {}
+  };
 
   /// Current compilation context.
   Context &Ctx;
@@ -237,7 +253,8 @@ protected:
   bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
-  bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
+  bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                          bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -254,12 +271,10 @@ protected:
   /// If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  std::optional<PrimType> classify(const Expr *E) const {
-    return Ctx.classify(E);
-  }
-  std::optional<PrimType> classify(QualType Ty) const {
-    return Ctx.classify(Ty);
-  }
+  OptPrimType classify(const Expr *E) const { return Ctx.classify(E); }
+  OptPrimType classify(QualType Ty) const { return Ctx.classify(Ty); }
+  bool canClassify(const Expr *E) const { return Ctx.canClassify(E); }
+  bool canClassify(QualType T) const { return Ctx.canClassify(T); }
 
   /// Classifies a known primitive type.
   PrimType classifyPrim(QualType Ty) const {
@@ -284,13 +299,15 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
   /// Just pass evaluation on to \p E. This leaves all the parsing flags
   /// intact.
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
-  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false,
+  VarCreationState visitVarDecl(const VarDecl *VD, const Expr *Init,
+                                bool Toplevel = false,
                                 bool IsConstexprUnknown = false);
   VarCreationState visitDecl(const VarDecl *VD,
                              bool IsConstexprUnknown = false);
@@ -306,21 +323,23 @@ protected:
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
-                          std::optional<PrimType> InitT);
-  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl);
+                          OptPrimType InitT);
+  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl,
+                     bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
+                                  bool IsVolatile = false,
                                   const ValueDecl *ExtendingDecl = nullptr,
                                   ScopeKind SC = ScopeKind::Block,
                                   bool IsConstexprUnknown = false);
 
   /// Allocates a space storing a local given its type.
-  std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                const ValueDecl *ExtendingDecl = nullptr,
-                ScopeKind = ScopeKind::Block, bool IsConstexprUnknown = false);
-  std::optional<unsigned> allocateTemporary(const Expr *E);
+  UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                               const ValueDecl *ExtendingDecl = nullptr,
+                               ScopeKind = ScopeKind::Block,
+                               bool IsConstexprUnknown = false);
+  UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -337,17 +356,20 @@ private:
   friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
   friend class StmtExprScope<Emitter>;
+  friend class LocOverrideScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
   bool visitZeroArrayInitializer(QualType T, const Expr *E);
+  bool visitAssignment(const Expr *LHS, const Expr *RHS, const Expr *E);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
+  bool emitConst(const llvm::APInt &Value, PrimType Ty, const Expr *E);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);
   bool emitConst(const llvm::APInt &Value, const Expr *E) {
-    return emitConst(static_cast<llvm::APSInt>(Value), E);
+    return emitConst(Value, classifyPrim(E), E);
   }
 
   /// Emits an integer constant.
@@ -388,8 +410,8 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-  bool emitRecordDestruction(const Record *R, SourceInfo Loc);
-  bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
+  bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
+  bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
   bool emitDummyPtr(const DeclTy &D, const Expr *E);
   bool emitFloat(const APFloat &F, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
@@ -402,6 +424,8 @@ private:
 
   bool checkLiteralType(const Expr *E);
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
+
+  bool refersToUnion(const Expr *E);
 
 protected:
   /// Variable to storage mapping.
@@ -423,6 +447,7 @@ protected:
   bool DiscardResult = false;
 
   bool InStmtExpr = false;
+  bool ToLValue = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
@@ -433,21 +458,12 @@ protected:
   bool InitStackActive = false;
 
   /// Type of the expression returned by the function.
-  std::optional<PrimType> ReturnType;
+  OptPrimType ReturnType;
 
   /// Switch case mapping.
   CaseMap CaseLabels;
-
-  /// Scope to cleanup until when we see a break statement.
-  VariableScope<Emitter> *BreakVarScope = nullptr;
-  /// Point to break to.
-  OptLabelTy BreakLabel;
-  /// Scope to cleanup until when we see a continue statement.
-  VariableScope<Emitter> *ContinueVarScope = nullptr;
-  /// Point to continue to.
-  OptLabelTy ContinueLabel;
-  /// Default case label.
-  OptLabelTy DefaultLabel;
+  /// Stack of label information for loops and switch statements.
+  llvm::SmallVector<LabelInfo> LabelInfoStack;
 
   const FunctionDecl *CompilingFunction = nullptr;
 };
@@ -562,7 +578,7 @@ public:
 
   void addLocal(const Scope::Local &Local) override {
     if (!Idx) {
-      Idx = this->Ctx->Descriptors.size();
+      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
       this->Ctx->emitInitScope(*Idx, {});
     }
@@ -581,11 +597,9 @@ public:
       if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
         return false;
 
-      if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
+      if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
         return false;
 
-      if (!this->Ctx->emitPopPtr(E))
-        return false;
       removeIfStoredOpaqueValue(Local);
     }
     return true;
@@ -610,15 +624,7 @@ public:
   }
 
   /// Index of the scope in the chain.
-  std::optional<unsigned> Idx;
-};
-
-/// Scope for storage declared in a compound statement.
-// FIXME: Remove?
-template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
-public:
-  BlockScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
-      : LocalScope<Emitter>(Ctx, Kind) {}
+  UnsignedOrNone Idx = std::nullopt;
 };
 
 template <class Emitter> class ArrayIndexScope final {
@@ -664,22 +670,29 @@ public:
 
   ~InitLinkScope() { this->Ctx->InitStack.pop_back(); }
 
-private:
+public:
   Compiler<Emitter> *Ctx;
 };
 
 template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
-      : Ctx(Ctx), OldValue(Ctx->InitStackActive) {
+      : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
     Ctx->InitStackActive = Active;
+    if (Active)
+      Ctx->InitStack.push_back(InitLink::DIE());
   }
 
-  ~InitStackScope() { this->Ctx->InitStackActive = OldValue; }
+  ~InitStackScope() {
+    this->Ctx->InitStackActive = OldValue;
+    if (Active)
+      Ctx->InitStack.pop_back();
+  }
 
 private:
   Compiler<Emitter> *Ctx;
   bool OldValue;
+  bool Active;
 };
 
 } // namespace interp

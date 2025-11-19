@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SETJMP_SIGSETJMP_EPILOGUE_H
 #define LLVM_LIBC_SRC_SETJMP_SIGSETJMP_EPILOGUE_H
 
-#include "hdr/types/jmp_buf.h"
+#include "hdr/types/sigjmp_buf.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
-[[gnu::returns_twice]] int sigsetjmp_epilogue(jmp_buf buffer, int retval);
+[[gnu::returns_twice]] int sigsetjmp_epilogue(sigjmp_buf buffer, int retval);
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SETJMP_SIGSETJMP_EPILOGUE_H

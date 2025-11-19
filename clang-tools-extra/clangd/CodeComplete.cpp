@@ -43,6 +43,7 @@
 #include "support/Trace.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -97,6 +98,9 @@ toCompletionItemKind(index::SymbolKind Kind,
                      const llvm::StringRef *Signature = nullptr) {
   using SK = index::SymbolKind;
   switch (Kind) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case SK::IncludeDirective:
   case SK::Unknown:
     return CompletionItemKind::Missing;
   case SK::Module:
@@ -193,7 +197,11 @@ MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
     Result.value.append(Doc.asPlainText());
     break;
   case MarkupKind::Markdown:
-    Result.value.append(Doc.asMarkdown());
+    if (Config::current().Documentation.CommentFormat ==
+        Config::CommentFormatPolicy::PlainText)
+      Result.value.append(Doc.asEscapedMarkdown());
+    else
+      Result.value.append(Doc.asMarkdown());
     break;
   }
   return Result;
@@ -1462,20 +1470,15 @@ bool allowIndex(CodeCompletionContext &CC) {
   auto Scope = CC.getCXXScopeSpecifier();
   if (!Scope)
     return true;
-  NestedNameSpecifier *NameSpec = (*Scope)->getScopeRep();
-  if (!NameSpec)
-    return true;
   // We only query the index when qualifier is a namespace.
   // If it's a class, we rely solely on sema completions.
-  switch (NameSpec->getKind()) {
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
+  switch ((*Scope)->getScopeRep().getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::Namespace:
     return true;
-  case NestedNameSpecifier::Super:
-  case NestedNameSpecifier::TypeSpec:
-  // Unresolved inside a template.
-  case NestedNameSpecifier::Identifier:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+  case NestedNameSpecifier::Kind::Type:
     return false;
   }
   llvm_unreachable("invalid NestedNameSpecifier kind");
@@ -1884,7 +1887,15 @@ private:
         for (auto &Cand : C.first) {
           if (Cand.SemaResult &&
               Cand.SemaResult->Kind == CodeCompletionResult::RK_Declaration) {
-            auto ID = clangd::getSymbolID(Cand.SemaResult->getDeclaration());
+            const NamedDecl *DeclToLookup = Cand.SemaResult->getDeclaration();
+            // For instantiations of members of class templates, the
+            // documentation will be stored at the member's original
+            // declaration.
+            if (const NamedDecl *Adjusted =
+                    dyn_cast<NamedDecl>(&adjustDeclToTemplate(*DeclToLookup))) {
+              DeclToLookup = Adjusted;
+            }
+            auto ID = clangd::getSymbolID(DeclToLookup);
             if (!ID)
               continue;
             Req.IDs.insert(ID);
@@ -2431,6 +2442,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const CodeCompletion &C) {
+  OS << "Signature: " << "\"" << C.Signature << "\", "
+     << "SnippetSuffix: " << "\"" << C.SnippetSuffix << "\""
+     << ", Rendered:";
   // For now just lean on CompletionItem.
   return OS << C.render(CodeCompleteOptions());
 }

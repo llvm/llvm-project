@@ -1978,20 +1978,42 @@ uint64_t MachOObjectFile::getSectionSize(DataRefImpl Sec) const {
   return SectSize;
 }
 
-ArrayRef<uint8_t> MachOObjectFile::getSectionContents(uint32_t Offset,
+ArrayRef<uint8_t> MachOObjectFile::getSectionContents(uint64_t Offset,
                                                       uint64_t Size) const {
   return arrayRefFromStringRef(getData().substr(Offset, Size));
 }
 
 Expected<ArrayRef<uint8_t>>
 MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
-  uint32_t Offset;
+  uint64_t Offset;
   uint64_t Size;
 
   if (is64Bit()) {
     MachO::section_64 Sect = getSection64(Sec);
     Offset = Sect.offset;
     Size = Sect.size;
+    // Check for large mach-o files where the section contents might exceed
+    // 4GB. MachO::section_64 objects only have 32 bit file offsets to the
+    // section contents and can overflow in dSYM files. We can track this and
+    // adjust the section offset to be 64 bit safe. If sections overflow then
+    // section ordering is enforced. If sections are not ordered, then an error
+    // will be returned stopping invalid section data from being returned.
+    uint64_t PrevTrueOffset = 0;
+    uint64_t SectOffsetAdjust = 0;
+    for (uint32_t SectIdx = 0; SectIdx < Sec.d.a; ++SectIdx) {
+      MachO::section_64 CurrSect =
+          getStruct<MachO::section_64>(*this, Sections[SectIdx]);
+      uint64_t CurrTrueOffset = (uint64_t)CurrSect.offset + SectOffsetAdjust;
+      if ((SectOffsetAdjust > 0) && (PrevTrueOffset > CurrTrueOffset))
+        return malformedError("section data exceeds 4GB and section file "
+                              "offsets are not ordered");
+      const uint64_t EndSectFileOffset =
+          (uint64_t)CurrSect.offset + CurrSect.size;
+      if (EndSectFileOffset > UINT32_MAX)
+        SectOffsetAdjust += EndSectFileOffset & 0xFFFFFFFF00000000ull;
+      PrevTrueOffset = CurrTrueOffset;
+    }
+    Offset += SectOffsetAdjust;
   } else {
     MachO::section Sect = getSection(Sec);
     Offset = Sect.offset;
@@ -3115,7 +3137,7 @@ void ExportEntry::pushNode(uint64_t offset) {
   }
   State.ChildCount = *Children;
   if (State.ChildCount != 0 && Children + 1 >= Trie.end()) {
-    *E = malformedError("byte for count of childern in export trie data at "
+    *E = malformedError("byte for count of children in export trie data at "
                         "node: 0x" +
                         Twine::utohexstr(offset) +
                         " extends past end of trie data");
@@ -3157,7 +3179,7 @@ void ExportEntry::pushDownUntilBottom() {
     }
     for (const NodeState &node : nodes()) {
       if (node.Start == Trie.begin() + childNodeIndex){
-        *E = malformedError("loop in childern in export trie data at node: 0x" +
+        *E = malformedError("loop in children in export trie data at node: 0x" +
                             Twine::utohexstr(Top.Start - Trie.begin()) +
                             " back to node: 0x" +
                             Twine::utohexstr(childNodeIndex));

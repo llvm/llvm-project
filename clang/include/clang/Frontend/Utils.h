@@ -15,8 +15,8 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Driver/OptionUtils.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
+#include "clang/Options/OptionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
@@ -143,8 +143,9 @@ class ModuleDependencyCollector : public DependencyCollector {
   std::error_code copyToRoot(StringRef Src, StringRef Dst = {});
 
 public:
-  ModuleDependencyCollector(std::string DestDir)
-      : DestDir(std::move(DestDir)) {}
+  ModuleDependencyCollector(std::string DestDir,
+                            IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
+      : DestDir(std::move(DestDir)), Canonicalizer(std::move(VFS)) {}
   ~ModuleDependencyCollector() override { writeFileMap(); }
 
   StringRef getDest() { return DestDir; }
@@ -189,7 +190,7 @@ void AttachHeaderIncludeGen(Preprocessor &PP,
 /// memory, mainly for testing.
 IntrusiveRefCntPtr<ExternalSemaSource>
 createChainedIncludesSource(CompilerInstance &CI,
-                            IntrusiveRefCntPtr<ExternalSemaSource> &Reader);
+                            IntrusiveRefCntPtr<ASTReader> &OutReader);
 
 /// Optional inputs to createInvocation.
 struct CreateInvocationOptions {

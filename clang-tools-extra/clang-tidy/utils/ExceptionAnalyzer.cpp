@@ -1,4 +1,4 @@
-//===--- ExceptionAnalyzer.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,10 +11,10 @@
 namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
-    const Type *ExceptionType) {
+    const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
   assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
-  ThrownExceptions.insert(ExceptionType);
+  ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
 
 void ExceptionAnalyzer::ExceptionInfo::registerExceptions(
@@ -44,10 +44,9 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
 }
 
 // FIXME: This could be ported to clang later.
-namespace {
 
-bool isUnambiguousPublicBaseClass(const Type *DerivedType,
-                                  const Type *BaseType) {
+static bool isUnambiguousPublicBaseClass(const Type *DerivedType,
+                                         const Type *BaseType) {
   const auto *DerivedClass =
       DerivedType->getCanonicalTypeUnqualified()->getAsCXXRecordDecl();
   const auto *BaseClass =
@@ -78,11 +77,11 @@ bool isUnambiguousPublicBaseClass(const Type *DerivedType,
          IsPublicBaseClass;
 }
 
-inline bool isPointerOrPointerToMember(const Type *T) {
+static bool isPointerOrPointerToMember(const Type *T) {
   return T->isPointerType() || T->isMemberPointerType();
 }
 
-std::optional<QualType> getPointeeOrArrayElementQualType(QualType T) {
+static std::optional<QualType> getPointeeOrArrayElementQualType(QualType T) {
   if (T->isAnyPointerType() || T->isMemberPointerType())
     return T->getPointeeType();
 
@@ -92,7 +91,7 @@ std::optional<QualType> getPointeeOrArrayElementQualType(QualType T) {
   return std::nullopt;
 }
 
-bool isBaseOf(const Type *DerivedType, const Type *BaseType) {
+static bool isBaseOf(const Type *DerivedType, const Type *BaseType) {
   const auto *DerivedClass = DerivedType->getAsCXXRecordDecl();
   const auto *BaseClass = BaseType->getAsCXXRecordDecl();
   if (!DerivedClass || !BaseClass)
@@ -103,12 +102,12 @@ bool isBaseOf(const Type *DerivedType, const Type *BaseType) {
 }
 
 // Check if T1 is more or Equally qualified than T2.
-bool moreOrEquallyQualified(QualType T1, QualType T2) {
+static bool moreOrEquallyQualified(QualType T1, QualType T2) {
   return T1.getQualifiers().isStrictSupersetOf(T2.getQualifiers()) ||
          T1.getQualifiers() == T2.getQualifiers();
 }
 
-bool isStandardPointerConvertible(QualType From, QualType To) {
+static bool isStandardPointerConvertible(QualType From, QualType To) {
   assert((From->isPointerType() || From->isMemberPointerType()) &&
          (To->isPointerType() || To->isMemberPointerType()) &&
          "Pointer conversion should be performed on pointer types only.");
@@ -150,7 +149,7 @@ bool isStandardPointerConvertible(QualType From, QualType To) {
   return false;
 }
 
-bool isFunctionPointerConvertible(QualType From, QualType To) {
+static bool isFunctionPointerConvertible(QualType From, QualType To) {
   if (!From->isFunctionPointerType() && !From->isFunctionType() &&
       !From->isMemberFunctionPointerType())
     return false;
@@ -192,8 +191,8 @@ bool isFunctionPointerConvertible(QualType From, QualType To) {
 // from the C rules.
 //
 // The function should only be called in C++ mode.
-bool isQualificationConvertiblePointer(QualType From, QualType To,
-                                       LangOptions LangOpts) {
+static bool isQualificationConvertiblePointer(QualType From, QualType To,
+                                              const LangOptions &LangOpts) {
 
   // [N4659 7.5 (1)]
   // A cv-decomposition of a type T is a sequence of cv_i and P_i such that T is
@@ -320,7 +319,6 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 
   return From.getTypePtr() == To.getTypePtr();
 }
-} // namespace
 
 static bool canThrow(const FunctionDecl *Func) {
   // consteval specifies that every call to the function must produce a
@@ -356,12 +354,15 @@ static bool canThrow(const FunctionDecl *Func) {
   };
 }
 
-bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
-    const Type *HandlerTy, const ASTContext &Context) {
+ExceptionAnalyzer::ExceptionInfo::Throwables
+ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
+                                                const ASTContext &Context) {
   llvm::SmallVector<const Type *, 8> TypesToDelete;
-  for (const Type *ExceptionTy : ThrownExceptions) {
-    CanQualType ExceptionCanTy = ExceptionTy->getCanonicalTypeUnqualified();
-    CanQualType HandlerCanTy = HandlerTy->getCanonicalTypeUnqualified();
+  for (const auto &ThrownException : ThrownExceptions) {
+    const Type *ExceptionTy = ThrownException.getFirst();
+    const CanQualType ExceptionCanTy =
+        ExceptionTy->getCanonicalTypeUnqualified();
+    const CanQualType HandlerCanTy = HandlerTy->getCanonicalTypeUnqualified();
 
     // The handler is of type cv T or cv T& and E and T are the same type
     // (ignoring the top-level cv-qualifiers) ...
@@ -409,11 +410,18 @@ bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
     }
   }
 
-  for (const Type *T : TypesToDelete)
-    ThrownExceptions.erase(T);
+  Throwables DeletedExceptions;
+
+  for (const Type *TypeToDelete : TypesToDelete) {
+    const auto DeleteIt = ThrownExceptions.find(TypeToDelete);
+    if (DeleteIt != ThrownExceptions.end()) {
+      DeletedExceptions.insert(*DeleteIt);
+      ThrownExceptions.erase(DeleteIt);
+    }
+  }
 
   reevaluateBehaviour();
-  return !TypesToDelete.empty();
+  return DeletedExceptions;
 }
 
 ExceptionAnalyzer::ExceptionInfo &
@@ -422,7 +430,8 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
   llvm::SmallVector<const Type *, 8> TypesToDelete;
   // Note: Using a 'SmallSet' with 'llvm::remove_if()' is not possible.
   // Therefore this slightly hacky implementation is required.
-  for (const Type *T : ThrownExceptions) {
+  for (const auto &ThrownException : ThrownExceptions) {
+    const Type *T = ThrownException.getFirst();
     if (const auto *TD = T->getAsTagDecl()) {
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
@@ -454,22 +463,21 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
   else
     Behaviour = State::Throwing;
 }
-
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
-    llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
+    CallStack &CallStack, SourceLocation CallLoc) {
   if (!Func || CallStack.contains(Func) ||
       (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {
-    CallStack.insert(Func);
+    CallStack.insert({Func, CallLoc});
     ExceptionInfo Result = throwsException(Body, Caught, CallStack);
 
     // For a constructor, we also have to check the initializers.
     if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Func)) {
       for (const CXXCtorInitializer *Init : Ctor->inits()) {
-        ExceptionInfo Excs =
+        const ExceptionInfo Excs =
             throwsException(Init->getInit(), Caught, CallStack);
         Result.merge(Excs);
       }
@@ -481,17 +489,23 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
 
   auto Result = ExceptionInfo::createUnknown();
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
-    for (const QualType &Ex : FPT->exceptions())
-      Result.registerException(Ex.getTypePtr());
+    for (const QualType &Ex : FPT->exceptions()) {
+      CallStack.insert({Func, CallLoc});
+      Result.registerException(
+          Ex.getTypePtr(),
+          {Func->getExceptionSpecSourceRange().getBegin(), CallStack});
+      CallStack.erase(Func);
+    }
   }
   return Result;
 }
 
 /// Analyzes a single statement on it's throwing behaviour. This is in principle
 /// possible except some 'Unknown' functions are called.
-ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
-    const Stmt *St, const ExceptionInfo::Throwables &Caught,
-    llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
+ExceptionAnalyzer::ExceptionInfo
+ExceptionAnalyzer::throwsException(const Stmt *St,
+                                   const ExceptionInfo::Throwables &Caught,
+                                   CallStack &CallStack) {
   auto Results = ExceptionInfo::createNonThrowing();
   if (!St)
     return Results;
@@ -505,7 +519,8 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
                          ->getPointeeType()
                          ->getUnqualifiedDesugaredType();
       Results.registerException(
-          ThrownExpr->getType()->getUnqualifiedDesugaredType());
+          ThrownExpr->getType()->getUnqualifiedDesugaredType(),
+          {Throw->getBeginLoc(), CallStack});
     } else
       // A rethrow of a caught exception happens which makes it possible
       // to throw all exception that are caught in the 'catch' clause of
@@ -519,8 +534,8 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
 
       // Everything is caught through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {
-        ExceptionInfo Rethrown = throwsException(
-            Catch->getHandlerBlock(), Uncaught.getExceptionTypes(), CallStack);
+        const ExceptionInfo Rethrown = throwsException(
+            Catch->getHandlerBlock(), Uncaught.getExceptions(), CallStack);
         Results.merge(Rethrown);
         Uncaught.clear();
       } else {
@@ -536,50 +551,63 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
         // thrown types (because it's sensitive to inheritance) the throwing
         // situation changes. First of all filter the exception types and
         // analyze if the baseclass-exception is rethrown.
-        if (Uncaught.filterByCatch(
-                CaughtType, Catch->getExceptionDecl()->getASTContext())) {
-          ExceptionInfo::Throwables CaughtExceptions;
-          CaughtExceptions.insert(CaughtType);
-          ExceptionInfo Rethrown = throwsException(Catch->getHandlerBlock(),
-                                                   CaughtExceptions, CallStack);
+        const ExceptionInfo::Throwables FilteredExceptions =
+            Uncaught.filterByCatch(CaughtType,
+                                   Catch->getExceptionDecl()->getASTContext());
+        if (!FilteredExceptions.empty()) {
+          const ExceptionInfo Rethrown = throwsException(
+              Catch->getHandlerBlock(), FilteredExceptions, CallStack);
           Results.merge(Rethrown);
         }
       }
     }
     Results.merge(Uncaught);
-  } else if (const auto *Call = dyn_cast<CallExpr>(St)) {
-    if (const FunctionDecl *Func = Call->getDirectCallee()) {
-      ExceptionInfo Excs = throwsException(Func, Caught, CallStack);
-      Results.merge(Excs);
-    }
-  } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
-    ExceptionInfo Excs =
-        throwsException(Construct->getConstructor(), Caught, CallStack);
-    Results.merge(Excs);
   } else if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(St)) {
-    ExceptionInfo Excs =
+    const ExceptionInfo Excs =
         throwsException(DefaultInit->getExpr(), Caught, CallStack);
     Results.merge(Excs);
   } else if (const auto *Coro = dyn_cast<CoroutineBodyStmt>(St)) {
     for (const Stmt *Child : Coro->childrenExclBody()) {
       if (Child != Coro->getExceptionHandler()) {
-        ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+        const ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
         Results.merge(Excs);
       }
     }
-    ExceptionInfo Excs = throwsException(Coro->getBody(), Caught, CallStack);
+    const ExceptionInfo Excs =
+        throwsException(Coro->getBody(), Caught, CallStack);
     Results.merge(throwsException(Coro->getExceptionHandler(),
-                                  Excs.getExceptionTypes(), CallStack));
-    for (const Type *Throwable : Excs.getExceptionTypes()) {
-      if (const auto *ThrowableRec = Throwable->getAsCXXRecordDecl()) {
-        ExceptionInfo DestructorExcs =
-            throwsException(ThrowableRec->getDestructor(), Caught, CallStack);
+                                  Excs.getExceptions(), CallStack));
+    for (const auto &Exception : Excs.getExceptions()) {
+      const Type *ExcType = Exception.getFirst();
+      if (const CXXRecordDecl *ThrowableRec = ExcType->getAsCXXRecordDecl()) {
+        const ExceptionInfo DestructorExcs = throwsException(
+            ThrowableRec->getDestructor(), Caught, CallStack, SourceLocation{});
         Results.merge(DestructorExcs);
       }
     }
+  } else if (const auto *Lambda = dyn_cast<LambdaExpr>(St)) {
+    for (const Stmt *Init : Lambda->capture_inits()) {
+      const ExceptionInfo Excs = throwsException(Init, Caught, CallStack);
+      Results.merge(Excs);
+    }
   } else {
+    // Check whether any of this node's subexpressions throws.
     for (const Stmt *Child : St->children()) {
-      ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+      const ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+      Results.merge(Excs);
+    }
+
+    // If this node is a call to a function or constructor, also check
+    // whether the call itself throws.
+    if (const auto *Call = dyn_cast<CallExpr>(St)) {
+      if (const FunctionDecl *Func = Call->getDirectCallee()) {
+        ExceptionInfo Excs =
+            throwsException(Func, Caught, CallStack, Call->getBeginLoc());
+        Results.merge(Excs);
+      }
+    } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
+      ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
+                                           CallStack, Construct->getBeginLoc());
       Results.merge(Excs);
     }
   }
@@ -593,9 +621,9 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
   // Check if the function has already been analyzed and reuse that result.
   const auto CacheEntry = FunctionCache.find(Func);
   if (CacheEntry == FunctionCache.end()) {
-    llvm::SmallSet<const FunctionDecl *, 32> CallStack;
-    ExceptionList =
-        throwsException(Func, ExceptionInfo::Throwables(), CallStack);
+    CallStack CallStack;
+    ExceptionList = throwsException(Func, ExceptionInfo::Throwables(),
+                                    CallStack, Func->getLocation());
 
     // Cache the result of the analysis. This is done prior to filtering
     // because it is best to keep as much information as possible.
@@ -610,7 +638,7 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
 
 ExceptionAnalyzer::ExceptionInfo
 ExceptionAnalyzer::analyzeImpl(const Stmt *Stmt) {
-  llvm::SmallSet<const FunctionDecl *, 32> CallStack;
+  CallStack CallStack;
   return throwsException(Stmt, ExceptionInfo::Throwables(), CallStack);
 }
 

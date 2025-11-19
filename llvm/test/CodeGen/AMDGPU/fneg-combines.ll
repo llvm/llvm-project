@@ -880,102 +880,54 @@ define amdgpu_kernel void @v_fneg_add_multi_use_fneg_x_f32(ptr addrspace(1) %out
 }
 
 ; This one asserted with -enable-no-signed-zeros-fp-math
-define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #0 {
-; SI-SAFE-LABEL: fneg_fadd_0:
-; SI-SAFE:       ; %bb.0: ; %.entry
-; SI-SAFE-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
-; SI-SAFE-NEXT:    v_rcp_f32_e32 v1, v0
-; SI-SAFE-NEXT:    v_div_scale_f32 v2, vcc, 1.0, s1, 1.0
-; SI-SAFE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; SI-SAFE-NEXT:    v_fma_f32 v3, -v0, v1, 1.0
-; SI-SAFE-NEXT:    v_fma_f32 v1, v3, v1, v1
-; SI-SAFE-NEXT:    v_mul_f32_e32 v3, v2, v1
-; SI-SAFE-NEXT:    v_fma_f32 v4, -v0, v3, v2
-; SI-SAFE-NEXT:    v_fma_f32 v3, v4, v1, v3
-; SI-SAFE-NEXT:    v_fma_f32 v0, -v0, v3, v2
-; SI-SAFE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; SI-SAFE-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
-; SI-SAFE-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; SI-SAFE-NEXT:    v_mad_f32 v0, v0, 0, 0
-; SI-SAFE-NEXT:    v_mov_b32_e32 v1, s0
-; SI-SAFE-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
-; SI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; SI-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
-; SI-SAFE-NEXT:    ; return to shader part epilog
+define amdgpu_ps float @fneg_fadd_0_safe(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #0 {
+; SI-LABEL: fneg_fadd_0_safe:
+; SI:       ; %bb.0: ; %.entry
+; SI-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
+; SI-NEXT:    v_rcp_f32_e32 v1, v0
+; SI-NEXT:    v_div_scale_f32 v2, vcc, 1.0, s1, 1.0
+; SI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; SI-NEXT:    v_fma_f32 v3, -v0, v1, 1.0
+; SI-NEXT:    v_fma_f32 v1, v3, v1, v1
+; SI-NEXT:    v_mul_f32_e32 v3, v2, v1
+; SI-NEXT:    v_fma_f32 v4, -v0, v3, v2
+; SI-NEXT:    v_fma_f32 v3, v4, v1, v3
+; SI-NEXT:    v_fma_f32 v0, -v0, v3, v2
+; SI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
+; SI-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
+; SI-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
+; SI-NEXT:    v_mad_f32 v0, v0, 0, 0
+; SI-NEXT:    v_mov_b32_e32 v1, s0
+; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; SI-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
+; SI-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; SI-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; SI-NEXT:    ; return to shader part epilog
 ;
-; SI-NSZ-LABEL: fneg_fadd_0:
-; SI-NSZ:       ; %bb.0: ; %.entry
-; SI-NSZ-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
-; SI-NSZ-NEXT:    v_rcp_f32_e32 v1, v0
-; SI-NSZ-NEXT:    v_div_scale_f32 v2, vcc, 1.0, s1, 1.0
-; SI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; SI-NSZ-NEXT:    v_fma_f32 v3, -v0, v1, 1.0
-; SI-NSZ-NEXT:    v_fma_f32 v1, v3, v1, v1
-; SI-NSZ-NEXT:    v_mul_f32_e32 v3, v2, v1
-; SI-NSZ-NEXT:    v_fma_f32 v4, -v0, v3, v2
-; SI-NSZ-NEXT:    v_fma_f32 v3, v4, v1, v3
-; SI-NSZ-NEXT:    v_fma_f32 v0, -v0, v3, v2
-; SI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; SI-NSZ-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
-; SI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; SI-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
-; SI-NSZ-NEXT:    v_mov_b32_e32 v1, s0
-; SI-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; SI-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
-; SI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; SI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; SI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
-; SI-NSZ-NEXT:    ; return to shader part epilog
-;
-; VI-SAFE-LABEL: fneg_fadd_0:
-; VI-SAFE:       ; %bb.0: ; %.entry
-; VI-SAFE-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
-; VI-SAFE-NEXT:    v_div_scale_f32 v1, vcc, 1.0, s1, 1.0
-; VI-SAFE-NEXT:    v_rcp_f32_e32 v2, v0
-; VI-SAFE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; VI-SAFE-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
-; VI-SAFE-NEXT:    v_fma_f32 v2, v3, v2, v2
-; VI-SAFE-NEXT:    v_mul_f32_e32 v3, v1, v2
-; VI-SAFE-NEXT:    v_fma_f32 v4, -v0, v3, v1
-; VI-SAFE-NEXT:    v_fma_f32 v3, v4, v2, v3
-; VI-SAFE-NEXT:    v_fma_f32 v0, -v0, v3, v1
-; VI-SAFE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; VI-SAFE-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
-; VI-SAFE-NEXT:    v_mov_b32_e32 v2, s0
-; VI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; VI-SAFE-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; VI-SAFE-NEXT:    v_mad_f32 v0, v0, 0, 0
-; VI-SAFE-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; VI-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
-; VI-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; VI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
-; VI-SAFE-NEXT:    ; return to shader part epilog
-;
-; VI-NSZ-LABEL: fneg_fadd_0:
-; VI-NSZ:       ; %bb.0: ; %.entry
-; VI-NSZ-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
-; VI-NSZ-NEXT:    v_div_scale_f32 v1, vcc, 1.0, s1, 1.0
-; VI-NSZ-NEXT:    v_rcp_f32_e32 v2, v0
-; VI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; VI-NSZ-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
-; VI-NSZ-NEXT:    v_fma_f32 v2, v3, v2, v2
-; VI-NSZ-NEXT:    v_mul_f32_e32 v3, v1, v2
-; VI-NSZ-NEXT:    v_fma_f32 v4, -v0, v3, v1
-; VI-NSZ-NEXT:    v_fma_f32 v3, v4, v2, v3
-; VI-NSZ-NEXT:    v_fma_f32 v0, -v0, v3, v1
-; VI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; VI-NSZ-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
-; VI-NSZ-NEXT:    v_mov_b32_e32 v2, s0
-; VI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; VI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; VI-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
-; VI-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; VI-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
-; VI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; VI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
-; VI-NSZ-NEXT:    ; return to shader part epilog
+; VI-LABEL: fneg_fadd_0_safe:
+; VI:       ; %bb.0: ; %.entry
+; VI-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
+; VI-NEXT:    v_div_scale_f32 v1, vcc, 1.0, s1, 1.0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
+; VI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; VI-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
+; VI-NEXT:    v_fma_f32 v2, v3, v2, v2
+; VI-NEXT:    v_mul_f32_e32 v3, v1, v2
+; VI-NEXT:    v_fma_f32 v4, -v0, v3, v1
+; VI-NEXT:    v_fma_f32 v3, v4, v2, v3
+; VI-NEXT:    v_fma_f32 v0, -v0, v3, v1
+; VI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
+; VI-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; VI-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
+; VI-NEXT:    v_mad_f32 v0, v0, 0, 0
+; VI-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
+; VI-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; VI-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv float 1.000000e+00, %tmp6
   %tmp8 = fmul float 0.000000e+00, %tmp7
@@ -989,39 +941,23 @@ define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i
   ret float %.i198
 }
 
-; This is a workaround because -enable-no-signed-zeros-fp-math does not set up
-; function attribute unsafe-fp-math automatically. Combine with the previous test
-; when that is done.
-define amdgpu_ps float @fneg_fadd_0_nsz(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #2 {
-; GCN-SAFE-LABEL: fneg_fadd_0_nsz:
-; GCN-SAFE:       ; %bb.0: ; %.entry
-; GCN-SAFE-NEXT:    v_rcp_f32_e32 v0, s1
-; GCN-SAFE-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-SAFE-NEXT:    v_mul_f32_e32 v0, 0, v0
-; GCN-SAFE-NEXT:    v_add_f32_e32 v0, 0, v0
-; GCN-SAFE-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; GCN-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
-; GCN-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; GCN-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; GCN-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
-; GCN-SAFE-NEXT:    ; return to shader part epilog
-;
-; GCN-NSZ-LABEL: fneg_fadd_0_nsz:
-; GCN-NSZ:       ; %bb.0: ; %.entry
-; GCN-NSZ-NEXT:    v_rcp_f32_e32 v0, s1
-; GCN-NSZ-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
-; GCN-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; GCN-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
-; GCN-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; GCN-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; GCN-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
-; GCN-NSZ-NEXT:    ; return to shader part epilog
+define amdgpu_ps float @fneg_fadd_0_nsz(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr {
+; GCN-LABEL: fneg_fadd_0_nsz:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_rcp_f32_e32 v0, s1
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    v_mul_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; GCN-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv afn float 1.000000e+00, %tmp6
   %tmp8 = fmul float 0.000000e+00, %tmp7
   %tmp9 = fmul reassoc nnan arcp contract float 0.000000e+00, %tmp8
-  %.i188 = fadd float %tmp9, 0.000000e+00
+  %.i188 = fadd nsz float %tmp9, 0.000000e+00
   %tmp10 = fcmp uge float %.i188, %tmp2
   %tmp11 = fneg float %.i188
   %.i092 = select i1 %tmp10, float %tmp2, float %tmp11
@@ -5079,7 +5015,7 @@ define amdgpu_kernel void @v_fneg_fp_round_fneg_f64_to_f32(ptr addrspace(1) %out
   %a.gep = getelementptr inbounds double, ptr addrspace(1) %a.ptr, i64 %tid.ext
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %a = load volatile double, ptr addrspace(1) %a.gep
-  %fneg.a = fsub double -0.000000e+00, %a
+  %fneg.a = fsub nsz double -0.000000e+00, %a
   %fpround = fptrunc double %fneg.a to float
   %fneg = fneg float %fpround
   store float %fneg, ptr addrspace(1) %out.gep
@@ -8070,5 +8006,8 @@ declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
 
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" }
+attributes #2 = { nounwind }
 attributes #3 = { nounwind "no-signed-zeros-fp-math"="true" }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GCN-NSZ: {{.*}}
+; GCN-SAFE: {{.*}}

@@ -81,7 +81,7 @@ CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
                         const URIForFile &File) {
   CodeAction CA;
   CA.title = R.FixMessage;
-  CA.kind = std::string(CodeAction::REFACTOR_KIND);
+  CA.kind = std::string(CodeAction::QUICKFIX_KIND);
   CA.command.emplace();
   CA.command->title = R.FixMessage;
   CA.command->command = std::string(ApplyRenameCommand);
@@ -456,7 +456,6 @@ private:
 
   ClangdLSPServer &Server;
 };
-constexpr int ClangdLSPServer::MessageHandler::MaxReplayCallbacks;
 
 // call(), notify(), and reply() wrap the Transport, adding logging and locking.
 void ClangdLSPServer::callMethod(StringRef Method, llvm::json::Value Params,
@@ -1279,11 +1278,9 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                       R.contents.kind = HoverContentFormat;
                       R.range = (*H)->SymRange;
                       switch (HoverContentFormat) {
-                      case MarkupKind::PlainText:
-                        R.contents.value = (*H)->present().asPlainText();
-                        return Reply(std::move(R));
                       case MarkupKind::Markdown:
-                        R.contents.value = (*H)->present().asMarkdown();
+                      case MarkupKind::PlainText:
+                        R.contents.value = (*H)->present(HoverContentFormat);
                         return Reply(std::move(R));
                       };
                       llvm_unreachable("unhandled MarkupKind");

@@ -107,6 +107,7 @@ bool IsBindCProcedure(const Scope &);
 // Returns a pointer to the function's symbol when true, else null
 const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
+bool IsOrContainsNotifyComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol &);
 // Does a non-PARAMETER symbol have explicit initialization with =value or
 // =>target in its declaration (but not in a DATA statement)? (Being
@@ -199,6 +200,8 @@ bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
 
+bool IsDeviceAllocatable(const Symbol &symbol);
+
 inline bool IsCUDADeviceContext(const Scope *scope) {
   if (scope) {
     if (const Symbol * symbol{scope->symbol()}) {
@@ -221,12 +224,20 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   return false;
 }
 
+bool HasCUDAComponent(const Symbol &sym);
+
+inline bool IsCUDADevice(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Device;
+  }
+  return false;
+}
+
 inline bool IsCUDAShared(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() == common::CUDADataAttr::Shared) {
-      return true;
-    }
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared;
   }
   return false;
 }
@@ -257,7 +268,7 @@ bool IsAccessible(const Symbol &, const Scope &);
 
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const Scope &, const Symbol &);
+    const Scope &, const Symbol &, bool inStructureConstructor = false);
 
 // Analysis of image control statements
 bool IsImageControlStmt(const parser::ExecutableConstruct &);
@@ -642,6 +653,8 @@ using PotentialAndPointerComponentIterator =
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindNotifyPotentialComponent(
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
 PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
     const DerivedTypeSpec &);
 PotentialAndPointerComponentIterator::const_iterator
@@ -729,12 +742,6 @@ const DerivedTypeSpec *GetDtvArgDerivedType(const Symbol &);
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
     parser::CharBlock at, const char *what);
 
-inline const parser::Name *getDesignatorNameIfDataRef(
-    const parser::Designator &designator) {
-  const auto *dataRef{std::get_if<parser::DataRef>(&designator.u)};
-  return dataRef ? std::get_if<parser::Name>(&dataRef->u) : nullptr;
-}
-
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
 template <typename R, typename T>
@@ -759,6 +766,8 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
+
+bool AreSameModuleSymbol(const Symbol &, const Symbol &);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

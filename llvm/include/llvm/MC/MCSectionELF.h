@@ -52,14 +52,15 @@ class MCSectionELF final : public MCSection {
 
 private:
   friend class MCContext;
+  friend class MCAsmInfoELF;
 
   // The storage of Name is owned by MCContext's ELFUniquingMap.
   MCSectionELF(StringRef Name, unsigned type, unsigned flags,
                unsigned entrySize, const MCSymbolELF *group, bool IsComdat,
                unsigned UniqueID, MCSymbol *Begin,
                const MCSymbolELF *LinkedToSym)
-      : MCSection(SV_ELF, Name, flags & ELF::SHF_EXECINSTR,
-                  type == ELF::SHT_NOBITS, Begin),
+      : MCSection(Name, flags & ELF::SHF_EXECINSTR, type == ELF::SHT_NOBITS,
+                  Begin),
         Type(type), Flags(flags), UniqueID(UniqueID), EntrySize(entrySize),
         Group(group, IsComdat), LinkedToSym(LinkedToSym) {
     assert((!(Flags & ELF::SHF_GROUP) || Group.getPointer()) &&
@@ -68,27 +69,13 @@ private:
       Group.getPointer()->setIsSignature();
   }
 
-  // TODO Delete after we stop supporting generation of GNU-style .zdebug_*
-  // sections.
-  void setSectionName(StringRef Name) { this->Name = Name; }
-
 public:
-  /// Decides whether a '.section' directive should be printed before the
-  /// section name
-  bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
-
   unsigned getType() const { return Type; }
   unsigned getFlags() const { return Flags; }
   unsigned getEntrySize() const { return EntrySize; }
   void setFlags(unsigned F) { Flags = F; }
   const MCSymbolELF *getGroup() const { return Group.getPointer(); }
   bool isComdat() const { return Group.getInt(); }
-
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
-  bool useCodeAlign() const override;
-  StringRef getVirtualSectionKind() const override;
 
   bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }
@@ -104,10 +91,6 @@ public:
   }
   std::pair<uint64_t, uint64_t> getOffsets() const {
     return std::make_pair(StartOffset, EndOffset);
-  }
-
-  static bool classof(const MCSection *S) {
-    return S->getVariant() == SV_ELF;
   }
 };
 

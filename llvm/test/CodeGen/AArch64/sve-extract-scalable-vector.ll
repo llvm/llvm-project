@@ -63,11 +63,11 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) uw
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p3.h, p1.b
 ; CHECK-NEXT:    punpkhi p4.h, p2.b
@@ -83,10 +83,10 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) uw
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p3.s, p5.s, p3.s
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
 ; CHECK-NEXT:    uzp1 p1.h, p2.h, p4.h
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    addvl sp, sp, #1

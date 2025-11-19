@@ -2,7 +2,7 @@
 
 ! This test checks the lowering of atomic write
 
-!CHECK: func @_QQmain() attributes {fir.bindc_name = "acc_atomic_write_test"} {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "ACC_ATOMIC_WRITE_TEST"} {
 !CHECK: %[[VAR_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
 !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[VAR_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[VAR_Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}

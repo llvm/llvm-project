@@ -128,6 +128,13 @@ void WriteState::dump() const {
 }
 #endif
 
+#ifndef NDEBUG
+void ReadState::dump() const {
+  dbgs() << "{ OpIdx=" << RD->OpIndex << ", RegID " << getRegisterID()
+         << ", Cycles Left=" << CyclesLeft << " }";
+}
+#endif
+
 const CriticalDependency &Instruction::computeCriticalRegDep() {
   if (CriticalRegDep.Cycles)
     return CriticalRegDep;

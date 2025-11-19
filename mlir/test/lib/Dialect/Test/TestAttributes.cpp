@@ -214,6 +214,16 @@ static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestCopyCountAttr Implementation
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCopyCountAttr::verify(
+    llvm::function_ref<::mlir::InFlightDiagnostic()> /*emitError*/,
+    CopyCount /*copy_count*/) {
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CopyCountAttr Implementation
 //===----------------------------------------------------------------------===//
 
@@ -375,13 +385,15 @@ TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
 //===----------------------------------------------------------------------===//
 
 bool TestConstMemorySpaceAttr::isValidLoad(
-    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    Type type, mlir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
 
 bool TestConstMemorySpaceAttr::isValidStore(
-    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    Type type, mlir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
@@ -390,7 +402,8 @@ bool TestConstMemorySpaceAttr::isValidStore(
 
 bool TestConstMemorySpaceAttr::isValidAtomicOp(
     mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
-    IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
   return false;
@@ -398,7 +411,8 @@ bool TestConstMemorySpaceAttr::isValidAtomicOp(
 
 bool TestConstMemorySpaceAttr::isValidAtomicXchg(
     Type type, mlir::ptr::AtomicOrdering successOrdering,
-    mlir::ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
+    mlir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
@@ -525,6 +539,24 @@ test::detail::TestCustomStorageCtorAttrAttrStorage::construct(
   // Note: this tests linker error ("undefined symbol"), the actual
   // implementation is not important.
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// TestTensorEncodingAttr
+//===----------------------------------------------------------------------===//
+
+::llvm::LogicalResult TestTensorEncodingAttr::verifyEncoding(
+    mlir::ArrayRef<int64_t> shape, mlir::Type elementType,
+    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TestMemRefLayoutAttr
+//===----------------------------------------------------------------------===//
+
+mlir::AffineMap TestMemRefLayoutAttr::getAffineMap() const {
+  return mlir::AffineMap::getMultiDimIdentityMap(1, getContext());
 }
 
 //===----------------------------------------------------------------------===//

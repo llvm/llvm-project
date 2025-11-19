@@ -52,7 +52,7 @@ declare i32 @__gxx_personality_v0(...)
 ; UNIQ:			.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3bazb{{$}}
 ;; Verify that with -unique-section-names=false, the unique id of the text section gets assigned to the llvm_bb_addr_map section.
 ; NOUNIQ:		.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text,unique,1
-; CHECK-NEXT:   .byte   3		# version
+; CHECK-NEXT:   .byte   4		# version
 ; CHECK-NEXT:   .byte   32		# feature
 ; CHECK-NEXT:	.quad	.Lfunc_begin0	# function address
 ; CHECK-NEXT:	.byte	6		# number of basic blocks

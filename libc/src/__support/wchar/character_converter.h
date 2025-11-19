@@ -11,6 +11,8 @@
 
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
+#include "hdr/types/size_t.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/wchar/mbstate.h"
@@ -30,11 +32,14 @@ public:
   bool isEmpty();
   bool isValidState();
 
+  template <typename CharType> size_t sizeAs();
+
   int push(char8_t utf8_byte);
   int push(char32_t utf32);
 
   ErrorOr<char8_t> pop_utf8();
   ErrorOr<char32_t> pop_utf32();
+  template <typename CharType> ErrorOr<CharType> pop();
 };
 
 } // namespace internal

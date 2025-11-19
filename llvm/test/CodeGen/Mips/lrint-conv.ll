@@ -1,4 +1,19 @@
 ; RUN: llc < %s -mtriple=mips64el -mattr=+soft-float | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mattr=+soft-float     | FileCheck %s
+
+; FIXME: crash
+; define signext i32 @testmswh(half %x) {
+; entry:
+;   %0 = tail call i64 @llvm.lrint.i64.f16(half %x)
+;   %conv = trunc i64 %0 to i32
+;   ret i32 %conv
+; }
+
+; define i64 @testmsxh(half %x) {
+; entry:
+;   %0 = tail call i64 @llvm.lrint.i64.f16(half %x)
+;   ret i64 %0
+; }
 
 define signext i32 @testmsws(float %x) {
 ; CHECK-LABEL: testmsws:

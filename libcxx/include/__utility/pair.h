@@ -18,7 +18,6 @@
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
-#include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_like_no_subrange.h>
 #include <__tuple/tuple_size.h>
 #include <__type_traits/common_reference.h>
@@ -32,14 +31,13 @@
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_replaceable.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
 
@@ -102,7 +100,6 @@ struct pair
       __conditional_t<__libcpp_is_trivially_relocatable<_T1>::value && __libcpp_is_trivially_relocatable<_T2>::value,
                       pair,
                       void>;
-  using __replaceable _LIBCPP_NODEBUG = __conditional_t<__is_replaceable_v<_T1> && __is_replaceable_v<_T2>, pair, void>;
 
   _LIBCPP_HIDE_FROM_ABI pair(pair const&) = default;
   _LIBCPP_HIDE_FROM_ABI pair(pair&&)      = default;
@@ -225,8 +222,8 @@ struct pair
       : pair(__pc,
              __first_args,
              __second_args,
-             typename __make_tuple_indices<sizeof...(_Args1)>::type(),
-             typename __make_tuple_indices<sizeof...(_Args2) >::type()) {}
+             __make_index_sequence<sizeof...(_Args1)>(),
+             __make_index_sequence<sizeof...(_Args2)>()) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
   operator=(__conditional_t<is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,
@@ -440,8 +437,8 @@ private:
   pair(piecewise_construct_t,
        tuple<_Args1...>& __first_args,
        tuple<_Args2...>& __second_args,
-       __tuple_indices<_I1...>,
-       __tuple_indices<_I2...>)
+       __index_sequence<_I1...>,
+       __index_sequence<_I2...>)
       : first(std::forward<_Args1>(std::get<_I1>(__first_args))...),
         second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
 #endif

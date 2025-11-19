@@ -737,6 +737,16 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #  include <compare>
 #  include <concepts>
 
+// [range.access.general]
+#  if _LIBCPP_STD_VER >= 20
+#    include <__ranges/access.h>
+#    include <__ranges/data.h>
+#    include <__ranges/empty.h>
+#    include <__ranges/rbegin.h>
+#    include <__ranges/rend.h>
+#    include <__ranges/size.h>
+#  endif
+
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif

@@ -109,6 +109,8 @@ public:
   private:
     void CommonInitializer(lldb::SupportFileSP support_file_sp,
                            lldb::TargetSP target_sp);
+    void CommonInitializerImpl(lldb::SupportFileSP support_file_sp,
+                               lldb::TargetSP target_sp);
   };
 
   typedef std::shared_ptr<File> FileSP;

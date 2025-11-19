@@ -208,9 +208,8 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.h, p0/m, z3.h, z4.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmad z3.h, p0/m, z4.h, z5.h
+; CHECK-NEXT:    stp q0, q3, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fma_v16f16:
@@ -248,7 +247,7 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    fcvt s18, h18
 ; NONEON-NOSVE-NEXT:    ldr h13, [sp, #90]
 ; NONEON-NOSVE-NEXT:    ldr h14, [sp, #74]
-; NONEON-NOSVE-NEXT:    str h0, [sp, #14] // 2-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str h0, [sp, #14] // 2-byte Spill
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldr h11, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldr h12, [sp, #72]
@@ -302,7 +301,7 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt h4, s4
 ; NONEON-NOSVE-NEXT:    fmul s2, s3, s2
-; NONEON-NOSVE-NEXT:    ldr h3, [sp, #14] // 2-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr h3, [sp, #14] // 2-byte Reload
 ; NONEON-NOSVE-NEXT:    fcvt s16, h16
 ; NONEON-NOSVE-NEXT:    fcvt s6, h6
 ; NONEON-NOSVE-NEXT:    fcvt s3, h3
@@ -526,9 +525,8 @@ define void @fma_v8f32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.s, p0/m, z2.s, z1.s
-; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.s, p0/m, z3.s, z4.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmad z3.s, p0/m, z4.s, z5.s
+; CHECK-NEXT:    stp q0, q3, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fma_v8f32:
@@ -642,9 +640,8 @@ define void @fma_v4f64(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.d, p0/m, z3.d, z4.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmad z3.d, p0/m, z4.d, z5.d
+; CHECK-NEXT:    stp q0, q3, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fma_v4f64:

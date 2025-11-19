@@ -20,22 +20,22 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Function.h"
 
 using namespace llvm;
 
 namespace {
 
-class X86DynAllocaExpander : public MachineFunctionPass {
+class X86DynAllocaExpander {
 public:
-  X86DynAllocaExpander() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool run(MachineFunction &MF);
 
 private:
   /// Strategies for lowering a DynAlloca.
@@ -61,22 +61,30 @@ private:
   unsigned SlotSize = 0;
   int64_t StackProbeSize = 0;
   bool NoStackArgProbe = false;
+};
 
+class X86DynAllocaExpanderLegacy : public MachineFunctionPass {
+public:
+  X86DynAllocaExpanderLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+private:
   StringRef getPassName() const override { return "X86 DynAlloca Expander"; }
 
 public:
   static char ID;
 };
 
-char X86DynAllocaExpander::ID = 0;
+char X86DynAllocaExpanderLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(X86DynAllocaExpander, "x86-dyn-alloca-expander",
+INITIALIZE_PASS(X86DynAllocaExpanderLegacy, "x86-dyn-alloca-expander",
                 "X86 DynAlloca Expander", false, false)
 
-FunctionPass *llvm::createX86DynAllocaExpander() {
-  return new X86DynAllocaExpander();
+FunctionPass *llvm::createX86DynAllocaExpanderLegacyPass() {
+  return new X86DynAllocaExpanderLegacy();
 }
 
 /// Return the allocation amount for a DynAlloca instruction, or -1 if unknown.
@@ -277,7 +285,7 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
       AmountDef->eraseFromParent();
 }
 
-bool X86DynAllocaExpander::runOnMachineFunction(MachineFunction &MF) {
+bool X86DynAllocaExpander::run(MachineFunction &MF) {
   if (!MF.getInfo<X86MachineFunctionInfo>()->hasDynAlloca())
     return false;
 
@@ -298,4 +306,20 @@ bool X86DynAllocaExpander::runOnMachineFunction(MachineFunction &MF) {
     lower(P.first, P.second);
 
   return true;
+}
+
+bool X86DynAllocaExpanderLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return X86DynAllocaExpander().run(MF);
+}
+
+PreservedAnalyses
+X86DynAllocaExpanderPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = X86DynAllocaExpander().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

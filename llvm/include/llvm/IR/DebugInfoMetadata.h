@@ -66,7 +66,55 @@ namespace dwarf {
 enum Tag : uint16_t;
 }
 
-class DbgVariableIntrinsic;
+/// Wrapper structure that holds a language name and its version.
+///
+/// Some debug-info formats, particularly DWARF, distniguish between
+/// language codes that include the version name and codes that don't.
+/// DISourceLanguageName may hold either of these.
+///
+class DISourceLanguageName {
+  /// Language version. The version scheme is language
+  /// dependent.
+  uint32_t Version = 0;
+
+  /// Language name.
+  /// If \ref HasVersion is \c true, then this name
+  /// is version independent (i.e., doesn't include the language
+  /// version in its name).
+  uint16_t Name;
+
+  /// If \c true, then \ref Version is interpretable and \ref Name
+  /// is a version independent name.
+  bool HasVersion;
+
+public:
+  bool hasVersionedName() const { return HasVersion; }
+
+  /// Returns a versioned or unversioned language name.
+  uint16_t getName() const { return Name; }
+
+  /// Transitional API for cases where we do not yet support
+  /// versioned source language names. Use \ref getName instead.
+  ///
+  /// FIXME: remove once all callers of this API account for versioned
+  /// names.
+  uint16_t getUnversionedName() const {
+    assert(!hasVersionedName());
+    return Name;
+  }
+
+  /// Returns language version. Only valid for versioned language names.
+  uint32_t getVersion() const {
+    assert(hasVersionedName());
+    return Version;
+  }
+
+  DISourceLanguageName(uint16_t Lang, uint32_t Version)
+      : Version(Version), Name(Lang), HasVersion(true) {};
+  DISourceLanguageName(uint16_t Lang)
+      : Version(0), Name(Lang), HasVersion(false) {};
+};
+
 class DbgVariableRecord;
 
 LLVM_ABI extern cl::opt<bool> EnableFSDiscriminator;
@@ -843,95 +891,113 @@ class DIBasicType : public DIType {
   friend class MDNode;
 
   unsigned Encoding;
+  /// Describes the number of bits used by the value of the object. Non-zero
+  /// when the value of an object does not fully occupy the storage size
+  /// specified by SizeInBits.
+  uint32_t DataSizeInBits;
 
 protected:
   DIBasicType(LLVMContext &C, StorageType Storage, unsigned Tag,
               uint32_t AlignInBits, unsigned Encoding,
-              uint32_t NumExtraInhabitants, DIFlags Flags,
-              ArrayRef<Metadata *> Ops)
+              uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+              DIFlags Flags, ArrayRef<Metadata *> Ops)
       : DIType(C, DIBasicTypeKind, Storage, Tag, 0, AlignInBits,
                NumExtraInhabitants, Flags, Ops),
-        Encoding(Encoding) {}
+        Encoding(Encoding), DataSizeInBits(DataSizeInBits) {}
   DIBasicType(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
               uint32_t AlignInBits, unsigned Encoding,
-              uint32_t NumExtraInhabitants, DIFlags Flags,
-              ArrayRef<Metadata *> Ops)
+              uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+              DIFlags Flags, ArrayRef<Metadata *> Ops)
       : DIType(C, ID, Storage, Tag, 0, AlignInBits, NumExtraInhabitants, Flags,
                Ops),
-        Encoding(Encoding) {}
+        Encoding(Encoding), DataSizeInBits(DataSizeInBits) {}
   ~DIBasicType() = default;
 
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               StringRef Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              uint32_t NumExtraInhabitants, DIFlags Flags,
+                              uint32_t NumExtraInhabitants,
+                              uint32_t DataSizeInBits, DIFlags Flags,
                               StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
                    SizeInBits, AlignInBits, Encoding, NumExtraInhabitants,
-                   Flags, Storage, ShouldCreate);
+                   DataSizeInBits, Flags, Storage, ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              uint32_t NumExtraInhabitants, DIFlags Flags,
+                              uint32_t NumExtraInhabitants,
+                              uint32_t DataSizeInBits, DIFlags Flags,
                               StorageType Storage, bool ShouldCreate = true) {
     auto *SizeInBitsNode = ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), SizeInBits));
     return getImpl(Context, Tag, Name, SizeInBitsNode, AlignInBits, Encoding,
-                   NumExtraInhabitants, Flags, Storage, ShouldCreate);
+                   NumExtraInhabitants, DataSizeInBits, Flags, Storage,
+                   ShouldCreate);
   }
-  LLVM_ABI static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
-                                       MDString *Name, Metadata *SizeInBits,
-                                       uint32_t AlignInBits, unsigned Encoding,
-                                       uint32_t NumExtraInhabitants,
-                                       DIFlags Flags, StorageType Storage,
-                                       bool ShouldCreate = true);
+  LLVM_ABI static DIBasicType *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+          Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          uint32_t NumExtraInhabitants, uint32_t DataSizeInBits, DIFlags Flags,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
                         getRawSizeInBits(), getAlignInBits(), getEncoding(),
-                        getNumExtraInhabitants(), getFlags());
+                        getNumExtraInhabitants(), getDataSizeInBits(),
+                        getFlags());
   }
 
 public:
   DEFINE_MDNODE_GET(DIBasicType, (unsigned Tag, StringRef Name),
-                    (Tag, Name, 0, 0, 0, 0, FlagZero))
+                    (Tag, Name, 0, 0, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, Flags))
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, 0, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, Flags))
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, 0, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding,
                      uint32_t NumExtraInhabitants, DIFlags Flags),
                     (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                     NumExtraInhabitants, Flags))
+                     NumExtraInhabitants, 0, Flags))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding,
+                     uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+                     DIFlags Flags),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding,
+                     NumExtraInhabitants, DataSizeInBits, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding,
-                     uint32_t NumExtraInhabitants, DIFlags Flags),
+                     uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+                     DIFlags Flags),
                     (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                     NumExtraInhabitants, Flags))
+                     NumExtraInhabitants, DataSizeInBits, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, Metadata *SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding,
-                     uint32_t NumExtraInhabitants, DIFlags Flags),
+                     uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+                     DIFlags Flags),
                     (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                     NumExtraInhabitants, Flags))
+                     NumExtraInhabitants, DataSizeInBits, Flags))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 
   unsigned getEncoding() const { return Encoding; }
+
+  uint32_t getDataSizeInBits() const { return DataSizeInBits; }
 
   enum class Signedness { Signed, Unsigned };
 
@@ -962,7 +1028,7 @@ class DIFixedPointType : public DIBasicType {
                    uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
                    unsigned Kind, int Factor, ArrayRef<Metadata *> Ops)
       : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, AlignInBits,
-                    Encoding, 0, Flags, Ops),
+                    Encoding, 0, 0, Flags, Ops),
         Kind(Kind), Factor(Factor) {
     assert(Kind == FixedPointBinary || Kind == FixedPointDecimal);
   }
@@ -971,7 +1037,7 @@ class DIFixedPointType : public DIBasicType {
                    unsigned Kind, APInt Numerator, APInt Denominator,
                    ArrayRef<Metadata *> Ops)
       : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, AlignInBits,
-                    Encoding, 0, Flags, Ops),
+                    Encoding, 0, 0, Flags, Ops),
         Kind(Kind), Factor(0), Numerator(Numerator), Denominator(Denominator) {
     assert(Kind == FixedPointRational);
   }
@@ -980,7 +1046,7 @@ class DIFixedPointType : public DIBasicType {
                    unsigned Kind, int Factor, APInt Numerator,
                    APInt Denominator, ArrayRef<Metadata *> Ops)
       : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, AlignInBits,
-                    Encoding, 0, Flags, Ops),
+                    Encoding, 0, 0, Flags, Ops),
         Kind(Kind), Factor(Factor), Numerator(Numerator),
         Denominator(Denominator) {}
   ~DIFixedPointType() = default;
@@ -2004,7 +2070,7 @@ public:
   LLVM_ABI static const char *nameTableKindString(DebugNameTableKind PK);
 
 private:
-  unsigned SourceLanguage;
+  DISourceLanguageName SourceLanguage;
   unsigned RuntimeVersion;
   uint64_t DWOId;
   unsigned EmissionKind;
@@ -2014,16 +2080,17 @@ private:
   bool DebugInfoForProfiling;
   bool RangesBaseAddress;
 
-  DICompileUnit(LLVMContext &C, StorageType Storage, unsigned SourceLanguage,
-                bool IsOptimized, unsigned RuntimeVersion,
-                unsigned EmissionKind, uint64_t DWOId, bool SplitDebugInlining,
-                bool DebugInfoForProfiling, unsigned NameTableKind,
-                bool RangesBaseAddress, ArrayRef<Metadata *> Ops);
+  DICompileUnit(LLVMContext &C, StorageType Storage,
+                DISourceLanguageName SourceLanguage, bool IsOptimized,
+                unsigned RuntimeVersion, unsigned EmissionKind, uint64_t DWOId,
+                bool SplitDebugInlining, bool DebugInfoForProfiling,
+                unsigned NameTableKind, bool RangesBaseAddress,
+                ArrayRef<Metadata *> Ops);
   ~DICompileUnit() = default;
 
   static DICompileUnit *
-  getImpl(LLVMContext &Context, unsigned SourceLanguage, DIFile *File,
-          StringRef Producer, bool IsOptimized, StringRef Flags,
+  getImpl(LLVMContext &Context, DISourceLanguageName SourceLanguage,
+          DIFile *File, StringRef Producer, bool IsOptimized, StringRef Flags,
           unsigned RuntimeVersion, StringRef SplitDebugFilename,
           unsigned EmissionKind, DICompositeTypeArray EnumTypes,
           DIScopeArray RetainedTypes,
@@ -2043,8 +2110,8 @@ private:
         getCanonicalMDString(Context, SDK), Storage, ShouldCreate);
   }
   LLVM_ABI static DICompileUnit *
-  getImpl(LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
-          MDString *Producer, bool IsOptimized, MDString *Flags,
+  getImpl(LLVMContext &Context, DISourceLanguageName SourceLanguage,
+          Metadata *File, MDString *Producer, bool IsOptimized, MDString *Flags,
           unsigned RuntimeVersion, MDString *SplitDebugFilename,
           unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
           Metadata *GlobalVariables, Metadata *ImportedEntities,
@@ -2069,7 +2136,7 @@ public:
 
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
-      (unsigned SourceLanguage, DIFile *File, StringRef Producer,
+      (DISourceLanguageName SourceLanguage, DIFile *File, StringRef Producer,
        bool IsOptimized, StringRef Flags, unsigned RuntimeVersion,
        StringRef SplitDebugFilename, DebugEmissionKind EmissionKind,
        DICompositeTypeArray EnumTypes, DIScopeArray RetainedTypes,
@@ -2085,7 +2152,7 @@ public:
        SysRoot, SDK))
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
-      (unsigned SourceLanguage, Metadata *File, MDString *Producer,
+      (DISourceLanguageName SourceLanguage, Metadata *File, MDString *Producer,
        bool IsOptimized, MDString *Flags, unsigned RuntimeVersion,
        MDString *SplitDebugFilename, unsigned EmissionKind, Metadata *EnumTypes,
        Metadata *RetainedTypes, Metadata *GlobalVariables,
@@ -2100,7 +2167,7 @@ public:
 
   TempDICompileUnit clone() const { return cloneImpl(); }
 
-  unsigned getSourceLanguage() const { return SourceLanguage; }
+  DISourceLanguageName getSourceLanguage() const { return SourceLanguage; }
   bool isOptimized() const { return IsOptimized; }
   unsigned getRuntimeVersion() const { return RuntimeVersion; }
   DebugEmissionKind getEmissionKind() const {
@@ -2487,6 +2554,39 @@ public:
     replaceOperandWith(7, N.get());
   }
 
+  /// For the given retained node of DISubprogram, applies one of the
+  /// given functions depending on the type of the node.
+  template <typename T, typename FuncLVT, typename FuncLabelT,
+            typename FuncImportedEntityT, typename FuncUnknownT>
+  static T
+  visitRetainedNode(const Metadata *N, FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
+                    FuncImportedEntityT &&FuncIE, FuncUnknownT &&FuncUnknown) {
+    if (const auto *LV = dyn_cast<DILocalVariable>(N))
+      return FuncLV(LV);
+    if (const auto *L = dyn_cast<DILabel>(N))
+      return FuncLabel(L);
+    if (const auto *IE = dyn_cast<DIImportedEntity>(N))
+      return FuncIE(IE);
+    return FuncUnknown(N);
+  }
+
+  /// Returns the scope of subprogram's retainedNodes.
+  static const DILocalScope *getRetainedNodeScope(const MDNode *N);
+  // For use in Verifier.
+  static const DIScope *getRawRetainedNodeScope(const MDNode *N);
+
+  /// For each retained node, applies one of the given functions depending
+  /// on the type of a node.
+  template <typename FuncLVT, typename FuncLabelT, typename FuncImportedEntityT>
+  void forEachRetainedNode(FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
+                           FuncImportedEntityT &&FuncIE) const {
+    for (MDNode *N : getRetainedNodes())
+      visitRetainedNode<void>(N, FuncLV, FuncLabel, FuncIE,
+                              [](const Metadata *N) {
+                                llvm_unreachable("Unexpected retained node!");
+                              });
+  }
+
   /// Check if this subprogram describes the given function.
   ///
   /// FIXME: Should this be looking through bitcasts?
@@ -2507,10 +2607,8 @@ public:
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
-#endif
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
              unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
@@ -2540,20 +2638,8 @@ class DILocation : public MDNode {
   }
 
 public:
-  uint64_t getAtomGroup() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomGroup;
-#else
-    return 0;
-#endif
-  }
-  uint8_t getAtomRank() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomRank;
-#else
-    return 0;
-#endif
-  }
+  uint64_t getAtomGroup() const { return AtomGroup; }
+  uint8_t getAtomRank() const { return AtomRank; }
 
   const DILocation *getWithoutAtom() const {
     if (!getAtomGroup() && !getAtomRank())
@@ -2615,14 +2701,19 @@ public:
   StringRef getDirectory() const { return getScope()->getDirectory(); }
   std::optional<StringRef> getSource() const { return getScope()->getSource(); }
 
-  /// Get the scope where this is inlined.
-  ///
-  /// Walk through \a getInlinedAt() and return \a getScope() from the deepest
-  /// location.
+  /// Walk through \a getInlinedAt() and return the \a DILocation of the
+  /// outermost call site in the inlining chain.
+  const DILocation *getInlinedAtLocation() const {
+    const DILocation *Current = this;
+    while (const DILocation *Next = Current->getInlinedAt())
+      Current = Next;
+    return Current;
+  }
+
+  // Return the \a DILocalScope of the outermost call site in the inlining
+  // chain.
   DILocalScope *getInlinedAtScope() const {
-    if (auto *IA = getInlinedAt())
-      return IA->getInlinedAtScope();
-    return getScope();
+    return getInlinedAtLocation()->getScope();
   }
 
   /// Get the DWARF discriminator.
@@ -4613,7 +4704,6 @@ class DebugVariable {
   LLVM_ABI static const FragmentInfo DefaultFragment;
 
 public:
-  LLVM_ABI DebugVariable(const DbgVariableIntrinsic *DII);
   LLVM_ABI DebugVariable(const DbgVariableRecord *DVR);
 
   DebugVariable(const DILocalVariable *Var,
@@ -4681,7 +4771,7 @@ template <> struct DenseMapInfo<DebugVariable> {
 /// information).
 class DebugVariableAggregate : public DebugVariable {
 public:
-  LLVM_ABI DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
+  LLVM_ABI DebugVariableAggregate(const DbgVariableRecord *DVR);
   DebugVariableAggregate(const DebugVariable &V)
       : DebugVariable(V.getVariable(), std::nullopt, V.getInlinedAt()) {}
 };

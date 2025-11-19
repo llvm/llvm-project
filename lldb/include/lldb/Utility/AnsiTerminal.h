@@ -72,6 +72,28 @@
 
 #define ANSI_ESC_START_LEN 2
 
+// Cursor Position, set cursor to position [l, c] (default = [1, 1]).
+#define ANSI_CSI_CUP(...) ANSI_ESC_START #__VA_ARGS__ "H"
+// Reset cursor to position.
+#define ANSI_CSI_RESET_CURSOR ANSI_CSI_CUP()
+// Erase In Display.
+#define ANSI_CSI_ED(opt) ANSI_ESC_START #opt "J"
+// Erase complete viewport.
+#define ANSI_CSI_ERASE_VIEWPORT ANSI_CSI_ED(2)
+// Erase scrollback.
+#define ANSI_CSI_ERASE_SCROLLBACK ANSI_CSI_ED(3)
+
+// OSC (Operating System Commands)
+// https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#define OSC_ESCAPE_START "\033"
+#define OSC_ESCAPE_END "\x07"
+
+// https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC
+#define OSC_PROGRESS_REMOVE OSC_ESCAPE_START "]9;4;0;0" OSC_ESCAPE_END
+#define OSC_PROGRESS_SHOW OSC_ESCAPE_START "]9;4;1;%u" OSC_ESCAPE_END
+#define OSC_PROGRESS_ERROR OSC_ESCAPE_START "]9;4;2;%u" OSC_ESCAPE_END
+#define OSC_PROGRESS_INDETERMINATE OSC_ESCAPE_START "]9;4;3;%u" OSC_ESCAPE_END
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -258,6 +280,11 @@ inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
     result.append(visible_length - result_visibile_length, padding);
 
   return result;
+}
+
+inline size_t ColumnWidth(llvm::StringRef str) {
+  std::string stripped = ansi::StripAnsiTerminalCodes(str);
+  return llvm::sys::locale::columnWidth(stripped);
 }
 
 } // namespace ansi

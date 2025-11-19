@@ -58,15 +58,17 @@ define amdgpu_kernel void @foo(ptr noundef %fp) {
 ; OW-NEXT:  entry:
 ; OW-NEXT:    [[FP_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; OW-NEXT:    store ptr [[FP]], ptr addrspace(5) [[FP_ADDR]], align 8
-; OW-NEXT:    call void [[FP]]()
+; OW-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(5) [[FP_ADDR]], align 8
+; OW-NEXT:    call void [[LOAD]]()
 ; OW-NEXT:    ret void
 ;
 ; CW-LABEL: define {{[^@]+}}@foo
-; CW-SAME: (ptr noundef [[FP:%.*]]) #[[ATTR1:[0-9]+]] {
+; CW-SAME: (ptr noundef [[FP:%.*]]) #[[ATTR0]] {
 ; CW-NEXT:  entry:
 ; CW-NEXT:    [[FP_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; CW-NEXT:    store ptr [[FP]], ptr addrspace(5) [[FP_ADDR]], align 8
-; CW-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[FP]], @bar1
+; CW-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(5) [[FP_ADDR]], align 8
+; CW-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[LOAD]], @bar1
 ; CW-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
 ; CW:       1:
 ; CW-NEXT:    call void @bar1()
@@ -82,11 +84,12 @@ define amdgpu_kernel void @foo(ptr noundef %fp) {
 ; CW-NEXT:    ret void
 ;
 ; NO-LABEL: define {{[^@]+}}@foo
-; NO-SAME: (ptr noundef [[FP:%.*]]) #[[ATTR1:[0-9]+]] {
+; NO-SAME: (ptr noundef [[FP:%.*]]) #[[ATTR0]] {
 ; NO-NEXT:  entry:
 ; NO-NEXT:    [[FP_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NO-NEXT:    store ptr [[FP]], ptr addrspace(5) [[FP_ADDR]], align 8
-; NO-NEXT:    call void [[FP]](), !callees [[META0:![0-9]+]]
+; NO-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(5) [[FP_ADDR]], align 8
+; NO-NEXT:    call void [[LOAD]](), !callees [[META0:![0-9]+]]
 ; NO-NEXT:    ret void
 ;
 entry:
@@ -98,14 +101,12 @@ entry:
 }
 
 ;.
-; NO: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; NO: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; NO: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ;.
-; OW: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; OW: attributes #[[ATTR1]] = { "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; OW: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; OW: attributes #[[ATTR1]] = { "uniform-work-group-size"="false" }
 ;.
-; CW: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CW: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CW: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ;.
 ; NO: [[META0]] = !{ptr @bar1, ptr @bar2}
 ;.

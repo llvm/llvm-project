@@ -292,7 +292,7 @@ void ProfOStream::patch(ArrayRef<PatchItem> P) {
     for (const auto &K : P) {
       for (int I = 0, E = K.D.size(); I != E; I++) {
         uint64_t Bytes =
-            endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
+            endian::byte_swap<uint64_t>(K.D[I], llvm::endianness::little);
         Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
                      (const char *)&Bytes, sizeof(uint64_t));
       }
@@ -302,7 +302,7 @@ void ProfOStream::patch(ArrayRef<PatchItem> P) {
 
 std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
-                           uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
+                           [[maybe_unused]] uint64_t Version) {
   // Value names may be prefixed with a binary '1' to indicate
   // that the backend should not modify the symbols due to any platform
   // naming convention. Do not include that '1' in the PGO profile name.
@@ -684,13 +684,13 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   return Error::success();
 }
 
-uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) const {
   // Given a runtime address, look up the hash value in the interval map, and
   // fallback to value 0 if a hash value is not found.
   return VTableAddrMap.lookup(Address, 0);
 }
 
-uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) const {
   finalizeSymtab();
   auto It = partition_point(AddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
     return A.first < Address;
@@ -1160,8 +1160,7 @@ void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
-  ValueProfData *VD =
-      (ValueProfData *)(new (::operator new(TotalSizeInBytes)) ValueProfData());
+  ValueProfData *VD = new (::operator new(TotalSizeInBytes)) ValueProfData();
   memset(VD, 0, TotalSizeInBytes);
   return VD;
 }
@@ -1608,7 +1607,7 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
   const char *EntryName =
       (Level == ProgramLevel ? "functions" : "edge counters");
   if (Level == ProgramLevel) {
-    OS << "Profile overlap infomation for base_profile: " << *BaseFilename
+    OS << "Profile overlap information for base_profile: " << *BaseFilename
        << " and test_profile: " << *TestFilename << "\nProgram level:\n";
   } else {
     OS << "Function level:\n"
@@ -1691,7 +1690,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
                 "Please update the reader as needed when a new field is added "
                 "or when indexed profile version gets bumped.");
 
@@ -1724,10 +1723,11 @@ size_t Header::size() const {
     // of the header, and byte offset of existing fields shouldn't change when
     // indexed profile version gets incremented.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
         "Please update the size computation below if a new field has "
         "been added to the header; for a version bump without new "
         "fields, add a case statement to fall through to the latest version.");
+  case 13ull:
   case 12ull:
     return 72;
   case 11ull:

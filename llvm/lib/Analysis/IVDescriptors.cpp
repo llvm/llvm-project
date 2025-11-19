@@ -40,6 +40,8 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   switch (Kind) {
   default:
     break;
+  case RecurKind::AddChainWithSubs:
+  case RecurKind::Sub:
   case RecurKind::Add:
   case RecurKind::Mul:
   case RecurKind::Or:
@@ -847,17 +849,12 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
 /// %sum.2 = select %cmp, %add, %sum.1
 RecurrenceDescriptor::InstDesc
 RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
-  SelectInst *SI = dyn_cast<SelectInst>(I);
-  if (!SI)
-    return InstDesc(false, I);
-
-  CmpInst *CI = dyn_cast<CmpInst>(SI->getCondition());
+  Value *TrueVal, *FalseVal;
   // Only handle single use cases for now.
-  if (!CI || !CI->hasOneUse())
+  if (!match(I,
+             m_Select(m_OneUse(m_Cmp()), m_Value(TrueVal), m_Value(FalseVal))))
     return InstDesc(false, I);
 
-  Value *TrueVal = SI->getTrueValue();
-  Value *FalseVal = SI->getFalseValue();
   // Handle only when either of operands of select instruction is a PHI
   // node for now.
   if ((isa<PHINode>(TrueVal) && isa<PHINode>(FalseVal)) ||
@@ -884,7 +881,7 @@ RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
   if (!IPhi || IPhi != FalseVal)
     return InstDesc(false, I);
 
-  return InstDesc(true, SI);
+  return InstDesc(true, I);
 }
 
 RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
@@ -897,8 +894,11 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
   case Instruction::PHI:
     return InstDesc(I, Prev.getRecKind(), Prev.getExactFPMathInst());
   case Instruction::Sub:
+    return InstDesc(
+        Kind == RecurKind::Sub || Kind == RecurKind::AddChainWithSubs, I);
   case Instruction::Add:
-    return InstDesc(Kind == RecurKind::Add, I);
+    return InstDesc(
+        Kind == RecurKind::Add || Kind == RecurKind::AddChainWithSubs, I);
   case Instruction::Mul:
     return InstDesc(Kind == RecurKind::Mul, I);
   case Instruction::And:
@@ -917,7 +917,8 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::Select:
     if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul ||
-        Kind == RecurKind::Add || Kind == RecurKind::Mul)
+        Kind == RecurKind::Add || Kind == RecurKind::Mul ||
+        Kind == RecurKind::Sub || Kind == RecurKind::AddChainWithSubs)
       return isConditionalRdxPattern(I);
     if (isFindIVRecurrenceKind(Kind) && SE)
       return isFindIVPattern(Kind, L, OrigPhi, I, *SE);
@@ -941,10 +942,30 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
                   m_Intrinsic<Intrinsic::minimumnum>(m_Value(), m_Value())) ||
             match(I, m_Intrinsic<Intrinsic::maximumnum>(m_Value(), m_Value()));
     };
-    if (isIntMinMaxRecurrenceKind(Kind) ||
-        (HasRequiredFMF() && isFPMinMaxRecurrenceKind(Kind)))
+    if (isIntMinMaxRecurrenceKind(Kind))
       return isMinMaxPattern(I, Kind, Prev);
-    else if (isFMulAddIntrinsic(I))
+    if (isFPMinMaxRecurrenceKind(Kind)) {
+      InstDesc Res = isMinMaxPattern(I, Kind, Prev);
+      if (!Res.isRecurrence())
+        return InstDesc(false, I);
+      if (HasRequiredFMF())
+        return Res;
+      // We may be able to vectorize FMax/FMin reductions using maxnum/minnum
+      // intrinsics with extra checks ensuring the vector loop handles only
+      // non-NaN inputs.
+      if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value()))) {
+        assert(Kind == RecurKind::FMax &&
+               "unexpected recurrence kind for maxnum");
+        return InstDesc(I, RecurKind::FMaxNum);
+      }
+      if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value()))) {
+        assert(Kind == RecurKind::FMin &&
+               "unexpected recurrence kind for minnum");
+        return InstDesc(I, RecurKind::FMinNum);
+      }
+      return InstDesc(false, I);
+    }
+    if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
     return InstDesc(false, I);
@@ -981,6 +1002,17 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   if (AddReductionVar(Phi, RecurKind::Add, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::Sub, TheLoop, FMF, RedDes, DB, AC, DT,
+                      SE)) {
+    LLVM_DEBUG(dbgs() << "Found a SUB reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::AddChainWithSubs, TheLoop, FMF, RedDes,
+                      DB, AC, DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a chained ADD-SUB reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::Mul, TheLoop, FMF, RedDes, DB, AC, DT,
@@ -1181,15 +1213,13 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
 
 unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   switch (Kind) {
+  case RecurKind::Sub:
+    return Instruction::Sub;
+  case RecurKind::AddChainWithSubs:
   case RecurKind::Add:
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;
-  case RecurKind::AnyOf:
-  case RecurKind::FindFirstIVSMin:
-  case RecurKind::FindFirstIVUMin:
-  case RecurKind::FindLastIVSMax:
-  case RecurKind::FindLastIVUMax:
   case RecurKind::Or:
     return Instruction::Or;
   case RecurKind::And:
@@ -1213,6 +1243,13 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
     return Instruction::FCmp;
+  case RecurKind::AnyOf:
+  case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
+  case RecurKind::FindLastIVSMax:
+  case RecurKind::FindLastIVUMax:
+    // TODO: Set AnyOf and FindIV to Instruction::Select once in-loop reductions
+    // are supported.
   default:
     llvm_unreachable("Unknown recurrence operation");
   }
@@ -1266,6 +1303,10 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     }
     // Recognize a call to the llvm.fmuladd intrinsic.
     if (isFMulAddIntrinsic(Cur))
+      return true;
+
+    if (Cur->getOpcode() == Instruction::Sub &&
+        Kind == RecurKind::AddChainWithSubs)
       return true;
 
     return Cur->getOpcode() == getOpcode();

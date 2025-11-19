@@ -591,8 +591,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
        NextToken().isRegularKeywordAttribute() ||
        NextToken().is(tok::kw___attribute)) &&
       D.SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
-      !D.SS.getScopeRep()->getAsNamespace() &&
-      !D.SS.getScopeRep()->getAsNamespaceAlias()) {
+      D.SS.getScopeRep().getKind() != NestedNameSpecifier::Kind::Namespace) {
     SourceLocation IdLoc = ConsumeToken();
     ParsedType Type =
         Actions.getInheritingConstructorName(D.SS, IdLoc, *LastII);
@@ -673,7 +672,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
           /*WantNontrivialTypeSourceInfo=*/true);
 
       UED = Actions.ActOnUsingEnumDeclaration(
-          getCurScope(), AS, UsingLoc, UELoc, IdentLoc, *IdentInfo, Type, &SS);
+          getCurScope(), AS, UsingLoc, UELoc, IdentLoc, *IdentInfo, Type, SS);
     } else if (Tok.is(tok::annot_template_id)) {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
 
@@ -688,7 +687,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
         UED = Actions.ActOnUsingEnumDeclaration(getCurScope(), AS, UsingLoc,
                                                 UELoc, Loc, *TemplateId->Name,
-                                                Type.get(), &SS);
+                                                Type.get(), SS);
       } else {
         Diag(Tok.getLocation(), diag::err_using_enum_not_enum)
             << TemplateId->Name->getName()
@@ -740,7 +739,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
         << FixItHint::CreateInsertionFromRange(
                Tok.getLocation(), CharSourceRange::getTokenRange(Range))
         << FixItHint::CreateRemoval(Range);
-    Attrs.takeAllFrom(MisplacedAttrs);
+    Attrs.takeAllPrependingFrom(MisplacedAttrs);
   }
 
   // Maybe this is an alias-declaration.
@@ -788,7 +787,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     // Parse (optional) attributes.
     MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
     DiagnoseCXX11AttributeExtension(Attrs);
-    Attrs.addAll(PrefixAttrs.begin(), PrefixAttrs.end());
+    Attrs.prepend(PrefixAttrs.begin(), PrefixAttrs.end());
 
     if (InvalidDeclarator)
       SkipUntil(tok::comma, tok::semi, StopBeforeMatch);
@@ -1133,13 +1132,6 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   // make sure we have a token we can turn into an annotation token
   if (PP.isBacktrackEnabled()) {
     PP.RevertCachedTokens(1);
-    if (DS.getTypeSpecType() == TST_error) {
-      // We encountered an error in parsing 'decltype(...)' so lets annotate all
-      // the tokens in the backtracking cache - that we likely had to skip over
-      // to get to a token that allows us to resume parsing, such as a
-      // semi-colon.
-      EndLoc = PP.getLastCachedTokenLocation();
-    }
   } else
     PP.EnterToken(Tok, /*IsReinject*/ true);
 
@@ -1956,7 +1948,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
       // Recover by adding misplaced attributes to the attribute list
       // of the class so they can be applied on the class later.
-      attrs.takeAllFrom(Attributes);
+      attrs.takeAllAppendingFrom(Attributes);
     }
   }
 
@@ -2850,7 +2842,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // decl-specifier-seq:
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this, TemplateDiags);
-  DS.takeAttributesFrom(DeclSpecAttrs);
+  DS.takeAttributesAppendingingFrom(DeclSpecAttrs);
 
   if (MalformedTypeSpec)
     DS.SetTypeSpecError();
@@ -3367,7 +3359,7 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
     Diag(Tok, diag::err_ms_property_initializer) << PD;
     return ExprError();
   }
-  return ParseInitializer();
+  return ParseInitializer(D);
 }
 
 void Parser::SkipCXXMemberSpecification(SourceLocation RecordLoc,
@@ -4520,6 +4512,27 @@ bool Parser::ParseCXX11AttributeArgs(
       Form = ParsedAttr::Form::Microsoft();
   }
 
+  if (LO.CPlusPlus) {
+    TentativeParsingAction TPA(*this);
+    bool HasInvalidArgument = false;
+    while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::eof)) {
+      if (Tok.isOneOf(tok::hash, tok::hashhash)) {
+        Diag(Tok.getLocation(), diag::ext_invalid_attribute_argument)
+            << PP.getSpelling(Tok);
+        HasInvalidArgument = true;
+      }
+      ConsumeAnyToken();
+    }
+
+    if (HasInvalidArgument) {
+      SkipUntil(tok::r_paren);
+      TPA.Commit();
+      return true;
+    }
+
+    TPA.Revert();
+  }
+
   // If the attribute isn't known, we will not attempt to parse any
   // arguments.
   if (Form.getSyntax() != ParsedAttr::AS_Microsoft &&
@@ -4931,34 +4944,20 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     return std::nullopt;
   };
 
-  auto StrLiteral = ProcessStringLiteral();
-  if (!StrLiteral.has_value()) {
+  auto Signature = ProcessStringLiteral();
+  if (!Signature.has_value()) {
     Diag(Tok, diag::err_expected_string_literal)
-        << /*in attributes...*/ 4 << RootSignatureIdent->getName();
-    SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
-    T.consumeClose();
+        << /*in attributes...*/ 4 << "RootSignature";
     return;
   }
 
   // Construct our identifier
-  StringLiteral *Signature = StrLiteral.value();
-  auto [DeclIdent, Found] =
-      Actions.HLSL().ActOnStartRootSignatureDecl(Signature->getString());
-  // If we haven't found an already defined DeclIdent then parse the root
-  // signature string and construct the in-memory elements
-  if (!Found) {
-    // Invoke the root signature parser to construct the in-memory constructs
-    SmallVector<hlsl::RootSignatureElement> RootElements;
-    hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, RootElements,
-                                     Signature, PP);
-    if (Parser.parse()) {
-      T.consumeClose();
-      return;
-    }
-
-    // Construct the declaration.
-    Actions.HLSL().ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
-                                                RootElements);
+  IdentifierInfo *DeclIdent = hlsl::ParseHLSLRootSignature(
+      Actions, getLangOpts().HLSLRootSigVer, *Signature);
+  if (!DeclIdent) {
+    SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
+    T.consumeClose();
+    return;
   }
 
   // Create the arg for the ParsedAttr

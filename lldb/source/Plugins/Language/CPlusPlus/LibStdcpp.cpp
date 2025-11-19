@@ -241,10 +241,11 @@ VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP ptr = valobj.GetChildAtNamePath({"_M_dataplus", "_M_p"});
-  if (!ptr)
-    return false;
+  if (!ptr || !ptr->GetError().Success())
+    stream << "Summary Unavailable";
+  else
+    stream << ptr->GetSummaryAsCString();
 
-  stream << ptr->GetSummaryAsCString();
   return true;
 }
 
@@ -364,5 +365,51 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
     stream.Printf(" weak=%" PRId64, count - (shared_count != 0));
   }
 
+  return true;
+}
+
+static uint64_t LibStdcppVariantNposValue(size_t index_byte_size) {
+  switch (index_byte_size) {
+  case 1:
+    return 0xff;
+  case 2:
+    return 0xffff;
+  default:
+    return 0xffff'ffff;
+  }
+}
+
+bool formatters::LibStdcppVariantSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP valobj_sp = valobj.GetNonSyntheticValue();
+  if (!valobj_sp)
+    return false;
+
+  ValueObjectSP index_obj = valobj_sp->GetChildMemberWithName("_M_index");
+  ValueObjectSP data_obj = valobj_sp->GetChildMemberWithName("_M_u");
+  if (!index_obj || !data_obj)
+    return false;
+
+  auto index_bytes = index_obj->GetByteSize();
+  if (!index_bytes)
+    return false;
+  auto npos_value = LibStdcppVariantNposValue(*index_bytes);
+  auto index = index_obj->GetValueAsUnsigned(0);
+  if (index == npos_value) {
+    stream.Printf(" No Value");
+    return true;
+  }
+
+  auto variant_type =
+      valobj_sp->GetCompilerType().GetCanonicalType().GetNonReferenceType();
+  if (!variant_type)
+    return false;
+  if (index >= variant_type.GetNumTemplateArguments(true)) {
+    stream.Printf(" <Invalid>");
+    return true;
+  }
+
+  auto active_type = variant_type.GetTypeTemplateArgument(index, true);
+  stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
   return true;
 }

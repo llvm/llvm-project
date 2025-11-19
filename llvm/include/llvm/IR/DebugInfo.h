@@ -39,30 +39,26 @@ class DbgVariableRecord;
 class Instruction;
 class Module;
 
-/// Finds dbg.declare intrinsics declaring local variables as living in the
+/// Finds dbg.declare records declaring local variables as living in the
 /// memory that 'V' points to.
-LLVM_ABI TinyPtrVector<DbgDeclareInst *> findDbgDeclares(Value *V);
-/// As above, for DVRDeclares.
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
 /// As above, for DVRValues.
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRValues(Value *V);
 
-/// Finds the llvm.dbg.value intrinsics describing a value.
-LLVM_ABI void findDbgValues(
-    SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V,
-    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords = nullptr);
-
-/// Finds the debug info intrinsics describing a value.
-LLVM_ABI void findDbgUsers(
-    SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V,
-    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords = nullptr);
+/// Finds the debug info records describing a value.
+LLVM_ABI void
+findDbgUsers(Value *V,
+             SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
+/// Finds the dbg.values describing a value.
+LLVM_ABI void
+findDbgValues(Value *V,
+              SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
 
 /// Find subprogram that is enclosing this scope.
 LLVM_ABI DISubprogram *getDISubprogram(const MDNode *Scope);
 
 /// Produce a DebugLoc to use for each dbg.declare that is promoted to a
 /// dbg.value.
-LLVM_ABI DebugLoc getDebugValueLoc(DbgVariableIntrinsic *DII);
 LLVM_ABI DebugLoc getDebugValueLoc(DbgVariableRecord *DVR);
 
 /// Strip debug info in the module if it exists.
@@ -112,11 +108,10 @@ public:
   LLVM_ABI void processInstruction(const Module &M, const Instruction &I);
 
   /// Process a DILocalVariable.
-  LLVM_ABI void processVariable(DILocalVariable *DVI);
+  LLVM_ABI void processVariable(const DILocalVariable *DVI);
   /// Process debug info location.
   LLVM_ABI void processLocation(const Module &M, const DILocation *Loc);
-  /// Process a DbgRecord (e.g, treat a DbgVariableRecord like a
-  /// DbgVariableIntrinsic).
+  /// Process a DbgRecord.
   LLVM_ABI void processDbgRecord(const Module &M, const DbgRecord &DR);
 
   /// Process subprogram.
@@ -129,7 +124,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
-  void processImportedEntity(DIImportedEntity *Import);
+  void processImportedEntity(const DIImportedEntity *Import);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   bool addScope(DIScope *Scope);
@@ -145,25 +140,17 @@ public:
   using type_iterator = SmallVectorImpl<DIType *>::const_iterator;
   using scope_iterator = SmallVectorImpl<DIScope *>::const_iterator;
 
-  iterator_range<compile_unit_iterator> compile_units() const {
-    return make_range(CUs.begin(), CUs.end());
-  }
+  iterator_range<compile_unit_iterator> compile_units() const { return CUs; }
 
-  iterator_range<subprogram_iterator> subprograms() const {
-    return make_range(SPs.begin(), SPs.end());
-  }
+  iterator_range<subprogram_iterator> subprograms() const { return SPs; }
 
   iterator_range<global_variable_expression_iterator> global_variables() const {
-    return make_range(GVs.begin(), GVs.end());
+    return GVs;
   }
 
-  iterator_range<type_iterator> types() const {
-    return make_range(TYs.begin(), TYs.end());
-  }
+  iterator_range<type_iterator> types() const { return TYs; }
 
-  iterator_range<scope_iterator> scopes() const {
-    return make_range(Scopes.begin(), Scopes.end());
-  }
+  iterator_range<scope_iterator> scopes() const { return Scopes; }
 
   unsigned compile_unit_count() const { return CUs.size(); }
   unsigned global_variable_count() const { return GVs.size(); }
@@ -193,13 +180,6 @@ using AssignmentInstRange =
 /// Iterators invalidated by adding or removing DIAssignID metadata to/from any
 /// instruction (including by deleting or cloning instructions).
 LLVM_ABI AssignmentInstRange getAssignmentInsts(DIAssignID *ID);
-/// Return a range of instructions (typically just one) that perform the
-/// assignment that \p DAI encodes.
-/// Iterators invalidated by adding or removing DIAssignID metadata to/from any
-/// instruction (including by deleting or cloning instructions).
-inline AssignmentInstRange getAssignmentInsts(const DbgAssignIntrinsic *DAI) {
-  return getAssignmentInsts(DAI->getAssignID());
-}
 
 inline AssignmentInstRange getAssignmentInsts(const DbgVariableRecord *DVR) {
   assert(DVR->isDbgAssign() &&
@@ -207,38 +187,8 @@ inline AssignmentInstRange getAssignmentInsts(const DbgVariableRecord *DVR) {
   return getAssignmentInsts(DVR->getAssignID());
 }
 
-//
-// Utilities for enumerating llvm.dbg.assign intrinsic from an assignment ID.
-//
-/// High level: this is an iterator for llvm.dbg.assign intrinsics.
-/// Implementation details: this is a wrapper around Value's User iterator that
-/// dereferences to a DbgAssignIntrinsic ptr rather than a User ptr.
-class DbgAssignIt
-    : public iterator_adaptor_base<DbgAssignIt, Value::user_iterator,
-                                   typename std::iterator_traits<
-                                       Value::user_iterator>::iterator_category,
-                                   DbgAssignIntrinsic *, std::ptrdiff_t,
-                                   DbgAssignIntrinsic **,
-                                   DbgAssignIntrinsic *&> {
-public:
-  DbgAssignIt(Value::user_iterator It) : iterator_adaptor_base(It) {}
-  DbgAssignIntrinsic *operator*() const { return cast<DbgAssignIntrinsic>(*I); }
-};
-/// A range of llvm.dbg.assign intrinsics.
-using AssignmentMarkerRange = iterator_range<DbgAssignIt>;
-/// Return a range of dbg.assign intrinsics which use \ID as an operand.
-/// Iterators invalidated by deleting an intrinsic contained in this range.
-LLVM_ABI AssignmentMarkerRange getAssignmentMarkers(DIAssignID *ID);
-/// Return a range of dbg.assign intrinsics for which \p Inst performs the
+/// Return a range of dbg_assign records for which \p Inst performs the
 /// assignment they encode.
-/// Iterators invalidated by deleting an intrinsic contained in this range.
-inline AssignmentMarkerRange getAssignmentMarkers(const Instruction *Inst) {
-  if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
-    return getAssignmentMarkers(cast<DIAssignID>(ID));
-  else
-    return make_range(Value::user_iterator(), Value::user_iterator());
-}
-
 inline SmallVector<DbgVariableRecord *>
 getDVRAssignmentMarkers(const Instruction *Inst) {
   if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
@@ -267,11 +217,6 @@ LLVM_ABI void deleteAll(Function *F);
 LLVM_ABI bool
 calculateFragmentIntersect(const DataLayout &DL, const Value *Dest,
                            uint64_t SliceOffsetInBits, uint64_t SliceSizeInBits,
-                           const DbgAssignIntrinsic *DbgAssign,
-                           std::optional<DIExpression::FragmentInfo> &Result);
-LLVM_ABI bool
-calculateFragmentIntersect(const DataLayout &DL, const Value *Dest,
-                           uint64_t SliceOffsetInBits, uint64_t SliceSizeInBits,
                            const DbgVariableRecord *DVRAssign,
                            std::optional<DIExpression::FragmentInfo> &Result);
 
@@ -290,8 +235,6 @@ struct VarRecord {
   DILocalVariable *Var;
   DILocation *DL;
 
-  VarRecord(DbgVariableIntrinsic *DVI)
-      : Var(DVI->getVariable()), DL(getDebugValueLoc(DVI)) {}
   VarRecord(DbgVariableRecord *DVR)
       : Var(DVR->getVariable()), DL(getDebugValueLoc(DVR)) {}
   VarRecord(DILocalVariable *Var, DILocation *DL) : Var(Var), DL(DL) {}

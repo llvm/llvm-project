@@ -30,6 +30,14 @@ void registerFromLLVMIRTranslation() {
       llvm::cl::desc("Emit expensive warnings during LLVM IR import "
                      "(discouraged: testing only!)"),
       llvm::cl::init(false));
+  static llvm::cl::opt<bool> convertDebugRecToIntrinsics(
+      "convert-debug-rec-to-intrinsics",
+      llvm::cl::desc("Change the input LLVM module to use old debug intrinsics "
+                     "instead of records "
+                     "via convertFromNewDbgValues, this happens "
+                     "before importing the debug information"
+                     "(discouraged: to be removed soon!)"),
+      llvm::cl::init(false));
   static llvm::cl::opt<bool> dropDICompositeTypeElements(
       "drop-di-composite-type-elements",
       llvm::cl::desc(
@@ -69,8 +77,10 @@ void registerFromLLVMIRTranslation() {
         if (llvm::verifyModule(*llvmModule, &llvm::errs()))
           return nullptr;
 
-        // Debug records are not currently supported in the LLVM IR translator.
-        llvmModule->convertFromNewDbgValues();
+        // Now that the translation supports importing debug records directly,
+        // make it the default, but allow the user to override to old behavior.
+        if (!convertDebugRecToIntrinsics)
+          llvmModule->convertFromNewDbgValues();
 
         return translateLLVMIRToModule(
             std::move(llvmModule), context, emitExpensiveWarnings,

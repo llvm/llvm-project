@@ -559,7 +559,8 @@ SparseTensorEncodingAttr::translateCrds(OpBuilder &builder, Location loc,
   SmallVector<Type> retType(
       dir == CrdTransDirectionKind::lvl2dim ? getDimRank() : getLvlRank(),
       builder.getIndexType());
-  auto transOp = builder.create<CrdTranslateOp>(loc, retType, crds, dir, *this);
+  auto transOp =
+      CrdTranslateOp::create(builder, loc, retType, crds, dir, *this);
   return transOp.getOutCrds();
 }
 
@@ -1481,7 +1482,7 @@ LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
 
 void LvlOp::build(OpBuilder &builder, OperationState &state, Value source,
                   int64_t index) {
-  Value val = builder.create<arith::ConstantIndexOp>(state.location, index);
+  Value val = arith::ConstantIndexOp::create(builder, state.location, index);
   return build(builder, state, source, val);
 }
 
@@ -2596,7 +2597,7 @@ std::optional<MutableArrayRef<OpOperand>> IterateOp::getYieldedValuesMutable() {
 
 std::optional<ResultRange> IterateOp::getLoopResults() { return getResults(); }
 
-OperandRange IterateOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+OperandRange IterateOp::getEntrySuccessorOperands(RegionSuccessor successor) {
   return getInitArgs();
 }
 
@@ -2606,7 +2607,7 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
   // or back into the operation itself.
   regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
   // It is possible for loop not to enter the body.
-  regions.push_back(RegionSuccessor(getResults()));
+  regions.push_back(RegionSuccessor(getOperation(), getResults()));
 }
 
 void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,

@@ -107,7 +107,7 @@ private:
   bool canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN, MachineInstr &MI,
                        const NodeList &UNodeList);
   bool isSafeToExtLR(NodeAddr<StmtNode *> SN, MachineInstr *MI,
-                     unsigned LRExtReg, const NodeList &UNodeList);
+                     Register LRExtReg, const NodeList &UNodeList);
   void getAllRealUses(NodeAddr<StmtNode *> SN, NodeList &UNodeList);
   bool allValidCandidates(NodeAddr<StmtNode *> SA, NodeList &UNodeList);
   short getBaseWithLongOffset(const MachineInstr &MI) const;
@@ -177,7 +177,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
   NodeId OffsetRegRD = 0;
   for (NodeAddr<UseNode *> UA : AddAslSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (OffsetReg == RR.Reg) {
+    if (OffsetReg == RR.asMCReg()) {
       OffsetRR = RR;
       OffsetRegRD = UA.Addr->getReachingDef();
     }
@@ -198,7 +198,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
     // Reaching Def to an offset register can't be a phi.
     if ((OffsetRegDN.Addr->getFlags() & NodeAttrs::PhiRef) &&
         MI.getParent() != UseMI.getParent())
-    return false;
+      return false;
 
     const MCInstrDesc &UseMID = UseMI.getDesc();
     if ((!UseMID.mayLoad() && !UseMID.mayStore()) ||
@@ -300,7 +300,7 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
 }
 
 bool HexagonOptAddrMode::isSafeToExtLR(NodeAddr<StmtNode *> SN,
-                                       MachineInstr *MI, unsigned LRExtReg,
+                                       MachineInstr *MI, Register LRExtReg,
                                        const NodeList &UNodeList) {
   RegisterRef LRExtRR;
   NodeId LRExtRegRD = 0;
@@ -308,7 +308,7 @@ bool HexagonOptAddrMode::isSafeToExtLR(NodeAddr<StmtNode *> SN,
   // for the LRExtReg.
   for (NodeAddr<UseNode *> UA : SN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (LRExtReg == RR.Reg) {
+    if (LRExtReg == RR.asMCReg()) {
       LRExtRR = RR;
       LRExtRegRD = UA.Addr->getReachingDef();
     }
@@ -552,7 +552,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   // Find the UseNode that contains the base register and it's reachingDef
   for (NodeAddr<UseNode *> UA : AddSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef URR = UA.Addr->getRegRef(*DFG);
-    if (BaseReg != URR.Reg)
+    if (BaseReg != URR.asMCReg())
       continue;
 
     UAReachingDefID = UA.Addr->getReachingDef();
@@ -740,7 +740,7 @@ bool HexagonOptAddrMode::processAddUses(NodeAddr<StmtNode *> AddSN,
   // for the LRExtReg.
   for (NodeAddr<UseNode *> UA : AddSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (BaseReg == RR.Reg)
+    if (BaseReg == RR.asMCReg())
       LRExtRegRD = UA.Addr->getReachingDef();
   }
 

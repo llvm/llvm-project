@@ -55,6 +55,7 @@ typedef enum {
   LLVMBinaryTypeMachO64B,             /**< MachO 64-bit, big endian. */
   LLVMBinaryTypeWasm,                 /**< Web Assembly. */
   LLVMBinaryTypeOffload,              /**< Offloading fatbinary. */
+  LLVMBinaryTypeDXcontainer,          /**< DirectX Binary Container. */
 
 } LLVMBinaryType;
 

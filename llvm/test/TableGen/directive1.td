@@ -53,6 +53,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
 // CHECK-NEXT:  #include "llvm/ADT/BitmaskEnum.h"
+// CHECK-NEXT:  #include "llvm/ADT/Sequence.h"
 // CHECK-NEXT:  #include "llvm/ADT/StringRef.h"
 // CHECK-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
 // CHECK-NEXT:  #include "llvm/Support/Compiler.h"
@@ -60,28 +61,33 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #include <utility>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
+// CHECK-EMPTY:
 // CHECK-NEXT:  namespace tdl {
 // CHECK-EMPTY:
 // CHECK-NEXT:  LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Association {
 // CHECK-NEXT:    Block,
+// CHECK-NEXT:    First_ = Block,
 // CHECK-NEXT:    Declaration,
 // CHECK-NEXT:    Delimited,
 // CHECK-NEXT:    Loop,
 // CHECK-NEXT:    None,
 // CHECK-NEXT:    Separating,
+// CHECK-NEXT:    Last_ = Separating,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Category {
 // CHECK-NEXT:    Declarative,
+// CHECK-NEXT:    First_ = Declarative,
 // CHECK-NEXT:    Executable,
 // CHECK-NEXT:    Informational,
 // CHECK-NEXT:    Meta,
 // CHECK-NEXT:    Subsidiary,
 // CHECK-NEXT:    Utility,
+// CHECK-NEXT:    Last_ = Utility,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Category_enumSize = 6;
@@ -96,6 +102,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Directive {
 // CHECK-NEXT:    TDLD_dira,
+// CHECK-NEXT:    First_ = TDLD_dira,
+// CHECK-NEXT:    Last_ = TDLD_dira,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Directive_enumSize = 1;
@@ -104,8 +112,10 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Clause {
 // CHECK-NEXT:    TDLC_clausea,
+// CHECK-NEXT:    First_ = TDLC_clausea,
 // CHECK-NEXT:    TDLC_clauseb,
 // CHECK-NEXT:    TDLC_clausec,
+// CHECK-NEXT:    Last_ = TDLC_clausec,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 3;
@@ -151,15 +161,32 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  LLVM_ABI StringRef getTdlAKindName(AKind x);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Association> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Category> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Directive> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Clause> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
+// CHECK-EMPTY:
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
 
 
 // IMPL:       #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-NEXT:  #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
-// IMPL-NEXT:  namespace llvm {
-// IMPL-NEXT:  namespace tdl {
+// IMPL-NEXT:  namespace llvm::tdl {
 // IMPL-EMPTY:
 // IMPL-NEXT:    // Sets for dira
 // IMPL-EMPTY:
@@ -176,8 +203,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-EMPTY:
 // IMPL-NEXT:    static  requiredClauses_TDLD_dira {
 // IMPL-NEXT:    };
-// IMPL-NEXT:  } // namespace tdl
-// IMPL-NEXT:  } // namespace llvm
+// IMPL-EMPTY:
+// IMPL-NEXT:  } // namespace llvm::tdl
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:

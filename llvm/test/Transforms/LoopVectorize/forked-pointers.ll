@@ -17,23 +17,24 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
 ; CHECK-LABEL: @forked_ptrs_different_base_same_offset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    [[BASE1:%.*]] = freeze ptr [[BASE3:%.*]]
+; CHECK-NEXT:    [[BASE2:%.*]] = freeze ptr [[BASE4:%.*]]
+; CHECK-NEXT:    [[DEST:%.*]] = freeze ptr [[DEST2:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoint ptr [[DEST:%.*]] to i64
+; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoint ptr [[DEST]] to i64
 ; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoint ptr [[PREDS:%.*]] to i64
-; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoint ptr [[BASE2:%.*]] to i64
-; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoint ptr [[BASE1:%.*]] to i64
+; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoint ptr [[BASE2]] to i64
+; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoint ptr [[BASE1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DEST1]], [[PREDS2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DEST1]], [[BASE23]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i64 [[TMP1]]
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[DOTFR]], 16
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DEST1]], [[BASE15]]
-; CHECK-NEXT:    [[DOTFR10:%.*]] = freeze i64 [[TMP2]]
-; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[DOTFR10]], 16
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK6]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX7]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[BASE2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
@@ -47,14 +48,14 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x ptr> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT9]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 2
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr float, ptr [[TMP11]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP29]], i64 4
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 2
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr float, ptr [[TMP13]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP30]], i64 8
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 3
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr float, ptr [[TMP15]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP31]], i64 12
 ; CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr [[TMP10]], align 4
@@ -71,7 +72,7 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:

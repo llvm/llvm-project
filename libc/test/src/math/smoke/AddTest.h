@@ -47,6 +47,10 @@ public:
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.zero));
     EXPECT_FP_EQ(inf, func(in.inf, in.neg_zero));
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.neg_zero));
+    EXPECT_FP_EQ(inf, func(in.zero, in.inf));
+    EXPECT_FP_EQ(inf, func(in.neg_zero, in.inf));
+    EXPECT_FP_EQ(neg_inf, func(in.zero, in.neg_inf));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_zero, in.neg_inf));
   }
 
   void test_invalid_operations(AddFunc func) {

@@ -53,7 +53,10 @@ class LLVMConfig(object):
             self.use_lit_shell = True
 
             global lit_path_displayed
-            if not self.lit_config.quiet and lit_path_displayed is False:
+            if (
+                self.lit_config.diagnostic_level_enabled("note")
+                and lit_path_displayed is False
+            ):
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 
@@ -64,12 +67,17 @@ class LLVMConfig(object):
             self.with_environment("_TAG_REDIR_ERR", "TXT")
             self.with_environment("_CEE_RUNOPTS", "FILETAG(AUTOCVT,AUTOTAG) POSIX(ON)")
 
+        if lit_config.update_tests:
+            self.use_lit_shell = True
+
         # Choose between lit's internal shell pipeline runner and a real shell.
         # If LIT_USE_INTERNAL_SHELL is in the environment, we use that as an
         # override.
         lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
         if lit_shell_env:
             self.use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+            if not self.use_lit_shell and lit_config.update_tests:
+                print("note: --update-tests is not supported when using external shell")
 
         if not self.use_lit_shell:
             features.add("shell")
@@ -80,7 +88,8 @@ class LLVMConfig(object):
                 "HWASAN_SYMBOLIZER_PATH",
                 "MSAN_SYMBOLIZER_PATH",
                 "TSAN_SYMBOLIZER_PATH",
-                "UBSAN_SYMBOLIZER_PATH" "ASAN_OPTIONS",
+                "UBSAN_SYMBOLIZER_PATH",
+                "ASAN_OPTIONS",
                 "HWASAN_OPTIONS",
                 "MSAN_OPTIONS",
                 "RTSAN_OPTIONS",
@@ -107,6 +116,8 @@ class LLVMConfig(object):
             features.add("system-solaris")
         elif platform.system() == "OS/390":
             features.add("system-zos")
+        elif sys.platform == "cygwin":
+            features.add("system-cygwin")
 
         # Native compilation: host arch == default triple arch
         # Both of these values should probably be in every site config (e.g. as
@@ -191,6 +202,9 @@ class LLVMConfig(object):
             if gmalloc_path_str is not None:
                 self.with_environment("DYLD_INSERT_LIBRARIES", gmalloc_path_str)
 
+        if not platform.system() == "Windows":
+            features.add("symlinks")
+
     def _find_git_windows_unix_tools(self, tools_needed):
         assert sys.platform == "win32"
         import winreg
@@ -223,7 +237,7 @@ class LLVMConfig(object):
             # For paths, we should be able to take a list of them and process
             # all of them.
             paths_to_add = value
-            if lit.util.is_string(paths_to_add):
+            if isinstance(paths_to_add, str):
                 paths_to_add = [paths_to_add]
 
             def norm(x):
@@ -252,7 +266,7 @@ class LLVMConfig(object):
         self.config.environment[variable] = value
 
     def with_system_environment(self, variables, append_path=False):
-        if lit.util.is_string(variables):
+        if isinstance(variables, str):
             variables = [variables]
         for v in variables:
             value = os.environ.get(v)
@@ -394,7 +408,7 @@ class LLVMConfig(object):
         if not search_dirs:
             search_dirs = [self.config.llvm_tools_dir]
 
-        if lit.util.is_string(search_dirs):
+        if isinstance(search_dirs, str):
             search_dirs = [search_dirs]
 
         tools = [x if isinstance(x, ToolSubst) else ToolSubst(x) for x in tools]
@@ -516,7 +530,7 @@ class LLVMConfig(object):
 
         if tool:
             tool = os.path.normpath(tool)
-            if not self.lit_config.quiet and not quiet:
+            if not quiet:
                 self.lit_config.note("using {}: {}".format(name, tool))
         return tool
 
@@ -626,10 +640,9 @@ class LLVMConfig(object):
                 ("%ms_abi_triple", self.make_msabi_triple(self.config.target_triple))
             )
         else:
-            if not self.lit_config.quiet:
-                self.lit_config.note(
-                    "No default target triple was found, some tests may fail as a result."
-                )
+            self.lit_config.note(
+                "No default target triple was found, some tests may fail as a result."
+            )
             self.config.substitutions.append(("%itanium_abi_triple", ""))
             self.config.substitutions.append(("%ms_abi_triple", ""))
 

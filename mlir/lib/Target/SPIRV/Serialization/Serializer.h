@@ -102,19 +102,27 @@ private:
 
   void processDebugInfo();
 
-  void processExtension();
+  LogicalResult processExtension();
 
   void processMemoryModel();
 
   LogicalResult processConstantOp(spirv::ConstantOp op);
+
+  LogicalResult processConstantCompositeReplicateOp(
+      spirv::EXTConstantCompositeReplicateOp op);
 
   LogicalResult processSpecConstantOp(spirv::SpecConstantOp op);
 
   LogicalResult
   processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op);
 
+  LogicalResult processSpecConstantCompositeReplicateOp(
+      spirv::EXTSpecConstantCompositeReplicateOp op);
+
   LogicalResult
   processSpecConstantOperationOp(spirv::SpecConstantOperationOp op);
+
+  LogicalResult processGraphConstantARMOp(spirv::GraphConstantARMOp op);
 
   /// SPIR-V dialect supports OpUndef using spirv.UndefOp that produces a SSA
   /// value to use with other operations. The SPIR-V spec recommends that
@@ -128,6 +136,15 @@ private:
   /// Processes a SPIR-V function op.
   LogicalResult processFuncOp(spirv::FuncOp op);
   LogicalResult processFuncParameter(spirv::FuncOp op);
+
+  /// Processes a SPIR-V GraphARM op.
+  LogicalResult processGraphARMOp(spirv::GraphARMOp op);
+
+  /// Processes a SPIR-V GraphEntryPointARM op.
+  LogicalResult processGraphEntryPointARMOp(spirv::GraphEntryPointARMOp op);
+
+  /// Processes a SPIR-V GraphOutputsARMOp op.
+  LogicalResult processGraphOutputsARMOp(spirv::GraphOutputsARMOp op);
 
   LogicalResult processVariableOp(spirv::VariableOp op);
 
@@ -183,12 +200,21 @@ private:
                                     spirv::Opcode &typeEnum,
                                     SmallVectorImpl<uint32_t> &operands);
 
+  LogicalResult prepareGraphType(Location loc, GraphType type,
+                                 spirv::Opcode &typeEnum,
+                                 SmallVectorImpl<uint32_t> &operands);
+
   //===--------------------------------------------------------------------===//
   // Constant
   //===--------------------------------------------------------------------===//
 
   uint32_t getConstantID(Attribute value) const {
     return constIDMap.lookup(value);
+  }
+
+  uint32_t getConstantCompositeReplicateID(
+      std::pair<Attribute, Type> valueTypePair) const {
+    return constCompositeReplicateIDMap.lookup(valueTypePair);
   }
 
   /// Main dispatch method for processing a constant with the given `constType`
@@ -227,8 +253,21 @@ private:
   uint32_t prepareConstantInt(Location loc, IntegerAttr intAttr,
                               bool isSpec = false);
 
+  uint32_t getGraphConstantARMId(Attribute value) const {
+    return graphConstIDMap.lookup(value);
+  }
+
+  uint32_t prepareGraphConstantId(Location loc, Type graphConstType,
+                                  IntegerAttr intAttr);
+
   uint32_t prepareConstantFp(Location loc, FloatAttr floatAttr,
                              bool isSpec = false);
+
+  /// Prepares `spirv.EXTConstantCompositeReplicateOp` serialization. This
+  /// method emits OpConstantCompositeReplicateEXT and returns the result <id>
+  /// associated with it.
+  uint32_t prepareConstantCompositeReplicate(Location loc, Type resultType,
+                                             Attribute valueAttr);
 
   //===--------------------------------------------------------------------===//
   // Control flow
@@ -355,6 +394,7 @@ private:
   SmallVector<uint32_t, 0> decorations;
   SmallVector<uint32_t, 0> typesGlobalValues;
   SmallVector<uint32_t, 0> functions;
+  SmallVector<uint32_t, 0> graphs;
 
   /// Recursive struct references are serialized as OpTypePointer instructions
   /// to the recursive struct type. However, the OpTypePointer instruction
@@ -371,15 +411,22 @@ private:
       recursiveStructInfos;
 
   /// `functionHeader` contains all the instructions that must be in the first
-  /// block in the function, and `functionBody` contains the rest. After
-  /// processing FuncOp, the encoded instructions of a function are appended to
-  /// `functions`. An example of instructions in `functionHeader` in order:
+  /// block in the function or graph, and `functionBody` contains the rest.
+  /// After processing FuncOp/GraphARMOp, the encoded instructions of a function
+  /// or graph are appended to `functions` or `graphs` respectively. Examples of
+  /// instructions in `functionHeader` in order:
+  ///
+  /// For a FuncOp:
   /// OpFunction ...
   /// OpFunctionParameter ...
   /// OpFunctionParameter ...
   /// OpLabel ...
   /// OpVariable ...
   /// OpVariable ...
+  ///
+  /// For a GraphARMOp
+  /// OpGraphARM ...
+  /// OpGraphInputARM ...
   SmallVector<uint32_t, 0> functionHeader;
   SmallVector<uint32_t, 0> functionBody;
 
@@ -389,8 +436,14 @@ private:
   /// Map from constant values to their <id>s.
   DenseMap<Attribute, uint32_t> constIDMap;
 
+  /// Map from a replicated composite constant's value and type to their <id>s.
+  DenseMap<std::pair<Attribute, Type>, uint32_t> constCompositeReplicateIDMap;
+
   /// Map from specialization constant names to their <id>s.
   llvm::StringMap<uint32_t> specConstIDMap;
+
+  /// Map from graph constant ID value to their <id>s.
+  DenseMap<Attribute, uint32_t> graphConstIDMap;
 
   /// Map from GlobalVariableOps name to <id>s.
   llvm::StringMap<uint32_t> globalVarIDMap;

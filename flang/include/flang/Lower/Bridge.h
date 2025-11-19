@@ -76,6 +76,7 @@ public:
                           loweringOptions, envDefaults, languageFeatures,
                           targetMachine, targetOptions, codeGenOptions);
   }
+  ~LoweringBridge();
 
   //===--------------------------------------------------------------------===//
   // Getters
@@ -174,6 +175,7 @@ private:
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
   const Fortran::common::LanguageFeatureControl &languageFeatures;
   std::set<std::string> tempNames;
+  std::optional<mlir::DiagnosticEngine::HandlerID> diagHandlerID;
 };
 
 } // namespace lower

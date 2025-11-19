@@ -580,6 +580,8 @@ TARGET_BUILTIN(__builtin_ppc_bcdsub_p, "iiV16UcV16Uc", "",
                "isa-v207-instructions")
 
 // P9 Binary-coded decimal (BCD) builtins.                                                
+TARGET_BUILTIN(__builtin_ppc_bcdcopysign, "V16UcV16UcV16Uc", "", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_bcdsetsign, "V16UcV16UcUc", "t", "power9-vector")
 TARGET_BUILTIN(__builtin_ppc_national2packed, "V16UcV16UcUc", "t", "power9-vector")
 TARGET_BUILTIN(__builtin_ppc_packed2national, "V16UcV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_ppc_packed2zoned, "V16UcV16UcUc", "t", "power9-vector")
@@ -1092,6 +1094,23 @@ UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp, "vW1024*W256V", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
                          "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_dmsetdmrz, "vW1024*", false,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_dmmr, "vW1024*W1024*", false,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxor, "vW1024*W1024*", true,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_disassemble_dmr, "vv*W1024*", false,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_build_dmr, "vW1024*VVVVVVVV", false,
+                         "mma,isa-future-instructions")
+
+UNALIASED_CUSTOM_BUILTIN(mma_dmsha2hash, "vW1024*W1024*Ii", true,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_dmsha3hash, "vW2048*Ii", true,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxxshapad, "vW1024*VIiIiIi", true,
+                         "mma,isa-future-instructions")
 
 // MMA builtins with positive/negative multiply/accumulate.
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf16ger2, "vW512*VV",
@@ -1110,6 +1129,14 @@ UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvbf16ger2, "vW512*VV",
                              "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3",
                              "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_dmxvbf16gerx2, "vW1024*W256V",
+                             "mma,isa-future-instructions")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmdmxvbf16gerx2, "vW1024*W256Vi255i15i3",
+                             "mma,isa-future-instructions")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_dmxvf16gerx2, "vW1024*W256V",
+                             "mma,isa-future-instructions")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmdmxvf16gerx2, "vW1024*W256Vi255i15i3",
+                             "mma,isa-future-instructions")
 
 // FIXME: Obviously incomplete.
 

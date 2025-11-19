@@ -75,31 +75,31 @@ define i4 @sign_i4(i4 %a) {
 define i8 @sign_i8(i8 %a) {
 ; ARM-LABEL: sign_i8:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    lsl r0, r0, #24
+; ARM-NEXT:    sxtb r0, r0
 ; ARM-NEXT:    mov r1, #1
-; ARM-NEXT:    orr r0, r1, r0, asr #31
+; ARM-NEXT:    orr r0, r1, r0, asr #7
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: sign_i8:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #24
-; THUMB-NEXT:    asrs r1, r0, #31
+; THUMB-NEXT:    sxtb r0, r0
+; THUMB-NEXT:    asrs r1, r0, #7
 ; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    orrs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: sign_i8:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    lsls r0, r0, #24
+; THUMB2-NEXT:    sxtb r0, r0
 ; THUMB2-NEXT:    movs r1, #1
-; THUMB2-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMB2-NEXT:    orr.w r0, r1, r0, asr #7
 ; THUMB2-NEXT:    bx lr
 ;
 ; THUMBV8-LABEL: sign_i8:
 ; THUMBV8:       @ %bb.0:
-; THUMBV8-NEXT:    lsls r0, r0, #24
+; THUMBV8-NEXT:    sxtb r0, r0
 ; THUMBV8-NEXT:    movs r1, #1
-; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #7
 ; THUMBV8-NEXT:    bx lr
   %c = icmp sgt i8 %a, -1
   %res = select i1 %c, i8 1, i8 -1
@@ -109,31 +109,31 @@ define i8 @sign_i8(i8 %a) {
 define i16 @sign_i16(i16 %a) {
 ; ARM-LABEL: sign_i16:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    lsl r0, r0, #16
+; ARM-NEXT:    sxth r0, r0
 ; ARM-NEXT:    mov r1, #1
-; ARM-NEXT:    orr r0, r1, r0, asr #31
+; ARM-NEXT:    orr r0, r1, r0, asr #15
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: sign_i16:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #16
-; THUMB-NEXT:    asrs r1, r0, #31
+; THUMB-NEXT:    sxth r0, r0
+; THUMB-NEXT:    asrs r1, r0, #15
 ; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    orrs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: sign_i16:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    lsls r0, r0, #16
+; THUMB2-NEXT:    sxth r0, r0
 ; THUMB2-NEXT:    movs r1, #1
-; THUMB2-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMB2-NEXT:    orr.w r0, r1, r0, asr #15
 ; THUMB2-NEXT:    bx lr
 ;
 ; THUMBV8-LABEL: sign_i16:
 ; THUMBV8:       @ %bb.0:
-; THUMBV8-NEXT:    lsls r0, r0, #16
+; THUMBV8-NEXT:    sxth r0, r0
 ; THUMBV8-NEXT:    movs r1, #1
-; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #15
 ; THUMBV8-NEXT:    bx lr
   %c = icmp sgt i16 %a, -1
   %res = select i1 %c, i16 1, i16 -1

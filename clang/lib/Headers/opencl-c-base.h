@@ -82,6 +82,8 @@
 #define __opencl_c_read_write_images 1
 #endif // defined(__SPIR__)
 
+#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+
 // Undefine any feature macros that have been explicitly disabled using
 // an __undef_<feature> macro.
 #ifdef __undef___opencl_c_work_group_collective_functions
@@ -99,8 +101,12 @@
 #ifdef __undef___opencl_c_read_write_images
 #undef __opencl_c_read_write_images
 #endif
-
-#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+#ifdef __undef___opencl_c_integer_dot_product_input_4x8bit
+#undef __opencl_c_integer_dot_product_input_4x8bit
+#endif
+#ifdef __undef___opencl_c_integer_dot_product_input_4x8bit_packed
+#undef __opencl_c_integer_dot_product_input_4x8bit_packed
+#endif
 
 #if !defined(__opencl_c_generic_address_space)
 // Internal feature macro to provide named (global, local, private) address
@@ -697,7 +703,16 @@ template <typename _Tp> struct __remove_address_space<__constant _Tp> {
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // OpenCL v1.2 s6.12.13, v2.0 s6.13.13 - printf
 
-int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
+#ifdef __OPENCL_CPP_VERSION__
+#define CLINKAGE extern "C"
+#else
+#define CLINKAGE
+#endif
+
+CLINKAGE int printf(__constant const char *st, ...)
+    __attribute__((format(printf, 1, 2)));
+
+#undef CLINKAGE
 #endif
 
 #ifdef cl_intel_device_side_avc_motion_estimation

@@ -44,7 +44,20 @@ inline static std::string printArg(Program &P, CodePtr &OpPC) {
     std::string Result;
     llvm::raw_string_ostream SS(Result);
     auto Arg = OpPC.read<T>();
-    SS << Arg;
+    // Make sure we print the integral value of chars.
+    if constexpr (std::is_integral_v<T>) {
+      if constexpr (sizeof(T) == 1) {
+        if constexpr (std::is_signed_v<T>)
+          SS << static_cast<int32_t>(Arg);
+        else
+          SS << static_cast<uint32_t>(Arg);
+      } else {
+        SS << Arg;
+      }
+    } else {
+      SS << Arg;
+    }
+
     return Result;
   }
 }
@@ -310,6 +323,8 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
                         : TerminalColor{llvm::raw_ostream::RED, false});
       OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
     }
+    if (GP.block()->isDummy())
+      OS << "dummy ";
     Desc->dump(OS);
 
     if (GP.isInitialized() && Desc->IsTemporary) {
@@ -338,7 +353,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
 
     OS << "\n";
-    if (GP.isInitialized() && Desc->isPrimitive() && !Desc->isDummy()) {
+    if (GP.isInitialized() && Desc->isPrimitive() && !G->block()->isDummy()) {
       OS << "   ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
@@ -394,8 +409,6 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
 
-  if (isDummy())
-    OS << " dummy";
   if (IsConstexprUnknown)
     OS << " constexpr-unknown";
 }
@@ -423,8 +436,28 @@ LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
 
       FO += ElemDesc->getAllocSize();
     }
+  } else if (isPrimitiveArray()) {
+    OS.indent(Spaces) << "Elements: " << getNumElems() << '\n';
+    OS.indent(Spaces) << "Element type: " << primTypeToString(getPrimType())
+                      << '\n';
+    unsigned FO = Offset + sizeof(InitMapPtr);
+    for (unsigned I = 0; I != getNumElems(); ++I) {
+      OS.indent(Spaces) << "Element " << I << " offset: " << FO << '\n';
+      FO += getElemSize();
+    }
   } else if (isRecord()) {
     ElemRecord->dump(OS, Indent + 1, Offset);
+    unsigned I = 0;
+    for (const Record::Field &F : ElemRecord->fields()) {
+      OS.indent(Spaces) << "- Field " << I << ": ";
+      {
+        ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
+        OS << F.Decl->getName();
+      }
+      OS << ". Offset " << (Offset + F.Offset) << "\n";
+      F.Desc->dumpFull(Offset + F.Offset, Indent + 1);
+      ++I;
+    }
   } else if (isPrimitive()) {
   } else {
   }
@@ -445,6 +478,7 @@ LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
   OS << "InUnion: " << InUnion << "\n";
   OS << "IsFieldMutable: " << IsFieldMutable << "\n";
   OS << "IsArrayElement: " << IsArrayElement << "\n";
+  OS << "IsConstInMutable: " << IsConstInMutable << '\n';
   OS << "Desc: ";
   if (Desc)
     Desc->dump(OS);
@@ -530,7 +564,7 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   Desc->dump(OS);
   OS << ")\n";
   unsigned NPointers = 0;
-  for (const Pointer *P = Pointers; P; P = P->Next) {
+  for (const Pointer *P = Pointers; P; P = P->asBlockPointer().Next) {
     ++NPointers;
   }
   OS << "  EvalID: " << EvalID << '\n';
@@ -540,50 +574,27 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   else
     OS << "-\n";
   OS << "  Pointers: " << NPointers << "\n";
-  OS << "  Dead: " << IsDead << "\n";
+  OS << "  Dead: " << isDead() << "\n";
   OS << "  Static: " << IsStatic << "\n";
-  OS << "  Extern: " << IsExtern << "\n";
+  OS << "  Extern: " << isExtern() << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
-  OS << "  Weak: " << IsWeak << "\n";
-  OS << "  Dynamic: " << IsDynamic << "\n";
+  OS << "  Weak: " << isWeak() << "\n";
+  OS << "  Dummy: " << isDummy() << '\n';
+  OS << "  Dynamic: " << isDynamic() << "\n";
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {
-  assert(Ctx);
   auto &OS = llvm::errs();
-  const ASTContext &ASTCtx = Ctx->getASTContext();
 
-  switch (Kind) {
-  case Empty:
+  if (empty()) {
     OS << "Empty\n";
-    break;
-  case RValue:
-    OS << "RValue: ";
-    std::get<APValue>(Value).dump(OS, ASTCtx);
-    break;
-  case LValue: {
-    assert(Source);
-    QualType SourceType;
-    if (const auto *D = dyn_cast<const Decl *>(Source)) {
-      if (const auto *VD = dyn_cast<ValueDecl>(D))
-        SourceType = VD->getType();
-    } else if (const auto *E = dyn_cast<const Expr *>(Source)) {
-      SourceType = E->getType();
-    }
-
-    OS << "LValue: ";
-    if (const auto *P = std::get_if<Pointer>(&Value))
-      P->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
-    else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-      FP->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
-    OS << "\n";
-    break;
-  }
-  case Invalid:
+  } else if (isInvalid()) {
     OS << "Invalid\n";
-    break;
-  case Valid:
-    OS << "Valid\n";
-    break;
+  } else {
+    OS << "Value: ";
+#ifndef NDEBUG
+    assert(Ctx);
+    Value.dump(OS, Ctx->getASTContext());
+#endif
   }
 }

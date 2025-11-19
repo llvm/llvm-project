@@ -54,9 +54,11 @@ CODEGENOPT(SeparateNamedSections, 1, 0, Benign) ///< Set for -fseparate-named-se
 CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0, Benign) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
 CODEGENOPT(XCOFFReadOnlyPointers, 1, 0, Benign) ///< Set for -mxcoff-roptr.
 CODEGENOPT(AllTocData, 1, 0, Benign) ///< AIX -mtocdata
-ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,reserved,none
+ENUM_CODEGENOPT(FramePointer, FramePointerKind, 3, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,non-leaf-no-reserve,reserved,none
 
-CODEGENOPT(ClearASTBeforeBackend , 1, 0, Benign) ///< Free the AST before running backend code generation. Only works with -disable-free.
+ENUM_CODEGENOPT(ExceptionHandling, ExceptionHandlingKind, 3, ExceptionHandlingKind::None, NotCompatible)
+
+CODEGENOPT(ClearASTBeforeBackend , 1, 0, Benign) ///< Free the AST before running backend code generation.
 CODEGENOPT(DisableFree       , 1, 0, Benign) ///< Don't free memory.
 CODEGENOPT(DiscardValueNames , 1, 0, Benign) ///< Discard Value Names from the IR (LLVMContext flag)
 CODEGENOPT(DisableLLVMPasses , 1, 0, Benign) ///< Don't run any LLVM IR passes to get
@@ -70,6 +72,8 @@ CODEGENOPT(EnableNoundefAttrs, 1, 0, Benign) ///< Enable emitting `noundef` attr
 CODEGENOPT(DebugPassManager, 1, 0, Benign) ///< Prints debug information for the new
                                            ///< pass manager.
 CODEGENOPT(DisableRedZone    , 1, 0, Benign) ///< Set when -mno-red-zone is enabled.
+CODEGENOPT(CallGraphSection, 1, 0, Benign) ///< Emit a call graph section into the
+                                           ///< object file.
 CODEGENOPT(EmitCallSiteInfo, 1, 0, Benign) ///< Emit call site info only in the case of
                                            ///< '-g' + 'O>0' level.
 CODEGENOPT(IndirectTlsSegRefs, 1, 0, Benign) ///< Set when -mno-tls-direct-seg-refs
@@ -209,17 +213,17 @@ CODEGENOPT(ObjCAvoidHeapifyLocalBlocks, 1, 0, Benign)
 
 
 // The optimization options affect frontend options, which in turn do affect the AST.
-VALUE_CODEGENOPT(OptimizationLevel, 2, 0, Affecting) ///< The -O[0-3] option specified.
-VALUE_CODEGENOPT(OptimizeSize, 2, 0, Affecting) ///< If -Os (==1, Benign) or -Oz (==2, Benign) is specified.
+VALUE_CODEGENOPT(OptimizationLevel, 2, 0, Compatible) ///< The -O[0-3] option specified.
+VALUE_CODEGENOPT(OptimizeSize, 2, 0, Compatible) ///< If -Os (==1, Benign) or -Oz (==2, Benign) is specified.
 
 CODEGENOPT(AtomicProfileUpdate , 1, 0, Benign) ///< Set -fprofile-update=atomic
 CODEGENOPT(ContinuousProfileSync, 1, 0, Benign) ///< Enable continuous instrumentation profiling
 /// Choose profile instrumenation kind or no instrumentation.
 
-ENUM_CODEGENOPT(ProfileInstr, llvm::driver::ProfileInstrKind, 4, llvm::driver::ProfileInstrKind::ProfileNone, Benign)
+ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 4, ProfileInstrKind::ProfileNone, Benign)
 
 /// Choose profile kind for PGO use compilation.
-ENUM_CODEGENOPT(ProfileUse, llvm::driver::ProfileInstrKind, 2, llvm::driver::ProfileInstrKind::ProfileNone, Benign)
+ENUM_CODEGENOPT(ProfileUse, ProfileInstrKind, 2, ProfileInstrKind::ProfileNone, Benign)
 /// Partition functions into N groups and select only functions in group i to be
 /// instrumented. Selected group numbers can be 0 to N-1 inclusive.
 VALUE_CODEGENOPT(ProfileTotalFunctionGroups, 32, 1, Benign)
@@ -244,8 +248,8 @@ CODEGENOPT(SaveTempLabels    , 1, 0, Benign) ///< Save temporary labels.
 CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0, Benign) ///< Enable use-after-scope detection
                                                         ///< in AddressSanitizer
 ENUM_CODEGENOPT(SanitizeAddressUseAfterReturn,
-                llvm::AsanDetectStackUseAfterReturnMode, 2,
-                llvm::AsanDetectStackUseAfterReturnMode::Runtime,
+                AsanDetectStackUseAfterReturnMode, 2,
+                AsanDetectStackUseAfterReturnMode::Runtime,
                 Benign
                 ) ///< Set detection mode for stack-use-after-return.
 CODEGENOPT(SanitizeAddressPoisonCustomArrayCookie, 1, 0, Benign) ///< Enable poisoning operator new[] which is not a replaceable
@@ -255,9 +259,9 @@ CODEGENOPT(SanitizeAddressGlobalsDeadStripping, 1, 0, Benign) ///< Enable linker
 CODEGENOPT(SanitizeAddressUseOdrIndicator, 1, 0, Benign) ///< Enable ODR indicator globals
 CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0, Benign) ///< Enable tracking origins in
                                                      ///< MemorySanitizer
-ENUM_CODEGENOPT(SanitizeAddressDtor, llvm::AsanDtorKind, 2,
-                llvm::AsanDtorKind::Global, Benign)  ///< Set how ASan global
-                                                     ///< destructors are emitted.
+ENUM_CODEGENOPT(SanitizeAddressDtor, AsanDtorKind, 2,
+                AsanDtorKind::Global, Benign)  ///< Set how ASan global
+                                               ///< destructors are emitted.
 CODEGENOPT(SanitizeMemoryParamRetval, 1, 0, Benign) ///< Enable detection of uninitialized
                                                     ///< parameters and return values
                                                     ///< in MemorySanitizer
@@ -304,20 +308,25 @@ CODEGENOPT(SanitizeBinaryMetadataCovered, 1, 0, Benign) ///< Emit PCs for covere
 CODEGENOPT(SanitizeBinaryMetadataAtomics, 1, 0, Benign) ///< Emit PCs for atomic operations.
 CODEGENOPT(SanitizeBinaryMetadataUAR, 1, 0, Benign) ///< Emit PCs for start of functions
                                                     ///< that are subject for use-after-return checking.
+CODEGENOPT(SanitizeAllocTokenFastABI, 1, 0, Benign) ///< Use the AllocToken fast ABI.
+CODEGENOPT(SanitizeAllocTokenExtended, 1, 0, Benign) ///< Extend coverage to custom allocation functions.
 CODEGENOPT(SanitizeStats     , 1, 0, Benign) ///< Collect statistics for sanitizers.
+ENUM_CODEGENOPT(SanitizeDebugTrapReasons, SanitizeDebugTrapReasonKind, 2, SanitizeDebugTrapReasonKind::Detailed, Benign) ///< Control how "trap reasons" are emitted in debug info
 CODEGENOPT(SimplifyLibCalls  , 1, 1, Benign) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0, Benign) ///< -soft-float.
 CODEGENOPT(SpeculativeLoadHardening, 1, 0, Benign) ///< Enable speculative load hardening.
 CODEGENOPT(FineGrainedBitfieldAccesses, 1, 0, Benign) ///< Enable fine-grained bitfield accesses.
 CODEGENOPT(StrictEnums       , 1, 0, Benign) ///< Optimize based on strict enum definition.
 CODEGENOPT(StrictVTablePointers, 1, 0, Benign) ///< Optimize based on the strict vtable pointers
-CODEGENOPT(TimePasses        , 1, 0, Benign) ///< Set when -ftime-report or -ftime-report= or -ftime-report-json is enabled.
+CODEGENOPT(TimePasses        , 1, 0, Benign) ///< Set when -ftime-report, -ftime-report=, -ftime-report-json, or -stats-file-timers is enabled.
 CODEGENOPT(TimePassesPerRun  , 1, 0, Benign) ///< Set when -ftime-report=per-pass-run is enabled.
 CODEGENOPT(TimePassesJson    , 1, 0, Benign) ///< Set when -ftime-report-json is enabled.
+CODEGENOPT(TimePassesStatsFile     , 1, 0, Benign) ///< Set when -stats-file-timers is enabled.
 CODEGENOPT(TimeTrace         , 1, 0, Benign) ///< Set when -ftime-trace is enabled.
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500, Benign) ///< Minimum time granularity (in microseconds),
                                                         ///< traced by time profiler
 CODEGENOPT(InterchangeLoops  , 1, 0, Benign) ///< Run loop-interchange.
+CODEGENOPT(FuseLoops         , 1, 0, Benign) ///< Run loop-fusion.
 CODEGENOPT(UnrollLoops       , 1, 0, Benign) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0, Benign) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0, Benign) ///< Set when -fno-jump-tables is enabled.
@@ -375,13 +384,13 @@ VALUE_CODEGENOPT(SmallDataLimit, 32, 0, Benign)
 VALUE_CODEGENOPT(SSPBufferSize, 32, 0, Benign)
 
 /// The kind of inlining to perform.
-ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining, Benign)
+ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining, Compatible)
 
 /// The maximum stack size a function can have to be considered for inlining.
 VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX, Benign)
 
 // Vector functions library to use.
-ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 4, llvm::driver::VectorLibrary::NoLibrary, Benign)
+ENUM_CODEGENOPT(VecLib, VectorLibrary, 4, VectorLibrary::NoLibrary, Benign)
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel, Benign)
@@ -457,8 +466,8 @@ ENUM_CODEGENOPT(SwiftAsyncFramePointer, SwiftAsyncFramePointerKind, 2,
 CODEGENOPT(SkipRaxSetup, 1, 0, Benign)
 
 /// Whether to zero out caller-used registers before returning.
-ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
-                5, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip, Benign)
+ENUM_CODEGENOPT(ZeroCallUsedRegs, ZeroCallUsedRegsKind,
+                5, ZeroCallUsedRegsKind::Skip, Benign)
 
 /// Modify C++ ABI to returning `this` pointer from constructors and
 /// non-deleting destructors. (No effect on Microsoft ABI.)
@@ -477,8 +486,8 @@ CODEGENOPT(ResMayAlias, 1, 0, Benign)
 
 /// Controls how unwind v2 (epilog) information should be generated for x64
 /// Windows.
-ENUM_CODEGENOPT(WinX64EHUnwindV2, llvm::WinX64EHUnwindV2Mode,
-                2, llvm::WinX64EHUnwindV2Mode::Disabled, Benign)
+ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
+                2, WinX64EHUnwindV2Mode::Disabled, Benign)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

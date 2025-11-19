@@ -85,7 +85,6 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; GCN-NEXT:   S_BRANCH %bb.2
   bb.0:
     successors: %bb.1
@@ -142,7 +141,6 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   S_BRANCH %bb.2
   bb.0:
     successors: %bb.1
@@ -162,6 +160,62 @@ body:             |
     successors: %bb.3
     %3:sreg_32 = PHI %1, %bb.3, %2, %bb.1
     S_BRANCH %bb.3
+  bb.3:
+    successors: %bb.2
+    %1:sreg_32 = COPY %0
+    S_BRANCH %bb.2
+...
+
+---
+
+name:            phi_moveimm_av_pseudo_input
+tracksRegLiveness: true
+body:             |
+  ; GCN-LABEL: name: phi_moveimm_av_pseudo_input
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[AV_MOV_:%[0-9]+]]:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[COPY1]], implicit-def $scc
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   successors: %bb.3(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI %5, %bb.3, [[S_ADD_U32_]], %bb.1
+  ; GCN-NEXT:   S_BRANCH %bb.3
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.3:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  bb.0:
+    successors: %bb.1
+    liveins: $sgpr0, $sgpr1
+
+    %0:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+
+    %4:sreg_32 = COPY $sgpr0
+    %5:sreg_32 = COPY $sgpr1
+
+  bb.1:
+    successors: %bb.2
+    %2:sreg_32 = S_ADD_U32 %4, %5, implicit-def $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+    %3:sreg_32 = PHI %1, %bb.3, %2, %bb.1
+    S_BRANCH %bb.3
+
   bb.3:
     successors: %bb.2
     %1:sreg_32 = COPY %0

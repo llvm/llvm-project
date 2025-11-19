@@ -206,8 +206,7 @@ void X86FastPreTileConfig::spill(MachineBasicBlock::iterator Before,
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   // Don't need shape information for tile store, becasue it is adjacent to
   // the tile def instruction.
-  TII->storeRegToStackSlot(*MBB, Before, VirtReg, Kill, FI, &RC, TRI,
-                           Register());
+  TII->storeRegToStackSlot(*MBB, Before, VirtReg, Kill, FI, &RC, Register());
   ++NumStores;
 
   // TODO: update DBG_VALUEs
@@ -267,24 +266,16 @@ void X86FastPreTileConfig::reload(MachineBasicBlock::iterator UseMI,
                     << printReg(TileReg, TRI) << '\n');
 }
 
-static unsigned getTileDefNum(MachineRegisterInfo *MRI, Register Reg) {
-  if (Reg.isVirtual()) {
-    unsigned RegClassID = MRI->getRegClass(Reg)->getID();
-    if (RegClassID == X86::TILERegClassID)
-      return 1;
-    if (RegClassID == X86::TILEPAIRRegClassID)
-      return 2;
-  } else {
-    if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-      return 1;
-    if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
-      return 2;
+static bool isTileRegister(MachineRegisterInfo *MRI, Register Reg) {
+  if (Reg.isVirtual() &&
+      (MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)) {
+    return true;
   }
-  return 0;
-}
 
-static bool isTileRegister(MachineRegisterInfo *MRI, Register VirtReg) {
-  return getTileDefNum(MRI, VirtReg) > 0;
+  if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
+    return true;
+
+  return false;
 }
 
 static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
@@ -296,7 +287,7 @@ static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
   if (!MO.isReg())
     return false;
 
-  return getTileDefNum(MRI, MO.getReg()) > 0;
+  return isTileRegister(MRI, MO.getReg());
 }
 
 static ShapeT getShape(MachineRegisterInfo *MRI, Register TileReg) {
@@ -564,8 +555,17 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       MachineBasicBlock::iterator I;
       if (LastShapeMI && dominates(MBB, MI, LastShapeMI))
         I = ++LastShapeMI->getIterator();
-      else
-        I = ++MI.getIterator();
+      else {
+        // Call can overwrite registers like rax, ensure the tile config
+        // instruction is sinked closer to first instruction that uses tile.
+        auto UseIt = MI.getIterator();
+        while (UseIt != MBB.end()) {
+          if (HasTileOperand(MRI, *UseIt))
+            break;
+          ++UseIt;
+        }
+        I = UseIt;
+      }
       Config(*I);
       HasUnconfigTile = false;
       continue;
@@ -627,19 +627,7 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       else if (dominates(MBB, LastShapeMI, ColMI))
         LastShapeMI = ColMI;
     }
-    unsigned TileDefNum = getTileDefNum(MRI, MI.getOperand(0).getReg());
-    if (TileDefNum > 1) {
-      for (unsigned I = 1; I < TileDefNum; I++) {
-        MachineOperand *ColxMO = &MI.getOperand(2 + I);
-        MachineInstr *ColxMI = MRI->getVRegDef(ColxMO->getReg());
-        if (ColxMI->getParent() == &MBB) {
-          if (!LastShapeMI)
-            LastShapeMI = ColxMI;
-          else if (dominates(MBB, LastShapeMI, ColxMI))
-            LastShapeMI = ColxMI;
-        }
-      }
-    }
+
     // If there is user live out of the tilecfg, spill it and reload in
     // before the user.
     Register TileReg = MI.getOperand(0).getReg();

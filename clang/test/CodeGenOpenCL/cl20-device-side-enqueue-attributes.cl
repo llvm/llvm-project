@@ -199,7 +199,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // SPIR32: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 // SPIR32: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 // SPIR32: attributes #[[ATTR2]] = { convergent noinline nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// SPIR32: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// SPIR32: attributes #[[ATTR3:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 // SPIR32: attributes #[[ATTR4]] = { convergent nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // SPIR32: attributes #[[ATTR5]] = { convergent nounwind "uniform-work-group-size"="true" }
 //.

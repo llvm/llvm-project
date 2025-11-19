@@ -1,4 +1,4 @@
-//===--- UseConstraintsCheck.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,7 @@
 
 #include "UseConstraintsCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -54,15 +55,17 @@ static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
   if (const auto Dep = TheType.getAs<DependentNameTypeLoc>()) {
     const IdentifierInfo *Identifier = Dep.getTypePtr()->getIdentifier();
-    ElaboratedTypeKeyword Keyword = Dep.getTypePtr()->getKeyword();
+    const ElaboratedTypeKeyword Keyword = Dep.getTypePtr()->getKeyword();
     if (!Identifier || Identifier->getName() != "type" ||
         (Keyword != ElaboratedTypeKeyword::Typename &&
          Keyword != ElaboratedTypeKeyword::None)) {
       return std::nullopt;
     }
-    TheType = Dep.getQualifierLoc().getTypeLoc();
+    TheType = Dep.getQualifierLoc().getAsTypeLoc();
     if (TheType.isNull())
       return std::nullopt;
+  } else {
+    return std::nullopt;
   }
 
   if (const auto SpecializationLoc =
@@ -78,7 +81,14 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
     if (!TD || TD->getName() != "enable_if")
       return std::nullopt;
 
-    int NumArgs = SpecializationLoc.getNumArgs();
+    assert(!TD->getTemplateParameters()->empty() &&
+           "found template with no template parameters?");
+    const auto *FirstParam = dyn_cast<NonTypeTemplateParmDecl>(
+        TD->getTemplateParameters()->getParam(0));
+    if (!FirstParam || !FirstParam->getType()->isBooleanType())
+      return std::nullopt;
+
+    const int NumArgs = SpecializationLoc.getNumArgs();
     if (NumArgs != 1 && NumArgs != 2)
       return std::nullopt;
 
@@ -89,9 +99,6 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
 
 static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
-  if (const auto Elaborated = TheType.getAs<ElaboratedTypeLoc>())
-    TheType = Elaborated.getNamedTypeLoc();
-
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
 
@@ -108,9 +115,16 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
     if (!Specialization->isTypeAlias())
       return std::nullopt;
 
+    assert(!TD->getTemplateParameters()->empty() &&
+           "found template with no template parameters?");
+    const auto *FirstParam = dyn_cast<NonTypeTemplateParmDecl>(
+        TD->getTemplateParameters()->getParam(0));
+    if (!FirstParam || !FirstParam->getType()->isBooleanType())
+      return std::nullopt;
+
     if (const auto *AliasedType =
             dyn_cast<DependentNameType>(Specialization->getAliasedType())) {
-      ElaboratedTypeKeyword Keyword = AliasedType->getKeyword();
+      const ElaboratedTypeKeyword Keyword = AliasedType->getKeyword();
       if (AliasedType->getIdentifier()->getName() != "type" ||
           (Keyword != ElaboratedTypeKeyword::Typename &&
            Keyword != ElaboratedTypeKeyword::None)) {
@@ -119,7 +133,7 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
     } else {
       return std::nullopt;
     }
-    int NumArgs = SpecializationLoc.getNumArgs();
+    const int NumArgs = SpecializationLoc.getNumArgs();
     if (NumArgs != 1 && NumArgs != 2)
       return std::nullopt;
 
@@ -209,7 +223,7 @@ getConditionRange(ASTContext &Context,
   const LangOptions &LangOpts = Context.getLangOpts();
   const SourceManager &SM = Context.getSourceManager();
   if (EnableIf.getNumArgs() > 1) {
-    TemplateArgumentLoc NextArg = EnableIf.getArgLoc(1);
+    const TemplateArgumentLoc NextArg = EnableIf.getArgLoc(1);
     return {EnableIf.getLAngleLoc().getLocWithOffset(1),
             utils::lexer::findPreviousTokenKind(
                 NextArg.getSourceRange().getBegin(), SM, LangOpts, tok::comma)};
@@ -221,7 +235,7 @@ getConditionRange(ASTContext &Context,
 
 static SourceRange getTypeRange(ASTContext &Context,
                                 const TemplateSpecializationTypeLoc &EnableIf) {
-  TemplateArgumentLoc Arg = EnableIf.getArgLoc(1);
+  const TemplateArgumentLoc Arg = EnableIf.getArgLoc(1);
   const LangOptions &LangOpts = Context.getLangOpts();
   const SourceManager &SM = Context.getSourceManager();
   return {utils::lexer::findPreviousTokenKind(Arg.getSourceRange().getBegin(),
@@ -255,7 +269,7 @@ getTypeText(ASTContext &Context,
 
 static std::optional<SourceLocation>
 findInsertionForConstraint(const FunctionDecl *Function, ASTContext &Context) {
-  SourceManager &SM = Context.getSourceManager();
+  const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
 
   if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(Function)) {
@@ -268,7 +282,7 @@ findInsertionForConstraint(const FunctionDecl *Function, ASTContext &Context) {
       return std::nullopt;
   }
   if (Function->isDeleted()) {
-    SourceLocation FunctionEnd = Function->getSourceRange().getEnd();
+    const SourceLocation FunctionEnd = Function->getSourceRange().getEnd();
     return utils::lexer::findNextAnyTokenKind(FunctionEnd, SM, LangOpts,
                                               tok::equal, tok::equal);
   }
@@ -300,7 +314,7 @@ static bool isPrimaryExpression(const Expr *Expression) {
 static std::optional<std::string> getConditionText(const Expr *ConditionExpr,
                                                    SourceRange ConditionRange,
                                                    ASTContext &Context) {
-  SourceManager &SM = Context.getSourceManager();
+  const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
 
   SourceLocation PrevTokenLoc = ConditionRange.getEnd();
@@ -311,14 +325,14 @@ static std::optional<std::string> getConditionText(const Expr *ConditionExpr,
   Token PrevToken;
   std::tie(PrevToken, PrevTokenLoc) = utils::lexer::getPreviousTokenAndStart(
       PrevTokenLoc, SM, LangOpts, SkipComments);
-  bool EndsWithDoubleSlash =
+  const bool EndsWithDoubleSlash =
       PrevToken.is(tok::comment) &&
       Lexer::getSourceText(CharSourceRange::getCharRange(
                                PrevTokenLoc, PrevTokenLoc.getLocWithOffset(2)),
                            SM, LangOpts) == "//";
 
   bool Invalid = false;
-  llvm::StringRef ConditionText = Lexer::getSourceText(
+  const llvm::StringRef ConditionText = Lexer::getSourceText(
       CharSourceRange::getCharRange(ConditionRange), SM, LangOpts, &Invalid);
   if (Invalid)
     return std::nullopt;
@@ -347,9 +361,9 @@ static std::vector<FixItHint> handleReturnType(const FunctionDecl *Function,
                                                const TypeLoc &ReturnType,
                                                const EnableIfData &EnableIf,
                                                ASTContext &Context) {
-  TemplateArgumentLoc EnableCondition = EnableIf.Loc.getArgLoc(0);
+  const TemplateArgumentLoc EnableCondition = EnableIf.Loc.getArgLoc(0);
 
-  SourceRange ConditionRange = getConditionRange(Context, EnableIf.Loc);
+  const SourceRange ConditionRange = getConditionRange(Context, EnableIf.Loc);
 
   std::optional<std::string> ConditionText = getConditionText(
       EnableCondition.getSourceExpression(), ConditionRange, Context);
@@ -396,12 +410,12 @@ handleTrailingTemplateType(const FunctionTemplateDecl *FunctionTemplate,
                            const FunctionDecl *Function,
                            const Decl *LastTemplateParam,
                            const EnableIfData &EnableIf, ASTContext &Context) {
-  SourceManager &SM = Context.getSourceManager();
+  const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
 
-  TemplateArgumentLoc EnableCondition = EnableIf.Loc.getArgLoc(0);
+  const TemplateArgumentLoc EnableCondition = EnableIf.Loc.getArgLoc(0);
 
-  SourceRange ConditionRange = getConditionRange(Context, EnableIf.Loc);
+  const SourceRange ConditionRange = getConditionRange(Context, EnableIf.Loc);
 
   std::optional<std::string> ConditionText = getConditionText(
       EnableCondition.getSourceExpression(), ConditionRange, Context);

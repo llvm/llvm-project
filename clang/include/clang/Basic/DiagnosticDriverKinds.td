@@ -116,6 +116,8 @@ def err_drv_cuda_host_arch : Error<
   "unsupported architecture '%0' for host compilation">;
 def err_drv_mix_cuda_hip : Error<
   "mixed CUDA and HIP compilation is not supported">;
+def err_drv_mix_offload : Error<
+  "mixed %0 and %1 offloading compilation is not supported">;
 def err_drv_bad_target_id : Error<
   "invalid target ID '%0'; format is a processor name followed by an optional "
   "colon-delimited list of features followed by an enable/disable sign (e.g., "
@@ -124,12 +126,25 @@ def err_drv_bad_offload_arch_combo : Error<
   "invalid offload arch combinations: '%0' and '%1' (for a specific processor, "
   "a feature should either exist in all offload archs, or not exist in any "
   "offload archs)">;
+def err_drv_unsupported_option_for_offload_arch_req_feature : Error<
+  "'%0' option for offload arch '%1' is not currently supported "
+  "there. Use it with an offload arch containing '%2' instead">;
 def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
   "ignoring '%0' option for offload arch '%1' as it is not currently supported "
   "there. Use it with an offload arch containing '%2' instead">,
   InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
+  InGroup<OptionIgnored>;
+def err_drv_unsupported_option_for_target : Error<
+  "'%0' option is not currently supported for target '%1'">;
+def warn_drv_unsupported_option_part_for_target : Warning<
+  "ignoring '%0' in '%1' option as it is not currently supported for target '%2'">,
+  InGroup<OptionIgnored>;
+def err_drv_unsupported_option_part_for_target : Error<
+  "'%0' in '%1' option is not currently supported for target '%2'">;
+def warn_drv_invalid_argument_for_flang : Warning<
+  "'%0' is not valid for Fortran">,
   InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_flang : Warning<
   "the argument '%0' is not supported for option '%1'. Mapping to '%1%2'">,
@@ -202,6 +217,9 @@ def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
   "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
+def warn_drv_argument_not_allowed_with : Warning<
+  "invalid argument '%0' not allowed with '%1'">,
+  InGroup<OptionIgnored>;
 def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
@@ -307,6 +325,8 @@ def warn_drv_yc_multiple_inputs_clang_cl : Warning<
 def warn_drv_potentially_misspelled_joined_argument : Warning<
   "joined argument treated as '%0'; did you mean '%1'?">, InGroup<UnknownArgument>;
 
+def err_drv_too_many_actions: Error<
+    "only one action option is allowed. Got %0">;
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_value_with_suggestion : Error<
@@ -359,9 +379,6 @@ def err_drv_optimization_remark_format : Error<
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
-def err_drv_omp_host_ir_file_not_found : Error<
-  "provided host compiler IR file '%0' is required to generate code for OpenMP "
-  "target regions but cannot be found">;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
@@ -391,6 +408,8 @@ def err_drv_small_columns : Error<
 def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
+
+def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -484,6 +503,9 @@ def warn_drv_overriding_option : Warning<
 def warn_drv_overriding_deployment_version
     : Warning<"overriding deployment version from '%0' to '%1'">,
       InGroup<DiagGroup<"overriding-deployment-version">>;
+def warn_drv_overriding_complex_range : Warning<
+  "'%1' sets complex range to \"%3\" overriding the setting of \"%2\" that was implied by '%0'">,
+  InGroup<DiagGroup<"overriding-complex-range">>;
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
@@ -576,6 +598,13 @@ def err_drv_reduced_module_output_overrided : Warning<
   "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
+def remark_found_cxx20_module_usage : Remark<
+  "found C++20 module usage in file '%0'">,
+  InGroup<ModulesDriver>;
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -671,6 +700,9 @@ def warn_drv_fuse_ld_path : Warning<
 def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
   "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
   InGroup<OptionIgnored>;
+
+def err_drv_profile_instrument_use_path_with_no_kind : Error<
+  "option '-fprofile-instrument-use-path=' requires -fprofile-instrument-use=<kind>">;
 
 def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"
@@ -874,4 +906,9 @@ def warn_drv_openacc_without_cir
     : Warning<"OpenACC directives will result in no runtime behavior; use "
               "-fclangir to enable runtime effect">,
       InGroup<SourceUsesOpenACC>;
+
+def warn_drv_gcc_install_dir_libstdcxx : Warning<
+    "future releases of the clang compiler will prefer GCC installations "
+    "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
+    InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
 }

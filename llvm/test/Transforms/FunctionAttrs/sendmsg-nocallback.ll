@@ -50,10 +50,12 @@ define internal i32 @sendmsg_rtn_is_norecurse() {
 }
 
 define void @user() {
-; FNATTRS-LABEL: define void @user() {
+; FNATTRS: Function Attrs: norecurse nounwind
+; FNATTRS-LABEL: define void @user(
+; FNATTRS-SAME: ) #[[ATTR1]] {
 ; FNATTRS-NEXT:    call void @sendmsg_is_norecurse()
 ; FNATTRS-NEXT:    call void @sendmsghalt_is_norecurse()
-; FNATTRS-NEXT:    call void @sendmsg_rtn_is_norecurse()
+; FNATTRS-NEXT:    [[TMP1:%.*]] = call i32 @sendmsg_rtn_is_norecurse()
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: norecurse nounwind
@@ -61,12 +63,12 @@ define void @user() {
 ; ATTRIBUTOR-SAME: ) #[[ATTR1]] {
 ; ATTRIBUTOR-NEXT:    call void @sendmsg_is_norecurse() #[[ATTR5:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    call void @sendmsghalt_is_norecurse() #[[ATTR6:[0-9]+]]
-; ATTRIBUTOR-NEXT:    call void @sendmsg_rtn_is_norecurse() #[[ATTR6]]
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call i32 @sendmsg_rtn_is_norecurse() #[[ATTR6]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @sendmsg_is_norecurse()
   call void @sendmsghalt_is_norecurse()
-  call void @sendmsg_rtn_is_norecurse()
+  call i32 @sendmsg_rtn_is_norecurse()
   ret void
 }
 ;.

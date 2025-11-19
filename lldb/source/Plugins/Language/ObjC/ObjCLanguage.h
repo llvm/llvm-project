@@ -145,7 +145,7 @@ public:
   std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;
 
-  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
@@ -175,13 +175,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "objc"; }
 
-  static bool IsPossibleObjCMethodName(const char *name) {
-    if (!name)
-      return false;
-    bool starts_right = (name[0] == '+' || name[0] == '-') && name[1] == '[';
-    bool ends_right = (name[strlen(name) - 1] == ']');
-    return (starts_right && ends_right);
-  }
+  static bool IsPossibleObjCMethodName(llvm::StringRef name);
 
   static bool IsPossibleObjCSelector(const char *name) {
     if (!name)

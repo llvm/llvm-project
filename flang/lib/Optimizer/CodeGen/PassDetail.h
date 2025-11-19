@@ -18,7 +18,7 @@
 
 namespace fir {
 
-#define GEN_PASS_CLASSES
+#define GEN_PASS_DECL
 #include "flang/Optimizer/CodeGen/CGPasses.h.inc"
 
 } // namespace fir

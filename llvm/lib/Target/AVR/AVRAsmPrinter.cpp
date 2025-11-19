@@ -245,7 +245,7 @@ void AVRAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
 bool AVRAsmPrinter::doFinalization(Module &M) {
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const AVRTargetMachine &TM = (const AVRTargetMachine &)MMI->getTarget();
-  const AVRSubtarget *SubTM = (const AVRSubtarget *)TM.getSubtargetImpl();
+  const AVRSubtarget *SubTM = TM.getSubtargetImpl();
 
   bool NeedsCopyData = false;
   bool NeedsClearBSS = false;
@@ -260,7 +260,7 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
       continue;
     }
 
-    auto *Section = cast<MCSectionELF>(TLOF.SectionForGlobal(&GO, TM));
+    auto *Section = static_cast<MCSectionELF *>(TLOF.SectionForGlobal(&GO, TM));
     if (Section->getName().starts_with(".data"))
       NeedsCopyData = true;
     else if (Section->getName().starts_with(".rodata") && SubTM->hasLPM())
@@ -294,7 +294,7 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
 
 void AVRAsmPrinter::emitStartOfAsmFile(Module &M) {
   const AVRTargetMachine &TM = (const AVRTargetMachine &)MMI->getTarget();
-  const AVRSubtarget *SubTM = (const AVRSubtarget *)TM.getSubtargetImpl();
+  const AVRSubtarget *SubTM = TM.getSubtargetImpl();
   if (!SubTM)
     return;
 

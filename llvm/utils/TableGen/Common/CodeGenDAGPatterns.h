@@ -349,7 +349,7 @@ private:
 };
 
 /// Set type used to track multiply used variables in patterns
-typedef StringSet<> MultipleUseVarSet;
+using MultipleUseVarSet = StringSet<>;
 
 /// SDTypeConstraint - This is a discriminated union of constraints,
 /// corresponding to the SDTypeConstraint tablegen class in Target.td.
@@ -1135,6 +1135,7 @@ private:
   std::vector<PatternToMatch> PatternsToMatch;
 
   TypeSetByHwMode LegalVTS;
+  TypeSetByHwMode LegalPtrVTS;
 
   using PatternRewriterFn = std::function<void(TreePattern *)>;
   PatternRewriterFn PatternRewriter;
@@ -1148,6 +1149,7 @@ public:
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }
   const TypeSetByHwMode &getLegalTypes() const { return LegalVTS; }
+  const TypeSetByHwMode &getLegalPtrTypes() const { return LegalPtrVTS; }
 
   const Record *getSDNodeNamed(StringRef Name) const;
 
@@ -1215,13 +1217,13 @@ public:
   iterator_range<pf_iterator> ptfs() const { return PatternFragments; }
 
   // Patterns to match information.
-  typedef std::vector<PatternToMatch>::const_iterator ptm_iterator;
+  using ptm_iterator = std::vector<PatternToMatch>::const_iterator;
   ptm_iterator ptm_begin() const { return PatternsToMatch.begin(); }
   ptm_iterator ptm_end() const { return PatternsToMatch.end(); }
   iterator_range<ptm_iterator> ptms() const { return PatternsToMatch; }
 
   /// Parse the Pattern for an instruction, and insert the result in DAGInsts.
-  typedef std::map<const Record *, DAGInstruction, LessRecordByID> DAGInstMap;
+  using DAGInstMap = std::map<const Record *, DAGInstruction, LessRecordByID>;
   void parseInstructionPattern(CodeGenInstruction &CGI, const ListInit *Pattern,
                                DAGInstMap &DAGInsts);
 
@@ -1249,6 +1251,7 @@ public:
   }
 
 private:
+  TypeSetByHwMode ComputeLegalPtrTypes() const;
   void ParseNodeInfo();
   void ParseNodeTransforms();
   void ParseComplexPatterns();

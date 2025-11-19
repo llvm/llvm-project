@@ -26,4 +26,22 @@ def ComputeRegionOpInterface : OpInterface<"ComputeRegionOpInterface"> {
   ];
 }
 
+def PartialEntityAccessOpInterface : OpInterface<"PartialEntityAccessOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations that access a partial entity such as
+    field or array element access.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Get the base entity being accessed", "::mlir::Value",
+      "getBaseEntity", (ins)>,
+    InterfaceMethod<"Check if this is a complete view of the entity", "bool",
+      "isCompleteView", (ins), [{
+        return false;
+      }]>,
+  ];
+}
+
 #endif // OPENACC_OPS_INTERFACES

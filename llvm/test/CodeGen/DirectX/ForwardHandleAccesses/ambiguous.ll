@@ -7,9 +7,9 @@
 
 define float @f() {
 entry:
-  %h1 = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %h1 = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   store target("dx.RawBuffer", <4 x float>, 1, 0) %h1, ptr @Buf, align 4
-  %h2 = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+  %h2 = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr null)
   store target("dx.RawBuffer", <4 x float>, 1, 0) %h2, ptr @Buf, align 4
 
   %b = load target("dx.RawBuffer", <4 x float>, 1, 0), ptr @Buf, align 4

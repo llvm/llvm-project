@@ -3270,7 +3270,8 @@ static const AttrClassDescriptor AttrClassDescriptors[] = {
     {"INHERITABLE_PARAM_ATTR", "InheritableParamAttr"},
     {"INHERITABLE_PARAM_OR_STMT_ATTR", "InheritableParamOrStmtAttr"},
     {"PARAMETER_ABI_ATTR", "ParameterABIAttr"},
-    {"HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"}};
+    {"HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"},
+    {"HLSL_SEMANTIC_ATTR", "HLSLSemanticBaseAttr"}};
 
 static void emitDefaultDefine(raw_ostream &OS, StringRef name,
                               const char *superName) {
@@ -5044,6 +5045,26 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
      << "}\n";
 }
 
+// Emits Sema calls for type dependent attributes
+void EmitClangAttrIsTypeDependent(const RecordKeeper &Records,
+                                  raw_ostream &OS) {
+  emitSourceFileHeader("Attribute is type dependent", OS, Records);
+
+  OS << "void checkAttrIsTypeDependent(Decl *D, const Attr *A) {\n";
+  OS << "  switch (A->getKind()) {\n";
+  OS << "  default:\n";
+  OS << "    break;\n";
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    if (A->getValueAsBit("IsTypeDependent")) {
+      OS << "  case attr::" << A->getName() << ":\n";
+      OS << "    ActOn" << A->getName() << "Attr(D, A);\n";
+      OS << "    break;\n";
+    }
+  }
+  OS << "  }\n";
+  OS << "}\n";
+}
+
 // Emits the code to dump an attribute.
 void EmitClangAttrTextNodeDump(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute text node dumper", OS, Records);
@@ -5163,7 +5184,7 @@ enum class SpellingKind : size_t {
 static const size_t NumSpellingKinds = (size_t)SpellingKind::NumSpellingKinds;
 
 class SpellingList {
-  std::vector<std::string> Spellings[NumSpellingKinds];
+  std::array<std::vector<std::string>, NumSpellingKinds> Spellings;
 
 public:
   ArrayRef<std::string> operator[](SpellingKind K) const {
@@ -5209,6 +5230,10 @@ public:
                              Other.Spellings[Kind].end());
     }
   }
+
+  bool hasSpelling() const {
+    return llvm::any_of(Spellings, [](const auto &L) { return !L.empty(); });
+  }
 };
 
 class DocumentationData {
@@ -5245,6 +5270,16 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
   // FIXME: there is no way to have a per-spelling category for the attribute
   // documentation. This may not be a limiting factor since the spellings
   // should generally be consistently applied across the category.
+
+  if (Cat == "HLSL Semantics") {
+    if (!Attribute.getName().starts_with("HLSL"))
+      PrintFatalError(Attribute.getLoc(),
+                      "HLSL semantic attribute name must start with HLSL");
+
+    assert(Attribute.getName().size() > 4);
+    std::string Name = Attribute.getName().substr(4).str();
+    return std::make_pair(std::move(Name), SpellingList());
+  }
 
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attribute);
   if (Spellings.empty())
@@ -5296,36 +5331,38 @@ static void WriteDocumentation(const RecordKeeper &Records,
     OS << ".. _" << Label << ":\n\n";
   OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
 
-  // List what spelling syntaxes the attribute supports.
-  // Note: "#pragma clang attribute" is handled outside the spelling kinds loop
-  // so it must be last.
-  OS << ".. csv-table:: Supported Syntaxes\n";
-  OS << "   :header: \"GNU\", \"C++11\", \"C23\", \"``__declspec``\",";
-  OS << " \"Keyword\", \"``#pragma``\", \"HLSL Annotation\", \"``#pragma "
-        "clang ";
-  OS << "attribute``\"\n\n   \"";
-  for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
-    SpellingKind K = (SpellingKind)Kind;
-    // TODO: List Microsoft (IDL-style attribute) spellings once we fully
-    // support them.
-    if (K == SpellingKind::Microsoft)
-      continue;
+  if (Doc.SupportedSpellings.hasSpelling()) {
+    // List what spelling syntaxes the attribute supports.
+    // Note: "#pragma clang attribute" is handled outside the spelling kinds
+    // loop so it must be last.
+    OS << ".. csv-table:: Supported Syntaxes\n";
+    OS << "   :header: \"GNU\", \"C++11\", \"C23\", \"``__declspec``\",";
+    OS << " \"Keyword\", \"``#pragma``\", \"HLSL Annotation\", \"``#pragma "
+          "clang ";
+    OS << "attribute``\"\n\n   \"";
+    for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
+      SpellingKind K = (SpellingKind)Kind;
+      // TODO: List Microsoft (IDL-style attribute) spellings once we fully
+      // support them.
+      if (K == SpellingKind::Microsoft)
+        continue;
 
-    bool PrintedAny = false;
-    for (StringRef Spelling : Doc.SupportedSpellings[K]) {
-      if (PrintedAny)
-        OS << " |br| ";
-      OS << "``" << Spelling << "``";
-      PrintedAny = true;
+      bool PrintedAny = false;
+      for (StringRef Spelling : Doc.SupportedSpellings[K]) {
+        if (PrintedAny)
+          OS << " |br| ";
+        OS << "``" << Spelling << "``";
+        PrintedAny = true;
+      }
+
+      OS << "\",\"";
     }
 
-    OS << "\",\"";
+    if (getPragmaAttributeSupport(Records).isAttributedSupported(
+            *Doc.Attribute))
+      OS << "Yes";
+    OS << "\"\n\n";
   }
-
-  if (getPragmaAttributeSupport(Records).isAttributedSupported(
-          *Doc.Attribute))
-    OS << "Yes";
-  OS << "\"\n\n";
 
   // If the attribute is deprecated, print a message about it, and possibly
   // provide a replacement attribute.

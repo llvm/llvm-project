@@ -28,7 +28,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
@@ -54,6 +53,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -117,6 +117,10 @@ DisableLFTR("disable-lftr", cl::Hidden, cl::init(false),
 static cl::opt<bool>
 LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
                 cl::desc("Predicate conditions in read only loops"));
+
+static cl::opt<bool> LoopPredicationTraps(
+    "indvars-predicate-loop-traps", cl::Hidden, cl::init(true),
+    cl::desc("Predicate conditions that trap in loops with only local writes"));
 
 static cl::opt<bool>
 AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
@@ -194,6 +198,18 @@ static bool ConvertToSInt(const APFloat &APF, int64_t &IntVal) {
   return true;
 }
 
+// Ensure we stay within the bounds of fp values that can be represented as
+// integers without gaps, which are 2^24 and 2^53 for IEEE-754 single and double
+// precision respectively (both on negative and positive side).
+static bool isRepresentableAsExactInteger(ConstantFP *FPVal, int64_t IntVal) {
+  const auto &InitValueFltSema = FPVal->getValueAPF().getSemantics();
+  if (!APFloat::isIEEELikeFP(InitValueFltSema))
+    return false;
+
+  return isUIntN(APFloat::semanticsPrecision(InitValueFltSema),
+                 AbsoluteValue(IntVal));
+}
+
 /// If the loop has floating induction variable then insert corresponding
 /// integer induction variable if possible.
 /// For example,
@@ -210,7 +226,8 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   auto *InitValueVal = dyn_cast<ConstantFP>(PN->getIncomingValue(IncomingEdge));
 
   int64_t InitValue;
-  if (!InitValueVal || !ConvertToSInt(InitValueVal->getValueAPF(), InitValue))
+  if (!InitValueVal || !ConvertToSInt(InitValueVal->getValueAPF(), InitValue) ||
+      !isRepresentableAsExactInteger(InitValueVal, InitValue))
     return false;
 
   // Check IV increment. Reject this PN if increment operation is not
@@ -260,7 +277,8 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   ConstantFP *ExitValueVal = dyn_cast<ConstantFP>(Compare->getOperand(1));
   int64_t ExitValue;
   if (ExitValueVal == nullptr ||
-      !ConvertToSInt(ExitValueVal->getValueAPF(), ExitValue))
+      !ConvertToSInt(ExitValueVal->getValueAPF(), ExitValue) ||
+      !isRepresentableAsExactInteger(ExitValueVal, ExitValue))
     return false;
 
   // Find new predicate for integer comparison.
@@ -1613,7 +1631,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (CurrMaxExit == MaxBECount)
       SkipLastIter = true;
   };
-  SmallSet<const SCEV *, 8> DominatingExactExitCounts;
+  SmallPtrSet<const SCEV *, 8> DominatingExactExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExactExitCount = SE->getExitCount(L, ExitingBB);
     const SCEV *MaxExitCount = SE->getExitCount(
@@ -1703,6 +1721,24 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // or a >u b.  Such a case is not currently known.
   }
   return Changed;
+}
+
+static bool crashingBBWithoutEffect(const BasicBlock &BB) {
+  return llvm::all_of(BB, [](const Instruction &I) {
+    // TODO: for now this is overly restrictive, to make sure nothing in this
+    // BB can depend on the loop body.
+    // It's not enough to check for !I.mayHaveSideEffects(), because e.g. a
+    // load does not have a side effect, but we could have
+    // %a = load ptr, ptr %ptr
+    // %b = load i32, ptr %a
+    // Now if the loop stored a non-nullptr to %a, we could cause a nullptr
+    // dereference by skipping over loop iterations.
+    if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      if (CB->onlyAccessesInaccessibleMemory())
+        return true;
+    }
+    return isa<UnreachableInst>(I);
+  });
 }
 
 bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
@@ -1817,11 +1853,25 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // suggestions on how to improve this?  I can obviously bail out for outer
   // loops, but that seems less than ideal.  MemorySSA can find memory writes,
   // is that enough for *all* side effects?
+  bool HasThreadLocalSideEffects = false;
   for (BasicBlock *BB : L->blocks())
     for (auto &I : *BB)
       // TODO:isGuaranteedToTransfer
-      if (I.mayHaveSideEffects())
-        return false;
+      if (I.mayHaveSideEffects()) {
+        if (!LoopPredicationTraps)
+          return false;
+        HasThreadLocalSideEffects = true;
+        if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+          // Simple stores cannot be observed by other threads.
+          // If HasThreadLocalSideEffects is set, we check
+          // crashingBBWithoutEffect to make sure that the crashing BB cannot
+          // observe them either.
+          if (!SI->isSimple())
+            return false;
+        } else {
+          return false;
+        }
+      }
 
   bool Changed = false;
   // Finally, do the actual predication for all predicatable blocks.  A couple
@@ -1841,6 +1891,19 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
 
     auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    if (HasThreadLocalSideEffects) {
+      const BasicBlock *Unreachable = nullptr;
+      for (const BasicBlock *Succ : BI->successors()) {
+        if (isa<UnreachableInst>(Succ->getTerminator()))
+          Unreachable = Succ;
+      }
+      // Exit BB which have one branch back into the loop and another one to
+      // a trap can still be optimized, because local side effects cannot
+      // be observed in the exit case (the trap). We could be smarter about
+      // this, but for now lets pattern match common cases that directly trap.
+      if (Unreachable == nullptr || !crashingBBWithoutEffect(*Unreachable))
+        return Changed;
+    }
     Value *NewCond;
     if (ExitCount == ExactBTC) {
       NewCond = L->contains(BI->getSuccessor(0)) ?

@@ -32,7 +32,7 @@ namespace PR6031 {
   template <class TT>
   struct FI2
   {
-    C<typename FI2::type> a; // expected-error{{no type named 'type' in 'FI2<TT>'}}
+    C<typename FI2::type> a; // expected-error{{no type named 'type' in 'PR6031::FI2<TT>'}}
   };
 
   template<typename T>
@@ -54,9 +54,9 @@ namespace PR6031 {
   template<typename T>
   struct NoDepBase {
     int foo() {
-      class NoDepBase::Nested nested; // expected-error{{no class named 'Nested' in 'NoDepBase<T>'}}
-      typedef typename NoDepBase::template MemberTemplate<T>::type type; // expected-error{{no member named 'MemberTemplate' in 'NoDepBase<T>'}}
-      return NoDepBase::a; // expected-error{{no member named 'a' in 'NoDepBase<T>'}}
+      class NoDepBase::Nested nested; // expected-error{{no class named 'Nested' in 'PR6031::NoDepBase<T>'}}
+      typedef typename NoDepBase::template MemberTemplate<T>::type type; // expected-error{{no member named 'MemberTemplate' in 'PR6031::NoDepBase<T>'}}
+      return NoDepBase::a; // expected-error{{no member named 'a' in 'PR6031::NoDepBase<T>'}}
     }
   };
 }
@@ -102,7 +102,7 @@ namespace PR6081 {
     template< class X >
     void f0(const X & k)
     {
-      this->template f1<int>()(k); // expected-error{{no member named 'f1' in 'C<T>'}}
+      this->template f1<int>()(k); // expected-error{{no member named 'f1' in 'PR6081::C<T>'}}
     }
   };
 }

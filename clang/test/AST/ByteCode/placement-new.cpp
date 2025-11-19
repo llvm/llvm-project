@@ -486,3 +486,40 @@ namespace bitcast {
   }
   static_assert(foo() == 0);
 }
+
+constexpr int modify_const_variable() {
+  const int a = 10;
+  new ((int *)&a) int(12); // both-note {{modification of object of const-qualified type 'const int' is not allowed in a constant expression}}
+  return a;
+}
+static_assert(modify_const_variable()); // both-error {{not an integral constant expression}} \
+                                        // both-note {{in call to}}
+
+constexpr int nullDest() {
+  new (nullptr) int{12}; // both-note {{construction of dereferenced null pointer}}
+  return 0;
+}
+static_assert(nullDest() == 0); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to}}
+
+constexpr int nullArrayDest() {
+  new (nullptr) int{12}; // both-note {{construction of dereferenced null pointer}}
+  return 0;
+}
+static_assert(nullArrayDest() == 0); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
+
+constexpr int intDest() {
+  new ((void*)2) int{3}; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  return 0;
+}
+static_assert(intDest() == 0); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to}}
+
+constexpr int intDestArray() {
+  new ((void*)2) int[4]; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  return 0;
+}
+static_assert(intDestArray() == 0); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+

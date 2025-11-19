@@ -186,7 +186,8 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         ctx.arg.thinLTOEmitIndexFiles, ctx.arg.thinLTOEmitImportsFiles,
         ctx.arg.outputFile, ctx.arg.dtltoDistributor,
         ctx.arg.dtltoDistributorArgs, ctx.arg.dtltoCompiler,
-        ctx.arg.dtltoCompilerArgs, !ctx.arg.saveTempsArgs.empty());
+        ctx.arg.dtltoCompilerPrependArgs, ctx.arg.dtltoCompilerArgs,
+        !ctx.arg.saveTempsArgs.empty());
   } else {
     backend = lto::createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(ctx.arg.thinLTOJobs),

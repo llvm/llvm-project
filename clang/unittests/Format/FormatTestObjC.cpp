@@ -763,6 +763,15 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "                  backing:NSBackingStoreBuffered\n"
       "                    defer:NO]);\n"
       "}");
+  Style.ColumnLimit = 63;
+  verifyFormat(
+      "- (void)test {\n"
+      "  if ([object\n"
+      "          respondsToSelector:@selector(\n"
+      "                                 selectorName:param1:param2:)])\n"
+      "    return;\n"
+      "}");
+  Style.ColumnLimit = PreviousColumnLimit;
   verifyFormat("[contentsContainer replaceSubview:[subviews objectAtIndex:0]\n"
                "                             with:contentsNativeView];");
 
@@ -940,6 +949,12 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "[aaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    aaaaaaaaaaaaaaaaa:aaaaaaaa\n"
       "                  aaa:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa];");
+  verifyFormat("[objectName\n"
+               "    respondsToSelector:\n"
+               "        @selector(\n"
+               "            somelonglonglonglongnameeeeeeee:\n"
+               "            loooooooooanotherlonglonglonglongnametopush:\n"
+               "            otherlongnameforlimit:)];");
 
   Style = getChromiumStyle(FormatStyle::LK_ObjC);
   Style.ColumnLimit = 80;

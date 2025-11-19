@@ -9,6 +9,8 @@
 #include "llvm/ObjCopy/ObjCopy.h"
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/COFF/COFFObjcopy.h"
+#include "llvm/ObjCopy/DXContainer/DXContainerConfig.h"
+#include "llvm/ObjCopy/DXContainer/DXContainerObjcopy.h"
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/ObjCopy/ELF/ELFObjcopy.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
@@ -19,6 +21,7 @@
 #include "llvm/ObjCopy/wasm/WasmConfig.h"
 #include "llvm/ObjCopy/wasm/WasmObjcopy.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
@@ -77,6 +80,15 @@ Error objcopy::executeObjcopyOnBinary(const MultiFormatConfig &Config,
 
     return xcoff::executeObjcopyOnBinary(Config.getCommonConfig(), *XCOFFConfig,
                                          *XCOFFBinary, Out);
+  }
+  if (auto *DXContainerBinary = dyn_cast<object::DXContainerObjectFile>(&In)) {
+    Expected<const DXContainerConfig &> DXContainerConfig =
+        Config.getDXContainerConfig();
+    if (!DXContainerConfig)
+      return DXContainerConfig.takeError();
+
+    return dxbc::executeObjcopyOnBinary(
+        Config.getCommonConfig(), *DXContainerConfig, *DXContainerBinary, Out);
   }
   return createStringError(object_error::invalid_file_type,
                            "unsupported object file format");

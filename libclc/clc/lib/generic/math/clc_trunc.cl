@@ -8,8 +8,8 @@
 
 #include <clc/internal/clc.h>
 
-#define FUNCTION __clc_trunc
-#define __IMPL_FUNCTION(x) __builtin_elementwise_trunc
+#define __CLC_FUNCTION __clc_trunc
+#define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_trunc
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

@@ -247,7 +247,6 @@ namespace std {
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
-#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_assignable.h>
@@ -1127,14 +1126,14 @@ template <class _IdxSeq>
 struct __make_overloads_imp;
 
 template <size_t... _Idx>
-struct __make_overloads_imp<__tuple_indices<_Idx...> > {
+struct __make_overloads_imp<index_sequence<_Idx...> > {
   template <class... _Types>
   using _Apply _LIBCPP_NODEBUG = __all_overloads<__overload<_Types, _Idx>...>;
 };
 
 template <class... _Types>
 using _MakeOverloads _LIBCPP_NODEBUG =
-    typename __make_overloads_imp< __make_indices_imp<sizeof...(_Types), 0> >::template _Apply<_Types...>;
+    typename __make_overloads_imp<make_index_sequence<sizeof...(_Types)>>::template _Apply<_Types...>;
 
 template <class _Tp, class... _Types>
 using __best_match_t _LIBCPP_NODEBUG = typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, _Tp>::type;
@@ -1172,7 +1171,6 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
-  using __replaceable _LIBCPP_NODEBUG = conditional_t<_And<__is_replaceable<_Types>...>::value, variant, void>;
 
   template <bool _Dummy                                                                               = true,
             enable_if_t<__dependent_type<is_default_constructible<__first_type>, _Dummy>::value, int> = 0>
@@ -1299,7 +1297,7 @@ public:
     __impl_.__swap(__that.__impl_);
   }
 
-#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#    if _LIBCPP_STD_VER >= 26
   // Helper class to implement [variant.visit]/10
   //   Constraints: The call to visit does not use an explicit template-argument-list
   //   that begins with a type template-argument.

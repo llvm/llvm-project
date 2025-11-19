@@ -441,6 +441,21 @@ let Predicates = [UseHVX] in {
   def: OpR_RR_pat_sat<V6_vaddwsat_dv,  saddsat, VecPI32, HWI32>;
 }
 
+let Predicates = [UseHVX] in {
+  def: OpR_RR_pat_sat<V6_vsububsat,    usubsat, VecI8,   HVI8>;
+  def: OpR_RR_pat_sat<V6_vsubuhsat,    usubsat, VecI16,  HVI16>;
+  def: OpR_RR_pat_sat<V6_vsubuwsat,    usubsat, VecI32,  HVI32>;
+  def: OpR_RR_pat_sat<V6_vsubbsat,     ssubsat, VecI8,   HVI8>;
+  def: OpR_RR_pat_sat<V6_vsubhsat,     ssubsat, VecI16,  HVI16>;
+  def: OpR_RR_pat_sat<V6_vsubwsat,     ssubsat, VecI32,  HVI32>;
+  def: OpR_RR_pat_sat<V6_vsububsat_dv, usubsat, VecPI8,  HWI8>;
+  def: OpR_RR_pat_sat<V6_vsubuhsat_dv, usubsat, VecPI16, HWI16>;
+  def: OpR_RR_pat_sat<V6_vsubuwsat_dv, usubsat, VecPI32, HWI32>;
+  def: OpR_RR_pat_sat<V6_vsubbsat_dv,  ssubsat, VecPI8,  HWI8>;
+  def: OpR_RR_pat_sat<V6_vsubhsat_dv,  ssubsat, VecPI16, HWI16>;
+  def: OpR_RR_pat_sat<V6_vsubwsat_dv,  ssubsat, VecPI32, HWI32>;
+}
+
 // For now, we always deal with vector floating point in SF mode.
 class OpR_RR_pat_conv<InstHexagon MI, PatFrag Op, ValueType ResType,
                       PatFrag RsPred, PatFrag RtPred = RsPred>
@@ -597,6 +612,9 @@ let Predicates = [UseHVX] in {
            (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
   def: Pat<(VecQ32 (trunc HVI32:$Vs)),
            (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
+  def: Pat<(VecQ16 (trunc HWI32:$Vss)),
+           (Combineq(VecQ32(V6_vandvrt (HiVec $Vss), (ToI32 0x01010101))),
+           (VecQ32 (V6_vandvrt (LoVec $Vss), (ToI32 0x01010101))))>;
 }
 
 let Predicates = [UseHVX] in {

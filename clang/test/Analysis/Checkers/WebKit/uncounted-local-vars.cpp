@@ -121,6 +121,7 @@ void foo8(RefCountable* obj) {
     RefCountable *bar = foo->trivial() ? foo.get() : nullptr;
     // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
     foo = nullptr;
+    foo = (RefCountable *)0;
     bar->method();
   }
 }

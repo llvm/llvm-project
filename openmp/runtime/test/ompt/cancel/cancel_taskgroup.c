@@ -1,63 +1,65 @@
+// clang-format off
 // RUN:  %libomp-compile && env OMP_CANCELLATION=true %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: clang-3, clang-4.0.0
 // Current GOMP interface implementation does not support cancellation; icc 16 has a bug
 // XFAIL: gcc, icc-16
+// clang-format on
 
 #include "callback.h"
-#include <unistd.h>  
+#include <unistd.h>
 #include <stdio.h>
 
-int main()
-{
-  int condition=0;
-  #pragma omp parallel num_threads(2)
+int main() {
+  int condition = 0;
+#pragma omp parallel num_threads(2)
   {}
 
   print_frame(0);
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp master
+#pragma omp master
     {
-      #pragma omp taskgroup
+#pragma omp taskgroup
       {
-        #pragma omp task shared(condition)
+#pragma omp task shared(condition)
         {
           printf("start execute task 1\n");
           OMPT_SIGNAL(condition);
-          OMPT_WAIT(condition,2);
-          #pragma omp cancellation point taskgroup
+          OMPT_WAIT(condition, 2);
+#pragma omp cancellation point taskgroup
           printf("end execute task 1\n");
         }
-        #pragma omp task shared(condition)
+#pragma omp task shared(condition)
         {
           printf("start execute task 2\n");
           OMPT_SIGNAL(condition);
-          OMPT_WAIT(condition,2);
-          #pragma omp cancellation point taskgroup
+          OMPT_WAIT(condition, 2);
+#pragma omp cancellation point taskgroup
           printf("end execute task 2\n");
         }
-      #pragma omp task shared(condition)
+#pragma omp task shared(condition)
         {
           printf("start execute task 3\n");
           OMPT_SIGNAL(condition);
-          OMPT_WAIT(condition,2);
-          #pragma omp cancellation point taskgroup
+          OMPT_WAIT(condition, 2);
+#pragma omp cancellation point taskgroup
           printf("end execute task 3\n");
         }
-      #pragma omp task if(0) shared(condition)
+#pragma omp task if (0) shared(condition)
         {
           printf("start execute task 4\n");
-          OMPT_WAIT(condition,1);
-          #pragma omp cancel taskgroup
+          OMPT_WAIT(condition, 1);
+#pragma omp cancel taskgroup
           printf("end execute task 4\n");
         }
         OMPT_SIGNAL(condition);
       }
     }
-    #pragma omp barrier
+#pragma omp barrier
   }
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_masked'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
@@ -67,24 +69,25 @@ int main()
 
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_masked_begin:
-  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]],
-  // CHECK-SAME: task_id=[[PARENT_TASK_ID:[0-9]+]],
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]],
+  // CHECK-SAME: task_id=[[PARENT_TASK_ID:[0-f]+]],
   // CHECK-SAME: codeptr_ra={{(0x)?[0-f]*}}
 
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{(0x)?[0-f]*}}, parent_task_frame.reenter={{(0x)?[0-f]*}}, new_task_id=[[FIRST_TASK_ID:[0-9]+]], codeptr_ra={{(0x)?[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{(0x)?[0-f]*}}, parent_task_frame.reenter={{(0x)?[0-f]*}}, new_task_id=[[SECOND_TASK_ID:[0-9]+]], codeptr_ra={{(0x)?[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{(0x)?[0-f]*}}, parent_task_frame.reenter={{(0x)?[0-f]*}}, new_task_id=[[THIRD_TASK_ID:[0-9]+]], codeptr_ra={{(0x)?[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{(0x)?[0-f]*}}, parent_task_frame.reenter={{(0x)?[0-f]*}}, new_task_id=[[FIRST_TASK_ID:[0-f]+]], codeptr_ra={{(0x)?[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{(0x)?[0-f]*}}, parent_task_frame.reenter={{(0x)?[0-f]*}}, new_task_id=[[SECOND_TASK_ID:[0-f]+]], codeptr_ra={{(0x)?[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{(0x)?[0-f]*}}, parent_task_frame.reenter={{(0x)?[0-f]*}}, new_task_id=[[THIRD_TASK_ID:[0-f]+]], codeptr_ra={{(0x)?[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no
 
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{(0x)?[0-f]*}}, parent_task_frame.reenter={{(0x)?[0-f]*}}, new_task_id=[[CANCEL_TASK_ID:[0-9]+]], codeptr_ra={{(0x)?[0-f]*}}, task_type=ompt_task_explicit|ompt_task_undeferred=134217732, has_dependences=no
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{(0x)?[0-f]*}}, parent_task_frame.reenter={{(0x)?[0-f]*}}, new_task_id=[[CANCEL_TASK_ID:[0-f]+]], codeptr_ra={{(0x)?[0-f]*}}, task_type=ompt_task_explicit|ompt_task_undeferred=134217732, has_dependences=no
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[PARENT_TASK_ID]], second_task_id=[[CANCEL_TASK_ID]], prior_task_status=ompt_task_switch=7
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_data=[[CANCEL_TASK_ID]], flags=ompt_cancel_taskgroup|ompt_cancel_activated=24, codeptr_ra={{(0x)?[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_id=[[CANCEL_TASK_ID]], flags=ompt_cancel_taskgroup|ompt_cancel_activated=24, codeptr_ra={{(0x)?[0-f]*}}
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[CANCEL_TASK_ID]], second_task_id=[[PARENT_TASK_ID]], prior_task_status=ompt_task_cancel=3
 
-  // CHECK-DAG: {{^}}{{[0-9]+}}: ompt_event_cancel: task_data={{[0-9]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_discarded_task=72, codeptr_ra=[[NULL]]
-  // CHECK-DAG: {{^}}{{[0-9]+}}: ompt_event_cancel: task_data={{[0-9]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_discarded_task=72, codeptr_ra=[[NULL]]
+  // CHECK-DAG: {{^}}{{[0-9]+}}: ompt_event_cancel: task_id={{[0-f]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_discarded_task=72, codeptr_ra=[[NULL]]
+  // CHECK-DAG: {{^}}{{[0-9]+}}: ompt_event_cancel: task_id={{[0-f]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_discarded_task=72, codeptr_ra=[[NULL]]
   
   // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_thread_begin: thread_type=ompt_thread_worker=2, thread_id=[[THREAD_ID]]
-  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_cancel: task_data={{[0-9]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_detected=40, codeptr_ra={{(0x)?[0-f]*}}
+  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_cancel: task_id={{[0-f]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_detected=40, codeptr_ra={{(0x)?[0-f]*}}
+  // clang-format on
 
   return 0;
 }

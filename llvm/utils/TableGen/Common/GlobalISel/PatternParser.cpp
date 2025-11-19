@@ -17,8 +17,9 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
+
 static constexpr StringLiteral MIFlagsEnumClassName = "MIFlagEnum";
 
 namespace {
@@ -445,6 +446,3 @@ const PatFrag *PatternParser::parsePatFrag(const Record *Def) {
   SeenPatFrags.insert(Res);
   return Res;
 }
-
-} // namespace gi
-} // namespace llvm

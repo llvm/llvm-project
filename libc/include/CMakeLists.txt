@@ -69,8 +69,8 @@ add_header_macro(
   ../libc/include/dlfcn.yaml
   dlfcn.h
   DEPENDS
-    .llvm-libc-macros.dlfcn_macros
     .llvm_libc_common_h
+    .llvm-libc-types.dl_info
 )
 
 add_header_macro(
@@ -103,6 +103,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  stdint
+  ../libc/include/stdint.yaml
+  stdint.h
+  DEPENDS
+    .llvm-libc-macros.stdint_macros
+)
+
+add_header_macro(
   inttypes
   ../libc/include/inttypes.yaml
   inttypes.h
@@ -110,6 +118,7 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
     .llvm-libc-macros.inttypes_macros
+    .stdint
 )
 
 add_header_macro(
@@ -118,14 +127,6 @@ add_header_macro(
   float.h
   DEPENDS
     .llvm-libc-macros.float_macros
-)
-
-add_header_macro(
-  stdint
-  ../libc/include/stdint.yaml
-  stdint.h
-  DEPENDS
-    .llvm-libc-macros.stdint_macros
 )
 
 add_header_macro(
@@ -165,7 +166,18 @@ add_header_macro(
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
-    .llvm-libc-types.stdfix-types
+    .llvm-libc-types.int_hk_t
+    .llvm-libc-types.int_hr_t
+    .llvm-libc-types.int_k_t
+    .llvm-libc-types.int_lk_t
+    .llvm-libc-types.int_lr_t
+    .llvm-libc-types.int_r_t
+    .llvm-libc-types.uint_uhk_t
+    .llvm-libc-types.uint_uhr_t
+    .llvm-libc-types.uint_uk_t
+    .llvm-libc-types.uint_ulk_t
+    .llvm-libc-types.uint_ulr_t
+    .llvm-libc-types.uint_ur_t
 )
 
 
@@ -187,6 +199,18 @@ add_header_macro(
   arpa/inet.h
   DEPENDS
     .llvm_libc_common_h
+    .inttypes
+)
+
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_in
+  ../libc/include/netinet/in.yaml
+  netinet/in.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.netinet_in_macros
 )
 
 add_header_macro(
@@ -205,6 +229,9 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.complex_macros
+    .llvm-libc-types.float128
+    .llvm-libc-types.cfloat128
+    .llvm-libc-types.cfloat16
 )
 
 add_header_macro(
@@ -214,6 +241,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.jmp_buf
+    .llvm-libc-types.sigjmp_buf
 )
 
 add_header_macro(
@@ -390,6 +418,8 @@ add_header_macro(
     .llvm-libc-types.pthread_attr_t
     .llvm-libc-types.pthread_condattr_t
     .llvm-libc-types.pthread_key_t
+    .llvm-libc-types.pthread_barrier_t
+    .llvm-libc-types.pthread_barrierattr_t
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
     .llvm-libc-types.pthread_once_t
@@ -616,8 +646,9 @@ add_header_macro(
   sys/time.h
   DEPENDS
     .llvm_libc_common_h
-    .llvm-libc-types.struct_timeval
     .llvm-libc-macros.sys_time_macros
+    .llvm-libc-types.struct_itimerval
+    .llvm-libc-types.struct_timeval
 )
 
 add_header_macro(
@@ -721,6 +752,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  wctype
+  ../libc/include/wctype.yaml
+  wctype.h
+  DEPENDS
+    .llvm_libc_common_h    
+    .llvm-libc-types.wint_t
+)
+
+add_header_macro(
   locale
   ../libc/include/locale.yaml
   locale.h
@@ -740,6 +780,15 @@ add_header_macro(
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
     .llvm-libc-macros.poll-macros
+  )
+
+add_header_macro(
+  nl_types
+  ../libc/include/nl_types.yaml
+  nl_types.h
+  DEPENDS
+    .llvm-libc-macros.nl_types_macros
+    .llvm-libc-types.nl_catd
   )
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility

@@ -25,9 +25,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
-#include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
@@ -60,6 +58,8 @@ std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);
 std::optional<unsigned> getMaxNReg(const Function &);
 
+bool hasBlocksAreClusters(const Function &);
+
 inline bool isKernelFunction(const Function &F) {
   return F.getCallingConv() == CallingConv::PTX_Kernel;
 }
@@ -80,6 +80,8 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
     return 32;
   if (size <= 64)
     return 64;
+  if (size <= 128)
+    return 128;
   return size;
 }
 
@@ -87,7 +89,7 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
 inline bool shouldPassAsArray(Type *Ty) {
   return Ty->isAggregateType() || Ty->isVectorTy() ||
-         Ty->getScalarSizeInBits() == 128 || Ty->isHalfTy() || Ty->isBFloatTy();
+         Ty->getScalarSizeInBits() >= 128 || Ty->isHalfTy() || Ty->isBFloatTy();
 }
 
 namespace NVPTX {
@@ -95,8 +97,8 @@ namespace NVPTX {
 // register. NOTE: This must be kept in sync with the register classes
 // defined in NVPTXRegisterInfo.td.
 inline auto packed_types() {
-  static const auto PackedTypes = {MVT::v4i8, MVT::v2f16, MVT::v2bf16,
-                                   MVT::v2i16, MVT::v2f32};
+  static const auto PackedTypes = {MVT::v4i8,  MVT::v2f16, MVT::v2bf16,
+                                   MVT::v2i16, MVT::v2f32, MVT::v2i32};
   return PackedTypes;
 }
 
@@ -165,6 +167,8 @@ inline std::string ScopeToString(Scope S) {
     return "Cluster";
   case Scope::Device:
     return "Device";
+  case Scope::DefaultDevice:
+    return "DefaultDevice";
   }
   report_fatal_error(formatv("Unknown NVPTX::Scope \"{}\".",
                              static_cast<ScopeUnderlyingType>(S)));

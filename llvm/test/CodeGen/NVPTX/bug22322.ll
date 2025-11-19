@@ -20,12 +20,12 @@ _ZL11compute_vecRK6float3jb.exit:
   call void @llvm.lifetime.start.p0(i64 4, ptr %ret_vec.sroa.8.i)
   %6 = and i32 %4, 15
   %7 = icmp eq i32 %6, 0
-  %8 = select i1 %7, float 0.000000e+00, float -1.000000e+00
+  %8 = select nnan nsz i1 %7, float 0.000000e+00, float -1.000000e+00
   store float %8, ptr %ret_vec.sroa.8.i, align 4
 ; CHECK: max.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, 0f00000000
   %9 = fcmp olt float %8, 0.000000e+00
   %ret_vec.sroa.8.i.val = load float, ptr %ret_vec.sroa.8.i, align 4
-  %10 = select i1 %9, float 0.000000e+00, float %ret_vec.sroa.8.i.val
+  %10 = select nnan nsz i1 %9, float 0.000000e+00, float %ret_vec.sroa.8.i.val
   call void @llvm.lifetime.end.p0(i64 4, ptr %ret_vec.sroa.8.i)
   %11 = getelementptr inbounds %class.float3, ptr %dst, i64 %5, i32 0
   store float 0.000000e+00, ptr %11, align 4
@@ -51,7 +51,7 @@ declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 ; Function Attrs: nounwind
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "no-signed-zeros-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 

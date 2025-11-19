@@ -74,6 +74,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
+  let ReadsPastVL = 1;
 }
 
 class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
@@ -98,6 +99,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
+  let ReadsPastVL = 1;
 }
 
 class VCIXInfo<string suffix, VCIXType type, DAGOperand TyRd,
@@ -215,6 +217,16 @@ let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
   defm FVW : CustomSiFiveVCIX<"fvw", VCIX_XVW, VR,    VR,    FPR32>, Sched<[]>;
 }
 
+let Predicates = [HasVendorXSfvfexpAny], DecoderNamespace = "XSfvector" in {
+  def SF_VFEXP_V : VALUVs2<0b010011, 0b00111, OPFVV, "sf.vfexp.v">,
+                   SchedUnaryMC<"WriteSF_VFExp", "ReadSF_VFExp">;
+}
+
+let Predicates = [HasVendorXSfvfexpa], DecoderNamespace = "XSfvector" in {
+  def SF_VFEXPA_V : VALUVs2<0b010011, 0b00110, OPFVV, "sf.vfexpa.v">,
+                    SchedUnaryMC<"WriteSF_VFExpa", "ReadSF_VFExpa">;
+}
+
 let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
     DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
   def SF_VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
@@ -243,10 +255,9 @@ let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvector",
 }
 
 class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
-      Pseudo<(outs),
-             (ins OpClass:$op1, payload5:$rs2, payload5:$rd, RS1Class:$r1,
-                  AVL:$vl, sew:$sew), []>,
-      RISCVVPseudo {
+      RISCVVPseudo<(outs),
+                   (ins OpClass:$op1, payload5:$rs2, payload5:$rd, RS1Class:$r1,
+                        AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -255,10 +266,9 @@ class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
 }
 
 class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
-      Pseudo<(outs),
-             (ins OpClass:$op1, payload5:$rd, RS2Class:$rs2, RS1Class:$r1,
-                  AVL:$vl, sew:$sew), []>,
-      RISCVVPseudo {
+      RISCVVPseudo<(outs),
+                   (ins OpClass:$op1, payload5:$rd, RS2Class:$rs2, RS1Class:$r1,
+                        AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -268,10 +278,9 @@ class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
 
 class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
                     DAGOperand RS1Class> :
-      Pseudo<(outs),
-             (ins OpClass:$op1, RDClass:$rd, RS2Class:$rs2, RS1Class:$r1,
-                  AVL:$vl, sew:$sew), []>,
-      RISCVVPseudo {
+      RISCVVPseudo<(outs),
+                   (ins OpClass:$op1, RDClass:$rd, RS2Class:$rs2, RS1Class:$r1,
+                        AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -280,10 +289,9 @@ class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
 }
 
 class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
-      Pseudo<(outs RDClass:$rd),
-             (ins OpClass:$op1, payload5:$rs2, RS1Class:$r1,
-                  AVL:$vl, sew:$sew), []>,
-      RISCVVPseudo {
+      RISCVVPseudo<(outs RDClass:$rd),
+                   (ins OpClass:$op1, payload5:$rs2, RS1Class:$r1,
+                        AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -293,10 +301,9 @@ class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
 
 class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
                      DAGOperand RS1Class> :
-      Pseudo<(outs RDClass:$rd),
-             (ins OpClass:$op1, RS2Class:$rs2, RS1Class:$r1,
-                  AVL:$vl, sew:$sew), []>,
-      RISCVVPseudo {
+      RISCVVPseudo<(outs RDClass:$rd),
+                   (ins OpClass:$op1, RS2Class:$rs2, RS1Class:$r1,
+                        AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -306,10 +313,9 @@ class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
 
 class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
                       DAGOperand RS1Class> :
-      Pseudo<(outs RDClass:$rd),
-             (ins OpClass:$op1, RDClass:$rs3, RS2Class:$rs2, RS1Class:$r1,
-                  AVL:$vl, sew:$sew), []>,
-      RISCVVPseudo {
+      RISCVVPseudo<(outs RDClass:$rd),
+                   (ins OpClass:$op1, RDClass:$rs3, RS2Class:$rs2, RS1Class:$r1,
+                        AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -442,8 +448,10 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach f = FPList in {
     foreach m = f.MxList in {
-    defm f.FX # "V" : VPseudoVC_XV<m, f.fprclass, payload1>;
-    defm f.FX # "VV" : VPseudoVC_XVV<m, f.fprclass, payload1>;
+      let AltFmtType = IS_NOT_ALTFMT in {
+        defm f.FX # "V" : VPseudoVC_XV<m, f.fprclass, payload1>;
+        defm f.FX # "VV" : VPseudoVC_XVV<m, f.fprclass, payload1>;
+      }
     }
   }
   foreach m = MxListW in {
@@ -453,7 +461,8 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach f = FPListW in {
     foreach m = f.MxList in
-    defm f.FX # "VW" : VPseudoVC_XVW<m, f.fprclass, payload1>;
+      let AltFmtType = IS_NOT_ALTFMT in
+        defm f.FX # "VW" : VPseudoVC_XVW<m, f.fprclass, payload1>;
   }
 }
 
@@ -475,9 +484,51 @@ let Predicates = [HasVendorXSfvfwmaccqqq] in {
   defm SF_VFWMACC_4x4x4 : VPseudoSiFiveVFWMACC;
 }
 
-let Predicates = [HasVendorXSfvfnrclipxfqf] in {
+let Predicates = [HasVendorXSfvfnrclipxfqf], AltFmtType = IS_NOT_ALTFMT in {
   defm SF_VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
   defm SF_VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
+}
+
+class VFExpSchedSEWSet<string mx, bit IsBF16, bit IsApprox> {
+  defvar BaseSet = SchedSEWSet<mx, isF=1>.val;
+  list<int> val = !if(IsBF16, !listremove(BaseSet, [32, 64]),
+                      !if(IsApprox, BaseSet, !listremove(BaseSet, [64])));
+}
+multiclass VPseudoVFExp_V<bit IsBF16 = false, bit IsApprox = false> {
+  defvar SchedSuffix = !if(IsApprox, "VFExpa", "VFExp");
+
+  foreach m = MxListF in {
+    defvar mx = m.MX;
+    foreach e = VFExpSchedSEWSet<mx, IsBF16, IsApprox>.val in {
+      let VLMul = m.value in {
+        def "_V_" # mx # "_E" # e
+            : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
+              SchedUnary<"WriteSF_" # SchedSuffix, "ReadSF_" # SchedSuffix,
+                         mx, e, forcePassthruRead=true>;
+        def "_V_" # mx # "_E" # e # "_MASK"
+            : VPseudoUnaryMask<m.vrclass, m.vrclass>,
+              RISCVMaskedPseudo<MaskIdx = 2>,
+              SchedUnary<"WriteSF_" # SchedSuffix, "ReadSF_" # SchedSuffix,
+                         mx, e, forcePassthruRead=true>;
+      }
+    }
+  }
+}
+
+let Predicates = [HasVendorXSfvfbfexp16e], hasSideEffects = 0 in {
+  let AltFmtType = IS_ALTFMT in {
+    defm PseudoSF_VFEXP_ALT : VPseudoVFExp_V<IsBF16=true>;
+  }
+}
+
+let Predicates = [HasVendorXSfvfexpAnyFloat], hasSideEffects = 0 in {
+  let AltFmtType = IS_NOT_ALTFMT in {
+    defm PseudoSF_VFEXP : VPseudoVFExp_V;
+  }
+}
+
+let Predicates = [HasVendorXSfvfexpa], AltFmtType = IS_NOT_ALTFMT in {
+  defm PseudoSF_VFEXPA : VPseudoVFExp_V<IsApprox=true>;
 }
 
 // SDNode
@@ -774,7 +825,7 @@ multiclass VPatVQMACCQOQ<string intrinsic, string instruction, string kind>
     : VPatVMACC<intrinsic, instruction, kind, VQMACCQOQInfoPairs, vint8m1_t>;
 
 multiclass VPatVFWMACC<string intrinsic, string instruction, string kind>
-    : VPatVMACC<intrinsic, instruction, kind, AllWidenableBFloatToFloatVectors,
+    : VPatVMACC<intrinsic, instruction, kind, AllWidenableBF16ToFloatVectors,
                 vbfloat16m1_t>;
 
 defset list<VTypeInfoToWide> VFNRCLIPInfoPairs = {
@@ -885,4 +936,37 @@ let Predicates = [HasVendorXSfcease] in {
     let rs1 = 0b00000;
     let rs2 = 0b00101;
 }
+}
+
+let Predicates = [HasVendorXSfvfbfexp16e] in {
+  defm : VPatUnaryV_V<"int_riscv_sf_vfexp", "PseudoSF_VFEXP_ALT",
+                      AllBF16Vectors,
+                      isSEWAware=1>;
+}
+
+let Predicates = [HasVendorXSfvfexp16e] in {
+  defm : VPatUnaryV_V<"int_riscv_sf_vfexp", "PseudoSF_VFEXP",
+                      [VF16MF4, VF16MF2, VF16M1, VF16M2, VF16M4, VF16M8],
+                      isSEWAware=1>;
+}
+
+let Predicates = [HasVendorXSfvfexp32e] in {
+  defm : VPatUnaryV_V<"int_riscv_sf_vfexp", "PseudoSF_VFEXP",
+                      [VF32MF2, VF32M1, VF32M2, VF32M4, VF32M8], isSEWAware=1>;
+}
+
+let Predicates = [HasVendorXSfvfexpa] in {
+  defm : VPatUnaryV_V<"int_riscv_sf_vfexpa", "PseudoSF_VFEXPA",
+                      [VF32MF2, VF32M1, VF32M2, VF32M4, VF32M8], isSEWAware=1>;
+}
+
+let Predicates = [HasVendorXSfvfexpa, HasVInstructionsF16] in {
+  defm : VPatUnaryV_V<"int_riscv_sf_vfexpa", "PseudoSF_VFEXPA",
+                      [VF16MF4, VF16MF2, VF16M1, VF16M2, VF16M4, VF16M8],
+                      isSEWAware=1>;
+}
+
+let Predicates = [HasVendorXSfvfexpa64e] in {
+  defm : VPatUnaryV_V<"int_riscv_sf_vfexpa", "PseudoSF_VFEXPA",
+                      [VF64M1, VF64M2, VF64M4, VF64M8], isSEWAware=1>;
 }

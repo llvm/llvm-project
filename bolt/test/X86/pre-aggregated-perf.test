@@ -61,11 +61,11 @@ RUN: FileCheck %s -check-prefix=NEWFORMAT --input-file %t.bolt.yaml
 RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated-basic.txt -o %t.ba \
 RUN:   2>&1 | FileCheck %s --check-prefix=BASIC-ERROR
 RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated-basic.txt -o %t.ba.nl \
-RUN:   -nl 2>&1 | FileCheck %s --check-prefix=BASIC-SUCCESS
-RUN: FileCheck %s --input-file %t.ba.nl --check-prefix CHECK-BASIC-NL
+RUN:   -ba 2>&1 | FileCheck %s --check-prefix=BASIC-SUCCESS
+RUN: FileCheck %s --input-file %t.ba.nl --check-prefix CHECK-BASIC-BA
 BASIC-ERROR: BOLT-INFO: 0 out of 7 functions in the binary (0.0%) have non-empty execution profile
 BASIC-SUCCESS: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
-CHECK-BASIC-NL: no_lbr cycles
+CHECK-BASIC-BA: no_lbr cycles
 
 PERF2BOLT: 1 frame_dummy/1 1e 1 frame_dummy/1 0 0 1
 PERF2BOLT-NEXT: 1 main 451 1 SolveCubic 0 0 2

@@ -23,17 +23,17 @@ define void @test1_select_invariant(ptr %src.1, ptr %src.2, ptr %dst, i1 %c, i8 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[PTR_SEL]], align 8, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i8
 ; CHECK-NEXT:    [[INDUCTION2:%.*]] = add i8 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[PTR_SEL]], align 8, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i8 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i8 [[INDUCTION2]]
-; CHECK-NEXT:    store i8 [[TMP10]], ptr [[TMP11]], align 2, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    store i8 [[TMP10]], ptr [[TMP8]], align 2, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store i8 [[TMP6]], ptr [[TMP11]], align 2, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    store i8 [[TMP6]], ptr [[TMP8]], align 2, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

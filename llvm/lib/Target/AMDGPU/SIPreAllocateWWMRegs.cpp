@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -128,6 +129,9 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
 
         const Register VirtReg = MO.getReg();
         if (VirtReg.isPhysical())
+          continue;
+
+        if (!VirtReg.isValid())
           continue;
 
         if (!VRM->hasPhys(VirtReg))

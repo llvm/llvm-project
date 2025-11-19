@@ -98,8 +98,6 @@ LANGOPT(Exceptions        , 1, 0, NotCompatible, "exception handling")
 LANGOPT(ObjCExceptions    , 1, 0, NotCompatible, "Objective-C exceptions")
 LANGOPT(CXXExceptions     , 1, 0, NotCompatible, "C++ exceptions")
 LANGOPT(EHAsynch          , 1, 0, NotCompatible, "C/C++ EH Asynch exceptions")
-ENUM_LANGOPT(ExceptionHandling, ExceptionHandlingKind, 3,
-             ExceptionHandlingKind::None,  NotCompatible, "exception handling")
 LANGOPT(IgnoreExceptions  , 1, 0, NotCompatible, "ignore exceptions")
 LANGOPT(ExternCNoUnwind   , 1, 0, NotCompatible, "Assume extern C functions don't unwind")
 LANGOPT(AssumeNothrowExceptionDtor , 1, 0, NotCompatible, "Assume exception object's destructor is nothrow")
@@ -133,6 +131,13 @@ LANGOPT(PointerAuthInitFiniAddressDiscrimination, 1, 0, NotCompatible,
 LANGOPT(PointerAuthELFGOT, 1, 0, NotCompatible, "authenticate pointers from GOT")
 LANGOPT(AArch64JumpTableHardening, 1, 0, NotCompatible, "use hardened lowering for jump-table dispatch")
 
+LANGOPT(PointerAuthObjcIsa, 1, 0, NotCompatible, "authentication of isa and super pointers in ObjC instances")
+LANGOPT(PointerAuthObjcInterfaceSel, 1, 0, NotCompatible, "authentication of SEL fields of ObjC interfaces")
+LANGOPT(PointerAuthObjcInterfaceSelKey, 16, 0, NotCompatible, "authentication key for SEL fields of ObjC interfaces")
+LANGOPT(PointerAuthObjcClassROPointers, 1, 0, Benign, "class_ro_t pointer authentication")
+
+LANGOPT(PointerAuthBlockDescriptorPointers, 1, 0, NotCompatible, "enable signed block descriptors")
+
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, NotCompatible, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, NotCompatible, "experimental late parsing of attributes")
 
@@ -161,8 +166,6 @@ LANGOPT(ModulesValidateTextualHeaderIncludes, 1, 1, Compatible, "validation of t
 LANGOPT(ModulesErrorRecovery, 1, 1, Benign, "automatically importing modules as needed when performing error recovery")
 LANGOPT(ImplicitModules, 1, 1, Benign, "building modules that are not specified via -fmodule-file")
 LANGOPT(ModulesLocalVisibility, 1, 0, Compatible, "local submodule visibility")
-LANGOPT(Optimize          , 1, 0, Compatible, "__OPTIMIZE__ predefined macro")
-LANGOPT(OptimizeSize      , 1, 0, Compatible, "__OPTIMIZE_SIZE__ predefined macro")
 LANGOPT(Static            , 1, 0, Compatible, "__STATIC__ predefined macro (as opposed to __DYNAMIC__)")
 VALUE_LANGOPT(PackStruct  , 32, 0, NotCompatible,
               "default struct packing maximum alignment")
@@ -179,7 +182,6 @@ VALUE_LANGOPT(PIE                    , 1, 0, Compatible, "is pie")
 LANGOPT(ROPI                         , 1, 0, NotCompatible, "Read-only position independence")
 LANGOPT(RWPI                         , 1, 0, NotCompatible, "Read-write position independence")
 LANGOPT(GNUInline                    , 1, 0, Compatible, "GNU inline semantics")
-LANGOPT(NoInlineDefine               , 1, 0, Compatible, "__NO_INLINE__ predefined macro")
 LANGOPT(Deprecated                   , 1, 0, Compatible, "__DEPRECATED predefined macro")
 LANGOPT(FastMath                     , 1, 0, Compatible, "fast FP math optimizations, and __FAST_MATH__ predefined macro")
 LANGOPT(UnsafeFPMath                 , 1, 0, Compatible, "Unsafe Floating Point Math")
@@ -191,6 +193,7 @@ LANGOPT(NoHonorInfs       , 1, 0, Benign, "Permit Floating Point optimization wi
 LANGOPT(NoSignedZero      , 1, 0, Benign, "Permit Floating Point optimization without regard to signed zeros")
 LANGOPT(AllowRecip        , 1, 0, Benign, "Permit Floating Point reciprocal")
 LANGOPT(ApproxFunc        , 1, 0, Benign, "Permit Floating Point approximation")
+LANGOPT(NamedLoops        , 1, 0, Benign, "Permit named break/continue")
 
 ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 3, CX_None, NotCompatible, "Enable use of range reduction for complex arithmetics.")
 
@@ -213,6 +216,7 @@ LANGOPT(OpenCLGenericAddressSpace, 1, 0, NotCompatible, "OpenCL generic keyword"
 LANGOPT(OpenCLPipes              , 1, 0, NotCompatible, "OpenCL pipes language constructs and built-ins")
 LANGOPT(NativeHalfType    , 1, 0, NotCompatible, "Native half type support")
 LANGOPT(NativeHalfArgsAndReturns, 1, 0, NotCompatible, "Native half args and returns")
+LANGOPT(NativeInt16Type   , 1, 1, NotCompatible, "Native int 16 type support")
 LANGOPT(CUDA              , 1, 0, NotCompatible, "CUDA")
 LANGOPT(HIP               , 1, 0, NotCompatible, "HIP")
 LANGOPT(OpenMP            , 32, 0, NotCompatible, "OpenMP support and version of OpenMP (31, 40 or 45)")
@@ -239,9 +243,10 @@ LANGOPT(HLSL, 1, 0, NotCompatible, "HLSL")
 ENUM_LANGOPT(HLSLVersion, HLSLLangStd, 16, HLSL_Unset, NotCompatible, "HLSL Version")
 LANGOPT(HLSLStrictAvailability, 1, 0, NotCompatible,
         "Strict availability diagnostic mode for HLSL built-in functions.")
+LANGOPT(HLSLSpvUseUnknownImageFormat, 1, 0, NotCompatible, "For storage images and texel buffers, sets the default format to 'Unknown' when not specified via the `vk::image_format` attribute. If this option is not used, the format is inferred from the resource's data type.")
+LANGOPT(HLSLSpvEnableMaximalReconvergence, 1, 0, NotCompatible, "Enables the MaximallyReconvergesKHR execution mode for this module. This ensures that control flow reconverges at well-defined merge points as defined by the Vulkan spec.")
 
 LANGOPT(CUDAIsDevice      , 1, 0, NotCompatible, "compiling for CUDA device")
-LANGOPT(CUDAAllowVariadicFunctions, 1, 0, NotCompatible, "allowing variadic functions in CUDA device code")
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, NotCompatible, "treating unattributed constexpr functions as __host__ __device__")
 LANGOPT(GPUDeviceApproxTranscendentals, 1, 0, NotCompatible, "using approximate transcendental functions")
 LANGOPT(GPURelocatableDeviceCode, 1, 0, NotCompatible, "generate relocatable device code")
@@ -429,6 +434,7 @@ ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
 LANGOPT(RegCall4, 1, 0, NotCompatible, "Set __regcall4 as a default calling convention to respect __regcall ABI v.4")
 
 LANGOPT(MatrixTypes, 1, 0, NotCompatible, "Enable or disable the builtin matrix type")
+VALUE_LANGOPT(MaxMatrixDimension, 32, (1 << 20) - 1, NotCompatible, "maximum allowed matrix dimension")
 
 LANGOPT(CXXAssumptions, 1, 1, NotCompatible, "Enable or disable codegen and compile-time checks for C++23's [[assume]] attribute")
 
@@ -448,7 +454,7 @@ LANGOPT(BranchTargetEnforcement, 1, 0, NotCompatible, "Branch-target enforcement
 LANGOPT(BranchProtectionPAuthLR, 1, 0, NotCompatible, "Use PC as a diversifier using PAuthLR NOP instructions.")
 LANGOPT(GuardedControlStack, 1, 0, NotCompatible, "Guarded control stack enabled")
 
-LANGOPT(SpeculativeLoadHardening, 1, 0, NotCompatible, "Speculative load hardening enabled")
+LANGOPT(SpeculativeLoadHardening, 1, 0, Benign, "Speculative load hardening enabled")
 
 LANGOPT(RelativeCXXABIVTables, 1, 0, NotCompatible,
         "Use an ABI-incompatible v-table layout that uses relative references")
@@ -490,6 +496,8 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
         "be used in a constant expression.")
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
+
+LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 

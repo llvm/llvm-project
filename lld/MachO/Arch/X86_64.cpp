@@ -51,10 +51,10 @@ struct X86_64 : TargetInfo {
 
 static constexpr std::array<RelocAttrs, 10> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-    {"UNSIGNED",
-     B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
+    {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE1) |
+                     B(BYTE4) | B(BYTE8)},
     {"SIGNED", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-    {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
+    {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE1) | B(BYTE4)},
     {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
     {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
     {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
@@ -82,25 +82,40 @@ int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
                                   relocation_info rel) const {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const uint8_t *loc = buf + offset + rel.r_address;
+  int64_t addend;
 
   switch (rel.r_length) {
+  case 0:
+    addend = static_cast<int8_t>(*loc);
+    break;
   case 2:
-    return static_cast<int32_t>(read32le(loc)) + pcrelOffset(rel.r_type);
+    addend = static_cast<int32_t>(read32le(loc));
+    break;
   case 3:
-    return read64le(loc) + pcrelOffset(rel.r_type);
+    addend = read64le(loc);
+    break;
   default:
     llvm_unreachable("invalid r_length");
   }
+
+  return addend + pcrelOffset(rel.r_type);
 }
 
 void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
                          uint64_t relocVA) const {
   if (r.pcrel) {
-    uint64_t pc = relocVA + 4 + pcrelOffset(r.type);
+    uint64_t pc = relocVA + (1ull << r.length) + pcrelOffset(r.type);
     value -= pc;
   }
 
   switch (r.length) {
+  case 0:
+    if (r.type == X86_64_RELOC_UNSIGNED)
+      checkUInt(loc, r, value, 8);
+    else
+      checkInt(loc, r, value, 8);
+    *loc = value;
+    break;
   case 2:
     if (r.type == X86_64_RELOC_UNSIGNED)
       checkUInt(loc, r, value, 32);

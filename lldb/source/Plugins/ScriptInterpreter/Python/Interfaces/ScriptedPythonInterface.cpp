@@ -17,6 +17,7 @@
 
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include <optional>
 
 using namespace lldb;
@@ -80,6 +81,33 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
 }
 
 template <>
+lldb::StackFrameSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBFrame *sb_frame = reinterpret_cast<lldb::SBFrame *>(
+          python::LLDBSWIGPython_CastPyObjectToSBFrame(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBFrame(*sb_frame);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBFrame to lldb_private::StackFrame.");
+
+  return nullptr;
+}
+
+template <>
+SymbolContext
+ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBSymbolContext *sb_symbol_context =
+          reinterpret_cast<lldb::SBSymbolContext *>(
+              python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBSymbolContext(*sb_symbol_context);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBSymbolContext to lldb_private::SymbolContext.");
+
+  return {};
+}
+
+template <>
 lldb::DataExtractorSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
     python::PythonObject &p, Status &error) {
@@ -109,6 +137,24 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
   }
 
   return m_interpreter.GetOpaqueTypeFromSBBreakpoint(*sb_breakpoint);
+}
+
+template <>
+lldb::BreakpointLocationSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::BreakpointLocationSP>(python::PythonObject &p, Status &error) {
+  lldb::SBBreakpointLocation *sb_break_loc =
+      reinterpret_cast<lldb::SBBreakpointLocation *>(
+          python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(p.get()));
+
+  if (!sb_break_loc) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBBreakpointLocation to "
+        "lldb::BreakpointLocationSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBBreakpointLocation(*sb_break_loc);
 }
 
 template <>
@@ -152,7 +198,8 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
   if (!sb_mem_reg_info) {
     error = Status::FromErrorStringWithFormat(
-        "Couldn't cast lldb::SBMemoryRegionInfo to lldb::MemoryRegionInfoSP.");
+        "Couldn't cast lldb::SBMemoryRegionInfo to "
+        "lldb_private::MemoryRegionInfo.");
     return {};
   }
 
@@ -176,6 +223,41 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
   }
 
   return m_interpreter.GetOpaqueTypeFromSBExecutionContext(*sb_exe_ctx);
+}
+
+template <>
+lldb::DescriptionLevel
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error) {
+  lldb::DescriptionLevel ret_val = lldb::eDescriptionLevelBrief;
+  llvm::Expected<unsigned long long> unsigned_or_err = p.AsUnsignedLongLong();
+  if (!unsigned_or_err) {
+    error = (Status::FromError(unsigned_or_err.takeError()));
+    return ret_val;
+  }
+  unsigned long long unsigned_val = *unsigned_or_err;
+  if (unsigned_val >= lldb::DescriptionLevel::kNumDescriptionLevels) {
+    error = Status("value too large for lldb::DescriptionLevel.");
+    return ret_val;
+  }
+  return static_cast<lldb::DescriptionLevel>(unsigned_val);
+}
+
+template <>
+lldb::StackFrameListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
+    python::PythonObject &p, Status &error) {
+
+  lldb::SBFrameList *sb_frame_list = reinterpret_cast<lldb::SBFrameList *>(
+      python::LLDBSWIGPython_CastPyObjectToSBFrameList(p.get()));
+
+  if (!sb_frame_list) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBFrameList to lldb::StackFrameListSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBFrameList(*sb_frame_list);
 }
 
 #endif

@@ -23,6 +23,7 @@ namespace llvm {
 
 class InductionDescriptor;
 class Instruction;
+class LoopVersioning;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
@@ -31,7 +32,8 @@ class VPBuilder;
 class VPRecipeBuilder;
 struct VFRange;
 
-extern cl::opt<bool> VerifyEachVPlan;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 struct VPlanTransforms {
   /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
@@ -54,21 +56,75 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop,
-                                                                LoopInfo &LI);
+  /// Create a base VPlan0, serving as the common starting point for all later
+  /// candidates. It consists of an initial plain CFG loop with loop blocks from
+  /// \p TheLoop being directly translated to VPBasicBlocks with VPInstruction
+  /// corresponding to the input IR.
+  ///
+  /// The created loop is wrapped in an initial skeleton to facilitate
+  /// vectorization, consisting of a vector pre-header, an exit block for the
+  /// main vector loop (middle.block) and a new block as preheader of the scalar
+  /// loop (scalar.ph). See below for an illustration. It also adds a canonical
+  /// IV and its increment, using \p InductionTy and \p IVDL, and creates a
+  /// VPValue expression for the original trip count.
+  ///
+  ///    [ ] <-- Plan's entry VPIRBasicBlock, wrapping the original loop's
+  ///    / \       old preheader. Will contain iteration number check and SCEV
+  ///   |   |      expansions.
+  ///   |   |
+  ///   /   v
+  ///  |   [ ] <-- vector loop bypass (may consist of multiple blocks) will be
+  ///  |  / |      added later.
+  ///  | /  v
+  ///  ||  [ ]     <-- vector pre header.
+  ///  |/   |
+  ///  |    v
+  ///  |   [  ] \  <-- plain CFG loop wrapping original loop to be vectorized.
+  ///  |   [  ]_|
+  ///  |    |
+  ///  |    v
+  ///  |   [ ]   <--- middle-block with the branch to successors
+  ///  |   / |
+  ///  |  /  |
+  ///  | |   v
+  ///  \--->[ ]   <--- scalar preheader (initial a VPBasicBlock, which will be
+  ///    |   |        replaced later by a VPIRBasicBlock wrapping the scalar
+  ///    |   |         preheader basic block.
+  ///    |   |
+  ///        v      <-- edge from middle to exit iff epilogue is not required.
+  ///    |  [ ] \
+  ///    |  [ ]_|   <-- old scalar loop to handle remainder (scalar epilogue,
+  ///    |   |          header wrapped in VPIRBasicBlock).
+  ///    \   |
+  ///     \  v
+  ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
+  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
+  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
+              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
 
-  /// Prepare the plan for vectorization. It will introduce a dedicated
-  /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
-  /// block of the main vector loop (middle.block). If a check is needed to
-  /// guard executing the scalar epilogue loop, it will be added to the middle
-  /// block, together with VPBasicBlocks for the scalar preheader and exit
-  /// blocks. \p InductionTy is the type of the canonical induction and used for
-  /// related values, like the trip count expression.  It also creates a VPValue
-  /// expression for the original trip count.
-  LLVM_ABI_FOR_TEST static void prepareForVectorization(
-      VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
-      bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
-      DebugLoc IVDL, bool HasUncountableExit, VFRange &Range);
+  /// Update \p Plan to account for all early exits.
+  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
+                                                 bool HasUncountableExit);
+
+  /// If a check is needed to guard executing the scalar epilogue loop, it will
+  /// be added to the middle block.
+  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan,
+                                               bool RequiresScalarEpilogueCheck,
+                                               bool TailFolded);
+
+  // Create a check to \p Plan to see if the vector loop should be executed.
+  static void addMinimumIterationCheck(
+      VPlan &Plan, ElementCount VF, unsigned UF,
+      ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
+      bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
+      const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE);
+
+  /// Add a check to \p Plan to see if the epilogue vector loop should be
+  /// executed.
+  static void addMinimumVectorEpilogueIterationCheck(
+      VPlan &Plan, Value *TripCount, Value *VectorTripCount,
+      bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
+      unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
@@ -84,10 +140,10 @@ struct VPlanTransforms {
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
   LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
-      VPlanPtr &Plan,
+      VPlan &Plan,
       function_ref<const InductionDescriptor *(PHINode *)>
           GetIntOrFpInductionDescriptor,
-      ScalarEvolution &SE, const TargetLibraryInfo &TLI);
+      const TargetLibraryInfo &TLI);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
@@ -99,16 +155,22 @@ struct VPlanTransforms {
   /// not valid.
   static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
 
+  /// Check if \p Plan contains any FMaxNum or FMinNum reductions. If they do,
+  /// try to update the vector loop to exit early if any input is NaN and resume
+  /// executing in the scalar loop to handle the NaNs there. Return false if
+  /// this attempt was unsuccessful.
+  static bool handleMaxMinNumReductions(VPlan &Plan);
+
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
 
   /// Explicitly unroll \p Plan by \p UF.
-  static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
+  static void unrollByUF(VPlan &Plan, unsigned UF);
 
-  /// Replace each VPReplicateRecipe outside on any replicate region in \p Plan
-  /// with \p VF single-scalar recipes.
-  /// TODO: Also replicate VPReplicateRecipes inside replicate regions, thereby
-  /// dissolving the latter.
+  /// Replace each replicating VPReplicateRecipe and VPInstruction outside of
+  /// any replicate region in \p Plan with \p VF single-scalar recipes.
+  /// TODO: Also replicate VPScalarIVSteps and VPReplicateRecipes inside
+  /// replicate regions, thereby dissolving the latter.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
@@ -120,7 +182,7 @@ struct VPlanTransforms {
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
-  static void optimize(VPlan &Plan);
+  LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -146,6 +208,12 @@ struct VPlanTransforms {
   truncateToMinimalBitwidths(VPlan &Plan,
                              const MapVector<Instruction *, uint64_t> &MinBWs);
 
+  /// Replace symbolic strides from \p StridesMap in \p Plan with constants when
+  /// possible.
+  static void
+  replaceSymbolicStrides(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                         const DenseMap<Value *, const SCEV *> &StridesMap);
+
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
   /// recipes meet the following conditions:
@@ -167,10 +235,9 @@ struct VPlanTransforms {
   /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
-  /// \returns true if the transformation succeeds, or false if it doesn't.
-  static bool
-  tryAddExplicitVectorLength(VPlan &Plan,
-                             const std::optional<unsigned> &MaxEVLSafeElements);
+  static void
+  addExplicitVectorLength(VPlan &Plan,
+                          const std::optional<unsigned> &MaxEVLSafeElements);
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
@@ -193,15 +260,26 @@ struct VPlanTransforms {
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                          VPBasicBlock *EarlyExitVPBB,
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                         VPBasicBlock *LatchVPBB,
-                                         VFRange &Range);
+                                         VPBasicBlock *LatchVPBB);
 
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
-  /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
-  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
-  static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
+  /// Transform EVL loops to use variable-length stepping after region
+  /// dissolution.
+  ///
+  /// Once loop regions are replaced with explicit CFG, EVL loops can step with
+  /// variable vector lengths instead of fixed lengths. This transformation:
+  ///  * Makes EVL-Phi concrete.
+  //   * Removes CanonicalIV and increment.
+  ///  * Replaces the exit condition from
+  ///      (branch-on-count CanonicalIVInc, VectorTripCount)
+  ///    to
+  ///      (branch-on-cond eq AVLNext, 0)
+  static void canonicalizeEVLLoops(VPlan &Plan);
+
+  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  static void convertToConcreteRecipes(VPlan &Plan);
 
   /// This function converts initial recipes to the abstract recipes and clamps
   /// \p Range based on cost model for following optimizations and cost
@@ -210,19 +288,65 @@ struct VPlanTransforms {
   static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                        VFRange &Range);
 
-  /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
-  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
-  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
+  /// Perform instcombine-like simplifications on recipes in \p Plan.
+  static void simplifyRecipes(VPlan &Plan);
+
+  /// Remove BranchOnCond recipes with true or false conditions together with
+  /// removing dead edges to their successors.
+  static void removeBranchOnConst(VPlan &Plan);
+
+  /// Perform common-subexpression-elimination on \p Plan.
+  static void cse(VPlan &Plan);
 
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
   static void
   optimizeInductionExitUsers(VPlan &Plan,
-                             DenseMap<VPValue *, VPValue *> &EndValues);
+                             DenseMap<VPValue *, VPValue *> &EndValues,
+                             ScalarEvolution &SE);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
+
+  /// Hoist single-scalar loads with invariant addresses out of the vector loop
+  /// to the preheader, if they are proven not to alias with any stores in the
+  /// plan using noalias metadata.
+  static void hoistInvariantLoads(VPlan &Plan);
+
+  // Materialize vector trip counts for constants early if it can simply be
+  // computed as (Original TC / VF * UF) * VF * UF.
+  static void
+  materializeConstantVectorTripCount(VPlan &Plan, ElementCount BestVF,
+                                     unsigned BestUF,
+                                     PredicatedScalarEvolution &PSE);
+
+  /// Materialize vector trip count computations to a set of VPInstructions.
+  static void materializeVectorTripCount(VPlan &Plan,
+                                         VPBasicBlock *VectorPHVPBB,
+                                         bool TailByMasking,
+                                         bool RequiresScalarEpilogue);
+
+  /// Materialize the backedge-taken count to be computed explicitly using
+  /// VPInstructions.
+  static void materializeBackedgeTakenCount(VPlan &Plan,
+                                            VPBasicBlock *VectorPH);
+
+  /// Add explicit Build[Struct]Vector recipes to Pack multiple scalar values
+  /// into vectors and Unpack recipes to extract scalars from vectors as
+  /// needed.
+  static void materializePacksAndUnpacks(VPlan &Plan);
+
+  /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
+  static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
+                                    ElementCount VF);
+
+  /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
+  /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
+  /// value. A mapping from SCEV expressions to their expanded IR value is
+  /// returned.
+  static DenseMap<const SCEV *, Value *> expandSCEVs(VPlan &Plan,
+                                                     ScalarEvolution &SE);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
@@ -231,7 +355,7 @@ struct VPlanTransforms {
   /// form of loop-aware SLP, where we use interleave groups to identify
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                     unsigned VectorRegWidth);
+                                     TypeSize VectorRegWidth);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
@@ -247,6 +371,19 @@ struct VPlanTransforms {
   static void
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
+
+  /// Create resume phis in the scalar preheader for first-order recurrences,
+  /// reductions and inductions, and update the VPIRInstructions wrapping the
+  /// original phis in the scalar header. End values for inductions are added to
+  /// \p IVEndValues.
+  static void addScalarResumePhis(VPlan &Plan, VPRecipeBuilder &Builder,
+                                  DenseMap<VPValue *, VPValue *> &IVEndValues);
+
+  /// Handle users in the exit block for first order reductions in the original
+  /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
+  /// users in the original exit block using the VPIRInstruction wrapping to the
+  /// LCSSA phi.
+  static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
 };
 
 } // namespace llvm

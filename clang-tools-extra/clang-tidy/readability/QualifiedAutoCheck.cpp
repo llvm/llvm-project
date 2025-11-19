@@ -1,4 +1,4 @@
-//===--- QualifiedAutoCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,8 +28,11 @@ AST_MATCHER_P(QualType, hasUnqualifiedType,
 
 enum class Qualifier { Const, Volatile, Restrict };
 
-std::optional<Token> findQualToken(const VarDecl *Decl, Qualifier Qual,
-                                   const MatchFinder::MatchResult &Result) {
+} // namespace
+
+static std::optional<Token>
+findQualToken(const VarDecl *Decl, Qualifier Qual,
+              const MatchFinder::MatchResult &Result) {
   // Since either of the locs can be in a macro, use `makeFileCharRange` to be
   // sure that we have a consistent `CharSourceRange`, located entirely in the
   // source file.
@@ -41,24 +44,24 @@ std::optional<Token> findQualToken(const VarDecl *Decl, Qualifier Qual,
   SourceLocation BeginLoc = Decl->getQualifierLoc().getBeginLoc();
   if (BeginLoc.isInvalid())
     BeginLoc = Decl->getBeginLoc();
-  SourceLocation EndLoc = Decl->getLocation();
+  const SourceLocation EndLoc = Decl->getLocation();
 
-  CharSourceRange FileRange = Lexer::makeFileCharRange(
+  const CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(BeginLoc, EndLoc), *Result.SourceManager,
       Result.Context->getLangOpts());
 
   if (FileRange.isInvalid())
     return std::nullopt;
 
-  tok::TokenKind Tok = Qual == Qualifier::Const      ? tok::kw_const
-                       : Qual == Qualifier::Volatile ? tok::kw_volatile
-                                                     : tok::kw_restrict;
+  const tok::TokenKind Tok = Qual == Qualifier::Const      ? tok::kw_const
+                             : Qual == Qualifier::Volatile ? tok::kw_volatile
+                                                           : tok::kw_restrict;
 
   return utils::lexer::getQualifyingToken(Tok, FileRange, *Result.Context,
                                           *Result.SourceManager);
 }
 
-std::optional<SourceRange>
+static std::optional<SourceRange>
 getTypeSpecifierLocation(const VarDecl *Var,
                          const MatchFinder::MatchResult &Result) {
   SourceRange TypeSpecifier(
@@ -73,8 +76,8 @@ getTypeSpecifierLocation(const VarDecl *Var,
   return TypeSpecifier;
 }
 
-std::optional<SourceRange> mergeReplacementRange(SourceRange &TypeSpecifier,
-                                                 const Token &ConstToken) {
+static std::optional<SourceRange>
+mergeReplacementRange(SourceRange &TypeSpecifier, const Token &ConstToken) {
   if (TypeSpecifier.getBegin().getLocWithOffset(-1) == ConstToken.getEndLoc()) {
     TypeSpecifier.setBegin(ConstToken.getLocation());
     return std::nullopt;
@@ -86,32 +89,32 @@ std::optional<SourceRange> mergeReplacementRange(SourceRange &TypeSpecifier,
   return SourceRange(ConstToken.getLocation(), ConstToken.getEndLoc());
 }
 
-bool isPointerConst(QualType QType) {
-  QualType Pointee = QType->getPointeeType();
+static bool isPointerConst(QualType QType) {
+  const QualType Pointee = QType->getPointeeType();
   assert(!Pointee.isNull() && "can't have a null Pointee");
   return Pointee.isConstQualified();
 }
 
-bool isAutoPointerConst(QualType QType) {
-  QualType Pointee =
+static bool isAutoPointerConst(QualType QType) {
+  const QualType Pointee =
       cast<AutoType>(QType->getPointeeType().getTypePtr())->desugar();
   assert(!Pointee.isNull() && "can't have a null Pointee");
   return Pointee.isConstQualified();
 }
-
-} // namespace
 
 QualifiedAutoCheck::QualifiedAutoCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AddConstToQualified(Options.get("AddConstToQualified", true)),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      IgnoreAliasing(Options.get("IgnoreAliasing", true)) {}
 
 void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AddConstToQualified", AddConstToQualified);
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "IgnoreAliasing", IgnoreAliasing);
 }
 
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
@@ -134,15 +137,27 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
 
   auto IsBoundToType = refersToType(equalsBoundNode("type"));
   auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
-  auto IsAutoDeducedToPointer = [](const std::vector<StringRef> &AllowedTypes,
-                                   const auto &...InnerMatchers) {
-    return autoType(hasDeducedType(
-        hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))),
-        unless(hasUnqualifiedType(
-            matchers::matchesAnyListedTypeName(AllowedTypes, false))),
-        unless(pointerType(pointee(hasUnqualifiedType(
-            matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
+
+  auto IsPointerType = [this](const auto &...InnerMatchers) {
+    if (this->IgnoreAliasing) {
+      return qualType(
+          hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))));
+    }
+    return qualType(anyOf(qualType(pointerType(pointee(InnerMatchers...))),
+                          qualType(substTemplateTypeParmType(hasReplacementType(
+                              pointerType(pointee(InnerMatchers...)))))));
   };
+
+  auto IsAutoDeducedToPointer =
+      [IsPointerType](const std::vector<StringRef> &AllowedTypes,
+                      const auto &...InnerMatchers) {
+        return autoType(hasDeducedType(
+            IsPointerType(InnerMatchers...),
+            unless(hasUnqualifiedType(
+                matchers::matchesAnyListedTypeName(AllowedTypes, false))),
+            unless(pointerType(pointee(hasUnqualifiedType(
+                matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
+      };
 
   Finder->addMatcher(
       ExplicitSingleVarDecl(
@@ -207,33 +222,34 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
     if (Var->getLocation() == TypeSpecifier.getEnd().getLocWithOffset(1))
       TypeSpecifier.setEnd(TypeSpecifier.getEnd().getLocWithOffset(1));
 
-    CharSourceRange FixItRange = CharSourceRange::getCharRange(TypeSpecifier);
+    const CharSourceRange FixItRange =
+        CharSourceRange::getCharRange(TypeSpecifier);
     if (FixItRange.isInvalid())
       return;
 
     SourceLocation FixitLoc = FixItRange.getBegin();
-    for (SourceRange &Range : RemoveQualifiersRange) {
+    for (const SourceRange &Range : RemoveQualifiersRange) {
       if (Range.getBegin() < FixitLoc)
         FixitLoc = Range.getBegin();
     }
 
-    std::string ReplStr = [&] {
-      llvm::StringRef PtrConst = isPointerConst(Var->getType()) ? "const " : "";
-      llvm::StringRef LocalConst = IsLocalConst ? "const " : "";
-      llvm::StringRef LocalVol = IsLocalVolatile ? "volatile " : "";
-      llvm::StringRef LocalRestrict = IsLocalRestrict ? "__restrict " : "";
+    const std::string ReplStr = [&] {
+      const StringRef PtrConst = isPointerConst(Var->getType()) ? "const " : "";
+      const StringRef LocalConst = IsLocalConst ? "const " : "";
+      const StringRef LocalVol = IsLocalVolatile ? "volatile " : "";
+      const StringRef LocalRestrict = IsLocalRestrict ? "__restrict " : "";
       return (PtrConst + "auto *" + LocalConst + LocalVol + LocalRestrict)
           .str();
     }();
 
-    DiagnosticBuilder Diag =
+    const DiagnosticBuilder Diag =
         diag(FixitLoc,
              "'%select{|const }0%select{|volatile }1%select{|__restrict }2auto "
              "%3' can be declared as '%4%3'")
         << IsLocalConst << IsLocalVolatile << IsLocalRestrict << Var->getName()
         << ReplStr;
 
-    for (SourceRange &Range : RemoveQualifiersRange) {
+    for (const SourceRange &Range : RemoveQualifiersRange) {
       Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(Range));
     }
 
@@ -270,7 +286,7 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
       if (TypeSpec->isInvalid() || TypeSpec->getBegin().isMacroID() ||
           TypeSpec->getEnd().isMacroID())
         return;
-      SourceLocation InsertPos = TypeSpec->getBegin();
+      const SourceLocation InsertPos = TypeSpec->getBegin();
       diag(InsertPos,
            "'auto *%select{|const }0%select{|volatile }1%2' can be declared as "
            "'const auto *%select{|const }0%select{|volatile }1%2'")
@@ -292,7 +308,7 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
       if (TypeSpec->isInvalid() || TypeSpec->getBegin().isMacroID() ||
           TypeSpec->getEnd().isMacroID())
         return;
-      SourceLocation InsertPos = TypeSpec->getBegin();
+      const SourceLocation InsertPos = TypeSpec->getBegin();
       diag(InsertPos, "'auto &%0' can be declared as 'const auto &%0'")
           << Var->getName() << FixItHint::CreateInsertion(InsertPos, "const ");
     }

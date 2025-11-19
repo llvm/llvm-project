@@ -51,10 +51,6 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
-def gi_vop3pmodsneg :
-    GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
-    GIComplexPatternEquiv<VOP3PModsNeg>;
-
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -82,6 +78,10 @@ def gi_swmmacindex8 :
 def gi_swmmacindex16 :
     GIComplexOperandMatcher<s32, "selectSWMMACIndex16">,
     GIComplexPatternEquiv<SWMMACIndex16>;
+
+def gi_swmmacindex32 :
+    GIComplexOperandMatcher<s64, "selectSWMMACIndex32">,
+    GIComplexPatternEquiv<SWMMACIndex32>;
 
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
@@ -125,6 +125,21 @@ def gi_global_offset :
 def gi_global_saddr :
     GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
     GIComplexPatternEquiv<GlobalSAddr>;
+def gi_global_saddr_cpol :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrCPol">,
+    GIComplexPatternEquiv<GlobalSAddrCPol>;
+def gi_global_saddr_cpol_m0 :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrCPolM0">,
+    GIComplexPatternEquiv<GlobalSAddrCPolM0>;
+def gi_global_saddr_glc :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
+    GIComplexPatternEquiv<GlobalSAddrGLC>;
+def gi_global_saddr_no_ioffset :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffset">,
+    GIComplexPatternEquiv<GlobalSAddrNoIOffset>;
+def gi_global_saddr_no_ioffset_m0 :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetM0">,
+    GIComplexPatternEquiv<GlobalSAddrNoIOffsetM0>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
@@ -300,6 +315,17 @@ def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SSHORT, SIsbuffer_load_short>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_USHORT, SIsbuffer_load_ushort>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_PREFETCH, SIsbuffer_prefetch>;
 
+def : GINodeEquiv<G_AMDGPU_LOAD_D16_LO, SIload_d16_lo>;
+def : GINodeEquiv<G_AMDGPU_LOAD_D16_LO_U8, SIload_d16_lo_u8>;
+def : GINodeEquiv<G_AMDGPU_LOAD_D16_LO_I8, SIload_d16_lo_i8>;
+def : GINodeEquiv<G_AMDGPU_LOAD_D16_HI, SIload_d16_hi>;
+def : GINodeEquiv<G_AMDGPU_LOAD_D16_HI_U8, SIload_d16_hi_u8>;
+def : GINodeEquiv<G_AMDGPU_LOAD_D16_HI_I8, SIload_d16_hi_i8>;
+
+def : GINodeEquiv<G_AMDGPU_WHOLE_WAVE_FUNC_SETUP, AMDGPUwhole_wave_setup>;
+// G_AMDGPU_WHOLE_WAVE_FUNC_RETURN is simpler than AMDGPUwhole_wave_return,
+// so we don't mark it as equivalent.
+
 class GISelSop2Pat <
   SDPatternOperator node,
   Instruction inst,
@@ -426,6 +452,16 @@ def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
 
 def gi_as_hw_round_mode : GICustomOperandRenderer<"renderRoundMode">,
   GISDNodeXFormEquiv<as_hw_round_mode>;
+
+def gi_VOP3PModsNeg : GICustomOperandRenderer<"renderVOP3PModsNeg">,
+  GISDNodeXFormEquiv<VOP3PModsNeg>;
+def gi_VOP3PModsNegs : GICustomOperandRenderer<"renderVOP3PModsNegs">,
+  GISDNodeXFormEquiv<VOP3PModsNegs>;
+def gi_VOP3PModsNegAbs : GICustomOperandRenderer<"renderVOP3PModsNegAbs">,
+  GISDNodeXFormEquiv<VOP3PModsNegAbs>;
+
+def gi_prefetch_loc : GICustomOperandRenderer<"renderPrefetchLoc">,
+  GISDNodeXFormEquiv<PrefetchLoc>;
 
 def gi_MFMALdScaleModifierOp : GICustomOperandRenderer<"renderScaledMAIIntrinsicOperand">,
   GISDNodeXFormEquiv<MFMALdScaleXForm>;

@@ -19,6 +19,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/Tosa/IR/TosaInterfaces.td"
 
 include "mlir/Dialect/Tosa/IR/TosaTypesBase.td"
@@ -43,7 +44,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
   let arguments = (ins
     Tosa_TensorAtLeast1D: $input,
     I32Attr: $axis,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -52,11 +53,12 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -107,8 +109,10 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
     LogicalResult verifyOutputZeroPoint(int64_t zp);
   }];
 
-  let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -299,6 +303,9 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
   }];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -336,6 +343,43 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
 
   let builders = [Tosa_MatMulOpQuantInfoBuilder];
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: matmul_t_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled"> {
+  let summary = "Performs two dimensional matrix multiplications using block scaled tensors.";
+
+  let description = [{
+    Performs two dimensional matrix multiplications using block scaled tensors. The block
+    dimension is always the the last dimension of the tensor, so the result is effectively
+    a matrix multiply of A by the transposed B matrix. If the N dimension of input B is of
+    size 1, the B matrix will be broadcast.
+  }];
+
+  let arguments = (ins
+    Tosa_MXFPDataTensor3D:$a_data,
+    Tosa_MXFPScaleTensor3D:$a_scale,
+    Tosa_MXFPDataTensor3D:$b_data,
+    Tosa_MXFPScaleTensor3D:$b_scale,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_Tensor3D:$output_data
+  );
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_MXFP]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -357,7 +401,7 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
     Tosa_IntArrayAttr2:$kernel,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$pad,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -371,6 +415,7 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -418,6 +463,9 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   }];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -487,7 +535,7 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp"> {
     Tosa_Tensor:$input,
     Tosa_IntOrFloatAttr:$min_val,
     Tosa_IntOrFloatAttr:$max_val,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -501,6 +549,7 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp"> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -560,6 +609,8 @@ def Tosa_SigmoidOp : Tosa_ElementwiseUnaryOp<"sigmoid"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -589,6 +640,8 @@ def Tosa_TanhOp : Tosa_ElementwiseUnaryOp<"tanh"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -629,10 +682,12 @@ def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -660,8 +715,10 @@ def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -688,8 +745,10 @@ def Tosa_BitwiseAndOp : Tosa_ElementwiseOp<"bitwise_and", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -716,8 +775,10 @@ def Tosa_BitwiseOrOp : Tosa_ElementwiseOp<"bitwise_or", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -744,8 +805,10 @@ def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -763,20 +826,22 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementTy
   }];
 
   let arguments = (ins
-    Tosa_Int32Tensor:$input1,
-    Tosa_Int32Tensor:$input2
+    Tosa_Int32Or64Tensor:$input1,
+    Tosa_Int32Or64Tensor:$input2
   );
 
   let results = (outs
-    Tosa_Int32Tensor:$output
+    Tosa_Int32Or64Tensor:$output
   );
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -805,6 +870,8 @@ def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -831,8 +898,10 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -859,8 +928,10 @@ def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -889,6 +960,8 @@ def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -917,6 +990,8 @@ def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -935,7 +1010,7 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
   let arguments = (ins
     Tosa_Tensor:$input1,
     Tosa_Tensor:$input2,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -944,8 +1019,9 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -964,7 +1040,7 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
   let arguments = (ins
     Tosa_Tensor:$input1,
     Tosa_Tensor:$input2,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -973,8 +1049,10 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -983,7 +1061,6 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
 def Tosa_MulOp : Tosa_Op<"mul", [
     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                               ["inferReturnTypeComponents"]>,
-    Commutative,
     Pure]> {
   let summary = "Multiplication operator.";
 
@@ -1006,7 +1083,7 @@ def Tosa_MulOp : Tosa_Op<"mul", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1041,6 +1118,8 @@ def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1065,10 +1144,12 @@ def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType]> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1113,6 +1194,9 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
   }];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1145,10 +1229,12 @@ def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1171,8 +1257,10 @@ def Tosa_BitwiseNotOp : Tosa_ElementwiseUnaryOp<"bitwise_not"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1197,6 +1285,8 @@ def Tosa_CeilOp : Tosa_ElementwiseUnaryOp<"ceil"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1219,8 +1309,10 @@ def Tosa_ClzOp : Tosa_ElementwiseUnaryOp<"clz"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1245,6 +1337,8 @@ def Tosa_CosOp : Tosa_ElementwiseUnaryOp<"cos"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1270,7 +1364,7 @@ def Tosa_ExpOp : Tosa_ElementwiseUnaryOp<"exp"> {
     Extension<[Tosa_EXT_BF16]>,
   ];
 
-  let hasFolder = 1;
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1295,6 +1389,8 @@ def Tosa_FloorOp : Tosa_ElementwiseUnaryOp<"floor"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1320,7 +1416,7 @@ def Tosa_LogOp : Tosa_ElementwiseUnaryOp<"log"> {
     Extension<[Tosa_EXT_BF16]>,
   ];
 
-  let hasFolder = 1;
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1345,6 +1441,8 @@ def Tosa_LogicalNotOp : Tosa_ElementwiseUnaryOp<"logical_not"> {
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1371,7 +1469,7 @@ def Tosa_NegateOp : Tosa_InferShapedTypeOp<"negate", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let builders = [Tosa_NegateOpQuantInfoBuilder];
@@ -1424,6 +1522,8 @@ def Tosa_ReciprocalOp : Tosa_ElementwiseUnaryOp<"reciprocal"> {
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1449,6 +1549,8 @@ def Tosa_RsqrtOp : Tosa_ElementwiseUnaryOp<"rsqrt"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1473,6 +1575,8 @@ def Tosa_SinOp : Tosa_ElementwiseUnaryOp<"sin"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1501,7 +1605,7 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizeMethod = 1;
@@ -1519,6 +1623,8 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
     ::mlir::TypedValue<::mlir::TensorType> getOnTrue() { return getInput2(); }
     ::mlir::TypedValue<::mlir::TensorType> getOnFalse() { return getInput3(); }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1549,7 +1655,7 @@ def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let extraClassDeclaration = [{
@@ -1559,6 +1665,8 @@ def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1582,10 +1690,12 @@ def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [SameOperandsElementType]> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1610,10 +1720,12 @@ def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1657,6 +1769,8 @@ def Tosa_ReduceAllOp : Tosa_InferTensorTypeOp<"reduce_all"> {
       return leftOperand & rightOperand;
     }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1696,6 +1810,8 @@ def Tosa_ReduceAnyOp : Tosa_InferTensorTypeOp<"reduce_any"> {
       return leftOperand | rightOperand;
     }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1711,7 +1827,7 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
   let arguments = (ins
     Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -1720,7 +1836,7 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1736,6 +1852,8 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
       return (leftOperand.sge(rightOperand)) ? leftOperand : rightOperand;
     }
   }];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1751,7 +1869,7 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
   let arguments = (ins
     Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis,
-    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
   );
 
   let results = (outs
@@ -1760,7 +1878,7 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1776,6 +1894,8 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
       return (leftOperand.sle(rightOperand)) ? leftOperand : rightOperand;
     }
   }];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1815,6 +1935,8 @@ def Tosa_ReduceProductOp : Tosa_InferTensorTypeOp<"reduce_product"> {
       return leftOperand * rightOperand;
     }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1838,7 +1960,7 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1854,6 +1976,8 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
       return leftOperand + rightOperand;
     }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1882,7 +2006,7 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -1894,6 +2018,8 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
     /// Method used by InferTypeOpInterface.
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1936,13 +2062,16 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let builders = [Tosa_PadOpQuantInfoBuilder];
 
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1971,7 +2100,7 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let extraClassDeclaration = [{
@@ -2008,7 +2137,7 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -2041,12 +2170,15 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2069,7 +2201,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let extraClassDeclaration = [{
@@ -2078,13 +2210,17 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
 // Operator: transpose
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
-                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface ,
+                                           ["reifyResultShapes"]>,
                  AllElementTypesMatch<["input1", "output"]>]> {
   let summary = "Transpose operator.";
 
@@ -2105,12 +2241,15 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2132,7 +2271,7 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values,
-    Tosa_Int32Tensor2D:$indices
+    Tosa_IndexTensor2D:$indices
   );
 
   let results = (outs
@@ -2141,10 +2280,13 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2166,7 +2308,7 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values_in,
-    Tosa_Int32Tensor2D:$indices,
+    Tosa_IndexTensor2D:$indices,
     Tosa_Tensor3D:$input
   );
 
@@ -2176,10 +2318,13 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2224,7 +2369,7 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
     Rank4TosaShape:$scale,
     Rank2TosaShape:$offset,
     Rank2TosaShape:$border,
-    Tosa_ResizeTypeAttr:$mode
+    Tosa_ResizeModeAttr:$mode
   );
 
   let results = (outs
@@ -2238,6 +2383,7 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2247,7 +2393,7 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
 //===----------------------------------------------------------------------===//
 // Operator: cast
 //===----------------------------------------------------------------------===//
-def Tosa_CastOp: Tosa_Op<"cast", [Pure,
+def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
       DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                               ["inferReturnTypeComponents"]>]> {
 
@@ -2318,12 +2464,75 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: cast_from_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_CastFromBlockScaledOp: Tosa_InferShapedTypeOp<"cast_from_block_scaled"> {
+  let summary = "Apply scales from a scale tensor to the values in a value tensor";
+
+  let description = [{
+    Apply the scales from a scale tensor to the values in a value tensor, casting
+    the result to the output type. The block dimension must be the last dimension
+    of the tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_MXFPDataTensorAtLeast1D:$input_data,
+    Tosa_MXFPScaleTensorAtLeast1D:$input_scale,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_TensorAtLeast1D: $output_data
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>,
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: cast_to_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_CastToBlockScaledOp : Tosa_InferShapedTypeOp<"cast_to_block_scaled"> {
+  let summary = "Calculate scale tensor values per block, output to separate scale and data tensors.";
+
+  let description = [{
+    Calculate a scale value per block of input values and use that to calculate
+    scaled data values from an input tensor. The output tensors are cast to the
+    specified scale and value types. The block dimension will be the last dimension
+    of the tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_TensorAtLeast1D:$input_data,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_MXFPDataTensorAtLeast1D:$output_data,
+    Tosa_MXFPScaleTensorAtLeast1D:$output_scale
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2374,7 +2583,7 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$output_zp,
     BoolAttr:$scale32,
-    Tosa_RoundingTypeAttr:$rounding_mode,
+    Tosa_RoundingModeAttr:$rounding_mode,
     BoolAttr:$per_channel,
     BoolAttr: $input_unsigned,
     BoolAttr: $output_unsigned
@@ -2397,8 +2606,7 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
   }];
 
   let hasVerifier = 1;
-
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2435,7 +2643,7 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -2463,7 +2671,7 @@ def Tosa_IdentityOp: Tosa_Op<"identity", [Pure,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -2605,6 +2813,106 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   );
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable
+//===----------------------------------------------------------------------===//
+def Tosa_VariableOp : Tosa_Op<"variable", [Symbol]> {
+  let summary = "Defines a variable";
+
+  let description = [{
+    Defines a new TOSA variable. This is a persistent mutable value across multiple
+    TOSA graph invocations. Modifications are expressed using read/write semantics.
+  }];
+
+  let arguments = (ins
+    // Note: "sym_name" is used as opposed to "name" in the specification,
+    // since a Symbol must be named "sym_name" for it to be recognised by
+    // the containing SymbolTable.
+    SymbolNameAttr:$sym_name,
+    IndexElementsAttr:$var_shape,
+    TypeAttr:$type,
+    OptionalAttr<AnyAttr>:$initial_value
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat = [{
+    $sym_name
+    attr-dict
+    custom<VariableOpTypeOrInitialValue>($var_shape, $type, $initial_value)
+  }];
+
+  let builders = [Tosa_VariableOpBuilder];
+
+  let extraClassDeclaration = [{
+    ::llvm::StringRef getName() {
+      return getSymName();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable_write
+//===----------------------------------------------------------------------===//
+def Tosa_VariableWriteOp : Tosa_Op<"variable_write", []> {
+  let summary = "write_buffer operator";
+
+  let description = [{
+    Assigns a value to the pseudo-buffer resource holding a persistent mutable tensor.
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$name,
+    Tosa_Tensor:$input1
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
+
+  let assemblyFormat = [{
+    $name attr-dict `,` $input1 `:` type($input1)
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable_read
+//===----------------------------------------------------------------------===//
+def Tosa_VariableReadOp : Tosa_Op<"variable_read", []> {
+  let summary = "read_buffer operator";
+
+  let description = [{
+    Reads the value from a pseudo-buffer resource holding a persistent mutable tensor.
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$name
+  );
+
+  let results = (outs
+    Tosa_Tensor:$output1
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
+
+  let assemblyFormat = [{
+    $name attr-dict `:` type($output1)
+  }];
+
   let hasVerifier = 1;
 }
 

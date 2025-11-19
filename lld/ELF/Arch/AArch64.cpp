@@ -82,7 +82,7 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   void applyBranchToBranchOpt() const override;
 
 private:
@@ -153,6 +153,12 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G2:
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
+    return R_ABS;
+  case R_AARCH64_PATCHINST:
+    if (!isAbsolute(s))
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "R_AARCH64_PATCHINST relocation against non-absolute symbol "
+               << &s;
     return R_ABS;
   case R_AARCH64_AUTH_ABS64:
     return RE_AARCH64_AUTH;
@@ -506,6 +512,12 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
+  case R_AARCH64_PATCHINST:
+    if (!rel.sym->isUndefined()) {
+      checkUInt(ctx, loc, val, 32, rel);
+      write32le(loc, val);
+    }
+    break;
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:
     checkInt(ctx, loc, val, 32, rel);
@@ -750,7 +762,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     relocateNoSym(loc, R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC, val);
     break;
   default:
-    llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
+    llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
   }
 }
 
@@ -927,12 +939,8 @@ static bool needsGotForMemtag(const Relocation &rel) {
   return rel.sym->isTagged() && needsGot(rel.expr);
 }
 
-void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   AArch64Relaxer relaxer(ctx, sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];

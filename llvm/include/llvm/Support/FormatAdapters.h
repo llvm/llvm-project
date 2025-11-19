@@ -77,7 +77,7 @@ class ErrorAdapter : public FormatAdapter<Error> {
 public:
   ErrorAdapter(Error &&Item) : FormatAdapter(std::move(Item)) {}
   ErrorAdapter(ErrorAdapter &&) = default;
-  ~ErrorAdapter() { consumeError(std::move(Item)); }
+  ~ErrorAdapter() override { consumeError(std::move(Item)); }
   void format(llvm::raw_ostream &Stream, StringRef Style) override {
     Stream << Item;
   }

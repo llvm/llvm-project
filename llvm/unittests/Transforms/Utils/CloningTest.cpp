@@ -18,6 +18,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -393,7 +394,7 @@ TEST(CloneLoop, CloneLoopNest) {
 
   std::unique_ptr<Module> M = parseIR(
     Context,
-    R"(define void @foo(i32* %A, i32 %ub) {
+    R"(define void @foo(ptr %A, i32 %ub) {
 entry:
   %guardcmp = icmp slt i32 0, %ub
   br i1 %guardcmp, label %for.outer.preheader, label %for.end
@@ -407,8 +408,8 @@ for.inner.preheader:
 for.inner:
   %i = phi i32 [ 0, %for.inner.preheader ], [ %inc, %for.inner ]
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  store i32 %i, ptr %arrayidx, align 4
   %inc = add nsw i32 %i, 1
   %cmp = icmp slt i32 %inc, %ub
   br i1 %cmp, label %for.inner, label %for.inner.exit
@@ -482,10 +483,10 @@ protected:
     DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
-    auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
-                                          DBuilder.createFile("filename.c",
-                                                              "/file/dir"),
-                                          "CloneFunc", false, "", 0);
+    auto *CU = DBuilder.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C99),
+        DBuilder.createFile("filename.c", "/file/dir"), "CloneFunc", false, "",
+        0);
 
     auto *Subprogram = DBuilder.createFunction(
         CU, "f", "f", File, 4, FuncType, 3, DINode::FlagZero,
@@ -540,7 +541,7 @@ protected:
 
     // Create another, empty, compile unit.
     DIBuilder DBuilder2(*M);
-    DBuilder2.createCompileUnit(dwarf::DW_LANG_C99,
+    DBuilder2.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C99),
                                 DBuilder.createFile("extra.c", "/file/dir"),
                                 "CloneFunc", false, "", 0);
     DBuilder2.finalize();
@@ -727,10 +728,10 @@ TEST(CloneFunction, CloneEmptyFunction) {
 
 TEST(CloneFunction, CloneFunctionWithInalloca) {
   StringRef ImplAssembly = R"(
-    declare void @a(i32* inalloca(i32))
+    declare void @a(ptr inalloca(i32))
     define void @foo() {
       %a = alloca inalloca i32
-      call void @a(i32* inalloca(i32) %a)
+      call void @a(ptr inalloca(i32) %a)
       ret void
     }
     declare void @bar()
@@ -953,8 +954,9 @@ protected:
       // confirm that compile units get cloned in the correct order.
       DIBuilder EmptyBuilder(*OldM);
       auto *File = EmptyBuilder.createFile("empty.c", "/file/dir/");
-      (void)EmptyBuilder.createCompileUnit(dwarf::DW_LANG_C99, File,
-                                           "EmptyUnit", false, "", 0);
+      (void)EmptyBuilder.createCompileUnit(
+          DISourceLanguageName(dwarf::DW_LANG_C99), File, "EmptyUnit", false,
+          "", 0);
       EmptyBuilder.finalize();
     }
 
@@ -973,10 +975,10 @@ protected:
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
     DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
-    auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
-                                          DBuilder.createFile("filename.c",
-                                                              "/file/dir"),
-                                          "CloneModule", false, "", 0);
+    auto *CU = DBuilder.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C99),
+        DBuilder.createFile("filename.c", "/file/dir"), "CloneModule", false,
+        "", 0);
     // Function DI
     auto *Subprogram = DBuilder.createFunction(
         CU, "f", "f", File, 4, DFuncType, 3, DINode::FlagZero,
@@ -1203,13 +1205,9 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
 
   ASSERT_FALSE(verifyModule(*M, &errs()));
 
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
 #define EXPECT_ATOM(Inst, G)                                                   \
   EXPECT_TRUE(Inst->getDebugLoc());                                            \
   EXPECT_EQ(Inst->getDebugLoc()->getAtomGroup(), uint64_t(G));
-#else
-#define EXPECT_ATOM(Inst, G) (void)Inst;
-#endif
 
   Function *F = M->getFunction("test");
   BasicBlock *BB = &*F->begin();

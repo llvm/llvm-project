@@ -15,7 +15,6 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/GenNameParser.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
@@ -154,5 +153,12 @@ int mlir::MlirTblgenMain(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv);
 
-  return TableGenMain(argv[0], &mlirTableGenMain);
+  return TableGenMain(
+      argv[0], [](TableGenOutputFiles &OutFiles, const RecordKeeper &RK) {
+        std::string S;
+        raw_string_ostream OS(S);
+        bool Res = mlirTableGenMain(OS, RK);
+        OutFiles = {S, {}};
+        return Res;
+      });
 }

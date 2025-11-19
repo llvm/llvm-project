@@ -14,8 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 
-#include "AMDGPUISelLowering.h"
 #include "AMDGPUArgumentUsageInfo.h"
+#include "AMDGPUISelLowering.h"
+#include "SIDefines.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
@@ -58,9 +59,17 @@ private:
                                      Align Alignment,
                                      ImplicitParameter Param) const;
 
+  SDValue convertABITypeToValueType(SelectionDAG &DAG, SDValue Val,
+                                    CCValAssign &VA, const SDLoc &SL) const;
+
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
                               const ISD::InputArg &Arg) const;
+  SDValue lowerWorkGroupId(
+      SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
   SDValue getPreloadedValue(SelectionDAG &DAG,
                             const SIMachineFunctionInfo &MFI,
                             EVT VT,
@@ -81,6 +90,9 @@ private:
                                         unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
+                              AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
+                              unsigned Width) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
 
@@ -211,6 +223,7 @@ private:
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFPRoundCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue reassociateScalarOps(SDNode *N, SelectionDAG &DAG) const;
   unsigned getFusedOpcode(const SelectionDAG &DAG,
@@ -263,6 +276,9 @@ public:
   bool shouldExpandVectorDynExt(SDNode *N) const;
 
   bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
+
+  bool canTransformPtrArithOutOfBounds(const Function &F,
+                                       EVT PtrVT) const override;
 
 private:
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
@@ -443,6 +459,7 @@ public:
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerROTR(SDValue Op, SelectionDAG &DAG) const;
 
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
@@ -544,11 +561,6 @@ public:
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
   bool denormalsEnabledForType(LLT Ty, const MachineFunction &MF) const;
 
-  bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
-                                 const TargetRegisterInfo *TRI,
-                                 const TargetInstrInfo *TII,
-                                 MCRegister &PhysReg, int &Cost) const override;
-
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
@@ -561,6 +573,8 @@ public:
   void emitExpandAtomicAddrSpacePredicate(Instruction *AI) const;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
   void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const override;
+  void emitExpandAtomicLoad(LoadInst *LI) const override;
+  void emitExpandAtomicStore(StoreInst *SI) const override;
 
   LoadInst *
   lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;

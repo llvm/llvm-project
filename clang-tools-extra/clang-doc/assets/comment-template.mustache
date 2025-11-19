@@ -5,16 +5,63 @@
     
     This file defines templates for generating comments
 }}
-{{#FullComment}}
-    {{#Children}}
-    {{>Comments}}
-    {{/Children}}
-{{/FullComment}}
+{{#BriefComments}}
+    <div>
+    {{#.}}
+        <p>{{TextComment}}</p>
+    {{/.}}
+    </div>
+{{/BriefComments}}
+{{#ParagraphComments}}
+    <div>
+    {{#.}}
+        <p>{{TextComment}}</p>
+    {{/.}}
+    </div>
+{{/ParagraphComments}}
 {{#ParagraphComment}}
     {{#Children}}
     {{>Comments}}
     {{/Children}}
 {{/ParagraphComment}}
+{{#HasParamComments}}
+    <h3>Parameters</h3>
+    {{#ParamComments}}
+    <div>
+        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{>Comments}}{{/Children}}
+    </div> 
+    {{/ParamComments}}
+{{/HasParamComments}}
+{{#HasReturnComments}}
+    <h3>Returns</h3>
+    {{#ReturnComments}}
+        {{#.}}
+        <p>{{TextComment}}</p>
+        {{/.}}
+    {{/ReturnComments}}
+{{/HasReturnComments}}
+{{#HasCodeComments}}
+    <h3>Code</h3> 
+    {{#CodeComments}}
+    <div>
+        <pre class="code-block">
+            <code>
+            {{#.}}
+            {{.}}
+            {{/.}}
+            </code>
+        </pre>
+    </div>
+    {{/CodeComments}}
+{{/HasCodeComments}}
+{{#HasThrowsComments}}
+    <h3>Throws</h3>
+    {{#ThrowsComments}}
+    <div>
+        <b>{{Exception}}</b> {{#Children}}{{TextComment}}{{/Children}}
+    </div>
+    {{/ThrowsComments}}
+{{/HasThrowsComments}}
 {{#BlockCommandComment}}
     <div class="block-command-comment__command">
         <div class="block-command-command">

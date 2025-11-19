@@ -1,4 +1,4 @@
-//===--- RedundantInlineSpecifierCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,7 +52,7 @@ AST_POLYMORPHIC_MATCHER_P(isInternalLinkage,
 static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
                                              const SourceManager &Sources,
                                              const LangOptions &LangOpts) {
-  SourceLocation Loc = RangeLocation.getBegin();
+  const SourceLocation Loc = RangeLocation.getBegin();
   if (Loc.isMacroID())
     return {};
 
@@ -106,7 +106,7 @@ template <typename T>
 void RedundantInlineSpecifierCheck::handleMatchedDecl(
     const T *MatchedDecl, const SourceManager &Sources,
     const MatchFinder::MatchResult &Result, StringRef Message) {
-  SourceLocation Loc = getInlineTokenLocation(
+  const SourceLocation Loc = getInlineTokenLocation(
       MatchedDecl->getSourceRange(), Sources, Result.Context->getLangOpts());
   if (Loc.isValid())
     diag(Loc, Message) << MatchedDecl << FixItHint::CreateRemoval(Loc);

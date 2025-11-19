@@ -456,7 +456,8 @@ enum CastOpcodes {
   CAST_PTRTOINT = 9,
   CAST_INTTOPTR = 10,
   CAST_BITCAST = 11,
-  CAST_ADDRSPACECAST = 12
+  CAST_ADDRSPACECAST = 12,
+  CAST_PTRTOADDR = 13,
 };
 
 /// UnaryOpcodes - These are values used in the bitcode files to encode which
@@ -799,6 +800,8 @@ enum AttributeKindCodes {
   ATTR_KIND_SANITIZE_TYPE = 101,
   ATTR_KIND_CAPTURES = 102,
   ATTR_KIND_DEAD_ON_RETURN = 103,
+  ATTR_KIND_SANITIZE_ALLOC_TOKEN = 104,
+  ATTR_KIND_NO_CREATE_UNDEF_OR_POISON = 105,
 };
 
 enum ComdatSelectionKindCodes {

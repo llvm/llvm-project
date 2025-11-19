@@ -154,18 +154,22 @@ public:
                      std::unique_ptr<LinkGraph> G, PassConfiguration PassConfig)
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
     JITLinkerBase::getPassConfig().PostAllocationPasses.push_back(
-        [this](LinkGraph &G) { return gatherRISCVPCRelHi20(G); });
+        [this](LinkGraph &G) { return gatherRISCVPairs(G); });
   }
 
 private:
   DenseMap<std::pair<const Block *, orc::ExecutorAddrDiff>, const Edge *>
       RelHi20;
+  DenseMap<std::pair<const Block *, orc::ExecutorAddrDiff>, const Edge *>
+      SetULEB128;
 
-  Error gatherRISCVPCRelHi20(LinkGraph &G) {
+  Error gatherRISCVPairs(LinkGraph &G) {
     for (Block *B : G.blocks())
       for (Edge &E : B->edges())
         if (E.getKind() == R_RISCV_PCREL_HI20)
           RelHi20[{B, E.getOffset()}] = &E;
+        else if (E.getKind() == R_RISCV_SET_ULEB128)
+          SetULEB128[{B, E.getOffset()}] = &E;
 
     return Error::success();
   }
@@ -187,6 +191,20 @@ private:
 
     return make_error<JITLinkError>("No HI20 PCREL relocation type be found "
                                     "for LO12 PCREL relocation type");
+  }
+
+  Expected<const Edge &> getRISCVSetULEB128(const Block &B,
+                                            const Edge &E) const {
+    using namespace riscv;
+    assert(E.getKind() == R_RISCV_SUB_ULEB128 &&
+           "Can only have pair relocation for R_RISCV_SUB_ULEB128");
+
+    auto It = SetULEB128.find({&B, E.getOffset()});
+    if (It != SetULEB128.end())
+      return *It->second;
+
+    return make_error<JITLinkError>(
+        "No RISCV_SET_ULEB128 relocation type be found");
   }
 
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
@@ -465,6 +483,21 @@ private:
       if (LLVM_UNLIKELY(!isInRangeForImm(Value, 32)))
         return makeTargetOutOfRangeError(G, B, E);
       *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
+      break;
+    }
+    case R_RISCV_SET_ULEB128:
+      break;
+    case R_RISCV_SUB_ULEB128: {
+      auto SetULEB128 = getRISCVSetULEB128(B, E);
+      if (!SetULEB128)
+        return SetULEB128.takeError();
+      uint64_t Value = SetULEB128->getTarget().getAddress() +
+                       SetULEB128->getAddend() - E.getTarget().getAddress() -
+                       E.getAddend();
+      if (overwriteULEB128(reinterpret_cast<uint8_t *>(FixupPtr), Value) >=
+          0x80)
+        return make_error<StringError>("ULEB128 value exceeds available space",
+                                       inconvertibleErrorCode());
       break;
     }
     }
@@ -843,6 +876,10 @@ private:
       return EdgeKind_riscv::R_RISCV_32_PCREL;
     case ELF::R_RISCV_ALIGN:
       return EdgeKind_riscv::AlignRelaxable;
+    case ELF::R_RISCV_SET_ULEB128:
+      return EdgeKind_riscv::R_RISCV_SET_ULEB128;
+    case ELF::R_RISCV_SUB_ULEB128:
+      return EdgeKind_riscv::R_RISCV_SUB_ULEB128;
     }
 
     return make_error<JITLinkError>(

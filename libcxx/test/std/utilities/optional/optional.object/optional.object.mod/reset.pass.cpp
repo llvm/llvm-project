@@ -69,5 +69,16 @@ int main(int, char**)
         X::dtor_called = false;
     }
 
-  return 0;
+#if TEST_STD_VER >= 26
+    {
+      X x{};
+      optional<X&> opt(x);
+      X::dtor_called = false;
+      opt.reset();
+      assert(X::dtor_called == false);
+      assert(static_cast<bool>(opt) == false);
+    }
+#endif
+
+    return 0;
 }

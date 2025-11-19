@@ -431,7 +431,7 @@ The ``print`` method
   virtual void print(llvm::raw_ostream &O, const Module *M) const;
 
 The ``print`` method must be implemented by "analyses" in order to print a
-human readable version of the analysis results.  This is useful for debugging
+human-readable version of the analysis results.  This is useful for debugging
 an analysis itself, as well as for other people to figure out how an analysis
 works.  Use the opt ``-analyze`` argument to invoke this method.
 

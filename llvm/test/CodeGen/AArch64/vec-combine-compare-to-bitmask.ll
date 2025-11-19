@@ -2,15 +2,15 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+neon -aarch64-enable-collect-loh=false -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+neon -aarch64-enable-collect-loh=false -global-isel -global-isel-abort=2 -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; Basic tests from input vector to bitmask
-; IR generated from clang for:
-; __builtin_convertvector + reinterpret_cast<uint16&>
-
 ; CHECK-GI:       warning: Instruction selection used fallback path for convert_to_bitmask2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for clang_builtins_undef_concat_convert_to_bitmask4
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_2xi32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_8xi2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for no_direct_convert_for_bad_concat
+
+; Basic tests from input vector to bitmask
+; IR generated from clang for:
+; __builtin_convertvector + reinterpret_cast<uint16&>
 
 define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; Bits used in mask
@@ -851,15 +851,15 @@ define i6 @no_combine_illegal_num_elements(<6 x i32> %vec) {
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s2, w4
 ; CHECK-GI-NEXT:    mov.s v1[1], w1
 ; CHECK-GI-NEXT:    mov.s v2[1], w5
 ; CHECK-GI-NEXT:    mov.s v0[1], wzr
 ; CHECK-GI-NEXT:    mov.s v1[2], w2
 ; CHECK-GI-NEXT:    cmeq.4s v0, v2, v0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
 ; CHECK-GI-NEXT:    mov.s v1[3], w3
+; CHECK-GI-NEXT:    mvn.16b v0, v0
 ; CHECK-GI-NEXT:    cmtst.4s v1, v1, v1
 ; CHECK-GI-NEXT:    mov.s w8, v1[1]
 ; CHECK-GI-NEXT:    mov.s w9, v1[2]
@@ -896,16 +896,13 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-SD-NEXT:    shl.16b v0, v0, #7
 ; CHECK-SD-NEXT:    adrp x8, lCPI20_0@PAGE
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI20_0@PAGEOFF]
-; CHECK-SD-NEXT:    add x8, sp, #14
 ; CHECK-SD-NEXT:    cmlt.16b v0, v0, #0
 ; CHECK-SD-NEXT:    and.16b v0, v0, v1
 ; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
 ; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
 ; CHECK-SD-NEXT:    addv.8h h0, v0
-; CHECK-SD-NEXT:    str h0, [sp, #14]
-; CHECK-SD-NEXT:    ld1.b { v0 }[0], [x8]
-; CHECK-SD-NEXT:    orr x8, x8, #0x1
-; CHECK-SD-NEXT:    ld1.b { v0 }[4], [x8]
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret

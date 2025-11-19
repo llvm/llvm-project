@@ -8,6 +8,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/HostInfo.h"
 
 #if LLDB_ENABLE_LIBEDIT
 
@@ -244,7 +245,7 @@ void EditlineAdapter::ConsumeAllOutput() {
 }
 
 class EditlineTestFixture : public ::testing::Test {
-  SubsystemRAII<FileSystem> subsystems;
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
   EditlineAdapter _el_adapter;
   std::shared_ptr<std::thread> _sp_output_thread;
 

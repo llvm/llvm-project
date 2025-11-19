@@ -355,7 +355,7 @@ bool CallBase::isTailCall() const {
 }
 
 Intrinsic::ID CallBase::getIntrinsicID() const {
-  if (auto *F = getCalledFunction())
+  if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
     return F->getIntrinsicID();
   return Intrinsic::not_intrinsic;
 }
@@ -719,6 +719,10 @@ CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
       CI &= Fn->getAttributes().getParamAttrs(OpNo).getCaptureInfo();
     return CI;
   }
+
+  // Bundles on assumes are captures(none).
+  if (getIntrinsicID() == Intrinsic::assume)
+    return CaptureInfo::none();
 
   // deopt operand bundles are captures(none)
   auto &BOI = getBundleOpInfoForOperand(OpNo);
@@ -2798,6 +2802,7 @@ bool CastInst::isNoopCast(Instruction::CastOps Opcode,
       return false;
     case Instruction::BitCast:
       return true;  // BitCast never modifies bits.
+    case Instruction::PtrToAddr:
     case Instruction::PtrToInt:
       return DL.getIntPtrType(SrcTy)->getScalarSizeInBits() ==
              DestTy->getScalarSizeInBits();
@@ -2819,10 +2824,10 @@ bool CastInst::isNoopCast(const DataLayout &DL) const {
 /// The function returns a resultOpcode so these two casts can be replaced with:
 /// *  %Replacement = resultOpcode %SrcTy %x to DstTy
 /// If no such cast is permitted, the function returns 0.
-unsigned CastInst::isEliminableCastPair(
-  Instruction::CastOps firstOp, Instruction::CastOps secondOp,
-  Type *SrcTy, Type *MidTy, Type *DstTy, Type *SrcIntPtrTy, Type *MidIntPtrTy,
-  Type *DstIntPtrTy) {
+unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
+                                        Instruction::CastOps secondOp,
+                                        Type *SrcTy, Type *MidTy, Type *DstTy,
+                                        const DataLayout *DL) {
   // Define the 144 possibilities for these two cast instructions. The values
   // in this matrix determine what to do in a given situation and select the
   // case in the switch below.  The rows correspond to firstOp, the columns
@@ -2842,6 +2847,7 @@ unsigned CastInst::isEliminableCastPair(
   // FPTRUNC       >       FloatPt      n/a        FloatPt      n/a
   // FPEXT         <       FloatPt      n/a        FloatPt      n/a
   // PTRTOINT     n/a      Pointer      n/a        Integral   Unsigned
+  // PTRTOADDR    n/a      Pointer      n/a        Integral   Unsigned
   // INTTOPTR     n/a      Integral   Unsigned     Pointer      n/a
   // BITCAST       =       FirstClass   n/a       FirstClass    n/a
   // ADDRSPCST    n/a      Pointer      n/a        Pointer      n/a
@@ -2855,26 +2861,29 @@ unsigned CastInst::isEliminableCastPair(
   // same reason.
   const unsigned numCastOps =
     Instruction::CastOpsEnd - Instruction::CastOpsBegin;
+  // clang-format off
   static const uint8_t CastResults[numCastOps][numCastOps] = {
-    // T        F  F  U  S  F  F  P  I  B  A  -+
-    // R  Z  S  P  P  I  I  T  P  2  N  T  S   |
-    // U  E  E  2  2  2  2  R  E  I  T  C  C   +- secondOp
-    // N  X  X  U  S  F  F  N  X  N  2  V  V   |
-    // C  T  T  I  I  P  P  C  T  T  P  T  T  -+
-    {  1, 0, 0,99,99, 0, 0,99,99,99, 0, 3, 0}, // Trunc         -+
-    {  8, 1, 9,99,99, 2,17,99,99,99, 2, 3, 0}, // ZExt           |
-    {  8, 0, 1,99,99, 0, 2,99,99,99, 0, 3, 0}, // SExt           |
-    {  0, 0, 0,99,99, 0, 0,99,99,99, 0, 3, 0}, // FPToUI         |
-    {  0, 0, 0,99,99, 0, 0,99,99,99, 0, 3, 0}, // FPToSI         |
-    { 99,99,99, 0, 0,99,99, 0, 0,99,99, 4, 0}, // UIToFP         +- firstOp
-    { 99,99,99, 0, 0,99,99, 0, 0,99,99, 4, 0}, // SIToFP         |
-    { 99,99,99, 0, 0,99,99, 0, 0,99,99, 4, 0}, // FPTrunc        |
-    { 99,99,99, 2, 2,99,99, 8, 2,99,99, 4, 0}, // FPExt          |
-    {  1, 0, 0,99,99, 0, 0,99,99,99, 7, 3, 0}, // PtrToInt       |
-    { 99,99,99,99,99,99,99,99,99,11,99,15, 0}, // IntToPtr       |
-    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16, 5, 1,14}, // BitCast        |
-    {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
+    // T        F  F  U  S  F  F  P  P  I  B  A  -+
+    // R  Z  S  P  P  I  I  T  P  2  2  N  T  S   |
+    // U  E  E  2  2  2  2  R  E  I  A  T  C  C   +- secondOp
+    // N  X  X  U  S  F  F  N  X  N  D  2  V  V   |
+    // C  T  T  I  I  P  P  C  T  T  R  P  T  T  -+
+    {  1, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // Trunc         -+
+    {  8, 1, 9,99,99, 2,17,99,99,99,99, 2, 3, 0}, // ZExt           |
+    {  8, 0, 1,99,99, 0, 2,99,99,99,99, 0, 3, 0}, // SExt           |
+    {  0, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // FPToUI         |
+    {  0, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // FPToSI         |
+    { 99,99,99, 0, 0,99,99, 0, 0,99,99,99, 4, 0}, // UIToFP         +- firstOp
+    { 99,99,99, 0, 0,99,99, 0, 0,99,99,99, 4, 0}, // SIToFP         |
+    { 99,99,99, 0, 0,99,99, 0, 0,99,99,99, 4, 0}, // FPTrunc        |
+    { 99,99,99, 2, 2,99,99, 8, 2,99,99,99, 4, 0}, // FPExt          |
+    {  1, 0, 0,99,99, 0, 0,99,99,99,99, 7, 3, 0}, // PtrToInt       |
+    {  0, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
+    { 99,99,99,99,99,99,99,99,99,11,11,99,15, 0}, // IntToPtr       |
+    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5, 1,14}, // BitCast        |
+    {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
   };
+  // clang-format on
 
   // TODO: This logic could be encoded into the table above and handled in the
   // switch below.
@@ -2927,24 +2936,16 @@ unsigned CastInst::isEliminableCastPair(
         return 0;
 
       // Cannot simplify if address spaces are different!
-      if (SrcTy->getPointerAddressSpace() != DstTy->getPointerAddressSpace())
+      if (SrcTy != DstTy)
         return 0;
 
-      unsigned MidSize = MidTy->getScalarSizeInBits();
-      // We can still fold this without knowing the actual sizes as long we
-      // know that the intermediate pointer is the largest possible
+      // Cannot simplify if the intermediate integer size is smaller than the
       // pointer size.
-      // FIXME: Is this always true?
-      if (MidSize == 64)
-        return Instruction::BitCast;
-
-      // ptrtoint, inttoptr -> bitcast (ptr -> ptr) if int size is >= ptr size.
-      if (!SrcIntPtrTy || DstIntPtrTy != SrcIntPtrTy)
+      unsigned MidSize = MidTy->getScalarSizeInBits();
+      if (!DL || MidSize < DL->getPointerTypeSizeInBits(SrcTy))
         return 0;
-      unsigned PtrSize = SrcIntPtrTy->getScalarSizeInBits();
-      if (MidSize >= PtrSize)
-        return Instruction::BitCast;
-      return 0;
+
+      return Instruction::BitCast;
     }
     case 8: {
       // ext, trunc -> bitcast,    if the SrcTy and DstTy are the same
@@ -2964,15 +2965,23 @@ unsigned CastInst::isEliminableCastPair(
       // zext, sext -> zext, because sext can't sign extend after zext
       return Instruction::ZExt;
     case 11: {
-      // inttoptr, ptrtoint -> bitcast if SrcSize<=PtrSize and SrcSize==DstSize
-      if (!MidIntPtrTy)
+      // inttoptr, ptrtoint/ptrtoaddr -> integer cast
+      if (!DL)
         return 0;
-      unsigned PtrSize = MidIntPtrTy->getScalarSizeInBits();
+      unsigned MidSize = secondOp == Instruction::PtrToAddr
+                             ? DL->getAddressSizeInBits(MidTy)
+                             : DL->getPointerTypeSizeInBits(MidTy);
       unsigned SrcSize = SrcTy->getScalarSizeInBits();
       unsigned DstSize = DstTy->getScalarSizeInBits();
-      if (SrcSize <= PtrSize && SrcSize == DstSize)
-        return Instruction::BitCast;
-      return 0;
+      // If the middle size is smaller than both source and destination,
+      // an additional masking operation would be required.
+      if (MidSize < SrcSize && MidSize < DstSize)
+        return 0;
+      if (DstSize < SrcSize)
+        return Instruction::Trunc;
+      if (DstSize > SrcSize)
+        return Instruction::ZExt;
+      return Instruction::BitCast;
     }
     case 12:
       // addrspacecast, addrspacecast -> bitcast,       if SrcAS == DstAS
@@ -3046,6 +3055,7 @@ CastInst *CastInst::Create(Instruction::CastOps op, Value *S, Type *Ty,
   case SIToFP:        return new SIToFPInst        (S, Ty, Name, InsertBefore);
   case FPToUI:        return new FPToUIInst        (S, Ty, Name, InsertBefore);
   case FPToSI:        return new FPToSIInst        (S, Ty, Name, InsertBefore);
+  case PtrToAddr:     return new PtrToAddrInst     (S, Ty, Name, InsertBefore);
   case PtrToInt:      return new PtrToIntInst      (S, Ty, Name, InsertBefore);
   case IntToPtr:      return new IntToPtrInst      (S, Ty, Name, InsertBefore);
   case BitCast:
@@ -3225,8 +3235,12 @@ CastInst::getCastOpcode(
       }
 
   // Get the bit sizes, we'll need these
-  unsigned SrcBits = SrcTy->getPrimitiveSizeInBits();   // 0 for ptr
-  unsigned DestBits = DestTy->getPrimitiveSizeInBits(); // 0 for ptr
+  // FIXME: This doesn't work for scalable vector types with different element
+  // counts that don't call getElementType above.
+  unsigned SrcBits =
+      SrcTy->getPrimitiveSizeInBits().getFixedValue(); // 0 for ptr
+  unsigned DestBits =
+      DestTy->getPrimitiveSizeInBits().getFixedValue(); // 0 for ptr
 
   // Run through the possibilities ...
   if (DestTy->isIntegerTy()) {                      // Casting to integral
@@ -3347,6 +3361,7 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
   case Instruction::FPToSI:
     return SrcTy->isFPOrFPVectorTy() && DstTy->isIntOrIntVectorTy() &&
            SrcEC == DstEC;
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
     if (SrcEC != DstEC)
       return false;
@@ -3458,6 +3473,12 @@ PtrToIntInst::PtrToIntInst(Value *S, Type *Ty, const Twine &Name,
                            InsertPosition InsertBefore)
     : CastInst(Ty, PtrToInt, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal PtrToInt");
+}
+
+PtrToAddrInst::PtrToAddrInst(Value *S, Type *Ty, const Twine &Name,
+                             InsertPosition InsertBefore)
+    : CastInst(Ty, PtrToAddr, S, Name, InsertBefore) {
+  assert(castIsValid(getOpcode(), S, Ty) && "Illegal PtrToAddr");
 }
 
 IntToPtrInst::IntToPtrInst(Value *S, Type *Ty, const Twine &Name,
@@ -4119,23 +4140,6 @@ void SwitchInst::growOperands() {
   growHungoffUses(ReservedSpace);
 }
 
-MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
-  assert(Changed && "called only if metadata has changed");
-
-  if (!Weights)
-    return nullptr;
-
-  assert(SI.getNumSuccessors() == Weights->size() &&
-         "num of prof branch_weights must accord with num of successors");
-
-  bool AllZeroes = all_of(*Weights, [](uint32_t W) { return W == 0; });
-
-  if (AllZeroes || Weights->size() < 2)
-    return nullptr;
-
-  return MDBuilder(SI.getParent()->getContext()).createBranchWeights(*Weights);
-}
-
 void SwitchInstProfUpdateWrapper::init() {
   MDNode *ProfileData = getBranchWeightMDNode(SI);
   if (!ProfileData)
@@ -4165,6 +4169,16 @@ SwitchInstProfUpdateWrapper::removeCase(SwitchInst::CaseIt I) {
     Weights->pop_back();
   }
   return SI.removeCase(I);
+}
+
+void SwitchInstProfUpdateWrapper::replaceDefaultDest(SwitchInst::CaseIt I) {
+  auto *DestBlock = I->getCaseSuccessor();
+  if (Weights) {
+    auto Weight = getSuccessorWeight(I->getCaseIndex() + 1);
+    (*Weights)[0] = Weight.value();
+  }
+
+  SI.setDefaultDest(DestBlock);
 }
 
 void SwitchInstProfUpdateWrapper::addCase(
@@ -4425,6 +4439,10 @@ FPToSIInst *FPToSIInst::cloneImpl() const {
 
 PtrToIntInst *PtrToIntInst::cloneImpl() const {
   return new PtrToIntInst(getOperand(0), getType());
+}
+
+PtrToAddrInst *PtrToAddrInst::cloneImpl() const {
+  return new PtrToAddrInst(getOperand(0), getType());
 }
 
 IntToPtrInst *IntToPtrInst::cloneImpl() const {

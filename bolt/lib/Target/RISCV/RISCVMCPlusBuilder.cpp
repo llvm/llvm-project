@@ -626,9 +626,9 @@ public:
     return Insts;
   }
 
-  InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const override {
+  InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                           MCContext *Ctx, bool IsLeaf,
+                                           unsigned CodePointerSize) override {
     // We need 2 scratch registers: one for the target address (x10), and one
     // for the increment value (x11).
     // addi sp, sp, -16

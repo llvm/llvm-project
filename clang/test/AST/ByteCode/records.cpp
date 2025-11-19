@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -triple i686 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++14 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++17 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++17 -triple i686 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both -triple i686 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -verify=ref,both                   %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both                   %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both -triple i686      %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both                   %s
 
 /// Used to crash.
 struct Empty {};
@@ -413,7 +413,7 @@ namespace DeriveFailures {
 
     constexpr Derived(int i) : OtherVal(i) {} // ref-error {{never produces a constant expression}} \
                                               // both-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} \
-                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} 
+                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}}
   };
 
   constexpr Derived D(12); // both-error {{must be initialized by a constant expression}} \
@@ -1162,6 +1162,19 @@ namespace IndirectFieldInit {
   static_assert(s2.x == 1 && s2.y == 2 && s2.a == 3 && s2.b == 4);
 
 #endif
+
+
+  struct B {
+    struct {
+      union {
+        int x = 3;
+      };
+      int y = this->x;
+    };
+
+    constexpr B() {}
+  };
+  static_assert(B().y == 3, "");
 }
 
 namespace InheritedConstructor {
@@ -1660,9 +1673,9 @@ namespace NullptrCast {
   constexpr A *na = nullptr;
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
-                         // both-note {{cannot access base class of null pointer}}
+                         // both-note {{dereferencing a null pointer}}
   constexpr B &rb = (B&)*na; // both-error {{constant expression}} \
-                             // both-note {{cannot access derived class of null pointer}}
+                             // both-note {{dereferencing a null pointer}}
   constexpr bool test() {
     auto a = (A*)(B*)nullptr;
 
@@ -1740,7 +1753,7 @@ namespace CtorOfInvalidClass {
 #if __cplusplus >= 202002L
   template <typename T, auto Q>
   concept ReferenceOf = Q;
-  /// This calls a valid and constexpr copy constructor of InvalidCtor, 
+  /// This calls a valid and constexpr copy constructor of InvalidCtor,
   /// but should still be rejected.
   template<ReferenceOf<InvalidCtor> auto R, typename Rep> int F; // both-error {{non-type template argument is not a constant expression}}
 #endif
@@ -1839,4 +1852,44 @@ namespace DiamondDowncast {
   constexpr Top &top1 = (Middle1&)bottom;
   constexpr Middle2 &fail = (Middle2&)top1; // both-error {{must be initialized by a constant expression}} \
                                             // both-note {{cannot cast object of dynamic type 'const Bottom' to type 'Middle2'}}
+}
+
+namespace PrimitiveInitializedByInitList {
+  constexpr struct {
+    int a;
+    int b{this->a};
+  } c{ 17 };
+  static_assert(c.b == 17, "");
+}
+
+namespace MethodWillHaveBody {
+  class A {
+  public:
+    static constexpr int get_value2() { return 1 + get_value(); }
+    static constexpr int get_value() { return 1; }
+  };
+  static_assert(A::get_value2() == 2, "");
+
+  template<typename T> constexpr T f(T);
+  template<typename T> constexpr T g(T t) {
+    typedef int arr[f(T())]; // both-warning {{variable length array}} \
+                             // both-note {{undefined function 'f<int>'}}
+    return t;
+  }
+  template<typename T> constexpr T f(T t) { // both-note {{declared here}}
+    typedef int arr[g(T())]; // both-note {{instantiation of}}
+    return t;
+  }
+  int n = f(0); // both-note {{instantiation of}}
+}
+
+namespace StaticRedecl {
+  struct T {
+    static T tt;
+    constexpr T() : p(&tt) {}
+    T *p;
+  };
+  T T::tt;
+  constexpr T t;
+  static_assert(t.p == &T::tt, "");
 }

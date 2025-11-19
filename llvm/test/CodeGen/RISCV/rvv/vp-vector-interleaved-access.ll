@@ -2,23 +2,13 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+v,m -O2 | FileCheck -check-prefixes=CHECK,RV32 %s
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+v,m -O2 | FileCheck -check-prefixes=CHECK,RV64 %s
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor2_v2(ptr %ptr, i32 %evl) {
-; RV32-LABEL: load_factor2_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    srli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg2e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: load_factor2_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 33
-; RV64-NEXT:    srli a1, a1, 33
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg2e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 2
+define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor2_v2(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor2_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg2e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 2
   %wide.masked.load = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %rvl)
   %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
@@ -28,33 +18,13 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor2_v2(ptr %ptr, i32 %
   ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
 }
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_v2(ptr %ptr, i32 %evl) {
-; RV32-LABEL: load_factor3_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    lui a2, 699051
-; RV32-NEXT:    addi a2, a2, -1365
-; RV32-NEXT:    mulhu a1, a1, a2
-; RV32-NEXT:    srli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg3e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: load_factor3_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a2, a1, 1
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    lui a2, 699051
-; RV64-NEXT:    addi a2, a2, -1365
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    slli a2, a2, 32
-; RV64-NEXT:    mulhu a1, a1, a2
-; RV64-NEXT:    srli a1, a1, 33
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg3e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 3
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_v2(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor3_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 3
   %wide.masked.load = call <vscale x 6 x i32> @llvm.vp.load(ptr %ptr, <vscale x 6 x i1> splat (i1 true), i32 %rvl)
   %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3(<vscale x 6 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
@@ -66,23 +36,70 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
 }
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor4_v2(ptr %ptr, i32 %evl) {
-; RV32-LABEL: load_factor4_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    srli a1, a1, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg4e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: load_factor4_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 34
-; RV64-NEXT:    srli a1, a1, 34
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg4e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 4
+define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_partial(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor3_partial:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg3e32.v v7, (a0)
+; CHECK-NEXT:    vmv1r.v v8, v7
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 3
+  %wide.masked.load = call <vscale x 6 x i32> @llvm.vp.load(ptr %ptr, <vscale x 6 x i1> splat (i1 true), i32 %rvl)
+  %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3(<vscale x 6 x i32> %wide.masked.load)
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
+  %t2 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 2
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t2, 1
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
+}
+
+; InterleavedAccess should kick in even if the users of deinterleave intrinsic are not extractvalue.
+define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_no_extract(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor3_no_extract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 12
+; CHECK-NEXT:    beq a1, a2, .LBB3_2
+; CHECK-NEXT:  # %bb.1: # %bb0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg3e32.v v7, (a0)
+; CHECK-NEXT:    j .LBB3_3
+; CHECK-NEXT:  .LBB3_2: # %bb1
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg3e32.v v7, (a0)
+; CHECK-NEXT:  .LBB3_3: # %merge
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v8, v7
+; CHECK-NEXT:    ret
+  %p = icmp ne i32 %evl, 12
+  br i1 %p, label %bb0, label %bb1
+
+bb0:
+  %rvl.0 = mul nuw i32 %evl, 3
+  %wide.load.0 = call <vscale x 6 x i32> @llvm.vp.load(ptr %ptr, <vscale x 6 x i1> splat (i1 true), i32 %rvl.0)
+  %deinterleaved.results.0 = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3(<vscale x 6 x i32> %wide.load.0)
+  br label %merge
+
+bb1:
+  %wide.load.1 = call <vscale x 6 x i32> @llvm.vp.load(ptr %ptr, <vscale x 6 x i1> splat (i1 true), i32 12)
+  %deinterleaved.results.1 = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3(<vscale x 6 x i32> %wide.load.1)
+  br label %merge
+
+merge:
+  %deinterleaved.results = phi { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [%deinterleaved.results.0, %bb0], [%deinterleaved.results.1, %bb1]
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
+  %t2 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 2
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t2, 1
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
+}
+
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor4_v2(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor4_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg4e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 4
   %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %rvl)
   %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave4.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 0
@@ -97,33 +114,13 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res3
 }
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor5_v2(ptr %ptr, i32 %evl) {
-; RV32-LABEL: load_factor5_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a2, a1, 2
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    lui a2, 838861
-; RV32-NEXT:    addi a2, a2, -819
-; RV32-NEXT:    mulhu a1, a1, a2
-; RV32-NEXT:    srli a1, a1, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg5e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: load_factor5_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a2, a1, 2
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    lui a2, 838861
-; RV64-NEXT:    addi a2, a2, -819
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    slli a2, a2, 32
-; RV64-NEXT:    mulhu a1, a1, a2
-; RV64-NEXT:    srli a1, a1, 34
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg5e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 5
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor5_v2(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor5_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg5e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 5
   %wide.masked.load = call <vscale x 10 x i32> @llvm.vp.load(ptr %ptr, <vscale x 10 x i1> splat (i1 true), i32 %rvl)
   %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave5(<vscale x 10 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
@@ -139,40 +136,13 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res4
 }
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor7_v2(ptr %ptr, i32 %evl) {
-; RV32-LABEL: load_factor7_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a2, a1, 3
-; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    lui a1, 149797
-; RV32-NEXT:    addi a1, a1, -1755
-; RV32-NEXT:    mulhu a1, a2, a1
-; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    srli a2, a2, 1
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    srli a1, a1, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg7e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: load_factor7_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a2, a1, 3
-; RV64-NEXT:    lui a3, 149797
-; RV64-NEXT:    subw a2, a2, a1
-; RV64-NEXT:    addi a1, a3, -1755
-; RV64-NEXT:    slli a3, a2, 32
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    mulhu a1, a3, a1
-; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    subw a2, a2, a1
-; RV64-NEXT:    srliw a2, a2, 1
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    srli a1, a1, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg7e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 7
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor7_v2(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor7_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg7e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 7
   %wide.masked.load = call <vscale x 14 x i32> @llvm.vp.load(ptr %ptr, <vscale x 14 x i1> splat (i1 true), i32 %rvl)
   %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave7(<vscale x 14 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
@@ -192,23 +162,13 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res6
 }
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor8_v2(ptr %ptr, i32 %evl) {
-; RV32-LABEL: load_factor8_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    srli a1, a1, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg8e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: load_factor8_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 35
-; RV64-NEXT:    srli a1, a1, 35
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg8e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 8
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor8_v2(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor8_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg8e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 8
   %wide.masked.load = call <vscale x 16 x i32> @llvm.vp.load.nxv16i32.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %rvl)
   %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave8.nxv16i32(<vscale x 16 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 0
@@ -231,61 +191,31 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res7
 }
 
-define void @store_factor2_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 %evl) {
-; RV32-LABEL: store_factor2_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    srli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV32-NEXT:    vsseg2e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_factor2_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 33
-; RV64-NEXT:    srli a1, a1, 33
-; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV64-NEXT:    vsseg2e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 2
+define void @store_factor2_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: store_factor2_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 2
   %interleaved.vec = call <vscale x 2 x i32> @llvm.vector.interleave2.nxv2i32(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1)
   call void @llvm.vp.store.nxv2i32.p0(<vscale x 2 x i32> %interleaved.vec, ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
-define void @store_factor3_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2, ptr %ptr, i32 %evl) {
-; RV32-LABEL: store_factor3_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    lui a2, 699051
-; RV32-NEXT:    addi a2, a2, -1365
-; RV32-NEXT:    mulhu a1, a1, a2
-; RV32-NEXT:    srli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV32-NEXT:    vsseg3e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_factor3_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a2, a1, 1
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    lui a2, 699051
-; RV64-NEXT:    addi a2, a2, -1365
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    slli a2, a2, 32
-; RV64-NEXT:    mulhu a1, a1, a2
-; RV64-NEXT:    srli a1, a1, 33
-; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV64-NEXT:    vsseg3e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 3
+define void @store_factor3_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: store_factor3_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 3
   %interleaved.vec = call <vscale x 3 x i32> @llvm.vector.interleave3(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2)
   call void @llvm.vp.store(<vscale x 3 x i32> %interleaved.vec, ptr %ptr, <vscale x 3 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
-define void @store_factor4_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 %evl) {
+define void @store_factor4_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 zeroext %evl) {
 ; RV32-LABEL: store_factor4_v2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a1, a1, 3
@@ -305,134 +235,61 @@ define void @store_factor4_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, pt
 ; RV64-NEXT:    vmv1r.v v11, v9
 ; RV64-NEXT:    vsseg4e32.v v8, (a0)
 ; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 8
+  %rvl = mul nuw i32 %evl, 8
   %interleaved.vec = call <vscale x 4 x i32> @llvm.vector.interleave4.nxv4i32(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1)
   call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> %interleaved.vec, ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
-define void @store_factor5_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2, <vscale x 1 x i32> %v3, <vscale x 1 x i32> %v4, ptr %ptr, i32 %evl) {
-; RV32-LABEL: store_factor5_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a2, a1, 2
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    lui a2, 838861
-; RV32-NEXT:    addi a2, a2, -819
-; RV32-NEXT:    mulhu a1, a1, a2
-; RV32-NEXT:    srli a1, a1, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV32-NEXT:    vsseg5e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_factor5_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a2, a1, 2
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    lui a2, 838861
-; RV64-NEXT:    addi a2, a2, -819
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    slli a2, a2, 32
-; RV64-NEXT:    mulhu a1, a1, a2
-; RV64-NEXT:    srli a1, a1, 34
-; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV64-NEXT:    vsseg5e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 5
+define void @store_factor5_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2, <vscale x 1 x i32> %v3, <vscale x 1 x i32> %v4, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: store_factor5_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsseg5e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 5
   %interleaved.vec = call <vscale x 5 x i32> @llvm.vector.interleave5(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2, <vscale x 1 x i32> %v3, <vscale x 1 x i32> %v4)
   call void @llvm.vp.store(<vscale x 5 x i32> %interleaved.vec, ptr %ptr, <vscale x 5 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
-define void @store_factor7_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2, <vscale x 1 x i32> %v3, <vscale x 1 x i32> %v4, <vscale x 1 x i32> %v5, <vscale x 1 x i32> %v6, ptr %ptr, i32 %evl) {
-; RV32-LABEL: store_factor7_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a2, a1, 3
-; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    lui a1, 149797
-; RV32-NEXT:    addi a1, a1, -1755
-; RV32-NEXT:    mulhu a1, a2, a1
-; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    srli a2, a2, 1
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    srli a1, a1, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV32-NEXT:    vsseg7e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_factor7_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a2, a1, 3
-; RV64-NEXT:    lui a3, 149797
-; RV64-NEXT:    subw a2, a2, a1
-; RV64-NEXT:    addi a1, a3, -1755
-; RV64-NEXT:    slli a3, a2, 32
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    mulhu a1, a3, a1
-; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    subw a2, a2, a1
-; RV64-NEXT:    srliw a2, a2, 1
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    srli a1, a1, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV64-NEXT:    vsseg7e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 7
+define void @store_factor7_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2, <vscale x 1 x i32> %v3, <vscale x 1 x i32> %v4, <vscale x 1 x i32> %v5, <vscale x 1 x i32> %v6, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: store_factor7_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsseg7e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 7
   %interleaved.vec = call <vscale x 7 x i32> @llvm.vector.interleave7(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v2, <vscale x 1 x i32> %v3, <vscale x 1 x i32> %v4,  <vscale x 1 x i32> %v5, <vscale x 1 x i32> %v6)
   call void @llvm.vp.store(<vscale x 7 x i32> %interleaved.vec, ptr %ptr, <vscale x 7 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
-define void @store_factor8_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 %evl) {
-; RV32-LABEL: store_factor8_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    srli a1, a1, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv1r.v v10, v8
-; RV32-NEXT:    vmv1r.v v11, v9
-; RV32-NEXT:    vmv1r.v v12, v8
-; RV32-NEXT:    vmv1r.v v13, v9
-; RV32-NEXT:    vmv1r.v v14, v8
-; RV32-NEXT:    vmv1r.v v15, v9
-; RV32-NEXT:    vsseg8e32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_factor8_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 35
-; RV64-NEXT:    srli a1, a1, 35
-; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV64-NEXT:    vmv1r.v v10, v8
-; RV64-NEXT:    vmv1r.v v11, v9
-; RV64-NEXT:    vmv1r.v v12, v8
-; RV64-NEXT:    vmv1r.v v13, v9
-; RV64-NEXT:    vmv1r.v v14, v8
-; RV64-NEXT:    vmv1r.v v15, v9
-; RV64-NEXT:    vsseg8e32.v v8, (a0)
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 8
+define void @store_factor8_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: store_factor8_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vmv1r.v v11, v9
+; CHECK-NEXT:    vmv1r.v v12, v8
+; CHECK-NEXT:    vmv1r.v v13, v9
+; CHECK-NEXT:    vmv1r.v v14, v8
+; CHECK-NEXT:    vmv1r.v v15, v9
+; CHECK-NEXT:    vsseg8e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 8
   %interleaved.vec = call <vscale x 8 x i32> @llvm.vector.interleave8.nxv8i32(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1)
   call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> %interleaved.vec, ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>} @masked_load_factor2_v2(<vscale x 2 x i1> %mask, ptr %ptr, i32 %evl) {
-; RV32-LABEL: masked_load_factor2_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    srli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg2e32.v v8, (a0), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_load_factor2_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 33
-; RV64-NEXT:    srli a1, a1, 33
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg2e32.v v8, (a0), v0.t
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 2
+define {<vscale x 2 x i32>, <vscale x 2 x i32>} @masked_load_factor2_v2(<vscale x 2 x i1> %mask, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: masked_load_factor2_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg2e32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 2
   %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %wide.masked.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> %interleaved.mask, i32 %rvl)
   %deinterleaved.results = tail call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 4 x i32> %wide.masked.load)
@@ -443,23 +300,13 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @masked_load_factor2_v2(<vscale 
   ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
 }
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @masked_load_factor4_v2(<vscale x 2 x i1> %mask, ptr %ptr, i32 %evl) {
-; RV32-LABEL: masked_load_factor4_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    srli a1, a1, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg4e32.v v8, (a0), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_load_factor4_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 34
-; RV64-NEXT:    srli a1, a1, 34
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg4e32.v v8, (a0), v0.t
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 4
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @masked_load_factor4_v2(<vscale x 2 x i1> %mask, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: masked_load_factor4_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg4e32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 4
   %interleaved.mask = call <vscale x 8 x i1> @llvm.vector.interleave4.nxv8i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> %interleaved.mask, i32 %rvl)
   %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave4.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
@@ -475,52 +322,28 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res3
 }
 
-define void @masked_store_factor2_v2(<vscale x 1 x i1> %mask, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 %evl) {
-; RV32-LABEL: masked_store_factor2_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; RV32-NEXT:    vmv1r.v v9, v8
-; RV32-NEXT:    srli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV32-NEXT:    vsseg2e32.v v8, (a0), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_store_factor2_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 33
-; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; RV64-NEXT:    vmv1r.v v9, v8
-; RV64-NEXT:    srli a1, a1, 33
-; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV64-NEXT:    vsseg2e32.v v8, (a0), v0.t
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 2
+define void @masked_store_factor2_v2(<vscale x 1 x i1> %mask, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: masked_store_factor2_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 2
   %interleaved.mask = tail call <vscale x 2 x i1> @llvm.vector.interleave2.nxv2i1(<vscale x 1 x i1> %mask, <vscale x 1 x i1> %mask)
   %interleaved.vec = tail call <vscale x 2 x i32> @llvm.vector.interleave2.nxv2i32(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v0)
   tail call void @llvm.vp.store.nxv2i32.p0(<vscale x 2 x i32> %interleaved.vec, ptr %ptr, <vscale x 2 x i1> %interleaved.mask, i32 %rvl)
   ret void
 }
 
-define void @masked_load_store_factor2_v2_shared_mask(<vscale x 2 x i1> %mask, ptr %ptr, i32 %evl) {
-; RV32-LABEL: masked_load_store_factor2_v2_shared_mask:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    srli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV32-NEXT:    vlseg2e32.v v8, (a0), v0.t
-; RV32-NEXT:    vsseg2e32.v v8, (a0), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_load_store_factor2_v2_shared_mask:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 33
-; RV64-NEXT:    srli a1, a1, 33
-; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; RV64-NEXT:    vlseg2e32.v v8, (a0), v0.t
-; RV64-NEXT:    vsseg2e32.v v8, (a0), v0.t
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 2
+define void @masked_load_store_factor2_v2_shared_mask(<vscale x 2 x i1> %mask, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: masked_load_store_factor2_v2_shared_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg2e32.v v8, (a0), v0.t
+; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 2
   %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %wide.masked.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> %interleaved.mask, i32 %rvl)
   %deinterleaved.results = tail call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 4 x i32> %wide.masked.load)
@@ -531,42 +354,40 @@ define void @masked_load_store_factor2_v2_shared_mask(<vscale x 2 x i1> %mask, p
   ret void
 }
 
-define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %mask, ptr %ptr, i32 %evl) {
+define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %mask, ptr %ptr, i32 zeroext %evl) {
 ; RV32-LABEL: masked_load_store_factor2_v2_shared_mask_extract:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv1r.v v8, v0
 ; RV32-NEXT:    slli a2, a1, 1
 ; RV32-NEXT:    vmv.v.i v9, 0
-; RV32-NEXT:    li a1, -1
+; RV32-NEXT:    li a3, -1
 ; RV32-NEXT:    vmerge.vim v10, v9, 1, v0
 ; RV32-NEXT:    vwaddu.vv v11, v10, v10
-; RV32-NEXT:    vwmaccu.vx v11, a1, v10
-; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    vwmaccu.vx v11, a3, v10
+; RV32-NEXT:    csrr a3, vlenb
 ; RV32-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.i v10, 0
-; RV32-NEXT:    srli a1, a1, 2
-; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; RV32-NEXT:    srli a3, a3, 2
+; RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v11, 0
-; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vslidedown.vx v11, v11, a1
+; RV32-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vx v11, v11, a3
 ; RV32-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; RV32-NEXT:    vmerge.vim v10, v10, 1, v0
-; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v11, 0
 ; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
 ; RV32-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
-; RV32-NEXT:    vslideup.vx v10, v9, a1
+; RV32-NEXT:    vslideup.vx v10, v9, a3
 ; RV32-NEXT:    vmsne.vi v0, v10, 0
 ; RV32-NEXT:    vle32.v v10, (a0), v0.t
-; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
-; RV32-NEXT:    vnsrl.wx v13, v10, a1
-; RV32-NEXT:    vmv.x.s a1, v10
+; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV32-NEXT:    vnsrl.wx v13, v10, a2
 ; RV32-NEXT:    vnsrl.wi v12, v10, 0
-; RV32-NEXT:    srli a2, a2, 1
+; RV32-NEXT:    vmv.x.s a1, v10
 ; RV32-NEXT:    vmv1r.v v0, v8
-; RV32-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; RV32-NEXT:    vsseg2e32.v v12, (a0), v0.t
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    ret
@@ -591,26 +412,24 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
 ; RV64-NEXT:    vmerge.vim v10, v10, 1, v0
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v11, 0
-; RV64-NEXT:    slli a3, a1, 33
 ; RV64-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vx v10, v9, a2
+; RV64-NEXT:    slli a2, a1, 33
 ; RV64-NEXT:    vmsne.vi v0, v10, 0
-; RV64-NEXT:    srli a1, a3, 32
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; RV64-NEXT:    srli a2, a2, 32
+; RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v10, (a0), v0.t
-; RV64-NEXT:    li a1, 32
-; RV64-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; RV64-NEXT:    vnsrl.wx v13, v10, a1
-; RV64-NEXT:    vmv.x.s a1, v10
+; RV64-NEXT:    li a2, 32
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV64-NEXT:    vnsrl.wx v13, v10, a2
 ; RV64-NEXT:    vnsrl.wi v12, v10, 0
-; RV64-NEXT:    srli a3, a3, 33
+; RV64-NEXT:    vmv.x.s a1, v10
 ; RV64-NEXT:    vmv1r.v v0, v8
-; RV64-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
 ; RV64-NEXT:    vsseg2e32.v v12, (a0), v0.t
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 2
+  %rvl = mul nuw i32 %evl, 2
   %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %wide.masked.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> %interleaved.mask, i32 %rvl)
   %deinterleaved.results = tail call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 4 x i32> %wide.masked.load)
@@ -622,36 +441,63 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
   ret i32 %r0
 }
 
-define void @masked_store_factor4_v2(<vscale x 1 x i1> %mask, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 %evl) {
-; RV32-LABEL: masked_store_factor4_v2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    srli a1, a1, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv1r.v v10, v8
-; RV32-NEXT:    vmv1r.v v11, v9
-; RV32-NEXT:    vsseg4e32.v v8, (a0), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_store_factor4_v2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 34
-; RV64-NEXT:    srli a1, a1, 34
-; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV64-NEXT:    vmv1r.v v10, v8
-; RV64-NEXT:    vmv1r.v v11, v9
-; RV64-NEXT:    vsseg4e32.v v8, (a0), v0.t
-; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 4
+define void @masked_store_factor4_v2(<vscale x 1 x i1> %mask, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: masked_store_factor4_v2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vmv1r.v v11, v9
+; CHECK-NEXT:    vsseg4e32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 4
   %interleaved.mask = call <vscale x 4 x i1> @llvm.vector.interleave4.nxv4i1(<vscale x 1 x i1> %mask, <vscale x 1 x i1> %mask, <vscale x 1 x i1> %mask, <vscale x 1 x i1> %mask)
   %interleaved.vec = call <vscale x 4 x i32> @llvm.vector.interleave4.nxv2i32(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1)
   call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> %interleaved.vec, ptr %ptr, <vscale x 4 x i1> %interleaved.mask, i32 %rvl)
   ret void
 }
 
+define <vscale x 2 x i32> @load_factor2_oneactive(ptr %ptr, i32 zeroext %evl) {
+; RV32-LABEL: load_factor2_oneactive:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    srli a1, a1, 1
+; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV32-NEXT:    vlseg2e32.v v7, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: load_factor2_oneactive:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a1, a1, 34
+; RV64-NEXT:    srli a1, a1, 33
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV64-NEXT:    vlseg2e32.v v7, (a0)
+; RV64-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 4
+  %wide.masked.load = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %rvl)
+  %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %wide.masked.load)
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 1
+  ret <vscale x 2 x i32> %t0
+}
+
+define <vscale x 2 x i32> @load_factor5_oneactive(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: load_factor5_oneactive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 12
+; CHECK-NEXT:    li a2, 20
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a2
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 5
+  %wide.masked.load = call <vscale x 10 x i32> @llvm.vp.load(ptr %ptr, <vscale x 10 x i1> splat (i1 true), i32 %rvl)
+  %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave5(<vscale x 10 x i32> %wide.masked.load)
+  %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 3
+  ret <vscale x 2 x i32> %t3
+}
+
+
 ; Negative tests
 
-define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1> %mask0, <vscale x 2 x i1> %mask1, ptr %ptr, i32 %evl) {
+define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1> %mask0, <vscale x 2 x i1> %mask1, ptr %ptr, i32 zeroext %evl) {
 ; RV32-LABEL: not_same_mask:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
@@ -724,7 +570,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
 ; RV64-NEXT:    vnsrl.wx v9, v10, a0
 ; RV64-NEXT:    vnsrl.wi v8, v10, 0
 ; RV64-NEXT:    ret
-  %rvl = mul i32 %evl, 2
+  %rvl = mul nuw i32 %evl, 2
   %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask0, <vscale x 2 x i1> %mask1)
   %wide.masked.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> %interleaved.mask, i32 %rvl)
   %deinterleaved.results = tail call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 4 x i32> %wide.masked.load)
@@ -736,54 +582,25 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
 }
 
 ; EVL should be a multiple of factor
-define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @invalid_evl(ptr %ptr, i32 %evl) {
-; RV32-LABEL: invalid_evl:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    slli a2, a2, 2
-; RV32-NEXT:    sub sp, sp, a2
-; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; RV32-NEXT:    ori a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vs4r.v v8, (a0)
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV32-NEXT:    vlseg4e32.v v8, (a0)
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 2
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    .cfi_def_cfa sp, 16
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: invalid_evl:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    slli a2, a2, 2
-; RV64-NEXT:    sub sp, sp, a2
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; RV64-NEXT:    ori a1, a1, 1
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vs4r.v v8, (a0)
-; RV64-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV64-NEXT:    vlseg4e32.v v8, (a0)
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 2
-; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    .cfi_def_cfa sp, 16
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    ret
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @invalid_evl(ptr %ptr, i32 zeroext %evl) nounwind {
+; CHECK-LABEL: invalid_evl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    ori a1, a1, 1
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs4r.v v8, (a0)
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg4e32.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
   %rvl = or i32 %evl, 1
   %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %rvl)
   %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave4.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
@@ -799,5 +616,3 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res3
 }
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}

@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -72,6 +73,7 @@
 #include "llvm/CodeGen/PostRAMachineSink.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ProcessImplicitDefs.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
@@ -113,17 +115,19 @@
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/CFGuard.h"
+#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "llvm/Transforms/Scalar/LoopTermFold.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Transforms/Scalar/ScalarizeMaskedMemIntrin.h"
+#include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include <cassert>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -171,8 +175,12 @@ public:
 
     // Target should override TM.Options.EnableIPRA in their target-specific
     // LLVMTM ctor. See TargetMachine::setGlobalISel for example.
-    if (Opt.EnableIPRA)
+    if (Opt.EnableIPRA) {
       TM.Options.EnableIPRA = *Opt.EnableIPRA;
+    } else {
+      // If not explicitly specified, use target default.
+      TM.Options.EnableIPRA |= TM.useIPRA();
+    }
 
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
@@ -276,7 +284,7 @@ protected:
 
       FunctionPassManager FPM;
       FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-      FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      FPM.addPass(FreeMachineFunctionPass());
       if (this->PB.AddInCGSCCOrder) {
         MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
             createCGSCCToFunctionPassAdaptor(std::move(FPM))));
@@ -574,8 +582,10 @@ protected:
   void insertPass(InsertedPassT &&Pass) const {
     AfterCallbacks.emplace_back(
         [&](StringRef Name, MachineFunctionPassManager &MFPM) mutable {
-          if (Name == TargetPassT::name())
+          if (Name == TargetPassT::name() &&
+              runBeforeAdding(InsertedPassT::name())) {
             MFPM.addPass(std::forward<InsertedPassT>(Pass));
+          }
         });
   }
 
@@ -627,6 +637,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>(),
               /*Force=*/true);
     addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>(),
+              /*Force=*/true);
+    addIRPass(RequireAnalysisPass<RuntimeLibraryAnalysis, Module>(),
               /*Force=*/true);
     addISelPasses(addIRPass);
   }
@@ -726,8 +738,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
     addPass(LowerEmuTLSPass());
 
   addPass(PreISelIntrinsicLoweringPass(&TM));
-  addPass(ExpandLargeDivRemPass(&TM));
-  addPass(ExpandFpPass(&TM));
+  addPass(ExpandLargeDivRemPass(TM));
+  addPass(ExpandFpPass(TM, getOptLevel()));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -747,7 +759,12 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
-    addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
+    LoopPassManager LPM;
+    LPM.addPass(CanonicalizeFreezeInLoopsPass());
+    LPM.addPass(LoopStrengthReducePass());
+    if (Opt.EnableLoopTermFold)
+      LPM.addPass(LoopTermFoldPass());
+    addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
                                             /*UseMemorySSA=*/true));
   }
 
@@ -758,7 +775,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     // target lowering hook.
     if (!Opt.DisableMergeICmps)
       addPass(MergeICmpsPass());
-    addPass(ExpandMemCmpPass(&TM));
+    addPass(ExpandMemCmpPass(TM));
   }
 
   // Run GC lowering passes for builtin collectors
@@ -792,11 +809,12 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   addPass(ScalarizeMaskedMemIntrinPass());
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
-  addPass(ExpandReductionsPass());
+  if (!Opt.DisableExpandReductions)
+    addPass(ExpandReductionsPass());
 
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
-    addPass(SelectOptimizePass(&TM));
+    addPass(SelectOptimizePass(TM));
 
   if (Opt.EnableGlobalMergeFunc)
     addPass(GlobalMergeFuncPass());
@@ -823,14 +841,14 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addPassesToHandleExceptions(
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
   case ExceptionHandling::ZOS:
-    addPass(DwarfEHPreparePass(&TM));
+    addPass(DwarfEHPreparePass(TM));
     break;
   case ExceptionHandling::WinEH:
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
     addPass(WinEHPreparePass());
-    addPass(DwarfEHPreparePass(&TM));
+    addPass(DwarfEHPreparePass(TM));
     break;
   case ExceptionHandling::Wasm:
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
@@ -855,7 +873,7 @@ template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addCodeGenPrepare(
     AddIRPass &addPass) const {
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableCGP)
-    addPass(CodeGenPreparePass(&TM));
+    addPass(CodeGenPreparePass(TM));
   // TODO: Default ctor'd RewriteSymbolPass is no-op.
   // addPass(RewriteSymbolPass());
 }
@@ -870,11 +888,14 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
   if (Opt.RequiresCodeGenSCCOrder)
     addPass.requireCGSCCOrder();
 
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(ObjCARCContractPass());
+
   addPass(CallBrPreparePass());
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
-  addPass(SafeStackPass(&TM));
-  addPass(StackProtectorPass(&TM));
+  addPass(SafeStackPass(TM));
+  addPass(StackProtectorPass(TM));
 
   if (Opt.PrintISelInput)
     addPass(PrintFunctionPass(dbgs(),
@@ -1076,11 +1097,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
-    bool RunOnAllFunctions =
-        (Opt.EnableMachineOutliner == RunOutliner::AlwaysOutline);
-    bool AddOutliner = RunOnAllFunctions || TM.Options.SupportsDefaultOutlining;
-    if (AddOutliner)
-      addPass(MachineOutlinerPass(RunOnAllFunctions));
+    if (Opt.EnableMachineOutliner != RunOutliner::TargetDefault ||
+        TM.Options.SupportsDefaultOutlining)
+      addPass(MachineOutlinerPass(Opt.EnableMachineOutliner));
   }
 
   addPass(StackFrameLayoutAnalysisPass());

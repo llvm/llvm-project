@@ -75,7 +75,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasDotProd = false;
   bool HasFP16FML = false;
   bool HasMTE = false;
-  bool HasTME = false;
   bool HasPAuth = false;
   bool HasLS64 = false;
   bool HasRandGen = false;
@@ -135,6 +134,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
+protected:
   std::string ABI;
 
 public:
@@ -152,7 +152,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
@@ -189,6 +189,8 @@ public:
   void getTargetDefinesARMV95A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV96A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
+  void getTargetDefinesARMV97A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -276,6 +278,16 @@ public:
 private:
   void setDataLayout() override;
 };
+
+template <>
+inline bool
+LinuxTargetInfo<AArch64leTargetInfo>::setABI(const std::string &Name) {
+  if (Name == "pauthtest") {
+    ABI = Name;
+    return true;
+  }
+  return AArch64leTargetInfo::setABI(Name);
+}
 
 class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
     : public WindowsTargetInfo<AArch64leTargetInfo> {

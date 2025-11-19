@@ -516,12 +516,8 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
   if (isThreadLocalVariables(sec.flags) &&
       !relocAttrs.hasAttr(RelocAttrBits::UNSIGNED))
     error(message("not allowed in thread-local section, must be UNSIGNED"));
-  if (rel.r_length < 2 || rel.r_length > 3 ||
-      !relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
-    static SmallVector<StringRef, 4> widths{"0", "4", "8", "4 or 8"};
-    error(message("has width " + std::to_string(1 << rel.r_length) +
-                  " bytes, but must be " +
-                  widths[(static_cast<int>(relocAttrs.bits) >> 2) & 3] +
+  if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
+    error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
                   " bytes"));
   }
   return valid;
@@ -812,6 +808,17 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       continue;
 
     if ((sym.n_type & N_TYPE) == N_SECT) {
+      if (sym.n_sect == 0) {
+        fatal("section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+              toString(this) + " has an invalid section index [0]");
+      }
+      if (sym.n_sect > sections.size()) {
+        fatal("section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+              toString(this) + " has an invalid section index [" +
+              Twine(static_cast<unsigned>(sym.n_sect)) +
+              "] greater than the total number of sections [" +
+              Twine(sections.size()) + "]");
+      }
       Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
       if (subsections.empty())
@@ -1789,12 +1796,13 @@ void DylibFile::parseExportedSymbols(uint32_t offset, uint32_t size) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   std::vector<TrieEntry> entries;
   // Find all the $ld$* symbols to process first.
-  parseTrie(buf + offset, size, [&](const Twine &name, uint64_t flags) {
-    StringRef savedName = saver().save(name);
-    if (handleLDSymbol(savedName))
-      return;
-    entries.push_back({savedName, flags});
-  });
+  parseTrie(toString(this), buf + offset, size,
+            [&](const Twine &name, uint64_t flags) {
+              StringRef savedName = saver().save(name);
+              if (handleLDSymbol(savedName))
+                return;
+              entries.push_back({savedName, flags});
+            });
 
   // Process the "normal" symbols.
   for (TrieEntry &entry : entries) {

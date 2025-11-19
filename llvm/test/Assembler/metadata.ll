@@ -5,6 +5,14 @@
 ; CHECK-UNMAT: @global = global i32 0, !foo [[M2:![0-9]+]], !foo [[M3:![0-9]+]], !baz [[M3]]
 @global = global i32 0, !foo !2, !foo !3, !baz !3
 
+; CHECK-UNMAT: @ifunc_func = ifunc void (...), ptr @resolver, !foo [[M2]]
+@ifunc_func = ifunc void (...), ptr @resolver, !foo !2
+
+define internal ptr @resolver() {
+entry:
+  ret ptr @test
+}
+
 ; CHECK-LABEL: @test
 ; CHECK: ret void, !foo [[M0:![0-9]+]], !bar [[M1:![0-9]+]]
 define void @test() !dbg !1 {

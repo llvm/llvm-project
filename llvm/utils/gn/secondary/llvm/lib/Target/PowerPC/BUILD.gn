@@ -30,6 +30,12 @@ tablegen("PPCGenRegisterBank") {
   td_file = "PPC.td"
 }
 
+tablegen("PPCGenSDNodeInfo") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "PPC.td"
+}
+
 static_library("LLVMPowerPCCodeGen") {
   deps = [
     ":PPCGenCallingConv",
@@ -37,6 +43,7 @@ static_library("LLVMPowerPCCodeGen") {
     ":PPCGenFastISel",
     ":PPCGenGlobalISel",
     ":PPCGenRegisterBank",
+    ":PPCGenSDNodeInfo",
     "AsmParser:PPCGenAsmMatcher",
     "MCTargetDesc",
     "TargetInfo",
@@ -63,7 +70,6 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCBoolRetToInt.cpp",
     "PPCBranchCoalescing.cpp",
     "PPCBranchSelector.cpp",
-    "PPCCCState.cpp",
     "PPCCTRLoops.cpp",
     "PPCCTRLoopsVerify.cpp",
     "PPCCallingConv.cpp",
@@ -93,9 +99,9 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCTargetMachine.cpp",
     "PPCTargetObjectFile.cpp",
     "PPCTargetTransformInfo.cpp",
-    "PPCVSXCopy.cpp",
     "PPCVSXFMAMutate.cpp",
     "PPCVSXSwapRemoval.cpp",
+    "PPCVSXWACCCopy.cpp",
   ]
 }
 

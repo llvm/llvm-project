@@ -16,6 +16,7 @@ define internal void @select_i32(i32 %self, ptr nonnull %value) {
 ; CHECK-NEXT:    bne .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %start
 ; CHECK-NEXT:    and.l #255, %d1
+; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    cmpi.l #0, %d1
 ; CHECK-NEXT:    bne .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: ; %null
@@ -60,6 +61,7 @@ define internal void @select_i16(i16 %self, ptr nonnull %value) {
 ; CHECK-NEXT:    bne .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %start
 ; CHECK-NEXT:    and.l #255, %d1
+; CHECK-NEXT:    and.w #1, %d1
 ; CHECK-NEXT:    cmpi.w #0, %d1
 ; CHECK-NEXT:    bne .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: ; %null
@@ -93,18 +95,26 @@ define internal void @select_i8(i8 %self, ptr nonnull %value) {
 ; CHECK-LABEL: select_i8:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %start
-; CHECK-NEXT:    move.l (8,%sp), %d0
-; CHECK-NEXT:    cmpi.b #0, (7,%sp)
-; CHECK-NEXT:    sne %d1
-; CHECK-NEXT:    bne .LBB2_2
-; CHECK-NEXT:  ; %bb.1: ; %start
-; CHECK-NEXT:    cmpi.b #0, %d1
-; CHECK-NEXT:    bne .LBB2_3
-; CHECK-NEXT:  .LBB2_2: ; %null
-; CHECK-NEXT:    suba.l %a0, %a0
-; CHECK-NEXT:    move.l %d0, (%a0)
-; CHECK-NEXT:  .LBB2_3: ; %exit
-; CHECK-NEXT:    rts
+; CHECK-NEXT:     suba.l #4, %sp
+; CHECK-NEXT:   .cfi_def_cfa_offset -8
+; CHECK-NEXT:   movem.l %d2, (0,%sp)                    ; 8-byte Folded Spill
+; CHECK-NEXT:   cmpi.b #0, (11,%sp)
+; CHECK-NEXT:   move.w %ccr, %d2
+; CHECK-NEXT:   sne %d1
+; CHECK-NEXT:   move.l (12,%sp), %d0
+; CHECK-NEXT:   move.w %d2, %ccr
+; CHECK-NEXT:   bne .LBB2_2
+; CHECK-NEXT:   ; %bb.1:                                ; %start
+; CHECK-NEXT:   and.b #1, %d1
+; CHECK-NEXT:   cmpi.b #0, %d1
+; CHECK-NEXT:   bne .LBB2_3
+; CHECK-NEXT:   .LBB2_2:                                ; %null
+; CHECK-NEXT:   suba.l %a0, %a0
+; CHECK-NEXT:   move.l %d0, (%a0)
+; CHECK-NEXT:   .LBB2_3:                                ; %exit
+; CHECK-NEXT:   movem.l (0,%sp), %d2                    ; 8-byte Folded Reload
+; CHECK-NEXT:   adda.l #4, %sp
+; CHECK-NEXT:   rts
 start:
   %2 = icmp eq i8 %self, 0
   %3 = select i1 %2, i8 0, i8 1

@@ -379,6 +379,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeELFDynamicSymbols:
           case eSectionTypeELFRelocationEntries:
           case eSectionTypeELFDynamicLinkInfo:
+          case eSectionTypeWasmName:
           case eSectionTypeOther:
             return AddressClass::eUnknown;
           case eSectionTypeAbsoluteAddress:
@@ -646,14 +647,14 @@ ObjectFile::GetDWARFSectionTypeFromName(llvm::StringRef name) {
       .Case("frame", eSectionTypeDWARFDebugFrame)
       .Case("info", eSectionTypeDWARFDebugInfo)
       .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
-      .Cases("line", "line.dwo", eSectionTypeDWARFDebugLine)
-      .Cases("line_str", "line_str.dwo", eSectionTypeDWARFDebugLineStr)
+      .Cases({"line", "line.dwo"}, eSectionTypeDWARFDebugLine)
+      .Cases({"line_str", "line_str.dwo"}, eSectionTypeDWARFDebugLineStr)
       .Case("loc", eSectionTypeDWARFDebugLoc)
       .Case("loc.dwo", eSectionTypeDWARFDebugLocDwo)
       .Case("loclists", eSectionTypeDWARFDebugLocLists)
       .Case("loclists.dwo", eSectionTypeDWARFDebugLocListsDwo)
       .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
-      .Cases("macro", "macro.dwo", eSectionTypeDWARFDebugMacro)
+      .Cases({"macro", "macro.dwo"}, eSectionTypeDWARFDebugMacro)
       .Case("names", eSectionTypeDWARFDebugNames)
       .Case("pubnames", eSectionTypeDWARFDebugPubNames)
       .Case("pubtypes", eSectionTypeDWARFDebugPubTypes)
@@ -662,7 +663,7 @@ ObjectFile::GetDWARFSectionTypeFromName(llvm::StringRef name) {
       .Case("rnglists.dwo", eSectionTypeDWARFDebugRngListsDwo)
       .Case("str", eSectionTypeDWARFDebugStr)
       .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
-      .Case("str_offsets", eSectionTypeDWARFDebugStrOffsets)
+      .Cases({"str_offsets", "str_offs"}, eSectionTypeDWARFDebugStrOffsets)
       .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
       .Case("tu_index", eSectionTypeDWARFDebugTuIndex)
       .Case("types", eSectionTypeDWARFDebugTypes)

@@ -1,4 +1,4 @@
-//===--- ThrowKeywordMissingCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,8 +17,11 @@ namespace clang::tidy::bugprone {
 void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
-          hasType(cxxRecordDecl(
-              isSameOrDerivedFrom(matchesName("[Ee]xception|EXCEPTION")))),
+          hasType(cxxRecordDecl(anyOf(
+              matchesName("[Ee]xception|EXCEPTION"),
+              hasAnyBase(hasType(hasCanonicalType(recordType(hasDeclaration(
+                  cxxRecordDecl(matchesName("[Ee]xception|EXCEPTION"))
+                      .bind("base"))))))))),
           unless(anyOf(
               hasAncestor(
                   stmt(anyOf(cxxThrowExpr(), callExpr(), returnStmt()))),
@@ -37,6 +40,11 @@ void ThrowKeywordMissingCheck::check(const MatchFinder::MatchResult &Result) {
   diag(TemporaryExpr->getBeginLoc(), "suspicious exception object created but "
                                      "not thrown; did you mean 'throw %0'?")
       << TemporaryExpr->getType().getBaseTypeIdentifier()->getName();
+
+  if (const auto *BaseDecl = Result.Nodes.getNodeAs<Decl>("base"))
+    diag(BaseDecl->getLocation(),
+         "object type inherits from base class declared here",
+         DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::bugprone

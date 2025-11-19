@@ -27,7 +27,15 @@ using MCPhysReg = uint16_t;
 /// A target with a complicated sub-register structure will typically have many
 /// fewer register units than actual registers. MCRI::getNumRegUnits() returns
 /// the number of register units in the target.
-using MCRegUnit = unsigned;
+enum class MCRegUnit : unsigned;
+
+struct MCRegUnitToIndex {
+  using argument_type = MCRegUnit;
+
+  unsigned operator()(MCRegUnit Unit) const {
+    return static_cast<unsigned>(Unit);
+  }
+};
 
 /// Wrapper class representing physical registers. Should be passed by value.
 class MCRegister {

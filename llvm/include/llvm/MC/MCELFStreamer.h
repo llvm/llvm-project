@@ -17,7 +17,6 @@ namespace llvm {
 
 class ELFObjectWriter;
 class MCContext;
-class MCDataFragment;
 class MCFragment;
 class MCObjectWriter;
 class MCSection;
@@ -51,7 +50,7 @@ public:
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
+  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
                       uint64_t Offset) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
@@ -65,12 +64,7 @@ public:
   void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              Align ByteAlignment) override;
 
-  void emitValueImpl(const MCExpr *Value, unsigned Size,
-                     SMLoc Loc = SMLoc()) override;
-
   void emitIdent(StringRef IdentString) override;
-
-  void emitValueToAlignment(Align, int64_t, uint8_t, unsigned) override;
 
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;
@@ -78,10 +72,6 @@ public:
   // This is final. Override MCTargetStreamer::finish instead for
   // target-specific code.
   void finishImpl() final;
-
-  void emitBundleAlignMode(Align Alignment) override;
-  void emitBundleLock(bool AlignToEnd) override;
-  void emitBundleUnlock() override;
 
   /// ELF object attributes section emission support
   struct AttributeItem {
@@ -151,10 +141,8 @@ public:
   }
 
 private:
-  bool isBundleLocked() const;
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
-
-  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);
+  void finalizeCGProfileEntry(const MCSymbolRefExpr *Sym, uint64_t Offset,
+                              const MCSymbolRefExpr *&S);
   void finalizeCGProfile();
 
   bool SeenIdent = false;

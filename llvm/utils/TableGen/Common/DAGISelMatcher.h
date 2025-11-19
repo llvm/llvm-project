@@ -105,7 +105,7 @@ protected:
   Matcher(KindTy K) : Kind(K) {}
 
 public:
-  virtual ~Matcher() {}
+  virtual ~Matcher() = default;
 
   unsigned getSize() const { return Size; }
   void setSize(unsigned sz) { Size = sz; }
@@ -838,8 +838,9 @@ class EmitIntegerMatcher : public Matcher {
 
 public:
   EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt, unsigned resultNo)
-      : Matcher(EmitInteger), Val(SignExtend64(val, MVT(vt).getSizeInBits())),
-        VT(vt), ResultNo(resultNo) {}
+      : Matcher(EmitInteger),
+        Val(SignExtend64(val, MVT(vt).getFixedSizeInBits())), VT(vt),
+        ResultNo(resultNo) {}
 
   int64_t getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }

@@ -33,9 +33,6 @@
 
 #define OFFLOAD_DEVICE_DEFAULT -1
 
-// Don't format out enums and structs.
-// clang-format off
-
 /// return flags of __tgt_target_XXX public APIs
 enum __tgt_target_return_t : int {
   /// successful offload executed on a target device
@@ -51,39 +48,42 @@ enum __tgt_target_return_t : int {
 /// Data attributes for each data reference used in an OpenMP target region.
 enum tgt_map_type {
   // No flags
-  OMP_TGT_MAPTYPE_NONE            = 0x000,
+  OMP_TGT_MAPTYPE_NONE = 0x000,
   // copy data from host to device
-  OMP_TGT_MAPTYPE_TO              = 0x001,
+  OMP_TGT_MAPTYPE_TO = 0x001,
   // copy data from device to host
-  OMP_TGT_MAPTYPE_FROM            = 0x002,
+  OMP_TGT_MAPTYPE_FROM = 0x002,
   // copy regardless of the reference count
-  OMP_TGT_MAPTYPE_ALWAYS          = 0x004,
+  OMP_TGT_MAPTYPE_ALWAYS = 0x004,
   // force unmapping of data
-  OMP_TGT_MAPTYPE_DELETE          = 0x008,
+  OMP_TGT_MAPTYPE_DELETE = 0x008,
   // map the pointer as well as the pointee
-  OMP_TGT_MAPTYPE_PTR_AND_OBJ     = 0x010,
+  OMP_TGT_MAPTYPE_PTR_AND_OBJ = 0x010,
   // pass device base address to kernel
-  OMP_TGT_MAPTYPE_TARGET_PARAM    = 0x020,
+  OMP_TGT_MAPTYPE_TARGET_PARAM = 0x020,
   // return base device address of mapped data
-  OMP_TGT_MAPTYPE_RETURN_PARAM    = 0x040,
+  OMP_TGT_MAPTYPE_RETURN_PARAM = 0x040,
   // private variable - not mapped
-  OMP_TGT_MAPTYPE_PRIVATE         = 0x080,
+  OMP_TGT_MAPTYPE_PRIVATE = 0x080,
   // copy by value - not mapped
-  OMP_TGT_MAPTYPE_LITERAL         = 0x100,
+  OMP_TGT_MAPTYPE_LITERAL = 0x100,
   // mapping is implicit
-  OMP_TGT_MAPTYPE_IMPLICIT        = 0x200,
+  OMP_TGT_MAPTYPE_IMPLICIT = 0x200,
   // copy data to device
-  OMP_TGT_MAPTYPE_CLOSE           = 0x400,
+  OMP_TGT_MAPTYPE_CLOSE = 0x400,
   // runtime error if not already allocated
-  OMP_TGT_MAPTYPE_PRESENT         = 0x1000,
+  OMP_TGT_MAPTYPE_PRESENT = 0x1000,
   // use a separate reference counter so that the data cannot be unmapped within
   // the structured region
   // This is an OpenMP extension for the sake of OpenACC support.
-  OMP_TGT_MAPTYPE_OMPX_HOLD       = 0x2000,
+  OMP_TGT_MAPTYPE_OMPX_HOLD = 0x2000,
+  // Attach pointer and pointee, after processing all other maps.
+  // Applicable to map-entering directives. Does not change ref-count.
+  OMP_TGT_MAPTYPE_ATTACH = 0x4000,
   // descriptor for non-contiguous target-update
-  OMP_TGT_MAPTYPE_NON_CONTIG      = 0x100000000000,
+  OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
-  OMP_TGT_MAPTYPE_MEMBER_OF       = 0xffff000000000000
+  OMP_TGT_MAPTYPE_MEMBER_OF = 0xffff000000000000
 };
 
 /// Flags for offload entries.
@@ -101,13 +101,7 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
-  /// The allocation will not block on other streams.
-  TARGET_ALLOC_DEVICE_NON_BLOCKING,
 };
-
-inline KernelArgsTy CTorDTorKernelArgs = {1,       0,       nullptr,   nullptr,
-	     nullptr, nullptr, nullptr,   nullptr,
-	     0,      {0,0,0},       {1, 0, 0}, {1, 0, 0}, 0};
 
 struct DeviceTy;
 
@@ -280,6 +274,7 @@ int omp_get_initial_device(void);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
+int omp_target_is_accessible(const void *Ptr, size_t Size, int DeviceNum);
 int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                       size_t DstOffset, size_t SrcOffset, int DstDevice,
                       int SrcDevice);

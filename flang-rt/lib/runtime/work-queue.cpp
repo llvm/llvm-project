@@ -14,27 +14,12 @@
 
 namespace Fortran::runtime {
 
-#if !defined(RT_DEVICE_COMPILATION)
+#if !defined(RT_DEVICE_COMPILATION) && !defined(OMP_OFFLOAD_BUILD)
 // FLANG_RT_DEBUG code is disabled when false.
 static constexpr bool enableDebugOutput{false};
 #endif
 
 RT_OFFLOAD_API_GROUP_BEGIN
-
-RT_API_ATTRS Componentwise::Componentwise(const typeInfo::DerivedType &derived)
-    : derived_{derived}, components_{derived_.component().Elements()} {
-  GetComponent();
-}
-
-RT_API_ATTRS void Componentwise::GetComponent() {
-  if (IsComplete()) {
-    component_ = nullptr;
-  } else {
-    const Descriptor &componentDesc{derived_.component()};
-    component_ = componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(
-        componentAt_);
-  }
-}
 
 RT_API_ATTRS int Ticket::Continue(WorkQueue &workQueue) {
   if (!begun) {
@@ -53,19 +38,21 @@ RT_API_ATTRS int Ticket::Continue(WorkQueue &workQueue) {
 }
 
 RT_API_ATTRS WorkQueue::~WorkQueue() {
-  if (last_) {
-    if ((last_->next = firstFree_)) {
-      last_->next->previous = last_;
+  if (anyDynamicAllocation_) {
+    if (last_) {
+      if ((last_->next = firstFree_)) {
+        last_->next->previous = last_;
+      }
+      firstFree_ = first_;
+      first_ = last_ = nullptr;
     }
-    firstFree_ = first_;
-    first_ = last_ = nullptr;
-  }
-  while (firstFree_) {
-    TicketList *next{firstFree_->next};
-    if (!firstFree_->isStatic) {
-      FreeMemory(firstFree_);
+    while (firstFree_) {
+      TicketList *next{firstFree_->next};
+      if (!firstFree_->isStatic) {
+        FreeMemory(firstFree_);
+      }
+      firstFree_ = next;
     }
-    firstFree_ = next;
   }
 }
 
@@ -74,6 +61,7 @@ RT_API_ATTRS Ticket &WorkQueue::StartTicket() {
     void *p{AllocateMemoryOrCrash(terminator_, sizeof(TicketList))};
     firstFree_ = new (p) TicketList;
     firstFree_->isStatic = false;
+    anyDynamicAllocation_ = true;
   }
   TicketList *newTicket{firstFree_};
   if ((firstFree_ = newTicket->next)) {
@@ -91,7 +79,7 @@ RT_API_ATTRS Ticket &WorkQueue::StartTicket() {
     last_ = newTicket;
   }
   newTicket->ticket.begun = false;
-#if !defined(RT_DEVICE_COMPILATION)
+#if !defined(RT_DEVICE_COMPILATION) && !defined(OMP_OFFLOAD_BUILD)
   if (enableDebugOutput &&
       (executionEnvironment.internalDebugging &
           ExecutionEnvironment::WorkQueue)) {
@@ -105,7 +93,7 @@ RT_API_ATTRS int WorkQueue::Run() {
   while (last_) {
     TicketList *at{last_};
     insertAfter_ = last_;
-#if !defined(RT_DEVICE_COMPILATION)
+#if !defined(RT_DEVICE_COMPILATION) && !defined(OMP_OFFLOAD_BUILD)
     if (enableDebugOutput &&
         (executionEnvironment.internalDebugging &
             ExecutionEnvironment::WorkQueue)) {
@@ -114,7 +102,7 @@ RT_API_ATTRS int WorkQueue::Run() {
     }
 #endif
     int stat{at->ticket.Continue(*this)};
-#if !defined(RT_DEVICE_COMPILATION)
+#if !defined(RT_DEVICE_COMPILATION) && !defined(OMP_OFFLOAD_BUILD)
     if (enableDebugOutput &&
         (executionEnvironment.internalDebugging &
             ExecutionEnvironment::WorkQueue)) {

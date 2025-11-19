@@ -38,6 +38,17 @@ enum class VerbosityLevel {
   ErrorsWarningsAndRemarks
 };
 
+enum class RemarkFormat {
+  REMARK_FORMAT_STDOUT,
+  REMARK_FORMAT_YAML,
+  REMARK_FORMAT_BITSTREAM,
+};
+
+enum class RemarkPolicy {
+  REMARK_POLICY_ALL,
+  REMARK_POLICY_FINAL,
+};
+
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
 /// supported options.
@@ -221,14 +232,56 @@ public:
   }
   bool shouldVerifyRoundtrip() const { return verifyRoundtripFlag; }
 
+  /// Checks if any remark filters are set.
+  bool shouldEmitRemarks() const {
+    // Emit all remarks only when no filters are specified.
+    const bool hasFilters =
+        !getRemarksAllFilter().empty() || !getRemarksPassedFilter().empty() ||
+        !getRemarksFailedFilter().empty() ||
+        !getRemarksMissedFilter().empty() || !getRemarksAnalyseFilter().empty();
+    return hasFilters;
+  }
+
   /// Reproducer file generation (no crash required).
   StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
+
+  /// Set the reproducer output filename
+  RemarkFormat getRemarkFormat() const { return remarkFormatFlag; }
+  /// Set the remark policy to use.
+  RemarkPolicy getRemarkPolicy() const { return remarkPolicyFlag; }
+  /// Set the remark format to use.
+  std::string getRemarksAllFilter() const { return remarksAllFilterFlag; }
+  /// Set the remark output file.
+  std::string getRemarksOutputFile() const { return remarksOutputFileFlag; }
+  /// Set the remark passed filters.
+  std::string getRemarksPassedFilter() const { return remarksPassedFilterFlag; }
+  /// Set the remark failed filters.
+  std::string getRemarksFailedFilter() const { return remarksFailedFilterFlag; }
+  /// Set the remark missed filters.
+  std::string getRemarksMissedFilter() const { return remarksMissedFilterFlag; }
+  /// Set the remark analyse filters.
+  std::string getRemarksAnalyseFilter() const {
+    return remarksAnalyseFilterFlag;
+  }
 
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
   /// general.
   bool allowUnregisteredDialectsFlag = false;
+
+  /// Remark format
+  RemarkFormat remarkFormatFlag = RemarkFormat::REMARK_FORMAT_STDOUT;
+  /// Remark policy
+  RemarkPolicy remarkPolicyFlag = RemarkPolicy::REMARK_POLICY_ALL;
+  /// Remark file to output to
+  std::string remarksOutputFileFlag = "";
+  /// Remark filters
+  std::string remarksAllFilterFlag = "";
+  std::string remarksPassedFilterFlag = "";
+  std::string remarksFailedFilterFlag = "";
+  std::string remarksMissedFilterFlag = "";
+  std::string remarksAnalyseFilterFlag = "";
 
   /// Configuration for the debugging hooks.
   tracing::DebugConfig debugConfig;
@@ -305,6 +358,20 @@ protected:
 /// used to pass in a callback to setup a default pass pipeline to be applied on
 /// the loaded IR.
 using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
+
+/// Register basic command line options.
+/// - toolName is used for the header displayed by `--help`.
+/// - registry should contain all the dialects that can be parsed in the source.
+/// - return std::string for help header.
+std::string registerCLIOptions(llvm::StringRef toolName,
+                               DialectRegistry &registry);
+
+/// Parse command line options.
+/// - helpHeader is used for the header displayed by `--help`.
+/// - return std::pair<std::string, std::string> for
+///   inputFilename and outputFilename command line option values.
+std::pair<std::string, std::string> parseCLIOptions(int argc, char **argv,
+                                                    llvm::StringRef helpHeader);
 
 /// Register and parse command line options.
 /// - toolName is used for the header displayed by `--help`.

@@ -41,7 +41,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -221,6 +220,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.MaxIterationsCountToAnalyze = UnrollMaxIterationsCountToAnalyze;
   UP.SCEVExpansionBudget = SCEVCheapExpansionBudget;
   UP.RuntimeUnrollMultiExit = false;
+  UP.AddAdditionalAccumulators = false;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP, &ORE);
@@ -1327,7 +1327,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   }
 
   // Do not attempt partial/runtime unrolling in FullLoopUnrolling
-  if (OnlyFullUnroll && (UP.Count < TripCount || UP.Count < MaxTripCount)) {
+  if (OnlyFullUnroll && ((!TripCount && !MaxTripCount) ||
+                         UP.Count < TripCount || UP.Count < MaxTripCount)) {
     LLVM_DEBUG(
         dbgs() << "Not attempting partial/runtime unroll in FullLoopUnroll.\n");
     return LoopUnrollResult::Unmodified;
@@ -1355,6 +1356,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   ULO.Heart = getLoopConvergenceHeart(L);
   ULO.SCEVExpansionBudget = UP.SCEVExpansionBudget;
   ULO.RuntimeUnrollMultiExit = UP.RuntimeUnrollMultiExit;
+  ULO.AddAdditionalAccumulators = UP.AddAdditionalAccumulators;
   LoopUnrollResult UnrollResult = UnrollLoop(
       L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
   if (UnrollResult == LoopUnrollResult::Unmodified)

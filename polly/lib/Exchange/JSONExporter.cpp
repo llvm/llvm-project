@@ -12,10 +12,8 @@
 
 #include "polly/JSONExporter.h"
 #include "polly/DependenceInfo.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/ScopLocation.h"
 #include "llvm/ADT/Statistic.h"
@@ -36,6 +34,11 @@ using namespace polly;
 
 #define DEBUG_TYPE "polly-import-jscop"
 
+static cl::opt<bool>
+    PollyPrintImportJscop("polly-print-import-jscop",
+                          cl::desc("Polly - Print Scop import result"),
+                          cl::cat(PollyCategory));
+
 STATISTIC(NewAccessMapFound, "Number of updated access functions");
 
 namespace {
@@ -50,36 +53,6 @@ static cl::opt<std::string>
                   cl::desc("Postfix to append to the import .jsop files."),
                   cl::Hidden, cl::value_desc("File postfix"), cl::ValueRequired,
                   cl::init(""), cl::cat(PollyCategory));
-
-class JSONExporter : public ScopPass {
-public:
-  static char ID;
-  explicit JSONExporter() : ScopPass(ID) {}
-
-  /// Export the SCoP @p S to a JSON file.
-  bool runOnScop(Scop &S) override;
-
-  /// Print the SCoP @p S as it is exported.
-  void printScop(raw_ostream &OS, Scop &S) const override;
-
-  /// Register all analyses and transformation required.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-};
-
-class JSONImporter : public ScopPass {
-public:
-  static char ID;
-  std::vector<std::string> NewAccessStrings;
-  explicit JSONImporter() : ScopPass(ID) {}
-  /// Import new access functions for SCoP @p S from a JSON file.
-  bool runOnScop(Scop &S) override;
-
-  /// Print the SCoP @p S and the imported access functions.
-  void printScop(raw_ostream &OS, Scop &S) const override;
-
-  /// Register all analyses and transformation required.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-};
 } // namespace
 
 static std::string getFileName(Scop &S, StringRef Suffix = "") {
@@ -742,140 +715,24 @@ static bool importScop(Scop &S, const Dependences &D, const DataLayout &DL,
   return true;
 }
 
-char JSONExporter::ID = 0;
-void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { OS << S; }
-
-bool JSONExporter::runOnScop(Scop &S) {
-  exportScop(S);
-  return false;
-}
-
-void JSONExporter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-  AU.addRequired<ScopInfoRegionPass>();
-}
-
-Pass *polly::createJSONExporterPass() { return new JSONExporter(); }
-
-PreservedAnalyses JSONExportPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                      ScopStandardAnalysisResults &SAR,
-                                      SPMUpdater &) {
-  exportScop(S);
-  return PreservedAnalyses::all();
-}
-
-char JSONImporter::ID = 0;
-
-void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
-  OS << S;
-  for (std::vector<std::string>::const_iterator I = NewAccessStrings.begin(),
-                                                E = NewAccessStrings.end();
-       I != E; I++)
-    OS << "New access function '" << *I << "' detected in JSCOP file\n";
-}
-
-bool JSONImporter::runOnScop(Scop &S) {
-  const Dependences &D =
-      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
+void polly::runImportJSON(Scop &S, DependenceAnalysis::Result &DA) {
+  const Dependences &D = DA.getDependences(Dependences::AL_Statement);
   const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
-
+  std::vector<std::string> NewAccessStrings;
   if (!importScop(S, D, DL, &NewAccessStrings))
     report_fatal_error("Tried to import a malformed jscop file.");
 
-  return false;
-}
-
-void JSONImporter::getAnalysisUsage(AnalysisUsage &AU) const {
-  ScopPass::getAnalysisUsage(AU);
-  AU.addRequired<DependenceInfo>();
-
-  // TODO: JSONImporter should throw away DependenceInfo.
-  AU.addPreserved<DependenceInfo>();
-}
-
-Pass *polly::createJSONImporterPass() { return new JSONImporter(); }
-
-PreservedAnalyses JSONImportPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                      ScopStandardAnalysisResults &SAR,
-                                      SPMUpdater &) {
-  const Dependences &D =
-      SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(
-          Dependences::AL_Statement);
-  const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
-
-  if (!importScop(S, D, DL))
-    report_fatal_error("Tried to import a malformed jscop file.");
-
-  // This invalidates all analyses on Scop.
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
-}
-
-INITIALIZE_PASS_BEGIN(JSONExporter, "polly-export-jscop",
-                      "Polly - Export Scops as JSON"
-                      " (Writes a .jscop file for each Scop)",
-                      false, false);
-INITIALIZE_PASS_DEPENDENCY(DependenceInfo)
-INITIALIZE_PASS_END(JSONExporter, "polly-export-jscop",
-                    "Polly - Export Scops as JSON"
-                    " (Writes a .jscop file for each Scop)",
-                    false, false)
-
-INITIALIZE_PASS_BEGIN(JSONImporter, "polly-import-jscop",
-                      "Polly - Import Scops from JSON"
-                      " (Reads a .jscop file for each Scop)",
-                      false, false);
-INITIALIZE_PASS_DEPENDENCY(DependenceInfo)
-INITIALIZE_PASS_END(JSONImporter, "polly-import-jscop",
-                    "Polly - Import Scops from JSON"
-                    " (Reads a .jscop file for each Scop)",
-                    false, false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from JSONImporter.
-class JSONImporterPrinterLegacyPass final : public ScopPass {
-public:
-  static char ID;
-
-  JSONImporterPrinterLegacyPass() : JSONImporterPrinterLegacyPass(outs()) {}
-  explicit JSONImporterPrinterLegacyPass(llvm::raw_ostream &OS)
-      : ScopPass(ID), OS(OS) {}
-
-  bool runOnScop(Scop &S) override {
-    JSONImporter &P = getAnalysis<JSONImporter>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
-       << S.getRegion().getNameStr() << "' in function '"
-       << S.getFunction().getName() << "':\n";
-    P.printScop(OS, S);
-
-    return false;
+  if (PollyPrintImportJscop) {
+    outs()
+        << "Printing analysis 'Polly - Print Scop import result' for region: '"
+        << S.getRegion().getNameStr() << "' in function '"
+        << S.getFunction().getName() << "':\n";
+    outs() << S;
+    for (std::vector<std::string>::const_iterator I = NewAccessStrings.begin(),
+                                                  E = NewAccessStrings.end();
+         I != E; I++)
+      outs() << "New access function '" << *I << "' detected in JSCOP file\n";
   }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ScopPass::getAnalysisUsage(AU);
-    AU.addRequired<JSONImporter>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char JSONImporterPrinterLegacyPass::ID = 0;
-} // namespace
-
-Pass *polly::createJSONImporterPrinterLegacyPass(llvm::raw_ostream &OS) {
-  return new JSONImporterPrinterLegacyPass(OS);
 }
 
-INITIALIZE_PASS_BEGIN(JSONImporterPrinterLegacyPass, "polly-print-import-jscop",
-                      "Polly - Print Scop import result", false, false)
-INITIALIZE_PASS_DEPENDENCY(JSONImporter)
-INITIALIZE_PASS_END(JSONImporterPrinterLegacyPass, "polly-print-import-jscop",
-                    "Polly - Print Scop import result", false, false)
+void polly::runExportJSON(Scop &S) { exportScop(S); }

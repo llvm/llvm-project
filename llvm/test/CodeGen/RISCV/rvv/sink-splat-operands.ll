@@ -549,7 +549,7 @@ define void @sink_splat_rsub_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB10_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a2)
-; CHECK-NEXT:    subw a3, a1, a3
+; CHECK-NEXT:    sub a3, a1, a3
 ; CHECK-NEXT:    sw a3, 0(a2)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    bne a2, a0, .LBB10_6
@@ -5427,18 +5427,18 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @sink_splat_select_op1(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_select_op1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    li a3, 42
+; CHECK-NEXT:    lui a3, 1
+; CHECK-NEXT:    li a2, 42
+; CHECK-NEXT:    add a3, a0, a3
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:  .LBB117_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmseq.vx v0, v8, a3
-; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vmseq.vx v0, v9, a2
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    bne a0, a2, .LBB117_1
+; CHECK-NEXT:    bne a0, a3, .LBB117_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -5472,9 +5472,8 @@ define void @sink_splat_select_op2(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB118_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vmseq.vx v0, v9, a2
-; CHECK-NEXT:    vmerge.vvm v9, v8, v9, v0
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vmsne.vx v0, v9, a2
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    bne a0, a1, .LBB118_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -6017,5 +6016,41 @@ vector.latch:                                     ; preds = %for.body419
   br i1 %cond, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.latch
+  ret void
+}
+
+;; This is exactly like sink_add_splat except that the splat has operands
+;; which haven't been converted to undef.
+define void @sink_non_canonical_splat(ptr nocapture %a, i32 signext %x) {
+; CHECK-LABEL: sink_non_canonical_splat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:  .LBB131_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vadd.vx v8, v8, a1
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    bne a0, a2, .LBB131_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %broadcast.splatinsert = insertelement <4 x i32> zeroinitializer, i32 %x, i32 0
+  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %0 = getelementptr inbounds i32, ptr %a, i64 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = add <4 x i32> %wide.load, %broadcast.splat
+  store <4 x i32> %1, ptr %0, align 4
+  %index.next = add nuw i64 %index, 4
+  %2 = icmp eq i64 %index.next, 1024
+  br i1 %2, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
