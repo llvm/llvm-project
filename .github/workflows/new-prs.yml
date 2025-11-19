@@ -55,7 +55,7 @@ jobs:
     # notifications.
     # always() means that even if greeter is skipped, this job will run.
     if: >
-      always() && github.repository == 'llvm/llvm-project' &&
+      always() &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.commits < 10
     steps:
