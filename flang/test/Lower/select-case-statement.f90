@@ -160,7 +160,8 @@
     ! CHECK: %[[STR00_CONV:[0-9]+]] = fir.convert %[[STR00]]
 
     ! At -O1, lge() is lowered to various loops and "if" statements that work
-    ! with "00". It's not our goal to completely lge() lowering here.
+    ! with "00". It's not our goal to completely test lge() lowering here,
+    ! since this file is about testing SELECT CASE.
     ! CHECK-O1: fir.do_loop
     ! At -O0, we call runtime function for character comparison.
     ! CHECK-O0: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR00_CONV]]
