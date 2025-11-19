@@ -849,6 +849,14 @@ static void instantiateDependentHLSLParamModifierAttr(
       "out or inout parameter type must be a reference and restrict qualified");
 }
 
+static void instantiateDependentMallocSpanAttr(Sema &S,
+                                               const MallocSpanAttr *Attr,
+                                               Decl *New) {
+  QualType RT = getFunctionOrMethodResultType(New);
+  if (!S.CheckSpanLikeType(*Attr, RT))
+    New->addAttr(Attr->clone(S.getASTContext()));
+}
+
 void Sema::InstantiateAttrsForDecl(
     const MultiLevelTemplateArgumentList &TemplateArgs, const Decl *Tmpl,
     Decl *New, LateInstantiatedAttrVec *LateAttrs,
@@ -1067,6 +1075,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
     /* TO_UPSTREAM(BoundsSafety) OFF*/
+
+    if (auto *A = dyn_cast<MallocSpanAttr>(TmplAttr)) {
+      instantiateDependentMallocSpanAttr(*this, A, New);
+      continue;
+    }
 
     if (auto *A = dyn_cast<CleanupAttr>(TmplAttr)) {
       if (!New->hasAttr<CleanupAttr>()) {
