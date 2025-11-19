@@ -10787,14 +10787,15 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
         return false;
     }
     if (MI.definesRegister(AMDGPU::SCC, &RI) ||
-        MI.killsRegister(AMDGPU::SCC, &RI) || MI.isReturn()) {
+        MI.killsRegister(AMDGPU::SCC, &RI)) {
       SCCIsDead = true;
       break;
     }
   }
+  if (MBB->succ_empty())
+    SCCIsDead = true;
 
-  // If SCC is still live, verify that it is not live past the end of this
-  // block.
+  // SCC may have more uses.  Can't invert all of them.
   if (!SCCIsDead)
     return false;
 

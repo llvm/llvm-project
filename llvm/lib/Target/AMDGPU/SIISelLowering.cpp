@@ -6577,8 +6577,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     if (TBB && !TBB->isLiveIn(AMDGPU::SCC) && FBB &&
         !FBB->isLiveIn(AMDGPU::SCC))
       MI.addRegisterKilled(AMDGPU::SCC, TRI);
-  }
     return BB;
+  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())
