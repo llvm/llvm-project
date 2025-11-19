@@ -31,6 +31,10 @@ bool get_func(HMODULE module, F** func, char const* name) {
   return ((*func = reinterpret_cast<F*>(reinterpret_cast<void*>(GetProcAddress(module, name)))) != nullptr);
 }
 
+// clang-format off
+bool(WINAPI* EnumProcessModules)(HANDLE, HMODULE*, DWORD, DWORD*);
+bool(WINAPI* GetModuleInformation)(HANDLE, HMODULE, MODULEINFO*, DWORD);
+DWORD(WINAPI* GetModuleBaseName)(HANDLE, HMODULE, char**, DWORD);
 IMAGE_NT_HEADERS* (*ImageNtHeader)(void*);
 bool(WINAPI* SymCleanup)(HANDLE);
 DWORD(WINAPI* SymGetOptions)();
@@ -38,9 +42,6 @@ bool(WINAPI* SymGetSearchPath)(HANDLE, char const*, DWORD);
 bool(WINAPI* SymInitialize)(HANDLE, char const*, bool);
 DWORD(WINAPI* SymSetOptions)(DWORD);
 bool(WINAPI* SymSetSearchPath)(HANDLE, char const*);
-bool(WINAPI* EnumProcessModules)(HANDLE, HMODULE*, DWORD, DWORD*);
-bool(WINAPI* GetModuleInformation)(HANDLE, HMODULE, MODULEINFO*, DWORD);
-DWORD(WINAPI* GetModuleBaseName)(HANDLE, HMODULE, char**, DWORD);
 #  ifdef _WIN64
 void*(WINAPI* SymFunctionTableAccess)(HANDLE, DWORD64);
 bool(WINAPI* SymGetLineFromAddr)(HANDLE, DWORD64, DWORD*, IMAGEHLP_LINE64*);
@@ -48,16 +49,8 @@ DWORD64(WINAPI* SymGetModuleBase)(HANDLE, DWORD64);
 bool(WINAPI* SymGetModuleInfo)(HANDLE, DWORD64, IMAGEHLP_MODULE64*);
 bool(WINAPI* SymGetSymFromAddr)(HANDLE, DWORD64, DWORD64*, IMAGEHLP_SYMBOL64*);
 DWORD64(WINAPI* SymLoadModule)(HANDLE, HANDLE, char const*, char const*, void*, DWORD);
-bool(WINAPI* StackWalk)(
-    DWORD,
-    HANDLE,
-    HANDLE,
-    STACKFRAME64*,
-    void*,
-    void*,
-    decltype(SymFunctionTableAccess),
-    decltype(SymGetModuleBase),
-    void*);
+bool(WINAPI* StackWalk)(DWORD, HANDLE, HANDLE, STACKFRAME64*, void*, void*,
+                        decltype(SymFunctionTableAccess), decltype(SymGetModuleBase), void*);
 #  else
 void*(WINAPI* SymFunctionTableAccess)(HANDLE, DWORD);
 bool(WINAPI* SymGetLineFromAddr)(HANDLE, DWORD, DWORD*, IMAGEHLP_LINE*);
@@ -65,17 +58,10 @@ DWORD(WINAPI* SymGetModuleBase)(HANDLE, DWORD);
 bool(WINAPI* SymGetModuleInfo)(HANDLE, DWORD, IMAGEHLP_MODULE*);
 bool(WINAPI* SymGetSymFromAddr)(HANDLE, DWORD, DWORD*, IMAGEHLP_SYMBOL*);
 DWORD(WINAPI* SymLoadModule)(HANDLE, HANDLE, char const*, char const*, void*, DWORD);
-bool(WINAPI* StackWalk)(
-    DWORD,
-    HANDLE,
-    HANDLE,
-    STACKFRAME*,
-    void*,
-    void*,
-    decltype(SymFunctionTableAccess),
-    decltype(SymGetModuleBase),
-    void*);
+bool(WINAPI* StackWalk)(DWORD, HANDLE, HANDLE, STACKFRAME*, void*, void*,
+                        decltype(SymFunctionTableAccess), decltype(SymGetModuleBase), void*);
 #  endif
+// clang-format on
 
 bool loadFuncs() {
   static bool attempted{false};
@@ -93,13 +79,16 @@ bool loadFuncs() {
 
   attempted = true;
 
-  HMODULE dbghelp = LoadLibrary("dbghelp.dll");
-  HMODULE psapi   = LoadLibrary("psapi.dll");
+  HMODULE psapi   = LoadLibraryA("psapi.dll");
+  HMODULE dbghelp = LoadLibraryA("dbghelp.dll");
 
   // clang-format off
   succeeded = true
-      && (dbghelp != nullptr)
       && (psapi != nullptr)
+      && (dbghelp != nullptr)
+      && get_func(psapi, &EnumProcessModules, "EnumProcessModules")
+      && get_func(psapi, &GetModuleInformation, "GetModuleInformation")
+      && get_func(psapi, &GetModuleBaseName, "GetModuleBaseNameA")
       && get_func(dbghelp, &ImageNtHeader, "ImageNtHeader")
       && get_func(dbghelp, &SymCleanup, "SymCleanup")
       && get_func(dbghelp, &SymGetOptions, "SymGetOptions")
@@ -107,9 +96,6 @@ bool loadFuncs() {
       && get_func(dbghelp, &SymInitialize, "SymInitialize")
       && get_func(dbghelp, &SymSetOptions, "SymSetOptions")
       && get_func(dbghelp, &SymSetSearchPath, "SymSetSearchPath")
-      && get_func(psapi, &EnumProcessModules, "EnumProcessModules")
-      && get_func(psapi, &GetModuleInformation, "GetModuleInformation")
-      && get_func(psapi, &GetModuleBaseName, "GetModuleBaseNameA")
 #ifdef _WIN64
       && get_func(dbghelp, &StackWalk, "StackWalk64")
       && get_func(dbghelp, &SymFunctionTableAccess, "SymFunctionTableAccess64")
@@ -130,8 +116,6 @@ bool loadFuncs() {
       ;
   // clang-format on
 
-  FreeLibrary(psapi);
-  FreeLibrary(dbghelp);
   return succeeded;
 }
 
@@ -285,16 +269,18 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
     IMAGEHLP_SYMBOL* sym = reinterpret_cast<IMAGEHLP_SYMBOL*>(space);
     sym->SizeOfStruct    = sizeof(IMAGEHLP_SYMBOL);
     sym->MaxNameLength   = __max_sym_len;
+
 #  if defined(_WIN64)
     DWORD64 symdisp{};
 #  else
     DWORD symdisp{};
 #  endif
-    DWORD linedisp{};
     IMAGEHLP_LINE line;
     if (SymGetSymFromAddr(proc, entry.__addr_, &symdisp, sym)) {
       entry.__desc_.assign(sym->Name);
     }
+
+    DWORD linedisp{};
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
     if (SymGetLineFromAddr(proc, entry.__addr_, &linedisp, &line)) {
       entry.__file_.assign(line.FileName);
