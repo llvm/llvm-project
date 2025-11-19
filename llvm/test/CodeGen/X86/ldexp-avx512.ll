@@ -75,9 +75,8 @@ declare fp128 @ldexpl(fp128, i32) memory(none)
 define <8 x half> @test_ldexp_8xhalf(<8 x half> %x, <8 x i16> %exp) nounwind {
 ; AVX512F-LABEL: test_ldexp_8xhalf:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %xmm1, %ymm1
-; AVX512F-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512F-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; AVX512F-NEXT:    vscalefps %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -95,9 +94,8 @@ define <8 x half> @test_ldexp_8xhalf(<8 x half> %x, <8 x i16> %exp) nounwind {
 ;
 ; AVX512VL-LABEL: test_ldexp_8xhalf:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; AVX512VL-NEXT:    vpmovsxwd %xmm1, %ymm1
-; AVX512VL-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; AVX512VL-NEXT:    vscalefps %zmm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
@@ -116,7 +114,7 @@ declare <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half>, <8 x i16>)
 define <4 x float> @test_ldexp_4xfloat(<4 x float> %x, <4 x i32> %exp) nounwind {
 ; AVX512-LABEL: test_ldexp_4xfloat:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtdq2ps %xmm1, %xmm1
+; AVX512-NEXT:    vmovaps %xmm1, %xmm1
 ; AVX512-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512-NEXT:    vscalefps %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
@@ -158,9 +156,8 @@ declare <2 x double> @llvm.ldexp.v2f64.v2i32(<2 x double>, <2 x i32>)
 define <16 x half> @test_ldexp_16xhalf(<16 x half> %x, <16 x i16> %exp) nounwind {
 ; AVX512F-LABEL: test_ldexp_16xhalf:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
-; AVX512F-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512F-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; AVX512F-NEXT:    vscalefps %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -176,9 +173,8 @@ define <16 x half> @test_ldexp_16xhalf(<16 x half> %x, <16 x i16> %exp) nounwind
 ;
 ; AVX512VL-LABEL: test_ldexp_16xhalf:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; AVX512VL-NEXT:    vpmovsxwd %ymm1, %zmm1
-; AVX512VL-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512VL-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; AVX512VL-NEXT:    vscalefps %zmm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
 ; AVX512VL-NEXT:    retq
@@ -196,7 +192,7 @@ declare <16 x half> @llvm.ldexp.v16f16.v16i16(<16 x half>, <16 x i16>)
 define <8 x float> @test_ldexp_8xfloat(<8 x float> %x, <8 x i32> %exp) nounwind {
 ; AVX512-LABEL: test_ldexp_8xfloat:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; AVX512-NEXT:    vmovaps %ymm1, %ymm1
 ; AVX512-NEXT:    vmovaps %ymm0, %ymm0
 ; AVX512-NEXT:    vscalefps %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -221,7 +217,7 @@ declare <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float>, <8 x i32>)
 define <4 x double> @test_ldexp_4xdouble(<4 x double> %x, <4 x i32> %exp) nounwind {
 ; AVX512-LABEL: test_ldexp_4xdouble:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; AVX512-NEXT:    vmovapd %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %ymm0, %ymm0
 ; AVX512-NEXT:    vscalefpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -246,16 +242,14 @@ declare <4 x double> @llvm.ldexp.v4f64.v4i32(<4 x double>, <4 x i32>)
 define <32 x half> @test_ldexp_32xhalf(<32 x half> %x, <32 x i16> %exp) nounwind {
 ; AVX512F-LABEL: test_ldexp_32xhalf:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vcvtph2ps %ymm0, %zmm2
-; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm3
-; AVX512F-NEXT:    vcvtdq2ps %zmm3, %zmm3
-; AVX512F-NEXT:    vscalefps %zmm3, %zmm2, %zmm2
+; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm2
+; AVX512F-NEXT:    vcvtph2ps %ymm0, %zmm3
+; AVX512F-NEXT:    vscalefps %zmm2, %zmm3, %zmm2
 ; AVX512F-NEXT:    vcvtps2ph $4, %zmm2, %ymm2
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512F-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
-; AVX512F-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; AVX512F-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; AVX512F-NEXT:    vscalefps %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
@@ -269,16 +263,14 @@ define <32 x half> @test_ldexp_32xhalf(<32 x half> %x, <32 x i16> %exp) nounwind
 ;
 ; AVX512VL-LABEL: test_ldexp_32xhalf:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvtph2ps %ymm0, %zmm2
-; AVX512VL-NEXT:    vpmovsxwd %ymm1, %zmm3
-; AVX512VL-NEXT:    vcvtdq2ps %zmm3, %zmm3
-; AVX512VL-NEXT:    vscalefps %zmm3, %zmm2, %zmm2
+; AVX512VL-NEXT:    vpmovsxwd %ymm1, %zmm2
+; AVX512VL-NEXT:    vcvtph2ps %ymm0, %zmm3
+; AVX512VL-NEXT:    vscalefps %zmm2, %zmm3, %zmm2
 ; AVX512VL-NEXT:    vcvtps2ph $4, %zmm2, %ymm2
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512VL-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; AVX512VL-NEXT:    vpmovsxwd %ymm1, %zmm1
-; AVX512VL-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; AVX512VL-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; AVX512VL-NEXT:    vscalefps %zmm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
 ; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0

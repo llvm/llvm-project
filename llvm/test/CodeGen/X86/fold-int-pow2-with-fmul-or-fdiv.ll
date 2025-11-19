@@ -115,7 +115,7 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-ONLY-AVX512F-LABEL: fmul_pow2_ldexp_4xfloat:
 ; CHECK-ONLY-AVX512F:       # %bb.0:
 ; CHECK-ONLY-AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm1 = [9.0E+0,9.0E+0,9.0E+0,9.0E+0]
-; CHECK-ONLY-AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vmovaps %xmm0, %xmm0
 ; CHECK-ONLY-AVX512F-NEXT:    vscalefps %zmm0, %zmm1, %zmm0
 ; CHECK-ONLY-AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-ONLY-AVX512F-NEXT:    vzeroupper
@@ -580,7 +580,6 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX512F:       # %bb.0:
 ; CHECK-AVX512F-NEXT:    vbroadcastss {{.*#+}} ymm1 = [8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3]
 ; CHECK-AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
-; CHECK-AVX512F-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-AVX512F-NEXT:    vscalefps %zmm0, %zmm1, %zmm0
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vzeroupper
