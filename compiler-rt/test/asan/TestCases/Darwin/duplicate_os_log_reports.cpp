@@ -1,8 +1,8 @@
 // UNSUPPORTED: ios
 // REQUIRES: darwin_log_cmd
 // RUN: %clangxx_asan -fsanitize-recover=address %s -o %t
-// RUN: bash -c "{ %env_asan_opts=halt_on_error=0,log_to_syslog=1 %run %t > %t.process_output.txt 2>&1 & } \
-// RUN: ; export TEST_PID=$! ; wait ${TEST_PID}; echo -n ${TEST_PID} > %t.test_pid"
+// RUN: bash -c '{ %env_asan_opts=halt_on_error=0,log_to_syslog=1 %run %t > %t.process_output.txt 2>&1 & } \
+// RUN: ; export TEST_PID=$! ; wait ${TEST_PID}; echo -n ${TEST_PID} > %t.test_pid'
 
 // Check process output.
 // RUN: FileCheck %s --check-prefixes CHECK,CHECK-PROC -input-file=%t.process_output.txt
