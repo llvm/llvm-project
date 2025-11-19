@@ -19,7 +19,11 @@
 
 namespace llvm {
 class MCSection;
+}
 
+using namespace llvm;
+
+namespace {
 /// MCExpr that represents the epilog unwind code in an unwind table.
 class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
   const MCSymbol *Function;
@@ -60,9 +64,7 @@ public:
     return UnwindV2Start->getFragment();
   }
 };
-}
-
-using namespace llvm;
+} // namespace
 
 // NOTE: All relocations generated here are 4-byte image-relative.
 

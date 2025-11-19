@@ -887,10 +887,4 @@ bool ELFAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
   return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createELFAsmParser() {
-  return new ELFAsmParser;
-}
-
-} // end namespace llvm
+MCAsmParserExtension *llvm::createELFAsmParser() { return new ELFAsmParser; }

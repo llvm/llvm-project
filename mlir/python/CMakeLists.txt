@@ -895,24 +895,8 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
 ################################################################################
 
 _flatten_mlir_python_targets(mlir_python_sources_deps MLIRPythonSources)
-add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
-if(NOT LLVM_ENABLE_IDE)
-  add_llvm_install_targets(install-mlir-python-sources
-    DEPENDS mlir-python-sources
-    COMPONENT mlir-python-sources
-  )
-endif()
 
-set(_mlir_python_stubgen_enabled ON)
-# Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
-# to find the extension module for the host arch).
-# Note: Stubgen requires some extra handling to work properly when sanitizers are enabled,
-# so we skip running it in that case now.
-if(CMAKE_CROSSCOMPILING OR (NOT LLVM_USE_SANITIZER STREQUAL ""))
-  set(_mlir_python_stubgen_enabled OFF)
-endif()
-
-if(_mlir_python_stubgen_enabled)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   # _mlir stubgen
   # Note: All this needs to come before add_mlir_python_modules(MLIRPythonModules so that the install targets for the
   # generated type stubs get created.
@@ -965,6 +949,7 @@ if(_mlir_python_stubgen_enabled)
     ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
     SOURCES "${_core_type_stub_sources}"
   )
+  list(APPEND mlir_python_sources_deps MLIRPythonExtension.Core.type_stub_gen)
 
   # _mlirPythonTestNanobind stubgen
 
@@ -995,13 +980,21 @@ if(_mlir_python_stubgen_enabled)
   endif()
 endif()
 
+add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
+if(NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-mlir-python-sources
+    DEPENDS mlir-python-sources
+    COMPONENT mlir-python-sources
+  )
+endif()
+
 ################################################################################
 # The fully assembled package of modules.
 # This must come last.
 ################################################################################
 
 set(_declared_sources MLIRPythonSources MLIRPythonExtension.RegisterEverything)
-if(_mlir_python_stubgen_enabled)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()
 
@@ -1014,7 +1007,7 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
-if(_mlir_python_stubgen_enabled)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   add_dependencies(MLIRPythonModules "${_mlir_typestub_gen_target}")
   if(MLIR_INCLUDE_TESTS)
     add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")

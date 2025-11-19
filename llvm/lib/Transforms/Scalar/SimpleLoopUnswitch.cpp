@@ -2914,8 +2914,8 @@ static int CalculateUnswitchCostMultiplier(
     ParentLoopSizeMultiplier =
         std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
 
-  int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
-                               : std::distance(LI.begin(), LI.end()));
+  int SiblingsCount =
+      (ParentL ? ParentL->getSubLoopsVector().size() : llvm::size(LI));
   // Count amount of clones that all the candidates might cause during
   // unswitching. Branch/guard/select counts as 1, switch counts as log2 of its
   // cases.

@@ -66747,11 +66747,9 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; SI-NEXT:    v_writelane_b32 v21, s17, 13
 ; SI-NEXT:  .LBB97_3: ; %end
 ; SI-NEXT:    v_readlane_b32 s18, v21, 0
-; SI-NEXT:    v_readlane_b32 s19, v21, 1
+; SI-NEXT:    s_and_b32 s16, s40, 0xff
 ; SI-NEXT:    s_lshl_b32 s17, s18, 8
 ; SI-NEXT:    v_readlane_b32 s18, v21, 2
-; SI-NEXT:    s_and_b32 s16, s40, 0xff
-; SI-NEXT:    v_readlane_b32 s19, v21, 3
 ; SI-NEXT:    s_or_b32 s16, s16, s17
 ; SI-NEXT:    s_and_b32 s17, s18, 0xff
 ; SI-NEXT:    v_readlane_b32 s18, v21, 4
@@ -66773,9 +66771,8 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; SI-NEXT:    v_mov_b32_e32 v2, s16
 ; SI-NEXT:    v_readlane_b32 s16, v21, 6
 ; SI-NEXT:    s_and_b32 s14, s14, 0xff
-; SI-NEXT:    v_readlane_b32 s17, v21, 7
 ; SI-NEXT:    s_lshl_b32 s16, s16, 8
-; SI-NEXT:    v_readlane_b32 s19, v21, 5
+; SI-NEXT:    v_readlane_b32 s17, v21, 7
 ; SI-NEXT:    s_or_b32 s14, s14, s16
 ; SI-NEXT:    v_readlane_b32 s16, v21, 8
 ; SI-NEXT:    v_readlane_b32 s17, v21, 9
@@ -66807,8 +66804,8 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; SI-NEXT:    v_mov_b32_e32 v2, s14
 ; SI-NEXT:    v_readlane_b32 s14, v21, 12
 ; SI-NEXT:    s_and_b32 s10, s10, 0xff
-; SI-NEXT:    v_readlane_b32 s15, v21, 13
 ; SI-NEXT:    s_lshl_b32 s14, s14, 8
+; SI-NEXT:    v_readlane_b32 s15, v21, 13
 ; SI-NEXT:    s_or_b32 s10, s10, s14
 ; SI-NEXT:    v_readlane_b32 s14, v21, 14
 ; SI-NEXT:    v_readlane_b32 s15, v21, 15
@@ -66959,10 +66956,13 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; SI-NEXT:    s_and_b32 s5, s89, 0xff
 ; SI-NEXT:    s_lshl_b32 s5, s5, 16
 ; SI-NEXT:    s_lshl_b32 s6, s91, 24
+; SI-NEXT:    v_readlane_b32 s19, v21, 1
 ; SI-NEXT:    s_and_b32 s4, s4, 0xffff
 ; SI-NEXT:    s_or_b32 s5, s6, s5
+; SI-NEXT:    v_readlane_b32 s19, v21, 3
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 56, v0
 ; SI-NEXT:    s_or_b32 s4, s4, s5
+; SI-NEXT:    v_readlane_b32 s19, v21, 5
 ; SI-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 60, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
@@ -67017,6 +67017,28 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; SI-NEXT:    v_writelane_b32 v21, s4, 0
 ; SI-NEXT:    v_writelane_b32 v21, s5, 1
 ; SI-NEXT:    ; implicit-def: $sgpr4
+; SI-NEXT:    v_writelane_b32 v21, s4, 2
+; SI-NEXT:    v_writelane_b32 v21, s5, 3
+; SI-NEXT:    ; implicit-def: $sgpr4
+; SI-NEXT:    v_writelane_b32 v21, s4, 4
+; SI-NEXT:    v_writelane_b32 v21, s5, 5
+; SI-NEXT:    ; implicit-def: $sgpr4
+; SI-NEXT:    v_writelane_b32 v21, s4, 6
+; SI-NEXT:    v_writelane_b32 v21, s5, 7
+; SI-NEXT:    ; implicit-def: $sgpr4
+; SI-NEXT:    v_writelane_b32 v21, s4, 8
+; SI-NEXT:    v_writelane_b32 v21, s5, 9
+; SI-NEXT:    ; implicit-def: $sgpr4
+; SI-NEXT:    v_writelane_b32 v21, s4, 10
+; SI-NEXT:    v_writelane_b32 v21, s5, 11
+; SI-NEXT:    ; implicit-def: $sgpr4
+; SI-NEXT:    v_writelane_b32 v21, s4, 12
+; SI-NEXT:    v_writelane_b32 v21, s5, 13
+; SI-NEXT:    ; implicit-def: $sgpr4
+; SI-NEXT:    v_writelane_b32 v21, s4, 14
+; SI-NEXT:    v_writelane_b32 v21, s5, 15
+; SI-NEXT:    ; implicit-def: $sgpr4
+; SI-NEXT:    v_writelane_b32 v21, s4, 16
 ; SI-NEXT:    ; implicit-def: $sgpr40
 ; SI-NEXT:    ; implicit-def: $sgpr60
 ; SI-NEXT:    ; implicit-def: $sgpr74
@@ -67044,6 +67066,7 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; SI-NEXT:    ; implicit-def: $sgpr79
 ; SI-NEXT:    ; implicit-def: $sgpr89
 ; SI-NEXT:    ; implicit-def: $sgpr91
+; SI-NEXT:    v_writelane_b32 v21, s5, 17
 ; SI-NEXT:    ; implicit-def: $sgpr42
 ; SI-NEXT:    ; implicit-def: $sgpr66
 ; SI-NEXT:    ; implicit-def: $sgpr64
@@ -67060,33 +67083,10 @@ define inreg <64 x i8> @bitcast_v32i16_to_v64i8_scalar(<32 x i16> inreg %a, i32 
 ; SI-NEXT:    ; implicit-def: $sgpr30
 ; SI-NEXT:    ; implicit-def: $sgpr94
 ; SI-NEXT:    ; implicit-def: $sgpr92
+; SI-NEXT:    ; implicit-def: $sgpr4
 ; SI-NEXT:    ; implicit-def: $sgpr90
 ; SI-NEXT:    ; implicit-def: $sgpr88
 ; SI-NEXT:    ; implicit-def: $sgpr78
-; SI-NEXT:    v_writelane_b32 v21, s4, 2
-; SI-NEXT:    v_writelane_b32 v21, s5, 3
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    v_writelane_b32 v21, s4, 4
-; SI-NEXT:    v_writelane_b32 v21, s5, 5
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    v_writelane_b32 v21, s4, 6
-; SI-NEXT:    v_writelane_b32 v21, s5, 7
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    v_writelane_b32 v21, s4, 8
-; SI-NEXT:    v_writelane_b32 v21, s5, 9
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    v_writelane_b32 v21, s4, 10
-; SI-NEXT:    v_writelane_b32 v21, s5, 11
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    v_writelane_b32 v21, s4, 12
-; SI-NEXT:    v_writelane_b32 v21, s5, 13
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    v_writelane_b32 v21, s4, 14
-; SI-NEXT:    v_writelane_b32 v21, s5, 15
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    v_writelane_b32 v21, s4, 16
-; SI-NEXT:    v_writelane_b32 v21, s5, 17
-; SI-NEXT:    ; implicit-def: $sgpr4
 ; SI-NEXT:    s_branch .LBB97_2
 ;
 ; VI-LABEL: bitcast_v32i16_to_v64i8_scalar:
@@ -88410,8 +88410,8 @@ define inreg <64 x i8> @bitcast_v32bf16_to_v64i8_scalar(<32 x bfloat> inreg %a, 
 ; SI-NEXT:    s_lshr_b64 s[4:5], s[74:75], 24
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_writelane_b32 v41, s4, 0
-; SI-NEXT:    v_writelane_b32 v41, s5, 1
 ; SI-NEXT:    v_readfirstlane_b32 s4, v6
+; SI-NEXT:    v_writelane_b32 v41, s5, 1
 ; SI-NEXT:    s_lshr_b32 s5, s4, 16
 ; SI-NEXT:    v_readfirstlane_b32 s4, v7
 ; SI-NEXT:    s_lshr_b64 s[60:61], s[4:5], 16

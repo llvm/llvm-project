@@ -8,6 +8,7 @@
 define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-LABEL: kernel0:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -19,10 +20,9 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
-; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x8
 ; CHECK-NEXT:    v_writelane_b32 v22, s2, 0
 ; CHECK-NEXT:    v_writelane_b32 v22, s3, 1
+; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x8
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[48:51]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -123,19 +123,19 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    v_writelane_b32 v22, s0, 58
 ; CHECK-NEXT:    v_writelane_b32 v22, s1, 59
 ; CHECK-NEXT:    v_writelane_b32 v22, s2, 60
+; CHECK-NEXT:    ; implicit-def: $vgpr23 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v22, s3, 61
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ; implicit-def: $vgpr23 : SGPR spill to VGPR lane
-; CHECK-NEXT:    v_writelane_b32 v22, s0, 62
 ; CHECK-NEXT:    v_writelane_b32 v23, s2, 0
 ; CHECK-NEXT:    v_writelane_b32 v23, s3, 1
 ; CHECK-NEXT:    v_writelane_b32 v23, s4, 2
 ; CHECK-NEXT:    v_writelane_b32 v23, s5, 3
 ; CHECK-NEXT:    v_writelane_b32 v23, s6, 4
-; CHECK-NEXT:    v_writelane_b32 v22, s1, 63
+; CHECK-NEXT:    v_writelane_b32 v22, s0, 62
 ; CHECK-NEXT:    v_writelane_b32 v23, s7, 5
+; CHECK-NEXT:    v_writelane_b32 v22, s1, 63
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -208,15 +208,15 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_readlane_b32 s0, v22, 2
 ; CHECK-NEXT:    v_readlane_b32 s1, v22, 3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[48:51]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_readlane_b32 s2, v22, 4
 ; CHECK-NEXT:    v_readlane_b32 s3, v22, 5
 ; CHECK-NEXT:    v_readlane_b32 s4, v22, 6
 ; CHECK-NEXT:    v_readlane_b32 s5, v22, 7
 ; CHECK-NEXT:    v_readlane_b32 s6, v22, 8
 ; CHECK-NEXT:    v_readlane_b32 s7, v22, 9
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[48:51]
-; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -241,6 +241,12 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_readlane_b32 s0, v22, 26
 ; CHECK-NEXT:    v_readlane_b32 s1, v22, 27
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[38:39]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[44:47]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_readlane_b32 s2, v22, 28
 ; CHECK-NEXT:    v_readlane_b32 s3, v22, 29
 ; CHECK-NEXT:    v_readlane_b32 s4, v22, 30
@@ -248,22 +254,10 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    v_readlane_b32 s6, v22, 32
 ; CHECK-NEXT:    v_readlane_b32 s7, v22, 33
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[38:39]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[44:47]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_readlane_b32 s0, v22, 34
 ; CHECK-NEXT:    v_readlane_b32 s1, v22, 35
-; CHECK-NEXT:    v_readlane_b32 s2, v22, 36
-; CHECK-NEXT:    v_readlane_b32 s3, v22, 37
-; CHECK-NEXT:    v_readlane_b32 s4, v22, 38
-; CHECK-NEXT:    v_readlane_b32 s5, v22, 39
-; CHECK-NEXT:    v_readlane_b32 s6, v22, 40
-; CHECK-NEXT:    v_readlane_b32 s7, v22, 41
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[16:31]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -273,6 +267,12 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[40:43]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_readlane_b32 s2, v22, 36
+; CHECK-NEXT:    v_readlane_b32 s3, v22, 37
+; CHECK-NEXT:    v_readlane_b32 s4, v22, 38
+; CHECK-NEXT:    v_readlane_b32 s5, v22, 39
+; CHECK-NEXT:    v_readlane_b32 s6, v22, 40
+; CHECK-NEXT:    v_readlane_b32 s7, v22, 41
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -297,11 +297,11 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_readlane_b32 s0, v22, 58
 ; CHECK-NEXT:    v_readlane_b32 s1, v22, 59
-; CHECK-NEXT:    v_readlane_b32 s2, v22, 60
-; CHECK-NEXT:    v_readlane_b32 s3, v22, 61
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[34:35]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_readlane_b32 s2, v22, 60
+; CHECK-NEXT:    v_readlane_b32 s3, v22, 61
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
