@@ -3673,31 +3673,31 @@ extern "C" __device__ long long int test_llround(double x) {
 // DEFAULT-LABEL: define dso_local noundef float @test_log10f(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log10.f32(float [[X]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log10.f32(float [[X]])
 // DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) float @test_log10f(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log10.f32(float nofpclass(nan inf) [[X]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf noundef float @llvm.log10.f32(float nofpclass(nan inf) [[X]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: define dso_local noundef float @test_log10f(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log10.f32(float [[X]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log10.f32(float [[X]])
 // APPROX-NEXT:    ret float [[TMP0]]
 //
 // NCRDIV-LABEL: define dso_local noundef float @test_log10f(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log10.f32(float [[X]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log10.f32(float [[X]])
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test_log10f(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.log10.f32(float [[X]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call noundef addrspace(4) float @llvm.log10.f32(float [[X]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_log10f(float x) {
@@ -3945,31 +3945,31 @@ extern "C" __device__ double test_logb(double x) {
 // DEFAULT-LABEL: define dso_local noundef float @test_logf(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log.f32(float [[X]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log.f32(float [[X]])
 // DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) float @test_logf(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log.f32(float nofpclass(nan inf) [[X]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf noundef float @llvm.log.f32(float nofpclass(nan inf) [[X]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: define dso_local noundef float @test_logf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log.f32(float [[X]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log.f32(float [[X]])
 // APPROX-NEXT:    ret float [[TMP0]]
 //
 // NCRDIV-LABEL: define dso_local noundef float @test_logf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log.f32(float [[X]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log.f32(float [[X]])
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test_logf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.log.f32(float [[X]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call noundef addrspace(4) float @llvm.log.f32(float [[X]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_logf(float x) {
@@ -8600,31 +8600,31 @@ extern "C" __device__ float test___fsub_rn(float x, float y) {
 // DEFAULT-LABEL: define dso_local noundef float @test___log10f(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log10.f32(float [[X]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log10.f32(float [[X]])
 // DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) float @test___log10f(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log10.f32(float nofpclass(nan inf) [[X]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf noundef float @llvm.log10.f32(float nofpclass(nan inf) [[X]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: define dso_local noundef float @test___log10f(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log10.f32(float [[X]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log10.f32(float [[X]])
 // APPROX-NEXT:    ret float [[TMP0]]
 //
 // NCRDIV-LABEL: define dso_local noundef float @test___log10f(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log10.f32(float [[X]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log10.f32(float [[X]])
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test___log10f(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.log10.f32(float [[X]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call noundef addrspace(4) float @llvm.log10.f32(float [[X]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test___log10f(float x) {
@@ -8668,31 +8668,31 @@ extern "C" __device__ float test___log2f(float x) {
 // DEFAULT-LABEL: define dso_local noundef float @test___logf(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log.f32(float [[X]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log.f32(float [[X]])
 // DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) float @test___logf(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log.f32(float nofpclass(nan inf) [[X]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf noundef float @llvm.log.f32(float nofpclass(nan inf) [[X]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: define dso_local noundef float @test___logf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log.f32(float [[X]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log.f32(float [[X]])
 // APPROX-NEXT:    ret float [[TMP0]]
 //
 // NCRDIV-LABEL: define dso_local noundef float @test___logf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.log.f32(float [[X]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call noundef float @llvm.log.f32(float [[X]])
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test___logf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.log.f32(float [[X]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call noundef addrspace(4) float @llvm.log.f32(float [[X]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test___logf(float x) {

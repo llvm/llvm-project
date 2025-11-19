@@ -582,6 +582,25 @@ static Value *EmitISOVolatileStore(CodeGenFunction &CGF, const CallExpr *E) {
   return Store;
 }
 
+// Check if an intrinsic is a transcendental function that is unsafe to
+// contract.
+static bool isUnsafeToContract(unsigned IntrinsicID, CodeGenFunction &CGF) {
+  switch (IntrinsicID) {
+    // The implementation for log in the AMDGCN backend uses a refinement
+    // algorithm that requires intermediate rounding. The contract flag would
+    // allow FMA formation that recomputes products, breaking the refinement
+    // algorithm.
+  case Intrinsic::log:
+  case Intrinsic::log10:
+    if ((CGF.getTarget().getTriple().isAMDGCN() ||
+         CGF.getTarget().getTriple().isSPIRV()) &&
+        CGF.getLangOpts().HIP)
+      return true;
+    return false;
+  default:
+    return false;
+  }
+}
 // Emit a simple mangled intrinsic that has 1 argument and a return type
 // matching the argument type. Depending on mode, this may be a constrained
 // floating-point intrinsic.
@@ -596,7 +615,14 @@ Value *emitUnaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
     return CGF.Builder.CreateConstrainedFPCall(F, { Src0 });
   } else {
     Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-    return CGF.Builder.CreateCall(F, Src0);
+    CallInst *Call = CGF.Builder.CreateCall(F, Src0);
+
+    // Check if the intrinsic is unsafe to contract
+    if (isUnsafeToContract(IntrinsicID, CGF)) {
+      Call->setHasAllowContract(false);
+    }
+
+    return Call;
   }
 }
 
