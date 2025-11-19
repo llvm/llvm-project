@@ -224,11 +224,9 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                      Align Alignment, unsigned AddressSpace,
+HexagonTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                       TTI::TargetCostKind CostKind) const {
-  return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                      CostKind);
+  return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
 }
 
 InstructionCost

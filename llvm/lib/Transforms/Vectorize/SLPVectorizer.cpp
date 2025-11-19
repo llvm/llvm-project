@@ -6904,9 +6904,10 @@ static bool isMaskedLoadCompress(
       ScalarLoadsCost;
   InstructionCost LoadCost = 0;
   if (IsMasked) {
-    LoadCost =
-        TTI.getMaskedMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
-                                  LI->getPointerAddressSpace(), CostKind);
+    LoadCost = TTI.getMaskedMemoryOpCost({Intrinsic::masked_load, LoadVecTy,
+                                          CommonAlignment,
+                                          LI->getPointerAddressSpace()},
+                                         CostKind);
   } else {
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
@@ -7305,8 +7306,9 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
           break;
         case LoadsState::CompressVectorize:
           VecLdCost += TTI.getMaskedMemoryOpCost(
-                           Instruction::Load, SubVecTy, CommonAlignment,
-                           LI0->getPointerAddressSpace(), CostKind) +
+                           {Intrinsic::masked_load, SubVecTy, CommonAlignment,
+                            LI0->getPointerAddressSpace()},
+                           CostKind) +
                        VectorGEPCost +
                        ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, SubVecTy,
                                         {}, CostKind);
@@ -15102,8 +15104,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
         } else if (IsMasked) {
           VecLdCost = TTI->getMaskedMemoryOpCost(
-              Instruction::Load, LoadVecTy, CommonAlignment,
-              LI0->getPointerAddressSpace(), CostKind);
+              {Intrinsic::masked_load, LoadVecTy, CommonAlignment,
+               LI0->getPointerAddressSpace()},
+              CostKind);
           // TODO: include this cost into CommonCost.
           VecLdCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
                                         LoadVecTy, CompressMask, CostKind);
