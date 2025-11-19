@@ -716,6 +716,9 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
   bool ShouldEmitVFEInfo = CGM.getCodeGenOpts().VirtualFunctionElimination &&
                            CGM.HasHiddenLTOVisibility(RD);
+  // TODO: Update this name not to be restricted to WPD only
+  // as we now emit the vtable info info for speculative devirtualization as
+  // well.
   bool ShouldEmitWPDInfo =
       (CGM.getCodeGenOpts().WholeProgramVTables &&
        // Don't insert type tests if we are forcing public visibility.
@@ -2111,9 +2114,10 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
 
   // Always emit type metadata on non-available_externally definitions, and on
   // available_externally definitions if we are performing whole program
-  // devirtualization. For WPD we need the type metadata on all vtable
-  // definitions to ensure we associate derived classes with base classes
-  // defined in headers but with a strong definition only in a shared library.
+  // devirtualization or speculative devirtualization. We need the type metadata
+  // on all vtable definitions to ensure we associate derived classes with base
+  // classes defined in headers but with a strong definition only in a shared
+  // library.
   if (!VTable->isDeclarationForLinker() ||
       CGM.getCodeGenOpts().WholeProgramVTables ||
       CGM.getCodeGenOpts().DevirtualizeSpeculatively) {

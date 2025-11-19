@@ -1656,6 +1656,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (!LTOPreLink)
     MPM.addPass(RelLookupTableConverterPass());
 
+  // Add devirtualization pass only when LTO is not enabled, as otherwise
+  // the pass is already enabled in the LTO pipeline.
   if (PTO.DevirtualizeSpeculatively && LTOPhase == ThinOrFullLTOPhase::None) {
     MPM.addPass(WholeProgramDevirtPass(
         /*ExportSummary*/ nullptr,
@@ -1663,6 +1665,12 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
         /*DevirtSpeculatively*/ PTO.DevirtualizeSpeculatively));
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
+    // Given that the devirtualization creates more opportunities for inlining,
+    // we run the Inliner again here to maximize the optimization gain we
+    // get from devirtualization.
+    // Also, we can't run devirtualization before inlining because the
+    // devirtualization depends on the passes optimizing/eliminating vtable GVs
+    // and those passes are only effective after inlining.
     if (EnableModuleInliner) {
       MPM.addPass(ModuleInlinerPass(getInlineParamsFromOptLevel(Level),
                                     UseInlineAdvisor,
