@@ -8036,14 +8036,11 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // match.
   for (const auto &[Phi, Chains] : ChainsByPhi) {
     for (const auto &[Chain, Scale] : Chains) {
-      auto AllUsersPartialRdx = [ScaleVal = Scale, this](const User *U) {
+      auto AllUsersPartialRdx = [ScaleVal = Scale, RdxPhi = Phi,
+                                 this](const User *U) {
         auto *UI = cast<Instruction>(U);
-        if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader()) {
-          return all_of(UI->users(), [ScaleVal, this](const User *U) {
-            auto *UI = cast<Instruction>(U);
-            return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal;
-          });
-        }
+        if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader())
+          return UI == RdxPhi;
         return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
                !OrigLoop->contains(UI->getParent());
       };

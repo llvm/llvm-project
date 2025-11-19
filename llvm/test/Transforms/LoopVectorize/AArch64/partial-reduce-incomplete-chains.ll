@@ -125,7 +125,6 @@ exit:
   ret i16 %red.next
 }
 
-
 define void @chained_sext_adds(ptr noalias %src, ptr noalias %dst) #0 {
 ; CHECK-NEON-LABEL: define void @chained_sext_adds(
 ; CHECK-NEON-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR1]] {
