@@ -736,7 +736,8 @@ View lifetimebound_return_of_by_value_param(MyObj stack_param) {
 // FIXME: Fails to diagnose UAF when a reference to a by-value param escapes via an out-param.
 void uaf_from_by_value_param_failing(MyObj param, View* out_p) {
   *out_p = Identity(param);
-  
+}
+
 // Conditional operator.
 void conditional_operator_one_unsafe_branch(bool cond) {
   MyObj safe;
