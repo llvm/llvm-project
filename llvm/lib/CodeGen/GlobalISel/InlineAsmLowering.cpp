@@ -565,13 +565,6 @@ bool InlineAsmLowering::lowerInlineAsm(
     }
   }
 
-  // Add rounding control registers as implicit def for inline asm.
-  if (MF.getFunction().hasFnAttribute(Attribute::StrictFP)) {
-    ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
-    for (MCPhysReg Reg : RCRegs)
-      Inst.addReg(Reg, RegState::ImplicitDefine);
-  }
-
   if (auto Bundle = Call.getOperandBundle(LLVMContext::OB_convergencectrl)) {
     auto *Token = Bundle->Inputs[0].get();
     ArrayRef<Register> SourceRegs = GetOrCreateVRegs(*Token);
@@ -582,6 +575,13 @@ bool InlineAsmLowering::lowerInlineAsm(
 
   if (const MDNode *SrcLoc = Call.getMetadata("srcloc"))
     Inst.addMetadata(SrcLoc);
+
+  // Add rounding control registers as implicit def for inline asm.
+  if (MF.getFunction().hasFnAttribute(Attribute::StrictFP)) {
+    ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
+    for (MCPhysReg Reg : RCRegs)
+      Inst.addReg(Reg, RegState::ImplicitDefine);
+  }
 
   // All inputs are handled, insert the instruction now
   MIRBuilder.insertInstr(Inst);
