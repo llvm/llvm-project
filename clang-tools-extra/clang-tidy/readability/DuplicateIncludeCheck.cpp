@@ -57,7 +57,6 @@ public:
                       const MacroDirective *Undef) override;
 
 private:
-  bool isAllowedDuplicate(StringRef FileName, OptionalFileEntryRef File) const;
   // A list of included files is kept for each file we enter.
   SmallVector<FileList> Files;
   DuplicateIncludeCheck &Check;
@@ -88,15 +87,6 @@ DuplicateIncludeCallbacks::DuplicateIncludeCallbacks(
   }
 }
 
-bool DuplicateIncludeCallbacks::isAllowedDuplicate(
-    StringRef FileName, OptionalFileEntryRef File) const {
-  if (llvm::any_of(AllowedRegexes, [&FileName](const llvm::Regex &R) {
-        return R.match(FileName);
-      }))
-    return true;
-  return false;
-}
-
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
                                             FileChangeReason Reason,
                                             SrcMgr::CharacteristicKind FileType,
@@ -109,7 +99,7 @@ void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
 
 void DuplicateIncludeCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef /*File*/,
     StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   // Skip includes behind macros
@@ -117,7 +107,9 @@ void DuplicateIncludeCallbacks::InclusionDirective(
       FilenameRange.getEnd().isMacroID())
     return;
   if (llvm::is_contained(Files.back(), FileName)) {
-    if (isAllowedDuplicate(FileName, File))
+    if (llvm::any_of(AllowedRegexes, [&FileName](const llvm::Regex &R) {
+          return R.match(FileName);
+        }))
       return;
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.
