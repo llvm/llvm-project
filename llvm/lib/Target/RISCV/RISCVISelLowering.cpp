@@ -25664,7 +25664,7 @@ bool RISCVTargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
   // Avoid reassociating expressions that can be lowered to vector
   // multiply accumulate (i.e. add (mul x, y), z)
   if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::MUL &&
-      (N0.getValueType().isVector() && Subtarget.hasStdExtV()))
+      (N0.getValueType().isVector() && Subtarget.hasVInstructions()))
     return false;
 
   return true;
