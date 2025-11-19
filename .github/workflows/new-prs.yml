@@ -25,13 +25,6 @@ jobs:
     # that we do not have any of the other author associations.
     # See https://docs.github.com/en/webhooks/webhook-events-and-payloads?actionType=opened#pull_request
     # for all the possible values.
-    if: >-
-      (github.event.action == 'opened') &&
-      (github.event.pull_request.author_association != 'COLLABORATOR') &&
-      (github.event.pull_request.author_association != 'CONTRIBUTOR') &&
-      (github.event.pull_request.author_association != 'MANNEQUIN') &&
-      (github.event.pull_request.author_association != 'MEMBER') &&
-      (github.event.pull_request.author_association != 'OWNER')
     steps:
       - name: Checkout Automation Script
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
