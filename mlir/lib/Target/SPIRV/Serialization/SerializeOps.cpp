@@ -783,7 +783,7 @@ LogicalResult Serializer::processSwitchOp(spirv::SwitchOp switchOp) {
   std::optional<mlir::DenseIntElementsAttr> literals = switchOp.getLiterals();
   BlockRange targets = switchOp.getTargets();
   if (literals) {
-    for (auto [literal, target] : llvm::zip(*literals, targets)) {
+    for (auto [literal, target] : llvm::zip_equal(*literals, targets)) {
       arguments.push_back(literal.getLimitedValue());
       uint32_t targetLabelID = getOrCreateBlockID(target);
       arguments.push_back(targetLabelID);

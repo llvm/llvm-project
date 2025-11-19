@@ -294,9 +294,9 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 
   SuccessorRange targets = getTargets();
   if (auto value = llvm::dyn_cast_or_null<IntegerAttr>(operands.front())) {
-    for (const auto &it : llvm::enumerate(literals->getValues<APInt>()))
-      if (it.value() == value.getValue())
-        return targets[it.index()];
+    for (auto [index, literal] : llvm::enumerate(literals->getValues<APInt>()))
+      if (literal == value.getValue())
+        return targets[index];
     return getDefaultTarget();
   }
   return nullptr;

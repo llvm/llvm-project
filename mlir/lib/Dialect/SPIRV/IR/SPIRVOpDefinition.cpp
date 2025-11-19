@@ -147,13 +147,13 @@ printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type selectorType,
   if (!literals)
     return;
 
-  for (const auto &it : llvm::enumerate(literals.getValues<APInt>())) {
+  for (auto [index, literal] : llvm::enumerate(literals.getValues<APInt>())) {
     p << ',';
     p.printNewline();
     p << "  ";
-    p << it.value().getLimitedValue();
+    p << literal.getLimitedValue();
     p << ": ";
-    p.printSuccessorAndUseList(targets[it.index()], targetOperands[it.index()]);
+    p.printSuccessorAndUseList(targets[index], targetOperands[index]);
   }
   p.printNewline();
 }
