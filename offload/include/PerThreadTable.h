@@ -88,8 +88,6 @@ template <typename ContainerTy> struct ContainerConcepts {
   template <typename Ty>
   using ClearCheck = decltype(std::declval<Ty>().clear());
   template <typename Ty>
-  using ClearAllCheck = decltype(std::declval<Ty>().clearAll(1));
-  template <typename Ty>
   using ReserveCheck = decltype(std::declval<Ty>().reserve(1));
   template <typename Ty>
   using ResizeCheck = decltype(std::declval<Ty>().resize(1));
@@ -97,7 +95,6 @@ template <typename ContainerTy> struct ContainerConcepts {
   static constexpr bool hasIterator =
       has<ContainerTy, IteratorTypeCheck>::value;
   static constexpr bool hasClear = has<ContainerTy, ClearCheck>::value;
-  static constexpr bool hasClearAll = has<ContainerTy, ClearAllCheck>::value;
   static constexpr bool isAssociative =
       has<ContainerTy, MappedTypeCheck>::value;
   static constexpr bool hasReserve = has<ContainerTy, ReserveCheck>::value;
@@ -213,10 +210,8 @@ public:
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
-      if constexpr (ContainerConcepts<ContainerType>::hasClearAll) {
-        ThreadData->ThreadEntry->clearAll(ClearFunc);
-      } else if constexpr (ContainerConcepts<ContainerType>::hasIterator &&
-                           ContainerConcepts<ContainerType>::hasClear) {
+      if constexpr (ContainerConcepts<ContainerType>::hasIterator &&
+                    ContainerConcepts<ContainerType>::hasClear) {
         for (auto &Obj : *ThreadData->ThreadEntry) {
           if constexpr (ContainerConcepts<ContainerType>::isAssociative) {
             ClearFunc(Obj.second);
