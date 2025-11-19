@@ -55,6 +55,34 @@ body: |
     PseudoBR %bb.1
 ...
 ---
+name: no_delete_dead_phys_def_no_tracksregliveness
+tracksRegLiveness: false
+body: |
+  ; CHECK-LABEL: name: no_delete_dead_phys_def_no_tracksregliveness
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %x:gpr = COPY $x8
+  ; CHECK-NEXT:   %y:gpr = COPY %x, implicit-def dead $x8
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY %x, implicit-def dead $x8
+  ; CHECK-NEXT:   %z:gpr = ADDI [[COPY]], 1
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  bb.0:
+    liveins: $x8
+    %x:gpr = COPY $x8
+    %y:gpr = COPY %x, implicit-def dead $x8
+    PseudoBR %bb.1
+  bb.1:
+    %z:gpr = ADDI %y, 1
+    PseudoBR %bb.1
+...
+---
 name: reserved_phys_def
 tracksRegLiveness: true
 body: |
