@@ -63,14 +63,13 @@ void EmitTypedGetInfoWrappers(const llvm::RecordKeeper &Records,
                       F.getName(), Object.getName(), Desc);
         OS << TAB_2 << formatv("return {}{{Err};\n", ReturnType);
         if (TaggedType == "char[]") {
-          // Null terminator isn't counted in std::string::size.
-          OS << TAB_1 << "ResultSize -= 1;\n";
+          // Null terminator isn't counted in `std::string::size()`.
+          OS << TAB_1 << "Result.resize(ResultSize - 1);\n";
         } else {
           OS << TAB_1
              << formatv("assert(ResultSize % sizeof({}) == 0);\n", ElementType);
-          OS << TAB_1 << formatv("ResultSize /= sizeof({});\n", ElementType);
+          OS << TAB_1 << formatv("Result.resize(ResultSize / sizeof({}));\n", ElementType);
         }
-        OS << TAB_1 << "Result.resize(ResultSize);\n";
         OS << TAB_1
            << formatv("if (auto Err = {}({}, {}, ResultSize, Result.data()))\n",
                       F.getName(), Object.getName(), Desc);

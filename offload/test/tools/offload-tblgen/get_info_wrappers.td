@@ -40,8 +40,7 @@ def olGetFooInfo : Function {
 // CHECK-NEXT:    size_t ResultSize = 0;
 // CHECK-NEXT:    if (auto Err = olGetFooInfoSize(Foo, OL_FOO_INFO_STRING, &ResultSize))
 // CHECK-NEXT:      return std::variant<std::string, ol_result_t>{Err};
-// CHECK-NEXT:    ResultSize -= 1;
-// CHECK-NEXT:    Result.resize(ResultSize);
+// CHECK-NEXT:    Result.resize(ResultSize - 1);
 // CHECK-NEXT:    if (auto Err = olGetFooInfo(Foo, OL_FOO_INFO_STRING, ResultSize, Result.data()))
 // CHECK-NEXT:      return std::variant<std::string, ol_result_t>{Err};
 // CHECK-NEXT:    else
@@ -53,8 +52,7 @@ def olGetFooInfo : Function {
 // CHECK-NEXT:    if (auto Err = olGetFooInfoSize(Foo, OL_FOO_INFO_ARRAY, &ResultSize))
 // CHECK-NEXT:      return std::variant<std::vector<int>, ol_result_t>{Err};
 // CHECK-NEXT:    assert(ResultSize % sizeof(int) == 0);
-// CHECK-NEXT:    ResultSize /= sizeof(int);
-// CHECK-NEXT:    Result.resize(ResultSize);
+// CHECK-NEXT:    Result.resize(ResultSize / sizeof(int));
 // CHECK-NEXT:    if (auto Err = olGetFooInfo(Foo, OL_FOO_INFO_ARRAY, ResultSize, Result.data()))
 // CHECK-NEXT:      return std::variant<std::vector<int>, ol_result_t>{Err};
 // CHECK-NEXT:    else
