@@ -2038,8 +2038,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   if (beginName.v == llvm::omp::OMPD_master_taskloop ||
       beginName.v == llvm::omp::OMPD_master_taskloop_simd ||
       beginName.v == llvm::omp::OMPD_parallel_master_taskloop ||
-      beginName.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
-      beginName.v == llvm::omp::Directive::OMPD_target_loop) {
+      beginName.v == llvm::omp::OMPD_parallel_master_taskloop_simd) {
     unsigned version{context_.langOptions().OpenMPVersion};
     IssueNonConformanceWarning(beginName.v, beginName.source, version);
   }
@@ -3622,8 +3621,8 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(llvm::omp::Directive D,
   case llvm::omp::OMPD_allocate:
     setAlternativeStr("ALLOCATORS");
     break;
-  case llvm::omp::OMPD_target_loop:
-  default:;
+  default:
+    break;
   }
   context_.Warn(common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US,
       warnStrOS.str());

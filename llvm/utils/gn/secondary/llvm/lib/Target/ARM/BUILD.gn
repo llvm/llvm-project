@@ -36,6 +36,12 @@ tablegen("ARMGenRegisterBank") {
   td_file = "ARM.td"
 }
 
+tablegen("ARMGenSDNodeInfo") {
+  visibility = [ ":LLVMARMCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "ARM.td"
+}
+
 static_library("LLVMARMCodeGen") {
   deps = [
     ":ARMGenCallingConv",
@@ -44,6 +50,7 @@ static_library("LLVMARMCodeGen") {
     ":ARMGenGlobalISel",
     ":ARMGenMCPseudoLowering",
     ":ARMGenRegisterBank",
+    ":ARMGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "Utils",
