@@ -16361,23 +16361,31 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     unsigned BitWidth = Val.getBitWidth();
     unsigned AmtBitWidth = Amt.getBitWidth();
     if (BitWidth == 1) {
-      // if BitWidth is 1, Amt % Divisor = 0
-      // No need for rotation
+      // Rotating a 1-bit value is always a no-op
       Amt = APSInt(APInt(AmtBitWidth, 0), Amt.isUnsigned());
     } else {
+      // Divisor is always unsigned to avoid misinterpreting BitWidth as
+      // negative in small bit widths (e.g., BitWidth=2 would be -2 if signed).
       APSInt Divisor;
       if (AmtBitWidth > BitWidth) {
-        Divisor = APSInt(llvm::APInt(AmtBitWidth, BitWidth), Amt.isUnsigned());
+        Divisor =
+            APSInt(llvm::APInt(AmtBitWidth, BitWidth), /*isUnsigned=*/true);
       } else {
-        Divisor = APSInt(llvm::APInt(BitWidth, BitWidth), Amt.isUnsigned());
+        Divisor = APSInt(llvm::APInt(BitWidth, BitWidth), /*isUnsigned=*/true);
         if (AmtBitWidth < BitWidth) {
           Amt = Amt.extend(BitWidth);
         }
       }
 
-      Amt = Amt % Divisor;
-      if (Amt.isNegative()) {
-        Amt += Divisor;
+      // Normalize to [0, BitWidth)
+      if (Amt.isSigned()) {
+        Amt = APSInt(Amt.srem(Divisor), /*isUnsigned=*/false);
+        if (Amt.isNegative()) {
+          APSInt SignedDivisor(Divisor, /*isUnsigned=*/false);
+          Amt += SignedDivisor;
+        }
+      } else {
+        Amt = APSInt(Amt.urem(Divisor), /*isUnsigned=*/true);
       }
     }
 
