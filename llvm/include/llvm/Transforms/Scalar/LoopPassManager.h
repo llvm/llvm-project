@@ -127,6 +127,18 @@ public:
     }
   }
 
+  LLVM_ATTRIBUTE_MINSIZE
+  void addPass(PassManager &&PM) {
+    size_t VecSize = PM.IsLoopNestPass.size();
+    IsLoopNestPass.reserve(IsLoopNestPass.size() + VecSize);
+    for (size_t I = 0; I != VecSize; ++I)
+      IsLoopNestPass.push_back(PM.IsLoopNestPass[I]);
+    for (auto &P : PM.LoopPasses)
+      LoopPasses.push_back(std::move(P));
+    for (auto &P : PM.LoopNestPasses)
+      LoopNestPasses.push_back(std::move(P));
+  }
+
   bool isEmpty() const { return LoopPasses.empty() && LoopNestPasses.empty(); }
 
   static bool isRequired() { return true; }
