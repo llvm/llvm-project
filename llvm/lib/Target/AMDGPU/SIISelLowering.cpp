@@ -16284,17 +16284,74 @@ SITargetLowering::performAddCarrySubCarryCombine(SDNode *N,
   return SDValue();
 }
 
+// Create fma((cond ? -1.0, 0.0), c, a)
+static SDValue createConditionalSubToFMA(SelectionDAG &DAG, SDLoc SL, EVT VT,
+                                         SDValue Cond, SDValue C, SDValue A) {
+  // FIXME: This should work but currently generates incorrect code.
+  if (isa<ConstantFPSDNode>(C) || isa<ConstantSDNode>(C))
+    return SDValue();
+  const SDValue MinusOne = DAG.getConstantFP(-1.0, SL, VT);
+  const SDValue Zero = DAG.getConstantFP(0.0, SL, VT);
+  SDValue Correction = DAG.getNode(ISD::SELECT, SL, VT, Cond, MinusOne, Zero);
+  return DAG.getNode(ISD::FMA, SL, VT, Correction, C, A);
+}
+
 SDValue SITargetLowering::performFAddCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
-  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
 
   SDLoc SL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+
+  // Match conditional subtraction patterns for FMA optimization:
+  //   result = a - (cond ? c : 0.0) (see performFSubCombine)
+  //   result = a + (cond ? -c : 0.0)
+  //   result = a + (-(cond ? c : 0.0))
+  // and convert to:
+  //   result = fma((cond ? -1.0, 0.0), c, a)
+  //
+  // This saves one v_cndmask per pattern on a pre-gfx12.
+  // The optimization doesn't make sense on gfx12 due to dual-issued v_cndmask.
+  if (Subtarget->shouldUseConditionalSubToFMAF64() &&
+      VT == MVT::f64) { // Only optimize if FMA is available
+    // Pattern 1: fadd %a, (fneg (select %cond, %c, 0.0))
+    if (RHS.getOpcode() == ISD::FNEG &&
+        RHS.getOperand(0).getOpcode() == ISD::SELECT) {
+      SDValue SelNode = RHS.getOperand(0);
+      SDValue Cond = SelNode.getOperand(0);     // condition
+      SDValue TrueVal = SelNode.getOperand(1);  // c
+      SDValue FalseVal = SelNode.getOperand(2); // should be 0.0
+
+      if (ConstantFPSDNode *FPConst = dyn_cast<ConstantFPSDNode>(FalseVal)) {
+        if (FPConst->isExactlyValue(0.0)) {
+          if (SDValue Result =
+                  createConditionalSubToFMA(DAG, SL, VT, Cond, TrueVal, LHS))
+            return Result;
+        }
+      }
+    }
+
+    // Pattern 2: fadd %a, (select %cond, (fneg %c), 0.0)
+    if (RHS.getOpcode() == ISD::SELECT) {
+      SDValue Cond = RHS.getOperand(0);     // condition
+      SDValue TrueVal = RHS.getOperand(1);  // should be fneg %c
+      SDValue FalseVal = RHS.getOperand(2); // should be 0.0
+
+      if (ConstantFPSDNode *FPConst = dyn_cast<ConstantFPSDNode>(FalseVal)) {
+        if (FPConst->isExactlyValue(0.0) && TrueVal.getOpcode() == ISD::FNEG) {
+          SDValue ActualC = TrueVal.getOperand(0);
+          if (SDValue Result =
+                  createConditionalSubToFMA(DAG, SL, VT, Cond, ActualC, LHS))
+            return Result;
+        }
+      }
+    }
+  }
+
+  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
+    return SDValue();
 
   // These should really be instruction patterns, but writing patterns with
   // source modifiers is a pain.
@@ -16328,12 +16385,38 @@ SDValue SITargetLowering::performFAddCombine(SDNode *N,
 
 SDValue SITargetLowering::performFSubCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
-  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
+
+  // Match conditional subtraction patterns for FMA optimization, see
+  // performFAddCombine:
+  //   result = a - (cond ? c : 0.0)
+  // and convert to:
+  //   result = fma((cond ? -1.0, 0.0), c, a)
+  if (VT == MVT::f64 && Subtarget->shouldUseConditionalSubToFMAF64()) {
+    SDValue LHS = N->getOperand(0); // a
+    SDValue RHS = N->getOperand(1); // sel
+
+    // Match the pattern: fsub %a, (select %cond, %c, 0.0)
+    if (RHS.getOpcode() == ISD::SELECT) {
+      SDValue Cond = RHS.getOperand(0);     // condition
+      SDValue TrueVal = RHS.getOperand(1);  // c
+      SDValue FalseVal = RHS.getOperand(2); // should be 0.0
+
+      if (ConstantFPSDNode *Zero = dyn_cast<ConstantFPSDNode>(FalseVal)) {
+        if (Zero->isZero()) {
+          if (SDValue Result =
+                  createConditionalSubToFMA(DAG, SL, VT, Cond, TrueVal, LHS))
+            return Result;
+        }
+      }
+    }
+  }
+
+  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
+    return SDValue();
+
   assert(!VT.isVector());
 
   // Try to get the fneg to fold into the source modifier. This undoes generic

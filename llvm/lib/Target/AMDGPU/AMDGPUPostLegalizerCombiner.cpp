@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
@@ -47,6 +48,7 @@ protected:
   const AMDGPUPostLegalizerCombinerImplRuleConfig &RuleConfig;
   const GCNSubtarget &STI;
   const SIInstrInfo &TII;
+  const MachineLoopInfo *MLI;
   // TODO: Make CombinerHelper methods const.
   mutable AMDGPUCombinerHelper Helper;
 
@@ -56,7 +58,7 @@ public:
       GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
       const AMDGPUPostLegalizerCombinerImplRuleConfig &RuleConfig,
       const GCNSubtarget &STI, MachineDominatorTree *MDT,
-      const LegalizerInfo *LI);
+      const MachineLoopInfo *MLI, const LegalizerInfo *LI);
 
   static const char *getName() { return "AMDGPUPostLegalizerCombinerImpl"; }
 
@@ -113,6 +115,19 @@ public:
   // bits are zero extended.
   bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
 
+  // Match conditional subtraction patterns for FMA optimization
+  struct ConditionalSubToFMAMatchInfo {
+    Register Cond;
+    Register C;
+    Register A;
+  };
+
+  bool matchConditionalSubToFMA(MachineInstr &MI,
+                                ConditionalSubToFMAMatchInfo &MatchInfo) const;
+  void
+  applyConditionalSubToFMA(MachineInstr &MI,
+                           const ConditionalSubToFMAMatchInfo &MatchInfo) const;
+
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
 #define AMDGPUSubtarget GCNSubtarget
@@ -131,9 +146,10 @@ AMDGPUPostLegalizerCombinerImpl::AMDGPUPostLegalizerCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
     GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const AMDGPUPostLegalizerCombinerImplRuleConfig &RuleConfig,
-    const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
+    const GCNSubtarget &STI, MachineDominatorTree *MDT,
+    const MachineLoopInfo *MLI, const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &VT, CSEInfo), RuleConfig(RuleConfig), STI(STI),
-      TII(*STI.getInstrInfo()),
+      TII(*STI.getInstrInfo()), MLI(MLI),
       Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI, STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AMDGPUGenPostLegalizeGICombiner.inc"
@@ -435,6 +451,112 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
   return false;
 }
 
+// Match conditional subtraction patterns for FMA optimization:
+//   result = a - (cond ? c : 0.0)
+//   result = a + (cond ? -c : 0.0)
+//   result = a + (-(cond ? c : 0.0))
+// to convert to:
+//   result = fma((cond ? -1.0, 0.0), c, a)
+//
+// This saves one v_cndmask per pattern on a pre-gfx12.
+// The optimization doesn't make sense on gfx12 due to dual-issued v_cndmask.
+bool AMDGPUPostLegalizerCombinerImpl::matchConditionalSubToFMA(
+    MachineInstr &MI, ConditionalSubToFMAMatchInfo &MatchInfo) const {
+  if (!MLI || !STI.shouldUseConditionalSubToFMAF64())
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(DstReg);
+  if (Ty != LLT::scalar(64))
+    return false;
+
+  Register A = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  MachineInstr *RHSMI = MRI.getVRegDef(RHS);
+  if (!RHSMI)
+    return false;
+
+  // Returns true if SelMI is a valid select with false value = 0.0.
+  auto matchSelectWithZero = [this, &MI](MachineInstr *SelMI, Register &Cond,
+                                         Register &TrueVal) -> bool {
+    if (!SelMI || SelMI->getOpcode() != TargetOpcode::G_SELECT)
+      return false;
+
+    Register FalseVal = SelMI->getOperand(3).getReg();
+    auto FalseConst = getFConstantVRegValWithLookThrough(FalseVal, MRI);
+    if (!FalseConst || !FalseConst->Value.isExactlyValue(0.0))
+      return false;
+
+    // Check if TrueVal is not constant.
+    // FIXME: This should work but currently generates incorrect code.
+    auto TempTrueVal = SelMI->getOperand(2).getReg();
+    auto TrueConst = getAnyConstantVRegValWithLookThrough(TempTrueVal, MRI);
+    if (TrueConst)
+      return false;
+
+    // Check if select and the add/sub are in the same loop context.
+    // Skipping optimization for loop-invariant select because it has no benefit
+    // in the loop: f_add is cheaper and requires less registers.
+    if (MLI->getLoopFor(MI.getParent()) != MLI->getLoopFor(SelMI->getParent()))
+      return false;
+
+    TrueVal = TempTrueVal;
+    Cond = SelMI->getOperand(1).getReg();
+    return true;
+  };
+
+  Register Cond, C;
+  if (MI.getOpcode() == TargetOpcode::G_FSUB) {
+    // Pattern: fsub a, (select cond, c, 0.0)
+    if (matchSelectWithZero(RHSMI, Cond, C)) {
+      MatchInfo = {Cond, C, A};
+      return true;
+    }
+  } else if (MI.getOpcode() == TargetOpcode::G_FADD) {
+    // Pattern 1: fadd a, (fneg (select cond, c, 0.0))
+    if (RHSMI->getOpcode() == TargetOpcode::G_FNEG) {
+      Register SelReg = RHSMI->getOperand(1).getReg();
+      MachineInstr *SelMI = MRI.getVRegDef(SelReg);
+      if (matchSelectWithZero(SelMI, Cond, C)) {
+        MatchInfo = {Cond, C, A};
+        return true;
+      }
+    }
+
+    // Pattern 2: fadd a, (select cond, (fneg c), 0.0)
+    if (matchSelectWithZero(RHSMI, Cond, C)) {
+      // Check if C is fneg
+      MachineInstr *CMI = MRI.getVRegDef(C);
+      if (CMI && CMI->getOpcode() == TargetOpcode::G_FNEG) {
+        C = CMI->getOperand(1).getReg();
+        MatchInfo = {Cond, C, A};
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void AMDGPUPostLegalizerCombinerImpl::applyConditionalSubToFMA(
+    MachineInstr &MI, const ConditionalSubToFMAMatchInfo &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+
+  // Build: correction = select cond, -1.0, 0.0
+  APFloat MinusOne = APFloat(-1.0);
+  APFloat Zero = APFloat(0.0);
+
+  Register MinusOneReg = B.buildFConstant(Ty, MinusOne).getReg(0);
+  Register ZeroReg = B.buildFConstant(Ty, Zero).getReg(0);
+  Register Correction =
+      B.buildSelect(Ty, MatchInfo.Cond, MinusOneReg, ZeroReg).getReg(0);
+
+  // Build: result = fma(correction, c, a)
+  B.buildFMA(Dst, Correction, MatchInfo.C, MatchInfo.A, MI.getFlags());
+
+  MI.eraseFromParent();
+}
+
 // Pass boilerplate
 // ================
 
@@ -467,6 +589,8 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -494,6 +618,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr
                 : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineLoopInfo *MLI =
+      IsOptNone ? nullptr : &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
@@ -503,7 +629,7 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   // Legalizer performs DCE, so a full DCE pass is unnecessary.
   CInfo.EnableFullDCE = false;
   AMDGPUPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, /*CSEInfo*/ nullptr,
-                                       RuleConfig, ST, MDT, LI);
+                                       RuleConfig, ST, MDT, MLI, LI);
   return Impl.combineMachineInstrs();
 }
 
@@ -513,6 +639,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after legalization", false,
                     false)

@@ -837,6 +837,12 @@ public:
 
   bool hasFmacF64Inst() const { return HasFmacF64Inst; }
 
+  /// Returns true if we should use conditional subtraction to FMA optimization.
+  /// This optimization has no benefit with dual issue instructions available.
+  bool shouldUseConditionalSubToFMAF64() const {
+    return HasFmacF64Inst && !HasVOPDInsts;
+  }
+
   bool hasDot1Insts() const {
     return HasDot1Insts;
   }
