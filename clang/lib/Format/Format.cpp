@@ -44,14 +44,6 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeNoexceptSpecifierStyle> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::CommentSpaceMode> {
-  static void enumeration(IO &IO, FormatStyle::CommentSpaceMode &Value) {
-    IO.enumCase(Value, "Leave", FormatStyle::CommentSpaceMode::Leave);
-    IO.enumCase(Value, "Always", FormatStyle::CommentSpaceMode::Always);
-    IO.enumCase(Value, "Never", FormatStyle::CommentSpaceMode::Never);
-  }
-};
-
 template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
   static void enumInput(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
     IO.enumCase(Value, "None", FormatStyle::AlignConsecutiveStyle({}));
@@ -99,16 +91,6 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                    Value.AlignFunctionDeclarations);
     IO.mapOptional("AlignFunctionPointers", Value.AlignFunctionPointers);
     IO.mapOptional("PadOperators", Value.PadOperators);
-  }
-};
-
-template <> struct MappingTraits<FormatStyle::SpaceInCommentsOptions> {
-  static void mapping(IO &IO, FormatStyle::SpaceInCommentsOptions &Value) {
-    IO.mapOptional("AfterOpeningComment", Value.AfterOpeningComment);
-    IO.mapOptional("BeforeClosingComment", Value.BeforeClosingComment);
-    IO.mapOptional("AfterOpeningParamComment", Value.AfterOpeningParamComment);
-    IO.mapOptional("BeforeClosingParamComment",
-                   Value.BeforeClosingParamComment);
   }
 };
 
@@ -319,6 +301,14 @@ struct ScalarEnumerationTraits<FormatStyle::BreakTemplateDeclarationsStyle> {
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::BTDS_MultiLine);
     IO.enumCase(Value, "true", FormatStyle::BTDS_Yes);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::CommentSpaceMode> {
+  static void enumeration(IO &IO, FormatStyle::CommentSpaceMode &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::CommentSpaceMode::Leave);
+    IO.enumCase(Value, "Always", FormatStyle::CommentSpaceMode::Always);
+    IO.enumCase(Value, "Never", FormatStyle::CommentSpaceMode::Never);
   }
 };
 
@@ -799,6 +789,17 @@ struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensStyle> {
     IO.enumCase(Value, "true", FormatStyle::SBPO_ControlStatements);
     IO.enumCase(Value, "ControlStatementsExceptForEachMacros",
                 FormatStyle::SBPO_ControlStatementsExceptControlMacros);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::SpaceInCommentsOptions> {
+  static void mapping(IO &IO, FormatStyle::SpaceInCommentsOptions &Options) {
+    IO.mapOptional("AfterOpeningComment", Options.AfterOpeningComment);
+    IO.mapOptional("BeforeClosingComment", Options.BeforeClosingComment);
+    IO.mapOptional("AfterOpeningParamComment",
+                   Options.AfterOpeningParamComment);
+    IO.mapOptional("BeforeClosingParamComment",
+                   Options.BeforeClosingParamComment);
   }
 };
 
