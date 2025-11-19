@@ -38,10 +38,10 @@ enum class UnaryOpKind {
 
 /// The type casts allowed by DIL.
 enum class CastKind {
-  eEnumeration, /// Casting from a scalar to an enumeration type
-  eNullptr,     /// Casting to a nullptr type
-  eReference,   /// Casting to a reference type
-  eNone,        /// Type promotion casting
+  eEnumeration, ///< Casting from a scalar to an enumeration type
+  eNullptr,     ///< Casting to a nullptr type
+  eReference,   ///< Casting to a reference type
+  eNone,        ///< Type promotion casting
 };
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
