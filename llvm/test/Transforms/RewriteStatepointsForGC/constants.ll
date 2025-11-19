@@ -2,28 +2,27 @@
 
 target datalayout = "e-ni:1:6"
 
-; constants don't get relocated.
 @G = addrspace(1) global i8 5
 
 declare void @foo()
 
+; constants don't get relocated.
 define i8 @test() gc "statepoint-example" {
 ; CHECK-LABEL: @test
 ; CHECK: gc.statepoint
 ; CHECK-NEXT: load i8, ptr addrspace(1) inttoptr (i64 15 to ptr addrspace(1))
-; Mostly just here to show reasonable code test can come from.
 entry:
   call void @foo() [ "deopt"() ]
   %res = load i8, ptr addrspace(1) inttoptr (i64 15 to ptr addrspace(1))
   ret i8 %res
 }
 
+; Mostly just here to show reasonable code test can come from.
 define i8 @test2(ptr addrspace(1) %p) gc "statepoint-example" {
 ; CHECK-LABEL: @test2
 ; CHECK: gc.statepoint
 ; CHECK-NEXT: gc.relocate
 ; CHECK-NEXT: icmp
-; Globals don't move and thus don't get relocated
 entry:
   call void @foo() [ "deopt"() ]
   %cmp = icmp eq ptr addrspace(1) %p, null
@@ -37,11 +36,17 @@ not_taken:                                        ; preds = %entry
   br i1 %cmp2, label %taken, label %dead
 
 dead:                                             ; preds = %not_taken
+  ; We see that dead can't be reached, but the optimizer might not.  It's
+  ; completely legal for it to exploit the fact that if dead executed, %p
+  ; would have to equal null.  This can produce intermediate states which
+  ; look like that of test above, even if arbitrary constant addresses aren't
+  ; legal in the source language
   %addr = getelementptr i8, ptr addrspace(1) %p, i32 15
   %res = load i8, ptr addrspace(1) %addr
   ret i8 %res
 }
 
+; Globals don't move and thus don't get relocated
 define i8 @test3(i1 %always_true) gc "statepoint-example" {
 ; CHECK-LABEL: @test3
 ; CHECK: gc.statepoint
