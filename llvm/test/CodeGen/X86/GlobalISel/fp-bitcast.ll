@@ -30,16 +30,19 @@ define i16 @test_half_to_i16(half %0) {
 ; SSE2-LABEL: test_half_to_i16:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    # kill: def $eax killed $eax def $ax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_half_to_i16:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    # kill: def $eax killed $eax def $ax
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_half_to_i16:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    # kill: def $eax killed $eax def $ax
 ; AVX512-NEXT:    retq
 entry:
   %2 = bitcast half %0 to i16
