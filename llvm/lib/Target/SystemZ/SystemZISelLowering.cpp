@@ -8673,14 +8673,16 @@ SmallVector<SDValue, 4> static simplifyAssumingCCVal(SDValue &Val, SDValue &CC,
 
     int CCValidVal = CCValid->getZExtValue();
     int CCMaskVal = CCMask->getZExtValue();
-    const auto &&TrueSDVals = simplifyAssumingCCVal(TrueVal, CC, DAG);
-    const auto &&FalseSDVals = simplifyAssumingCCVal(FalseVal, CC, DAG);
-    if (TrueSDVals.empty() || FalseSDVals.empty())
-      return {};
+    // Pruning search tree early - Moving CC test and combineCCMask ahead of
+    // recursive call to simplifyAssumingCCVal.
     SDValue Op4CCReg = Val.getOperand(4);
     if (Op4CCReg != CC)
       combineCCMask(Op4CCReg, CCValidVal, CCMaskVal, DAG);
     if (Op4CCReg != CC)
+      return {};
+    const auto &&TrueSDVals = simplifyAssumingCCVal(TrueVal, CC, DAG);
+    const auto &&FalseSDVals = simplifyAssumingCCVal(FalseVal, CC, DAG);
+    if (TrueSDVals.empty() || FalseSDVals.empty())
       return {};
     SmallVector<SDValue, 4> MergedSDVals;
     for (auto &CCVal : {0, 1, 2, 3})
