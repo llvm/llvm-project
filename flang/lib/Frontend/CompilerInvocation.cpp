@@ -959,7 +959,7 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // -J/module-dir option
   std::vector<std::string> moduleDirList =
-      args.getAllArgValues(clang::options::OPT_module_dir);
+      args.getAllArgValues(clang::options::OPT_J);
   // User can only specify one -J/-module-dir directory, but may repeat
   // -J/-module-dir as long as the directory is the same each time.
   // https://gcc.gnu.org/onlinedocs/gfortran/Directory-Options.html

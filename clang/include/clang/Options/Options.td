@@ -7236,11 +7236,14 @@ def cpp : Flag<["-"], "cpp">, Group<f_Group>,
   HelpText<"Enable predefined and command line preprocessor macros">;
 def nocpp : Flag<["-"], "nocpp">, Group<f_Group>,
   HelpText<"Disable predefined and command line preprocessor macros">;
-def module_dir : JoinedOrSeparate<["-"], "module-dir">, MetaVarName<"<dir>">,
+def J : JoinedOrSeparate<["-"], "J">,
+  Flags<[RenderJoined]>,
   HelpText<"Put MODULE files in <dir>">,
   DocBrief<[{This option specifies where to put .mod files for compiled modules.
 It is also added to the list of directories to be searched by an USE statement.
 The default is the current directory.}]>;
+def module_dir : Separate<["-"], "module-dir">, MetaVarName<"<dir>">,
+  Alias<J>;
 
 def ffixed_form : Flag<["-"], "ffixed-form">, Group<f_Group>,
   HelpText<"Process source files in fixed form">;
@@ -7375,11 +7378,6 @@ def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
   HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
       Values<"none, host, device">;
 } // let Visibility = [FC1Option, FlangOption]
-
-def J : JoinedOrSeparate<["-"], "J">,
-  Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
-  Group<gfortran_Group>,
-  Alias<module_dir>;
 
 //===----------------------------------------------------------------------===//
 // FC1 Options
