@@ -1007,6 +1007,15 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (auto *A = dyn_cast<CleanupAttr>(TmplAttr)) {
+      if (!New->hasAttr<CleanupAttr>()) {
+        auto *NewAttr = A->clone(Context);
+        NewAttr->setArgLoc(A->getArgLoc());
+        New->addAttr(NewAttr);
+      }
+      continue;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -5465,7 +5474,7 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
 bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
                                                       FunctionDecl *Tmpl) {
   // Transfer across any unqualified lookups.
-  if (auto *DFI = Tmpl->getDefalutedOrDeletedInfo()) {
+  if (auto *DFI = Tmpl->getDefaultedOrDeletedInfo()) {
     SmallVector<DeclAccessPair, 32> Lookups;
     Lookups.reserve(DFI->getUnqualifiedLookups().size());
     bool AnyChanged = false;

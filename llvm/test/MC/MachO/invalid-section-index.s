@@ -1,6 +1,8 @@
+// REQUIRES: aarch64-registered-target
+
 /// Test that when there are more than 255 sections, error is shown specifying too many sections.
 
-// RUN: not llvm-mc -filetype=obj -triple arm64-apple-macos %s -o - 2>&1 | FileCheck %s --check-prefix=MACHOERROR
+// RUN: not llvm-mc -filetype=obj -triple arm64-apple-darwin %s -o - 2>&1 | FileCheck %s --check-prefix=MACHOERROR
 
 // MACHOERROR: error: Too many sections!
 // MACHOERROR-NEXT: error: Invalid section index!

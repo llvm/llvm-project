@@ -530,6 +530,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
 
+  addRulesForGOpcs({G_FSHR}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
+
   addRulesForGOpcs({G_FRAME_INDEX}).Any({{UniP5, _}, {{SgprP5}, {None}}});
 
   addRulesForGOpcs({G_UBFX, G_SBFX}, Standard)
@@ -931,9 +935,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniP4}, {{SgprP4}, {}}})
       .Any({{UniP8}, {{SgprP8}, {}}});
 
+  addRulesForGOpcs({G_AMDGPU_WAVE_ADDRESS}).Any({{UniP5}, {{SgprP5}, {}}});
+
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
-  addRulesForGOpcs({G_FADD}, Standard)
+  addRulesForGOpcs({G_FADD, G_FMUL}, Standard)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
       .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
@@ -957,6 +963,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}}, hasSALUFloat)
       .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_IS_FPCLASS})
+      .Any({{DivS1, S16}, {{Vcc}, {Vgpr16}}})
+      .Any({{UniS1, S16}, {{UniInVcc}, {Vgpr16}}})
+      .Any({{DivS1, S32}, {{Vcc}, {Vgpr32}}})
+      .Any({{UniS1, S32}, {{UniInVcc}, {Vgpr32}}})
+      .Any({{DivS1, S64}, {{Vcc}, {Vgpr64}}})
+      .Any({{UniS1, S64}, {{UniInVcc}, {Vgpr64}}});
 
   using namespace Intrinsic;
 

@@ -218,10 +218,10 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PrologueEpilogue.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1712,12 +1712,10 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   // NOTE: we currently do not account for the D registers as LLVM does not
   // support non-ABI compliant D register spills.
   bool SpillExtendedVolatile =
-      IsWindows && std::any_of(std::begin(CSI), std::end(CSI),
-                               [](const CalleeSavedInfo &CSI) {
-                                 const auto &Reg = CSI.getReg();
-                                 return Reg >= AArch64::X0 &&
-                                        Reg <= AArch64::X18;
-                               });
+      IsWindows && llvm::any_of(CSI, [](const CalleeSavedInfo &CSI) {
+        const auto &Reg = CSI.getReg();
+        return Reg >= AArch64::X0 && Reg <= AArch64::X18;
+      });
 
   int ZPRByteOffset = 0;
   int PPRByteOffset = 0;
@@ -2412,9 +2410,31 @@ void AArch64FrameLowering::determineStackHazardSlot(
     AFI->setStackHazardSlotIndex(ID);
   }
 
-  // Determine if we should use SplitSVEObjects. This should only be used if
-  // there's a possibility of a stack hazard between PPRs and ZPRs or FPRs.
+  if (!AFI->hasStackHazardSlotIndex())
+    return;
+
   if (SplitSVEObjects) {
+    CallingConv::ID CC = MF.getFunction().getCallingConv();
+    if (AFI->isSVECC() || CC == CallingConv::AArch64_SVE_VectorCall) {
+      AFI->setSplitSVEObjects(true);
+      LLVM_DEBUG(dbgs() << "Using SplitSVEObjects for SVE CC function\n");
+      return;
+    }
+
+    // We only use SplitSVEObjects in non-SVE CC functions if there's a
+    // possibility of a stack hazard between PPRs and ZPRs/FPRs.
+    LLVM_DEBUG(dbgs() << "Determining if SplitSVEObjects should be used in "
+                         "non-SVE CC function...\n");
+
+    // If another calling convention is explicitly set FPRs can't be promoted to
+    // ZPR callee-saves.
+    if (!is_contained({CallingConv::C, CallingConv::Fast}, CC)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Calling convention is not supported with SplitSVEObjects\n");
+      return;
+    }
+
     if (!HasPPRCSRs && !HasPPRStackObjects) {
       LLVM_DEBUG(
           dbgs() << "Not using SplitSVEObjects as no PPRs are on the stack\n");
@@ -2425,16 +2445,6 @@ void AArch64FrameLowering::determineStackHazardSlot(
       LLVM_DEBUG(
           dbgs()
           << "Not using SplitSVEObjects as no FPRs or ZPRs are on the stack\n");
-      return;
-    }
-
-    // If another calling convention is explicitly set FPRs can't be promoted to
-    // ZPR callee-saves.
-    if (!is_contained({CallingConv::C, CallingConv::Fast,
-                       CallingConv::AArch64_SVE_VectorCall},
-                      MF.getFunction().getCallingConv())) {
-      LLVM_DEBUG(
-          dbgs() << "Calling convention is not supported with SplitSVEObjects");
       return;
     }
 

@@ -12,6 +12,7 @@
 
 // flat_map& operator=(const flat_map& m);
 
+#include <cassert>
 #include <deque>
 #include <flat_map>
 #include <functional>

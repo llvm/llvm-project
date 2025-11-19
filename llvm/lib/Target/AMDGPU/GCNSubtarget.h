@@ -166,6 +166,13 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasCubeInsts = false;
+  bool HasLerpInst = false;
+  bool HasSadInsts = false;
+  bool HasQsadInsts = false;
+  bool HasCvtNormInsts = false;
+  bool HasCvtPkNormVOP2Insts = false;
+  bool HasCvtPkNormVOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -892,6 +899,20 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
+  bool hasCubeInsts() const { return HasCubeInsts; }
+
+  bool hasLerpInst() const { return HasLerpInst; }
+
+  bool hasSadInsts() const { return HasSadInsts; }
+
+  bool hasQsadInsts() const { return HasQsadInsts; }
+
+  bool hasCvtNormInsts() const { return HasCvtNormInsts; }
+
+  bool hasCvtPkNormVOP2Insts() const { return HasCvtPkNormVOP2Insts; }
+
+  bool hasCvtPkNormVOP3Insts() const { return HasCvtPkNormVOP3Insts; }
+
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
   bool hasPkFmacF16Inst() const {
@@ -1039,8 +1060,6 @@ public:
   bool enableMachineScheduler() const override {
     return true;
   }
-
-  bool enableTerminalRule() const override { return true; }
 
   bool useAA() const override;
 
@@ -1421,6 +1440,13 @@ public:
 
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
+
+  /// \returns true if the target has packed f32 instructions that only read 32
+  /// bits from a scalar operand (SGPR or literal) and replicates the bits to
+  /// both channels.
+  bool hasPKF32InstsReplicatingLower32BitsOfScalarInput() const {
+    return getGeneration() == GFX12 && GFX1250Insts;
+  }
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 

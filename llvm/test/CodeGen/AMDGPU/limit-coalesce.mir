@@ -17,7 +17,7 @@ body:             |
     ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub1:sgpr_64 = COPY $sgpr17
     ; CHECK-NEXT: [[COPY:%[0-9]+]].sub0:sgpr_64 = COPY $sgpr16
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: INLINEASM &"; def $0", 0 /* attdialect */, 3407882 /* regdef:VReg_64 */, def %4
+    ; CHECK-NEXT: INLINEASM &"; def $0", 0 /* attdialect */, 2818058 /* regdef:VReg_64 */, def %4
     ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0:vreg_128 = COPY %4.sub1
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[COPY]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
@@ -26,7 +26,7 @@ body:             |
     undef %2.sub0:sgpr_64 = COPY killed %1
     %2.sub1:sgpr_64 = COPY killed %0
     %3:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    INLINEASM &"; def $0", 0 /* attdialect */, 3407882 /* regdef:VReg_64 */, def %4:vreg_64
+    INLINEASM &"; def $0", 0 /* attdialect */, 2818058 /* regdef:VReg_64 */, def %4:vreg_64
     undef %5.sub0:vreg_128 = COPY killed %4.sub1
     GLOBAL_STORE_DWORDX4_SADDR killed %3, killed %5, killed %2, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     SI_RETURN

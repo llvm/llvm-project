@@ -106,13 +106,6 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   return Status();
 }
 
-lldb::ThreadSP ScriptInterpreter::GetOpaqueTypeFromSBThread(
-    const lldb::SBThread &thread) const {
-  if (thread.m_opaque_sp)
-    return thread.m_opaque_sp->GetThreadSP();
-  return nullptr;
-}
-
 lldb::StackFrameSP
 ScriptInterpreter::GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const {
   if (frame.m_opaque_sp)

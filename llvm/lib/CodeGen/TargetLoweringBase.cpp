@@ -475,6 +475,24 @@ RTLIB::Libcall RTLIB::getSINCOS_STRET(EVT RetVT) {
 }
 
 RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
+  // TODO: Tablegen should generate this function
+  if (RetVT.isVector()) {
+    if (!RetVT.isSimple())
+      return RTLIB::UNKNOWN_LIBCALL;
+    switch (RetVT.getSimpleVT().SimpleTy) {
+    case MVT::v4f32:
+      return RTLIB::MODF_V4F32;
+    case MVT::v2f64:
+      return RTLIB::MODF_V2F64;
+    case MVT::nxv4f32:
+      return RTLIB::MODF_NXV4F32;
+    case MVT::nxv2f64:
+      return RTLIB::MODF_NXV2F64;
+    default:
+      return RTLIB::UNKNOWN_LIBCALL;
+    }
+  }
+
   return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
                       MODF_PPCF128);
 }
@@ -735,7 +753,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
                          TM.Options.FloatABIType, TM.Options.EABIVersion,
-                         TM.Options.MCOptions.getABIName()),
+                         TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo) {
   initActions();
 

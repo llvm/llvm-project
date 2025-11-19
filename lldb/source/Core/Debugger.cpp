@@ -965,7 +965,8 @@ llvm::StringRef Debugger::GetStaticBroadcasterClass() {
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
       Properties(std::make_shared<OptionValueProperties>()),
-      m_input_file_sp(std::make_shared<NativeFile>(stdin, NativeFile::Unowned)),
+      m_input_file_sp(std::make_shared<NativeFile>(
+          stdin, File::eOpenOptionReadOnly, NativeFile::Unowned)),
       m_output_stream_sp(std::make_shared<LockableStreamFile>(
           stdout, NativeFile::Unowned, m_output_mutex)),
       m_error_stream_sp(std::make_shared<LockableStreamFile>(
@@ -1172,7 +1173,8 @@ Status Debugger::SetInputString(const char *data) {
     return result;
   }
 
-  SetInputFile((FileSP)std::make_shared<NativeFile>(commands_file, true));
+  SetInputFile((FileSP)std::make_shared<NativeFile>(
+      commands_file, File::eOpenOptionReadOnly, true));
   return result;
 }
 
@@ -1378,7 +1380,8 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in,
       in = GetInputFileSP();
     // If there is nothing, use stdin
     if (!in)
-      in = std::make_shared<NativeFile>(stdin, NativeFile::Unowned);
+      in = std::make_shared<NativeFile>(stdin, File::eOpenOptionReadOnly,
+                                        NativeFile::Unowned);
   }
   // If no STDOUT has been set, then set it appropriately
   if (!out || !out->GetUnlockedFile().IsValid()) {
