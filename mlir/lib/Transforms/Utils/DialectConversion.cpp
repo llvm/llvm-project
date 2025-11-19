@@ -25,6 +25,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -91,6 +92,22 @@ static OpBuilder::InsertPoint computeInsertPoint(ArrayRef<Value> vals) {
   }
   return pt;
 }
+
+namespace {
+enum OpConversionMode {
+  /// In this mode, the conversion will ignore failed conversions to allow
+  /// illegal operations to co-exist in the IR.
+  Partial,
+
+  /// In this mode, all operations must be legal for the given target for the
+  /// conversion to succeed.
+  Full,
+
+  /// In this mode, operations are analyzed for legality. No actual rewrites are
+  /// applied to the operations on success.
+  Analysis,
+};
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ConversionValueMapping
@@ -866,8 +883,9 @@ namespace mlir {
 namespace detail {
 struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   explicit ConversionPatternRewriterImpl(ConversionPatternRewriter &rewriter,
-                                         const ConversionConfig &config)
-      : rewriter(rewriter), config(config),
+                                         const ConversionConfig &config,
+                                         OperationConverter &opConverter)
+      : rewriter(rewriter), config(config), opConverter(opConverter),
         notifyingRewriter(rewriter.getContext(), config.listener) {}
 
   //===--------------------------------------------------------------------===//
@@ -1034,7 +1052,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
         MLIRContext *context,
         std::function<void(Operation *)> opErasedCallback = nullptr)
         : RewriterBase(context, /*listener=*/this),
-          opErasedCallback(opErasedCallback) {}
+          opErasedCallback(std::move(opErasedCallback)) {}
 
     /// Erase the given op (unless it was already erased).
     void eraseOp(Operation *op) override {
@@ -1123,6 +1141,9 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
 
   /// Dialect conversion configuration.
   const ConversionConfig &config;
+
+  /// The operation converter to use for recursive legalization.
+  OperationConverter &opConverter;
 
   /// A set of erased operations. This set is utilized only if
   /// `allowPatternRollback` is set to "false". Conceptually, this set is
@@ -2084,9 +2105,10 @@ void ConversionPatternRewriterImpl::notifyMatchFailure(
 //===----------------------------------------------------------------------===//
 
 ConversionPatternRewriter::ConversionPatternRewriter(
-    MLIRContext *ctx, const ConversionConfig &config)
-    : PatternRewriter(ctx),
-      impl(new detail::ConversionPatternRewriterImpl(*this, config)) {
+    MLIRContext *ctx, const ConversionConfig &config,
+    OperationConverter &opConverter)
+    : PatternRewriter(ctx), impl(new detail::ConversionPatternRewriterImpl(
+                                *this, config, opConverter)) {
   setListener(impl.get());
 }
 
@@ -2204,6 +2226,37 @@ ConversionPatternRewriter::getRemappedValues(ValueRange keys,
     assert(values.size() == 1 && "1:N conversion not supported");
     results.push_back(values.front());
   }
+  return success();
+}
+
+LogicalResult ConversionPatternRewriter::legalize(Region *r) {
+  // Fast path: If the region is empty, there is nothing to legalize.
+  if (r->empty())
+    return success();
+
+  // Gather a list of all operations to legalize. This is done before
+  // converting the entry block signature because unrealized_conversion_cast
+  // ops should not be included.
+  SmallVector<Operation *> ops;
+  for (Block &b : *r)
+    for (Operation &op : b)
+      ops.push_back(&op);
+
+  // If the current pattern runs with a type converter, convert the entry block
+  // signature.
+  if (const TypeConverter *converter = impl->currentTypeConverter) {
+    std::optional<TypeConverter::SignatureConversion> conversion =
+        converter->convertBlockSignature(&r->front());
+    if (!conversion)
+      return failure();
+    applySignatureConversion(&r->front(), *conversion, converter);
+  }
+
+  // Legalize all operations in the region.
+  for (Operation *op : ops)
+    if (failed(legalize(op)))
+      return failure();
+
   return success();
 }
 
@@ -2713,7 +2766,7 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
       rewriterImpl.patternMaterializations.clear();
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // Expensive pattern check that can detect API violations.
-      if (checkOp) {
+      if (checkOp && topLevelFingerPrint) {
         OperationFingerPrint fingerPrintAfterPattern(checkOp);
         if (fingerPrintAfterPattern != *topLevelFingerPrint)
           llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
@@ -2804,17 +2857,19 @@ LogicalResult OperationLegalizer::legalizePatternResult(
   assert(impl.pendingRootUpdates.empty() && "dangling root updates");
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  // Check that the root was either replaced or updated in place.
-  auto newRewrites = llvm::drop_begin(impl.rewrites, curState.numRewrites);
-  auto replacedRoot = [&] {
-    return hasRewrite<ReplaceOperationRewrite>(newRewrites, op);
-  };
-  auto updatedRootInPlace = [&] {
-    return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
-  };
-  if (!replacedRoot() && !updatedRootInPlace())
-    llvm::report_fatal_error(
-        "expected pattern to replace the root operation or modify it in place");
+  if (impl.config.allowPatternRollback) {
+    // Check that the root was either replaced or updated in place.
+    auto newRewrites = llvm::drop_begin(impl.rewrites, curState.numRewrites);
+    auto replacedRoot = [&] {
+      return hasRewrite<ReplaceOperationRewrite>(newRewrites, op);
+    };
+    auto updatedRootInPlace = [&] {
+      return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
+    };
+    if (!replacedRoot() && !updatedRootInPlace())
+      llvm::report_fatal_error("expected pattern to replace the root operation "
+                               "or modify it in place");
+  }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   // Legalize each of the actions registered during application.
@@ -3192,22 +3247,6 @@ static void reconcileUnrealizedCasts(
 // OperationConverter
 //===----------------------------------------------------------------------===//
 
-namespace {
-enum OpConversionMode {
-  /// In this mode, the conversion will ignore failed conversions to allow
-  /// illegal operations to co-exist in the IR.
-  Partial,
-
-  /// In this mode, all operations must be legal for the given target for the
-  /// conversion to succeed.
-  Full,
-
-  /// In this mode, operations are analyzed for legality. No actual rewrites are
-  /// applied to the operations on success.
-  Analysis,
-};
-} // namespace
-
 namespace mlir {
 // This class converts operations to a given conversion target via a set of
 // rewrite patterns. The conversion behaves differently depending on the
@@ -3217,16 +3256,20 @@ struct OperationConverter {
                               const FrozenRewritePatternSet &patterns,
                               const ConversionConfig &config,
                               OpConversionMode mode)
-      : rewriter(ctx, config), opLegalizer(rewriter, target, patterns),
+      : rewriter(ctx, config, *this), opLegalizer(rewriter, target, patterns),
         mode(mode) {}
 
   /// Converts the given operations to the conversion target.
   LogicalResult convertOperations(ArrayRef<Operation *> ops);
 
-private:
-  /// Converts an operation with the given rewriter.
-  LogicalResult convert(Operation *op);
+  /// Converts a single operation. If `isRecursiveLegalization` is "true", the
+  /// conversion is a recursive legalization request, triggered from within a
+  /// pattern. In that case, do not emit errors because there will be another
+  /// attempt at legalizing the operation later (via the regular pre-order
+  /// legalization mechanism).
+  LogicalResult convert(Operation *op, bool isRecursiveLegalization = false);
 
+private:
   /// The rewriter to use when converting operations.
   ConversionPatternRewriter rewriter;
 
@@ -3238,32 +3281,42 @@ private:
 };
 } // namespace mlir
 
-LogicalResult OperationConverter::convert(Operation *op) {
+LogicalResult ConversionPatternRewriter::legalize(Operation *op) {
+  return impl->opConverter.convert(op, /*isRecursiveLegalization=*/true);
+}
+
+LogicalResult OperationConverter::convert(Operation *op,
+                                          bool isRecursiveLegalization) {
   const ConversionConfig &config = rewriter.getConfig();
 
   // Legalize the given operation.
   if (failed(opLegalizer.legalize(op))) {
     // Handle the case of a failed conversion for each of the different modes.
     // Full conversions expect all operations to be converted.
-    if (mode == OpConversionMode::Full)
-      return op->emitError()
-             << "failed to legalize operation '" << op->getName() << "'";
+    if (mode == OpConversionMode::Full) {
+      if (!isRecursiveLegalization)
+        op->emitError() << "failed to legalize operation '" << op->getName()
+                        << "'";
+      return failure();
+    }
     // Partial conversions allow conversions to fail iff the operation was not
     // explicitly marked as illegal. If the user provided a `unlegalizedOps`
     // set, non-legalizable ops are added to that set.
     if (mode == OpConversionMode::Partial) {
-      if (opLegalizer.isIllegal(op))
-        return op->emitError()
-               << "failed to legalize operation '" << op->getName()
-               << "' that was explicitly marked illegal";
-      if (config.unlegalizedOps)
+      if (opLegalizer.isIllegal(op)) {
+        if (!isRecursiveLegalization)
+          op->emitError() << "failed to legalize operation '" << op->getName()
+                          << "' that was explicitly marked illegal";
+        return failure();
+      }
+      if (config.unlegalizedOps && !isRecursiveLegalization)
         config.unlegalizedOps->insert(op);
     }
   } else if (mode == OpConversionMode::Analysis) {
     // Analysis conversions don't fail if any operations fail to legalize,
     // they are only interested in the operations that were successfully
     // legalized.
-    if (config.legalizableOps)
+    if (config.legalizableOps && !isRecursiveLegalization)
       config.legalizableOps->insert(op);
   }
   return success();

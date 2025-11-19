@@ -2,18 +2,34 @@
 
 ! Test CUDA Fortran atmoicadd functions available cudadevice module
 
-attributes(global) subroutine atomicaddvector_r2()
+attributes(global) subroutine test_atomicaddvector_r2()
   real(2), device :: a(2), tmp1(2), tmp2(2)
   tmp1 = atomicAddVector(a, tmp2)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPatomicaddvector_r2() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK-LABEL: func.func @_QPtest_atomicaddvector_r2() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 ! CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<2xf16>
 
-attributes(global) subroutine atomicaddvector_r4()
+attributes(global) subroutine test_atomicaddvector_r4()
   real(4), device :: a(2), tmp1(2), tmp2(2)
   tmp1 = atomicAddVector(a, tmp2)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPatomicaddvector_r4() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK-LABEL: func.func @_QPtest_atomicaddvector_r4() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 ! CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<2xf32>
+
+attributes(global) subroutine test_atomicadd_r2x4()
+  real(4), device :: a(2), tmp1(2), tmp2(2)
+  tmp1 = atomicaddreal4x2(a, tmp2)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_atomicadd_r2x4() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<2xf32>
+
+attributes(global) subroutine test_atomicadd_r4x4()
+  real(4), device :: a(4), tmp1(4), tmp2(4)
+  tmp1 = atomicaddreal4x4(a, tmp2)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_atomicadd_r4x4() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<4xf32>

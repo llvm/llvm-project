@@ -1179,18 +1179,36 @@ implicit none
   end interface
 
   interface atomicaddvector
-    attributes(device) pure function atomicadd_r2x2(address, val) result(z)
+    attributes(device) pure function atomicaddvector_r2x2(address, val) result(z)
       !dir$ ignore_tkr (rd) address, (d) val
       real(2), dimension(2), intent(inout) :: address
       real(2), dimension(2), intent(in) :: val
       real(2), dimension(2) :: z
     end function
 
+    attributes(device) pure function atomicaddvector_r4x2(address, val) result(z)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(4), dimension(2), intent(inout) :: address
+      real(4), dimension(2), intent(in) :: val
+      real(4), dimension(2) :: z
+    end function
+  end interface
+
+  interface atomicaddreal4x2
     attributes(device) pure function atomicadd_r4x2(address, val) result(z)
       !dir$ ignore_tkr (rd) address, (d) val
       real(4), dimension(2), intent(inout) :: address
       real(4), dimension(2), intent(in) :: val
       real(4), dimension(2) :: z
+    end function
+  end interface
+
+  interface atomicaddreal4x4
+    attributes(device) pure function atomicadd_r4x4(address, val) result(z)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(4), dimension(4), intent(inout) :: address
+      real(4), dimension(4), intent(in) :: val
+      real(4), dimension(4) :: z
     end function
   end interface
 

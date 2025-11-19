@@ -4641,11 +4641,17 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  LHS.getBaseInfo(), TBAAAccessInfo());
   }
 
-  // The HLSL runtime handle the subscript expression on global resource arrays.
-  if (getLangOpts().HLSL && (E->getType()->isHLSLResourceRecord() ||
-                             E->getType()->isHLSLResourceRecordArray())) {
-    std::optional<LValue> LV =
-        CGM.getHLSLRuntime().emitResourceArraySubscriptExpr(E, *this);
+  // The HLSL runtime handles subscript expressions on global resource arrays
+  // and objects with HLSL buffer layouts.
+  if (getLangOpts().HLSL) {
+    std::optional<LValue> LV;
+    if (E->getType()->isHLSLResourceRecord() ||
+        E->getType()->isHLSLResourceRecordArray()) {
+      LV = CGM.getHLSLRuntime().emitResourceArraySubscriptExpr(E, *this);
+    } else if (E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+      LV = CGM.getHLSLRuntime().emitBufferArraySubscriptExpr(E, *this,
+                                                             EmitIdxAfterBase);
+    }
     if (LV.has_value())
       return *LV;
   }
@@ -5109,6 +5115,11 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   if (DeclRefExpr *DRE = tryToConvertMemberExprToDeclRefExpr(*this, E)) {
     EmitIgnoredExpr(E->getBase());
     return EmitDeclRefLValue(DRE);
+  }
+  if (getLangOpts().HLSL &&
+      E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+    // We have an HLSL buffer - emit using HLSL's layout rules.
+    return CGM.getHLSLRuntime().emitBufferMemberExpr(*this, E);
   }
 
   Expr *BaseExpr = E->getBase();
@@ -6632,15 +6643,6 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                          E == MustTailCall, E->getExprLoc());
 
   if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-    // Generate function declaration DISuprogram in order to be used
-    // in debug info about call sites.
-    if (CGDebugInfo *DI = getDebugInfo()) {
-      FunctionArgList Args;
-      QualType ResTy = BuildFunctionArgList(CalleeDecl, Args);
-      DI->EmitFuncDeclForCallSite(LocalCallOrInvoke,
-                                  DI->getFunctionType(CalleeDecl, ResTy, Args),
-                                  CalleeDecl);
-    }
     if (CalleeDecl->hasAttr<RestrictAttr>() ||
         CalleeDecl->hasAttr<AllocSizeAttr>()) {
       // Function has 'malloc' (aka. 'restrict') or 'alloc_size' attribute.

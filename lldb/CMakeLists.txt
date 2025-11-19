@@ -62,11 +62,16 @@ if (LLDB_ENABLE_PYTHON)
   set(cachestring_LLDB_PYTHON_EXT_SUFFIX
     "Filename extension for native code python modules")
 
+  if (LLDB_ENABLE_PYTHON_LIMITED_API)
+    set(stable_abi "--stable-abi")
+  endif()
+
   foreach(var LLDB_PYTHON_RELATIVE_PATH LLDB_PYTHON_EXE_RELATIVE_PATH LLDB_PYTHON_EXT_SUFFIX)
     if(NOT DEFINED ${var} AND NOT CMAKE_CROSSCOMPILING)
       execute_process(
         COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/bindings/python/get-python-config.py
+          ${stable_abi}
           ${var}
         OUTPUT_VARIABLE value
         OUTPUT_STRIP_TRAILING_WHITESPACE)

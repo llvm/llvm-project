@@ -1512,6 +1512,9 @@ void CodeGenModule::Release() {
   case CodeGenOptions::FramePointerKind::Reserved:
     getModule().setFramePointer(llvm::FramePointerKind::Reserved);
     break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    getModule().setFramePointer(llvm::FramePointerKind::NonLeafNoReserve);
+    break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     getModule().setFramePointer(llvm::FramePointerKind::NonLeaf);
     break;
@@ -2368,9 +2371,8 @@ static QualType GeneralizeTransparentUnion(QualType Ty) {
   const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return Ty;
-  for (const auto *it : UD->fields()) {
-    return it->getType();
-  }
+  if (!UD->fields().empty())
+    return UD->fields().begin()->getType();
   return Ty;
 }
 
@@ -4935,6 +4937,11 @@ void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
   setGlobalVisibility(Resolver, D);
 
   setDSOLocal(Resolver);
+
+  // The resolver must be exempt from sanitizer instrumentation, as it can run
+  // before the sanitizer is initialized.
+  // (https://github.com/llvm/llvm-project/issues/163369)
+  Resolver->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
 
   // Set the default target-specific attributes, such as PAC and BTI ones on
   // AArch64. Not passing Decl to prevent setting unrelated attributes,
@@ -8280,4 +8287,54 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
+}
+
+bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
+  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
+    return false;
+  CXXDestructorDecl *Dtor = RD->getDestructor();
+  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
+  // so just force vector deleting destructor emission if dllexport is present.
+  // This matches MSVC behavior.
+  if (Dtor && Dtor->isVirtual() && Dtor->isDefined() &&
+      Dtor->hasAttr<DLLExportAttr>())
+    return true;
+
+  return RequireVectorDeletingDtor.count(RD);
+}
+
+void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
+  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
+    return;
+  RequireVectorDeletingDtor.insert(RD);
+
+  // To reduce code size in general case we lazily emit scalar deleting
+  // destructor definition and an alias from vector deleting destructor to
+  // scalar deleting destructor. It may happen that we first emitted the scalar
+  // deleting destructor definition and the alias and then discovered that the
+  // definition of the vector deleting destructor is required. Then we need to
+  // remove the alias and the scalar deleting destructor and queue vector
+  // deleting destructor body for emission. Check if that is the case.
+  CXXDestructorDecl *DtorD = RD->getDestructor();
+  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
+  StringRef MangledName = getMangledName(ScalarDtorGD);
+  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+  if (Entry && !Entry->isDeclaration()) {
+    GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
+    StringRef VDName = getMangledName(VectorDtorGD);
+    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
+    // It exists and it should be an alias.
+    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
+    auto *NewFn = llvm::Function::Create(
+        cast<llvm::FunctionType>(VDEntry->getValueType()),
+        llvm::Function::ExternalLinkage, VDName, &getModule());
+    SetFunctionAttributes(VectorDtorGD, NewFn, /*IsIncompleteFunction*/ false,
+                          /*IsThunk*/ false);
+    NewFn->takeName(VDEntry);
+    VDEntry->replaceAllUsesWith(NewFn);
+    VDEntry->eraseFromParent();
+    Entry->replaceAllUsesWith(NewFn);
+    Entry->eraseFromParent();
+    addDeferredDeclToEmit(VectorDtorGD);
+  }
 }

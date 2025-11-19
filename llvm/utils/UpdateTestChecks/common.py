@@ -605,6 +605,7 @@ TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
+STOP_PASS_RE = re.compile(r"-stop-(before|after)=(\w+)")
 
 IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
 IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\S+")

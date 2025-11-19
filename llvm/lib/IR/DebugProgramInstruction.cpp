@@ -12,8 +12,9 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Compiler.h"
 
-namespace llvm {
+using namespace llvm;
 
+namespace llvm {
 template <typename T>
 DbgRecordParamRef<T>::DbgRecordParamRef(const T *Param)
     : Ref(const_cast<T *>(Param)) {}
@@ -28,6 +29,7 @@ template <typename T> T *DbgRecordParamRef<T>::get() const {
 template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DIExpression>;
 template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILabel>;
 template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILocalVariable>;
+} // namespace llvm
 
 DbgVariableRecord::DbgVariableRecord(const DbgVariableIntrinsic *DVI)
     : DbgRecord(ValueKind, DVI->getDebugLoc()),
@@ -755,5 +757,3 @@ iterator_range<simple_ilist<DbgRecord>::iterator> DbgMarker::cloneDebugInfoFrom(
     // We inserted a block at the end, return that range.
     return {First->getIterator(), StoredDbgRecords.end()};
 }
-
-} // end namespace llvm

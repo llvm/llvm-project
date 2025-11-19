@@ -54,8 +54,6 @@ using llvm::support::endian::read32le;
 using llvm::support::endian::write32le;
 using llvm::support::endian::write64le;
 
-constexpr size_t MergeNoTailSection::numShards;
-
 static uint64_t readUint(Ctx &ctx, uint8_t *buf) {
   return ctx.arg.is64 ? read64(ctx, buf) : read32(ctx, buf);
 }
@@ -2749,9 +2747,9 @@ RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
 
-PaddingSection::PaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent)
-    : SyntheticSection(ctx, ".padding", SHT_PROGBITS, SHF_ALLOC, 1),
-      size(size) {
+PaddingSection::PaddingSection(Ctx &ctx, uint64_t amount, OutputSection *parent)
+    : SyntheticSection(ctx, ".padding", SHT_PROGBITS, SHF_ALLOC, 1) {
+  size = amount;
   this->parent = parent;
 }
 

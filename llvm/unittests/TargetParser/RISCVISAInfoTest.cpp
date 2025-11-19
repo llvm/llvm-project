@@ -1204,6 +1204,7 @@ Experimental extensions
     zvfofp8min           0.2
     zvkgs                0.7
     zvqdotq              0.0
+    smpmpmt              0.6
     svukte               0.3
     xqccmp               0.3
     xqcia                0.7

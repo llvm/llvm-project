@@ -619,11 +619,17 @@ void mlir::applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm) {
     return;
   tm.setEnabled(options->timing);
   tm.setDisplayMode(options->displayMode);
+  tm.setOutput(createOutputStrategy(options->outputFormat, llvm::errs()));
+}
 
-  std::unique_ptr<OutputStrategy> printer;
-  if (options->outputFormat == OutputFormat::Text)
-    printer = std::make_unique<OutputTextStrategy>(llvm::errs());
-  else if (options->outputFormat == OutputFormat::Json)
-    printer = std::make_unique<OutputJsonStrategy>(llvm::errs());
-  tm.setOutput(std::move(printer));
+std::unique_ptr<OutputStrategy>
+mlir::createOutputStrategy(DefaultTimingManager::OutputFormat fmt,
+                           raw_ostream &os) {
+  switch (fmt) {
+  case OutputFormat::Text:
+    return std::make_unique<OutputTextStrategy>(os);
+  case OutputFormat::Json:
+    return std::make_unique<OutputJsonStrategy>(os);
+  }
+  llvm_unreachable("Invalid output format");
 }

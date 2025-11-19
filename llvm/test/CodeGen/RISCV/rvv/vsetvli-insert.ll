@@ -863,3 +863,62 @@ entry:
     i64 2)
   ret <vscale x 1 x double> %2
 }
+
+; The two vsetvlis will be coalesced so the add will be made dead and
+; removed. Make sure we shrink the live interval of %x.
+define void @non_li_addi(i64 %x, ptr %p) {
+; CHECK-LABEL: non_li_addi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    ret
+entry:
+  %add = add i64 %x, 1
+  %0 = tail call i64 @llvm.riscv.vsetvli(i64 %add, i64 3, i64 0)
+  %1 = call <vscale x 8 x i8> @llvm.riscv.vle(<vscale x 8 x i8> poison, ptr %p, i64 %0)
+  %2 = tail call i64 @llvm.riscv.vsetvli(i64 1, i64 3, i64 0)
+  %3 = tail call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff(<vscale x 8 x i8> poison, ptr %p, i64 %2)
+  ret void
+}
+
+; This will create a live interval in such a way we can't coalesce two vsetvlis,
+; see the corresponding .mir test for more details. Make sure we check for this
+; and don't crash.
+define void @coalesce_vl_clobber(ptr %p) {
+; CHECK-LABEL: coalesce_vl_clobber:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, ma
+; CHECK-NEXT:    vmclr.m v8
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:  .LBB43_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    slli a3, a1, 32
+; CHECK-NEXT:    vsetvli a1, a2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    srli a3, a3, 32
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vslideup.vx v10, v9, a3, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmsne.vi v0, v10, 0, v0.t
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vse32.v v10, (a0), v0.t
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    j .LBB43_1
+entry:
+  br label %vector.body
+
+vector.body:
+  %avl = phi i64 [ 0, %entry ], [ 1, %vector.body ]
+  %prev.evl = phi i32 [ 0, %entry ], [ %0, %vector.body ]
+  %0 = tail call i32 @llvm.experimental.get.vector.length(i64 %avl, i32 1, i1 true)
+  %1 = tail call <vscale x 4 x i1> @llvm.experimental.vp.splice(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 0, <vscale x 4 x i1> zeroinitializer, i32 %prev.evl, i32 0)
+  tail call void @llvm.vp.store(<vscale x 4 x float> zeroinitializer, ptr %p, <vscale x 4 x i1> %1, i32 %0)
+  br label %vector.body
+}

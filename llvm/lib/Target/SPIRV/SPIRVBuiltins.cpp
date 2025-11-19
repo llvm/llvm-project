@@ -2390,6 +2390,15 @@ static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
   return buildBindlessImageINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generateBlockingPipesInst(const SPIRV::IncomingCall *Call,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+  return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
+}
+
 static bool
 generateTernaryBitwiseFunctionINTELInst(const SPIRV::IncomingCall *Call,
                                         MachineIRBuilder &MIRBuilder,
@@ -3050,6 +3059,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generatePipeInst(Call.get(), MIRBuilder, GR);
   case SPIRV::PredicatedLoadStore:
     return generatePredicatedLoadStoreInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::BlockingPipes:
+    return generateBlockingPipesInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

@@ -19,8 +19,6 @@
 
 #include "gtest/gtest.h"
 
-#include <vector>
-
 using namespace llvm;
 using namespace llvm::pdb;
 

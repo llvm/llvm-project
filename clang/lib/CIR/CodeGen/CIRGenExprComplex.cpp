@@ -339,7 +339,7 @@ mlir::Value ComplexExprEmitter::emitLoadOfLValue(LValue lv,
     cgf.cgm.errorNYI(loc, "emitLoadOfLValue with Atomic LV");
 
   const Address srcAddr = lv.getAddress();
-  return builder.createLoad(cgf.getLoc(loc), srcAddr);
+  return builder.createLoad(cgf.getLoc(loc), srcAddr, lv.isVolatileQualified());
 }
 
 /// EmitStoreOfComplex - Store the specified real/imag parts into the
@@ -353,7 +353,7 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
   }
 
   const Address destAddr = lv.getAddress();
-  builder.createStore(loc, val, destAddr);
+  builder.createStore(loc, val, destAddr, lv.isVolatileQualified());
 }
 
 //===----------------------------------------------------------------------===//

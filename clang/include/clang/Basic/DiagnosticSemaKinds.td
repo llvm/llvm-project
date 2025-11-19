@@ -8116,6 +8116,17 @@ def ext_gnu_ptr_func_arith : Extension<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to%select{ the|}2 function "
   "type%select{|s}2 %1%select{| and %3}2 is a GNU extension">,
   InGroup<GNUPointerArith>;
+def ext_gnu_counted_by_void_ptr
+    : Extension<
+          "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' "
+          "on a pointer to void is a GNU extension, treated as "
+          "'%select{sized_by|sized_by|sized_by_or_null|sized_by_or_null}0'">,
+      InGroup<GNUPointerArith>;
+def note_gnu_counted_by_void_ptr_use_sized_by
+    : Note<"use "
+           "'%select{__sized_by|__sized_by|__sized_by_or_null|__sized_by_or_"
+           "null}0' "
+           "to suppress this warning">;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
 def ext_c2y_increment_complex : Extension<
@@ -12126,6 +12137,9 @@ def err_omp_unexpected_schedule_modifier : Error<
   "modifier '%0' cannot be used along with modifier '%1'">;
 def err_omp_schedule_nonmonotonic_static : Error<
   "'nonmonotonic' modifier can only be specified with 'dynamic' or 'guided' schedule kind">;
+def err_omp_incompatible_dyn_groupprivate_modifier
+    : Error<"modifier '%0' cannot be used along with modifier '%1' in "
+            "dyn_groupprivate">;
 def err_omp_simple_clause_incompatible_with_ordered : Error<
   "'%0' clause with '%1' modifier cannot be specified if an 'ordered' clause is specified">;
 def err_omp_ordered_simd : Error<
@@ -12953,6 +12967,9 @@ def err_builtin_invalid_arg_type: Error<
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
 
+def err_bswapg_invalid_bit_width : Error<
+  "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;
+
 def err_builtin_trivially_relocate_invalid_arg_type: Error <
   "first%select{||| and second}0 argument%select{|||s}0 to "
   "'__builtin_trivially_relocate' must be"
@@ -13184,6 +13201,7 @@ def err_hlsl_semantic_indexing_not_supported
     : Error<"semantic %0 does not allow indexing">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
+def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
 
 def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
 def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;

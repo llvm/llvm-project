@@ -58,22 +58,24 @@ BasicBlockSectionsProfileReader::parseUniqueBBID(StringRef S) const {
 }
 
 bool BasicBlockSectionsProfileReader::isFunctionHot(StringRef FuncName) const {
-  return getClusterInfoForFunction(FuncName).first;
+  return !getClusterInfoForFunction(FuncName).empty();
 }
 
-std::pair<bool, SmallVector<BBClusterInfo>>
+SmallVector<BBClusterInfo>
 BasicBlockSectionsProfileReader::getClusterInfoForFunction(
     StringRef FuncName) const {
   auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
-  return R != ProgramPathAndClusterInfo.end()
-             ? std::pair(true, R->second.ClusterInfo)
-             : std::pair(false, SmallVector<BBClusterInfo>());
+  return R != ProgramPathAndClusterInfo.end() ? R->second.ClusterInfo
+                                              : SmallVector<BBClusterInfo>();
 }
 
 SmallVector<SmallVector<unsigned>>
 BasicBlockSectionsProfileReader::getClonePathsForFunction(
     StringRef FuncName) const {
-  return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).ClonePaths;
+  auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
+  return R != ProgramPathAndClusterInfo.end()
+             ? R->second.ClonePaths
+             : SmallVector<SmallVector<unsigned>>();
 }
 
 uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
@@ -494,7 +496,7 @@ bool BasicBlockSectionsProfileReaderWrapperPass::isFunctionHot(
   return BBSPR.isFunctionHot(FuncName);
 }
 
-std::pair<bool, SmallVector<BBClusterInfo>>
+SmallVector<BBClusterInfo>
 BasicBlockSectionsProfileReaderWrapperPass::getClusterInfoForFunction(
     StringRef FuncName) const {
   return BBSPR.getClusterInfoForFunction(FuncName);

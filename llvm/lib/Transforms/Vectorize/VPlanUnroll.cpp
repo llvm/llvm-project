@@ -518,9 +518,9 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     // TODO: have cloning of replicate recipes also provide the desired result
     // coupled with setting its operands to NewOps (deriving IsSingleScalar and
     // Mask from the operands?)
-    New =
-        new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
-                              /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
+    New = new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
+                                /*IsSingleScalar=*/true, /*Mask=*/nullptr,
+                                *RepR, *RepR, RepR->getDebugLoc());
   } else {
     assert(isa<VPInstruction>(DefR) &&
            "DefR must be a VPReplicateRecipe or VPInstruction");
@@ -582,7 +582,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
-        return U.onlyFirstLaneUsed(DefR);
+        return U.usesFirstLaneOnly(DefR);
       });
 
       // Update each build vector user that currently has DefR as its only

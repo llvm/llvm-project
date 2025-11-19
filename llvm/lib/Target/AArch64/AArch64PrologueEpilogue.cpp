@@ -253,6 +253,8 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
   case AArch64::SEH_SaveReg:
   case AArch64::SEH_SaveFRegP:
   case AArch64::SEH_SaveFReg:
+  case AArch64::SEH_SaveAnyRegI:
+  case AArch64::SEH_SaveAnyRegIP:
   case AArch64::SEH_SaveAnyRegQP:
   case AArch64::SEH_SaveAnyRegQPX:
     ImmOpnd = &MBBI->getOperand(ImmIdx);
@@ -805,7 +807,7 @@ void AArch64PrologueEmitter::emitPrologue() {
     CFAOffset += SVEAllocs.BeforePPRs;
     assert(PPRRange.End == ZPRRange.Begin &&
            "Expected ZPR callee saves after PPR locals");
-    allocateStackSpace(PPRRange.End, RealignmentPadding, SVEAllocs.AfterPPRs,
+    allocateStackSpace(PPRRange.End, 0, SVEAllocs.AfterPPRs,
                        EmitAsyncCFI && !HasFP, CFAOffset,
                        MFI.hasVarSizedObjects() || SVEAllocs.AfterZPRs);
     CFAOffset += SVEAllocs.AfterPPRs;
@@ -1318,6 +1320,26 @@ AArch64EpilogueEmitter::AArch64EpilogueEmitter(MachineFunction &MF,
   SEHEpilogueStartI = MBB.end();
 }
 
+void AArch64EpilogueEmitter::moveSPBelowFP(MachineBasicBlock::iterator MBBI,
+                                           StackOffset Offset) {
+  // Other combinations could be supported, but are not currently needed.
+  assert(Offset.getScalable() < 0 && Offset.getFixed() <= 0 &&
+         "expected negative offset (with optional fixed portion)");
+  Register Base = AArch64::FP;
+  if (int64_t FixedOffset = Offset.getFixed()) {
+    // If we have a negative fixed offset, we need to first subtract it in a
+    // temporary register first (to avoid briefly deallocating the scalable
+    // portion of the offset).
+    Base = MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+    emitFrameOffset(MBB, MBBI, DL, Base, AArch64::FP,
+                    StackOffset::getFixed(FixedOffset), TII,
+                    MachineInstr::FrameDestroy);
+  }
+  emitFrameOffset(MBB, MBBI, DL, AArch64::SP, Base,
+                  StackOffset::getScalable(Offset.getScalable()), TII,
+                  MachineInstr::FrameDestroy);
+}
+
 void AArch64EpilogueEmitter::emitEpilogue() {
   MachineBasicBlock::iterator EpilogueEndI = MBB.getLastNonDebugInstr();
   if (MBB.end() != EpilogueEndI) {
@@ -1418,6 +1440,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
       AfterCSRPopSize += ProloguePopSize;
     }
   }
+
   // Move past the restores of the callee-saved registers.
   // If we plan on combining the sp bump of the local stack size and the callee
   // save stack size, we might need to adjust the CSR save and restore offsets.
@@ -1483,7 +1506,6 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
   StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
   SVEStackAllocations SVEAllocs = getSVEStackAllocations({PPR, ZPR});
-  MachineBasicBlock::iterator RestoreBegin = ZPRRange.Begin;
 
   // Deallocate the SVE area.
   if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
@@ -1510,28 +1532,25 @@ void AArch64EpilogueEmitter::emitEpilogue() {
         (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) ? AArch64::FP
                                                               : AArch64::SP;
     if (SVECalleeSavesSize && BaseForSVEDealloc == AArch64::FP) {
-      // TODO: Support stack realigment and variable-sized objects.
-      assert(
-          SVELayout != SVEStackLayout::Split &&
-          "unexpected stack realignment or variable sized objects with split "
-          "SVE stack objects");
-
-      Register CalleeSaveBase = AArch64::FP;
-      if (int64_t CalleeSaveBaseOffset =
-              AFI->getCalleeSaveBaseToFrameRecordOffset()) {
-        // If we have have an non-zero offset to the non-SVE CS base we need to
-        // compute the base address by subtracting the offest in a temporary
-        // register first (to avoid briefly deallocating the SVE CS).
-        CalleeSaveBase = MBB.getParent()->getRegInfo().createVirtualRegister(
-            &AArch64::GPR64RegClass);
-        emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
-                        StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
-                        MachineInstr::FrameDestroy);
+      if (ZPR.CalleeSavesSize || SVELayout != SVEStackLayout::Split) {
+        // The offset from the frame-pointer to the start of the ZPR saves.
+        StackOffset FPOffsetZPR =
+            -SVECalleeSavesSize - PPR.LocalsSize -
+            StackOffset::getFixed(AFI->getCalleeSaveBaseToFrameRecordOffset());
+        // Deallocate the stack space space by moving the SP to the start of the
+        // ZPR/PPR callee-save area.
+        moveSPBelowFP(ZPRRange.Begin, FPOffsetZPR);
       }
-      // The code below will deallocate the stack space space by moving the SP
-      // to the start of the SVE callee-save area.
-      emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
-                      -SVECalleeSavesSize, TII, MachineInstr::FrameDestroy);
+      // With split SVE, the predicates are stored in a separate area above the
+      // ZPR saves, so we must adjust the stack to the start of the PPRs.
+      if (PPR.CalleeSavesSize && SVELayout == SVEStackLayout::Split) {
+        // The offset from the frame-pointer to the start of the PPR saves.
+        StackOffset FPOffsetPPR = -PPR.CalleeSavesSize;
+        // Move to the start of the PPR area.
+        assert(!FPOffsetPPR.getFixed() && "expected only scalable offset");
+        emitFrameOffset(MBB, ZPRRange.End, DL, AArch64::SP, AArch64::FP,
+                        FPOffsetPPR, TII, MachineInstr::FrameDestroy);
+      }
     } else if (BaseForSVEDealloc == AArch64::SP) {
       auto NonSVELocals = StackOffset::getFixed(NumBytes);
       auto CFAOffset = NonSVELocals + StackOffset::getFixed(PrologueSaveSize) +

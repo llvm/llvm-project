@@ -11,7 +11,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/XRay/FDRRecords.h"
-#include <algorithm>
 #include <memory>
 #include <vector>
 

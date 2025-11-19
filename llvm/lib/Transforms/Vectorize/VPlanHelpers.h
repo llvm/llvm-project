@@ -50,21 +50,6 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step);
 
-/// A helper function that returns how much we should divide the cost of a
-/// predicated block by. Typically this is the reciprocal of the block
-/// probability, i.e. if we return X we are assuming the predicated block will
-/// execute once for every X iterations of the loop header so the block should
-/// only contribute 1/X of its cost to the total cost calculation, but when
-/// optimizing for code size it will just be 1 as code size costs don't depend
-/// on execution probabilities.
-///
-/// TODO: We should use actual block probability here, if available. Currently,
-///       we always assume predicated blocks have a 50% chance of executing.
-inline unsigned
-getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind) {
-  return CostKind == TTI::TCK_CodeSize ? 1 : 2;
-}
-
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
 /// [1, 16) = {1, 2, 4, 8}
@@ -367,6 +352,10 @@ struct VPCostContext {
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 
+  /// \returns how much the cost of a predicated block should be divided by.
+  /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
+  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
+
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
 
@@ -406,7 +395,7 @@ class VPSlotTracker {
   std::unique_ptr<ModuleSlotTracker> MST;
 
   void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
+  LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 

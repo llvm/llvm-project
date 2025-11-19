@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCall.h"
-#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -22,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -193,11 +193,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // default (e.g. in C / C++ auto vars are in the generic address space). At
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
-    assert(!cir::MissingFeatures::addressSpace());
+
+    if (!cir::isMatchingAddressSpace(
+            getCIRAllocaAddressSpace(),
+            e->getType()->getPointeeType().getAddressSpace())) {
+      cgm.errorNYI(e->getSourceRange(), "Non-default address space for alloca");
+    }
 
     // Bitcast the alloca to the expected type.
-    return RValue::get(
-        builder.createBitcast(allocaAddr, builder.getVoidPtrTy()));
+    return RValue::get(builder.createBitcast(
+        allocaAddr, builder.getVoidPtrTy(getCIRAllocaAddressSpace())));
   }
 
   case Builtin::BIcos:
@@ -221,6 +226,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_ceilf128:
     assert(!cir::MissingFeatures::fastMathFlags());
     return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(*this, *e);
+
+  case Builtin::BIexp:
+  case Builtin::BIexpf:
+  case Builtin::BIexpl:
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *e);
 
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
@@ -470,6 +486,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
                     returnValue);
   }
+  case Builtin::BI__builtin_dynamic_object_size:
+  case Builtin::BI__builtin_object_size: {
+    unsigned type =
+        e->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    auto resType = mlir::cast<cir::IntType>(convertType(e->getType()));
+
+    // We pass this builtin onto the optimizer so that it can figure out the
+    // object size in more complex cases.
+    bool isDynamic = builtinID == Builtin::BI__builtin_dynamic_object_size;
+    return RValue::get(emitBuiltinObjectSize(e->getArg(0), type, resType,
+                                             /*EmittedE=*/nullptr, isDynamic));
+  }
+
   case Builtin::BI__builtin_prefetch: {
     auto evaluateOperandAsInt = [&](const Expr *arg) {
       Expr::EvalResult res;
@@ -601,6 +630,22 @@ CIRGenFunction::emitTargetBuiltinExpr(unsigned builtinID, const CallExpr *e,
                                    getTarget().getTriple().getArch());
 }
 
+mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(
+    const unsigned iceArguments, const unsigned idx, const Expr *argExpr) {
+  mlir::Value arg = {};
+  if ((iceArguments & (1 << idx)) == 0) {
+    arg = emitScalarExpr(argExpr);
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    const std::optional<llvm::APSInt> result =
+        argExpr->getIntegerConstantExpr(getContext());
+    assert(result && "Expected argument to be a constant");
+    arg = builder.getConstInt(getLoc(argExpr->getSourceRange()), *result);
+  }
+  return arg;
+}
+
 /// Given a builtin id for a function like "__builtin_fabsf", return a Function*
 /// for "fabsf".
 cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *fd,
@@ -651,4 +696,43 @@ mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
   mlir::Type type = convertType(ve->getType());
   mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
   return cir::VAArgOp::create(builder, loc, type, vaList);
+}
+
+mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
+                                                  cir::IntType resType,
+                                                  mlir::Value emittedE,
+                                                  bool isDynamic) {
+  assert(!cir::MissingFeatures::opCallImplicitObjectSizeArgs());
+
+  // LLVM can't handle type=3 appropriately, and __builtin_object_size shouldn't
+  // evaluate e for side-effects. In either case, just like original LLVM
+  // lowering, we shouldn't lower to `cir.objsize` but to a constant instead.
+  if (type == 3 || (!emittedE && e->HasSideEffects(getContext())))
+    return builder.getConstInt(getLoc(e->getSourceRange()), resType,
+                               (type & 2) ? 0 : -1);
+
+  mlir::Value ptr = emittedE ? emittedE : emitScalarExpr(e);
+  assert(mlir::isa<cir::PointerType>(ptr.getType()) &&
+         "Non-pointer passed to __builtin_object_size?");
+
+  assert(!cir::MissingFeatures::countedBySize());
+
+  // Extract the min/max mode from type. CIR only supports type 0
+  // (max, whole object) and type 2 (min, whole object), not type 1 or 3
+  // (closest subobject variants).
+  const bool min = ((type & 2) != 0);
+  // For GCC compatibility, __builtin_object_size treats NULL as unknown size.
+  auto op =
+      cir::ObjSizeOp::create(builder, getLoc(e->getSourceRange()), resType, ptr,
+                             min, /*nullUnknown=*/true, isDynamic);
+  return op.getResult();
+}
+
+mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
+    const Expr *e, unsigned type, cir::IntType resType, mlir::Value emittedE,
+    bool isDynamic) {
+  uint64_t objectSize;
+  if (!e->tryEvaluateObjectSize(objectSize, getContext(), type))
+    return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
+  return builder.getConstInt(getLoc(e->getSourceRange()), resType, objectSize);
 }

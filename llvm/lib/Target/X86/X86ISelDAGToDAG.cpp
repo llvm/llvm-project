@@ -4728,9 +4728,9 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   auto tryPeelOuterNotWrappingLogic = [&](SDNode *Op) {
     if (Op->getOpcode() == ISD::XOR && Op->hasOneUse() &&
         ISD::isBuildVectorAllOnes(Op->getOperand(1).getNode())) {
-      SDValue InnerOp = Op->getOperand(0);
+      SDValue InnerOp = getFoldableLogicOp(Op->getOperand(0));
 
-      if (!getFoldableLogicOp(InnerOp))
+      if (!InnerOp)
         return SDValue();
 
       N0 = InnerOp.getOperand(0);
