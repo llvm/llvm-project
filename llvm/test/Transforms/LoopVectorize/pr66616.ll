@@ -18,10 +18,9 @@ define void @pr66616(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP0]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    br label [[LOOP_1:%.*]]
 ; CHECK:       preheader:
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 -1, [[DOTLCSSA]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 -1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4

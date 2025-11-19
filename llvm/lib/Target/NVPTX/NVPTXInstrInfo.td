@@ -139,7 +139,6 @@ def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
 def hasTcgen05MMAScaleInputDImm : Predicate<"Subtarget->hasTcgen05MMAScaleInputDImm()">;
-def hasTMACTAGroupSupport  : Predicate<"Subtarget->hasCpAsyncBulkTensorCTAGroupSupport()">;
 def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
 
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
@@ -596,6 +595,15 @@ let hasSideEffects = false in {
   defm CVT_bf16 : CVT_FROM_ALL<"bf16", B16, [hasPTX<78>, hasSM<90>]>;
   defm CVT_f32 : CVT_FROM_ALL<"f32", B32>;
   defm CVT_f64 : CVT_FROM_ALL<"f64", B64>;
+  
+  multiclass CVT_FROM_FLOAT_SATFINITE<string ToName, RegisterClass RC> {
+    def _f32_sf :
+      BasicFlagsNVPTXInst<(outs RC:$dst),
+                (ins B32:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.satfinite." # ToName # ".f32">;
+  }
+  defm CVT_bf16 : CVT_FROM_FLOAT_SATFINITE<"bf16", B16>;
+  defm CVT_f16 : CVT_FROM_FLOAT_SATFINITE<"f16", B16>;
 
   // These cvts are different from those above: The source and dest registers
   // are of the same type.
@@ -612,6 +620,11 @@ let hasSideEffects = false in {
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}." # FromName # ".f32">,
     Requires<[hasPTX<70>, hasSM<80>]>;
+    
+    def _f32_sf :
+      BasicFlagsNVPTXInst<(outs RC:$dst),
+                (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", B32>;
@@ -684,7 +697,7 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rn_relu  : CVT_TO_TF32<"rn.relu">;
   defm CVT_to_tf32_rz_relu  : CVT_TO_TF32<"rz.relu">;
   defm CVT_to_tf32_rna      : CVT_TO_TF32<"rna", [hasPTX<70>, hasSM<80>]>;
-  defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [hasPTX<81>, hasSM<89>]>;
+  defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [hasPTX<81>, hasSM<80>]>;
 
   defm CVT_to_tf32_rn_satf : CVT_TO_TF32<"rn.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
@@ -1687,13 +1700,19 @@ def SDTMoveParamProfile : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]
 
 def SDTProxyReg : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
 
-
+// These nodes represent a parameter declaration. In PTX this will look like:
+//   .param .align 16 .b8 param0[1024];
+//   .param .b32 retval0;
+//
+// DeclareArrayParam(Chain, Externalsym, Align, Size, Glue)
+// DeclareScalarParam(Chain, Externalsym, Size, Glue)
 def declare_array_param :
   SDNode<"NVPTXISD::DeclareArrayParam", SDTDeclareArrayParam,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def declare_scalar_param :
   SDNode<"NVPTXISD::DeclareScalarParam", SDTDeclareScalarParam,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+
 def MoveParam :
   SDNode<"NVPTXISD::MoveParam", SDTMoveParamProfile, []>;
 def proxy_reg :
@@ -1755,7 +1774,7 @@ def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
 def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def CallPrototype :
   SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+         [SDNPHasChain, SDNPSideEffect]>;
 def ProtoIdent : Operand<i32> { let PrintMethod = "printProtoIdent"; }
 def CALL_PROTOTYPE :
   NVPTXInst<(outs), (ins ProtoIdent:$ident),
@@ -2182,6 +2201,9 @@ foreach vt = [v2f32, v2i32] in {
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;
 
+// This node is similar to ISD::BUILD_VECTOR except that the output may be
+// implicitly bitcast to a scalar. This allows for the representation of
+// packing move instructions for vector types which are not legal i.e. v2i32
 def nvptx_build_vector : SDNode<"NVPTXISD::BUILD_VECTOR", SDTypeProfile<1, 2, []>, []>;
 
 def : Pat<(i64 (nvptx_build_vector i32:$a, i32:$b)),
@@ -2268,7 +2290,7 @@ def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, CvtRN)>;
 def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE)>;
 // fpextend bf16 -> f32
-def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
+def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ, hasPTX<78>, hasSM<90>]>;
 def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE)>, Requires<[hasPTX<71>, hasSM<80>]>;
 
 // fpextend f16 -> f64

@@ -35,7 +35,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;libclc;openmp;offload")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;offload")
 set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -233,6 +233,20 @@ endif()
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
 option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
+option(RUNTIMES_EXECUTE_ONLY_CODE "Compile runtime libraries as execute-only." OFF)
+
+if (RUNTIMES_EXECUTE_ONLY_CODE)
+  # If a target doesn't support or recognise -mexecute-only, Clang will simply ignore the flag.
+  # We can check for this case using -Werror=unused-command-line-argument.
+  check_c_compiler_flag("-mexecute-only -Werror=unused-command-line-argument" C_SUPPORTS_MEXECUTE_ONLY)
+  if (NOT C_SUPPORTS_MEXECUTE_ONLY)
+    message(FATAL_ERROR "RUNTIMES_EXECUTE_ONLY_CODE was turned on, but the target '${LLVM_TARGET_TRIPLE}'"
+                        " doesn't support the -mexecute-only flag")
+  endif()
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mexecute-only")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mexecute-only")
+endif()
 
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
@@ -241,6 +255,20 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
+
+# Make GTest available to all runtimes
+# The runtime must call make_gtest_target() for it to become available. This is
+# to avoid build failures when gtest is not actually needed. In particular,
+# mingw-incomplete-sysroot is missing C++ header files that GTest needs to
+# compile.
+function(build_gtest)
+  if(TARGET default_gtest)
+    # Already available
+    return()
+  endif()
+
+  add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
+endfunction()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)

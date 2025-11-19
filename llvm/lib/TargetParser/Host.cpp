@@ -70,8 +70,8 @@
 
 using namespace llvm;
 
-static std::unique_ptr<llvm::MemoryBuffer>
-    LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+[[maybe_unused]] static std::unique_ptr<llvm::MemoryBuffer>
+getProcCpuinfoContent() {
   const char *CPUInfoFile = "/proc/cpuinfo";
   if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
     CPUInfoFile = CpuinfoIntercept;
@@ -369,6 +369,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
   if (Implementer == "0x63") { // Arm China.
     return StringSwitch<const char *>(Part)
         .Case("0x132", "star-mc1")
+        .Case("0xd25", "star-mc3")
         .Default("generic");
   }
 
@@ -511,11 +512,11 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-    if (Lines[I].starts_with("features")) {
-      size_t Pos = Lines[I].find(':');
+  for (StringRef Line : Lines)
+    if (Line.starts_with("features")) {
+      size_t Pos = Line.find(':');
       if (Pos != StringRef::npos) {
-        Lines[I].drop_front(Pos + 1).split(CPUFeatures, ' ');
+        Line.drop_front(Pos + 1).split(CPUFeatures, ' ');
         break;
       }
     }
@@ -523,20 +524,16 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // We need to check for the presence of vector support independently of
   // the machine type, since we may only use the vector register set when
   // supported by the kernel (and hypervisor).
-  bool HaveVectorSupport = false;
-  for (unsigned I = 0, E = CPUFeatures.size(); I != E; ++I) {
-    if (CPUFeatures[I] == "vx")
-      HaveVectorSupport = true;
-  }
+  bool HaveVectorSupport = llvm::is_contained(CPUFeatures, "vx");
 
   // Now check the processor machine type.
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].starts_with("processor ")) {
-      size_t Pos = Lines[I].find("machine = ");
+  for (StringRef Line : Lines) {
+    if (Line.starts_with("processor ")) {
+      size_t Pos = Line.find("machine = ");
       if (Pos != StringRef::npos) {
         Pos += sizeof("machine = ") - 1;
         unsigned int Id;
-        if (!Lines[I].drop_front(Pos).getAsInteger(10, Id))
+        if (!Line.drop_front(Pos).getAsInteger(10, Id))
           return getCPUNameFromS390Model(Id, HaveVectorSupport);
       }
       break;
@@ -553,9 +550,9 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
 
   // Look for uarch line to determine cpu name
   StringRef UArch;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].starts_with("uarch")) {
-      UArch = Lines[I].substr(5).ltrim("\t :");
+  for (StringRef Line : Lines) {
+    if (Line.starts_with("uarch")) {
+      UArch = Line.substr(5).ltrim("\t :");
       break;
     }
   }
@@ -1152,6 +1149,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    // Novalake:
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
@@ -1164,7 +1175,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  const char *CPU = 0;
+  const char *CPU = nullptr;
 
   switch (Family) {
   case 4:
@@ -2177,7 +2188,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf1E = MaxLevel >= 0x1e &&
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
-  Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
   Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;

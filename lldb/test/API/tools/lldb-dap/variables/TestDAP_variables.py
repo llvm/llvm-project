@@ -65,6 +65,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 self.assertNotIn(
                     key, actual, 'key "%s" is not expected in %s' % (key, actual)
                 )
+        isReadOnly = verify_dict.get("readOnly", False)
+        attributes = actual.get("presentationHint", {}).get("attributes", [])
+        self.assertEqual(
+            isReadOnly, "readOnly" in attributes, "%s %s" % (verify_dict, actual)
+        )
         hasVariablesReference = "variablesReference" in actual
         varRef = None
         if hasVariablesReference:
@@ -179,8 +184,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 "children": {
                     "x": {"equals": {"type": "int", "value": "11"}},
                     "y": {"equals": {"type": "int", "value": "22"}},
-                    "buffer": {"children": buffer_children},
+                    "buffer": {"children": buffer_children, "readOnly": True},
                 },
+                "readOnly": True,
             },
             "x": {"equals": {"type": "int"}},
         }
@@ -444,8 +450,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     "buffer": {
                         "children": buffer_children,
                         "equals": {"indexedVariables": 16},
+                        "readOnly": True,
                     },
                 },
+                "readOnly": True,
             },
             "x": {
                 "equals": {"type": "int"},
@@ -528,7 +536,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "children": {
                 "x": {"equals": {"type": "int", "value": "11"}},
                 "y": {"equals": {"type": "int", "value": "22"}},
-                "buffer": {"children": buffer_children},
+                "buffer": {"children": buffer_children, "readOnly": True},
             },
         }
 
@@ -622,11 +630,17 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # "[raw]" child.
         raw_child_count = 1 if enableSyntheticChildDebugging else 0
         verify_locals = {
-            "small_array": {"equals": {"indexedVariables": 5}},
-            "large_array": {"equals": {"indexedVariables": 200}},
-            "small_vector": {"equals": {"indexedVariables": 5 + raw_child_count}},
-            "large_vector": {"equals": {"indexedVariables": 200 + raw_child_count}},
-            "pt": {"missing": ["indexedVariables"]},
+            "small_array": {"equals": {"indexedVariables": 5}, "readOnly": True},
+            "large_array": {"equals": {"indexedVariables": 200}, "readOnly": True},
+            "small_vector": {
+                "equals": {"indexedVariables": 5 + raw_child_count},
+                "readOnly": True,
+            },
+            "large_vector": {
+                "equals": {"indexedVariables": 200 + raw_child_count},
+                "readOnly": True,
+            },
+            "pt": {"missing": ["indexedVariables"], "readOnly": True},
         }
         self.verify_variables(verify_locals, locals)
 
@@ -640,7 +654,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "[4]": {"equals": {"type": "int", "value": "0"}},
         }
         if enableSyntheticChildDebugging:
-            verify_children["[raw]"] = ({"contains": {"type": ["vector"]}},)
+            verify_children["[raw]"] = {
+                "contains": {"type": ["vector"]},
+                "readOnly": True,
+            }
 
         children = self.dap_server.request_variables(locals[2]["variablesReference"])[
             "body"
@@ -660,7 +677,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             return_name: {"equals": {"type": "int", "value": "300"}},
             "argc": {},
             "argv": {},
-            "pt": {},
+            "pt": {"readOnly": True},
             "x": {},
             "return_result": {"equals": {"type": "int"}},
         }

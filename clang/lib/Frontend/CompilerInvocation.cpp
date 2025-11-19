@@ -27,7 +27,6 @@
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -38,6 +37,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Options/Options.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
@@ -255,7 +255,7 @@ CowCompilerInvocation::getMutPreprocessorOutputOpts() {
 using ArgumentConsumer = CompilerInvocation::ArgumentConsumer;
 
 #define OPTTABLE_STR_TABLE_CODE
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTTABLE_STR_TABLE_CODE
 
 static llvm::StringRef lookupStrInTable(unsigned Offset) {
@@ -263,7 +263,7 @@ static llvm::StringRef lookupStrInTable(unsigned Offset) {
 }
 
 #define SIMPLE_ENUM_VALUE_TABLE
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef SIMPLE_ENUM_VALUE_TABLE
 
 static std::optional<bool> normalizeSimpleFlag(OptSpecifier Opt,
@@ -981,7 +981,7 @@ static void GenerateAnalyzerArgs(const AnalyzerOptions &Opts,
 
 #define ANALYZER_OPTION_WITH_MARSHALLING(...)                                  \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
   if (Opts.AnalysisConstraintsOpt != RangeConstraintsModel) {
@@ -1068,7 +1068,7 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 
 #define ANALYZER_OPTION_WITH_MARSHALLING(...)                                  \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
   if (Arg *A = Args.getLastArg(OPT_analyzer_constraints)) {
@@ -1575,7 +1575,7 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
 
 #define CODEGEN_OPTION_WITH_MARSHALLING(...)                                   \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef CODEGEN_OPTION_WITH_MARSHALLING
 
   if (Opts.OptimizationLevel > 0) {
@@ -1833,10 +1833,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
        serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
     GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
 
-  if (Opts.AllocTokenMax)
-    GenerateArg(Consumer, OPT_falloc_token_max_EQ,
-                std::to_string(*Opts.AllocTokenMax));
-
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
 
@@ -1884,7 +1880,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
 #define CODEGEN_OPTION_WITH_MARSHALLING(...)                                   \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef CODEGEN_OPTION_WITH_MARSHALLING
 
   // At O0 we want to fully disable inlining outside of cases marked with
@@ -2350,15 +2346,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     }
   }
 
-  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
-    StringRef S = Arg->getValue();
-    uint64_t Value = 0;
-    if (S.getAsInteger(0, Value))
-      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
-    else
-      Opts.AllocTokenMax = Value;
-  }
-
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
   if (!LangOpts->CUDAIsDevice)
@@ -2384,7 +2371,7 @@ static void GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
   const DependencyOutputOptions &DependencyOutputOpts = Opts;
 #define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(...)                         \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING
 
   if (Opts.ShowIncludesDest != ShowIncludesDestination::None)
@@ -2419,7 +2406,7 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   DependencyOutputOptions &DependencyOutputOpts = Opts;
 #define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(...)                         \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING
 
   if (Args.hasArg(OPT_show_includes)) {
@@ -2547,7 +2534,7 @@ static void GenerateFileSystemArgs(const FileSystemOptions &Opts,
 
 #define FILE_SYSTEM_OPTION_WITH_MARSHALLING(...)                               \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
 }
 
@@ -2559,7 +2546,7 @@ static bool ParseFileSystemArgs(FileSystemOptions &Opts, const ArgList &Args,
 
 #define FILE_SYSTEM_OPTION_WITH_MARSHALLING(...)                               \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
 
   return Diags.getNumErrors() == NumErrorsBefore;
@@ -2570,7 +2557,7 @@ static void GenerateMigratorArgs(const MigratorOptions &Opts,
   const MigratorOptions &MigratorOpts = Opts;
 #define MIGRATOR_OPTION_WITH_MARSHALLING(...)                                  \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef MIGRATOR_OPTION_WITH_MARSHALLING
 }
 
@@ -2582,7 +2569,7 @@ static bool ParseMigratorArgs(MigratorOptions &Opts, const ArgList &Args,
 
 #define MIGRATOR_OPTION_WITH_MARSHALLING(...)                                  \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef MIGRATOR_OPTION_WITH_MARSHALLING
 
   return Diags.getNumErrors() == NumErrorsBefore;
@@ -2594,7 +2581,7 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
   const DiagnosticOptions *DiagnosticOpts = &Opts;
 #define DIAG_OPTION_WITH_MARSHALLING(...)                                      \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef DIAG_OPTION_WITH_MARSHALLING
 
   if (!Opts.DiagnosticSerializationFile.empty())
@@ -2699,7 +2686,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
 
 #define DIAG_OPTION_WITH_MARSHALLING(...)                                      \
   PARSE_OPTION_WITH_MARSHALLING(Args, *Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef DIAG_OPTION_WITH_MARSHALLING
 
   llvm::sys::Process::UseANSIEscapeCodes(Opts.UseANSIEscapeCodes);
@@ -2849,7 +2836,7 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
   const FrontendOptions &FrontendOpts = Opts;
 #define FRONTEND_OPTION_WITH_MARSHALLING(...)                                  \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef FRONTEND_OPTION_WITH_MARSHALLING
 
   std::optional<OptSpecifier> ProgramActionOpt =
@@ -3019,7 +3006,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
 #define FRONTEND_OPTION_WITH_MARSHALLING(...)                                  \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef FRONTEND_OPTION_WITH_MARSHALLING
 
   Opts.ProgramAction = frontend::ParseSyntaxOnly;
@@ -3227,7 +3214,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       DashX = llvm::StringSwitch<InputKind>(XValue)
                   .Case("cpp-output", InputKind(Language::C).getPreprocessed())
                   .Case("assembler-with-cpp", Language::Asm)
-                  .Cases("ast", "pcm", "precompiled-header",
+                  .Cases({"ast", "pcm", "precompiled-header"},
                          InputKind(Language::Unknown, InputKind::Precompiled))
                   .Case("ir", Language::LLVM_IR)
                   .Case("cir", Language::CIR)
@@ -3301,7 +3288,7 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
   const HeaderSearchOptions *HeaderSearchOpts = &Opts;
 #define HEADER_SEARCH_OPTION_WITH_MARSHALLING(...)                             \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
 
   if (Opts.UseLibcxx)
@@ -3416,7 +3403,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
 #define HEADER_SEARCH_OPTION_WITH_MARSHALLING(...)                             \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
 
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
@@ -3749,7 +3736,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
 #define LANG_OPTION_WITH_MARSHALLING(...)                                      \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
 
   // The '-fcf-protection=' option is generated by CodeGenOpts generator.
@@ -3966,6 +3953,29 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   if (!Opts.RandstructSeed.empty())
     GenerateArg(Consumer, OPT_frandomize_layout_seed_EQ, Opts.RandstructSeed);
+
+  if (Opts.AllocTokenMax)
+    GenerateArg(Consumer, OPT_falloc_token_max_EQ,
+                std::to_string(*Opts.AllocTokenMax));
+
+  if (Opts.AllocTokenMode) {
+    StringRef S;
+    switch (*Opts.AllocTokenMode) {
+    case llvm::AllocTokenMode::Increment:
+      S = "increment";
+      break;
+    case llvm::AllocTokenMode::Random:
+      S = "random";
+      break;
+    case llvm::AllocTokenMode::TypeHash:
+      S = "typehash";
+      break;
+    case llvm::AllocTokenMode::TypeHashPointerSplit:
+      S = "typehashpointersplit";
+      break;
+    }
+    GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
+  }
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -4012,13 +4022,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           auto Diag = Diags.Report(diag::note_drv_use_standard);
           Diag << Std.getName() << Std.getDescription();
           unsigned NumAliases = 0;
-#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD(id, name, lang, desc, features, version)
 #define LANGSTANDARD_ALIAS(id, alias) \
           if (KindValue == LangStandard::lang_##id) ++NumAliases;
 #define LANGSTANDARD_ALIAS_DEPR(id, alias)
 #include "clang/Basic/LangStandards.def"
           Diag << NumAliases;
-#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD(id, name, lang, desc, features, version)
 #define LANGSTANDARD_ALIAS(id, alias) \
           if (KindValue == LangStandard::lang_##id) Diag << alias;
 #define LANGSTANDARD_ALIAS_DEPR(id, alias)
@@ -4039,18 +4049,18 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // -cl-std only applies for OpenCL language standards.
   // Override the -std option in this case.
   if (const Arg *A = Args.getLastArg(OPT_cl_std_EQ)) {
-    LangStandard::Kind OpenCLLangStd
-      = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
-        .Cases("cl", "CL", LangStandard::lang_opencl10)
-        .Cases("cl1.0", "CL1.0", LangStandard::lang_opencl10)
-        .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
-        .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
-        .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
-        .Cases("cl3.0", "CL3.0", LangStandard::lang_opencl30)
-        .Cases("clc++", "CLC++", LangStandard::lang_openclcpp10)
-        .Cases("clc++1.0", "CLC++1.0", LangStandard::lang_openclcpp10)
-        .Cases("clc++2021", "CLC++2021", LangStandard::lang_openclcpp2021)
-        .Default(LangStandard::lang_unspecified);
+    LangStandard::Kind OpenCLLangStd =
+        llvm::StringSwitch<LangStandard::Kind>(A->getValue())
+            .Cases({"cl", "CL"}, LangStandard::lang_opencl10)
+            .Cases({"cl1.0", "CL1.0"}, LangStandard::lang_opencl10)
+            .Cases({"cl1.1", "CL1.1"}, LangStandard::lang_opencl11)
+            .Cases({"cl1.2", "CL1.2"}, LangStandard::lang_opencl12)
+            .Cases({"cl2.0", "CL2.0"}, LangStandard::lang_opencl20)
+            .Cases({"cl3.0", "CL3.0"}, LangStandard::lang_opencl30)
+            .Cases({"clc++", "CLC++"}, LangStandard::lang_openclcpp10)
+            .Cases({"clc++1.0", "CLC++1.0"}, LangStandard::lang_openclcpp10)
+            .Cases({"clc++2021", "CLC++2021"}, LangStandard::lang_openclcpp2021)
+            .Default(LangStandard::lang_unspecified);
 
     if (OpenCLLangStd == LangStandard::lang_unspecified) {
       Diags.Report(diag::err_drv_invalid_value)
@@ -4072,7 +4082,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
 #define LANG_OPTION_WITH_MARSHALLING(...)                                      \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
@@ -4544,6 +4554,23 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_frandomize_layout_seed_EQ))
     Opts.RandstructSeed = A->getValue(0);
 
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
+    StringRef S = Arg->getValue();
+    uint64_t Value = 0;
+    if (S.getAsInteger(0, Value))
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+    else
+      Opts.AllocTokenMax = Value;
+  }
+
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_mode_EQ)) {
+    StringRef S = Arg->getValue();
+    if (auto Mode = getAllocTokenModeFromString(S))
+      Opts.AllocTokenMode = Mode;
+    else
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+  }
+
   // Validate options for HLSL
   if (Opts.HLSL) {
     // TODO: Revisit restricting SPIR-V to logical once we've figured out how to
@@ -4573,7 +4600,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         // Validate that if fnative-half-type is given, that
         // the language standard is at least hlsl2018, and that
         // the target shader model is at least 6.2.
-        if (Args.getLastArg(OPT_fnative_half_type)) {
+        if (Args.getLastArg(OPT_fnative_half_type) ||
+            Args.getLastArg(OPT_fnative_int16_type)) {
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018 &&
@@ -4587,12 +4615,16 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << VulkanEnv << T.getOSName() << T.str();
         }
-        if (Args.getLastArg(OPT_fnative_half_type)) {
+        if (Args.getLastArg(OPT_fnative_half_type) ||
+            Args.getLastArg(OPT_fnative_int16_type)) {
+          const char *Str = Args.getLastArg(OPT_fnative_half_type)
+                                ? "-fnative-half-type"
+                                : "-fnative-int16-type";
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018))
             Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
-                << "-fnative-half-type" << false << Std.getName();
+                << Str << false << Std.getName();
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");
@@ -4713,7 +4745,7 @@ static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
 
 #define PREPROCESSOR_OPTION_WITH_MARSHALLING(...)                              \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef PREPROCESSOR_OPTION_WITH_MARSHALLING
 
   if (Opts.PCHWithHdrStop && !Opts.PCHWithHdrStopCreate)
@@ -4787,7 +4819,7 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
 
 #define PREPROCESSOR_OPTION_WITH_MARSHALLING(...)                              \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef PREPROCESSOR_OPTION_WITH_MARSHALLING
 
   Opts.PCHWithHdrStop = Args.hasArg(OPT_pch_through_hdrstop_create) ||
@@ -4880,7 +4912,7 @@ GeneratePreprocessorOutputArgs(const PreprocessorOutputOptions &Opts,
 
 #define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(...)                       \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING
 
   bool Generate_dM = isStrictlyPreprocessorAction(Action) && !Opts.ShowCPP;
@@ -4901,7 +4933,7 @@ static bool ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
 
 #define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(...)                       \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING
 
   Opts.ShowCPP = isStrictlyPreprocessorAction(Action) && !Args.hasArg(OPT_dM);
@@ -4916,7 +4948,7 @@ static void GenerateTargetArgs(const TargetOptions &Opts,
   const TargetOptions *TargetOpts = &Opts;
 #define TARGET_OPTION_WITH_MARSHALLING(...)                                    \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef TARGET_OPTION_WITH_MARSHALLING
 
   if (!Opts.SDKVersion.empty())
@@ -4935,7 +4967,7 @@ static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
 
 #define TARGET_OPTION_WITH_MARSHALLING(...)                                    \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef TARGET_OPTION_WITH_MARSHALLING
 
   if (Arg *A = Args.getLastArg(options::OPT_target_sdk_version_EQ)) {
@@ -5246,6 +5278,87 @@ std::string CompilerInvocation::getModuleHash() const {
   HBuilder.getHasher().final(Result);
   uint64_t Hash = Result.high() ^ Result.low();
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
+}
+
+void CompilerInvocationBase::visitPathsImpl(
+    llvm::function_ref<bool(std::string &)> Predicate) {
+#define RETURN_IF(PATH)                                                        \
+  do {                                                                         \
+    if (Predicate(PATH))                                                       \
+      return;                                                                  \
+  } while (0)
+
+#define RETURN_IF_MANY(PATHS)                                                  \
+  do {                                                                         \
+    if (llvm::any_of(PATHS, Predicate))                                        \
+      return;                                                                  \
+  } while (0)
+
+  auto &HeaderSearchOpts = *this->HSOpts;
+  // Header search paths.
+  RETURN_IF(HeaderSearchOpts.Sysroot);
+  for (auto &Entry : HeaderSearchOpts.UserEntries)
+    if (Entry.IgnoreSysRoot)
+      RETURN_IF(Entry.Path);
+  RETURN_IF(HeaderSearchOpts.ResourceDir);
+  RETURN_IF(HeaderSearchOpts.ModuleCachePath);
+  RETURN_IF(HeaderSearchOpts.ModuleUserBuildPath);
+  for (auto &[Name, File] : HeaderSearchOpts.PrebuiltModuleFiles)
+    RETURN_IF(File);
+  RETURN_IF_MANY(HeaderSearchOpts.PrebuiltModulePaths);
+  RETURN_IF_MANY(HeaderSearchOpts.VFSOverlayFiles);
+
+  // Preprocessor options.
+  auto &PPOpts = *this->PPOpts;
+  RETURN_IF_MANY(PPOpts.MacroIncludes);
+  RETURN_IF_MANY(PPOpts.Includes);
+  RETURN_IF(PPOpts.ImplicitPCHInclude);
+
+  // Frontend options.
+  auto &FrontendOpts = *this->FrontendOpts;
+  for (auto &Input : FrontendOpts.Inputs) {
+    if (Input.isBuffer())
+      continue;
+
+    RETURN_IF(Input.File);
+  }
+  // TODO: Also report output files such as FrontendOpts.OutputFile;
+  RETURN_IF(FrontendOpts.CodeCompletionAt.FileName);
+  RETURN_IF_MANY(FrontendOpts.ModuleMapFiles);
+  RETURN_IF_MANY(FrontendOpts.ModuleFiles);
+  RETURN_IF_MANY(FrontendOpts.ModulesEmbedFiles);
+  RETURN_IF_MANY(FrontendOpts.ASTMergeFiles);
+  RETURN_IF(FrontendOpts.OverrideRecordLayoutsFile);
+  RETURN_IF(FrontendOpts.StatsFile);
+
+  // Filesystem options.
+  auto &FileSystemOpts = *this->FSOpts;
+  RETURN_IF(FileSystemOpts.WorkingDir);
+
+  // Codegen options.
+  auto &CodeGenOpts = *this->CodeGenOpts;
+  RETURN_IF(CodeGenOpts.DebugCompilationDir);
+  RETURN_IF(CodeGenOpts.CoverageCompilationDir);
+
+  // Sanitizer options.
+  RETURN_IF_MANY(LangOpts->NoSanitizeFiles);
+
+  // Coverage mappings.
+  RETURN_IF(CodeGenOpts.ProfileInstrumentUsePath);
+  RETURN_IF(CodeGenOpts.SampleProfileFile);
+  RETURN_IF(CodeGenOpts.ProfileRemappingFile);
+
+  // Dependency output options.
+  for (auto &ExtraDep : DependencyOutputOpts->ExtraDeps)
+    RETURN_IF(ExtraDep.first);
+}
+
+void CompilerInvocationBase::visitPaths(
+    llvm::function_ref<bool(StringRef)> Callback) const {
+  // The const_cast here is OK, because visitPathsImpl() itself doesn't modify
+  // the invocation, and our callback takes immutable StringRefs.
+  return const_cast<CompilerInvocationBase *>(this)->visitPathsImpl(
+      [&Callback](std::string &Path) { return Callback(StringRef(Path)); });
 }
 
 void CompilerInvocationBase::generateCC1CommandLine(

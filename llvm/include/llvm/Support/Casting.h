@@ -340,7 +340,7 @@ struct ValueFromPointerCast
 /// during the cast. It's also a good example of how to implement a move-only
 /// cast.
 template <typename To, typename From, typename Derived = void>
-struct UniquePtrCast : public CastIsPossible<To, From *> {
+struct UniquePtrCast : CastIsPossible<To, From *> {
   using Self = detail::SelfType<Derived, UniquePtrCast<To, From>>;
   using CastResultType = std::unique_ptr<
       std::remove_reference_t<typename cast_retty<To, From>::ret_type>>;
@@ -473,7 +473,7 @@ struct ForwardToPointerCast {
 // take advantage of the cast traits whenever possible!
 
 template <typename To, typename From, typename Enable = void>
-struct CastInfo : public CastIsPossible<To, From> {
+struct CastInfo : CastIsPossible<To, From> {
   using Self = CastInfo<To, From, Enable>;
 
   using CastReturnType = typename cast_retty<To, From>::ret_type;
@@ -536,8 +536,7 @@ struct CastInfo<To, std::unique_ptr<From>> : public UniquePtrCast<To, From> {};
 /// the input is std::optional<From> that the output can be std::optional<To>.
 /// If that's not the case, specialize CastInfo for your use case.
 template <typename To, typename From>
-struct CastInfo<To, std::optional<From>> : public OptionalValueCast<To, From> {
-};
+struct CastInfo<To, std::optional<From>> : OptionalValueCast<To, From> {};
 
 /// isa<X> - Return true if the parameter to the template is an instance of one
 /// of the template type arguments.  Used like this:
@@ -817,6 +816,42 @@ template <typename... Types> struct IsaAndPresentCheckPredicate {
     return isa_and_present<Types...>(Val);
   }
 };
+
+//===----------------------------------------------------------------------===//
+// Casting Function Objects
+//===----------------------------------------------------------------------===//
+
+/// Usable in generic algorithms like map_range
+template <typename U> struct StaticCastFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return static_cast<U>(Val);
+  }
+};
+
+template <typename U> struct DynCastFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return dyn_cast<U>(Val);
+  }
+};
+
+template <typename U> struct CastFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return cast<U>(Val);
+  }
+};
+
+template <typename U> struct CastIfPresentFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return cast_if_present<U>(Val);
+  }
+};
+
+template <typename U> struct DynCastIfPresentFunc {
+  template <typename T> decltype(auto) operator()(T &&Val) const {
+    return dyn_cast_if_present<U>(Val);
+  }
+};
+
 } // namespace detail
 
 /// Function object wrapper for the `llvm::isa` type check. The function call
@@ -841,6 +876,20 @@ inline constexpr detail::IsaCheckPredicate<Types...> IsaPred{};
 template <typename... Types>
 inline constexpr detail::IsaAndPresentCheckPredicate<Types...>
     IsaAndPresentPred{};
+
+/// Function objects corresponding to the Cast types defined above.
+template <typename To>
+inline constexpr detail::StaticCastFunc<To> StaticCastTo{};
+
+template <typename To> inline constexpr detail::CastFunc<To> CastTo{};
+
+template <typename To>
+inline constexpr detail::CastIfPresentFunc<To> CastIfPresentTo{};
+
+template <typename To>
+inline constexpr detail::DynCastIfPresentFunc<To> DynCastIfPresentTo{};
+
+template <typename To> inline constexpr detail::DynCastFunc<To> DynCastTo{};
 
 } // end namespace llvm
 

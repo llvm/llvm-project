@@ -1,7 +1,10 @@
-;; Tests that we store the type identifiers in .callgraph section of the object file for tailcalls.
+;; Tests that we store the type identifiers in .llvm.callgraph section of the object file for tailcalls.
+
+; REQUIRES: x86-registered-target
+; REQUIRES: arm-registered-target
 
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
-; RUN: llvm-readelf -x .callgraph - | FileCheck %s
+; RUN: llvm-readelf -x .llvm.callgraph - | FileCheck %s
 
 define i32 @check_tailcall(ptr %func, i8 %x) !type !0 {
 entry:
@@ -27,7 +30,7 @@ declare !type !2 i32 @bar(i8 signext)
 !2 = !{i64 0, !"_ZTSFicE.generalized"}
 !3 = !{i64 0, !"_ZTSFiiE.generalized"}
 
-; CHECK: Hex dump of section '.callgraph':
+; CHECK: Hex dump of section '.llvm.callgraph':
 ; CHECK-NEXT: 0x00000000 00050000 00000000 00008e19 0b7f3326
 ; CHECK-NEXT: 0x00000010 e3000154 86bc5981 4b8e3000 05000000
 ;; Verify that the type id 0x308e4b8159bc8654 is in section.

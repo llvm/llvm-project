@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
+#include <array>
 
 namespace llvm {
 
@@ -45,7 +46,7 @@ struct GCNRegPressure {
     return !Value[SGPR] && !Value[VGPR] && !Value[AGPR] && !Value[AVGPR];
   }
 
-  void clear() { std::fill(&Value[0], &Value[ValueArraySize], 0); }
+  void clear() { Value.fill(0); }
 
   unsigned getNumRegs(RegKind Kind) const {
     assert(Kind < TOTAL_KINDS);
@@ -127,9 +128,7 @@ struct GCNRegPressure {
   bool less(const MachineFunction &MF, const GCNRegPressure &O,
             unsigned MaxOccupancy = std::numeric_limits<unsigned>::max()) const;
 
-  bool operator==(const GCNRegPressure &O) const {
-    return std::equal(&Value[0], &Value[ValueArraySize], O.Value);
-  }
+  bool operator==(const GCNRegPressure &O) const { return Value == O.Value; }
 
   bool operator!=(const GCNRegPressure &O) const {
     return !(*this == O);
@@ -160,7 +159,7 @@ private:
 
   /// Pressure for all register kinds (first all regular registers kinds, then
   /// all tuple register kinds).
-  unsigned Value[ValueArraySize];
+  std::array<unsigned, ValueArraySize> Value;
 
   static unsigned getRegKind(const TargetRegisterClass *RC,
                              const SIRegisterInfo *STI);
@@ -293,7 +292,7 @@ protected:
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
   void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
 
-  LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
+  LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
   // reset tracker and set live register set to the specified value.
@@ -464,7 +463,7 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   }
   llvm::sort(Indexes);
 
-  auto &MRI = (*R.begin())->getParent()->getParent()->getRegInfo();
+  auto &MRI = (*R.begin())->getMF()->getRegInfo();
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> LiveRegMap;
   SmallVector<SlotIndex, 32> LiveIdxs, SRLiveIdxs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
@@ -494,13 +493,13 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
 inline GCNRPTracker::LiveRegSet getLiveRegsAfter(const MachineInstr &MI,
                                                  const LiveIntervals &LIS) {
   return getLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
-                     MI.getParent()->getParent()->getRegInfo());
+                     MI.getMF()->getRegInfo());
 }
 
 inline GCNRPTracker::LiveRegSet getLiveRegsBefore(const MachineInstr &MI,
                                                   const LiveIntervals &LIS) {
   return getLiveRegs(LIS.getInstructionIndex(MI).getBaseIndex(), LIS,
-                     MI.getParent()->getParent()->getRegInfo());
+                     MI.getMF()->getRegInfo());
 }
 
 template <typename Range>

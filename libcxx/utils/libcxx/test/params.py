@@ -11,7 +11,7 @@ import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
-from libcxx.test.features import _isClang, _isAppleClang, _isGCC, _isMSVC
+from libcxx.test.features.compiler import _isClang, _isAppleClang, _isGCC, _isMSVC
 
 
 _warningFlags = [

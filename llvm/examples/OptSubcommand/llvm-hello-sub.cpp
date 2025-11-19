@@ -46,7 +46,7 @@ public:
   HelloSubOptTable()
       : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                         /*IgnoreCase=*/false, OptionSubCommands,
-                        OptionSubCommandIDsTable) {}
+                        OptionSubCommandIDsTable) {};
 };
 } // namespace
 

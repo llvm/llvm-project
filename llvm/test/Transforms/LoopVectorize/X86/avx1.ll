@@ -6,8 +6,8 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 ; CHECK-LABEL: @read_mod_write_single_ptr(
 ; CHECK: load <8 x float>
-; CHECK: ret i32
-define i32 @read_mod_write_single_ptr(ptr nocapture %a, i32 %n) nounwind uwtable ssp {
+; CHECK: ret void
+define void @read_mod_write_single_ptr(ptr nocapture %a, i32 %n) nounwind uwtable ssp {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -23,15 +23,15 @@ define i32 @read_mod_write_single_ptr(ptr nocapture %a, i32 %n) nounwind uwtable
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret i32 undef
+  ret void
 }
 
 
 ; CHECK-LABEL: @read_mod_i64(
 ; SLOWMEM32: load <2 x i64>
 ; FASTMEM32: load <4 x i64>
-; CHECK: ret i32
-define i32 @read_mod_i64(ptr nocapture %a, i32 %n) nounwind uwtable ssp {
+; CHECK: ret void
+define void @read_mod_i64(ptr nocapture %a, i32 %n) nounwind uwtable ssp {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -47,6 +47,6 @@ define i32 @read_mod_i64(ptr nocapture %a, i32 %n) nounwind uwtable ssp {
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret i32 undef
+  ret void
 }
 

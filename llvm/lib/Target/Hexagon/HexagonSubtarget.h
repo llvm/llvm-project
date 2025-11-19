@@ -100,7 +100,6 @@ private:
   // The following objects can use the TargetTriple, so they must be
   // declared after it.
   HexagonInstrInfo InstrInfo;
-  HexagonRegisterInfo RegInfo;
   HexagonTargetLowering TLInfo;
   HexagonSelectionDAGInfo TSInfo;
   HexagonFrameLowering FrameLowering;
@@ -122,7 +121,7 @@ public:
   }
   const HexagonInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const HexagonRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const HexagonTargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -223,6 +222,15 @@ public:
   }
   bool useHVXV79Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V79;
+  }
+  bool hasV81Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V81;
+  }
+  bool hasV81OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V81;
+  }
+  bool useHVXV81Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V81;
   }
 
   bool useAudioOps() const { return UseAudioOps; }

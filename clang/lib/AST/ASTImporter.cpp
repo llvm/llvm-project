@@ -696,6 +696,10 @@ namespace clang {
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
     ExpectedStmt VisitRequiresExpr(RequiresExpr* E);
     ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr* E);
+    ExpectedStmt
+    VisitSubstNonTypeTemplateParmPackExpr(SubstNonTypeTemplateParmPackExpr *E);
+    ExpectedStmt VisitPseudoObjectExpr(PseudoObjectExpr *E);
+    ExpectedStmt VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -1740,7 +1744,7 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
 }
 
 ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
-  TagDecl *DeclForType = T->getOriginalDecl();
+  TagDecl *DeclForType = T->getDecl();
   Expected<TagDecl *> ToDeclOrErr = import(DeclForType);
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
@@ -2155,7 +2159,7 @@ Error ASTNodeImporter::ImportDeclParts(
       const Type *LeafT =
           getLeafPointeeType(P->getType().getCanonicalType().getTypePtr());
       auto *RT = dyn_cast<RecordType>(LeafT);
-      if (RT && RT->getOriginalDecl() == D) {
+      if (RT && RT->getDecl() == D) {
         Importer.FromDiag(D->getLocation(), diag::err_unsupported_ast_node)
             << D->getDeclKindName();
         return make_error<ASTImportError>(ASTImportError::UnsupportedConstruct);
@@ -2408,8 +2412,8 @@ Error ASTNodeImporter::ImportFieldDeclDefinition(const FieldDecl *From,
     const RecordType *RecordTo = ToType->getAs<RecordType>();
 
     if (RecordFrom && RecordTo) {
-      FromRecordDecl = RecordFrom->getOriginalDecl();
-      ToRecordDecl = RecordTo->getOriginalDecl();
+      FromRecordDecl = RecordFrom->getDecl();
+      ToRecordDecl = RecordTo->getDecl();
     }
   }
 
@@ -3205,7 +3209,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(FoundDecl)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          FoundDecl = Tag->getOriginalDecl();
+          FoundDecl = Tag->getDecl();
       }
 
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
@@ -3336,7 +3340,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       Decl *Found = FoundDecl;
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(Found)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          Found = Tag->getOriginalDecl();
+          Found = Tag->getDecl();
       }
 
       if (auto *FoundRecord = dyn_cast<RecordDecl>(Found)) {
@@ -3757,12 +3761,11 @@ public:
   }
 
   std::optional<bool> VisitTagType(const TagType *T) {
-    if (auto *Spec =
-            dyn_cast<ClassTemplateSpecializationDecl>(T->getOriginalDecl()))
+    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl()))
       for (const auto &Arg : Spec->getTemplateArgs().asArray())
         if (checkTemplateArgument(Arg))
           return true;
-    return isAncestorDeclContextOf(ParentDC, T->getOriginalDecl());
+    return isAncestorDeclContextOf(ParentDC, T->getDecl());
   }
 
   std::optional<bool> VisitPointerType(const PointerType *T) {
@@ -9272,6 +9275,50 @@ ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   return ConceptSpecializationExpr::Create(
       Importer.getToContext(), CL,
       const_cast<ImplicitConceptSpecializationDecl *>(CSD), &Satisfaction);
+}
+
+ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmPackExpr(
+    SubstNonTypeTemplateParmPackExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToPackLoc = importChecked(Err, E->getParameterPackLocation());
+  auto ToArgPack = importChecked(Err, E->getArgumentPack());
+  auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext()) SubstNonTypeTemplateParmPackExpr(
+      ToType, E->getValueKind(), ToPackLoc, ToArgPack, ToAssociatedDecl,
+      E->getIndex(), E->getFinal());
+}
+
+ExpectedStmt ASTNodeImporter::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
+  SmallVector<Expr *, 4> ToSemantics(E->getNumSemanticExprs());
+  if (Error Err = ImportContainerChecked(E->semantics(), ToSemantics))
+    return std::move(Err);
+  auto ToSyntOrErr = import(E->getSyntacticForm());
+  if (!ToSyntOrErr)
+    return ToSyntOrErr.takeError();
+  return PseudoObjectExpr::Create(Importer.getToContext(), *ToSyntOrErr,
+                                  ToSemantics, E->getResultExprIndex());
+}
+
+ExpectedStmt
+ASTNodeImporter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToInitLoc = importChecked(Err, E->getInitLoc());
+  auto ToBeginLoc = importChecked(Err, E->getBeginLoc());
+  auto ToEndLoc = importChecked(Err, E->getEndLoc());
+  if (Err)
+    return std::move(Err);
+
+  SmallVector<Expr *, 4> ToArgs(E->getInitExprs().size());
+  if (Error Err = ImportContainerChecked(E->getInitExprs(), ToArgs))
+    return std::move(Err);
+  return CXXParenListInitExpr::Create(Importer.getToContext(), ToArgs, ToType,
+                                      E->getUserSpecifiedInitExprs().size(),
+                                      ToInitLoc, ToBeginLoc, ToEndLoc);
 }
 
 Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,

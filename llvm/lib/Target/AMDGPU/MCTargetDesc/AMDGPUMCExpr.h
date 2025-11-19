@@ -64,7 +64,7 @@ private:
   ArrayRef<const MCExpr *> Args;
 
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
-  ~AMDGPUMCExpr();
+  ~AMDGPUMCExpr() override;
 
   bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
@@ -97,11 +97,6 @@ public:
   createAlignTo(const MCExpr *Value, const MCExpr *Align, MCContext &Ctx) {
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
-
-  static const AMDGPUMCExpr *
-  createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
-                  const MCExpr *NumVGPRs, unsigned DynamicVGPRBlockSize,
-                  const GCNSubtarget &STM, MCContext &Ctx);
 
   static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
                                        MCContext &Ctx);

@@ -19,7 +19,7 @@ using i4x3x3 = _BitInt(4) __attribute__((matrix_type(3, 3)));
 // CHECK-NEXT:    store i32 [[A_COERCE]], ptr [[A]], align 4
 // CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i8>, ptr [[A]], align 4
 // CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i8> [[LOADVECN]], <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i8> [[A1]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i8> [[A1]], <3 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    store <4 x i8> [[EXTRACTVEC]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[LOADVECN2:%.*]] = load <4 x i8>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <4 x i8> [[LOADVECN2]], <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -38,7 +38,7 @@ i8x3 v1(i8x3 a) {
 // CHECK-SAME: <3 x i32> noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x i32>, align 16
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[A]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[A]], <3 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    store <4 x i32> [[EXTRACTVEC]], ptr [[A_ADDR]], align 16
 // CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i32>, ptr [[A_ADDR]], align 16
 // CHECK-NEXT:    [[EXTRACTVEC1:%.*]] = shufflevector <4 x i32> [[LOADVECN]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -57,7 +57,7 @@ i32x3 v2(i32x3 a) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x i512>, align 256
 // CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i512>, ptr [[TMP0]], align 256
 // CHECK-NEXT:    [[A:%.*]] = shufflevector <4 x i512> [[LOADVECN]], <4 x i512> poison, <3 x i32> <i32 0, i32 1, i32 2>
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i512> [[A]], <3 x i512> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i512> [[A]], <3 x i512> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    store <4 x i512> [[EXTRACTVEC]], ptr [[A_ADDR]], align 256
 // CHECK-NEXT:    [[LOADVECN1:%.*]] = load <4 x i512>, ptr [[A_ADDR]], align 256
 // CHECK-NEXT:    [[EXTRACTVEC2:%.*]] = shufflevector <4 x i512> [[LOADVECN1]], <4 x i512> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -80,7 +80,7 @@ i512x3 v3(i512x3 a) {
 // CHECK-NEXT:    store i32 [[A_COERCE]], ptr [[A]], align 4
 // CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i4>, ptr [[A]], align 4
 // CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i4> [[LOADVECN]], <4 x i4> poison, <3 x i32> <i32 0, i32 1, i32 2>
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i4> [[A1]], <3 x i4> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i4> [[A1]], <3 x i4> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    store <4 x i4> [[EXTRACTVEC]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[LOADVECN2:%.*]] = load <4 x i4>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <4 x i4> [[LOADVECN2]], <4 x i4> poison, <3 x i32> <i32 0, i32 1, i32 2>

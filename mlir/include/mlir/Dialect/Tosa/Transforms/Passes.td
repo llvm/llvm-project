@@ -137,6 +137,13 @@ def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
   ];
 
   let options = [
+    Option<"specificationVersion", "specification_version", "mlir::tosa::SpecificationVersion",
+              /*default=*/"mlir::tosa::SpecificationVersion::V_1_0",
+              "The specification version that TOSA operators should conform to.",
+              [{::llvm::cl::values(
+                clEnumValN(mlir::tosa::SpecificationVersion::V_1_0, "1.0", "TOSA Specification version 1.0"),
+                clEnumValN(mlir::tosa::SpecificationVersion::V_1_1_DRAFT, "1.1.draft", "TOSA Specification version 1.1.draft")
+              )}]>,
     Option<"level", "level", "mlir::tosa::Level",
               /*default=*/"mlir::tosa::Level::eightK",
               "The TOSA level that operators should conform to. A TOSA level defines "
@@ -156,6 +163,29 @@ def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
     ListOption<"extensions", "extensions", "std::string",
             "The TOSA extension(s) that operators should conform to. TOSA profile "
             "extensions define optional operation and data type combinations.">
+  ];
+}
+
+def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
+  let summary = "Narrow I64 TOSA operations to I32";
+  let description = [{
+    This pass narrows TOSA operations with 64-bit integer tensor types to
+    32-bit integer tensor types. This can be useful for backends that do not
+    support the EXT-INT64 extension of TOSA.
+  }];
+
+  let options = [
+    Option<"aggressiveRewrite", "aggressive-rewrite", "bool", "false",
+      "If enabled, all TOSA operations are rewritten, regardless or whether the narrowing"
+      "is safe. This option may lead to data loss if not used carefully.">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool", "false",
+      "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+      "be inserted at the I/O boundaries.">
+  ];
+
+  let dependentDialects = [
+    "func::FuncDialect",
+    "tosa::TosaDialect",
   ];
 }
 

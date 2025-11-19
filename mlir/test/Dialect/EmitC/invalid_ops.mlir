@@ -876,3 +876,41 @@ func.func @test_do(%arg0 : !emitc.ptr<i32>) {
 
   return
 }
+
+// -----
+
+func.func @test_for_none_block_argument(%arg0: index) {
+  // expected-error@+1 {{expected body to have a single block argument for the induction variable}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @test_for_more_than_one_block_argument(%arg0: index) {
+  // expected-error@+1 {{expected body to have a single block argument for the induction variable}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+    ^bb0(%i0 : index, %i1 : index):
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @test_for_unmatch_type(%arg0: index) {
+  // expected-error@+1 {{expected induction variable to be same type as bounds}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+    ^bb0(%i0 : f32):
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}

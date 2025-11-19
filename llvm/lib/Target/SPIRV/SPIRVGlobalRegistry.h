@@ -548,14 +548,12 @@ public:
                                 MachineIRBuilder &MIRBuilder);
   Register getOrCreateUndef(MachineInstr &I, SPIRVType *SpvType,
                             const SPIRVInstrInfo &TII);
-  Register buildGlobalVariable(Register Reg, SPIRVType *BaseType,
-                               StringRef Name, const GlobalValue *GV,
-                               SPIRV::StorageClass::StorageClass Storage,
-                               const MachineInstr *Init, bool IsConst,
-                               bool HasLinkageTy,
-                               SPIRV::LinkageType::LinkageType LinkageType,
-                               MachineIRBuilder &MIRBuilder,
-                               bool IsInstSelector);
+  Register buildGlobalVariable(
+      Register Reg, SPIRVType *BaseType, StringRef Name, const GlobalValue *GV,
+      SPIRV::StorageClass::StorageClass Storage, const MachineInstr *Init,
+      bool IsConst,
+      const std::optional<SPIRV::LinkageType::LinkageType> &LinkageType,
+      MachineIRBuilder &MIRBuilder, bool IsInstSelector);
   Register getOrCreateGlobalVariableWithBinding(const SPIRVType *VarType,
                                                 uint32_t Set, uint32_t Binding,
                                                 StringRef Name,

@@ -102,7 +102,7 @@ __attribute__((visibility("protected"), used)) int x;
 
 // CUDA: clang{{.*}} -o [[IMG_SM70:.+]] -dumpdir a.out.nvptx64.sm_70.img. --target=nvptx64-nvidia-cuda -march=sm_70
 // CUDA: clang{{.*}} -o [[IMG_SM52:.+]] -dumpdir a.out.nvptx64.sm_52.img. --target=nvptx64-nvidia-cuda -march=sm_52
-// CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image=profile=sm_70,file=[[IMG_SM70]] --image=profile=sm_52,file=[[IMG_SM52]]
+// CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image3=kind=elf,sm=70,file=[[IMG_SM70]] --image3=kind=elf,sm=52,file=[[IMG_SM52]]
 // CUDA: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.cuda.image.{{.*}}.o
 
 // RUN: llvm-offload-binary -o %t.out \
@@ -236,7 +236,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-CUDA
 
 // RELOCATABLE-LINK-CUDA: clang{{.*}} -o {{.*}}.img -dumpdir a.out.nvptx64.sm_89.img. --target=nvptx64-nvidia-cuda
-// RELOCATABLE-LINK-CUDA: fatbinary{{.*}} -64 --create {{.*}}.fatbin --image=profile=sm_89,file={{.*}}.img
+// RELOCATABLE-LINK-CUDA: fatbinary{{.*}} -64 --create {{.*}}.fatbin --image3=kind=elf,sm=89,file={{.*}}.img
 // RELOCATABLE-LINK-CUDA: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-CUDA: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
 
