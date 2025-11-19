@@ -7,13 +7,14 @@ function( configure_pkg PACKAGE_NAME_T COMPONENT_NAME_T PACKAGE_VERSION_T MAINTA
       set_debian_pkg_cmake_flags( ${PACKAGE_NAME_T} ${PACKAGE_VERSION_T}
                                   ${MAINTAINER_NM_T} ${MAINTAINER_EMAIL_T} )
 
+      set(DEB_SOURCE_DIR "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/DEBIAN")
       # Create debian directory in build tree
       file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/DEBIAN")
 
       # Configure the copyright file
       configure_file(
-        "${CMAKE_SOURCE_DIR}/DEBIAN/copyright.in"
         "${CMAKE_BINARY_DIR}/DEBIAN/copyright"
+	"${DEB_SOURCE_DIR}/copyright.in"
         @ONLY
       )
 
@@ -24,8 +25,8 @@ function( configure_pkg PACKAGE_NAME_T COMPONENT_NAME_T PACKAGE_VERSION_T MAINTA
 
       # Configure the changelog file
       configure_file(
-        "${CMAKE_SOURCE_DIR}/DEBIAN/changelog.in"
         "${CMAKE_BINARY_DIR}/DEBIAN/changelog.Debian"
+	"${DEB_SOURCE_DIR}/changelog.in"
         @ONLY
       )
 
