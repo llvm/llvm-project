@@ -267,8 +267,9 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     bool IsUnsigned = (BuiltinID == PPC::BI__builtin_amo_lwat ||
                        BuiltinID == PPC::BI__builtin_amo_ldat);
 
-    bool IsValid = IsUnsigned ? llvm::is_contained({0, 1, 2, 3, 4, 6, 8}, Val)
-                              : llvm::is_contained({0, 5, 7, 8}, Val);
+    bool IsValid = IsUnsigned
+                       ? llvm::is_contained({0u, 1u, 2u, 3u, 4u, 6u, 8u}, Val)
+                       : llvm::is_contained({0u, 5u, 7u, 8u}, Val);
 
     if (IsValid)
       return false;
