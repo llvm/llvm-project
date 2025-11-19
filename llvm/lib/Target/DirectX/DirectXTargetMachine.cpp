@@ -53,7 +53,8 @@
 
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeDXILIntrinsicExpansionLegacyPass(*PR);
@@ -109,9 +110,9 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createGlobalDCEPass());
+    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
-    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;

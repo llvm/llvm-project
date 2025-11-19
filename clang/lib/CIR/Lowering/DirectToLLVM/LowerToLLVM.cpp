@@ -194,6 +194,14 @@ mlir::LogicalResult CIRToLLVMCosOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMExpOpLowering::matchAndRewrite(
+    cir::ExpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExpOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -310,6 +318,30 @@ static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
       rewriter, op->getLoc(), intrinsicName, resultTy, operands);
   rewriter.replaceOp(op, callIntrinOp.getOperation());
   return callIntrinOp;
+}
+
+mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
+    cir::LLVMIntrinsicCallOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type llvmResTy =
+      getTypeConverter()->convertType(op->getResultTypes()[0]);
+  if (!llvmResTy)
+    return op.emitError("expected LLVM result type");
+  StringRef name = op.getIntrinsicName();
+
+  // Some LLVM intrinsics require ElementType attribute to be attached to
+  // the argument of pointer type. That prevents us from generating LLVM IR
+  // because from LLVM dialect, we have LLVM IR like the below which fails
+  // LLVM IR verification.
+  // %3 = call i64 @llvm.aarch64.ldxr.p0(ptr %2)
+  // The expected LLVM IR should be like
+  // %3 = call i64 @llvm.aarch64.ldxr.p0(ptr elementtype(i32) %2)
+  // TODO(cir): MLIR LLVM dialect should handle this part as CIR has no way
+  // to set LLVM IR attribute.
+  assert(!cir::MissingFeatures::intrinsicElementTypeSupport());
+  replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm." + name, llvmResTy,
+                                   adaptor.getOperands());
+  return mlir::success();
 }
 
 /// IntAttr visitor.
@@ -1328,11 +1360,54 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
+    cir::DerivedClassAddrOp derivedClassOp, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type resultType =
+      getTypeConverter()->convertType(derivedClassOp.getType());
+  mlir::Value baseAddr = adaptor.getBaseAddr();
+  // The offset is set in the operation as an unsigned value, but it must be
+  // applied as a negative offset.
+  int64_t offsetVal = -(adaptor.getOffset().getZExtValue());
+  if (offsetVal == 0) {
+    // If the offset is zero, we can just return the base address,
+    rewriter.replaceOp(derivedClassOp, baseAddr);
+    return mlir::success();
+  }
+  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {offsetVal};
+  mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
+                                               mlir::IntegerType::Signless);
+  if (derivedClassOp.getAssumeNotNull()) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        derivedClassOp, resultType, byteType, baseAddr, offset,
+        mlir::LLVM::GEPNoWrapFlags::inbounds);
+  } else {
+    mlir::Location loc = derivedClassOp.getLoc();
+    mlir::Value isNull = mlir::LLVM::ICmpOp::create(
+        rewriter, loc, mlir::LLVM::ICmpPredicate::eq, baseAddr,
+        mlir::LLVM::ZeroOp::create(rewriter, loc, baseAddr.getType()));
+    mlir::Value adjusted =
+        mlir::LLVM::GEPOp::create(rewriter, loc, resultType, byteType, baseAddr,
+                                  offset, mlir::LLVM::GEPNoWrapFlags::inbounds);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(derivedClassOp, isNull,
+                                                      baseAddr, adjusted);
+  }
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMATanOpLowering::matchAndRewrite(
     cir::ATanOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ATanOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMCeilOpLowering::matchAndRewrite(
+    cir::CeilOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::FCeilOp>(op, resTy, adaptor.getSrc());
   return mlir::success();
 }
 
@@ -1920,7 +1995,6 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   //        attributes are available on cir.global ops. This duplicates code
   //        in CIRToLLVMGlobalOpLowering::matchAndRewrite() but that will go
   //        away when the placeholders are no longer needed.
-  assert(!cir::MissingFeatures::opGlobalConstant());
   const bool isConst = op.getConstant();
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
@@ -1980,8 +2054,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
-  assert(!cir::MissingFeatures::opGlobalConstant());
-  const bool isConst = false;
+  const bool isConst = op.getConstant();
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
   const bool isDsoLocal = op.getDsoLocal();
@@ -2814,6 +2887,29 @@ static void collectUnreachable(mlir::Operation *parent,
         workList.push_back(succ);
     }
   }
+}
+
+mlir::LogicalResult CIRToLLVMObjSizeOpLowering::matchAndRewrite(
+    cir::ObjSizeOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type llvmResTy = getTypeConverter()->convertType(op.getType());
+  mlir::Location loc = op->getLoc();
+
+  mlir::IntegerType i1Ty = rewriter.getI1Type();
+
+  auto i1Val = [&rewriter, &loc, &i1Ty](bool val) {
+    return mlir::LLVM::ConstantOp::create(rewriter, loc, i1Ty, val);
+  };
+
+  replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.objectsize", llvmResTy,
+                                   {
+                                       adaptor.getPtr(),
+                                       i1Val(op.getMin()),
+                                       i1Val(op.getNullunknown()),
+                                       i1Val(op.getDynamic()),
+                                   });
+
+  return mlir::LogicalResult::success();
 }
 
 void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
@@ -3737,6 +3833,12 @@ mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::VaArgOp>(op, llvmType, vaList);
   return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMBlockAddressOpLowering::matchAndRewrite(
+    cir::BlockAddressOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {

@@ -1511,14 +1511,14 @@ define void @stride_check_known_via_loop_guard(ptr %C, ptr %A, i32 %Acols) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX_US]], align 8, !alias.scope [[META69:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[C]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX_US]], align 8, !alias.scope [[META69:![0-9]+]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    store <4 x double> [[BROADCAST_SPLAT]], ptr [[TMP0]], align 8, !alias.scope [[META72:![0-9]+]], !noalias [[META69]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[C]], i32 [[INDEX]]
+; CHECK-NEXT:    store <4 x double> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 8, !alias.scope [[META72:![0-9]+]], !noalias [[META69]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP74:![0-9]+]]

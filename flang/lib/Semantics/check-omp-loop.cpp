@@ -285,13 +285,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
   SetLoopInfo(x);
 
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
-    if (const auto &doConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-      const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
-      CheckNoBranching(doBlock, beginName.v, beginName.source);
-    }
+  if (const auto *doConstruct{x.GetNestedLoop()}) {
+    const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
+    CheckNoBranching(doBlock, beginName.v, beginName.source);
   }
   CheckLoopItrVariableIsInt(x);
   CheckAssociatedLoopConstraints(x);
@@ -314,46 +310,34 @@ const parser::Name OmpStructureChecker::GetLoopIndex(
 }
 
 void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
-    if (const auto &loopConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-      const parser::DoConstruct *loop{&*loopConstruct};
-      if (loop && loop->IsDoNormal()) {
-        const parser::Name &itrVal{GetLoopIndex(loop)};
-        SetLoopIv(itrVal.symbol);
-      }
+  if (const auto *loop{x.GetNestedLoop()}) {
+    if (loop->IsDoNormal()) {
+      const parser::Name &itrVal{GetLoopIndex(loop)};
+      SetLoopIv(itrVal.symbol);
     }
   }
 }
 
 void OmpStructureChecker::CheckLoopItrVariableIsInt(
     const parser::OpenMPLoopConstruct &x) {
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
-    if (const auto &loopConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-
-      for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
-        if (loop->IsDoNormal()) {
-          const parser::Name &itrVal{GetLoopIndex(loop)};
-          if (itrVal.symbol) {
-            const auto *type{itrVal.symbol->GetType()};
-            if (!type->IsNumeric(TypeCategory::Integer)) {
-              context_.Say(itrVal.source,
-                  "The DO loop iteration"
-                  " variable must be of the type integer."_err_en_US,
-                  itrVal.ToString());
-            }
-          }
+  for (const parser::DoConstruct *loop{x.GetNestedLoop()}; loop;) {
+    if (loop->IsDoNormal()) {
+      const parser::Name &itrVal{GetLoopIndex(loop)};
+      if (itrVal.symbol) {
+        const auto *type{itrVal.symbol->GetType()};
+        if (!type->IsNumeric(TypeCategory::Integer)) {
+          context_.Say(itrVal.source,
+              "The DO loop iteration"
+              " variable must be of the type integer."_err_en_US,
+              itrVal.ToString());
         }
-        // Get the next DoConstruct if block is not empty.
-        const auto &block{std::get<parser::Block>(loop->t)};
-        const auto it{block.begin()};
-        loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
-                                 : nullptr;
       }
     }
+    // Get the next DoConstruct if block is not empty.
+    const auto &block{std::get<parser::Block>(loop->t)};
+    const auto it{block.begin()};
+    loop =
+        it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it) : nullptr;
   }
 }
 
@@ -417,29 +401,23 @@ void OmpStructureChecker::CheckDistLinear(
 
     // Match the loop index variables with the collected symbols from linear
     // clauses.
-    auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-    if (optLoopCons.has_value()) {
-      if (const auto &loopConstruct{
-              std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-        for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
-          if (loop->IsDoNormal()) {
-            const parser::Name &itrVal{GetLoopIndex(loop)};
-            if (itrVal.symbol) {
-              // Remove the symbol from the collected set
-              indexVars.erase(&itrVal.symbol->GetUltimate());
-            }
-            collapseVal--;
-            if (collapseVal == 0) {
-              break;
-            }
-          }
-          // Get the next DoConstruct if block is not empty.
-          const auto &block{std::get<parser::Block>(loop->t)};
-          const auto it{block.begin()};
-          loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
-                                   : nullptr;
+    for (const parser::DoConstruct *loop{x.GetNestedLoop()}; loop;) {
+      if (loop->IsDoNormal()) {
+        const parser::Name &itrVal{GetLoopIndex(loop)};
+        if (itrVal.symbol) {
+          // Remove the symbol from the collected set
+          indexVars.erase(&itrVal.symbol->GetUltimate());
+        }
+        collapseVal--;
+        if (collapseVal == 0) {
+          break;
         }
       }
+      // Get the next DoConstruct if block is not empty.
+      const auto &block{std::get<parser::Block>(loop->t)};
+      const auto it{block.begin()};
+      loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
+                               : nullptr;
     }
 
     // Show error for the remaining variables

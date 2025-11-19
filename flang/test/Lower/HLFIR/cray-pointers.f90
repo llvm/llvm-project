@@ -62,8 +62,8 @@ end subroutine test3
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "cp"},
 ! CHECK-SAME:                        %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest3En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest3Ecp"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest3En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest3Ecp"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 11 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 11 : index
 ! CHECK:           %[[VAL_24:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
@@ -88,7 +88,7 @@ end subroutine test4
 ! CHECK-LABEL:   func.func @_QPtest4(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.char<1,?>>>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest4En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest4En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca i64 {bindc_name = "cp", uniq_name = "_QFtest4Ecp"}
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFtest4Ecp"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
@@ -153,7 +153,7 @@ end subroutine test6
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest6En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest6En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca i64 {bindc_name = "cp", uniq_name = "_QFtest6Ecp"}
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFtest6Ecp"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
@@ -379,7 +379,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_craypointer_capture(
 ! CHECK-SAME:                                           %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.char<1,?>>>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_craypointer_captureEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_craypointer_captureEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca i64 {bindc_name = "cray_pointer", uniq_name = "_QFtest_craypointer_captureEcray_pointer"}
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFtest_craypointer_captureEcray_pointer"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>

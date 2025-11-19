@@ -21,7 +21,6 @@ on:
         options:
           - ubuntu-22.04
           - ubuntu-22.04-arm
-          - macos-13
           - macos-14
 
   workflow_call:
@@ -69,7 +68,7 @@ jobs:
     # due to https://github.com/actions/runner-images/issues/10385
     - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
       with:
-        python-version: '3.13'
+        python-version: '3.14'
 
     - name: Checkout LLVM
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -130,8 +129,6 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
           if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
-          else
-            arches=x86_64
           fi
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
@@ -141,19 +138,10 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
-        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
-            ;;
-          macos-13)
-            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
-            else
-              build_runs_on="macos-13-large"
-            fi
-            test_runs_on="${{ inputs.runs-on }}"
             ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
@@ -168,6 +156,23 @@ jobs:
             build_runs_on=$test_runs_on
             ;;
         esac
+
+        case "$build_runs_on" in
+          # These runners cannot build the full release package faster than
+          # the 6 hours timeout limit, so we need to use a configuration
+          # that builds more quickly.
+          macos-14)
+            bootstrap_prefix="BOOTSTRAP"
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF"
+            ;;
+          *)
+            bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
+            ;;
+        esac
+
+        target_cmake_flags="$target_cmake_flags -D${bootstrap_prefix}_CPACK_PACKAGE_FILE_NAME=$release_binary_basename"
+
+        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
 
@@ -182,15 +187,6 @@ jobs:
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         ref: ${{ needs.prepare.outputs.ref }}
-
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@a1ea791b03c8e61f53a0e66f2f73db283aa0f01e # main
-
-    - name: Setup Windows
-      if: startsWith(runner.os, 'Windows')
-      uses: llvm/actions/setup-windows@main
-      with:
-        arch: amd64
 
     - name: Set Build Prefix
       id: setup-stage
@@ -211,8 +207,7 @@ jobs:
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -C clang/cmake/caches/Release.cmake \
-            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+            -C clang/cmake/caches/Release.cmake
 
     - name: Build
       shell: bash
@@ -221,7 +216,7 @@ jobs:
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
     
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
         # Due to path differences on Windows when running in bash vs running on node,
@@ -259,14 +254,14 @@ jobs:
         sparse-checkout-cone-mode: false
 
     - name: 'Download artifact'
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
       with:
         pattern: '*-release-binary'
         merge-multiple: true
 
     - name: Attest Build Provenance
       id: provenance
-      uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
         subject-path: ${{ needs.prepare.outputs.release-binary-filename }}
 
@@ -275,7 +270,7 @@ jobs:
         mv ${{ steps.provenance.outputs.bundle-path }} ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
 
     - name: Upload Build Provenance
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
         path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl

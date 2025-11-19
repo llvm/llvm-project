@@ -285,6 +285,8 @@ module attributes {transform.with_named_sequence} {
 
 ///----------------------------------------------------------------------------------------
 /// Tests for linalg.pack
+///
+/// TODO: Add similar tests for linalg.unpack
 ///----------------------------------------------------------------------------------------
 
 // Note, see a similar test in:
@@ -356,7 +358,7 @@ func.func @vectorize_map(%arg0: memref<64xf32>,
     %arg1: memref<64xf32>, %arg2: memref<64xf32>) {
   linalg.map ins(%arg0, %arg1 : memref<64xf32>, memref<64xf32>)
              outs(%arg2 : memref<64xf32>)
-    (%in: f32, %in_0: f32) {
+    (%in: f32, %in_0: f32, %out: f32) {
       %0 = arith.addf %in, %in_0 : f32
       linalg.yield %0 : f32
     }

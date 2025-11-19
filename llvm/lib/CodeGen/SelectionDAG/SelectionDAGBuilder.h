@@ -429,6 +429,10 @@ public:
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
                                  SDValue Op);
 
+  // Lower nofpclass attributes to AssertNoFPClass
+  SDValue lowerNoFPClassToAssertNoFPClass(SelectionDAG &DAG,
+                                          const Instruction &I, SDValue Op);
+
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
                                 const CallBase *Call, unsigned ArgIdx,
                                 unsigned NumArgs, SDValue Callee,
@@ -727,6 +731,17 @@ private:
                        MCSymbol *&BeginLabel);
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
+
+  std::pair<bool, bool> getTargetIntrinsicCallProperties(const CallBase &I);
+  SmallVector<SDValue, 8> getTargetIntrinsicOperands(
+      const CallBase &I, bool HasChain, bool OnlyLoad,
+      TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
+  SDVTList getTargetIntrinsicVTList(const CallBase &I, bool HasChain);
+  SDValue getTargetNonMemIntrinsicNode(const Type &IntrinsicVT, bool HasChain,
+                                       ArrayRef<SDValue> Ops,
+                                       const SDVTList &VTs);
+  SDValue handleTargetIntrinsicRet(const CallBase &I, bool HasChain,
+                                   bool OnlyLoad, SDValue Result);
 };
 
 /// This struct represents the registers (physical or virtual)

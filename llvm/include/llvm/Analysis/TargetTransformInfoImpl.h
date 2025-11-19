@@ -842,8 +842,7 @@ public:
   }
 
   virtual InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const {
     return 1;
   }
@@ -1028,7 +1027,7 @@ public:
 
   virtual bool areTypesABICompatible(const Function *Caller,
                                      const Function *Callee,
-                                     const ArrayRef<Type *> &Types) const {
+                                     ArrayRef<Type *> Types) const {
     return (Caller->getFnAttribute("target-cpu") ==
             Callee->getFnAttribute("target-cpu")) &&
            (Caller->getFnAttribute("target-features") ==

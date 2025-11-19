@@ -583,6 +583,18 @@ m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
   return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
 }
 
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(Opc, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P, true>
+m_c_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, true>(Opc, Op0, Op1, Op2);
+}
+
 template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
 inline auto m_SelectCC(const LTy &L, const RTy &R, const TTy &T, const FTy &F,
                        const CCTy &CC) {
@@ -890,6 +902,11 @@ inline BinaryOpc_match<LHS, RHS> m_Sra(const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Srl(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R);
+}
+template <typename LHS, typename RHS>
+inline auto m_ExactSr(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS>(ISD::SRA, L, R, SDNodeFlags::Exact),
+                 BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R, SDNodeFlags::Exact));
 }
 
 template <typename LHS, typename RHS>
@@ -1299,7 +1316,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   }
 
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(const ArrayRef<SmallBitVector> Matches,
+  reassociatableMatchHelper(ArrayRef<SmallBitVector> Matches,
                             SmallBitVector &Used, size_t Curr = 0) {
     if (Curr == Matches.size())
       return true;

@@ -12,49 +12,64 @@
 
 #include "orc-rt/Session.h"
 
-#include <future>
-
 namespace orc_rt {
 
 Session::~Session() { waitForShutdown(); }
 
 void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
-  std::vector<std::unique_ptr<ResourceManager>> ToShutdown;
-
   {
     std::scoped_lock<std::mutex> Lock(M);
-    std::swap(ResourceMgrs, ToShutdown);
+    if (SI) {
+      SI->OnCompletes.push_back(std::move(OnShutdownComplete));
+      return;
+    }
+
+    SI = std::make_unique<ShutdownInfo>();
+    SI->OnCompletes.push_back(std::move(OnShutdownComplete));
+    std::swap(SI->ResourceMgrs, ResourceMgrs);
   }
 
-  shutdownNext(std::move(OnShutdownComplete), Error::success(),
-               std::move(ToShutdown));
+  shutdownNext(Error::success());
 }
 
 void Session::waitForShutdown() {
-  std::promise<void> P;
-  auto F = P.get_future();
-
-  shutdown([P = std::move(P)]() mutable { P.set_value(); });
-
-  F.wait();
+  shutdown([]() {});
+  std::unique_lock<std::mutex> Lock(M);
+  SI->CompleteCV.wait(Lock, [&]() { return SI->Complete; });
 }
 
-void Session::shutdownNext(
-    OnShutdownCompleteFn OnComplete, Error Err,
-    std::vector<std::unique_ptr<ResourceManager>> RemainingRMs) {
+void Session::shutdownNext(Error Err) {
   if (Err)
     reportError(std::move(Err));
 
-  if (RemainingRMs.empty())
-    return OnComplete();
+  if (SI->ResourceMgrs.empty())
+    return shutdownComplete();
 
-  auto NextRM = std::move(RemainingRMs.back());
-  RemainingRMs.pop_back();
-  NextRM->shutdown([this, RemainingRMs = std::move(RemainingRMs),
-                    OnComplete = std::move(OnComplete)](Error Err) mutable {
-    shutdownNext(std::move(OnComplete), std::move(Err),
-                 std::move(RemainingRMs));
-  });
+  // Get the next ResourceManager to shut down.
+  auto NextRM = std::move(SI->ResourceMgrs.back());
+  SI->ResourceMgrs.pop_back();
+  NextRM->shutdown([this](Error Err) { shutdownNext(std::move(Err)); });
+}
+
+void Session::shutdownComplete() {
+
+  std::unique_ptr<TaskDispatcher> TmpDispatcher;
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    TmpDispatcher = std::move(Dispatcher);
+  }
+
+  TmpDispatcher->shutdown();
+
+  for (auto &OnShutdownComplete : SI->OnCompletes)
+    OnShutdownComplete();
+
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    SI->Complete = true;
+  }
+
+  SI->CompleteCV.notify_all();
 }
 
 } // namespace orc_rt

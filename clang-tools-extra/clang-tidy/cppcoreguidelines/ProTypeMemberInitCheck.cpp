@@ -173,7 +173,7 @@ struct InitializerInsertion {
     assert(!Initializers.empty() && "No initializers to insert");
     std::string Code;
     llvm::raw_string_ostream Stream(Code);
-    std::string Joined =
+    const std::string Joined =
         llvm::join(Initializers.begin(), Initializers.end(), "(), ");
     switch (Placement) {
     case InitializerPlacement::New:
@@ -434,7 +434,7 @@ static llvm::StringLiteral getInitializer(QualType QT, bool UseAssignment) {
 void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     ASTContext &Context, const CXXRecordDecl &ClassDecl,
     const CXXConstructorDecl *Ctor) {
-  bool IsUnion = ClassDecl.isUnion();
+  const bool IsUnion = ClassDecl.isUnion();
 
   if (IsUnion && ClassDecl.hasInClassInitializer())
     return;
@@ -583,7 +583,7 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
 
 void ProTypeMemberInitCheck::checkUninitializedTrivialType(
     const ASTContext &Context, const VarDecl *Var) {
-  DiagnosticBuilder Diag =
+  const DiagnosticBuilder Diag =
       diag(Var->getBeginLoc(), "uninitialized record type: %0") << Var;
 
   Diag << FixItHint::CreateInsertion(

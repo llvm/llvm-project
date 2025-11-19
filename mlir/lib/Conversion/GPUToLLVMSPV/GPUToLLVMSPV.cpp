@@ -259,7 +259,7 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
           }
           return std::nullopt;
         })
-        .Default([](auto) { return std::nullopt; });
+        .Default(std::nullopt);
   }
 
   static std::optional<std::string> getFuncName(gpu::ShuffleMode mode,

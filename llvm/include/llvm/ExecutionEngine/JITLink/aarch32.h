@@ -175,7 +175,7 @@ struct HalfWords {
 /// FixupInfo base class is required for dynamic lookups.
 struct FixupInfoBase {
   LLVM_ABI static const FixupInfoBase *getDynFixupInfo(Edge::Kind K);
-  virtual ~FixupInfoBase() {}
+  virtual ~FixupInfoBase() = default;
 };
 
 /// FixupInfo checks for Arm edge kinds work on 32-bit words

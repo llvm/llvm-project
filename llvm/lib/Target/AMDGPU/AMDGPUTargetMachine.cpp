@@ -465,6 +465,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
+static cl::opt<bool> EnableLowerExecSync(
+    "amdgpu-enable-lower-exec-sync",
+    cl::desc("Enable lowering of execution synchronization."), cl::init(true),
+    cl::Hidden);
+
 static cl::opt<bool>
     EnableSwLowerLDS("amdgpu-enable-sw-lower-lds",
                      cl::desc("Enable lowering of lds to global memory pass "
@@ -567,6 +572,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
+  initializeAMDGPULowerExecSyncLegacyPass(*PR);
   initializeAMDGPUSwLowerLDSLegacyPass(*PR);
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
   initializeAMDGPUArgumentUsageInfoPass(*PR);
@@ -619,6 +625,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
+  initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -640,7 +647,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
-  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   return DAG;
 }
 
@@ -661,7 +668,7 @@ createGCNMaxMemoryClauseMachineScheduler(MachineSchedContext *C) {
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
-  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   return DAG;
 }
 
@@ -815,7 +822,7 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
   Params.consume_front("strategy=");
   auto Result = StringSwitch<std::optional<ScanOptions>>(Params)
                     .Case("dpp", ScanOptions::DPP)
-                    .Cases("iterative", "", ScanOptions::Iterative)
+                    .Cases({"iterative", ""}, ScanOptions::Iterative)
                     .Case("none", ScanOptions::None)
                     .Default(std::nullopt);
   if (Result)
@@ -887,9 +894,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         if (EarlyInlineAll && !EnableFunctionCalls)
           PM.addPass(AMDGPUAlwaysInlinePass());
-
-        if (EnableUniformIntrinsicCombine)
-          PM.addPass(AMDGPUUniformIntrinsicCombinePass());
       });
 
   PB.registerPeepholeEPCallback(
@@ -900,6 +904,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FPM.addPass(AMDGPUUseNativeCallsPass());
         if (EnableLibCallSimplify)
           FPM.addPass(AMDGPUSimplifyLibCallsPass());
+
+        if (EnableUniformIntrinsicCombine)
+          FPM.addPass(AMDGPUUniformIntrinsicCombinePass());
       });
 
   PB.registerCGSCCOptimizerLateEPCallback(
@@ -961,6 +968,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // We want to support the -lto-partitions=N option as "best effort".
         // For that, we need to lower LDS earlier in the pipeline before the
         // module is partitioned for codegen.
+        if (EnableLowerExecSync)
+          PM.addPass(AMDGPULowerExecSyncPass());
         if (EnableSwLowerLDS)
           PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
@@ -1200,7 +1209,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
       EnableVOPD)
     DAG->addMutation(createVOPDPairingMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
-  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   return DAG;
 }
 //===----------------------------------------------------------------------===//
@@ -1314,6 +1323,9 @@ void AMDGPUPassConfig::addIRPasses() {
       isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
+  if (EnableUniformIntrinsicCombine)
+    addPass(createAMDGPUUniformIntrinsicCombineLegacyPass());
+
   // This can be disabled by passing ::Disable here or on the command line
   // with --expand-variadics-override=disable.
   addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
@@ -1328,6 +1340,10 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Make enqueued block runtime handles externally visible.
   addPass(createAMDGPUExportKernelRuntimeHandlesLegacyPass());
+
+  // Lower special LDS accesses.
+  if (EnableLowerExecSync)
+    addPass(createAMDGPULowerExecSyncLegacyPass());
 
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
@@ -2065,6 +2081,8 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(AMDGPUImageIntrinsicOptimizerPass(TM));
 
+  if (EnableUniformIntrinsicCombine)
+    addPass(AMDGPUUniformIntrinsicCombinePass());
   // This can be disabled by passing ::Disable here or on the command line
   // with --expand-variadics-override=disable.
   addPass(ExpandVariadicsPass(ExpandVariadicsMode::Lowering));
@@ -2073,6 +2091,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   addPass(AlwaysInlinerPass());
 
   addPass(AMDGPUExportKernelRuntimeHandlesPass());
+
+  if (EnableLowerExecSync)
+    addPass(AMDGPULowerExecSyncPass());
 
   if (EnableSwLowerLDS)
     addPass(AMDGPUSwLowerLDSPass(TM));

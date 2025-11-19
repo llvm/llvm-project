@@ -244,7 +244,7 @@ static bool canEmitMemcpy(const TargetMachine *TM, Function *F) {
   if (!TM)
     return true;
   const TargetLowering *TLI = TM->getSubtargetImpl(*F)->getTargetLowering();
-  return TLI->getMemcpyName() != nullptr;
+  return TLI->getMemcpyImpl() != RTLIB::Unsupported;
 }
 
 // Return a value appropriate for use with the memset_pattern16 libcall, if

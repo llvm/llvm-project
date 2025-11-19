@@ -1402,7 +1402,7 @@ static DecodeStatus DecodeAddrMode3Instruction(MCInst &Inst, unsigned Insn,
     Inst.addOperand(MCOperand::createImm(U | (imm << 4) | Rm));
   } else {
     if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
-    return MCDisassembler::Fail;
+      return MCDisassembler::Fail;
     Inst.addOperand(MCOperand::createImm(U));
   }
 
@@ -1922,7 +1922,7 @@ static DecodeStatus DecodeBranchImmInstruction(MCInst &Inst, unsigned Insn,
     imm |= fieldFromInstruction(Insn, 24, 1) << 1;
     if (!tryAddingSymbolicOperand(Address, Address + SignExtend32<26>(imm) + 8,
                                   true, 4, Inst, Decoder))
-    Inst.addOperand(MCOperand::createImm(SignExtend32<26>(imm)));
+      Inst.addOperand(MCOperand::createImm(SignExtend32<26>(imm)));
     return S;
   }
 
@@ -3703,17 +3703,17 @@ static DecodeStatus DecodeThumbAddSPReg(MCInst &Inst, uint16_t Insn,
     Rdm |= fieldFromInstruction(Insn, 7, 1) << 3;
 
     if (!Check(S, DecodeGPRRegisterClass(Inst, Rdm, Address, Decoder)))
-    return MCDisassembler::Fail;
+      return MCDisassembler::Fail;
     Inst.addOperand(MCOperand::createReg(ARM::SP));
     if (!Check(S, DecodeGPRRegisterClass(Inst, Rdm, Address, Decoder)))
-    return MCDisassembler::Fail;
+      return MCDisassembler::Fail;
   } else if (Inst.getOpcode() == ARM::tADDspr) {
     unsigned Rm = fieldFromInstruction(Insn, 3, 4);
 
     Inst.addOperand(MCOperand::createReg(ARM::SP));
     Inst.addOperand(MCOperand::createReg(ARM::SP));
     if (!Check(S, DecodeGPRRegisterClass(Inst, Rm, Address, Decoder)))
-    return MCDisassembler::Fail;
+      return MCDisassembler::Fail;
   }
 
   return S;
