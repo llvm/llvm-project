@@ -94,14 +94,6 @@ bool DuplicateIncludeCallbacks::isAllowedDuplicate(
         return R.match(FileName);
       }))
     return true;
-
-  if (File) {
-    const StringRef Resolved = File->getName();
-    return llvm::any_of(AllowedRegexes, [&Resolved](const llvm::Regex &R) {
-      return R.match(Resolved);
-    });
-  }
-
   return false;
 }
 
