@@ -258,11 +258,10 @@ public:
                             OptimizationRemarkEmitter *ORE,
                             LoopVectorizationRequirements *R,
                             LoopVectorizeHints *H, DemandedBits *DB,
-                            AssumptionCache *AC, BlockFrequencyInfo *BFI,
-                            ProfileSummaryInfo *PSI, AAResults *AA)
+                            AssumptionCache *AC, bool OptForSize, AAResults *AA)
       : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
-        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC), BFI(BFI), PSI(PSI),
-        AA(AA) {}
+        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
+        OptForSize(OptForSize), AA(AA) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -720,9 +719,8 @@ private:
   /// Hold potentially faulting loads.
   SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
 
-  /// BFI and PSI are used to check for profile guided size optimizations.
-  BlockFrequencyInfo *BFI;
-  ProfileSummaryInfo *PSI;
+  /// The result of llvm::shouldOptimizeForSize on the original loop.
+  bool OptForSize;
 
   // Alias Analysis results used to check for possible aliasing with loads
   // used in uncountable exit conditions.
