@@ -335,14 +335,13 @@ void LinkerDriver::handleReproFile(StringRef path, InputType inputType) {
              << ": " << ec.message();
   sys::path::remove_dots(absPath, true);
   *reproFile << absPath << "\"\n";
-  reproFile->flush();
 }
 
 void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputType pathType) {
   auto future = std::make_shared<std::future<MBErrPair>>(
       createFutureForFile(std::string(path)));
   std::string pathStr = std::string(path);
-  enqueueTask([=, reproFile = reproFile.get()]() {
+  enqueueTask([=]() {
     llvm::TimeTraceScope timeScope("File: ", path);
     auto [mb, ec] = future->get();
     if (ec) {
@@ -2888,6 +2887,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   rootTimer.stop();
   if (config->showTiming)
     ctx.rootTimer.print();
+
+  // Clean up /linkreprofullpathrsp file
+  reproFile.reset();
 
   if (config->timeTraceEnabled) {
     // Manually stop the topmost "COFF link" scope, since we're shutting down.
