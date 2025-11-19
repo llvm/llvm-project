@@ -324,30 +324,220 @@ OpenACCAtomicConstruct *OpenACCAtomicConstruct::Create(
   return Inst;
 }
 
-static std::pair<const Expr *, const Expr *> getBinaryOpArgs(const Expr *Op) {
+static std::optional<std::pair<const Expr *, const Expr *>>
+getBinaryAssignOpArgs(const Expr *Op, bool &IsCompoundAssign) {
   if (const auto *BO = dyn_cast<BinaryOperator>(Op)) {
-    assert(BO->isAssignmentOp());
-    return {BO->getLHS(), BO->getRHS()};
+    if (!BO->isAssignmentOp())
+      return std::nullopt;
+    IsCompoundAssign = BO->isCompoundAssignmentOp();
+    return std::pair<const Expr *, const Expr *>(BO->getLHS(), BO->getRHS());
   }
 
-  const auto *OO = cast<CXXOperatorCallExpr>(Op);
-  assert(OO->isAssignmentOp());
-  return {OO->getArg(0), OO->getArg(1)};
+  if (const auto *OO = dyn_cast<CXXOperatorCallExpr>(Op)) {
+    if (!OO->isAssignmentOp())
+      return std::nullopt;
+    IsCompoundAssign = OO->getOperator() != OO_Equal;
+    return std::pair<const Expr *, const Expr *>(OO->getArg(0), OO->getArg(1));
+  }
+  return std::nullopt;
+}
+static std::optional<std::pair<const Expr *, const Expr *>>
+getBinaryAssignOpArgs(const Expr *Op) {
+  bool IsCompoundAssign;
+  return getBinaryAssignOpArgs(Op, IsCompoundAssign);
 }
 
-static std::pair<bool, const Expr *> getUnaryOpArgs(const Expr *Op) {
+static std::optional<const Expr *> getUnaryOpArgs(const Expr *Op) {
   if (const auto *UO = dyn_cast<UnaryOperator>(Op))
-    return {true, UO->getSubExpr()};
+    return UO->getSubExpr();
 
   if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(Op)) {
     // Post-inc/dec have a second unused argument to differentiate it, so we
     // accept -- or ++ as unary, or any operator call with only 1 arg.
-    if (OpCall->getNumArgs() == 1 || OpCall->getOperator() != OO_PlusPlus ||
-        OpCall->getOperator() != OO_MinusMinus)
-      return {true, OpCall->getArg(0)};
+    if (OpCall->getNumArgs() == 1 || OpCall->getOperator() == OO_PlusPlus ||
+        OpCall->getOperator() == OO_MinusMinus)
+      return {OpCall->getArg(0)};
   }
 
-  return {false, nullptr};
+  return std::nullopt;
+}
+
+// Read is of the form `v = x;`, where both sides are scalar L-values. This is a
+// BinaryOperator or CXXOperatorCallExpr.
+static std::optional<OpenACCAtomicConstruct::SingleStmtInfo>
+getReadStmtInfo(const Expr *E, bool ForAtomicComputeSingleStmt = false) {
+  std::optional<std::pair<const Expr *, const Expr *>> BinaryArgs =
+      getBinaryAssignOpArgs(E);
+
+  if (!BinaryArgs)
+    return std::nullopt;
+
+  // We want the L-value for each side, so we ignore implicit casts.
+  auto Res = OpenACCAtomicConstruct::SingleStmtInfo::createRead(
+      E, BinaryArgs->first->IgnoreImpCasts(),
+      BinaryArgs->second->IgnoreImpCasts());
+
+  // The atomic compute single-stmt variant has to do a 'fixup' step for the 'X'
+  // value, since it is dependent on the RHS.  So if we're in that version, we
+  // skip the checks on X.
+  if ((!ForAtomicComputeSingleStmt &&
+       (!Res.X->isLValue() || !Res.X->getType()->isScalarType())) ||
+      !Res.V->isLValue() || !Res.V->getType()->isScalarType())
+    return std::nullopt;
+
+  return Res;
+}
+
+// Write supports only the format 'x = expr', where the expression is scalar
+// type, and 'x' is a scalar l value. As above, this can come in 2 forms;
+// Binary Operator or CXXOperatorCallExpr.
+static std::optional<OpenACCAtomicConstruct::SingleStmtInfo>
+getWriteStmtInfo(const Expr *E) {
+  std::optional<std::pair<const Expr *, const Expr *>> BinaryArgs =
+      getBinaryAssignOpArgs(E);
+  if (!BinaryArgs)
+    return std::nullopt;
+  // We want the L-value for ONLY the X side, so we ignore implicit casts. For
+  // the right side (the expr), we emit it as an r-value so we need to
+  // maintain implicit casts.
+  auto Res = OpenACCAtomicConstruct::SingleStmtInfo::createWrite(
+      E, BinaryArgs->first->IgnoreImpCasts(), BinaryArgs->second);
+
+  if (!Res.X->isLValue() || !Res.X->getType()->isScalarType())
+    return std::nullopt;
+  return Res;
+}
+
+static std::optional<OpenACCAtomicConstruct::SingleStmtInfo>
+getUpdateStmtInfo(const Expr *E) {
+  std::optional<const Expr *> UnaryArgs = getUnaryOpArgs(E);
+  if (UnaryArgs) {
+    auto Res = OpenACCAtomicConstruct::SingleStmtInfo::createUpdate(
+        E, (*UnaryArgs)->IgnoreImpCasts());
+
+    if (!Res.X->isLValue() || !Res.X->getType()->isScalarType())
+      return std::nullopt;
+
+    return Res;
+  }
+
+  bool IsRHSCompoundAssign = false;
+  std::optional<std::pair<const Expr *, const Expr *>> BinaryArgs =
+      getBinaryAssignOpArgs(E, IsRHSCompoundAssign);
+  if (!BinaryArgs)
+    return std::nullopt;
+
+  auto Res = OpenACCAtomicConstruct::SingleStmtInfo::createUpdate(
+      E, BinaryArgs->first->IgnoreImpCasts());
+
+  if (!Res.X->isLValue() || !Res.X->getType()->isScalarType())
+    return std::nullopt;
+
+  // 'update' has to be either a compound-assignment operation, or
+  // assignment-to-a-binary-op. Return nullopt if these are not the case.
+  // If we are already compound-assign, we're done!
+  if (IsRHSCompoundAssign)
+    return Res;
+
+  // else we have to check that we have a binary operator.
+  const Expr *RHS = BinaryArgs->second->IgnoreImpCasts();
+
+  if (isa<BinaryOperator>(RHS)) {
+    return Res;
+  } else if (const auto *OO = dyn_cast<CXXOperatorCallExpr>(RHS)) {
+    if (OO->isInfixBinaryOp())
+      return Res;
+  }
+
+  return std::nullopt;
+}
+
+/// The statement associated with an atomic capture comes in 1 of two forms: A
+/// compound statement containing two statements, or a single statement.  In
+/// either case, the compound/single statement is decomposed into 2 separate
+/// operations, eihter a read/write, read/update, or update/read.  This function
+/// figures out that information in the form listed in the standard (filling in
+/// V, X, or Expr) for each of these operations.
+static OpenACCAtomicConstruct::StmtInfo
+getCaptureStmtInfo(const Stmt *AssocStmt) {
+
+  if (const auto *CmpdStmt = dyn_cast<CompoundStmt>(AssocStmt)) {
+    // We checked during Sema to ensure we only have 2 statements here, and
+    // that both are expressions, we can look at these to see what the valid
+    // options are.
+    const Expr *Stmt1 = cast<Expr>(*CmpdStmt->body().begin())->IgnoreImpCasts();
+    const Expr *Stmt2 =
+        cast<Expr>(*(CmpdStmt->body().begin() + 1))->IgnoreImpCasts();
+
+    // The compound statement form allows read/write, read/update, or
+    // update/read. First we get the information for a 'Read' to see if this is
+    // one of the former two.
+    std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Read =
+        getReadStmtInfo(Stmt1);
+
+    if (Read) {
+      // READ : WRITE
+      // v = x; x = expr
+      // READ : UPDATE
+      // v = x; x binop = expr
+      // v = x; x = x binop expr
+      // v = x; x = expr binop x
+      // v = x; x++
+      // v = x; ++x
+      // v = x; x--
+      // v = x; --x
+      std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Update =
+          getUpdateStmtInfo(Stmt2);
+      // Since we already know the first operation is a read, the second is
+      // either an update, which we check, or a write, which we can assume next.
+      if (Update)
+        return OpenACCAtomicConstruct::StmtInfo::createReadUpdate(*Read,
+                                                                  *Update);
+
+      std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Write =
+          getWriteStmtInfo(Stmt2);
+      return OpenACCAtomicConstruct::StmtInfo::createReadWrite(*Read, *Write);
+    }
+    // UPDATE: READ
+    // x binop = expr; v = x
+    // x = x binop expr; v = x
+    // x = expr binop x ; v = x
+    // ++ x; v = x
+    // x++; v = x
+    // --x; v = x
+    // x--; v = x
+    // Otherwise, it is one of the above forms for update/read.
+    std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Update =
+        getUpdateStmtInfo(Stmt1);
+    Read = getReadStmtInfo(Stmt2);
+
+    return OpenACCAtomicConstruct::StmtInfo::createUpdateRead(*Update, *Read);
+  } else {
+    // All of the possible forms (listed below) that are writable as a single
+    // line are expressed as an update, then as a read.  We should be able to
+    // just run these two in the right order.
+    // UPDATE: READ
+    // v = x++;
+    // v = x--;
+    // v = ++x;
+    // v = --x;
+    // v = x binop=expr
+    // v = x = x binop expr
+    // v = x = expr binop x
+
+    const Expr *E = cast<const Expr>(AssocStmt);
+
+    std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Read =
+        getReadStmtInfo(E, /*ForAtomicComputeSingleStmt=*/true);
+    std::optional<OpenACCAtomicConstruct::SingleStmtInfo> Update =
+        getUpdateStmtInfo(Read->X);
+
+    // Fixup this, since the 'X' for the read is the result after write, but is
+    // the same value as the LHS-most variable of the update(its X).
+    Read->X = Update->X;
+    return OpenACCAtomicConstruct::StmtInfo::createUpdateRead(*Update, *Read);
+  }
+  return {};
 }
 
 const OpenACCAtomicConstruct::StmtInfo
@@ -357,48 +547,28 @@ OpenACCAtomicConstruct::getAssociatedStmtInfo() const {
   // asserts to ensure we don't get off into the weeds.
   assert(getAssociatedStmt() && "invalid associated stmt?");
 
-  const Expr *AssocStmt = cast<const Expr>(getAssociatedStmt());
   switch (AtomicKind) {
-  case OpenACCAtomicKind::Capture:
-    assert(false && "Only 'read'/'write'/'update' have been implemented here");
-    return {};
-  case OpenACCAtomicKind::Read: {
-    // Read only supports the format 'v = x'; where both sides are a scalar
-    // expression. This can come in 2 forms; BinaryOperator or
-    // CXXOperatorCallExpr (rarely).
-    std::pair<const Expr *, const Expr *> BinaryArgs =
-        getBinaryOpArgs(AssocStmt);
-    // We want the L-value for each side, so we ignore implicit casts.
-    return {BinaryArgs.first->IgnoreImpCasts(),
-            BinaryArgs.second->IgnoreImpCasts(), /*expr=*/nullptr};
-  }
-  case OpenACCAtomicKind::Write: {
-    // Write supports only the format 'x = expr', where the expression is scalar
-    // type, and 'x' is a scalar l value. As above, this can come in 2 forms;
-    // Binary Operator or CXXOperatorCallExpr.
-    std::pair<const Expr *, const Expr *> BinaryArgs =
-        getBinaryOpArgs(AssocStmt);
-    // We want the L-value for ONLY the X side, so we ignore implicit casts. For
-    // the right side (the expr), we emit it as an r-value so we need to
-    // maintain implicit casts.
-    return {/*v=*/nullptr, BinaryArgs.first->IgnoreImpCasts(),
-            BinaryArgs.second};
-  }
-  case OpenACCAtomicKind::None:
-  case OpenACCAtomicKind::Update: {
-    std::pair<bool, const Expr *> UnaryArgs = getUnaryOpArgs(AssocStmt);
-    if (UnaryArgs.first)
-      return {/*v=*/nullptr, UnaryArgs.second->IgnoreImpCasts(),
-              /*expr=*/nullptr};
+  case OpenACCAtomicKind::Read:
+    return OpenACCAtomicConstruct::StmtInfo{
+        OpenACCAtomicConstruct::StmtInfo::StmtForm::Read,
+        *getReadStmtInfo(cast<const Expr>(getAssociatedStmt())),
+        OpenACCAtomicConstruct::SingleStmtInfo::Empty()};
 
-    std::pair<const Expr *, const Expr *> BinaryArgs =
-        getBinaryOpArgs(AssocStmt);
-    // For binary args, we just store the RHS as an expression (in the
-    // expression slot), since the codegen just wants the whole thing for a
-    // recipe.
-    return {/*v=*/nullptr, BinaryArgs.first->IgnoreImpCasts(),
-            BinaryArgs.second};
-  }
+  case OpenACCAtomicKind::Write:
+    return OpenACCAtomicConstruct::StmtInfo{
+        OpenACCAtomicConstruct::StmtInfo::StmtForm::Write,
+        *getWriteStmtInfo(cast<const Expr>(getAssociatedStmt())),
+        OpenACCAtomicConstruct::SingleStmtInfo::Empty()};
+
+  case OpenACCAtomicKind::None:
+  case OpenACCAtomicKind::Update:
+    return OpenACCAtomicConstruct::StmtInfo{
+        OpenACCAtomicConstruct::StmtInfo::StmtForm::Update,
+        *getUpdateStmtInfo(cast<const Expr>(getAssociatedStmt())),
+        OpenACCAtomicConstruct::SingleStmtInfo::Empty()};
+
+  case OpenACCAtomicKind::Capture:
+    return getCaptureStmtInfo(getAssociatedStmt());
   }
 
   llvm_unreachable("unknown OpenACC atomic kind");

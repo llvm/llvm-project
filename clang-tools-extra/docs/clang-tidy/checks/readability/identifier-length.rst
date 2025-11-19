@@ -16,7 +16,8 @@ The following options are described below:
  - :option:`MinimumVariableNameLength`, :option:`IgnoredVariableNames`
  - :option:`MinimumParameterNameLength`, :option:`IgnoredParameterNames`
  - :option:`MinimumLoopCounterNameLength`, :option:`IgnoredLoopCounterNames`
- - :option:`MinimumExceptionNameLength`, :option:`IgnoredExceptionVariableNames`
+ - :option:`MinimumExceptionNameLength`,
+   :option:`IgnoredExceptionVariableNames`
 
 .. option:: MinimumVariableNameLength
 
