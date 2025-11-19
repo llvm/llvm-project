@@ -26,3 +26,19 @@ void test_mm_sfence(void) {
   // LLVM: call void @llvm.x86.sse.sfence()
   // OGCG: call void @llvm.x86.sse.sfence()
 }
+
+__m128 test_mm_undefined_ps(void) {
+  // CIR-LABEL: _mm_undefined_ps
+  // CIR: %[[A:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.double>
+  // CIR: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<2 x !cir.double> -> !cir.vector<4 x !cir.float>
+  // CIR: cir.return %{{.*}} : !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: test_mm_undefined_ps
+  // LLVM: store <4 x float> zeroinitializer, ptr %[[A:.*]], align 16
+  // LLVM: %{{.*}} = load <4 x float>, ptr %[[A]], align 16
+  // LLVM: ret <4 x float> %{{.*}}
+
+  // OGCG-LABEL: test_mm_undefined_ps
+  // OGCG: ret <4 x float> zeroinitializer
+  return _mm_undefined_ps();
+}
