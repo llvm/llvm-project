@@ -213,6 +213,9 @@ Error MustacheHTMLGenerator::generateDocs(
     }
   }
 
+  if (!CDCtx.KeepJSON)
+    sys::fs::remove_directories(JSONPath);
+
   return Error::success();
 }
 

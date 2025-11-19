@@ -110,6 +110,11 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<bool>
+    KeepJSON("keep-json",
+             llvm::cl::desc("Keep JSON residuals after processing."),
+             llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
+
 enum OutputFormatTy { md, yaml, html, mustache, json };
 
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
@@ -325,6 +330,7 @@ Example usage for a project using a compile commands database:
         RepositoryCodeLinePrefix,
         BaseDirectory,
         {UserStylesheets.begin(), UserStylesheets.end()},
+        KeepJSON,
         FTimeTrace};
 
     if (Format == "html") {

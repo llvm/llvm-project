@@ -481,9 +481,9 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef RepositoryUrl,
                                  StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets,
-                                 bool FTimeTrace)
+                                 bool KeepJSON, bool FTimeTrace)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      FTimeTrace(FTimeTrace), OutDirectory(OutDirectory),
+      FTimeTrace(FTimeTrace), KeepJSON(KeepJSON), OutDirectory(OutDirectory),
       UserStylesheets(UserStylesheets), Base(Base) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())

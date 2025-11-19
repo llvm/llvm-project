@@ -39,8 +39,8 @@ getClangDocContext(std::vector<std::string> UserStylesheets = {},
                    StringRef RepositoryUrl = "",
                    StringRef RepositoryLinePrefix = "", StringRef Base = "") {
   ClangDocContext CDCtx{
-      {},   "test-project", {}, {}, {}, RepositoryUrl, RepositoryLinePrefix,
-      Base, UserStylesheets};
+      {},   "test-project",  {}, {}, {}, RepositoryUrl, RepositoryLinePrefix,
+      Base, UserStylesheets, {}};
   CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(), "");
   CDCtx.JsScripts.emplace_back("");
   return CDCtx;
