@@ -43,7 +43,7 @@ namespace {
 /// Struct to store the complete context for a potential lifetime violation.
 struct PendingWarning {
   SourceLocation ExpiryLoc; // Where the loan expired.
-  const Expr *UseExpr;      // Where the origin holding this loan was used.
+  llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
   Confidence ConfidenceLevel;
 };
 
@@ -68,7 +68,7 @@ public:
     issuePendingWarnings();
   }
 
-  /// Checks for use-after-free errors when a loan expires.
+  /// Checks for use-after-free & use-after-return errors when a loan expires.
   ///
   /// This method examines all live origins at the expiry point and determines
   /// if any of them hold the expiring loan. If so, it creates a pending
@@ -83,7 +83,11 @@ public:
     LoanID ExpiredLoan = EF->getLoanID();
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
     Confidence CurConfidence = Confidence::None;
-    const UseFact *BadUse = nullptr;
+    // The UseFact or OriginEscapesFact most indicative of a lifetime error,
+    // prioritized by earlier source location.
+    llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
+        BestCausingFact = nullptr;
+
     for (auto &[OID, LiveInfo] : Origins) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
       if (!HeldLoans.contains(ExpiredLoan))
@@ -92,17 +96,17 @@ public:
       Confidence NewConfidence = livenessKindToConfidence(LiveInfo.Kind);
       if (CurConfidence < NewConfidence) {
         CurConfidence = NewConfidence;
-        BadUse = LiveInfo.CausingUseFact;
+        BestCausingFact = LiveInfo.CausingFact;
       }
     }
-    if (!BadUse)
+    if (!BestCausingFact)
       return;
     // We have a use-after-free.
     Confidence LastConf = FinalWarningsMap.lookup(ExpiredLoan).ConfidenceLevel;
     if (LastConf >= CurConfidence)
       return;
     FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
-                                     /*UseExpr=*/BadUse->getUseExpr(),
+                                     /*BestCausingFact=*/BestCausingFact,
                                      /*ConfidenceLevel=*/CurConfidence};
   }
 
@@ -112,8 +116,20 @@ public:
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
       const Expr *IssueExpr = L.IssueExpr;
-      Reporter->reportUseAfterFree(IssueExpr, Warning.UseExpr,
-                                   Warning.ExpiryLoc, Warning.ConfidenceLevel);
+      llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
+          CausingFact = Warning.CausingFact;
+      Confidence Confidence = Warning.ConfidenceLevel;
+      SourceLocation ExpiryLoc = Warning.ExpiryLoc;
+
+      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>())
+        Reporter->reportUseAfterFree(IssueExpr, UF->getUseExpr(), ExpiryLoc,
+                                     Confidence);
+      else if (const auto *OEF =
+                   CausingFact.dyn_cast<const OriginEscapesFact *>())
+        Reporter->reportUseAfterReturn(IssueExpr, OEF->getEscapeExpr(),
+                                       ExpiryLoc, Confidence);
+      else
+        llvm_unreachable("Unhandled CausingFact type");
     }
   }
 };

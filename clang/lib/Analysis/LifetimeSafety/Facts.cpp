@@ -43,10 +43,10 @@ void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << ")\n";
 }
 
-void ReturnOfOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                              const OriginManager &OM) const {
-  OS << "ReturnOfOrigin (";
-  OM.dump(getReturnedOriginID(), OS);
+void OriginEscapesFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                             const OriginManager &OM) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
   OS << ")\n";
 }
 
@@ -93,6 +93,16 @@ void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
     }
     llvm::dbgs() << "  End of Block\n";
   }
+}
+
+llvm::ArrayRef<const Fact *>
+FactManager::getBlockContaining(ProgramPoint P) const {
+  for (const auto &BlockToFactsVec : BlockToFacts) {
+    for (const Fact *F : BlockToFactsVec)
+      if (F == P)
+        return BlockToFactsVec;
+  }
+  return {};
 }
 
 } // namespace clang::lifetimes::internal
