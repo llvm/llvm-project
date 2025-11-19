@@ -171,12 +171,20 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
   if (!global)
     return false;
 
+  // Check if the global is actually a common block by demangling its name.
+  // Module EQUIVALENCE variables also use storage operands but are mangled
+  // as VARIABLE type, so we reject them to avoid treating them as common
+  // blocks.
+  llvm::StringRef globalSymbol = sym.getRootReference();
+  auto globalResult = fir::NameUniquer::deconstruct(globalSymbol);
+  if (globalResult.first == fir::NameUniquer::NameKind::VARIABLE)
+    return false;
+
   // FIXME: We are trying to extract the name of the common block from the
   // name of the global. As part of mangling, GetCommonBlockObjectName can
   // add a trailing _ in the name of that global. The demangle function
   // does not seem to handle such cases. So the following hack is used to
   // remove the trailing '_'.
-  llvm::StringRef globalSymbol = sym.getRootReference();
   llvm::StringRef commonName = globalSymbol;
   if (commonName != Fortran::common::blankCommonObjectName &&
       !commonName.empty() && commonName.back() == '_')
