@@ -13,8 +13,8 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/platform.hpp>
 
-#include "detail/offload/info_code.hpp"
-#include "detail/offload/offload_utils.hpp"
+#include <detail/offload/info_code.hpp>
+#include <detail/offload/offload_utils.hpp>
 
 #include <OffloadAPI.h>
 
