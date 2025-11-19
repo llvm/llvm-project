@@ -1204,6 +1204,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
           // No branch weights can produce a frequency of less than one given
           // the initial iteration, and our formulas produce a negative
           // probability if we try.
+          assert(Freq >= 1.0 && "expected freq >= 1 due to initial iteration");
           double NewFreq = std::max(Freq - 1, 1.0);
           setLoopProbability(
               L, BranchProbability::getBranchProbability(1 - 1 / NewFreq));
