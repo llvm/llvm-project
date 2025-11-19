@@ -19451,15 +19451,14 @@ static bool IsSVECntIntrinsic(SDValue S) {
   case Intrinsic::aarch64_sve_cnth:
   case Intrinsic::aarch64_sve_cntw:
   case Intrinsic::aarch64_sve_cntd:
-  case Intrinsic::aarch64_sve_cntp:
     return true;
   }
   return false;
 }
 
 // Returns the maximum (scalable) value that can be returned by an SVE count
-// intrinsic. The supported intrinsics are covered by IsSVECntIntrinsic.
-static ElementCount getMaxValueForSVECntIntrinsic(SDValue Op) {
+// intrinsic. Returns std::nullopt if \p Op is not aarch64_sve_cnt*. 
+static std::optional<ElementCount> getMaxValueForSVECntIntrinsic(SDValue Op) {
   Intrinsic::ID IID = getIntrinsicID(Op.getNode());
   if (IID == Intrinsic::aarch64_sve_cntp)
     return Op.getOperand(1).getValueType().getVectorElementCount();
@@ -19473,7 +19472,7 @@ static ElementCount getMaxValueForSVECntIntrinsic(SDValue Op) {
   case Intrinsic::aarch64_sve_cntb:
     return ElementCount::getScalable(16);
   default:
-    llvm_unreachable("Unexpected intrinsic");
+    return std::nullopt;
   }
 }
 
@@ -31684,20 +31683,20 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
     return false;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    if (!IsSVECntIntrinsic(Op))
+    std::optional<ElementCount> MaxCount = getMaxValueForSVECntIntrinsic(Op);
+    if (!MaxCount)
       return false;
     unsigned MaxSVEVectorSizeInBits = Subtarget->getMaxSVEVectorSizeInBits();
     if (!MaxSVEVectorSizeInBits)
       MaxSVEVectorSizeInBits = AArch64::SVEMaxBitsPerVector;
     unsigned VscaleMax = MaxSVEVectorSizeInBits / 128;
-    unsigned MaxCount =
-        getMaxValueForSVECntIntrinsic(Op).getKnownMinValue() * VscaleMax;
+    unsigned MaxValue = MaxCount.getKnownMinValue() * VscaleMax;
     // The SVE count intrinsics don't support the multiplier immediate so we
     // don't have to account for that here. The value returned may be slightly
     // over the true required bits, as this is based on the "ALL" pattern. The
     // other patterns are also exposed by these intrinsics, but they all
     // return a value that's strictly less than "ALL".
-    unsigned RequiredBits = llvm::bit_width(MaxCount);
+    unsigned RequiredBits = llvm::bit_width(MaxValue);
     unsigned BitWidth = Known.Zero.getBitWidth();
     if (RequiredBits < BitWidth)
       Known.Zero.setHighBits(BitWidth - RequiredBits);
