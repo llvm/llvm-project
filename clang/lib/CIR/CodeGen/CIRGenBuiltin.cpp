@@ -22,6 +22,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -523,10 +524,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_operator_new:
     return emitNewOrDeleteBuiltinCall(
-        e->getCallee()->getType()->castAs<FunctionProtoType>(), e, false);
+        e->getCallee()->getType()->castAs<FunctionProtoType>(), e, OO_New);
   case Builtin::BI__builtin_operator_delete:
     emitNewOrDeleteBuiltinCall(
-        e->getCallee()->getType()->castAs<FunctionProtoType>(), e, true);
+        e->getCallee()->getType()->castAs<FunctionProtoType>(), e, OO_Delete);
     return RValue::get(nullptr);
   }
 
