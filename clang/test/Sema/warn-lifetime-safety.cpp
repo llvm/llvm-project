@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 
 struct MyObj {
   int id;
@@ -397,6 +397,131 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
 }
 
 //===----------------------------------------------------------------------===//
+// Basic Definite Use-After-Return (Return-Stack-Address) (-W...permissive)
+// These are cases where the pointer is guaranteed to be dangling at the use site.
+//===----------------------------------------------------------------------===//
+
+MyObj* simple_return_stack_address() {
+  MyObj s;      
+  MyObj* p = &s; // expected-warning {{address of stack memory is returned later}}
+  return p;      // expected-note {{returned here}}
+}
+
+MyObj* direct_return() {
+  MyObj s;      
+  return &s;     // expected-warning {{address of stack memory is returned later}}
+                 // expected-note@-1 {{returned here}}
+}
+
+const MyObj* conditional_assign_unconditional_return(const MyObj& safe, bool c) {
+  MyObj s; 
+  const MyObj* p = &safe;
+  if (c) {
+    p = &s;       // expected-warning {{address of stack memory is returned later}}
+  }     
+  return p;      // expected-note {{returned here}}
+}
+
+View conditional_assign_both_branches(const MyObj& safe, bool c) {
+  MyObj s;
+  View p;
+  if (c) {
+    p = s;      // expected-warning {{address of stack memory is returned later}}
+  } 
+  else {
+    p = safe;
+  }
+  return p;     // expected-note {{returned here}}
+
+}
+
+View reassign_safe_to_local(const MyObj& safe) {
+  MyObj local;
+  View p = safe;
+  p = local;    // expected-warning {{address of stack memory is returned later}}
+  return p;     // expected-note {{returned here}}
+}
+
+View pointer_chain_to_local() {
+  MyObj local;
+  View p1 = local;     // expected-warning {{address of stack memory is returned later}}
+  View p2 = p1; 
+  return p2;          // expected-note {{returned here}}
+}
+
+View multiple_assign_multiple_return(const MyObj& safe, bool c1, bool c2) {
+  MyObj local1;
+  MyObj local2;
+  View p;
+  if (c1) {
+    p = local1;       // expected-warning {{address of stack memory is returned later}}
+    return p;         // expected-note {{returned here}}
+  }
+  else if (c2) {
+    p = local2;       // expected-warning {{address of stack memory is returned later}}
+    return p;         // expected-note {{returned here}}
+  }
+  p = safe;
+  return p;
+}
+
+View multiple_assign_single_return(const MyObj& safe, bool c1, bool c2) {
+  MyObj local1;
+  MyObj local2;
+  View p;
+  if (c1) {
+    p = local1;      // expected-warning {{address of stack memory is returned later}}
+  }
+  else if (c2) {
+    p = local2;      // expected-warning {{address of stack memory is returned later}}
+  }
+  else {
+    p = safe;
+  }
+  return p;         // expected-note 2 {{returned here}}
+}
+
+View direct_return_of_local() {
+  MyObj stack;      
+  return stack;     // expected-warning {{address of stack memory is returned later}}
+                    // expected-note@-1 {{returned here}}
+}
+
+MyObj& reference_return_of_local() {
+  MyObj stack;      
+  return stack;     // expected-warning {{address of stack memory is returned later}}
+                    // expected-note@-1 {{returned here}}
+}
+
+//===----------------------------------------------------------------------===//
+// Use-After-Scope & Use-After-Return (Return-Stack-Address) Combined
+// These are cases where the diagnostic kind is determined by location
+//===----------------------------------------------------------------------===//
+
+MyObj* uaf_before_uar() {
+  MyObj* p;
+  {
+    MyObj local_obj; 
+    p = &local_obj;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  return p;          // expected-note {{later used here}}
+}
+
+View uar_before_uaf(const MyObj& safe, bool c) {
+  View p;
+  {
+    MyObj local_obj; 
+    p = local_obj;  // expected-warning {{address of stack memory is returned later}}
+    if (c) {
+      return p;      // expected-note {{returned here}}
+    }
+  }
+  p.use();
+  p = safe;
+  return p;
+}
+
+//===----------------------------------------------------------------------===//
 // No-Error Cases
 //===----------------------------------------------------------------------===//
 void no_error_if_dangle_then_rescue() {
@@ -434,12 +559,19 @@ void no_error_loan_from_current_iteration(bool cond) {
   }
 }
 
+View safe_return(const MyObj& safe) {
+  MyObj local;
+  View p = local;
+  p = safe;     // p has been reassigned
+  return p;     // This is safe
+}
 
 //===----------------------------------------------------------------------===//
 // Lifetimebound Attribute Tests
 //===----------------------------------------------------------------------===//
 
 View Identity(View v [[clang::lifetimebound]]);
+const MyObj& IdentityRef(const MyObj& obj [[clang::lifetimebound]]);
 MyObj* Identity(MyObj* v [[clang::lifetimebound]]);
 View Choose(bool cond, View a [[clang::lifetimebound]], View b [[clang::lifetimebound]]);
 MyObj* GetPointer(const MyObj& obj [[clang::lifetimebound]]);
@@ -582,6 +714,28 @@ void lifetimebound_ctor() {
     v = obj;
   }
   (void)v;
+}
+
+View lifetimebound_return_of_local() {
+  MyObj stack;
+  return Identity(stack); // expected-warning {{address of stack memory is returned later}}
+                          // expected-note@-1 {{returned here}}
+}
+
+const MyObj& lifetimebound_return_ref_to_local() {
+  MyObj stack;
+  return IdentityRef(stack); // expected-warning {{address of stack memory is returned later}}
+                             // expected-note@-1 {{returned here}}
+}
+
+// FIXME: Fails to diagnose UAR when a reference to a by-value param escapes via the return value.
+View lifetimebound_return_of_by_value_param(MyObj stack_param) {
+  return Identity(stack_param); 
+}
+
+// FIXME: Fails to diagnose UAF when a reference to a by-value param escapes via an out-param.
+void uaf_from_by_value_param_failing(MyObj param, View* out_p) {
+  *out_p = Identity(param);
 }
 
 // Conditional operator.
