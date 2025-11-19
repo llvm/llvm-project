@@ -12,6 +12,9 @@ jobs:
     runs-on: depot-windows-2022-16
     if: github.repository_owner == 'llvm'
     steps:
+      - shell: bash
+        run: |
+          find /c -iname 'python3.lib'
       - uses: llvm/actions/setup-windows@main
         with:
           arch: amd64
