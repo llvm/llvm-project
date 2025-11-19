@@ -470,6 +470,9 @@ public:
     return AttributeSets.getFnStackAlignment();
   }
 
+  /// Derive fast-math flags from the function attributes.
+  FastMathFlags getFMFFromFnAttribute() const;
+
   /// Returns true if the function has ssp, sspstrong, or sspreq fn attrs.
   bool hasStackProtectorFnAttr() const;
 
