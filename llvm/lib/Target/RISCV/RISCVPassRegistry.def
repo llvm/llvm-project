@@ -16,7 +16,5 @@
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
-FUNCTION_PASS(
-    "riscv-codegenprepare",
-    RISCVCodeGenPreparePass(*static_cast<const RISCVTargetMachine *>(this)))
+FUNCTION_PASS("riscv-codegenprepare", RISCVCodeGenPreparePass(this))
 #undef FUNCTION_PASS

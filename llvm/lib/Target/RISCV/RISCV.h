@@ -28,10 +28,10 @@ class RISCVTargetMachine;
 
 class RISCVCodeGenPreparePass : public PassInfoMixin<RISCVCodeGenPreparePass> {
 private:
-  const RISCVTargetMachine &TM;
+  const RISCVTargetMachine *TM;
 
 public:
-  RISCVCodeGenPreparePass(const RISCVTargetMachine &TM) : TM(TM) {}
+  RISCVCodeGenPreparePass(const RISCVTargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 FunctionPass *createRISCVCodeGenPrepareLegacyPass();

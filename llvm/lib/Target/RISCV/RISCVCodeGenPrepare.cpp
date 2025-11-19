@@ -316,7 +316,7 @@ FunctionPass *llvm::createRISCVCodeGenPrepareLegacyPass() {
 PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
   DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
-  auto ST = &TM.getSubtarget<RISCVSubtarget>(F);
+  auto ST = &TM->getSubtarget<RISCVSubtarget>(F);
   bool Changed = RISCVCodeGenPrepare(F, DT, ST).run();
   if (!Changed)
     return PreservedAnalyses::all();
