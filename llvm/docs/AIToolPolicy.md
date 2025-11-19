@@ -1,5 +1,38 @@
 # LLVM AI Tool Use Policy
 
+LLVM's policy is that contributors can use whatever tools they would like to
+craft their contributions, but **contributors must read and review all
+LLM-generated code or text before they ask other project members to review
+it.** The contributor is always the author and is fully accountable for their
+contributions. Contributors should be sufficiently confident that the
+contribution is high enough quality that asking for a review is a good use of
+scarce maintainer time.
+
+We expect that new contributors will be less confident in their contributions,
+and our guidance to them is to start with small contributions that they can
+fully understand to build confidence. We aspire to be a welcoming community
+that helps new contributors grow their expertise, but learning involves taking
+small steps, getting feedback, and iterating. Passing maintainer feedback to an
+LLM doesn't help anyone grow, and does not sustain our community.
+
+The most important question in shared, foundational open source infrastructure
+is often not whether something can be done (many things are possible), but
+whether what's proposed makes a good tradeoff amongst all of the many competing
+objectives of the project contributors.
+
+The most important implication of our policy is that we'd like to ban agents
+that take action in our digital spaces without human supervision. For example,
+we don't think GitHub copilot is good enough to have it post review comments
+for everyone to see. However, LLM tools that propose suggested edits subject to
+human approval are allowed. As another example, many areas of LLVM are
+underdocumented. Using an LLM to generate documentation, which a contributor
+manually reviews for correctness, edits, and then posts as a PR, is an approved
+use of tools under this policy.
+
+TODO: Edit down the remainder
+
+---
+
 LLVM's policy on AI-assisted tooling is fundamentally liberal -- We want to
 enable contributors to use the latest and greatest tools available. However,
 human oversight remains critical. **The contributor is always the author and is
