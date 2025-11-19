@@ -169,14 +169,11 @@ void test_init_captures() {
   (void)y3;
 }
 
-void test_vla_no_crash() {
+void test_vla() {
   // VLAs create implicit VLA bound captures that cannot be written explicitly.
   // No warning should be issued.
   int n = 5;
   int vla[n];
-  for (int i = 0; i < n; ++i) {
-    vla[i] = i * 10;
-  }
 
   auto lambda = [&]() { return vla[0]; };
 }
