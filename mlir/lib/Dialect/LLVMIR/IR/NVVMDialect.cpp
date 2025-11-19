@@ -1037,10 +1037,9 @@ void MmaSpOp::print(OpAsmPrinter &p) {
 }
 
 void MmaSpOp::build(
-    OpBuilder &builder, OperationState &result,
-    Type resultType, ValueRange operandA, ValueRange operandB,
-    ValueRange operandC, Value sparseMetadata, Value sparsitySelector,
-    ArrayRef<int64_t> shape,
+    OpBuilder &builder, OperationState &result, Type resultType,
+    ValueRange operandA, ValueRange operandB, ValueRange operandC,
+    Value sparseMetadata, Value sparsitySelector, ArrayRef<int64_t> shape,
     std::optional<MMAIntOverflow> intOverflow,
     std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes) {
 
