@@ -616,7 +616,7 @@ public:
   Expected<InfoTreeNode> obtainInfoImpl() override;
   uint64_t getClockFrequency() const override { return getClockRate(); }
   uint64_t getHardwareParallelism() const override { return getTotalThreads(); }
-  Error getDeviceMemorySize(uint64_t &DSize) {
+  Error getDeviceMemorySize(uint64_t &DSize) override {
     DSize = getGlobalMemorySize();
     return Plugin::success();
   }
