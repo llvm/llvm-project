@@ -2217,19 +2217,6 @@ def MMAIntOverflow : I32EnumAttr<"MMAIntOverflow", "MMA overflow options",
 def MMAIntOverflowAttr : EnumAttr<NVVM_Dialect, MMAIntOverflow, "mma_int_overflow"> {
   let assemblyFormat = "`<` $value `>`";
 }
-
-/// Sparse MMA metadata types
-def MMASpMetadataStandard : I32EnumAttrCase<"standard", 0>;
-def MMASpMetadataOrdered : I32EnumAttrCase<"ordered", 1>;
-def MMASpMetadata : I32EnumAttr<"MMASpMetadata", "Sparse MMA metadata ordering",
-  [MMASpMetadataStandard, MMASpMetadataOrdered]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MMASpMetadataAttr : EnumAttr<NVVM_Dialect, MMASpMetadata, "mma_sp_metadata"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 /// MMA kind types (for mixed-precision FP8 operations)
 def MMAKindF8F6F4 : I32EnumAttrCase<"f8f6f4", 0>;
 def MMAKind : I32EnumAttr<"MMAKind", "MMA operation kind",
@@ -2921,8 +2908,7 @@ class MMA_SP_SYNC_INTR {
                 # " && \"" # op[2].ptx_elt_type # "\" == eltypeC"
                 # " && \"" # op[3].ptx_elt_type # "\" == eltypeD"
                 # " && (satf.has_value()  ? " # satf # " == static_cast<int>(*satf) : true)"
-                # " && " # !if(!eq(metadata, "sp"), "!orderedMetadata", "orderedMetadata")
-                # " && " # !if(!eq(kind, ""), "!hasKind", "hasKind") # ")\n"
+                # " && " # !if(!eq(metadata, "sp"), "!orderedMetadata", "orderedMetadata") # ")\n"
                 # "  return " #
                 MMA_SP_SYNC_NAME<metadata, kind, satf, op[0], op[1], op[2], op[3]>.id # ";",
                 "") // if supported
@@ -2956,9 +2942,9 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
     controls how the indices are distributed among threads in the warp and
     should typically be 0 or 1.
 
-    The optional `metadataType` attribute specifies the metadata ordering:
-    - `standard` (default): Uses standard sparse metadata ordering
-    - `ordered`: Uses ordered metadata (PTX ISA 8.5+, sm_90+)
+    The optional `orderedMetadata` attribute specifies the metadata ordering:
+    - Absence (default): Uses standard sparse metadata ordering
+    - Presence: Uses ordered metadata (PTX ISA 8.5+, sm_90+)
     
     The optional `kind` attribute specifies mixed-precision modes for FP8 operations:
     - `f8f6f4`: Enables e3m2, e2m3, e2m1 FP8 types and f16 accumulator (PTX ISA 8.7+, sm_90+)
@@ -2978,8 +2964,7 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
     // With ordered metadata:
     %d = nvvm.mma.sp.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1]
                           sparseMetadata[%meta] selector[%sel]
-                          {metadataType = #nvvm.mma_sp_metadata<ordered>,
-                           shape = {k = 32 : i32, m = 16 : i32, n = 8 : i32}}
+                          {orderedMetadata, shape = {k = 32 : i32, m = 16 : i32, n = 8 : i32}}
         : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
     ```
   }];
@@ -2989,7 +2974,7 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
              OptionalAttr<MMAIntOverflowAttr>:$intOverflowBehavior,
              OptionalAttr<MMATypesAttr>:$multiplicandAPtxType,
              OptionalAttr<MMATypesAttr>:$multiplicandBPtxType,
-             OptionalAttr<MMASpMetadataAttr>:$metadataType,
+             UnitAttr:$orderedMetadata,
              OptionalAttr<MMAKindAttr>:$kind,
              Variadic<LLVM_Type>:$operandA,
              Variadic<LLVM_Type>:$operandB,
@@ -3001,7 +2986,7 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
       static llvm::Intrinsic::ID getIntrinsicID(
             int64_t m, int64_t n, uint64_t k,
             std::optional<MMAIntOverflow> satf,
-            std::optional<MMASpMetadata> metadata,
+            bool orderedMetadata,
             std::optional<MMAKind> kind,
             mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
             mlir::NVVM::MMATypes eltypeCEnum, mlir::NVVM::MMATypes eltypeDEnum) {
@@ -3009,9 +2994,6 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
         llvm::StringRef eltypeB = stringifyEnum(eltypeBEnum);
         llvm::StringRef eltypeC = stringifyEnum(eltypeCEnum);
         llvm::StringRef eltypeD = stringifyEnum(eltypeDEnum);
-        bool orderedMetadata = metadata.has_value() &&
-                               *metadata == MMASpMetadata::ordered;
-        bool hasKind = kind.has_value();
         }],
         MMA_SP_SYNC_INTR<>.id, [{
           return 0;

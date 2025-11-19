@@ -968,7 +968,7 @@ MmaSpOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   auto intId = MmaSpOp::getIntrinsicID(
       thisOp.getShape().getM(), thisOp.getShape().getN(),
       thisOp.getShape().getK(), thisOp.getIntOverflowBehavior(),
-      thisOp.getMetadataType(), thisOp.getKind(),
+      thisOp.getOrderedMetadata(), thisOp.getKind(),
       *thisOp.getMultiplicandAPtxType(), *thisOp.getMultiplicandBPtxType(),
       thisOp.accumPtxType(), thisOp.resultPtxType());
 
