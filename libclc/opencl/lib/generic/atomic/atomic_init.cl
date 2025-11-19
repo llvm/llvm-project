@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_fetch_sub.h>
-#include <clc/opencl/atomic/atomic_fetch_sub.h>
+#include <clc/opencl/atomic/atomic_init.h>
 #include <clc/opencl/utils.h>
+
+#define __CLC_ATOMIC_GENTYPE __CLC_XCONCAT(atomic_, __CLC_GENTYPE)
 
 #define __CLC_BODY <atomic_init.inc>
 #include <clc/integer/gentype.inc>

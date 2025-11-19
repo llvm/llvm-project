@@ -23,8 +23,6 @@
 #endif
 #if defined(__CLC_HAVE_FP_ATOMIC) || defined(__CLC_HAVE_INT_ATOMIC)
 
-#define __CLC_ATOMIC_GENTYPE __CLC_XCONCAT(atomic_, __CLC_GENTYPE)
-
 #define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
   _CLC_OVERLOAD _CLC_DECL void atomic_init(                                    \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value);
