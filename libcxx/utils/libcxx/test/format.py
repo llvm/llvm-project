@@ -99,7 +99,7 @@ def parseScript(test, preamble):
     substitutions.append(
         (
             "%{verify}",
-            "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+            "%{cxx} %s %{flags} %{compile_flags} -U_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
         )
     )
     substitutions.append(("%{run}", "%{exec} %t.exe"))

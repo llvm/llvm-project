@@ -60,6 +60,7 @@ endif()
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
+include(CheckAssemblerFlag)
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
@@ -423,6 +424,41 @@ set(arm_or_thumb2_base_SOURCES
   ${GENERIC_SOURCES}
 )
 
+option(COMPILER_RT_ARM_OPTIMIZED_FP
+  "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
+
+set(arm_or_thumb2_optimized_fp_SOURCES)
+if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
+  check_assembler_flag(COMPILER_RT_HAS_MIMPLICIT_IT -mimplicit-it=always)
+  if(COMPILER_RT_HAS_MIMPLICIT_IT)
+    set(implicit_it_flag -mimplicit-it=always)
+  else()
+    check_assembler_flag(
+      COMPILER_RT_HAS_WA_MIMPLICIT_IT -Wa,-mimplicit-it=always)
+    if(COMPILER_RT_HAS_WA_MIMPLICIT_IT)
+      set(implicit_it_flag -Wa,-mimplicit-it=always)
+    else()
+      message(WARNING "Don't know how to set the -mimplicit-it=always flag in this assembler; not including Arm optimized implementations")
+      set(implicit_it_flag "")
+    endif()
+  endif()
+
+  if(implicit_it_flag)
+    set(assembly_files
+      arm/mulsf3.S
+      arm/divsf3.S
+      )
+    set_source_files_properties(${assembly_files}
+      PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
+    set(arm_or_thumb2_optimized_fp_SOURCES
+      ${assembly_files}
+      arm/fnan2.c
+      arm/fnorm2.c
+      arm/funder.c
+      )
+  endif()
+endif()
+
 set(arm_sync_SOURCES
   arm/sync_fetch_and_add_4.S
   arm/sync_fetch_and_add_8.S
@@ -455,6 +491,16 @@ set(thumb1_base_SOURCES
   arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+
+if(COMPILER_RT_ARM_OPTIMIZED_FP)
+  set(thumb1_base_SOURCES
+    arm/thumb1/mulsf3.S
+    arm/fnan2.c
+    arm/fnorm2.c
+    arm/funder.c
+    ${thumb1_base_SOURCES}
+  )
+endif()
 
 set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
@@ -567,6 +613,7 @@ if(MINGW)
     arm/aeabi_uldivmod.S
     arm/chkstk.S
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
   )
 
@@ -577,6 +624,7 @@ elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
     ${arm_EABI_SOURCES}
     ${arm_Thumb1_SOURCES}

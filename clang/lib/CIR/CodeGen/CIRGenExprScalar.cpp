@@ -168,6 +168,15 @@ public:
     return emitLoadOfLValue(e);
   }
 
+  mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *e) {
+    auto func = cast<cir::FuncOp>(cgf.curFn);
+    auto blockInfoAttr = cir::BlockAddrInfoAttr::get(
+        &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
+    return cir::BlockAddressOp::create(builder, cgf.getLoc(e->getSourceRange()),
+                                       cgf.convertType(e->getType()),
+                                       blockInfoAttr);
+  }
+
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
@@ -1972,6 +1981,20 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.createIntToPtr(middleVal, destCIRTy);
   }
 
+  case CK_BaseToDerived: {
+    const CXXRecordDecl *derivedClassDecl = destTy->getPointeeCXXRecordDecl();
+    assert(derivedClassDecl && "BaseToDerived arg isn't a C++ object pointer!");
+    Address base = cgf.emitPointerWithAlignment(subExpr);
+    Address derived = cgf.getAddressOfDerivedClass(
+        cgf.getLoc(ce->getSourceRange()), base, derivedClassDecl, ce->path(),
+        cgf.shouldNullCheckClassCastValue(ce));
+
+    // C++11 [expr.static.cast]p11: Behavior is undefined if a downcast is
+    // performed and the object is not of the derived type.
+    assert(!cir::MissingFeatures::sanitizers());
+
+    return cgf.getAsNaturalPointerTo(derived, ce->getType()->getPointeeType());
+  }
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
     // The EmitPointerWithAlignment path does this fine; just discard
@@ -1979,7 +2002,6 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return cgf.getAsNaturalPointerTo(cgf.emitPointerWithAlignment(ce),
                                      ce->getType()->getPointeeType());
   }
-
   case CK_Dynamic: {
     Address v = cgf.emitPointerWithAlignment(subExpr);
     const auto *dce = cast<CXXDynamicCastExpr>(ce);
@@ -2366,9 +2388,9 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       // type, so evaluating it returns a null Value.  However, a conditional
       // with non-void type must return a non-null Value.
       if (!result && !e->getType()->isVoidType()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "throw expression in conditional operator");
-        result = {};
+        result = builder.getConstant(
+            loc, cir::PoisonAttr::get(builder.getContext(),
+                                      cgf.convertType(e->getType())));
       }
 
       return result;
