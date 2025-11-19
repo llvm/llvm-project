@@ -766,6 +766,37 @@ static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
                       FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
 }
 
+// Returns true if the instruction is a packed f32 instruction that only reads
+// 32 bits from a scalar operand (SGPR or literal) and replicates the bits to
+// both channels.
+static bool
+isPKF32InstrReplicatingLow32BitsOfScalarInput(const GCNSubtarget *ST,
+                                              MachineInstr *MI) {
+  if (!ST->hasPKF32InstsReplicatingLow32BitsOfScalarInput())
+    return false;
+  switch (MI->getOpcode()) {
+  case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_FMA_F32:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("unknown instruction");
+}
+
+// Packed FP32 instructions only read 32 bits from a scalar operand (SGPR or
+// literal) and replicates the bits to both channels. Therefore, if the hi and
+// lo are not same, we can't fold it.
+static bool checkImmOpForPKF32InstrReplicatingLow32BitsOfScalarInput(
+    const FoldableDef &OpToFold) {
+  assert(OpToFold.isImm() && "Expected immediate operand");
+  uint64_t ImmVal = OpToFold.getEffectiveImmVal().value();
+  uint32_t Lo = Lo_32(ImmVal);
+  uint32_t Hi = Hi_32(ImmVal);
+  return Lo == Hi;
+}
+
 bool SIFoldOperandsImpl::tryAddToFoldList(
     SmallVectorImpl<FoldCandidate> &FoldList, MachineInstr *MI, unsigned OpNo,
     const FoldableDef &OpToFold) const {
@@ -918,6 +949,13 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (tryToFoldAsFMAAKorMK())
       return true;
   }
+
+  // Special case for PK_F32 instructions if we are trying to fold an imm to
+  // src0 or src1.
+  if (OpToFold.isImm() &&
+      isPKF32InstrReplicatingLow32BitsOfScalarInput(ST, MI) &&
+      !checkImmOpForPKF32InstrReplicatingLow32BitsOfScalarInput(OpToFold))
+    return false;
 
   appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
   return true;
@@ -1134,6 +1172,9 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
     return false;
 
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
+    if (isPKF32InstrReplicatingLow32BitsOfScalarInput(ST, UseMI) &&
+        !checkImmOpForPKF32InstrReplicatingLow32BitsOfScalarInput(OpToFold))
+      return false;
     appendFoldCandidate(FoldList, UseMI, UseOpIdx, OpToFold);
     return true;
   }
@@ -1284,10 +1325,11 @@ void SIFoldOperandsImpl::foldOperand(
         continue;
 
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
-      const TargetRegisterClass *MovSrcRC =
-          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[SrcIdx]));
 
-      if (MovSrcRC) {
+      int16_t RegClassID = TII->getOpRegClassID(MovDesc.operands()[SrcIdx]);
+      if (RegClassID != -1) {
+        const TargetRegisterClass *MovSrcRC = TRI->getRegClass(RegClassID);
+
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
 
@@ -1326,7 +1368,7 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
         const auto &SrcOp = UseMI->getOperand(UseOpIdx);
         MachineOperand NewSrcOp(SrcOp);
-        MachineFunction *MF = UseMI->getParent()->getParent();
+        MachineFunction *MF = UseMI->getMF();
         UseMI->removeOperand(1);
         UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
         UseMI->addOperand(NewSrcOp);                          // src0
@@ -1357,7 +1399,7 @@ void SIFoldOperandsImpl::foldOperand(
       // Remove this if 16-bit SGPRs (i.e. SGPR_LO16) are added to the
       // VS_16RegClass
       //
-      // Excerpt from AMDGPUGenRegisterInfo.inc
+      // Excerpt from AMDGPUGenRegisterInfoEnums.inc
       // NoSubRegister, //0
       // hi16, // 1
       // lo16, // 2
@@ -1533,20 +1575,6 @@ static unsigned getMovOpc(bool IsScalar) {
   return IsScalar ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
 }
 
-static void mutateCopyOp(MachineInstr &MI, const MCInstrDesc &NewDesc) {
-  MI.setDesc(NewDesc);
-
-  // Remove any leftover implicit operands from mutating the instruction. e.g.
-  // if we replace an s_and_b32 with a copy, we don't need the implicit scc def
-  // anymore.
-  const MCInstrDesc &Desc = MI.getDesc();
-  unsigned NumOps = Desc.getNumOperands() + Desc.implicit_uses().size() +
-                    Desc.implicit_defs().size();
-
-  for (unsigned I = MI.getNumOperands() - 1; I >= NumOps; --I)
-    MI.removeOperand(I);
-}
-
 std::optional<int64_t>
 SIFoldOperandsImpl::getImmOrMaterializedImm(MachineOperand &Op) const {
   if (Op.isImm())
@@ -1585,7 +1613,8 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
        Opc == AMDGPU::S_NOT_B32) &&
       Src0Imm) {
     MI->getOperand(1).ChangeToImmediate(~*Src0Imm);
-    mutateCopyOp(*MI, TII->get(getMovOpc(Opc == AMDGPU::S_NOT_B32)));
+    TII->mutateAndCleanupImplicit(
+        *MI, TII->get(getMovOpc(Opc == AMDGPU::S_NOT_B32)));
     return true;
   }
 
@@ -1613,7 +1642,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     // instruction.
     MI->getOperand(Src0Idx).ChangeToImmediate(NewImm);
     MI->removeOperand(Src1Idx);
-    mutateCopyOp(*MI, TII->get(getMovOpc(IsSGPR)));
+    TII->mutateAndCleanupImplicit(*MI, TII->get(getMovOpc(IsSGPR)));
     return true;
   }
 
@@ -1633,11 +1662,12 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     if (Src1Val == 0) {
       // y = or x, 0 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
     } else if (Src1Val == -1) {
       // y = or x, -1 => y = v_mov_b32 -1
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(getMovOpc(Opc == AMDGPU::S_OR_B32)));
+      TII->mutateAndCleanupImplicit(
+          *MI, TII->get(getMovOpc(Opc == AMDGPU::S_OR_B32)));
     } else
       return false;
 
@@ -1649,11 +1679,12 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     if (Src1Val == 0) {
       // y = and x, 0 => y = v_mov_b32 0
       MI->removeOperand(Src0Idx);
-      mutateCopyOp(*MI, TII->get(getMovOpc(Opc == AMDGPU::S_AND_B32)));
+      TII->mutateAndCleanupImplicit(
+          *MI, TII->get(getMovOpc(Opc == AMDGPU::S_AND_B32)));
     } else if (Src1Val == -1) {
       // y = and x, -1 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
     } else
       return false;
 
@@ -1665,7 +1696,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     if (Src1Val == 0) {
       // y = xor x, 0 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
       return true;
     }
   }
@@ -1711,7 +1742,7 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
     MI.removeOperand(Src1ModIdx);
   if (Src0ModIdx != -1)
     MI.removeOperand(Src0ModIdx);
-  mutateCopyOp(MI, NewDesc);
+  TII->mutateAndCleanupImplicit(MI, NewDesc);
   LLVM_DEBUG(dbgs() << MI);
   return true;
 }
@@ -1779,7 +1810,7 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   if (CopiesToReplace.empty() && FoldList.empty())
     return Changed;
 
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   // Make sure we add EXEC uses to any new v_mov instructions created.
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);

@@ -440,6 +440,7 @@ void no_error_loan_from_current_iteration(bool cond) {
 //===----------------------------------------------------------------------===//
 
 View Identity(View v [[clang::lifetimebound]]);
+MyObj* Identity(MyObj* v [[clang::lifetimebound]]);
 View Choose(bool cond, View a [[clang::lifetimebound]], View b [[clang::lifetimebound]]);
 MyObj* GetPointer(const MyObj& obj [[clang::lifetimebound]]);
 
@@ -581,4 +582,107 @@ void lifetimebound_ctor() {
     v = obj;
   }
   (void)v;
+}
+
+// Conditional operator.
+void conditional_operator_one_unsafe_branch(bool cond) {
+  MyObj safe;
+  MyObj* p = &safe;
+  {
+    MyObj temp;
+    p = cond ? &temp  // expected-warning {{object whose reference is captured may not live long enough}}
+             : &safe;
+  }  // expected-note {{destroyed here}}
+
+  // This is not a use-after-free for any value of `cond` but the analysis
+  // cannot reason this and marks the above as a false positive. This 
+  // ensures safety regardless of cond's value.
+  if (cond) 
+    p = &safe;
+  (void)*p;  // expected-note {{later used here}}
+}
+
+void conditional_operator_two_unsafe_branches(bool cond) {
+  MyObj* p;
+  {
+    MyObj a, b;
+    p = cond ? &a   // expected-warning {{object whose reference is captured does not live long enough}}
+             : &b;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }  // expected-note 2 {{destroyed here}}
+  (void)*p;  // expected-note 2 {{later used here}}
+}
+
+void conditional_operator_nested(bool cond) {
+  MyObj* p;
+  {
+    MyObj a, b, c, d;
+    p = cond ? cond ? &a    // expected-warning {{object whose reference is captured does not live long enough}}.
+                    : &b    // expected-warning {{object whose reference is captured does not live long enough}}.
+             : cond ? &c    // expected-warning {{object whose reference is captured does not live long enough}}.
+                    : &d;   // expected-warning {{object whose reference is captured does not live long enough}}.
+  }  // expected-note 4 {{destroyed here}}
+  (void)*p;  // expected-note 4 {{later used here}}
+}
+
+void conditional_operator_lifetimebound(bool cond) {
+  MyObj* p;
+  {
+    MyObj a, b;
+    p = Identity(cond ? &a    // expected-warning {{object whose reference is captured does not live long enough}}
+                      : &b);  // expected-warning {{object whose reference is captured does not live long enough}}
+  }  // expected-note 2 {{destroyed here}}
+  (void)*p;  // expected-note 2 {{later used here}}
+}
+
+void conditional_operator_lifetimebound_nested(bool cond) {
+  MyObj* p;
+  {
+    MyObj a, b;
+    p = Identity(cond ? Identity(&a)    // expected-warning {{object whose reference is captured does not live long enough}}
+                      : Identity(&b));  // expected-warning {{object whose reference is captured does not live long enough}}
+  }  // expected-note 2 {{destroyed here}}
+  (void)*p;  // expected-note 2 {{later used here}}
+}
+
+void conditional_operator_lifetimebound_nested_deep(bool cond) {
+  MyObj* p;
+  {
+    MyObj a, b, c, d;
+    p = Identity(cond ? Identity(cond ? &a     // expected-warning {{object whose reference is captured does not live long enough}}
+                                      : &b)    // expected-warning {{object whose reference is captured does not live long enough}}
+                      : Identity(cond ? &c     // expected-warning {{object whose reference is captured does not live long enough}}
+                                      : &d));  // expected-warning {{object whose reference is captured does not live long enough}}
+  }  // expected-note 4 {{destroyed here}}
+  (void)*p;  // expected-note 4 {{later used here}}
+}
+
+void parentheses(bool cond) {
+  MyObj* p;
+  {
+    MyObj a;
+    p = &((((a))));  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  (void)*p;          // expected-note {{later used here}}
+
+  {
+    MyObj a;
+    p = ((GetPointer((a))));  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                           // expected-note {{destroyed here}}
+  (void)*p;                   // expected-note {{later used here}}
+
+  {
+    MyObj a, b, c, d;
+    p = &(cond ? (cond ? a     // expected-warning {{object whose reference is captured does not live long enough}}.
+                       : b)    // expected-warning {{object whose reference is captured does not live long enough}}.
+               : (cond ? c     // expected-warning {{object whose reference is captured does not live long enough}}.
+                       : d));  // expected-warning {{object whose reference is captured does not live long enough}}.
+  }  // expected-note 4 {{destroyed here}}
+  (void)*p;  // expected-note 4 {{later used here}}
+
+  {
+    MyObj a, b, c, d;
+    p = ((cond ? (((cond ? &a : &b)))   // expected-warning 2 {{object whose reference is captured does not live long enough}}.
+              : &(((cond ? c : d)))));  // expected-warning 2 {{object whose reference is captured does not live long enough}}.
+  }  // expected-note 4 {{destroyed here}}
+  (void)*p;  // expected-note 4 {{later used here}}
 }

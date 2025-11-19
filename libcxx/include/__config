@@ -152,7 +152,7 @@
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-#    define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
+#    define _LIBCPP_ALIGNOF(...) alignof(__VA_ARGS__)
 #    define _ALIGNAS_TYPE(x) alignas(x)
 #    define _ALIGNAS(x) alignas(x)
 #    define _NOEXCEPT noexcept
@@ -161,7 +161,7 @@
 
 #  else
 
-#    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
+#    define _LIBCPP_ALIGNOF(...) _Alignof(__VA_ARGS__)
 #    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 #    define _ALIGNAS(x) __attribute__((__aligned__(x)))
 #    define nullptr __nullptr
@@ -291,6 +291,16 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HARDENING_SIG n // "none"
 #  endif
 
+#  if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_OBSERVE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG o
+#  elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG q
+#  elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG e
+#  else
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG i // `ignore`
+#  endif
+
 #  if !_LIBCPP_HAS_EXCEPTIONS
 #    define _LIBCPP_EXCEPTIONS_SIG n
 #  else
@@ -298,7 +308,9 @@ typedef __char32_t char32_t;
 #  endif
 
 #  define _LIBCPP_ODR_SIGNATURE                                                                                        \
-    _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_EXCEPTIONS_SIG), _LIBCPP_VERSION)
+    _LIBCPP_CONCAT(                                                                                                    \
+        _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_ASSERTION_SEMANTIC_SIG), _LIBCPP_EXCEPTIONS_SIG), \
+        _LIBCPP_VERSION)
 
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:
@@ -532,6 +544,12 @@ typedef __char32_t char32_t;
 #  else
 #    define _LIBCPP_DEPRECATED
 #    define _LIBCPP_DEPRECATED_(m)
+#  endif
+
+#  if defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#    define _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS 1
+#  else
+#    define _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS 0
 #  endif
 
 #  if !defined(_LIBCPP_CXX03_LANG)

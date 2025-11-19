@@ -125,11 +125,11 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -138,16 +138,16 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    bl normal_callee_vec_arg
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB4_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB4_4:
 ; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
@@ -155,7 +155,7 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -173,18 +173,18 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 ; CHECK-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-18
-; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -241,18 +241,18 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x29, [sp], #32 // 8-byte Folded Reload
@@ -270,18 +270,18 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-18
-; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -299,7 +299,7 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p0, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p0, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbz w19, #0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1:
@@ -311,15 +311,15 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB6_4:
-; CHECK-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    bl normal_callee_predicate_vec_arg
-; CHECK-NEXT:    str p0, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p0, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB6_6
 ; CHECK-NEXT:  // %bb.5:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB6_6:
-; CHECK-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p1, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p1, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
@@ -338,18 +338,18 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x29, [sp], #32 // 8-byte Folded Reload
@@ -483,7 +483,7 @@ define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB10_4: // %entry
 ; CHECK-NEXT:    ldp x29, x30, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #120] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #120] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload

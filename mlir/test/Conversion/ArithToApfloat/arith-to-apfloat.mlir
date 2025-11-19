@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --convert-arith-to-apfloat -split-input-file -verify-diagnostics | FileCheck %s
 
-// CHECK-LABEL:   func.func private @__mlir_apfloat_add(i32, i64, i64) -> i64
+// CHECK-LABEL:   func.func private @_mlir_apfloat_add(i32, i64, i64) -> i64
 
 // CHECK-LABEL:   func.func @foo() -> f8E4M3FN {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 2.250000e+00 : f8E4M3FN
@@ -12,7 +12,7 @@
 // CHECK:           return %[[CONSTANT_0]] : f6E3M2FN
 // CHECK:         }
 
-// Illustrate that both f8E4M3FN and f6E3M2FN calling the same __mlir_apfloat_add is fine
+// Illustrate that both f8E4M3FN and f6E3M2FN calling the same _mlir_apfloat_add is fine
 // because each gets its own semantics enum and gets bitcast/extui/trunci to its own width.
 // CHECK-LABEL:   func.func @full_example() {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.375000e+00 : f8E4M3FN
@@ -23,7 +23,7 @@
 // CHECK:           %[[EXTUI_1:.*]] = arith.extui %[[BITCAST_1]] : i8 to i64
 //                  // fltSemantics semantics for f8E4M3FN
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : i32
-// CHECK:           %[[VAL_1:.*]] = call @__mlir_apfloat_add(%[[CONSTANT_1]], %[[EXTUI_0]], %[[EXTUI_1]]) : (i32, i64, i64) -> i64
+// CHECK:           %[[VAL_1:.*]] = call @_mlir_apfloat_add(%[[CONSTANT_1]], %[[EXTUI_0]], %[[EXTUI_1]]) : (i32, i64, i64) -> i64
 // CHECK:           %[[TRUNCI_0:.*]] = arith.trunci %[[VAL_1]] : i64 to i8
 // CHECK:           %[[BITCAST_2:.*]] = arith.bitcast %[[TRUNCI_0]] : i8 to f8E4M3FN
 // CHECK:           vector.print %[[BITCAST_2]] : f8E4M3FN
@@ -36,7 +36,7 @@
 // CHECK:           %[[EXTUI_3:.*]] = arith.extui %[[BITCAST_4]] : i6 to i64
 //                  // fltSemantics semantics for f6E3M2FN
 // CHECK:           %[[CONSTANT_3:.*]] = arith.constant 16 : i32
-// CHECK:           %[[VAL_3:.*]] = call @__mlir_apfloat_add(%[[CONSTANT_3]], %[[EXTUI_2]], %[[EXTUI_3]]) : (i32, i64, i64) -> i64
+// CHECK:           %[[VAL_3:.*]] = call @_mlir_apfloat_add(%[[CONSTANT_3]], %[[EXTUI_2]], %[[EXTUI_3]]) : (i32, i64, i64) -> i64
 // CHECK:           %[[TRUNCI_1:.*]] = arith.trunci %[[VAL_3]] : i64 to i6
 // CHECK:           %[[BITCAST_5:.*]] = arith.bitcast %[[TRUNCI_1]] : i6 to f6E3M2FN
 // CHECK:           vector.print %[[BITCAST_5]] : f6E3M2FN
@@ -69,9 +69,9 @@ func.func @full_example() {
 
 // -----
 
-// CHECK: func.func private @__mlir_apfloat_add(i32, i64, i64) -> i64
+// CHECK: func.func private @_mlir_apfloat_add(i32, i64, i64) -> i64
 // CHECK: %[[sem:.*]] = arith.constant 18 : i32
-// CHECK: call @__mlir_apfloat_add(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+// CHECK: call @_mlir_apfloat_add(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @addf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.addf %arg0, %arg1 : f4E2M1FN
   return
@@ -80,8 +80,8 @@ func.func @addf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 // -----
 
 // Test decl collision (different type)
-// expected-error@+1{{matched function '__mlir_apfloat_add' but with different type: '(i32, i32, f32) -> index' (expected '(i32, i64, i64) -> i64')}}
-func.func private @__mlir_apfloat_add(i32, i32, f32) -> index
+// expected-error@+1{{matched function '_mlir_apfloat_add' but with different type: '(i32, i32, f32) -> index' (expected '(i32, i64, i64) -> i64')}}
+func.func private @_mlir_apfloat_add(i32, i32, f32) -> index
 func.func @addf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.addf %arg0, %arg1 : f4E2M1FN
   return
@@ -89,9 +89,9 @@ func.func @addf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 
 // -----
 
-// CHECK: func.func private @__mlir_apfloat_subtract(i32, i64, i64) -> i64
+// CHECK: func.func private @_mlir_apfloat_subtract(i32, i64, i64) -> i64
 // CHECK: %[[sem:.*]] = arith.constant 18 : i32
-// CHECK: call @__mlir_apfloat_subtract(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+// CHECK: call @_mlir_apfloat_subtract(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.subf %arg0, %arg1 : f4E2M1FN
   return
@@ -99,9 +99,9 @@ func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 
 // -----
 
-// CHECK: func.func private @__mlir_apfloat_multiply(i32, i64, i64) -> i64
+// CHECK: func.func private @_mlir_apfloat_multiply(i32, i64, i64) -> i64
 // CHECK: %[[sem:.*]] = arith.constant 18 : i32
-// CHECK: call @__mlir_apfloat_multiply(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+// CHECK: call @_mlir_apfloat_multiply(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.mulf %arg0, %arg1 : f4E2M1FN
   return
@@ -109,9 +109,9 @@ func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 
 // -----
 
-// CHECK: func.func private @__mlir_apfloat_divide(i32, i64, i64) -> i64
+// CHECK: func.func private @_mlir_apfloat_divide(i32, i64, i64) -> i64
 // CHECK: %[[sem:.*]] = arith.constant 18 : i32
-// CHECK: call @__mlir_apfloat_divide(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+// CHECK: call @_mlir_apfloat_divide(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.divf %arg0, %arg1 : f4E2M1FN
   return
@@ -119,9 +119,9 @@ func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 
 // -----
 
-// CHECK: func.func private @__mlir_apfloat_remainder(i32, i64, i64) -> i64
+// CHECK: func.func private @_mlir_apfloat_remainder(i32, i64, i64) -> i64
 // CHECK: %[[sem:.*]] = arith.constant 18 : i32
-// CHECK: call @__mlir_apfloat_remainder(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+// CHECK: call @_mlir_apfloat_remainder(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @remf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.remf %arg0, %arg1 : f4E2M1FN
   return

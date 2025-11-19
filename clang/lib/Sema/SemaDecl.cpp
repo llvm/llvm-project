@@ -59,6 +59,7 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -3352,6 +3353,11 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     foundAny = true;
 
   if (!foundAny) New->dropAttrs();
+}
+
+void Sema::CheckAttributesOnDeducedType(Decl *D) {
+  for (const Attr *A : D->attrs())
+    checkAttrIsTypeDependent(D, A);
 }
 
 // Returns the number of added attributes.
@@ -13117,6 +13123,13 @@ namespace {
     if (isa<ParmVarDecl>(OrigDecl))
       return;
 
+    // Skip checking for file-scope constexpr variables - constant evaluation
+    // will produce appropriate errors without needing runtime diagnostics.
+    // Local constexpr should still emit runtime warnings.
+    if (auto *VD = dyn_cast<VarDecl>(OrigDecl);
+        VD && VD->isConstexpr() && VD->isFileVarDecl())
+      return;
+
     E = E->IgnoreParens();
 
     // Skip checking T a = a where T is not a record or reference type.
@@ -13744,6 +13757,11 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 }
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
+  auto ResetDeclForInitializer = llvm::make_scope_exit([this]() {
+    if (this->ExprEvalContexts.empty())
+      this->ExprEvalContexts.back().DeclForInitializer = nullptr;
+  });
+
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
   if (!RealDecl) {
@@ -13795,6 +13813,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     if (DeduceVariableDeclarationType(VDecl, DirectInit, Init))
       return;
   }
+
+  this->CheckAttributesOnDeducedType(RealDecl);
 
   // dllimport cannot be used on variable definitions.
   if (VDecl->hasAttr<DLLImportAttr>() && !VDecl->isStaticDataMember()) {
@@ -14286,6 +14306,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (Type->isUndeducedType() &&
         DeduceVariableDeclarationType(Var, false, nullptr))
       return;
+
+    this->CheckAttributesOnDeducedType(RealDecl);
 
     // C++11 [class.static.data]p3: A static data member can be declared with
     // the constexpr specifier; if so, its declaration shall specify
@@ -15068,6 +15090,10 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   VarDecl *VD = dyn_cast_or_null<VarDecl>(ThisDecl);
   if (!VD)
     return;
+
+  // Emit any deferred warnings for the variable's initializer, even if the
+  // variable is invalid
+  AnalysisWarnings.issueWarningsForRegisteredVarDecl(VD);
 
   // Apply an implicit SectionAttr if '#pragma clang section bss|data|rodata' is active
   if (VD->hasGlobalStorage() && VD->isThisDeclarationADefinition() &&

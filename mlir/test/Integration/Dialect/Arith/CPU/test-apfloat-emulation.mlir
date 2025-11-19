@@ -1,14 +1,20 @@
+// REQUIRES: system-linux
+// TODO: Run only on Linux until we figure out how to build
+// mlir_apfloat_wrappers in a platform-independent way.
+
 // Case 1: All floating-point arithmetics is lowered through APFloat.
 // RUN: mlir-opt %s --convert-arith-to-apfloat --convert-to-llvm | \
 // RUN: mlir-runner -e entry --entry-point-result=void \
-// RUN:             --shared-libs=%mlir_c_runner_utils | FileCheck %s
+// RUN:             --shared-libs=%mlir_c_runner_utils \
+// RUN:             --shared-libs=%mlir_apfloat_wrappers | FileCheck %s
 
 // Case 2: Only unsupported arithmetics (f8E4M3FN) is lowered through APFloat.
 //         Arithmetics on f32 is lowered directly to LLVM.
 // RUN: mlir-opt %s --convert-to-llvm --convert-arith-to-apfloat \
 // RUN:          --convert-to-llvm --reconcile-unrealized-casts | \
 // RUN: mlir-runner -e entry --entry-point-result=void \
-// RUN:             --shared-libs=%mlir_c_runner_utils | FileCheck %s
+// RUN:             --shared-libs=%mlir_c_runner_utils \
+// RUN:             --shared-libs=%mlir_apfloat_wrappers | FileCheck %s
 
 // Put rhs into separate function so that it won't be constant-folded.
 func.func @foo() -> (f8E4M3FN, f32) {

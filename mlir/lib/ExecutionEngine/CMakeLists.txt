@@ -168,14 +168,25 @@ if(LLVM_ENABLE_PIC)
   set_property(TARGET mlir_float16_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_float16_utils PRIVATE mlir_float16_utils_EXPORTS)
 
-  add_mlir_library(mlir_apfloat_wrappers
-    SHARED
-    APFloatWrappers.cpp
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # TODO: This support library is only used on Linux builds until we figure
+    # out how to hide LLVM symbols in a way that works for all platforms.
+    add_mlir_library(mlir_apfloat_wrappers
+      SHARED
+      APFloatWrappers.cpp
 
-    EXCLUDE_FROM_LIBMLIR
+      EXCLUDE_FROM_LIBMLIR
+      )
+    set_target_properties(
+      mlir_apfloat_wrappers
+      PROPERTIES CXX_STANDARD 17
+                CXX_VISIBILITY_PRESET hidden
+                VISIBILITY_INLINES_HIDDEN ON
     )
-  set_property(TARGET mlir_apfloat_wrappers PROPERTY CXX_STANDARD 17)
-  target_compile_definitions(mlir_apfloat_wrappers PRIVATE mlir_apfloat_wrappers_EXPORTS)
+    target_compile_definitions(mlir_apfloat_wrappers PRIVATE mlir_apfloat_wrappers_EXPORTS)
+    # Hide LLVM symbols to avoid ODR violations.
+    target_link_options(mlir_apfloat_wrappers PRIVATE "-Wl,--exclude-libs,ALL")
+  endif()
 
   add_subdirectory(SparseTensor)
 
@@ -187,13 +198,17 @@ if(LLVM_ENABLE_PIC)
     EXCLUDE_FROM_LIBMLIR
 
     LINK_LIBS PUBLIC
-    mlir_apfloat_wrappers
     mlir_float16_utils
     MLIRSparseTensorEnums
     MLIRSparseTensorRuntime
     )
   set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
+
+  # Conditionally link apfloat wrappers only on Linux.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(mlir_c_runner_utils PUBLIC mlir_apfloat_wrappers)
+  endif()
 
   add_mlir_library(mlir_runner_utils
     SHARED
@@ -202,10 +217,14 @@ if(LLVM_ENABLE_PIC)
     EXCLUDE_FROM_LIBMLIR
 
     LINK_LIBS PUBLIC
-    mlir_apfloat_wrappers
     mlir_float16_utils
   )
   target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
+
+    # Conditionally link apfloat wrappers only on Linux.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(mlir_runner_utils PUBLIC mlir_apfloat_wrappers)
+  endif()
 
   add_mlir_library(mlir_async_runtime
     SHARED
@@ -335,7 +354,6 @@ if(LLVM_ENABLE_PIC)
       endif()
       string(STRIP AGENTS_STRING ${AGENTS_STRING})
       string(REPLACE "\n" ";" AGENTS_LIST ${AGENTS_STRING})
-      list(FILTER AGENTS_LIST EXCLUDE REGEX "gfx000")
       if (AGENTS_LIST STREQUAL "")
         message(SEND_ERROR "No non-CPU ROCm agents found on the system, and ROCM_TEST_CHIPSET is not defined")
       else()

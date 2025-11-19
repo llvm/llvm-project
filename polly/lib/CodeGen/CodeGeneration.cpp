@@ -25,7 +25,6 @@
 #include "polly/CodeGen/PerfMonitor.h"
 #include "polly/CodeGen/Utils.h"
 #include "polly/DependenceInfo.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/ScopHelper.h"
@@ -35,9 +34,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -320,82 +317,6 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   return true;
 }
 
-namespace {
-
-class CodeGeneration final : public ScopPass {
-public:
-  static char ID;
-
-  /// The data layout used.
-  const DataLayout *DL;
-
-  /// @name The analysis passes we need to generate code.
-  ///
-  ///{
-  LoopInfo *LI;
-  IslAstInfo *AI;
-  DominatorTree *DT;
-  ScalarEvolution *SE;
-  RegionInfo *RI;
-  ///}
-
-  CodeGeneration() : ScopPass(ID) {}
-
-  /// Generate LLVM-IR for the SCoP @p S.
-  bool runOnScop(Scop &S) override {
-    AI = &getAnalysis<IslAstInfoWrapperPass>().getAI();
-    LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    DL = &S.getFunction().getDataLayout();
-    RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
-    return generateCode(S, *AI, *LI, *DT, *SE, *RI);
-  }
-
-  /// Register all analyses and transformation required.
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ScopPass::getAnalysisUsage(AU);
-
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<IslAstInfoWrapperPass>();
-    AU.addRequired<RegionInfoPass>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<ScopDetectionWrapperPass>();
-    AU.addRequired<ScopInfoRegionPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-
-    AU.addPreserved<DependenceInfo>();
-    AU.addPreserved<IslAstInfoWrapperPass>();
-
-    // FIXME: We do not yet add regions for the newly generated code to the
-    //        region tree.
-  }
-};
-} // namespace
-
-PreservedAnalyses CodeGenerationPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                          ScopStandardAnalysisResults &AR,
-                                          SPMUpdater &U) {
-  auto &AI = SAM.getResult<IslAstAnalysis>(S, AR);
-  if (generateCode(S, AI, AR.LI, AR.DT, AR.SE, AR.RI)) {
-    U.invalidateScop(S);
-    return PreservedAnalyses::none();
-  }
-
-  return PreservedAnalyses::all();
+bool polly::runCodeGeneration(Scop &S, RegionInfo &RI, IslAstInfo &AI) {
+  return generateCode(S, AI, *S.getLI(), *S.getDT(), *S.getSE(), RI);
 }
-
-char CodeGeneration::ID = 1;
-
-Pass *polly::createCodeGenerationPass() { return new CodeGeneration(); }
-
-INITIALIZE_PASS_BEGIN(CodeGeneration, "polly-codegen",
-                      "Polly - Create LLVM-IR from SCoPs", false, false);
-INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(ScopDetectionWrapperPass);
-INITIALIZE_PASS_END(CodeGeneration, "polly-codegen",
-                    "Polly - Create LLVM-IR from SCoPs", false, false)

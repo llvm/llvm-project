@@ -15,8 +15,14 @@
 
 #include "orc-rt/Error.h"
 #include "orc-rt/ResourceManager.h"
+#include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/move_only_function.h"
 
+#include "orc-rt-c/CoreTypes.h"
+
+#include <condition_variable>
+#include <memory>
+#include <mutex>
 #include <vector>
 
 namespace orc_rt {
@@ -35,13 +41,21 @@ public:
   ///
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
-  Session(ErrorReporterFn ReportError) : ReportError(std::move(ReportError)) {}
+  Session(std::unique_ptr<TaskDispatcher> Dispatcher,
+          ErrorReporterFn ReportError)
+      : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
+  }
 
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;
   Session &operator=(const Session &) = delete;
+  Session(Session &&) = delete;
+  Session &operator=(Session &&) = delete;
 
   ~Session();
+
+  /// Dispatch a task using the Session's TaskDispatcher.
+  void dispatch(std::unique_ptr<Task> T) { Dispatcher->dispatch(std::move(T)); }
 
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
@@ -61,13 +75,30 @@ public:
   }
 
 private:
-  void shutdownNext(OnShutdownCompleteFn OnShutdownComplete, Error Err,
+  void shutdownNext(Error Err,
                     std::vector<std::unique_ptr<ResourceManager>> RemainingRMs);
 
-  std::mutex M;
+  void shutdownComplete();
+
+  std::unique_ptr<TaskDispatcher> Dispatcher;
   ErrorReporterFn ReportError;
+
+  enum class SessionState { Running, ShuttingDown, Shutdown };
+
+  std::mutex M;
+  SessionState State = SessionState::Running;
+  std::condition_variable StateCV;
   std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
+  std::vector<OnShutdownCompleteFn> ShutdownCallbacks;
 };
+
+inline orc_rt_SessionRef wrap(Session *S) noexcept {
+  return reinterpret_cast<orc_rt_SessionRef>(S);
+}
+
+inline Session *unwrap(orc_rt_SessionRef S) noexcept {
+  return reinterpret_cast<Session *>(S);
+}
 
 } // namespace orc_rt
 

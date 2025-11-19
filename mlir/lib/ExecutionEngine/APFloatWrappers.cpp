@@ -21,15 +21,24 @@
 //
 #include "llvm/ADT/APFloat.h"
 
-#if (defined(_WIN32) || defined(__CYGWIN__))
-#define MLIR_APFLOAT_WRAPPERS_EXPORTED __declspec(dllexport)
+#ifdef _WIN32
+#ifndef MLIR_APFLOAT_WRAPPERS_EXPORT
+#ifdef mlir_apfloat_wrappers_EXPORTS
+// We are building this library
+#define MLIR_APFLOAT_WRAPPERS_EXPORT __declspec(dllexport)
 #else
-#define MLIR_APFLOAT_WRAPPERS_EXPORTED __attribute__((visibility("default")))
-#endif
+// We are using this library
+#define MLIR_APFLOAT_WRAPPERS_EXPORT __declspec(dllimport)
+#endif // mlir_apfloat_wrappers_EXPORTS
+#endif // MLIR_APFLOAT_WRAPPERS_EXPORT
+#else
+// Non-windows: use visibility attributes.
+#define MLIR_APFLOAT_WRAPPERS_EXPORT __attribute__((visibility("default")))
+#endif // _WIN32
 
 /// Binary operations without rounding mode.
 #define APFLOAT_BINARY_OP(OP)                                                  \
-  int64_t MLIR_APFLOAT_WRAPPERS_EXPORTED __mlir_apfloat_##OP(                  \
+  MLIR_APFLOAT_WRAPPERS_EXPORT int64_t _mlir_apfloat_##OP(                     \
       int32_t semantics, uint64_t a, uint64_t b) {                             \
     const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(        \
         static_cast<llvm::APFloatBase::Semantics>(semantics));                 \
@@ -42,7 +51,7 @@
 
 /// Binary operations with rounding mode.
 #define APFLOAT_BINARY_OP_ROUNDING_MODE(OP, ROUNDING_MODE)                     \
-  int64_t MLIR_APFLOAT_WRAPPERS_EXPORTED __mlir_apfloat_##OP(                  \
+  MLIR_APFLOAT_WRAPPERS_EXPORT int64_t _mlir_apfloat_##OP(                     \
       int32_t semantics, uint64_t a, uint64_t b) {                             \
     const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(        \
         static_cast<llvm::APFloatBase::Semantics>(semantics));                 \
@@ -69,8 +78,7 @@ APFLOAT_BINARY_OP(remainder)
 
 #undef APFLOAT_BINARY_OP
 
-void MLIR_APFLOAT_WRAPPERS_EXPORTED printApFloat(int32_t semantics,
-                                                 uint64_t a) {
+MLIR_APFLOAT_WRAPPERS_EXPORT void printApFloat(int32_t semantics, uint64_t a) {
   const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
       static_cast<llvm::APFloatBase::Semantics>(semantics));
   unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);

@@ -97,6 +97,16 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     # don't
     elif symbol.startswith("??_G") or symbol.startswith("??_E"):
         return None
+    # Delete template instantiations. These start with ?$ and can be discarded
+    # because they will be instantiated in the importing translation unit if
+    # needed.
+    elif symbol.startswith("??$"):
+        return None
+    # Delete lambda object constructors and operator() functions. These start
+    # with ??R<lambda_ or ??0<lambda_ and can be discarded because lambdas are
+    # usually local to a function.
+    elif symbol.startswith("??R<lambda_") or symbol.startswith("??0<lambda_"):
+        return None
     # An anonymous namespace is mangled as ?A(maybe hex number)@. Any symbol
     # that mentions an anonymous namespace can be discarded, as the anonymous
     # namespace doesn't exist outside of that translation unit.
@@ -131,7 +141,24 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     #                 ::= .+@ (list of types)
     #                 ::= .*Z (list of types, varargs)
     # <throw-spec> ::= exceptions are not allowed
-    elif re.search(r"(llvm|clang)@@[A-Z][A-Z0-9_]*[A-JQ].+(X|.+@|.*Z)$", symbol):
+    elif re.search(r"@(llvm|clang)@@[A-Z][A-Z0-9_]*[A-JQ].+(X|.+@|.*Z)$", symbol):
+        # Remove llvm::<Class>::dump and clang::<Class>::dump methods because
+        # they are used for debugging only.
+        if symbol.startswith("?dump@"):
+            return None
+        return symbol
+    # Keep mangled global variables and static class members in llvm:: namespace.
+    # These have a type mangling that looks like (this is derived from
+    # clang/lib/AST/MicrosoftMangle.cpp):
+    # <type-encoding> ::= <storage-class> <variable-type>
+    # <storage-class> ::= 0  # private static member
+    #                 ::= 1  # protected static member
+    #                 ::= 2  # public static member
+    #                 ::= 3  # global
+    #                 ::= 4  # static local
+    # <variable-type> ::= <type> <cvr-qualifiers>
+    #                 ::= <type> <pointee-cvr-qualifiers> # pointers, references
+    elif re.search(r"@llvm@@[0-3].*$", symbol):
         return symbol
     return None
 

@@ -18,6 +18,7 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "nanobind/nanobind.h"
+#include "nanobind/typing.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -204,8 +205,8 @@ namespace {
 
 class PyRegionIterator {
 public:
-  PyRegionIterator(PyOperationRef operation)
-      : operation(std::move(operation)) {}
+  PyRegionIterator(PyOperationRef operation, int nextIndex)
+      : operation(std::move(operation)), nextIndex(nextIndex) {}
 
   PyRegionIterator &dunderIter() { return *this; }
 
@@ -228,7 +229,7 @@ public:
 
 private:
   PyOperationRef operation;
-  int nextIndex = 0;
+  intptr_t nextIndex = 0;
 };
 
 /// Regions of an op are fixed length and indexed numerically so are represented
@@ -247,7 +248,7 @@ public:
 
   PyRegionIterator dunderIter() {
     operation->checkValid();
-    return PyRegionIterator(operation);
+    return PyRegionIterator(operation, startIndex);
   }
 
   static void bindDerived(ClassTy &c) {
@@ -1482,7 +1483,11 @@ public:
 
   /// Binds the Python module objects to functions of this class.
   static void bind(nb::module_ &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(
+        m, DerivedTy::pyClassName, nb::is_generic(),
+        nb::sig((Twine("class ") + DerivedTy::pyClassName + "(Value[_T])")
+                    .str()
+                    .c_str()));
     cls.def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), nb::arg("value"));
     cls.def_static(
         "isinstance",
@@ -4605,7 +4610,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of Value.
   //----------------------------------------------------------------------------
-  nb::class_<PyValue>(m, "Value")
+  m.attr("_T") = nb::type_var("_T", nb::arg("bound") = m.attr("Type"));
+
+  nb::class_<PyValue>(m, "Value", nb::is_generic(),
+                      nb::sig("class Value(Generic[_T])"))
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), nb::arg("value"),
            "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
@@ -4737,7 +4745,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyValue &self, const PyType &type) {
             mlirValueSetType(self.get(), type);
           },
-          nb::arg("type"), "Sets the type of the value.")
+          nb::arg("type"), "Sets the type of the value.",
+          nb::sig("def set_type(self, type: _T)"))
       .def(
           "replace_all_uses_with",
           [](PyValue &self, PyValue &with) {

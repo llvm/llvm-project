@@ -5704,6 +5704,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   case CodeGenOptions::FramePointerKind::Reserved:
     FPKeepKindStr = "-mframe-pointer=reserved";
     break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    FPKeepKindStr = "-mframe-pointer=non-leaf-no-reserve";
+    break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";
     break;
@@ -7633,7 +7636,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcuda-include-gpubinary");
     CmdArgs.push_back(CudaDeviceInput->getFilename());
   } else if (!HostOffloadingInputs.empty()) {
-    if (IsCuda && !IsRDCMode) {
+    if ((IsCuda || IsHIP) && !IsRDCMode) {
       assert(HostOffloadingInputs.size() == 1 && "Only one input expected");
       CmdArgs.push_back("-fcuda-include-gpubinary");
       CmdArgs.push_back(HostOffloadingInputs.front().getFilename());
@@ -8271,22 +8274,29 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     llvm::Triple::ArchType AT = getToolChain().getArch();
     StringRef Default = AT == llvm::Triple::x86 ? "IA32" : "SSE2";
     StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch, Default);
+    llvm::SmallSet<StringRef, 4> Arch512 = {"AVX512F", "AVX512", "AVX10.1",
+                                            "AVX10.2"};
 
     if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_512)) {
-      if (Arch == "AVX512F" || Arch == "AVX512")
+      if (Arch512.contains(Arch))
         CmdArgs.push_back("-mprefer-vector-width=512");
       else
         D.Diag(diag::warn_drv_argument_not_allowed_with)
             << "/vlen=512" << std::string("/arch:").append(Arch);
-    }
-
-    if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_256)) {
-      if (Arch == "AVX512F" || Arch == "AVX512")
+    } else if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_256)) {
+      if (Arch512.contains(Arch))
         CmdArgs.push_back("-mprefer-vector-width=256");
       else if (Arch != "AVX" && Arch != "AVX2")
         D.Diag(diag::warn_drv_argument_not_allowed_with)
             << "/vlen=256" << std::string("/arch:").append(Arch);
+    } else {
+      if (Arch == "AVX10.1" || Arch == "AVX10.2")
+        CmdArgs.push_back("-mprefer-vector-width=256");
     }
+  } else {
+    StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch);
+    if (Arch == "AVX10.1" || Arch == "AVX10.2")
+      CmdArgs.push_back("-mprefer-vector-width=256");
   }
 
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
@@ -9083,7 +9093,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
                            const ToolChain &TC) {
     // CMake hack to avoid printing verbose informatoin for HIP non-RDC mode.
-    if (A->getOption().matches(OPT_v) && JA.getType() == types::TY_Object)
+    if (A->getOption().matches(OPT_v) && JA.getType() == types::TY_HIP_FATBIN)
       return false;
     return (Set.contains(A->getOption().getID()) ||
             (A->getOption().getGroup().isValid() &&
@@ -9165,7 +9175,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // non-RDC mode compilation. This confuses default CMake implicit linker
   // argument parsing when the language is set to HIP and the system linker is
   // also `ld.lld`.
-  if (Args.hasArg(options::OPT_v) && JA.getType() != types::TY_Object)
+  if (Args.hasArg(options::OPT_v) && JA.getType() != types::TY_HIP_FATBIN)
     CmdArgs.push_back("--wrapper-verbose");
   if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ))
     CmdArgs.push_back(
@@ -9237,14 +9247,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   // We use action type to differentiate two use cases of the linker wrapper.
   // TY_Image for normal linker wrapper work.
-  // TY_Object for HIP fno-gpu-rdc embedding device binary in a relocatable
-  // object.
-  assert(JA.getType() == types::TY_Object || JA.getType() == types::TY_Image);
-  if (JA.getType() == types::TY_Object) {
+  // TY_HIP_FATBIN for HIP fno-gpu-rdc emitting a fat binary without wrapping.
+  assert(JA.getType() == types::TY_HIP_FATBIN ||
+         JA.getType() == types::TY_Image);
+  if (JA.getType() == types::TY_HIP_FATBIN) {
+    CmdArgs.push_back("--emit-fatbin-only");
     CmdArgs.append({"-o", Output.getFilename()});
     for (auto Input : Inputs)
       CmdArgs.push_back(Input.getFilename());
-    CmdArgs.push_back("-r");
   } else
     for (const char *LinkArg : LinkCommand->getArguments())
       CmdArgs.push_back(LinkArg);
