@@ -33,6 +33,29 @@ static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
       .getResult();
 }
 
+static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder,
+                                   mlir::Value mask, unsigned numElems) {
+  auto maskIntType = mlir::cast<cir::IntType>(mask.getType());
+  unsigned maskWidth = maskIntType.getWidth();
+
+  // Create a vector of bool type with maskWidth elements
+  auto maskVecTy = cir::VectorType::get(
+      builder.getContext(), cir::BoolType::get(builder.getContext()),
+      maskWidth);
+  mlir::Value maskVec = builder.createBitcast(mask, maskVecTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (numElems < 8) {
+    llvm::SmallVector<int64_t, 4> indices;
+    for (unsigned i = 0; i != numElems; ++i)
+      indices.push_back(i);
+    maskVec =
+        builder.createVecShuffle(mask.getLoc(), maskVec, indices);
+  }
+  return maskVec;
+}
+
 // OG has unordered comparison as a form of optimization in addition to
 // ordered comparison, while CIR doesn't.
 //
@@ -169,6 +192,32 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
+
+  case X86::BI__builtin_ia32_kunpckdi:
+  case X86::BI__builtin_ia32_kunpcksi:
+  case X86::BI__builtin_ia32_kunpckhi: {
+    auto maskIntType = mlir::cast<cir::IntType>(ops[0].getType());
+    unsigned numElems = maskIntType.getWidth();
+    mlir::Value lhs = getMaskVecValue(builder, ops[0], numElems);
+    mlir::Value rhs = getMaskVecValue(builder, ops[1], numElems);
+    llvm::SmallVector<int64_t, 64> indices;
+    for (unsigned i = 0; i != numElems; ++i)
+      indices.push_back(i);
+
+    // First extract half of each vector. This gives better codegen than
+    // doing it in a single shuffle.
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    lhs = builder.createVecShuffle(loc, lhs,
+                                   llvm::ArrayRef(indices.data(), numElems / 2));
+    rhs = builder.createVecShuffle(loc, rhs,
+                                   llvm::ArrayRef(indices.data(), numElems / 2));
+    // Concat the vectors.
+    // NOTE: Operands are swapped to match the intrinsic definition.
+    mlir::Value res = builder.createVecShuffle(
+        loc, rhs, lhs, llvm::ArrayRef(indices.data(), numElems));
+    return builder.createBitcast(res, ops[0].getType());
+  }
+
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr:
   case X86::BI_mm_getcsr:
@@ -675,9 +724,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_kmovw:
   case X86::BI__builtin_ia32_kmovd:
   case X86::BI__builtin_ia32_kmovq:
-  case X86::BI__builtin_ia32_kunpckdi:
-  case X86::BI__builtin_ia32_kunpcksi:
-  case X86::BI__builtin_ia32_kunpckhi:
   case X86::BI__builtin_ia32_sqrtsh_round_mask:
   case X86::BI__builtin_ia32_sqrtsd_round_mask:
   case X86::BI__builtin_ia32_sqrtss_round_mask:
