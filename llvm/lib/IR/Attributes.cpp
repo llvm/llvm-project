@@ -574,6 +574,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   if (hasAttribute(Attribute::DereferenceableOrNull))
     return AttrWithBytesToString("dereferenceable_or_null");
 
+  if (hasAttribute(Attribute::FlattenDepth))
+    return AttrWithBytesToString("flatten_depth");
+
   if (hasAttribute(Attribute::AllocSize)) {
     unsigned ElemSize;
     std::optional<unsigned> NumElems;
@@ -2210,6 +2213,13 @@ AttrBuilder &AttrBuilder::addDereferenceableOrNullAttr(uint64_t Bytes) {
     return *this;
 
   return addRawIntAttr(Attribute::DereferenceableOrNull, Bytes);
+}
+
+AttrBuilder &AttrBuilder::addFlattenDepthAttr(uint64_t Depth) {
+  if (Depth == 0)
+    return *this;
+
+  return addRawIntAttr(Attribute::FlattenDepth, Depth);
 }
 
 AttrBuilder &

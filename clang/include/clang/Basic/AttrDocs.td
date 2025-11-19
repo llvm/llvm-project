@@ -4032,6 +4032,49 @@ callee is unavailable or if the callee has the ``noinline`` attribute.
   }];
 }
 
+def FlattenDepthDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``flatten_depth`` attribute provides a hint to the inliner to aggressively
+inline calls within the attributed function and their transitive callees up to
+a specified depth in the call tree.
+
+This attribute takes a single unsigned integer argument representing the
+requested depth of inlining. For example, ``__attribute__((flatten_depth(3)))``
+requests that calls within the function be inlined (depth 1), then calls within
+those inlined functions (depth 2), and then calls within those functions (depth 3).
+
+**Important**: This attribute is a requested depth hint, not a hard constraint.
+The actual inlining behavior is subject to several considerations:
+
+- **Interaction with other attributes**: Functions marked with ``always_inline``
+  will be inlined even if they exceed the requested depth. Similarly, functions
+  marked with ``noinline`` will not be inlined regardless of the requested depth.
+
+- **Cost model decisions**: The compiler's inlining cost model may choose to
+  inline functions beyond the requested depth if doing so is deemed beneficial
+  (e.g., trivial wrapper functions or obvious optimization opportunities). This
+  prevents the attribute from blocking beneficial optimizations.
+
+- **Insufficient call depth**: If the call tree is shallower than the requested
+  depth, the attribute simply inlines as far as the call tree allows.
+
+- **Recursive functions**: For recursive calls, the attribute applies the depth
+  limit to prevent infinite inlining, but does not prevent recursion itself.
+  Recursive calls beyond the specified depth will not be inlined.
+
+- **Unavailable function bodies**: Inlining cannot occur if the callee's body
+  is unavailable (e.g., external functions without definitions).
+
+.. code-block:: c++
+
+  __attribute__((flatten_depth(3)))
+  void process_data() {
+    // Requests inlining of calls up to 3 levels deep in the call tree
+  }
+  }];
+}
+
 def FormatDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
