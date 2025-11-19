@@ -33,15 +33,15 @@ static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
       .getResult();
 }
 
-static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder,
-                                   mlir::Value mask, unsigned numElems) {
+static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Value mask,
+                                   unsigned numElems) {
   auto maskIntType = mlir::cast<cir::IntType>(mask.getType());
   unsigned maskWidth = maskIntType.getWidth();
 
   // Create a vector of bool type with maskWidth elements
-  auto maskVecTy = cir::VectorType::get(
-      builder.getContext(), cir::BoolType::get(builder.getContext()),
-      maskWidth);
+  auto maskVecTy =
+      cir::VectorType::get(builder.getContext(),
+                           cir::BoolType::get(builder.getContext()), maskWidth);
   mlir::Value maskVec = builder.createBitcast(mask, maskVecTy);
 
   // If we have less than 8 elements, then the starting mask was an i8 and
@@ -50,8 +50,7 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder,
     llvm::SmallVector<int64_t, 4> indices;
     for (unsigned i = 0; i != numElems; ++i)
       indices.push_back(i);
-    maskVec =
-        builder.createVecShuffle(mask.getLoc(), maskVec, indices);
+    maskVec = builder.createVecShuffle(mask.getLoc(), maskVec, indices);
   }
   return maskVec;
 }
@@ -207,10 +206,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     // First extract half of each vector. This gives better codegen than
     // doing it in a single shuffle.
     mlir::Location loc = getLoc(expr->getExprLoc());
-    lhs = builder.createVecShuffle(loc, lhs,
-                                   llvm::ArrayRef(indices.data(), numElems / 2));
-    rhs = builder.createVecShuffle(loc, rhs,
-                                   llvm::ArrayRef(indices.data(), numElems / 2));
+    lhs = builder.createVecShuffle(
+        loc, lhs, llvm::ArrayRef(indices.data(), numElems / 2));
+    rhs = builder.createVecShuffle(
+        loc, rhs, llvm::ArrayRef(indices.data(), numElems / 2));
     // Concat the vectors.
     // NOTE: Operands are swapped to match the intrinsic definition.
     mlir::Value res = builder.createVecShuffle(
