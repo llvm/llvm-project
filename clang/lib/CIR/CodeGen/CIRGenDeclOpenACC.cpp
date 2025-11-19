@@ -12,12 +12,42 @@
 
 #include "CIRGenFunction.h"
 #include "clang/AST/DeclOpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
+namespace {
+  struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
+    mlir::acc::DeclareEnterOp enterOp;
+
+    OpenACCDeclareCleanup(mlir::acc::DeclareEnterOp enterOp)
+        : enterOp(enterOp) {}
+
+    void emit(CIRGenFunction &cgf) override {
+      mlir::acc::DeclareExitOp::create(cgf.getBuilder(), enterOp.getLoc(),
+                                       enterOp, {});
+
+      // TODO(OpenACC): Some clauses require that we add info about them to the
+      // DeclareExitOp.  However, we don't have any of those implemented yet, so
+      // we should add infrastructure here to do that once we have one
+      // implemented.
+    }
+
+  };
+} // namespace
+
 void CIRGenFunction::emitOpenACCDeclare(const OpenACCDeclareDecl &d) {
-  getCIRGenModule().errorNYI(d.getSourceRange(), "OpenACC Declare Construct");
+  mlir::Location exprLoc = cgm.getLoc(d.getBeginLoc());
+  auto enterOp = mlir::acc::DeclareEnterOp::create(
+      builder, exprLoc,
+      mlir::acc::DeclareTokenType::get(&cgm.getMLIRContext()), {});
+
+  emitOpenACCClauses(enterOp, OpenACCDirectiveKind::Declare, d.getBeginLoc(),
+                     d.clauses());
+
+  ehStack.pushCleanup<OpenACCDeclareCleanup>(CleanupKind::NormalCleanup,
+                                             enterOp);
 }
 
 void CIRGenFunction::emitOpenACCRoutine(const OpenACCRoutineDecl &d) {
