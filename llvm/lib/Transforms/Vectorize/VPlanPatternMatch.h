@@ -17,8 +17,7 @@
 
 #include "VPlan.h"
 
-namespace llvm {
-namespace VPlanPatternMatch {
+namespace llvm::VPlanPatternMatch {
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -878,7 +877,6 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-} // namespace VPlanPatternMatch
-} // namespace llvm
+} // namespace llvm::VPlanPatternMatch
 
 #endif
