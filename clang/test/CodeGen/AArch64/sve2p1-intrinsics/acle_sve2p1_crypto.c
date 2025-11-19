@@ -148,68 +148,68 @@ svuint8x4_t test_svaesemc_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 
 // CHECK-LABEL: @test_svpmull_u64_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.pair.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svpmull_u64_x2u12__SVUint64_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.pair.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x2_t test_svpmull_u64_x2(svuint64_t op1, svuint64_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svpmull,_u64_x2)(op1, op2);
+  return SVE_ACLE_FUNC(svpmull_pair,_u64_x2)(op1, op2);
 }
 
 // CHECK-LABEL: @test_svpmull_n_u64_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP2:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.pair.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svpmull_n_u64_x2u12__SVUint64_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP2:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.pair.x2(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x2_t test_svpmull_n_u64_x2(svuint64_t op1, uint64_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svpmull,_n_u64_x2)(op1, op2);
+  return SVE_ACLE_FUNC(svpmull_pair,_n_u64_x2)(op1, op2);
 }
 
 // CHECK-LABEL: @test_svpmlal_u64_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.pair.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svpmlal_u64_x212svuint64x2_tu12__SVUint64_tS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.pair.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x2_t test_svpmlal_u64_x2(svuint64x2_t op1, svuint64_t op2, svuint64_t op3) STREAMING
 {
-  return SVE_ACLE_FUNC(svpmlal,_u64_x2)(op1, op2, op3);
+  return SVE_ACLE_FUNC(svpmlal_pair,_u64_x2)(op1, op2, op3);
 }
 
 // CHECK-LABEL: @test_svpmlal_n_u64_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP3:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.pair.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svpmlal_n_u64_x212svuint64x2_tu12__SVUint64_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP3:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.pair.x2(<vscale x 2 x i64> [[OP1_COERCE0:%.*]], <vscale x 2 x i64> [[OP1_COERCE1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 svuint64x2_t test_svpmlal_n_u64_x2(svuint64x2_t op1, svuint64_t op2, uint64_t op3) STREAMING
 {
-  return SVE_ACLE_FUNC(svpmlal,_n_u64_x2)(op1, op2, op3);
+  return SVE_ACLE_FUNC(svpmlal_pair,_n_u64_x2)(op1, op2, op3);
 }

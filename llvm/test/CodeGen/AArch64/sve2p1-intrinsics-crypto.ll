@@ -132,7 +132,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @pmull_i64(<vscale x 2 x i64> 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    pmull { z0.q, z1.q }, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %out = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.x2(<vscale x 2 x i64> %a,
+  %out = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmull.pair.x2(<vscale x 2 x i64> %a,
                                                                        <vscale x 2 x i64> %b)
   ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %out
 }
@@ -149,7 +149,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @pmlal_i64(<vscale x 2 x i64> 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    pmlal { z0.q, z1.q }, z2.d, z3.d
 ; CHECK-NEXT:    ret
-  %out = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.x2(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c,
+  %out = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.pmlal.pair.x2(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c,
                                                                        <vscale x 2 x i64> %d)
   ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %out
 }

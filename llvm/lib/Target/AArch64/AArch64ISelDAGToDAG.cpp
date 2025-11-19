@@ -6273,10 +6273,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_sve_aesdimc_laneq_x4:
       SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESDIMC_4ZZI_B);
       return;
-    case Intrinsic::aarch64_sve_pmlal_x2:
+    case Intrinsic::aarch64_sve_pmlal_pair_x2:
       SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::PMLAL_2ZZZ_Q);
       return;
-    case Intrinsic::aarch64_sve_pmull_x2: {
+    case Intrinsic::aarch64_sve_pmull_pair_x2: {
       SDLoc DL(Node);
       SmallVector<SDValue, 4> Regs(Node->ops().slice(1, 2));
       SDNode *Res =

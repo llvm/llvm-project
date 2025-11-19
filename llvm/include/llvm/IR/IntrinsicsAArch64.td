@@ -4216,9 +4216,9 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_aese_laneq_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
   def int_aarch64_sve_aesemc_laneq_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
 
-  def int_aarch64_sve_pmull_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
+  def int_aarch64_sve_pmull_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
       [llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
-  def int_aarch64_sve_pmlal_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
+  def int_aarch64_sve_pmlal_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
       [llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
 }
 
