@@ -1,4 +1,4 @@
-//===-- String Optimization -------------------------------------*- C++ -*-===//
+//===-- String Length -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,9 @@
 // related code.
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SRC_STRING_STRING_LENGTH_H
+#define LLVM_LIBC_SRC_STRING_STRING_LENGTH_H
 
 #include "hdr/limits_macros.h"
 #include "hdr/stdint_proxy.h" // uintptr_t
@@ -204,9 +207,7 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
   return element::string_length_element<T>(src);
 }
 
-// Returns the first occurrence of 'ch' within the first 'n' characters of
-// 'src'. If 'ch' is not found, returns nullptr.
-LIBC_INLINE void *find_first_character(const unsigned char *src,
-                                       unsigned char ch, size_t max_strlen) {
-  return find_first_character_impl(src, ch, max_strlen);
-}
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif //  LLVM_LIBC_SRC_STRING_STRING_LENGTH_H

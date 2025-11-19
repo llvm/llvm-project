@@ -20,7 +20,10 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/string_optimization.h"
+#include "src/string/string_length.h"
+
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 // Returns the maximum length span that contains only characters not found in
 // 'segment'. If no characters are found, returns the length of 'src'.
@@ -112,6 +115,14 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
       return last_occurrence;
     ++src;
   }
+}
+
+
+// Returns the first occurrence of 'ch' within the first 'n' characters of
+// 'src'. If 'ch' is not found, returns nullptr.
+LIBC_INLINE void *find_first_character(const unsigned char *src,
+                                       unsigned char ch, size_t max_strlen) {
+  return find_first_character_impl(src, ch, max_strlen);
 }
 
 } // namespace internal
