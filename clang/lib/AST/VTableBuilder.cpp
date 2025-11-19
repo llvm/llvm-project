@@ -2312,9 +2312,11 @@ VTableLayout::VTableLayout(VTableIndicesTy VTableIndices,
                            const AddressPointsMapTy &AddressPoints)
     : VTableIndices(std::move(VTableIndices)),
       VTableComponents(VTableComponents), VTableThunks(VTableThunks),
-      AddressPoints(AddressPoints), AddressPointIndices(MakeAddressPointIndices(
-                                        AddressPoints, VTableIndices.size())) {
-  assert(!VTableIndices.empty() && "VTableLayout requires at least one index.");
+      AddressPoints(AddressPoints),
+      AddressPointIndices(
+          MakeAddressPointIndices(AddressPoints, this->VTableIndices.size())) {
+  assert(!this->VTableIndices.empty() &&
+         "VTableLayout requires at least one index.");
   llvm::sort(this->VTableThunks, [](const VTableLayout::VTableThunkTy &LHS,
                                     const VTableLayout::VTableThunkTy &RHS) {
     assert((LHS.first != RHS.first || LHS.second == RHS.second) &&
