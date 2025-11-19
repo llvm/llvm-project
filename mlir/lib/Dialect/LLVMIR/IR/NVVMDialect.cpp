@@ -940,6 +940,480 @@ LogicalResult MmaOp::verify() {
   return success();
 }
 
+MMATypes MmaSpOp::accumPtxType() {
+  std::optional<mlir::NVVM::MMATypes> val = MmaOp::inferOperandMMAType(
+      getODSOperands(2).getTypes().front(), /*isAccumulator=*/true);
+  assert(val.has_value() && "accumulator PTX type should always be inferrable");
+  return val.value();
+}
+
+MMATypes MmaSpOp::resultPtxType() {
+  std::optional<mlir::NVVM::MMATypes> val =
+      MmaOp::inferOperandMMAType(getResult().getType(), /*isAccumulator=*/true);
+  assert(val.has_value() && "result PTX type should always be inferrable");
+  return val.value();
+}
+
+mlir::NVVM::IDArgPair
+MmaSpOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MmaSpOp>(op);
+
+  // Get operands
+  llvm::SmallVector<llvm::Value *> args;
+  for (mlir::Value v : thisOp.getOperands())
+    args.push_back(mt.lookupValue(v));
+
+  // Get intrinsic ID using the existing getIntrinsicID method
+  auto intId = MmaSpOp::getIntrinsicID(
+      thisOp.getShape().getM(), thisOp.getShape().getN(), thisOp.getShape().getK(),
+      thisOp.getIntOverflowBehavior(),
+      thisOp.getMetadataType(),
+      thisOp.getKind(),
+      *thisOp.getMultiplicandAPtxType(),
+      *thisOp.getMultiplicandBPtxType(),
+      thisOp.accumPtxType(),
+      thisOp.resultPtxType());
+
+  return {intId, args};
+}
+
+void MmaSpOp::print(OpAsmPrinter &p) {
+  SmallVector<Type, 4> regTypes;
+  struct OperandFragment {
+    StringRef operandName;
+    StringRef ptxTypeAttr;
+    SmallVector<Value, 4> regs;
+    explicit OperandFragment(StringRef name, StringRef ptxTypeName)
+        : operandName(name), ptxTypeAttr(ptxTypeName) {}
+  };
+
+  std::array<OperandFragment, 5> frags{
+      OperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      OperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      OperandFragment("C", ""),
+      OperandFragment("sparseMetadata", ""),
+      OperandFragment("selector", "")};
+  SmallVector<StringRef, 4> ignoreAttrNames{
+      mlir::NVVM::MmaSpOp::getOperandSegmentSizeAttr()};
+
+  // Handle variadic operands A, B, C
+  for (unsigned fragIdx = 0; fragIdx < 3; fragIdx++) {
+    auto &frag = frags[fragIdx];
+    auto varOperandSpec = getODSOperandIndexAndLength(fragIdx);
+    for (auto operandIdx = varOperandSpec.first;
+         operandIdx < varOperandSpec.first + varOperandSpec.second;
+         operandIdx++) {
+      frag.regs.push_back(this->getOperand(operandIdx));
+      if (operandIdx == varOperandSpec.first) {
+        regTypes.push_back(this->getOperand(operandIdx).getType());
+      }
+    }
+    std::optional<MMATypes> inferredType =
+        MmaOp::inferOperandMMAType(regTypes.back(), /*isAccumulator=*/fragIdx >= 2);
+    if (inferredType)
+      ignoreAttrNames.push_back(frag.ptxTypeAttr);
+  }
+
+  // Handle sparse metadata and selector (single operands)
+  frags[3].regs.push_back(getSparseMetadata());
+  frags[4].regs.push_back(getSparsitySelector());
+
+  auto printMmaSpOperand = [&](const OperandFragment &frag) -> void {
+    p << " " << frag.operandName;
+    p << "[";
+    p.printOperands(frag.regs);
+    p << "]";
+  };
+
+  for (const auto &frag : frags)
+    printMmaSpOperand(frag);
+
+  p.printOptionalAttrDict((*this)->getAttrs(), ignoreAttrNames);
+  p << " : ";
+  p << "(";
+  for (int i = 0; i < 3; ++i) {
+    p << regTypes[i];
+    if (i < 2) p << ", ";
+  }
+  p << ") -> " << getResult().getType();
+}
+
+void MmaSpOp::build(OpBuilder &builder, OperationState &result,
+                Type resultType, ValueRange operandA, ValueRange operandB,
+                ValueRange operandC, Value sparseMetadata, Value sparsitySelector,
+                ArrayRef<int64_t> shape,
+                std::optional<MMAIntOverflow> intOverflow,
+                std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes) {
+
+  assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
+  MLIRContext *ctx = builder.getContext();
+  result.addAttribute(
+      "shape", builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
+
+  result.addOperands(operandA);
+  result.addOperands(operandB);
+  result.addOperands(operandC);
+  result.addOperands(sparseMetadata);
+  result.addOperands(sparsitySelector);
+
+  if (multiplicandPtxTypes) {
+    result.addAttribute("multiplicandAPtxType",
+                        MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[0]));
+    result.addAttribute("multiplicandBPtxType",
+                        MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[1]));
+  } else {
+    if (auto res = MmaOp::inferOperandMMAType(operandA[0].getType(), false))
+      result.addAttribute("multiplicandAPtxType", MMATypesAttr::get(ctx, *res));
+    if (auto res = MmaOp::inferOperandMMAType(operandB[0].getType(), false))
+      result.addAttribute("multiplicandBPtxType", MMATypesAttr::get(ctx, *res));
+  }
+
+  if (intOverflow.has_value())
+    result.addAttribute("intOverflowBehavior",
+                        MMAIntOverflowAttr::get(ctx, *intOverflow));
+
+  result.addTypes(resultType);
+  result.addAttribute(
+      MmaSpOp::getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(operandA.size()),
+                                    static_cast<int32_t>(operandB.size()),
+                                    static_cast<int32_t>(operandC.size()),
+                                    1, 1})); // sparseMetadata and sparsitySelector
+}
+
+ParseResult MmaSpOp::parse(OpAsmParser &parser, OperationState &result) {
+  struct OperandFragment {
+    std::optional<MMATypes> elemtype;
+    SmallVector<OpAsmParser::UnresolvedOperand, 4> regs;
+    SmallVector<Type> regTypes;
+  };
+
+  Builder &builder = parser.getBuilder();
+  std::array<OperandFragment, 6> frags; // A, B, C, sparseMetadata, selector
+
+  NamedAttrList namedAttributes;
+
+  // A helper to parse the operand segments.
+  auto parseMmaSpOperand = [&](StringRef operandName,
+                               OperandFragment &frag) -> LogicalResult {
+    if (parser.parseKeyword(operandName).failed())
+      return failure();
+    if (parser
+            .parseOperandList(frag.regs, OpAsmParser::Delimiter::OptionalSquare)
+            .failed())
+      return failure();
+    return success();
+  };
+
+  // Parse the operand segments.
+  if (parseMmaSpOperand("A", frags[0]).failed())
+    return failure();
+  if (parseMmaSpOperand("B", frags[1]).failed())
+    return failure();
+  if (parseMmaSpOperand("C", frags[2]).failed())
+    return failure();
+  if (parseMmaSpOperand("sparseMetadata", frags[3]).failed())
+    return failure();
+  if (parseMmaSpOperand("selector", frags[4]).failed())
+    return failure();
+
+  if (parser.parseOptionalAttrDict(namedAttributes).failed())
+    return failure();
+
+  // Parse the type specification and resolve operands.
+  SmallVector<Type, 3> operandTypes;
+  if (failed(parser.parseColon()))
+    return failure();
+  if (failed(parser.parseLParen()))
+    return failure();
+  if (failed(parser.parseTypeList(operandTypes)))
+    return failure();
+  if (failed(parser.parseRParen()))
+    return failure();
+  if (operandTypes.size() != 3)
+    return parser.emitError(
+        parser.getNameLoc(),
+        "expected one type for each operand segment but got " +
+            Twine(operandTypes.size()) + " types");
+  for (const auto &iter : llvm::enumerate(operandTypes)) {
+    auto &frag = frags[iter.index()];
+    frag.regTypes.resize(frag.regs.size(), iter.value());
+    if (failed(parser.resolveOperands(frag.regs, frag.regTypes,
+                                      parser.getNameLoc(), result.operands)))
+      return failure();
+    frag.elemtype = MmaOp::inferOperandMMAType(frag.regTypes[0],
+                                               /*isAccumulator*/ iter.index() >= 2);
+  }
+
+  Type resultType;
+  if (parser.parseArrow() || parser.parseType(resultType))
+    return failure();
+  frags[5].elemtype = MmaOp::inferOperandMMAType(resultType, /*isAccumulator*/ true);
+
+  // Resolve sparse metadata and selector (assume i32 type)
+  Type i32Type = builder.getIntegerType(32);
+  if (parser.resolveOperands(frags[3].regs, i32Type,
+                             parser.getCurrentLocation(), result.operands)
+          .failed())
+    return failure();
+  if (parser.resolveOperands(frags[4].regs, i32Type,
+                             parser.getCurrentLocation(), result.operands)
+          .failed())
+    return failure();
+
+  std::array<StringRef, 2> names{"multiplicandAPtxType",
+                                 "multiplicandBPtxType"};
+  for (unsigned idx = 0; idx < names.size(); idx++) {
+    const auto &frag = frags[idx];
+    std::optional<NamedAttribute> attr = namedAttributes.getNamed(names[idx]);
+    if (!frag.elemtype.has_value() && !attr.has_value()) {
+      return parser.emitError(
+          parser.getNameLoc(),
+          "attribute " + names[idx] +
+              " is not provided explicitly and cannot be inferred");
+    }
+    if (!attr.has_value())
+      result.addAttribute(
+          names[idx], MMATypesAttr::get(parser.getContext(), *frag.elemtype));
+  }
+
+  result.addTypes(resultType);
+  if (!namedAttributes.empty())
+    result.addAttributes(namedAttributes);
+  result.addAttribute(MmaSpOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({
+                          static_cast<int32_t>(frags[0].regs.size()),
+                          static_cast<int32_t>(frags[1].regs.size()),
+                          static_cast<int32_t>(frags[2].regs.size()),
+                          1, // sparseMetadata
+                          1  // sparsitySelector
+                      }));
+  return success();
+}
+
+LogicalResult MmaSpOp::verify() {
+  MLIRContext *context = getContext();
+  auto f16Ty = Float16Type::get(context);
+  auto i32Ty = IntegerType::get(context, 32);
+  auto f16x2Ty = VectorType::get(2, f16Ty);
+  auto f32Ty = Float32Type::get(context);
+  auto f16x2x4StructTy = LLVM::LLVMStructType::getLiteral(
+      context, {f16x2Ty, f16x2Ty, f16x2Ty, f16x2Ty});
+
+  auto s32x4StructTy =
+      LLVM::LLVMStructType::getLiteral(context, {i32Ty, i32Ty, i32Ty, i32Ty});
+  auto f32x8StructTy =
+      LLVM::LLVMStructType::getLiteral(context, SmallVector<Type>(8, f32Ty));
+  auto f16x2x2StructTy =
+      LLVM::LLVMStructType::getLiteral(context, {f16x2Ty, f16x2Ty});
+  auto f32x4StructTy =
+      LLVM::LLVMStructType::getLiteral(context, {f32Ty, f32Ty, f32Ty, f32Ty});
+  auto s32x2StructTy =
+      LLVM::LLVMStructType::getLiteral(context, {i32Ty, i32Ty});
+
+  std::array<int64_t, 3> mmaShape{getShapeAttr().getM(), getShapeAttr().getN(),
+                                  getShapeAttr().getK()};
+
+  // These variables define the set of allowed data types for matrices A, B, C,
+  // and result.
+  using AllowedShapes = SmallVector<std::array<int64_t, 3>, 2>;
+  using AllowedTypes = SmallVector<SmallVector<Type, 4>, 2>;
+  AllowedShapes allowedShapes;
+  AllowedTypes expectedA;
+  AllowedTypes expectedB;
+  AllowedTypes expectedC;
+  SmallVector<Type> expectedResult;
+
+  // When M = 16, we just need to calculate the number of 8xk tiles, where
+  // k is a factor that depends on the data type.
+  if (mmaShape[0] == 16) {
+    int64_t kFactor;
+    Type multiplicandFragType;
+    switch (*getMultiplicandAPtxType()) {
+    case MMATypes::tf32:
+      kFactor = 4;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
+          context, {f32Ty, f32Ty, f32Ty, f32Ty}));
+      // Sparse MMA supports m16n8k8 and m16n8k16 for tf32
+      allowedShapes.push_back({16, 8, 8});
+      allowedShapes.push_back({16, 8, 16});
+      break;
+    case MMATypes::bf16:
+      kFactor = 8;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
+          context, {f32Ty, f32Ty, f32Ty, f32Ty}));
+      // Sparse MMA supports m16n8k16 and m16n8k32 for bf16
+      allowedShapes.push_back({16, 8, 16});
+      allowedShapes.push_back({16, 8, 32});
+      break;
+    case MMATypes::f16:
+      kFactor = 8;
+      multiplicandFragType = f16x2Ty;
+      expectedResult.push_back(f16x2x2StructTy);
+      expectedResult.push_back(f32x4StructTy);
+      // Sparse MMA supports m16n8k16 and m16n8k32 for f16
+      allowedShapes.push_back({16, 8, 16});
+      allowedShapes.push_back({16, 8, 32});
+      break;
+    case MMATypes::s4:
+    case MMATypes::u4:
+      kFactor = 32;
+      // Sparse MMA supports m16n8k64 and m16n8k128 for s4/u4
+      allowedShapes.push_back({16, 8, 64});
+      allowedShapes.push_back({16, 8, 128});
+      break;
+    case MMATypes::s8:
+    case MMATypes::u8:
+      kFactor = 16;
+      // Sparse MMA supports m16n8k32 and m16n8k64 for s8/u8
+      allowedShapes.push_back({16, 8, 32});
+      allowedShapes.push_back({16, 8, 64});
+      break;
+    case MMATypes::e4m3:
+    case MMATypes::e5m2:
+    case MMATypes::e3m2:
+    case MMATypes::e2m3:
+    case MMATypes::e2m1:
+      kFactor = 32;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(f16x2x2StructTy);
+      expectedResult.push_back(f32x4StructTy);
+      // Sparse MMA supports m16n8k64 for FP8 types
+      allowedShapes.push_back({16, 8, 64});
+      break;
+    default:
+      return emitError("invalid shape or multiplicand type: " +
+                       stringifyEnum(getMultiplicandAPtxType().value()));
+    }
+
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
+      expectedResult.push_back(s32x4StructTy);
+      expectedC.emplace_back(4, i32Ty);
+      multiplicandFragType = i32Ty;
+    } else if (*getMultiplicandAPtxType() >= MMATypes::e4m3 &&
+               *getMultiplicandAPtxType() <= MMATypes::e2m1) {
+      // FP8 types
+      expectedC.emplace_back(2, f16x2Ty);
+      expectedC.emplace_back(4, f32Ty);
+    } else {
+      expectedC.emplace_back(2, f16x2Ty);
+      expectedC.emplace_back(4, f32Ty);
+    }
+
+    // For sparse MMA, A operand is compressed (2:4 sparsity means half the elements)
+    int64_t unitA = (mmaShape[0] / 8) * (mmaShape[2] / kFactor) / 2;
+    int64_t unitB = (mmaShape[1] / 8) * (mmaShape[2] / kFactor);
+    expectedA.emplace_back(unitA, multiplicandFragType);
+    expectedB.emplace_back(unitB, multiplicandFragType);
+
+    if (resultPtxType() != accumPtxType())
+      return emitOpError("ctype does not match dtype");
+  }
+
+  // In the M=8 case, there is only 1 possible case per data type.
+  if (mmaShape[0] == 8) {
+    if (*getMultiplicandAPtxType() == MMATypes::f16) {
+      expectedA.emplace_back(2, f16x2Ty);
+      expectedB.emplace_back(2, f16x2Ty);
+      expectedResult.push_back(f16x2x4StructTy);
+      expectedResult.push_back(f32x8StructTy);
+      expectedC.emplace_back(4, f16x2Ty);
+      expectedC.emplace_back(8, f32Ty);
+      allowedShapes.push_back({8, 8, 4});
+    }
+    if (*getMultiplicandAPtxType() == MMATypes::f64) {
+      Type f64Ty = Float64Type::get(context);
+      expectedA.emplace_back(1, f64Ty);
+      expectedB.emplace_back(1, f64Ty);
+      expectedC.emplace_back(2, f64Ty);
+      expectedResult.emplace_back(LLVM::LLVMStructType::getLiteral(
+          context, SmallVector<Type>(2, f64Ty)));
+      allowedShapes.push_back({8, 8, 4});
+    }
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
+      expectedA.push_back({i32Ty});
+      expectedB.push_back({i32Ty});
+      expectedC.push_back({i32Ty, i32Ty});
+      expectedResult.push_back(s32x2StructTy);
+      if (isInt4PtxType(getMultiplicandAPtxType().value()))
+        allowedShapes.push_back({8, 8, 32});
+      if (isInt8PtxType(getMultiplicandAPtxType().value()))
+        allowedShapes.push_back({8, 8, 16});
+    }
+  }
+
+  std::string errorMessage;
+  llvm::raw_string_ostream errorStream(errorMessage);
+
+  // Check that we matched an existing shape/dtype combination.
+  if (expectedA.empty() || expectedB.empty() || expectedC.empty() ||
+      !llvm::is_contained(allowedShapes, mmaShape)) {
+    errorStream << "unimplemented variant for MMA shape <";
+    llvm::interleaveComma(mmaShape, errorStream);
+    errorStream << ">";
+    return emitOpError(errorMessage);
+  }
+
+  // Verify the operand types for segments of A, B, and C operands.
+  std::array<StringRef, 3> operandNames{"A", "B", "C"};
+  for (const auto &iter : llvm::enumerate(
+           SmallVector<AllowedTypes, 3>{expectedA, expectedB, expectedC})) {
+    auto spec = this->getODSOperandIndexAndLength(iter.index());
+    SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
+                                      operand_type_begin() + spec.first +
+                                          spec.second);
+    bool match = llvm::is_contained(iter.value(), operandTySeg);
+
+    if (!match) {
+      errorStream << "Could not match types for the "
+                  << operandNames[iter.index()]
+                  << " operands; expected one of ";
+      for (const auto &x : iter.value()) {
+        errorStream << x.size() << "x" << x[0] << " ";
+      }
+      errorStream << "but got ";
+      llvm::interleaveComma(operandTySeg, errorStream);
+      return emitOpError(errorMessage);
+    }
+  }
+
+  // Check the result type
+  if (!llvm::any_of(expectedResult, [&](Type expectedResultType) {
+        return expectedResultType == getResult().getType();
+      })) {
+    errorStream
+        << "Could not match allowed types for the result; expected one of ";
+    llvm::interleaveComma(expectedResult, errorStream);
+    errorStream << " but got " << getResult().getType();
+    return emitOpError(errorMessage);
+  }
+
+  // Ensure int4/int8 MMA variants specify the accum overflow behavior
+  // attribute.
+  if (isInt4PtxType(*getMultiplicandAPtxType()) ||
+      isInt8PtxType(*getMultiplicandAPtxType())) {
+    if (!getIntOverflowBehavior())
+      return emitOpError("op requires " +
+                         getIntOverflowBehaviorAttrName().strref() +
+                         " attribute");
+  }
+
+  // Validate sparse metadata type (should be i32)
+  if (!getSparseMetadata().getType().isInteger(32)) {
+    return emitOpError() << "sparse metadata must be i32 type";
+  }
+
+  // Validate sparsity selector type (should be i32)
+  if (!getSparsitySelector().getType().isInteger(32)) {
+    return emitOpError() << "sparsity selector must be i32 type";
+  }
+
+  return success();
+}
+
 LogicalResult ShflOp::verify() {
   auto returnStructType = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
 
