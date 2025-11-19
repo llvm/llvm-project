@@ -73,9 +73,14 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<CallsiteID> PrefetchTargets =
       getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
           .getPrefetchTargetsForFunction(MF.getName());
-  DenseMap<UniqueBBID, SmallVector<int>> PrefetchTargetsByBBID;
+  DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargetsByBBID;
   for (const auto &Target : PrefetchTargets)
     PrefetchTargetsByBBID[Target.BBID].push_back(Target.CallsiteIndex);
+  // Sort and uniquify the callsite indices for every block.
+  for (auto &[K, V]: PrefetchTargetsByBBID) {
+    llvm::sort(V);
+    V.erase(llvm::unique(V), V.end());
+  }
   for (auto &MBB : MF) {
     auto R = PrefetchTargetsByBBID.find(*MBB.getBBID());
     if (R == PrefetchTargetsByBBID.end())

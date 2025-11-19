@@ -42,11 +42,12 @@ struct BBClusterInfo {
   unsigned PositionInCluster;
 };
 
-// The prefetch symbol is emitted immediately after the call of the given index
-// in block `BBID` (or at the beginning of the block if CallsiteIndex is -1).
+// The prefetch symbol is emitted immediately after the call of the given index,
+// in block `BBID` (First call has an index of 1). Zero callsite index means the
+// start of the block.
 struct CallsiteID {
   UniqueBBID BBID;
-  int CallsiteIndex;
+  unsigned CallsiteIndex;
 };
 
 // This represents the raw input profile for one function.

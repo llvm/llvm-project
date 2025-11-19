@@ -230,9 +230,10 @@ private:
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
   /// Contains the callsite indices in this block that are targets of code
-  /// prefetching. The index `i` specifies the `i`th call, with `-1`
-  /// representing the beginning of the block.
-  SmallVector<int> PrefetchTargetCallsiteIndexes;
+  /// prefetching. The index `i` specifies the `i`th call, with zero
+  /// representing the beginning of the block and ` representing the first call.
+  /// Must be in ascending order and without duplicates.
+  SmallVector<unsigned> PrefetchTargetCallsiteIndexes;
 
   /// Cached MCSymbol for this block (used if IsEHContTarget).
   mutable MCSymbol *CachedEHContMCSymbol = nullptr;
@@ -715,11 +716,11 @@ public:
 
   std::optional<UniqueBBID> getBBID() const { return BBID; }
 
-  const SmallVector<int> &getPrefetchTargetCallsiteIndexes() const {
+  const SmallVector<unsigned> &getPrefetchTargetCallsiteIndexes() const {
     return PrefetchTargetCallsiteIndexes;
   }
 
-  void setPrefetchTargetCallsiteIndexes(const SmallVector<int> &V) {
+  void setPrefetchTargetCallsiteIndexes(const SmallVector<unsigned> &V) {
     PrefetchTargetCallsiteIndexes = V;
   }
 

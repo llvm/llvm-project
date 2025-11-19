@@ -358,12 +358,12 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[0]);
       if (!TargetBBID)
         return TargetBBID.takeError();
-      long long CallsiteIndex;
-      if (getAsSignedInteger(PrefetchTargetStr[1], 10, CallsiteIndex))
+      unsigned long long CallsiteIndex;
+      if (getAsUnsignedInteger(PrefetchTargetStr[1], 10, CallsiteIndex))
         return createProfileParseError(Twine("signed integer expected: '") +
                                        PrefetchTargetStr[1]);
       FI->second.PrefetchTargets.push_back(
-          CallsiteID{*TargetBBID, static_cast<int>(CallsiteIndex - 1)});
+          CallsiteID{*TargetBBID, static_cast<unsigned>(CallsiteIndex)});
       continue;
     }
     default:
