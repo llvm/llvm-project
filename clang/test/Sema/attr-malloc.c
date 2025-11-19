@@ -13,6 +13,32 @@ int   returns_int   (void) __attribute((malloc)); // expected-warning {{attribut
 int * returns_intptr(void) __attribute((malloc)); // no-warning
 typedef int * iptr;
 iptr  returns_iptr  (void) __attribute((malloc)); // no-warning
+typedef struct {
+  void *ptr;
+  size_t n;
+} sized_ptr;
+sized_ptr  returns_sized_ptr  (void) __attribute((malloc)); // no-warning
+
+// The first struct field must be pointer and the second must be an integer.
+// Check the possible ways to violate it.
+typedef struct {
+  size_t n;
+  void *ptr;
+} invalid_span1;
+invalid_span1  returns_non_std_span1  (void) __attribute((malloc)); // expected-warning {{attribute only applies to return values that are pointers}}
+
+typedef struct {
+  void *ptr;
+  void *ptr2;
+} invalid_span2;
+invalid_span2  returns_non_std_span2  (void) __attribute((malloc)); // expected-warning {{attribute only applies to return values that are pointers}}
+
+typedef struct {
+  void *ptr;
+  size_t n;
+  size_t n2;
+} invalid_span3;
+invalid_span3  returns_non_std_span3  (void) __attribute((malloc)); // expected-warning {{attribute only applies to return values that are pointers}}
 
 __attribute((malloc)) void *(*f)(void); //  expected-warning{{attribute only applies to functions}}
 __attribute((malloc)) int (*g)(void); // expected-warning{{attribute only applies to functions}}

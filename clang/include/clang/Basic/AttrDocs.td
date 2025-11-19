@@ -5244,6 +5244,11 @@ deallocation function. When this form is used, it enables the compiler to
 diagnose when the incorrect deallocation function is used with this variable.
 However the associated warning, spelled `-Wmismatched-dealloc` in GCC, is not
 yet implemented in clang.
+
+It's also possible to place the ``malloc`` attribute on the functions returning
+span-like structures, that is, the structs having a pointer as the first field
+and an integer with the size of the actually allocated memory as the second field.
+Note that extended semantics is clang-specific and not currently supported in GCC.
   }];
 }
 
