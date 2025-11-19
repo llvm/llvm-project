@@ -60,15 +60,15 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
-#include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
-#include "clang/Driver/Types.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Options/OptionUtils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -4427,10 +4427,6 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
                    options::OPT_no_offload_new_driver,
                    C.isOffloadingHostKind(Action::OFK_Cuda));
 
-  bool HIPNoRDC =
-      C.isOffloadingHostKind(Action::OFK_HIP) &&
-      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
-
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
       !UseNewOffloadingDriver
@@ -4569,7 +4565,7 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
     // Check if this Linker Job should emit a static library.
     if (ShouldEmitStaticLibrary(Args)) {
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
-    } else if ((UseNewOffloadingDriver && !HIPNoRDC) ||
+    } else if (UseNewOffloadingDriver ||
                Args.hasArg(options::OPT_offload_link)) {
       LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
       LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
@@ -4906,20 +4902,6 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
         << "-fhip-emit-relocatable"
         << "--offload-device-only";
 
-  // For HIP non-rdc non-device-only compilation, create a linker wrapper
-  // action for each host object to link, bundle and wrap device files in
-  // it.
-  if ((isa<AssembleJobAction>(HostAction) ||
-       (isa<BackendJobAction>(HostAction) &&
-        HostAction->getType() == types::TY_LTO_BC)) &&
-      HIPNoRDC && !offloadDeviceOnly()) {
-    ActionList AL{HostAction};
-    HostAction = C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_Object);
-    HostAction->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
-                                         /*BoundArch=*/nullptr);
-    return HostAction;
-  }
-
   // Don't build offloading actions if we do not have a compile action. If
   // preprocessing only ignore embedding.
   if (!(isa<CompileJobAction>(HostAction) ||
@@ -5084,6 +5066,21 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     DDep.add(*FatbinAction,
              *C.getOffloadToolChains<Action::OFK_HIP>().first->second, nullptr,
              Action::OFK_HIP);
+  } else if (HIPNoRDC) {
+    // Package all the offloading actions into a single output that can be
+    // embedded in the host and linked.
+    Action *PackagerAction =
+        C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
+
+    // For HIP non-RDC compilation, wrap the device binary with linker wrapper
+    // before bundling with host code. Do not bind a specific GPU arch here,
+    // as the packaged image may contain entries for multiple GPUs.
+    ActionList AL{PackagerAction};
+    PackagerAction =
+        C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_HIP_FATBIN);
+    DDep.add(*PackagerAction,
+             *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
+             /*BoundArch=*/nullptr, Action::OFK_HIP);
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.
@@ -5215,6 +5212,14 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
+    // Skip a redundant Backend phase for HIP device code when using the new
+    // offload driver, where mid-end is done in linker wrapper.
+    if (TargetDeviceOffloadKind == Action::OFK_HIP &&
+        Args.hasFlag(options::OPT_offload_new_driver,
+                     options::OPT_no_offload_new_driver, false) &&
+        !offloadDeviceOnly())
+      return Input;
+
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
       if (Args.hasArg(options::OPT_ffat_lto_objects) &&
@@ -5234,7 +5239,8 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_emit_llvm) ||
         TargetDeviceOffloadKind == Action::OFK_SYCL ||
         (((Input->getOffloadingToolChain() &&
-           Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
+           Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&
+           TargetDeviceOffloadKind != Action::OFK_None) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
          ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                         false) ||

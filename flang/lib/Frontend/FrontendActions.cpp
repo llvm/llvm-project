@@ -277,11 +277,11 @@ bool CodeGenAction::beginSourceFileAction() {
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
-  if (ci.getInvocation().getLangOpts().NoFastRealMod) {
+  if (ci.getInvocation().getLangOpts().FastRealMod) {
     mlir::ModuleOp mod = lb.getModule();
     mod.getOperation()->setAttr(
         mlir::StringAttr::get(mod.getContext(),
-                              llvm::Twine{"fir.no_fast_real_mod"}),
+                              llvm::Twine{"fir.fast_real_mod"}),
         mlir::BoolAttr::get(mod.getContext(), true));
   }
 

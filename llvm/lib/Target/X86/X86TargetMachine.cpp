@@ -50,7 +50,6 @@
 #include "llvm/Transforms/CFGuard.h"
 #include <memory>
 #include <optional>
-#include <string>
 
 using namespace llvm;
 
@@ -77,7 +76,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeFixupBWInstPassPass(PR);
   initializeCompressEVEXPassPass(PR);
   initializeFixupLEAPassPass(PR);
-  initializeFPSPass(PR);
+  initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
@@ -105,7 +104,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
-  initializeX86DynAllocaExpanderPass(PR);
+  initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
 }
@@ -517,7 +516,7 @@ void X86PassConfig::addPreRegAlloc() {
 
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
-  addPass(createX86DynAllocaExpander());
+  addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
@@ -532,7 +531,7 @@ void X86PassConfig::addMachineSSAOptimization() {
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86LowerTileCopyPass());
-  addPass(createX86FloatingPointStackifierPass());
+  addPass(createX86FPStackifierLegacyPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
   // to using the Speculative Execution Side Effect Suppression pass for
   // mitigation. This is to prevent slow downs due to

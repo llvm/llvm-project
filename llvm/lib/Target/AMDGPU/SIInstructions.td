@@ -845,6 +845,17 @@ def : GCNPat<
   (SI_CALL_ISEL $src0, (i64 0))
 >;
 
+// Funnel shift right (fshr) patterns for uniform inputs.
+// These patterns implement this using scalar instructions by constructing a 64-bit
+// value {a, b} and performing a single right shift.
+def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
+>;
+
+def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
+>;
+
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
 // the called function after regalloc.
 def SI_CALL : SPseudoInstSI <
@@ -3007,13 +3018,23 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i64 (zext i32:$src)),
+  (i64 (UniformUnaryFrag<zext> i32:$src)),
   (REG_SEQUENCE SReg_64, $src, sub0, (S_MOV_B32 (i32 0)), sub1)
 >;
 
 def : GCNPat <
-  (i64 (anyext i32:$src)),
+  (i64 (zext i32:$src)),
+  (REG_SEQUENCE VReg_64, $src, sub0, (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+
+def : GCNPat <
+  (i64 (UniformUnaryFrag<anyext> i32:$src)),
   (REG_SEQUENCE SReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat <
+  (i64 (anyext i32:$src)),
+  (REG_SEQUENCE VReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 class ZExt_i64_i1_Pat <SDNode ext> : GCNPat <

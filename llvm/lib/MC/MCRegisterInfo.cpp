@@ -221,7 +221,7 @@ bool MCRegisterInfo::regsOverlap(MCRegister RegA, MCRegister RegB) const {
   return false;
 }
 
-bool MCRegisterInfo::isArtificialRegUnit(unsigned Unit) const {
+bool MCRegisterInfo::isArtificialRegUnit(MCRegUnit Unit) const {
   for (MCRegUnitRootIterator Root(Unit, this); Root.isValid(); ++Root)
     if (isArtificial(*Root))
       return true;

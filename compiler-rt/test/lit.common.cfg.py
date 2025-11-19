@@ -113,6 +113,9 @@ def push_dynamic_library_lookup_path(config, new_path):
         config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
 
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
 use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
@@ -120,9 +123,8 @@ if use_lit_shell:
     # 0 is external, "" is default, and everything else is internal.
     execute_external = use_lit_shell == "0"
 else:
-    # Otherwise we default to internal on Windows and external elsewhere, as
-    # bash on Windows is usually very slow.
-    execute_external = not sys.platform in ["win32"]
+    # Otherwise we default to internal everywhere.
+    execute_external = False
 
 # Allow expanding substitutions that are based on other substitutions
 config.recursiveExpansionLimit = 10
@@ -195,16 +197,14 @@ test_cc_resource_dir, _ = get_path_from_clang(
 # Normalize the path for comparison
 if test_cc_resource_dir is not None:
     test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
-if lit_config.debug:
-    lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
+lit_config.dbg(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
 if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
     if config.compiler_id == "Clang":
-        if lit_config.debug:
-            lit_config.note(
-                f"Overriding test compiler resource dir to use "
-                f'libraries in "{config.compiler_rt_libdir}"'
-            )
+        lit_config.dbg(
+            f"Overriding test compiler resource dir to use "
+            f'libraries in "{config.compiler_rt_libdir}"'
+        )
         # Ensure that we use the just-built static libraries when linking by
         # overriding the Clang resource directory. Additionally, we want to use
         # the builtin headers shipped with clang (e.g. stdint.h), so we

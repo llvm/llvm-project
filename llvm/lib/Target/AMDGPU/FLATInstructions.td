@@ -262,8 +262,18 @@ multiclass FLAT_Flat_Load_Pseudo<string opName, RegisterOperand regClass = AVLdS
 
 multiclass FLAT_Flat_Load_Pseudo_t16<string opName> {
   defm "" : FLAT_Flat_Load_Pseudo<opName, AVLdSt_32, 1>;
-  let True16Predicate = UseRealTrue16Insts in
-    defm _t16 : FLAT_Flat_Load_Pseudo<opName#"_t16", VGPROp_16>, True16D16Table<NAME#"_HI", NAME>;
+
+  defvar Name16 = opName#"_t16";
+  let True16Predicate = UseRealTrue16Insts in {
+    def _t16 : FLAT_Load_Pseudo<Name16, VGPROp_16>,
+      GlobalSaddrTable<0, Name16>,
+      True16D16Table<NAME#"_HI", NAME>;
+
+    let OtherPredicates = [HasFlatGVSMode] in
+    def _t16_SADDR : FLAT_Load_Pseudo<Name16, VGPROp_16, 0, 1, 1>,
+      GlobalSaddrTable<1, Name16>,
+      True16D16Table<NAME#"_HI_SADDR", NAME#"_SADDR">;
+  }
 }
 
 class FLAT_Store_Pseudo <string opName, RegisterOperand vdataClass,

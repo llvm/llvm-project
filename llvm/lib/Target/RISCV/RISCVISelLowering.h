@@ -71,6 +71,9 @@ public:
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
+  /// Customize the preferred legalization strategy for certain types.
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
+
   bool softPromoteHalfType() const override { return true; }
 
   /// Return the register type for a given MVT, ensuring vectors are treated

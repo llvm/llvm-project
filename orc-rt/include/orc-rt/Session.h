@@ -17,6 +17,8 @@
 #include "orc-rt/ResourceManager.h"
 #include "orc-rt/move_only_function.h"
 
+#include "orc-rt-c/CoreTypes.h"
+
 #include <vector>
 
 namespace orc_rt {
@@ -40,6 +42,8 @@ public:
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;
   Session &operator=(const Session &) = delete;
+  Session(Session &&) = delete;
+  Session &operator=(Session &&) = delete;
 
   ~Session();
 
@@ -68,6 +72,14 @@ private:
   ErrorReporterFn ReportError;
   std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
 };
+
+inline orc_rt_SessionRef wrap(Session *S) noexcept {
+  return reinterpret_cast<orc_rt_SessionRef>(S);
+}
+
+inline Session *unwrap(orc_rt_SessionRef S) noexcept {
+  return reinterpret_cast<Session *>(S);
+}
 
 } // namespace orc_rt
 

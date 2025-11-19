@@ -363,6 +363,43 @@ int llvm_test_dibuilder(void) {
   assert(AddDbgRecordUnderTheRange == NULL);
   (void)AddDbgRecordUnderTheRange;
 
+  // Test that we can read the first debug record.
+  LLVMMetadataRef AddDbgRecordFirstDebugLoc =
+      LLVMDbgRecordGetDebugLoc(AddDbgRecordFirst);
+  (void)AddDbgRecordFirstDebugLoc;
+  assert(LLVMDILocationGetLine(AddDbgRecordFirstDebugLoc) == 43);
+  assert(LLVMDbgRecordGetKind(AddDbgRecordFirst) == LLVMDbgRecordValue);
+  LLVMValueRef AddDbgRecordFirstValue =
+      LLVMDbgVariableRecordGetValue(AddDbgRecordFirst, 0);
+  (void)AddDbgRecordFirstValue;
+  assert(LLVMGetValueKind(AddDbgRecordFirstValue) == LLVMConstantIntValueKind);
+  assert(LLVMConstIntGetZExtValue(AddDbgRecordFirstValue) == 0);
+  LLVMMetadataRef AddDbgRecordFirstVariable =
+      LLVMDbgVariableRecordGetVariable(AddDbgRecordFirst);
+  (void)AddDbgRecordFirstVariable;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariable) ==
+         LLVMDILocalVariableMetadataKind);
+  // TODO: For now, there is no way to get the name.
+  LLVMMetadataRef AddDbgRecordFirstVariableScope =
+      LLVMDIVariableGetScope(AddDbgRecordFirstVariable);
+  (void)AddDbgRecordFirstVariableScope;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariableScope) ==
+         LLVMDILexicalBlockMetadataKind);
+  LLVMMetadataRef AddDbgRecordFirstVariableFile =
+      LLVMDIScopeGetFile(AddDbgRecordFirstVariableScope);
+  (void)AddDbgRecordFirstVariableFile;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariableFile) ==
+         LLVMDIFileMetadataKind);
+  unsigned FileLen = 0;
+  assert(strcmp(LLVMDIFileGetFilename(AddDbgRecordFirstVariableFile, &FileLen),
+                "debuginfo.c") == 0);
+  (void)FileLen;
+  LLVMMetadataRef AddDbgRecordFirstExpr =
+      LLVMDbgVariableRecordGetExpression(AddDbgRecordFirst);
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstExpr) ==
+         LLVMDIExpressionMetadataKind);
+  (void)AddDbgRecordFirstExpr;
+
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);
   LLVMDisposeMessage(MStr);

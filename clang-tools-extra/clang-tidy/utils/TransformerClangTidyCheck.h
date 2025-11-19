@@ -48,8 +48,9 @@ public:
   ///
   /// See \c setRule for constraints on the rule.
   TransformerClangTidyCheck(
-      std::function<std::optional<transformer::RewriteRuleWith<std::string>>(
-          const LangOptions &, const OptionsView &)>
+      llvm::function_ref<
+          std::optional<transformer::RewriteRuleWith<std::string>>(
+              const LangOptions &, const OptionsView &)>
           MakeRule,
       StringRef Name, ClangTidyContext *Context);
 

@@ -3029,7 +3029,7 @@ private:
 
   // printInfoComment - Print a little comment after the instruction indicating
   // which slot it occupies.
-  void printInfoComment(const Value &V);
+  void printInfoComment(const Value &V, bool isMaterializable = false);
 
   // printGCRelocateComment - print comment after call to the gc.relocate
   // intrinsic indicating base and derived pointer names.
@@ -4062,7 +4062,7 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   if (Attrs.hasAttributes())
     Out << " #" << Machine.getAttributeGroupSlot(Attrs);
 
-  printInfoComment(*GV);
+  printInfoComment(*GV, GV->isMaterializable());
 }
 
 void AssemblyWriter::printAlias(const GlobalAlias *GA) {
@@ -4100,7 +4100,7 @@ void AssemblyWriter::printAlias(const GlobalAlias *GA) {
     Out << '"';
   }
 
-  printInfoComment(*GA);
+  printInfoComment(*GA, GA->isMaterializable());
   Out << '\n';
 }
 
@@ -4139,7 +4139,7 @@ void AssemblyWriter::printIFunc(const GlobalIFunc *GI) {
     printMetadataAttachments(MDs, ", ");
   }
 
-  printInfoComment(*GI);
+  printInfoComment(*GI, GI->isMaterializable());
   Out << '\n';
 }
 
@@ -4418,13 +4418,12 @@ void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
 
 /// printInfoComment - Print a little comment after the instruction indicating
 /// which slot it occupies.
-void AssemblyWriter::printInfoComment(const Value &V) {
+void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(&V))
     printGCRelocateComment(*Relocate);
 
-  if (AnnotationWriter) {
+  if (AnnotationWriter && !isMaterializable)
     AnnotationWriter->printInfoComment(V, Out);
-  }
 
   if (PrintInstDebugLocs) {
     if (auto *I = dyn_cast<Instruction>(&V)) {

@@ -18,13 +18,13 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/ChainedDiagnosticConsumer.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -350,8 +350,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   unsigned NumParallelJobs =
       getLastArgIntValue(ArgList, options::OPT_parallel_jobs_EQ, 1, Diags);
   UseNewCC1Process =
-      ArgList.hasFlag(clang::driver::options::OPT_fno_integrated_cc1,
-                      clang::driver::options::OPT_fintegrated_cc1,
+      ArgList.hasFlag(clang::options::OPT_fno_integrated_cc1,
+                      clang::options::OPT_fintegrated_cc1,
                       /*Default=*/NumParallelJobs > 1 ? true : CLANG_SPAWN_CC1);
 
   if (!DiagOpts->DiagnosticSerializationFile.empty()) {

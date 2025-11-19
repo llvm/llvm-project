@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-parallel -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-parallel -S < %s | FileCheck %s
 ;
 ;    void foo(float *A, float *B) {
 ;      for (long i = 0; i < 1000; i++)

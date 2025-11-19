@@ -24,7 +24,7 @@
 using namespace llvm;
 
 SPIRVInstrInfo::SPIRVInstrInfo(const SPIRVSubtarget &STI)
-    : SPIRVGenInstrInfo(STI) {}
+    : SPIRVGenInstrInfo(STI, RI) {}
 
 bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {

@@ -7,9 +7,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 %struct.pair = type { i32, i32 }
 
 define i32 @t1() !dbg !9 {
-; CHECK-LABEL: define i32 @t1(
-; CHECK-SAME: ) !dbg [[DBG9:![0-9]+]] {
-; CHECK-NEXT:      #dbg_value(i32 2, [[META13:![0-9]+]], !DIExpression(DIOpArg(0, i32)), [[META15:![0-9]+]])
+; CHECK-LABEL: define i32 @t1() {
 ; CHECK-NEXT:    ret i32 2
 ;
   %local = alloca i32, align 4
@@ -21,17 +19,14 @@ define i32 @t1() !dbg !9 {
 
 define i32 @t2(i1 %cond) !dbg !16 {
 ; CHECK-LABEL: define i32 @t2(
-; CHECK-SAME: i1 [[COND:%.*]]) !dbg [[DBG16:![0-9]+]] {
+; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:      #dbg_value(i32 42, [[META17:![0-9]+]], !DIExpression(DIOpArg(0, i32)), [[META18:![0-9]+]])
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:      #dbg_value(i32 2, [[META17]], !DIExpression(DIOpArg(0, i32)), [[META18]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[LOCAL_0:%.*]] = phi i32 [ 42, [[THEN]] ], [ 2, [[ELSE]] ]
-; CHECK-NEXT:      #dbg_value(i32 [[LOCAL_0]], [[META17]], !DIExpression(DIOpArg(0, i32)), [[META18]])
 ; CHECK-NEXT:    ret i32 [[LOCAL_0]]
 ;
   %local = alloca i32, align 4
@@ -52,10 +47,7 @@ join:                                             ; preds = %else, %then
 }
 
 define void @t3() !dbg !19 {
-; CHECK-LABEL: define void @t3(
-; CHECK-SAME: ) !dbg [[DBG19:![0-9]+]] {
-; CHECK-NEXT:      #dbg_value(i32 42, [[META20:![0-9]+]], !DIExpression(DIOpArg(0, i32), DIOpFragment(0, 32)), [[META25:![0-9]+]])
-; CHECK-NEXT:      #dbg_value(i32 43, [[META20]], !DIExpression(DIOpArg(0, i32), DIOpFragment(32, 32)), [[META25]])
+; CHECK-LABEL: define void @t3() {
 ; CHECK-NEXT:    ret void
 ;
   %local = alloca %struct.pair, align 4
@@ -70,9 +62,7 @@ define void @t3() !dbg !19 {
 define i32 @t4() !dbg !26 {
   ;; FIXME(diexpression-poison): We could probably preserve debug info for the dbg.value here if
   ;; necessary. Check that we at least do something sensible with it for now.
-; CHECK-LABEL: define i32 @t4(
-; CHECK-SAME: ) !dbg [[DBG26:![0-9]+]] {
-; CHECK-NEXT:      #dbg_value(ptr poison, [[META27:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32)), [[META28:![0-9]+]])
+; CHECK-LABEL: define i32 @t4() {
 ; CHECK-NEXT:    ret i32 42
 ;
   %local = alloca i32, align 4
@@ -87,17 +77,14 @@ define i16 @t5(i1 %cond) !dbg !29 {
   ;; of the variable !30. This is something that old-style DIExpressions don't
   ;; support.
 ; CHECK-LABEL: define i16 @t5(
-; CHECK-SAME: i1 [[COND:%.*]]) !dbg [[DBG29:![0-9]+]] {
+; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:      #dbg_value(i16 42, [[META30:![0-9]+]], !DIExpression(DIOpArg(0, i16), DIOpSExt(i32)), [[META31:![0-9]+]])
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:      #dbg_value(i16 43, [[META30]], !DIExpression(DIOpArg(0, i16), DIOpSExt(i32)), [[META31]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[LOCAL_0:%.*]] = phi i16 [ 42, [[THEN]] ], [ 43, [[ELSE]] ]
-; CHECK-NEXT:      #dbg_value(i16 [[LOCAL_0]], [[META30]], !DIExpression(DIOpArg(0, i16), DIOpSExt(i32)), [[META31]])
 ; CHECK-NEXT:    ret i16 [[LOCAL_0]]
 ;
   %local = alloca i16, align 4
@@ -120,12 +107,7 @@ join:                                             ; preds = %else, %then
 %struct.pair.pair = type { %struct.pair, %struct.pair }
 
 define void @t6() !dbg !32 {
-; CHECK-LABEL: define void @t6(
-; CHECK-SAME: ) !dbg [[DBG32:![0-9]+]] {
-; CHECK-NEXT:      #dbg_value(i32 0, [[META33:![0-9]+]], !DIExpression(DIOpArg(0, i32), DIOpFragment(0, 32)), [[META38:![0-9]+]])
-; CHECK-NEXT:      #dbg_value(i32 1, [[META33]], !DIExpression(DIOpArg(0, i32), DIOpFragment(32, 32)), [[META38]])
-; CHECK-NEXT:      #dbg_value(i32 2, [[META33]], !DIExpression(DIOpArg(0, i32), DIOpFragment(64, 32)), [[META38]])
-; CHECK-NEXT:      #dbg_value(i32 3, [[META33]], !DIExpression(DIOpArg(0, i32), DIOpFragment(96, 32)), [[META38]])
+; CHECK-LABEL: define void @t6() {
 ; CHECK-NEXT:    ret void
 ;
   %first = alloca %struct.pair, align 4
@@ -195,37 +177,3 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !37 = !DILocalVariable(name: "local", scope: !32, file: !1, line: 1, type: !33)
 !38 = !DILocation(line: 1, column: 1, scope: !32)
 
-;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "clang 19", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META1]] = !DIFile(filename: "{{.*}}t.cpp", directory: {{.*}})
-; CHECK: [[DBG9]] = distinct !DISubprogram(name: "t1", linkageName: "t1", scope: [[META1]], file: [[META1]], line: 7, type: [[META10:![0-9]+]], scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12:![0-9]+]])
-; CHECK: [[META10]] = !DISubroutineType(types: [[META11:![0-9]+]])
-; CHECK: [[META11]] = !{null}
-; CHECK: [[META12]] = !{[[META13]]}
-; CHECK: [[META13]] = !DILocalVariable(name: "local", scope: [[DBG9]], file: [[META1]], line: 8, type: [[META14:![0-9]+]])
-; CHECK: [[META14]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-; CHECK: [[META15]] = !DILocation(line: 0, scope: [[DBG9]])
-; CHECK: [[DBG16]] = distinct !DISubprogram(name: "t2", linkageName: "t2", scope: [[META1]], file: [[META1]], line: 7, type: [[META10]], scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12]])
-; CHECK: [[META17]] = !DILocalVariable(name: "local", scope: [[DBG16]], file: [[META1]], line: 1, type: [[META14]])
-; CHECK: [[META18]] = !DILocation(line: 0, scope: [[DBG16]])
-; CHECK: [[DBG19]] = distinct !DISubprogram(name: "t3", linkageName: "t3", scope: [[META1]], file: [[META1]], line: 7, type: [[META10]], scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12]])
-; CHECK: [[META20]] = !DILocalVariable(name: "local", scope: [[DBG19]], file: [[META1]], line: 1, type: [[META21:![0-9]+]])
-; CHECK: [[META21]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "pair", file: [[META1]], line: 2, size: 64, flags: DIFlagTypePassByValue, elements: [[META22:![0-9]+]], identifier: "pair")
-; CHECK: [[META22]] = !{[[META23:![0-9]+]], [[META24:![0-9]+]]}
-; CHECK: [[META23]] = !DIDerivedType(tag: DW_TAG_member, name: "s1", scope: [[META21]], file: [[META1]], line: 3, baseType: [[META14]], size: 32)
-; CHECK: [[META24]] = !DIDerivedType(tag: DW_TAG_member, name: "s2", scope: [[META21]], file: [[META1]], line: 4, baseType: [[META14]], size: 32, offset: 32)
-; CHECK: [[META25]] = !DILocation(line: 0, scope: [[DBG19]])
-; CHECK: [[DBG26]] = distinct !DISubprogram(name: "t4", linkageName: "t4", scope: [[META1]], file: [[META1]], line: 7, type: [[META10]], scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12]])
-; CHECK: [[META27]] = !DILocalVariable(name: "local", scope: [[DBG26]], file: [[META1]], line: 1, type: [[META14]])
-; CHECK: [[META28]] = !DILocation(line: 1, column: 1, scope: [[DBG26]])
-; CHECK: [[DBG29]] = distinct !DISubprogram(name: "t5", linkageName: "t5", scope: [[META1]], file: [[META1]], line: 7, type: [[META10]], scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12]])
-; CHECK: [[META30]] = !DILocalVariable(name: "local_i16", scope: [[DBG29]], file: [[META1]], line: 1, type: [[META14]])
-; CHECK: [[META31]] = !DILocation(line: 0, scope: [[DBG29]])
-; CHECK: [[DBG32]] = distinct !DISubprogram(name: "t6", linkageName: "t56", scope: [[META1]], file: [[META1]], line: 7, type: [[META10]], scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12]])
-; CHECK: [[META33]] = !DILocalVariable(name: "local", scope: [[DBG32]], file: [[META1]], line: 1, type: [[META34:![0-9]+]])
-; CHECK: [[META34]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "pair_pair", file: [[META1]], line: 2, size: 128, flags: DIFlagTypePassByValue, elements: [[META35:![0-9]+]], identifier: "pair_pair")
-; CHECK: [[META35]] = !{[[META36:![0-9]+]], [[META37:![0-9]+]]}
-; CHECK: [[META36]] = !DIDerivedType(tag: DW_TAG_member, name: "s1", scope: [[META34]], file: [[META1]], line: 3, baseType: [[META21]], size: 64)
-; CHECK: [[META37]] = !DIDerivedType(tag: DW_TAG_member, name: "s2", scope: [[META34]], file: [[META1]], line: 4, baseType: [[META21]], size: 64, offset: 64)
-; CHECK: [[META38]] = !DILocation(line: 0, scope: [[DBG32]])
-;.

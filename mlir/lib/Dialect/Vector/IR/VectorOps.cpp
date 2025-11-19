@@ -6067,19 +6067,21 @@ LogicalResult ScatterOp::verify() {
   VectorType indVType = getIndexVectorType();
   VectorType maskVType = getMaskVectorType();
   VectorType valueVType = getVectorType();
-  MemRefType memType = getMemRefType();
+  ShapedType baseType = getBaseType();
 
-  if (valueVType.getElementType() != memType.getElementType())
+  if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
+    return emitOpError("requires base to be a memref or ranked tensor type");
+
+  if (valueVType.getElementType() != baseType.getElementType())
     return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getOffsets()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (llvm::size(getOffsets()) != baseType.getRank())
+    return emitOpError("requires ") << baseType.getRank() << " indices";
   if (valueVType.getShape() != indVType.getShape())
     return emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore dim to match mask dim");
   return success();
 }
-
 namespace {
 class ScatterFolder final : public OpRewritePattern<ScatterOp> {
 public:

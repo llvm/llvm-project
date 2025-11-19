@@ -9,6 +9,7 @@ static_library("Frontend") {
     "//clang/lib/Driver",
     "//clang/lib/Edit",
     "//clang/lib/Lex",
+    "//clang/lib/Options",
     "//clang/lib/Parse",
     "//clang/lib/Sema",
     "//clang/lib/Serialization",

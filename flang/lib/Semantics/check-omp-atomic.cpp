@@ -590,9 +590,11 @@ void OmpStructureChecker::CheckAtomicVariable(
 
   CheckAtomicType(syms.back(), source, atom.AsFortran(), checkTypeOnPointer);
 
-  if (IsAllocatable(syms.back()) && !IsArrayElement(atom)) {
-    context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
-        atom.AsFortran());
+  if (!IsArrayElement(atom) && !ExtractComplexPart(atom)) {
+    if (IsAllocatable(syms.back())) {
+      context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
+          atom.AsFortran());
+    }
   }
 }
 

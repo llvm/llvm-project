@@ -234,19 +234,18 @@ define amdgpu_cs void @workgroup_id_optimized() "amdgpu-cluster-dims"="2,3,4" {
 ;
 ; GFX1250-SDAG-LABEL: workgroup_id_optimized:
 ; GFX1250-SDAG:       ; %bb.0: ; %.entry
-; GFX1250-SDAG-NEXT:    s_lshl_b32 s0, ttmp9, 1
-; GFX1250-SDAG-NEXT:    s_and_b32 s1, ttmp6, 15
-; GFX1250-SDAG-NEXT:    s_lshr_b32 s2, ttmp7, 14
-; GFX1250-SDAG-NEXT:    s_add_co_i32 s1, s1, s0
-; GFX1250-SDAG-NEXT:    s_and_b32 s0, s2, 0x3fffc
+; GFX1250-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 14
 ; GFX1250-SDAG-NEXT:    s_and_b32 s2, ttmp7, 0xffff
+; GFX1250-SDAG-NEXT:    s_and_b32 s0, ttmp6, 15
+; GFX1250-SDAG-NEXT:    s_and_b32 s1, s1, 0x3fffc
 ; GFX1250-SDAG-NEXT:    s_bfe_u32 s3, ttmp6, 0x40008
 ; GFX1250-SDAG-NEXT:    s_mul_i32 s2, s2, 3
 ; GFX1250-SDAG-NEXT:    s_bfe_u32 s4, ttmp6, 0x40004
-; GFX1250-SDAG-NEXT:    s_add_co_i32 s3, s3, s0
+; GFX1250-SDAG-NEXT:    s_lshl1_add_u32 s0, ttmp9, s0
+; GFX1250-SDAG-NEXT:    s_add_co_i32 s3, s3, s1
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s4, s4, s2
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s4
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s4
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX1250-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX1250-SDAG-NEXT:    s_endpgm

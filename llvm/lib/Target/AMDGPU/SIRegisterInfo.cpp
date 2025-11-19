@@ -350,10 +350,12 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
          "getNumCoveredRegs() will not work with generated subreg masks!");
 
   RegPressureIgnoredUnits.resize(getNumRegUnits());
-  RegPressureIgnoredUnits.set(*regunits(MCRegister::from(AMDGPU::M0)).begin());
+  RegPressureIgnoredUnits.set(
+      static_cast<unsigned>(*regunits(MCRegister::from(AMDGPU::M0)).begin()));
   for (auto Reg : AMDGPU::VGPR_16RegClass) {
     if (AMDGPU::isHi16Reg(Reg, *this))
-      RegPressureIgnoredUnits.set(*regunits(Reg).begin());
+      RegPressureIgnoredUnits.set(
+          static_cast<unsigned>(*regunits(Reg).begin()));
   }
 
   // HACK: Until this is fully tablegen'd.
@@ -2034,7 +2036,7 @@ void SIRegisterInfo::buildSpillLoadStore(
 
 void SIRegisterInfo::addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                                     Register BlockReg) const {
-  const MachineFunction *MF = MIB->getParent()->getParent();
+  const MachineFunction *MF = MIB->getMF();
   const SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
   uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(BlockReg);
   Register BaseVGPR = getSubReg(BlockReg, AMDGPU::sub0);
@@ -2473,7 +2475,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
 bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
-  MachineFunction *MF = MI->getParent()->getParent();
+  MachineFunction *MF = MI->getMF();
   MachineBasicBlock *MBB = MI->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
@@ -3252,7 +3254,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     if (!IsMUBUF && !MFI->isBottomOfStack()) {
       // Convert to a swizzled stack address by scaling by the wave size.
       // In an entry function/kernel the offset is already swizzled.
-      bool IsSALU = isSGPRClass(TII->getOpRegClass(*MI, FIOperandNum));
+      bool IsSALU = isSGPRClass(TII->getRegClass(MI->getDesc(), FIOperandNum));
       bool LiveSCC = RS->isRegUsed(AMDGPU::SCC) &&
                      !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr);
       const TargetRegisterClass *RC = IsSALU && !LiveSCC
@@ -3764,6 +3766,17 @@ SIRegisterInfo::getVectorSuperClassForBitWidth(unsigned BitWidth) const {
 }
 
 const TargetRegisterClass *
+SIRegisterInfo::getDefaultVectorSuperClassForBitWidth(unsigned BitWidth) const {
+  // TODO: In principle this should use AV classes for gfx908 too. This is
+  // limited to 90a+ to avoid regressing special case copy optimizations which
+  // need new handling. The core issue is that it's not possible to directly
+  // copy between AGPRs on gfx908, and the current optimizations around that
+  // expect to see copies to VGPR.
+  return ST.hasGFX90AInsts() ? getVectorSuperClassForBitWidth(BitWidth)
+                             : getVGPRClassForBitWidth(BitWidth);
+}
+
+const TargetRegisterClass *
 SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 16 || BitWidth == 32)
     return &AMDGPU::SReg_32RegClass;
@@ -3829,6 +3842,14 @@ const TargetRegisterClass *
 SIRegisterInfo::getEquivalentAGPRClass(const TargetRegisterClass *SRC) const {
   unsigned Size = getRegSizeInBits(*SRC);
   const TargetRegisterClass *ARC = getAGPRClassForBitWidth(Size);
+  assert(ARC && "Invalid register class size");
+  return ARC;
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getEquivalentAVClass(const TargetRegisterClass *SRC) const {
+  unsigned Size = getRegSizeInBits(*SRC);
+  const TargetRegisterClass *ARC = getVectorSuperClassForBitWidth(Size);
   assert(ARC && "Invalid register class size");
   return ARC;
 }
@@ -3947,7 +3968,6 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                     unsigned DstSubReg,
                                     const TargetRegisterClass *NewRC,
                                     LiveIntervals &LIS) const {
-
   auto MFI = MI->getMF()->getInfo<SIMachineFunctionInfo>();
   if (!MFI->isWaveCFG()) {
     // Do not coalesce any SGPR copy before WaveTransform.
@@ -3970,18 +3990,11 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
     }
   }
 
-  unsigned SrcSize = getRegSizeInBits(*SrcRC);
-  unsigned DstSize = getRegSizeInBits(*DstRC);
+  // TODO: This should be more aggressive, but be more cautious with very wide
+  // tuples.
   unsigned NewSize = getRegSizeInBits(*NewRC);
-
-  // Do not increase size of registers beyond dword, we would need to allocate
-  // adjacent registers and constraint regalloc more than needed.
-
-  // Always allow dword coalescing.
-  if (SrcSize <= 32 || DstSize <= 32)
-    return true;
-
-  return NewSize <= DstSize || NewSize <= SrcSize;
+  return NewSize <= 128 || NewSize <= getRegSizeInBits(*SrcRC) ||
+         NewSize <= getRegSizeInBits(*DstRC);
 }
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
@@ -4017,10 +4030,10 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
   llvm_unreachable("Unexpected register pressure set!");
 }
 
-const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
+const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
   static const int Empty[] = { -1 };
 
-  if (RegPressureIgnoredUnits[RegUnit])
+  if (RegPressureIgnoredUnits[static_cast<unsigned>(RegUnit)])
     return Empty;
 
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
@@ -4184,20 +4197,6 @@ const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
                                 : &AMDGPU::VReg_64RegClass;
 }
 
-const TargetRegisterClass *
-SIRegisterInfo::getRegClass(unsigned RCID) const {
-  switch ((int)RCID) {
-  case AMDGPU::SReg_1RegClassID:
-    return getBoolRC();
-  case AMDGPU::SReg_1_XEXECRegClassID:
-    return getWaveMaskRegClass();
-  case -1:
-    return nullptr;
-  default:
-    return AMDGPUGenRegisterInfo::getRegClass(RCID);
-  }
-}
-
 // Find reaching register definition
 MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
                                               MachineInstr &Use,
@@ -4284,28 +4283,6 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
   assert(&RC != &AMDGPU::VS_64RegClass);
 
   return true;
-}
-
-const TargetRegisterClass *
-SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
-  if (!RC || !ST.needsAlignedVGPRs())
-    return RC;
-
-  unsigned Size = getRegSizeInBits(*RC);
-  if (Size <= 32)
-    return RC;
-
-  if (RC == &AMDGPU::VS_64RegClass)
-    return &AMDGPU::VS_64_Align2RegClass;
-
-  if (isVGPRClass(RC))
-    return getAlignedVGPRClassForBitWidth(Size);
-  if (isAGPRClass(RC))
-    return getAlignedAGPRClassForBitWidth(Size);
-  if (isVectorSuperClass(RC))
-    return getAlignedVectorSuperClassForBitWidth(Size);
-
-  return RC;
 }
 
 ArrayRef<MCPhysReg>

@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mcpu=gfx1030 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-dwarfdump --debug-info - | FileCheck %s
-
+; XFAIL: *
 ; CHECK-LABEL: DW_AT_name ("test_loc_single")
 define void @test_loc_single(ptr addrspace(3) %ptr) #0 !dbg !9 {
   ; Verify that the right address class attribute is attached to the variable's

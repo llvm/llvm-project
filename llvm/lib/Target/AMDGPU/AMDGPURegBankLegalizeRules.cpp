@@ -66,6 +66,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64);
   case P5:
     return MRI.getType(Reg) == LLT::pointer(5, 32);
+  case P8:
+    return MRI.getType(Reg) == LLT::pointer(8, 128);
   case Ptr32:
     return isAnyPtr(MRI.getType(Reg), 32);
   case Ptr64:
@@ -108,6 +110,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isUniform(Reg);
   case UniP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isUniform(Reg);
+  case UniP8:
+    return MRI.getType(Reg) == LLT::pointer(8, 128) && MUI.isUniform(Reg);
   case UniPtr32:
     return isAnyPtr(MRI.getType(Reg), 32) && MUI.isUniform(Reg);
   case UniPtr64:
@@ -917,6 +921,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
       .Uni(S64, {{Sgpr64}, {}});
+
+  addRulesForGOpcs({G_BLOCK_ADDR}).Any({{UniP0}, {{SgprP0}, {}}});
+
+  addRulesForGOpcs({G_GLOBAL_VALUE})
+      .Any({{UniP0}, {{SgprP0}, {}}})
+      .Any({{UniP1}, {{SgprP1}, {}}})
+      .Any({{UniP3}, {{SgprP3}, {}}})
+      .Any({{UniP4}, {{SgprP4}, {}}})
+      .Any({{UniP8}, {{SgprP8}, {}}});
+
+  addRulesForGOpcs({G_AMDGPU_WAVE_ADDRESS}).Any({{UniP5}, {{SgprP5}, {}}});
 
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 

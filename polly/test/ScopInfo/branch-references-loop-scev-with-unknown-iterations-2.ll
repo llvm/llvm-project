@@ -1,8 +1,6 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | \
-; RUN:     FileCheck %s -check-prefix=DETECT
+; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s -check-prefix=DETECT
 
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | \
-; RUN:     FileCheck %s -check-prefix=SCOP
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=SCOP
 
 ; DETECT: Valid Region for Scop: loop => barrier
 ; DETECT-NEXT: Valid Region for Scop: branch => end

@@ -324,6 +324,163 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 }
 
 define void @too_many_args_use_workitem_id_xyz(
+; GFX7-LABEL: too_many_args_use_workitem_id_xyz:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_and_b32_e32 v32, 0x3ff, v31
+; GFX7-NEXT:    flat_store_dword v[0:1], v32
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_bfe_u32 v32, v31, 10, 10
+; GFX7-NEXT:    v_bfe_u32 v31, v31, 20, 10
+; GFX7-NEXT:    flat_store_dword v[0:1], v32
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v31
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX7-NEXT:    flat_store_dword v[0:1], v0
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v1
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v2
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v3
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v4
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v5
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v6
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v7
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v8
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v9
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v10
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v11
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v12
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v13
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v14
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v15
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v16
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v17
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v18
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v19
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v20
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v21
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v22
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v23
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v24
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v25
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v26
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v27
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v28
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v29
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v30
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    flat_store_dword v[0:1], v31
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: too_many_args_use_workitem_id_xyz:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    buffer_load_dword v33, off, s[0:3], s32
+; GFX90A-NEXT:    v_and_b32_e32 v32, 0x3ff, v31
+; GFX90A-NEXT:    global_store_dword v[0:1], v32, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    v_bfe_u32 v32, v31, 10, 10
+; GFX90A-NEXT:    v_bfe_u32 v31, v31, 20, 10
+; GFX90A-NEXT:    global_store_dword v[0:1], v32, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v31, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v0, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v1, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v2, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v3, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v4, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v5, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v6, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v7, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v8, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v9, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v10, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v11, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v12, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v13, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v14, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v15, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v16, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v17, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v18, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v19, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v20, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v21, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v22, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v23, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v24, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v25, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v26, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v27, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v28, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v29, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v30, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    global_store_dword v[0:1], v33, off
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
   i32 %arg8, i32 %arg9, i32 %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15,
   i32 %arg16, i32 %arg17, i32 %arg18, i32 %arg19, i32 %arg20, i32 %arg21, i32 %arg22, i32 %arg23,

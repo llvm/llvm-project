@@ -28,7 +28,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 

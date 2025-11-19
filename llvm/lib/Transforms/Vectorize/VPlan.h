@@ -588,7 +588,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPSingleDefRecipe to dbgs() (for debugging).
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
@@ -959,6 +959,11 @@ public:
 
   /// Add metadata with kind \p Kind and \p Node.
   void addMetadata(unsigned Kind, MDNode *Node) {
+    assert(none_of(Metadata,
+                   [Kind](const std::pair<unsigned, MDNode *> &P) {
+                     return P.first == Kind;
+                   }) &&
+           "Kind must appear at most once in Metadata");
     Metadata.emplace_back(Kind, Node);
   }
 
@@ -1100,8 +1105,7 @@ private:
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
+      : VPInstruction(Opcode, Operands, {}, {}, DL, Name) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags, const VPIRMetadata &MD = {},
@@ -3494,8 +3498,8 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const override;
 #endif
 
   /// Returns the scalar type of the induction.
@@ -3594,8 +3598,8 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -4209,10 +4213,9 @@ public:
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
   /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
-  VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
+  VPlan(BasicBlock *ScalarHeaderBB) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
-    TripCount = TC;
   }
 
   LLVM_ABI_FOR_TEST ~VPlan();
@@ -4436,10 +4439,10 @@ public:
   void printLiveIns(raw_ostream &O) const;
 
   /// Print this VPlan to \p O.
-  void print(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O) const;
 
   /// Print this VPlan in DOT format to \p O.
-  void printDOT(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void printDOT(raw_ostream &O) const;
 
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
@@ -4447,7 +4450,7 @@ public:
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
-  VPlan *duplicate();
+  LLVM_ABI_FOR_TEST VPlan *duplicate();
 
   /// Create a new VPBasicBlock with \p Name and containing \p Recipe if
   /// present. The returned block is owned by the VPlan and deleted once the

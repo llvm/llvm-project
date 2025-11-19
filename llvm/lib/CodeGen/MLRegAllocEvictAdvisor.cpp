@@ -83,13 +83,6 @@ static cl::opt<std::string> ModelUnderTraining(
     "regalloc-model", cl::Hidden,
     cl::desc("The model being trained for register allocation eviction"));
 
-static cl::opt<bool> EnableDevelopmentFeatures(
-    "regalloc-enable-development-features", cl::Hidden,
-    cl::desc("Whether or not to enable features under development for the ML "
-             "regalloc advisor"));
-
-#else
-static const bool EnableDevelopmentFeatures = false;
 #endif // #ifdef LLVM_HAVE_TFLITE
 
 /// The score injection pass.
@@ -212,23 +205,6 @@ static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
     "lowest stage of an interval in this LR")                                  \
   M(float, progress, {1}, "ratio of current queue size to initial size")
 
-#ifdef LLVM_HAVE_TFLITE
-#define RA_EVICT_FIRST_DEVELOPMENT_FEATURE(M)                                  \
-  M(int64_t, instructions, InstructionsShape,                                  \
-    "Opcodes of the instructions covered by the eviction problem")
-
-#define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)                                  \
-  M(int64_t, instructions_mapping, InstructionsMappingShape,                   \
-    "A binary matrix mapping LRs to instruction opcodes")                      \
-  M(float, mbb_frequencies, MBBFrequencyShape,                                 \
-    "A vector of machine basic block frequencies")                             \
-  M(int64_t, mbb_mapping, InstructionsShape,                                   \
-    "A vector of indices mapping instructions to MBBs")
-#else
-#define RA_EVICT_FIRST_DEVELOPMENT_FEATURE(M)
-#define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)
-#endif
-
 // The model learns to pick one of the mask == 1 interferences. This is the
 // name of the output tensor. The contract with the model is that the output
 // will be guaranteed to be to a mask == 1 position. Using a macro here to
@@ -242,12 +218,6 @@ enum FeatureIDs {
 #define _FEATURE_IDX_SIMPLE(_, name, __, ___) name
 #define _FEATURE_IDX(A, B, C, D) _FEATURE_IDX_SIMPLE(A, B, C, D),
   RA_EVICT_FEATURES_LIST(_FEATURE_IDX) FeatureCount,
-#ifdef LLVM_HAVE_TFLITE
-  RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_FEATURE_IDX_SIMPLE) = FeatureCount,
-#else
-  RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_FEATURE_IDX)
-#endif // #ifdef LLVM_HAVE_TFLITE
-  RA_EVICT_REST_DEVELOPMENT_FEATURES(_FEATURE_IDX) FeaturesWithDevelopmentCount
 #undef _FEATURE_IDX
 #undef _FEATURE_IDX_SIMPLE
 };
@@ -268,11 +238,7 @@ void resetInputs(MLModelRunner &Runner) {
   std::memset(Runner.getTensorUntyped(FeatureIDs::NAME), 0,                    \
               getTotalSize<TYPE>(SHAPE));
   RA_EVICT_FEATURES_LIST(_RESET)
-  if (EnableDevelopmentFeatures) {
-    RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_RESET)
-    RA_EVICT_REST_DEVELOPMENT_FEATURES(_RESET)
 #undef _RESET
-  }
 }
 
 // Per-live interval components that get aggregated into the feature values
@@ -398,13 +364,7 @@ class ReleaseModeEvictionAdvisorProvider final
 public:
   ReleaseModeEvictionAdvisorProvider(LLVMContext &Ctx)
       : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {
-    if (EnableDevelopmentFeatures) {
-      InputFeatures = {RA_EVICT_FEATURES_LIST(
-          _DECL_FEATURES) RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_FEATURES)
-                           RA_EVICT_REST_DEVELOPMENT_FEATURES(_DECL_FEATURES)};
-    } else {
-      InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
-    }
+    InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
   }
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
@@ -500,25 +460,12 @@ class DevelopmentModeEvictionAdvisorProvider final
 public:
   DevelopmentModeEvictionAdvisorProvider(LLVMContext &Ctx)
       : RegAllocEvictionAdvisorProvider(AdvisorMode::Development, Ctx) {
-    if (EnableDevelopmentFeatures) {
-      InputFeatures = {RA_EVICT_FEATURES_LIST(
-          _DECL_FEATURES) RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_FEATURES)
-                           RA_EVICT_REST_DEVELOPMENT_FEATURES(_DECL_FEATURES)};
-      TrainingInputFeatures = {
-          RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
-              RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_TRAIN_FEATURES)
-                  RA_EVICT_REST_DEVELOPMENT_FEATURES(_DECL_TRAIN_FEATURES)
-                      TensorSpec::createSpec<float>("action_discount", {1}),
-          TensorSpec::createSpec<int32_t>("action_step_type", {1}),
-          TensorSpec::createSpec<float>("action_reward", {1})};
-    } else {
-      InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
-      TrainingInputFeatures = {
-          RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
-              TensorSpec::createSpec<float>("action_discount", {1}),
-          TensorSpec::createSpec<int32_t>("action_step_type", {1}),
-          TensorSpec::createSpec<float>("action_reward", {1})};
-    }
+    InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
+    TrainingInputFeatures = {
+        RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
+            TensorSpec::createSpec<float>("action_discount", {1}),
+        TensorSpec::createSpec<int32_t>("action_step_type", {1}),
+        TensorSpec::createSpec<float>("action_reward", {1})};
     if (ModelUnderTraining.empty() && TrainingLog.empty()) {
       Ctx.emitError("Regalloc development mode should be requested with at "
                     "least logging enabled and/or a training model");
@@ -814,34 +761,6 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
                     /*NumUrgent*/ 0.0, LRPosInfo);
   assert(InitialQSize > 0.0 && "We couldn't have gotten here if we had "
                                "nothing to allocate initially.");
-#ifdef LLVM_HAVE_TFLITE
-  if (EnableDevelopmentFeatures) {
-    extractInstructionFeatures(
-        LRPosInfo, Runner,
-        [this](SlotIndex InputIndex) -> int {
-          auto *CurrentMachineInstruction =
-              LIS->getInstructionFromIndex(InputIndex);
-          if (!CurrentMachineInstruction) {
-            return -1;
-          }
-          return CurrentMachineInstruction->getOpcode();
-        },
-        [this](SlotIndex InputIndex) -> float {
-          auto *CurrentMachineInstruction =
-              LIS->getInstructionFromIndex(InputIndex);
-          return MBFI.getBlockFreqRelativeToEntryBlock(
-              CurrentMachineInstruction->getParent());
-        },
-        [this](SlotIndex InputIndex) -> MachineBasicBlock * {
-          auto *CurrentMachineInstruction =
-              LIS->getInstructionFromIndex(InputIndex);
-          return CurrentMachineInstruction->getParent();
-        },
-        FeatureIDs::instructions, FeatureIDs::instructions_mapping,
-        FeatureIDs::mbb_frequencies, FeatureIDs::mbb_mapping,
-        LIS->getSlotIndexes()->getLastIndex());
-  }
-#endif // #ifdef LLVM_HAVE_TFLITE
   // Normalize the features.
   for (auto &V : Largest)
     V = V ? V : 1.0;
@@ -987,13 +906,6 @@ void MLEvictAdvisor::extractFeatures(
 
     HintWeights += LIFC.HintWeights;
     NumRematerializable += LIFC.IsRemat;
-
-    if (EnableDevelopmentFeatures) {
-      for (auto CurrentSegment : LI) {
-        LRPosInfo.push_back(
-            LRStartEndInfo{CurrentSegment.start, CurrentSegment.end, Pos});
-      }
-    }
   }
   size_t Size = 0;
   if (!Intervals.empty()) {
@@ -1209,9 +1121,7 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
 
   Log->startObservation();
   size_t CurrentFeature = 0;
-  size_t FeatureCount = EnableDevelopmentFeatures
-                            ? FeatureIDs::FeaturesWithDevelopmentCount
-                            : FeatureIDs::FeatureCount;
+  size_t FeatureCount = FeatureIDs::FeatureCount;
   for (; CurrentFeature < FeatureCount; ++CurrentFeature) {
     Log->logTensorValue(CurrentFeature,
                         reinterpret_cast<const char *>(

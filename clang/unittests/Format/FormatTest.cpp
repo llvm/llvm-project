@@ -19851,6 +19851,14 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  Test &operator=(const Test &) = default;\n"
                "};",
                Alignment);
+
+  // The comment to the right should still align right.
+  verifyFormat("void foo(int   name, // name\n"
+               "         float name, // name\n"
+               "         int   name) // name\n"
+               "{}",
+               Alignment);
+
   unsigned OldColumnLimit = Alignment.ColumnLimit;
   // We need to set ColumnLimit to zero, in order to stress nested alignments,
   // otherwise the function parameters will be re-flowed onto a single line.
@@ -22271,6 +22279,19 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "{\"dy\", \"sign\"}},\n"
                "});",
                Style);
+
+  verifyNoCrash(
+      "PANEL_Ic PANEL_ic[PANEL_IC_NUMBER] =\n"
+      "    {\n"
+      "        {PIC(0),   PIC(0),   PIC(99),  PIC(81),  0}, // Backbox\n"
+      "        {PIC(1),   PIC(83),  PIC(191), PIC(137), 0}, // AK47\n"
+      "\n"
+      "#define PICALL1(a, b, c, d) \\\n"
+      "    { PIC(a), PIC(b), PIC(c), PIC(d), 1 }\n"
+      "\n"
+      "        PICALL1(1, 1, 75, 50),\n"
+      "};",
+      Style);
 
   Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
   verifyFormat("#define FOO \\\n"

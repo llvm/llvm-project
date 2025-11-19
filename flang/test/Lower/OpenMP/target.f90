@@ -466,7 +466,7 @@ end subroutine omp_target_implicit_nested
 !CHECK: %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 subroutine omp_target_implicit_bounds(n)
    !CHECK: %[[VAL_COPY:.*]] = fir.alloca i32
-   !CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_target_implicit_boundsEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+   !CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFomp_target_implicit_boundsEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
    !CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>
    !CHECK: fir.store %[[VAL_2]] to %[[VAL_COPY]] : !fir.ref<i32>
    !CHECK: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
@@ -530,7 +530,7 @@ subroutine omp_target_device_ptr
    use iso_c_binding, only : c_ptr, c_loc
    type(c_ptr) :: a
    integer, target :: b
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) mapper(@[[CPTR_DEFAULT:_QQM__fortran_builtinsc_ptr\.omp\.default\.mapper]]) -> {{.*}} {name = "a"}
    !CHECK: omp.target_data map_entries(%[[MAP]]{{.*}}) use_device_ptr({{.*}} -> %[[VAL_1:.*]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
    !$omp target data map(tofrom: a) use_device_ptr(a)
    !CHECK: {{.*}} = fir.coordinate_of %[[VAL_1:.*]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>

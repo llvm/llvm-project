@@ -36,9 +36,9 @@ subroutine test2(a, b, c)
   call allocate(d(N))
   c => d
 ! CHECK: %[[DS:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[E:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[DS]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest2Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-! CHECK: %[[F:.*]]:2 = hlfir.declare %arg1 dummy_scope %[[DS]] {uniq_name = "_QFtest2Eb"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
-! CHECK: %[[G:.*]]:2 = hlfir.declare %arg2 dummy_scope %[[DS]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest2Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+! CHECK: %[[E:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[DS]] {{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest2Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+! CHECK: %[[F:.*]]:2 = hlfir.declare %arg1 dummy_scope %[[DS]] {{.*}} {uniq_name = "_QFtest2Eb"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
+! CHECK: %[[G:.*]]:2 = hlfir.declare %arg2 dummy_scope %[[DS]] {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest2Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
 
   !$acc data copy(a,b,c,d)
   !$acc host_data use_device(a,b,c)

@@ -130,7 +130,15 @@ int main(void) {
   P(object_size, (s0, 3));
 
   // Whatever
-
+  P(bswapg, ((char)N));
+  P(bswapg, ((short)N));
+  P(bswapg, ((int)N));
+  P(bswapg, ((unsigned long)N));
+  P(bswapg, ((_BitInt(8))N));
+  P(bswapg, ((_BitInt(16))N));
+  P(bswapg, ((_BitInt(32))N));
+  P(bswapg, ((_BitInt(64))N));
+  P(bswapg, ((_BitInt(128))N));
   P(bswap16, (N));
   P(bswap32, (N));
   P(bswap64, (N));
@@ -1277,3 +1285,40 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
 }
 
 #endif
+
+// CHECK-LABEL: define{{.*}} void @test_builtin_bswapg
+void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
+                       unsigned long ul, unsigned long long ull,
+#ifdef __SIZEOF_INT128__
+                       unsigned __int128 ui128,
+#endif
+                       _BitInt(8) bi8,
+                       _BitInt(16) bi16, _BitInt(32) bi32, 
+                       _BitInt(64) bi64, _BitInt(128) bi128) {
+  uc = __builtin_bswapg(uc);
+  // CHECK: %1 = load i8, ptr %uc.addr
+  // CHECK: store i8 %1, ptr %uc.addr
+  us = __builtin_bswapg(us);
+  // CHECK: call i16 @llvm.bswap.i16
+  ui = __builtin_bswapg(ui);
+  // CHECK: call i32 @llvm.bswap.i32
+  ul = __builtin_bswapg(ul);
+  // CHECK: call i64 @llvm.bswap.i64
+  ull = __builtin_bswapg(ull);
+  // CHECK: call i64 @llvm.bswap.i64
+#ifdef __SIZEOF_INT128__
+  ui128 = __builtin_bswapg(ui128);
+  // CHECK: call i128 @llvm.bswap.i128
+#endif
+  bi8 = __builtin_bswapg(bi8);
+  // CHECK: %17 = load i8, ptr %bi8.addr, align 1
+  // CHECK: store i8 %17, ptr %bi8.addr
+  bi16 = __builtin_bswapg(bi16);
+  // CHECK: call i16 @llvm.bswap.i16
+  bi32 = __builtin_bswapg(bi32);
+  // CHECK: call i32 @llvm.bswap.i32
+  bi64 = __builtin_bswapg(bi64);
+  // CHECK: call i64 @llvm.bswap.i64
+  bi128 = __builtin_bswapg(bi128);
+  // CHECK: call i128 @llvm.bswap.i128
+}

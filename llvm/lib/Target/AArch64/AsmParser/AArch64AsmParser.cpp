@@ -88,7 +88,7 @@ private:
   StringRef Mnemonic; ///< Instruction mnemonic.
 
   // Map of register aliases registers via the .req directive.
-  StringMap<std::pair<RegKind, unsigned>> RegisterReqs;
+  StringMap<std::pair<RegKind, MCRegister>> RegisterReqs;
 
   class PrefixInfo {
   public:
@@ -165,7 +165,7 @@ private:
   AArch64CC::CondCode parseCondCodeString(StringRef Cond,
                                           std::string &Suggestion);
   bool parseCondCode(OperandVector &Operands, bool invertCondCode);
-  unsigned matchRegisterNameAlias(StringRef Name, RegKind Kind);
+  MCRegister matchRegisterNameAlias(StringRef Name, RegKind Kind);
   bool parseRegister(OperandVector &Operands);
   bool parseSymbolicImmVal(const MCExpr *&ImmVal);
   bool parseNeonVectorList(OperandVector &Operands);
@@ -268,6 +268,7 @@ private:
   ParseStatus tryParsePSBHint(OperandVector &Operands);
   ParseStatus tryParseBTIHint(OperandVector &Operands);
   ParseStatus tryParseCMHPriorityHint(OperandVector &Operands);
+  ParseStatus tryParseTIndexHint(OperandVector &Operands);
   ParseStatus tryParseAdrpLabel(OperandVector &Operands);
   ParseStatus tryParseAdrLabel(OperandVector &Operands);
   template <bool AddFPZeroAsLiteral>
@@ -373,6 +374,7 @@ private:
     k_PHint,
     k_BTIHint,
     k_CMHPriorityHint,
+    k_TIndexHint,
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -391,7 +393,7 @@ private:
   };
 
   struct RegOp {
-    unsigned RegNum;
+    MCRegister Reg;
     RegKind Kind;
     int ElementWidth;
 
@@ -417,7 +419,7 @@ private:
   };
 
   struct MatrixRegOp {
-    unsigned RegNum;
+    MCRegister Reg;
     unsigned ElementWidth;
     MatrixKind Kind;
   };
@@ -427,7 +429,7 @@ private:
   };
 
   struct VectorListOp {
-    unsigned RegNum;
+    MCRegister Reg;
     unsigned Count;
     unsigned Stride;
     unsigned NumElements;
@@ -507,6 +509,11 @@ private:
     unsigned Length;
     unsigned Val;
   };
+  struct TIndexHintOp {
+    const char *Data;
+    unsigned Length;
+    unsigned Val;
+  };
 
   struct SVCROp {
     const char *Data;
@@ -534,6 +541,7 @@ private:
     struct PHintOp PHint;
     struct BTIHintOp BTIHint;
     struct CMHPriorityHintOp CMHPriorityHint;
+    struct TIndexHintOp TIndexHint;
     struct ShiftExtendOp ShiftExtend;
     struct SVCROp SVCR;
   };
@@ -606,6 +614,9 @@ public:
       break;
     case k_CMHPriorityHint:
       CMHPriorityHint = o.CMHPriorityHint;
+      break;
+    case k_TIndexHint:
+      TIndexHint = o.TIndexHint;
       break;
     case k_ShiftExtend:
       ShiftExtend = o.ShiftExtend;
@@ -688,12 +699,12 @@ public:
 
   MCRegister getReg() const override {
     assert(Kind == k_Register && "Invalid access!");
-    return Reg.RegNum;
+    return Reg.Reg;
   }
 
-  unsigned getMatrixReg() const {
+  MCRegister getMatrixReg() const {
     assert(Kind == k_MatrixRegister && "Invalid access!");
-    return MatrixReg.RegNum;
+    return MatrixReg.Reg;
   }
 
   unsigned getMatrixElementWidth() const {
@@ -716,9 +727,9 @@ public:
     return Reg.EqualityTy;
   }
 
-  unsigned getVectorListStart() const {
+  MCRegister getVectorListStart() const {
     assert(Kind == k_VectorList && "Invalid access!");
-    return VectorList.RegNum;
+    return VectorList.Reg;
   }
 
   unsigned getVectorListCount() const {
@@ -789,6 +800,16 @@ public:
   StringRef getCMHPriorityHintName() const {
     assert(Kind == k_CMHPriorityHint && "Invalid access!");
     return StringRef(CMHPriorityHint.Data, CMHPriorityHint.Length);
+  }
+
+  unsigned getTIndexHint() const {
+    assert(Kind == k_TIndexHint && "Invalid access!");
+    return TIndexHint.Val;
+  }
+
+  StringRef getTIndexHintName() const {
+    assert(Kind == k_TIndexHint && "Invalid access!");
+    return StringRef(TIndexHint.Data, TIndexHint.Length);
   }
 
   StringRef getSVCR() const {
@@ -1264,15 +1285,15 @@ public:
   bool isNeonVectorRegLo() const {
     return Kind == k_Register && Reg.Kind == RegKind::NeonVector &&
            (AArch64MCRegisterClasses[AArch64::FPR128_loRegClassID].contains(
-                Reg.RegNum) ||
+                Reg.Reg) ||
             AArch64MCRegisterClasses[AArch64::FPR64_loRegClassID].contains(
-                Reg.RegNum));
+                Reg.Reg));
   }
 
   bool isNeonVectorReg0to7() const {
     return Kind == k_Register && Reg.Kind == RegKind::NeonVector &&
            (AArch64MCRegisterClasses[AArch64::FPR128_0to7RegClassID].contains(
-               Reg.RegNum));
+               Reg.Reg));
   }
 
   bool isMatrix() const { return Kind == k_MatrixRegister; }
@@ -1401,34 +1422,34 @@ public:
 
   bool isGPR32as64() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
-      AArch64MCRegisterClasses[AArch64::GPR64RegClassID].contains(Reg.RegNum);
+           AArch64MCRegisterClasses[AArch64::GPR64RegClassID].contains(Reg.Reg);
   }
 
   bool isGPR64as32() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
-      AArch64MCRegisterClasses[AArch64::GPR32RegClassID].contains(Reg.RegNum);
+           AArch64MCRegisterClasses[AArch64::GPR32RegClassID].contains(Reg.Reg);
   }
 
   bool isGPR64x8() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
            AArch64MCRegisterClasses[AArch64::GPR64x8ClassRegClassID].contains(
-               Reg.RegNum);
+               Reg.Reg);
   }
 
   bool isWSeqPair() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
            AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID].contains(
-               Reg.RegNum);
+               Reg.Reg);
   }
 
   bool isXSeqPair() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
            AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID].contains(
-               Reg.RegNum);
+               Reg.Reg);
   }
 
   bool isSyspXzrPair() const {
-    return isGPR64<AArch64::GPR64RegClassID>() && Reg.RegNum == AArch64::XZR;
+    return isGPR64<AArch64::GPR64RegClassID>() && Reg.Reg == AArch64::XZR;
   }
 
   template<int64_t Angle, int64_t Remainder>
@@ -1495,7 +1516,7 @@ public:
         isTypedVectorList<VectorKind, NumRegs, NumElements, ElementWidth>();
     if (!Res)
       return DiagnosticPredicate::NoMatch;
-    if (!AArch64MCRegisterClasses[RegClass].contains(VectorList.RegNum))
+    if (!AArch64MCRegisterClasses[RegClass].contains(VectorList.Reg))
       return DiagnosticPredicate::NearMatch;
     return DiagnosticPredicate::Match;
   }
@@ -1507,9 +1528,9 @@ public:
                                  ElementWidth, Stride>();
     if (!Res)
       return DiagnosticPredicate::NoMatch;
-    if ((VectorList.RegNum < (AArch64::Z0 + Stride)) ||
-        ((VectorList.RegNum >= AArch64::Z16) &&
-         (VectorList.RegNum < (AArch64::Z16 + Stride))))
+    if ((VectorList.Reg < (AArch64::Z0 + Stride)) ||
+        ((VectorList.Reg >= AArch64::Z16) &&
+         (VectorList.Reg < (AArch64::Z16 + Stride))))
       return DiagnosticPredicate::Match;
     return DiagnosticPredicate::NoMatch;
   }
@@ -1534,6 +1555,7 @@ public:
   bool isPHint() const { return Kind == k_PHint; }
   bool isBTIHint() const { return Kind == k_BTIHint; }
   bool isCMHPriorityHint() const { return Kind == k_CMHPriorityHint; }
+  bool isTIndexHint() const { return Kind == k_TIndexHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
     if (!isShiftExtend())
@@ -1841,7 +1863,7 @@ public:
 
   void addPPRorPNRRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    unsigned Reg = getReg();
+    MCRegister Reg = getReg();
     // Normalise to PPR
     if (Reg >= AArch64::PN0 && Reg <= AArch64::PN15)
       Reg = Reg - AArch64::PN0 + AArch64::P0;
@@ -2224,6 +2246,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getCMHPriorityHint()));
   }
 
+  void addTIndexHintOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getTIndexHint()));
+  }
+
   void addShifterOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     unsigned Imm =
@@ -2336,13 +2363,12 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateReg(unsigned RegNum, RegKind Kind, SMLoc S, SMLoc E, MCContext &Ctx,
+  CreateReg(MCRegister Reg, RegKind Kind, SMLoc S, SMLoc E, MCContext &Ctx,
             RegConstraintEqualityTy EqTy = RegConstraintEqualityTy::EqualsReg,
             AArch64_AM::ShiftExtendType ExtTy = AArch64_AM::LSL,
-            unsigned ShiftAmount = 0,
-            unsigned HasExplicitAmount = false) {
+            unsigned ShiftAmount = 0, unsigned HasExplicitAmount = false) {
     auto Op = std::make_unique<AArch64Operand>(k_Register, Ctx);
-    Op->Reg.RegNum = RegNum;
+    Op->Reg.Reg = Reg;
     Op->Reg.Kind = Kind;
     Op->Reg.ElementWidth = 0;
     Op->Reg.EqualityTy = EqTy;
@@ -2354,28 +2380,26 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<AArch64Operand>
-  CreateVectorReg(unsigned RegNum, RegKind Kind, unsigned ElementWidth,
-                  SMLoc S, SMLoc E, MCContext &Ctx,
-                  AArch64_AM::ShiftExtendType ExtTy = AArch64_AM::LSL,
-                  unsigned ShiftAmount = 0,
-                  unsigned HasExplicitAmount = false) {
+  static std::unique_ptr<AArch64Operand> CreateVectorReg(
+      MCRegister Reg, RegKind Kind, unsigned ElementWidth, SMLoc S, SMLoc E,
+      MCContext &Ctx, AArch64_AM::ShiftExtendType ExtTy = AArch64_AM::LSL,
+      unsigned ShiftAmount = 0, unsigned HasExplicitAmount = false) {
     assert((Kind == RegKind::NeonVector || Kind == RegKind::SVEDataVector ||
             Kind == RegKind::SVEPredicateVector ||
             Kind == RegKind::SVEPredicateAsCounter) &&
            "Invalid vector kind");
-    auto Op = CreateReg(RegNum, Kind, S, E, Ctx, EqualsReg, ExtTy, ShiftAmount,
+    auto Op = CreateReg(Reg, Kind, S, E, Ctx, EqualsReg, ExtTy, ShiftAmount,
                         HasExplicitAmount);
     Op->Reg.ElementWidth = ElementWidth;
     return Op;
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateVectorList(unsigned RegNum, unsigned Count, unsigned Stride,
+  CreateVectorList(MCRegister Reg, unsigned Count, unsigned Stride,
                    unsigned NumElements, unsigned ElementWidth,
                    RegKind RegisterKind, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_VectorList, Ctx);
-    Op->VectorList.RegNum = RegNum;
+    Op->VectorList.Reg = Reg;
     Op->VectorList.Count = Count;
     Op->VectorList.Stride = Stride;
     Op->VectorList.NumElements = NumElements;
@@ -2586,10 +2610,21 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateMatrixRegister(unsigned RegNum, unsigned ElementWidth, MatrixKind Kind,
+  CreateTIndexHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_TIndexHint, Ctx);
+    Op->TIndexHint.Val = Val;
+    Op->TIndexHint.Data = Str.data();
+    Op->TIndexHint.Length = Str.size();
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<AArch64Operand>
+  CreateMatrixRegister(MCRegister Reg, unsigned ElementWidth, MatrixKind Kind,
                        SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_MatrixRegister, Ctx);
-    Op->MatrixReg.RegNum = RegNum;
+    Op->MatrixReg.Reg = Reg;
     Op->MatrixReg.ElementWidth = ElementWidth;
     Op->MatrixReg.Kind = Kind;
     Op->StartLoc = S;
@@ -2660,9 +2695,9 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   case k_VectorList: {
     OS << "<vectorlist ";
-    unsigned Reg = getVectorListStart();
+    MCRegister Reg = getVectorListStart();
     for (unsigned i = 0, e = getVectorListCount(); i != e; ++i)
-      OS << Reg + i * getVectorListStride() << " ";
+      OS << Reg.id() + i * getVectorListStride() << " ";
     OS << ">";
     break;
   }
@@ -2698,8 +2733,11 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   case k_CMHPriorityHint:
     OS << getCMHPriorityHintName();
     break;
+  case k_TIndexHint:
+    OS << getTIndexHintName();
+    break;
   case k_MatrixRegister:
-    OS << "<matrix " << getMatrixReg() << ">";
+    OS << "<matrix " << getMatrixReg().id() << ">";
     break;
   case k_MatrixTileList: {
     OS << "<matrixlist ";
@@ -2715,7 +2753,7 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   }
   case k_Register:
-    OS << "<register " << getReg() << ">";
+    OS << "<register " << getReg().id() << ">";
     if (!getShiftExtendAmount() && !hasShiftExtendAmount())
       break;
     [[fallthrough]];
@@ -3048,53 +3086,53 @@ ParseStatus AArch64AsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
 }
 
 // Matches a register name or register alias previously defined by '.req'
-unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
-                                                  RegKind Kind) {
-  unsigned RegNum = 0;
-  if ((RegNum = matchSVEDataVectorRegName(Name)))
-    return Kind == RegKind::SVEDataVector ? RegNum : 0;
+MCRegister AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
+                                                    RegKind Kind) {
+  MCRegister Reg = MCRegister();
+  if ((Reg = matchSVEDataVectorRegName(Name)))
+    return Kind == RegKind::SVEDataVector ? Reg : MCRegister();
 
-  if ((RegNum = matchSVEPredicateVectorRegName(Name)))
-    return Kind == RegKind::SVEPredicateVector ? RegNum : 0;
+  if ((Reg = matchSVEPredicateVectorRegName(Name)))
+    return Kind == RegKind::SVEPredicateVector ? Reg : MCRegister();
 
-  if ((RegNum = matchSVEPredicateAsCounterRegName(Name)))
-    return Kind == RegKind::SVEPredicateAsCounter ? RegNum : 0;
+  if ((Reg = matchSVEPredicateAsCounterRegName(Name)))
+    return Kind == RegKind::SVEPredicateAsCounter ? Reg : MCRegister();
 
-  if ((RegNum = MatchNeonVectorRegName(Name)))
-    return Kind == RegKind::NeonVector ? RegNum : 0;
+  if ((Reg = MatchNeonVectorRegName(Name)))
+    return Kind == RegKind::NeonVector ? Reg : MCRegister();
 
-  if ((RegNum = matchMatrixRegName(Name)))
-    return Kind == RegKind::Matrix ? RegNum : 0;
+  if ((Reg = matchMatrixRegName(Name)))
+    return Kind == RegKind::Matrix ? Reg : MCRegister();
 
- if (Name.equals_insensitive("zt0"))
+  if (Name.equals_insensitive("zt0"))
     return Kind == RegKind::LookupTable ? unsigned(AArch64::ZT0) : 0;
 
   // The parsed register must be of RegKind Scalar
-  if ((RegNum = MatchRegisterName(Name)))
-    return (Kind == RegKind::Scalar) ? RegNum : 0;
+  if ((Reg = MatchRegisterName(Name)))
+    return (Kind == RegKind::Scalar) ? Reg : MCRegister();
 
-  if (!RegNum) {
+  if (!Reg) {
     // Handle a few common aliases of registers.
-    if (auto RegNum = StringSwitch<unsigned>(Name.lower())
-                    .Case("fp", AArch64::FP)
-                    .Case("lr",  AArch64::LR)
-                    .Case("x31", AArch64::XZR)
-                    .Case("w31", AArch64::WZR)
-                    .Default(0))
-      return Kind == RegKind::Scalar ? RegNum : 0;
+    if (MCRegister Reg = StringSwitch<unsigned>(Name.lower())
+                             .Case("fp", AArch64::FP)
+                             .Case("lr", AArch64::LR)
+                             .Case("x31", AArch64::XZR)
+                             .Case("w31", AArch64::WZR)
+                             .Default(0))
+      return Kind == RegKind::Scalar ? Reg : MCRegister();
 
     // Check for aliases registered via .req. Canonicalize to lower case.
     // That's more consistent since register names are case insensitive, and
     // it's how the original entry was passed in from MC/MCParser/AsmParser.
     auto Entry = RegisterReqs.find(Name.lower());
     if (Entry == RegisterReqs.end())
-      return 0;
+      return MCRegister();
 
-    // set RegNum if the match is the right kind of register
+    // set Reg if the match is the right kind of register
     if (Kind == Entry->getValue().first)
-      RegNum = Entry->getValue().second;
+      Reg = Entry->getValue().second;
   }
-  return RegNum;
+  return Reg;
 }
 
 unsigned AArch64AsmParser::getNumRegsForRegKind(RegKind K) {
@@ -3122,8 +3160,8 @@ ParseStatus AArch64AsmParser::tryParseScalarRegister(MCRegister &RegNum) {
     return ParseStatus::NoMatch;
 
   std::string lowerCase = Tok.getString().lower();
-  unsigned Reg = matchRegisterNameAlias(lowerCase, RegKind::Scalar);
-  if (Reg == 0)
+  MCRegister Reg = matchRegisterNameAlias(lowerCase, RegKind::Scalar);
+  if (!Reg)
     return ParseStatus::NoMatch;
 
   RegNum = Reg;
@@ -3335,6 +3373,23 @@ ParseStatus AArch64AsmParser::tryParseCMHPriorityHint(OperandVector &Operands) {
 
   Operands.push_back(AArch64Operand::CreateCMHPriorityHint(
       CMHPriority->Encoding, Tok.getString(), S, getContext()));
+  Lex(); // Eat identifier token.
+  return ParseStatus::Success;
+}
+
+/// tryParseTIndexHint - Try to parse a TIndex operand
+ParseStatus AArch64AsmParser::tryParseTIndexHint(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const AsmToken &Tok = getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return TokError("invalid operand for instruction");
+
+  auto TIndex = AArch64TIndexHint::lookupTIndexByName(Tok.getString());
+  if (!TIndex)
+    return TokError("invalid operand for instruction");
+
+  Operands.push_back(AArch64Operand::CreateTIndexHint(
+      TIndex->Encoding, Tok.getString(), S, getContext()));
   Lex(); // Eat identifier token.
   return ParseStatus::Success;
 }
@@ -3667,7 +3722,7 @@ ParseStatus AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
   }
 
   // Try to parse matrix register.
-  unsigned Reg = matchRegisterNameAlias(Name, RegKind::Matrix);
+  MCRegister Reg = matchRegisterNameAlias(Name, RegKind::Matrix);
   if (!Reg)
     return ParseStatus::NoMatch;
 
@@ -3850,7 +3905,6 @@ static const struct Extension {
     {"rdma", {AArch64::FeatureRDM}},
     {"sb", {AArch64::FeatureSB}},
     {"ssbs", {AArch64::FeatureSSBS}},
-    {"tme", {AArch64::FeatureTME}},
     {"fp8", {AArch64::FeatureFP8}},
     {"faminmax", {AArch64::FeatureFAMINMAX}},
     {"fp8fma", {AArch64::FeatureFP8FMA}},
@@ -3896,6 +3950,10 @@ static const struct Extension {
     {"f16mm", {AArch64::FeatureF16MM}},
     {"f16f32dot", {AArch64::FeatureF16F32DOT}},
     {"f16f32mm", {AArch64::FeatureF16F32MM}},
+    {"mops-go", {AArch64::FeatureMOPS_GO}},
+    {"poe2", {AArch64::FeatureS1POE2}},
+    {"tev", {AArch64::FeatureTEV}},
+    {"btie", {AArch64::FeatureBTIE}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3985,6 +4043,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   bool ExpectRegister = true;
   bool OptionalRegister = false;
   bool hasAll = getSTI().hasFeature(AArch64::FeatureAll);
+  bool hasTLBID = getSTI().hasFeature(AArch64::FeatureTLBID);
 
   if (Mnemonic == "ic") {
     const AArch64IC::IC *IC = AArch64IC::lookupICByName(Op);
@@ -4065,6 +4124,20 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     }
     ExpectRegister = false;
     createSysAlias(GSB->Encoding, Operands, S);
+  } else if (Mnemonic == "plbi") {
+    const AArch64PLBI::PLBI *PLBI = AArch64PLBI::lookupPLBIByName(Op);
+    if (!PLBI)
+      return TokError("invalid operand for PLBI instruction");
+    else if (!PLBI->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("PLBI " + std::string(PLBI->Name) + " requires: ");
+      setRequiredFeatureString(PLBI->getRequiredFeatures(), Str);
+      return TokError(Str);
+    }
+    ExpectRegister = PLBI->NeedsReg;
+    if (hasAll || hasTLBID) {
+      OptionalRegister = PLBI->OptionalReg;
+    }
+    createSysAlias(PLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
              Mnemonic == "cosp") {
 
@@ -4130,12 +4203,12 @@ bool AArch64AsmParser::parseSyslAlias(StringRef Name, SMLoc NameLoc,
   SMLoc startLoc = getLoc();
   const AsmToken &regTok = getTok();
   StringRef reg = regTok.getString();
-  unsigned RegNum = matchRegisterNameAlias(reg.lower(), RegKind::Scalar);
-  if (!RegNum)
+  MCRegister Reg = matchRegisterNameAlias(reg.lower(), RegKind::Scalar);
+  if (!Reg)
     return TokError("expected register operand");
 
   Operands.push_back(AArch64Operand::CreateReg(
-      RegNum, RegKind::Scalar, startLoc, getLoc(), getContext(), EqualsReg));
+      Reg, RegKind::Scalar, startLoc, getLoc(), getContext(), EqualsReg));
 
   Lex(); // Eat token
   if (parseToken(AsmToken::Comma))
@@ -4453,7 +4526,7 @@ ParseStatus AArch64AsmParser::tryParseVectorRegister(MCRegister &Reg,
   // a '.'.
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
-  unsigned RegNum = matchRegisterNameAlias(Head, MatchKind);
+  MCRegister RegNum = matchRegisterNameAlias(Head, MatchKind);
 
   if (RegNum) {
     if (Next != StringRef::npos) {
@@ -4937,13 +5010,13 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
   const AsmToken &Tok = getTok();
   std::string Name = Tok.getString().lower();
 
-  unsigned RegNum = matchRegisterNameAlias(Name, RegKind::LookupTable);
+  MCRegister Reg = matchRegisterNameAlias(Name, RegKind::LookupTable);
 
-  if (RegNum == 0)
+  if (!Reg)
     return ParseStatus::NoMatch;
 
   Operands.push_back(AArch64Operand::CreateReg(
-      RegNum, RegKind::LookupTable, StartLoc, getLoc(), getContext()));
+      Reg, RegKind::LookupTable, StartLoc, getLoc(), getContext()));
   Lex(); // Eat register.
 
   // Check if register is followed by an index
@@ -5439,11 +5512,11 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
 
-  // IC, DC, AT, TLBI, MLBI, GIC{R}, GSB and Prediction invalidation
+  // IC, DC, AT, TLBI, MLBI, PLBI, GIC{R}, GSB and Prediction invalidation
   // instructions are aliases for the SYS instruction.
   if (Head == "ic" || Head == "dc" || Head == "at" || Head == "tlbi" ||
       Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp" ||
-      Head == "mlbi" || Head == "gic" || Head == "gsb")
+      Head == "mlbi" || Head == "plbi" || Head == "gic" || Head == "gsb")
     return parseSysAlias(Head, NameLoc, Operands);
 
   // GICR instructions are aliases for the SYSL instruction.
@@ -5925,21 +5998,15 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::CPYETWN:
   case AArch64::CPYETRN:
   case AArch64::CPYETN: {
-    MCRegister Xd_wb = Inst.getOperand(0).getReg();
-    MCRegister Xs_wb = Inst.getOperand(1).getReg();
-    MCRegister Xn_wb = Inst.getOperand(2).getReg();
+    // Xd_wb == op0, Xs_wb == op1, Xn_wb == op2
     MCRegister Xd = Inst.getOperand(3).getReg();
     MCRegister Xs = Inst.getOperand(4).getReg();
     MCRegister Xn = Inst.getOperand(5).getReg();
-    if (Xd_wb != Xd)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xd_wb and Xd do not match");
-    if (Xs_wb != Xs)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xs_wb and Xs do not match");
-    if (Xn_wb != Xn)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xn_wb and Xn do not match");
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xs == Inst.getOperand(1).getReg() && "Xs_wb and Xs do not match");
+    assert(Xn == Inst.getOperand(2).getReg() && "Xn_wb and Xn do not match");
+
     if (Xd == Xs)
       return Error(Loc[0], "invalid CPY instruction, destination and source"
                            " registers are the same");
@@ -5975,17 +6042,14 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::MOPSSETGET:
   case AArch64::MOPSSETGEN:
   case AArch64::MOPSSETGETN: {
-    MCRegister Xd_wb = Inst.getOperand(0).getReg();
-    MCRegister Xn_wb = Inst.getOperand(1).getReg();
+    // Xd_wb == op0, Xn_wb == op1
     MCRegister Xd = Inst.getOperand(2).getReg();
     MCRegister Xn = Inst.getOperand(3).getReg();
     MCRegister Xm = Inst.getOperand(4).getReg();
-    if (Xd_wb != Xd)
-      return Error(Loc[0],
-                   "invalid SET instruction, Xd_wb and Xd do not match");
-    if (Xn_wb != Xn)
-      return Error(Loc[0],
-                   "invalid SET instruction, Xn_wb and Xn do not match");
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xn == Inst.getOperand(1).getReg() && "Xn_wb and Xn do not match");
+
     if (Xd == Xn)
       return Error(Loc[0], "invalid SET instruction, destination and size"
                            " registers are the same");
@@ -5994,6 +6058,30 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            " registers are the same");
     if (Xn == Xm)
       return Error(Loc[0], "invalid SET instruction, source and size"
+                           " registers are the same");
+    break;
+  }
+  case AArch64::SETGOP:
+  case AArch64::SETGOPT:
+  case AArch64::SETGOPN:
+  case AArch64::SETGOPTN:
+  case AArch64::SETGOM:
+  case AArch64::SETGOMT:
+  case AArch64::SETGOMN:
+  case AArch64::SETGOMTN:
+  case AArch64::SETGOE:
+  case AArch64::SETGOET:
+  case AArch64::SETGOEN:
+  case AArch64::SETGOETN: {
+    // Xd_wb == op0, Xn_wb == op1
+    MCRegister Xd = Inst.getOperand(2).getReg();
+    MCRegister Xn = Inst.getOperand(3).getReg();
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xn == Inst.getOperand(1).getReg() && "Xn_wb and Xn do not match");
+
+    if (Xd == Xn)
+      return Error(Loc[0], "invalid SET instruction, destination and size"
                            " registers are the same");
     break;
   }
@@ -7651,7 +7739,7 @@ bool AArch64AsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   if (parseEOL())
     return true;
 
-  auto pair = std::make_pair(RegisterKind, (unsigned) RegNum);
+  auto pair = std::make_pair(RegisterKind, RegNum);
   if (RegisterReqs.insert(std::make_pair(Name, pair)).first->second != pair)
     Warning(L, "ignoring redefinition of register alias '" + Name + "'");
 

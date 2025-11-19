@@ -103,24 +103,24 @@ end
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 ! CHECK: nvvm.barrier0
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%[[CONV]])
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%[[CONV]]) fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%[[CONV]]) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %[[CONV]] -> i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
 ! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
@@ -214,9 +214,9 @@ end
 ! CHECK: cuf.kernel
 ! CHECK: nvvm.barrier0
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
-! CHECK: fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-! CHECK: fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-! CHECK: fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
 
 attributes(device) subroutine testMatch()
   integer :: a, ipred, mask, v32
