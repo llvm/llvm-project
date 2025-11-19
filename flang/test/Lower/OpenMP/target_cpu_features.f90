@@ -11,8 +11,8 @@
 !AMDGCN-SAME: fir.target_features = #llvm.target_features<["+16-bit-insts", "+ci-insts",
 !AMDGCN-SAME: "+dl-insts", "+dot1-insts", "+dot10-insts", "+dot2-insts", "+dot3-insts",
 !AMDGCN-SAME: "+dot4-insts", "+dot5-insts", "+dot6-insts", "+dot7-insts", "+dpp",
-!AMDGCN-SAME: "+gfx8-insts", "+gfx9-insts", "+gws", "+image-insts", "+lerp-inst", "+mai-insts",
-!AMDGCN-SAME: "+qsad-insts", "+s-memrealtime", "+s-memtime-inst", "+sad-insts", "+vmem-to-lds-load-insts", "+wavefrontsize64"]>
+!AMDGCN-SAME: "+gfx8-insts", "+gfx9-insts", "+gws", "+image-insts", "+mai-insts",
+!AMDGCN-SAME: "+s-memrealtime", "+s-memtime-inst", "+vmem-to-lds-load-insts", "+wavefrontsize64"]>
 
 !NVPTX: module attributes {
 !NVPTX-SAME: fir.target_cpu = "sm_80"

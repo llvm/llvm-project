@@ -166,13 +166,6 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
-  bool HasCubeInsts = false;
-  bool HasLerpInst = false;
-  bool HasSadInsts = false;
-  bool HasQsadInsts = false;
-  bool HasCvtNormInsts = false;
-  bool HasCvtPkNormVOP2Insts = false;
-  bool HasCvtPkNormVOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -898,20 +891,6 @@ public:
   }
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
-
-  bool hasCubeInsts() const { return HasCubeInsts; }
-
-  bool hasLerpInst() const { return HasLerpInst; }
-
-  bool hasSadInsts() const { return HasSadInsts; }
-
-  bool hasQsadInsts() const { return HasQsadInsts; }
-
-  bool hasCvtNormInsts() const { return HasCvtNormInsts; }
-
-  bool hasCvtPkNormVOP2Insts() const { return HasCvtPkNormVOP2Insts; }
-
-  bool hasCvtPkNormVOP3Insts() const { return HasCvtPkNormVOP3Insts; }
 
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 

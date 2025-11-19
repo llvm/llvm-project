@@ -971,7 +971,7 @@ defm V_MBCNT_HI_U32_B32 : VOP2Inst <"v_mbcnt_hi_u32_b32", VOP_I32_I32_I32, int_a
 } // End IsNeverUniform = 1
 defm V_LDEXP_F32 : VOP2Inst <"v_ldexp_f32", VOP_F32_F32_I32, any_fldexp>;
 
-let ReadsModeReg = 0, mayRaiseFPException = 0, SubtargetPredicate = HasCvtPkNormVOP2Insts in {
+let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_PKNORM_I16_F32 : VOP2Inst <"v_cvt_pknorm_i16_f32", VOP_V2I16_F32_F32, AMDGPUpknorm_i16_f32>;
 defm V_CVT_PKNORM_U16_F32 : VOP2Inst <"v_cvt_pknorm_u16_f32", VOP_V2I16_F32_F32, AMDGPUpknorm_u16_f32>;
 }
