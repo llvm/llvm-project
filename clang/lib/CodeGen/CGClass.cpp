@@ -2827,9 +2827,9 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
                                                    SourceLocation Loc) {
   if (SanOpts.has(SanitizerKind::CFIVCall))
     EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
+  // Emit the type test assumes for the features of WPD (only when LTO
+  // visibility is NOT public) and speculative devirtualization.
   else if ((CGM.getCodeGenOpts().WholeProgramVTables &&
-            // Don't insert type test assumes if we are forcing public
-            // visibility.
             !CGM.AlwaysHasLTOVisibilityPublic(RD)) ||
            CGM.getCodeGenOpts().DevirtualizeSpeculatively) {
     CanQualType Ty = CGM.getContext().getCanonicalTagType(RD);
