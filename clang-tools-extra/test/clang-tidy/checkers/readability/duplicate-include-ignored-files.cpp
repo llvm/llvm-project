@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-duplicate-include %t -- \
-// RUN:   -config="{CheckOptions: {readability-duplicate-include.IgnoredFilesList: 'pack_.*\\.h'}}" -header-filter='' \
-// RUN:   -- -I %S/Inputs/duplicate-include
+// RUN:   -config="{CheckOptions: {readability-duplicate-include.IgnoredFilesList: 'pack_.*\\.h'}}" \
+// RUN:   -header-filter='' -- -I %S/Inputs/duplicate-include
 
 int g;
 #include "duplicate-include.h"
