@@ -128,7 +128,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
   case X86::BI__builtin_ia32_tzcnt_u64:
-    cgm.errorNYI(e->getSourceRange(),
+    cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return {};
@@ -140,8 +140,8 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     // IR optimizer and backend.
     // TODO: If we had a "freeze" IR instruction to generate a fixed undef
     //  value, we should use that here instead of a zero.
-    return builder.getNullValue(convertType(e->getType()),
-                                getLoc(e->getExprLoc()));
+    return builder.getNullValue(convertType(expr->getType()),
+                                getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
