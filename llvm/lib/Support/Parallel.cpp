@@ -212,10 +212,12 @@ Executor *Executor::getDefaultExecutor() {
   // are more frequent with the debug static runtime.
   //
   // This also prevents intermittent deadlocks on exit with the MinGW runtime.
+
   static ManagedStatic<ThreadPoolExecutor, ThreadPoolExecutor::Creator,
                        ThreadPoolExecutor::Deleter>
       ManagedExec;
-  return &*ManagedExec;
+  static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
+  return Exec.get();
 #else
   // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
   // by llvm_shutdown(), worker threads will clean up and invoke TLS

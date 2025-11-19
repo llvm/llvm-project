@@ -796,6 +796,8 @@ __m128h test_mm_mask_add_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B)
   // CHECK-NEXT: %{{.*}} = insertelement <8 x half> %{{.*}}, half %{{.*}}, i64 0
   return _mm_mask_add_sh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_mask_add_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f},(__mmask8)0x01,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),110.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
+
 __m128h test_mm_maskz_add_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_maskz_add_sh
   // CHECK: %{{.*}} = extractelement <8 x half> %{{.*}}, i32 0
@@ -810,6 +812,7 @@ __m128h test_mm_maskz_add_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-NEXT: %{{.*}} = insertelement <8 x half> %{{.*}}, half %{{.*}}, i64 0
   return _mm_maskz_add_sh(__U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_maskz_add_sh((__mmask8)0x01,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),110.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f));
 
 __m128h test_mm_add_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_add_sh
@@ -849,6 +852,8 @@ __m128h test_mm_mask_sub_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B)
   // CHECK-NEXT: %{{.*}} = insertelement <8 x half> %{{.*}}, half %{{.*}}, i64 0
   return _mm_mask_sub_sh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_mask_sub_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f},(__mmask8)0x01,(__m128h)(__v8hf){20.0f,21.0f,22.0f,23.0f,24.0f,25.0f,26.0f,27.0f},(__m128h)(__v8hf){5.0f,6.0f,7.0f,8.0f,9.0f,10.0f,11.0f,12.0f}),15.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
+
 __m128h test_mm_maskz_sub_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_maskz_sub_sh
   // CHECK: %{{.*}} = extractelement <8 x half> %{{.*}}, i32 0
@@ -863,6 +868,7 @@ __m128h test_mm_maskz_sub_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-NEXT: %{{.*}} = insertelement <8 x half> %{{.*}}, half %{{.*}}, i64 0
   return _mm_maskz_sub_sh(__U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_maskz_sub_sh((__mmask8)0x01,(__m128h)(__v8hf){20.0f,21.0f,22.0f,23.0f,24.0f,25.0f,26.0f,27.0f},(__m128h)(__v8hf){5.0f,6.0f,7.0f,8.0f,9.0f,10.0f,11.0f,12.0f}),15.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f));
 
 __m128h test_mm_sub_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_sub_sh
@@ -902,6 +908,8 @@ __m128h test_mm_mask_mul_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B)
   // CHECK-NEXT: %{{.*}} = insertelement <8 x half> %{{.*}}, half %{{.*}}, i64 0
   return _mm_mask_mul_sh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_mask_mul_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f},(__mmask8)0x01,(__m128h)(__v8hf){3.0f,4.0f,5.0f,6.0f,7.0f,8.0f,9.0f,10.0f},(__m128h)(__v8hf){4.0f,5.0f,6.0f,7.0f,8.0f,9.0f,10.0f,11.0f}),12.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
+
 __m128h test_mm_maskz_mul_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_maskz_mul_sh
   // CHECK: %{{.*}} = extractelement <8 x half> %{{.*}}, i32 0
@@ -916,6 +924,7 @@ __m128h test_mm_maskz_mul_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-NEXT: %{{.*}} = insertelement <8 x half> %{{.*}}, half %{{.*}}, i64 0
   return _mm_maskz_mul_sh(__U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_maskz_mul_sh((__mmask8)0x01,(__m128h)(__v8hf){3.0f,4.0f,5.0f,6.0f,7.0f,8.0f,9.0f,10.0f},(__m128h)(__v8hf){4.0f,5.0f,6.0f,7.0f,8.0f,9.0f,10.0f,11.0f}),12.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f));
 
 __m128h test_mm_mul_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_mul_sh
@@ -955,6 +964,8 @@ __m128h test_mm_mask_div_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B)
   // CHECK-NEXT: %{{.*}} = insertelement <8 x half> %{{.*}}, half %{{.*}}, i64 0
   return _mm_mask_div_sh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_mask_div_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f},(__mmask8)0x01,(__m128h)(__v8hf){8.0f,9.0f,10.0f,11.0f,12.0f,13.0f,14.0f,15.0f},(__m128h)(__v8hf){4.0f,3.0f,2.0f,1.0f,2.0f,3.0f,4.0f,5.0f}),2.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
+
 __m128h test_mm_maskz_div_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_maskz_div_sh
   // CHECK: %{{.*}} = extractelement <8 x half> %{{.*}}, i32 0
@@ -969,6 +980,7 @@ __m128h test_mm_maskz_div_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-NEXT: %{{.*}} = insertelement <8 x half> %{{.*}}, half %{{.*}}, i64 0
   return _mm_maskz_div_sh(__U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_maskz_div_sh((__mmask8)0x01,(__m128h)(__v8hf){8.0f,9.0f,10.0f,11.0f,12.0f,13.0f,14.0f,15.0f},(__m128h)(__v8hf){4.0f,3.0f,2.0f,1.0f,2.0f,3.0f,4.0f,5.0f}),2.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f));
 
 __m128h test_mm_div_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_div_sh
@@ -1622,6 +1634,7 @@ __m128h test_mm_mask_move_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B
   // CHECK-NEXT: insertelement <8 x half> [[VEC]], half [[SEL]], i64 0
   return _mm_mask_move_sh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_mask_move_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f}, (__mmask8)0x01, (__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f}, (__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}), 100.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
 
 __m128h test_mm_maskz_move_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_maskz_move_sh
@@ -1635,6 +1648,7 @@ __m128h test_mm_maskz_move_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-NEXT: insertelement <8 x half> [[VEC]], half [[SEL]], i64 0
   return _mm_maskz_move_sh(__U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_maskz_move_sh((__mmask8)0x01, (__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f}, (__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}), 100.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f));
 
 short test_mm_cvtsi128_si16(__m128i A) {
   // CHECK-LABEL: test_mm_cvtsi128_si16
