@@ -458,15 +458,10 @@ if(${LIBOMP_OMPT_SUPPORT})
 endif()
 
 
-include(CMakePrintHelpers)
-
 # Build the modules files if a Fortran compiler is available.
 # Only LLVM_ENABLE_RUNTIMES=openmp is supported, LLVM_ENABLE_PROJECTS=openmp
 # has been deprecated.
-message("OpenMP2: RUNTIMES_FLANG_MODULES_ENABLED=${RUNTIMES_FLANG_MODULES_ENABLED}")
-message("OpenMP2: LIBOMP_FORTRAN_MODULES=${LIBOMP_FORTRAN_MODULES}")
 if(LIBOMP_FORTRAN_MODULES)
-  message("OpenMP2: Adding libomp-mod targets")
   add_library(libomp-mod OBJECT
     omp_lib.F90
   )
@@ -489,24 +484,4 @@ if(LIBOMP_FORTRAN_MODULES)
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
     DESTINATION ${destination}
   )
-
-#cmake_print_properties(TARGETS libomp-mod)
 endif()
-cmake_print_variables(RUNTIMES_FLANG_MODULES_ENABLED LIBOMP_FORTRAN_MODULES RUNTIMES_FLANG_MODULES_ENABLED_default RUNTIMES_OUTPUT_RESOURCE_MOD_DIR RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
-
-if (EXISTS  "${CMAKE_BINARY_DIR}/CMakeCache.txt")
-  file(READ "${CMAKE_BINARY_DIR}/CMakeCache.txt" _outcache)
-  message("CMakeCache.txt:\n${_outcache}")
-else ()
-  message("No cache file")
-endif ()
-
-
-if (EXISTS  "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeConfigureLog.yaml")
-  file(READ "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeConfigureLog.yaml" _outcache)
-  message("CMakeConfigureLog.yaml:\n${_outcache}")
-else ()
-  message("No CMakeConfigureLog.yaml")
-endif ()
-
-
