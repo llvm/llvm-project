@@ -3233,17 +3233,11 @@ define i4 @clmul_constfold_i4() nounwind {
 }
 
 define i16 @clmul_constfold_i16() nounwind {
-; RV32IM-LABEL: clmul_constfold_i16:
-; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    lui a0, 699051
-; RV32IM-NEXT:    addi a0, a0, -1366
-; RV32IM-NEXT:    ret
-;
-; RV64IM-LABEL: clmul_constfold_i16:
-; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    lui a0, %hi(.LCPI6_0)
-; RV64IM-NEXT:    ld a0, %lo(.LCPI6_0)(a0)
-; RV64IM-NEXT:    ret
+; CHECK-LABEL: clmul_constfold_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 11
+; CHECK-NEXT:    addi a0, a0, -1366
+; CHECK-NEXT:    ret
   %res = call i16 @llvm.clmul.i16(i16 -2, i16 -1)
   ret i16 %res
 }
@@ -7566,17 +7560,11 @@ define i4 @clmulr_constfold_i4() nounwind {
 }
 
 define i16 @clmulr_constfold_i16() nounwind {
-; RV32IM-LABEL: clmulr_constfold_i16:
-; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    lui a0, 699051
-; RV32IM-NEXT:    addi a0, a0, -1366
-; RV32IM-NEXT:    ret
-;
-; RV64IM-LABEL: clmulr_constfold_i16:
-; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    lui a0, %hi(.LCPI13_0)
-; RV64IM-NEXT:    ld a0, %lo(.LCPI13_0)(a0)
-; RV64IM-NEXT:    ret
+; CHECK-LABEL: clmulr_constfold_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 11
+; CHECK-NEXT:    addi a0, a0, -1365
+; CHECK-NEXT:    ret
   %res = call i16 @llvm.clmulr.i16(i16 -2, i16 -1)
   ret i16 %res
 }
