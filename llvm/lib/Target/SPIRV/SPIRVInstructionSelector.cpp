@@ -3582,15 +3582,12 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_unpackhalf2x16: {
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
-  case Intrinsic::spv_ddx_coarse: {
+  case Intrinsic::spv_ddx_coarse:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
-  }
-  case Intrinsic::spv_ddy_coarse: {
+  case Intrinsic::spv_ddy_coarse:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
-  }
-  case Intrinsic::spv_fwidth: {
+  case Intrinsic::spv_fwidth:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpFwidth);
-  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);

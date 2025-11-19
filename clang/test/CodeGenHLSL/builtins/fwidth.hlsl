@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple spirv-pc-vulkan-compute  %s \
+// RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple spirv-unknown-vulkan1.3-library  %s \
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK-SPIRV
 
