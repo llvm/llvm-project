@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <cassert>
-#include <map>
 #include <utility>
 #include <vector>
 
@@ -1463,9 +1462,8 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
     unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
-  // A loop with a backedge that isn't taken, e.g. an unconditional branch
-  // true, isn't really a loop and we don't want to consider it as a
-  // candidate.
+  // Do not consider loops with a backedge that isn't taken, e.g. an
+  // unconditional branch true/false, as candidates for interchange.
   // TODO: when interchange is forced, we should probably also allow
   // interchange for these loops, and thus this logic should be moved just
   // below the cost-model ignore check below. But this check is done first
