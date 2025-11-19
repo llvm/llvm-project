@@ -62,6 +62,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -20604,17 +20605,15 @@ static void CheckForComparisonInEnumInitializer(SemaBase &Sema,
       BinaryOperatorKind Op = BinOp->getOpcode();
 
       // Check for bitwise ops (<<, >>, &, |)
-      if (Op == BO_Shl || Op == BO_Shr || Op == BO_And || Op == BO_Or) {
+      if (BinOp->isBitwiseOp() || BinOp->isShiftOp()) {
         HasBitwiseOp = true;
-      }
-      // Check for the typo pattern (Comparison < or >)
-      else if (Op == BO_LT || Op == BO_GT) {
+      } else if (Op == BO_LT || Op == BO_GT) {
+        // Check for the typo pattern (Comparison < or >)
         const Expr *LHS = BinOp->getLHS()->IgnoreParenImpCasts();
         if (const auto *IntLiteral = dyn_cast<IntegerLiteral>(LHS)) {
           // Specifically looking for accidental bitshifts "1 < X" or "1 > X"
-          if (IntLiteral->getValue() == 1) {
+          if (IntLiteral->getValue() == 1)
             SuspiciousCompares.push_back(BinOp);
-          }
         }
       }
     }
@@ -20622,19 +20621,19 @@ static void CheckForComparisonInEnumInitializer(SemaBase &Sema,
 
   // If we found a bitwise op and some sus compares, iterate over the compares
   // and warn.
-  if (HasBitwiseOp && !SuspiciousCompares.empty()) {
+  if (HasBitwiseOp) {
     for (const auto *BinOp : SuspiciousCompares) {
-      auto suggestedOp = (BinOp->getOpcode() == BO_LT)
-                             ? BinaryOperator::getOpcodeStr(BO_Shl)
-                             : BinaryOperator::getOpcodeStr(BO_Shr);
+      StringRef SuggestedOp = (BinOp->getOpcode() == BO_LT)
+                                  ? BinaryOperator::getOpcodeStr(BO_Shl)
+                                  : BinaryOperator::getOpcodeStr(BO_Shr);
       SourceLocation OperatorLoc = BinOp->getOperatorLoc();
 
       Sema.Diag(OperatorLoc, diag::warn_comparison_in_enum_initializer)
-          << BinOp->getOpcodeStr() << suggestedOp;
+          << BinOp->getOpcodeStr() << SuggestedOp;
 
       Sema.Diag(OperatorLoc, diag::note_enum_compare_typo_suggest)
-          << suggestedOp
-          << FixItHint::CreateReplacement(OperatorLoc, suggestedOp);
+          << SuggestedOp
+          << FixItHint::CreateReplacement(OperatorLoc, SuggestedOp);
     }
   }
 }

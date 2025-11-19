@@ -415,6 +415,10 @@ Improvements to Clang's diagnostics
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
 
+- A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
+  comparison operators when mixed with bitwise operators in enum value initializers.
+  This can be locally disabled by explicitly casting the initializer value.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
