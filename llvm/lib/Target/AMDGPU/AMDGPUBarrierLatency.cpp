@@ -27,8 +27,17 @@ using namespace llvm;
 namespace {
 
 class BarrierLatency : public ScheduleDAGMutation {
+private:
+  SmallSet<SyncScope::ID, 4> IgnoredScopes;
+
 public:
-  BarrierLatency() = default;
+  BarrierLatency(MachineFunction *MF) {
+    LLVMContext &Context = MF->getFunction().getContext();
+    IgnoredScopes.insert(SyncScope::SingleThread);
+    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront"));
+    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront-one-as"));
+    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("singlethread-one-as"));
+  }
   void apply(ScheduleDAGInstrs *DAG) override;
 };
 
@@ -40,8 +49,11 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
       continue;
 
     // Update latency on barrier edges of ATOMIC_FENCE.
-    // We don't consider the scope of the fence or type of instruction
-    // involved in the barrier edge.
+    // Ignore scopes not expected to have any latency.
+    SyncScope::ID SSID = static_cast<SyncScope::ID>(MI->getOperand(1).getImm());
+    if (IgnoredScopes.contains(SSID))
+      continue;
+
     for (SDep &PredDep : SU.Preds) {
       if (!PredDep.isBarrier())
         continue;
@@ -68,6 +80,6 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
 } // end namespace
 
 std::unique_ptr<ScheduleDAGMutation>
-llvm::createAMDGPUBarrierLatencyDAGMutation() {
-  return std::make_unique<BarrierLatency>();
+llvm::createAMDGPUBarrierLatencyDAGMutation(MachineFunction *MF) {
+  return std::make_unique<BarrierLatency>(MF);
 }
