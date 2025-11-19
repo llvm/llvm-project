@@ -2139,11 +2139,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
 
   case AMDGPU::SI_SPILL_S32_TO_VGPR:
-    MI.setDesc(get(AMDGPU::V_WRITELANE_B32));
+    mutateAndCleanupImplicit(MI, get(AMDGPU::V_WRITELANE_B32));
     break;
 
   case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
-    MI.setDesc(get(AMDGPU::V_READLANE_B32));
+    mutateAndCleanupImplicit(MI, get(AMDGPU::V_READLANE_B32));
     break;
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();

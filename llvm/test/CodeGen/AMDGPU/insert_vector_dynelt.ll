@@ -1826,10 +1826,10 @@ define amdgpu_kernel void @bit128_inselt(ptr addrspace(1) %out, <128 x i1> %vec,
 ; GCN-NEXT:    s_or_b32 s0, s0, s5
 ; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GCN-NEXT:    s_or_b32 s0, s0, s4
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_readlane_b32 s0, v6, 0
 ; GCN-NEXT:    v_readlane_b32 s1, v6, 1
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_readlane_b32 s0, v6, 0
 ; GCN-NEXT:    v_mov_b32_e32 v5, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3

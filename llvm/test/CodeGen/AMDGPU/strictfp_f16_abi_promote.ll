@@ -518,7 +518,6 @@ define half @call_split_type_used_outside_block_v8f16() #0 {
 ; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v7, v7
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v5, v5
@@ -527,6 +526,7 @@ define half @call_split_type_used_outside_block_v8f16() #0 {
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX7-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX7-NEXT:    s_mov_b32 s32, s33
 ; GFX7-NEXT:    v_readlane_b32 s4, v40, 2

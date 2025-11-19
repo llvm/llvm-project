@@ -35,8 +35,8 @@ define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_readlane_b32 s30, v4, 0
 ; CHECK-NEXT:    v_min_f32_e32 v0, v3, v0
+; CHECK-NEXT:    v_readlane_b32 s30, v4, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v4, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
@@ -85,9 +85,9 @@ define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
 ; CHECK-NEXT:    v_min_f32_e32 v0, v4, v0
 ; CHECK-NEXT:    v_min_f32_e32 v1, v5, v1
+; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v6, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
@@ -136,8 +136,8 @@ define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v4
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
 ; CHECK-NEXT:    v_min_f64 v[0:1], v[2:3], v[0:1]
+; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v6, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
@@ -247,9 +247,9 @@ define { float, float } @aggregate_use(float %z) {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_max_f32_e32 v2, v40, v40
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
 ; CHECK-NEXT:    v_min_f32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_min_f32_e32 v1, v1, v2
+; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v41, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v41, 2
@@ -317,12 +317,12 @@ define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v20, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v21, v9
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_readlane_b32 s30, v24, 0
 ; CHECK-NEXT:    v_min_f64 v[0:1], v[12:13], v[0:1]
 ; CHECK-NEXT:    v_min_f64 v[2:3], v[14:15], v[2:3]
 ; CHECK-NEXT:    v_min_f64 v[4:5], v[16:17], v[4:5]
 ; CHECK-NEXT:    v_min_f64 v[6:7], v[18:19], v[6:7]
 ; CHECK-NEXT:    v_min_f64 v[8:9], v[20:21], v[8:9]
+; CHECK-NEXT:    v_readlane_b32 s30, v24, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v24, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1

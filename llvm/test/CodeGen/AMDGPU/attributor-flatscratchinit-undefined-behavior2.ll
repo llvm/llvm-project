@@ -317,7 +317,6 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX942-ARCH-FLAT-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX942-ARCH-FLAT-NEXT:    v_writelane_b32 v3, s30, 0
 ; GFX942-ARCH-FLAT-NEXT:    s_add_i32 s32, s32, 16
-; GFX942-ARCH-FLAT-NEXT:    s_nop 0
 ; GFX942-ARCH-FLAT-NEXT:    v_writelane_b32 v3, s31, 1
 ; GFX942-ARCH-FLAT-NEXT:    s_getpc_b64 s[0:1]
 ; GFX942-ARCH-FLAT-NEXT:    s_add_u32 s0, s0, with_private_to_flat_addrspacecast@gotpcrel32@lo+4

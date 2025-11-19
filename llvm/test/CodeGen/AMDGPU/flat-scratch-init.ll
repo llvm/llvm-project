@@ -151,8 +151,8 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_readlane_b32 s0, v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, vcc_lo
+; GCN-NEXT:    v_readlane_b32 s0, v0, 0
 ; GCN-NEXT:    v_readlane_b32 s1, v0, 1
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    ;;#ASMSTART

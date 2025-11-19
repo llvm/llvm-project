@@ -1380,7 +1380,6 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use s31
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s30, v0, 37
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use s32
 ; CHECK-NEXT:    ;;#ASMEND
@@ -1597,6 +1596,7 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use vcc_hi
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_readlane_b32 s30, v0, 37
 ; CHECK-NEXT:    v_readlane_b32 s31, v0, 38
 ; CHECK-NEXT:    v_readlane_b32 s101, v0, 36
 ; CHECK-NEXT:    v_readlane_b32 s100, v0, 35

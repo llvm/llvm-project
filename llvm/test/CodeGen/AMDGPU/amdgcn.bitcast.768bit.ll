@@ -3477,8 +3477,8 @@ define inreg <48 x i16> @bitcast_v24i32_to_v48i16_scalar(<24 x i32> inreg %a, i3
 ; SI-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x5c, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
-; SI-NEXT:    v_readlane_b32 s30, v20, 2
 ; SI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; SI-NEXT:    v_readlane_b32 s30, v20, 2
 ; SI-NEXT:    v_readlane_b32 s31, v20, 3
 ; SI-NEXT:    v_readlane_b32 s35, v20, 1
 ; SI-NEXT:    v_readlane_b32 s34, v20, 0
@@ -22988,8 +22988,8 @@ define inreg <48 x i16> @bitcast_v12i64_to_v48i16_scalar(<12 x i64> inreg %a, i3
 ; SI-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x5c, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
-; SI-NEXT:    v_readlane_b32 s30, v20, 2
 ; SI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; SI-NEXT:    v_readlane_b32 s30, v20, 2
 ; SI-NEXT:    v_readlane_b32 s31, v20, 3
 ; SI-NEXT:    v_readlane_b32 s35, v20, 1
 ; SI-NEXT:    v_readlane_b32 s34, v20, 0

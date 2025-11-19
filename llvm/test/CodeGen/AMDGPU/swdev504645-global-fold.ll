@@ -13,7 +13,6 @@ define void @test_load_zext() {
 ; CHECK-NEXT:    v_writelane_b32 v40, s0, 2
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_add_i32 s32, s32, 16
-; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[0:1]
 ; CHECK-NEXT:    s_add_u32 s0, s0, has_spgr_args@gotpcrel32@lo+4
