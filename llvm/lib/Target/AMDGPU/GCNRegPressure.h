@@ -455,7 +455,7 @@ template <typename Range>
 DenseMap<MachineInstr*, GCNRPTracker::LiveRegSet>
 getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   std::vector<SlotIndex> Indexes;
-  Indexes.reserve(std::distance(R.begin(), R.end()));
+  Indexes.reserve(llvm::size(R));
   auto &SII = *LIS.getSlotIndexes();
   for (MachineInstr *I : R) {
     auto SI = SII.getInstructionIndex(*I);

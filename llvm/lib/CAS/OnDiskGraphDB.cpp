@@ -1678,9 +1678,8 @@ Error OnDiskGraphDB::importFullTree(ObjectID PrimaryID,
     if (!Node)
       return;
     auto Refs = UpstreamDB->getObjectRefs(*Node);
-    CursorStack.push_back({*Node,
-                           (size_t)std::distance(Refs.begin(), Refs.end()),
-                           Refs.begin(), Refs.end()});
+    CursorStack.push_back(
+        {*Node, (size_t)llvm::size(Refs), Refs.begin(), Refs.end()});
   };
 
   enqueueNode(PrimaryID, UpstreamNode);
@@ -1740,7 +1739,7 @@ Error OnDiskGraphDB::importSingleNode(ObjectID PrimaryID,
   auto Data = UpstreamDB->getObjectData(UpstreamNode);
   auto UpstreamRefs = UpstreamDB->getObjectRefs(UpstreamNode);
   SmallVector<ObjectID, 64> Refs;
-  Refs.reserve(std::distance(UpstreamRefs.begin(), UpstreamRefs.end()));
+  Refs.reserve(llvm::size(UpstreamRefs));
   for (ObjectID UpstreamRef : UpstreamRefs) {
     auto Ref = getReference(UpstreamDB->getDigest(UpstreamRef));
     if (LLVM_UNLIKELY(!Ref))

@@ -1067,8 +1067,7 @@ static void removeImplicitFallthroughs(MachineFunction &MF,
     if (!isImplicitFallthrough(MBB))
       continue;
 
-    assert(std::distance(MBB.successors().begin(), MBB.successors().end()) ==
-           1);
+    assert(MBB.succ_size() == 1);
     MIB.setInsertPt(MBB, MBB.end());
     MIB.buildBr(**MBB.successors().begin());
   }
