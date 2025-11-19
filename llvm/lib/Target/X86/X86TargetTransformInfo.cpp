@@ -7232,7 +7232,7 @@ bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
     CallBase *CB = dyn_cast<CallBase>(U);
     if (!CB || CB->getCalledOperand() != &F)
       continue;
-    Function *CallerFunc = CB->getParent()->getParent();
+    Function *CallerFunc = CB->getFunction();
     if (TM.getSubtarget<X86Subtarget>(*CallerFunc).hasEGPR() != HasEGPR)
       return false;
   }
