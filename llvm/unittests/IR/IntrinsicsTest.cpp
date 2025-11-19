@@ -189,4 +189,12 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
   }
 }
 
+// Check that getFnAttributes for intrinsics that do not have any function
+// attributes correcty returns an empty set.
+TEST(IntrinsicAttributes, TestGetFnAttributesBug) {
+  using namespace Intrinsic;
+  LLVMContext Context;
+  AttributeSet AS = getFnAttributes(Context, experimental_guard);
+  EXPECT_FALSE(AS.hasAttributes());
+}
 } // end namespace

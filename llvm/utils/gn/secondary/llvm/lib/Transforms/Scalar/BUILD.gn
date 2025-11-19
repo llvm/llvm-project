@@ -22,6 +22,7 @@ static_library("Scalar") {
     "DFAJumpThreading.cpp",
     "DeadStoreElimination.cpp",
     "DivRemPairs.cpp",
+    "DropUnnecessaryAssumes.cpp",
     "EarlyCSE.cpp",
     "FlattenCFGPass.cpp",
     "Float2Int.cpp",

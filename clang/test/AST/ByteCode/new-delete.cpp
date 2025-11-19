@@ -82,8 +82,7 @@ static_assert(noInit() == 0, "");
 /// Try to delete a pointer that hasn't been heap allocated.
 constexpr int notHeapAllocated() { // both-error {{never produces a constant expression}}
   int A = 0; // both-note 2{{declared here}}
-  delete &A; // ref-note 2{{delete of pointer '&A' that does not point to a heap-allocated object}} \
-             // expected-note 2{{delete of pointer '&A' that does not point to a heap-allocated object}}
+  delete &A; // both-note 2{{delete of pointer '&A' that does not point to a heap-allocated object}}
 
   return 1;
 }
@@ -374,8 +373,7 @@ namespace delete_random_things {
   static_assert((delete &(new A)->n, true)); // both-error {{}} \
                                              // both-note {{delete of pointer to subobject }}
   static_assert((delete (new int + 1), true)); // both-error {{}} \
-                                               // ref-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}} \
-                                               // expected-note {{delete of pointer '&{*new int#1} + 1' that does not point to complete object}}
+                                               // both-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}}
   static_assert((delete[] (new int[3] + 1), true)); // both-error {{}} \
                                                     // both-note {{delete of pointer to subobject}}
   static_assert((delete &(int&)(int&&)0, true)); // both-error {{}} \
@@ -1069,6 +1067,51 @@ namespace BaseCompare {
 
   }
   static_assert(foo());
+}
+
+
+namespace NegativeArraySize { 
+  constexpr void f() { // both-error {{constexpr function never produces a constant expression}}
+    int x = -1;
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}} 
+  }
+} // namespace NegativeArraySize
+
+namespace NewNegSizeNothrow {
+  constexpr int get_neg_size() {
+    return -1;
+  }
+
+  constexpr bool test_nothrow_neg_size() {
+    int x = get_neg_size();
+    int* p = new (std::nothrow) int[x]; 
+    return p == nullptr;
+  }
+
+  static_assert(test_nothrow_neg_size(), "expected nullptr");
+} // namespace NewNegSizeNothrow
+
+#if __SIZEOF_SIZE_T == 8
+/// We can't allocate the array here as it is too big.
+/// Make sure we're not crashing by assuming an non-null
+/// Descriptor.
+namespace HugeAllocation {
+  void *p;
+  void foo ()
+  {
+    p = new char [256][256][256][256][256];
+  }
+}
+#endif
+
+namespace ZeroSizeArray {
+  constexpr int foo() {
+    int *A = new int[0];
+    int diff = A - (&A[0]);
+    delete[] A;
+    return diff;
+  }
+  static_assert(foo() == 0);
 }
 
 #else

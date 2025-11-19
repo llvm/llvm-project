@@ -300,6 +300,9 @@ struct LaunchRequestArguments {
   /// terminal or external terminal.
   Console console = eConsoleInternal;
 
+  /// An array of file paths for redirecting the program's standard IO streams.
+  std::vector<std::optional<std::string>> stdio;
+
   /// @}
 };
 bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
@@ -310,6 +313,8 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 using LaunchResponse = VoidResponse;
 
 #define LLDB_DAP_INVALID_PORT -1
+/// An invalid 'frameId' default value.
+#define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
 
 /// lldb-dap specific attach arguments.
 struct AttachRequestArguments {
@@ -375,6 +380,35 @@ struct ContinueResponseBody {
   bool allThreadsContinued = true;
 };
 llvm::json::Value toJSON(const ContinueResponseBody &);
+
+/// Arguments for `completions` request.
+struct CompletionsArguments {
+  /// Returns completions in the scope of this stack frame. If not specified,
+  /// the completions are returned for the global scope.
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
+
+  /// One or more source lines. Typically this is the text users have typed into
+  /// the debug console before they asked for completion.
+  std::string text;
+
+  /// The position within `text` for which to determine the completion
+  /// proposals. It is measured in UTF-16 code units and the client capability
+  /// `columnsStartAt1` determines whether it is 0- or 1-based.
+  int64_t column = 0;
+
+  /// A line for which to determine the completion proposals. If missing the
+  /// first line of the text is assumed.
+  int64_t line = 0;
+};
+bool fromJSON(const llvm::json::Value &, CompletionsArguments &,
+              llvm::json::Path);
+
+/// Response to `completions` request.
+struct CompletionsResponseBody {
+  /// The possible completions for a given caret position and text.
+  std::vector<CompletionItem> targets;
+};
+llvm::json::Value toJSON(const CompletionsResponseBody &);
 
 /// Arguments for `configurationDone` request.
 using ConfigurationDoneArguments = EmptyArguments;
@@ -455,7 +489,7 @@ struct ScopesArguments {
   /// Retrieve the scopes for the stack frame identified by `frameId`. The
   /// `frameId` must have been obtained in the current suspended state. See
   /// 'Lifetime of Object References' in the Overview section for details.
-  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
 };
 bool fromJSON(const llvm::json::Value &, ScopesArguments &, llvm::json::Path);
 
@@ -541,7 +575,7 @@ using StepInResponse = VoidResponse;
 /// Arguments for `stepInTargets` request.
 struct StepInTargetsArguments {
   /// The stack frame for which to retrieve the possible step-in targets.
-  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
 };
 bool fromJSON(const llvm::json::Value &, StepInTargetsArguments &,
               llvm::json::Path);
@@ -690,7 +724,7 @@ struct DataBreakpointInfoArguments {
   /// When `name` is an expression, evaluate it in the scope of this stack
   /// frame. If not specified, the expression is evaluated in the global scope.
   /// When `asAddress` is true, the `frameId` is ignored.
-  std::optional<uint64_t> frameId;
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
 
   /// If specified, a debug adapter should return information for the range of
   /// memory extending `bytes` number of bytes from the address or variable
@@ -980,6 +1014,169 @@ struct WriteMemoryResponseBody {
   uint64_t bytesWritten = 0;
 };
 llvm::json::Value toJSON(const WriteMemoryResponseBody &);
+
+struct ModuleSymbolsArguments {
+  /// The module UUID for which to retrieve symbols.
+  std::string moduleId;
+
+  /// The module path.
+  std::string moduleName;
+
+  /// The index of the first symbol to return; if omitted, start at the
+  /// beginning.
+  std::optional<uint32_t> startIndex;
+
+  /// The number of symbols to return; if omitted, all symbols are returned.
+  std::optional<uint32_t> count;
+};
+bool fromJSON(const llvm::json::Value &, ModuleSymbolsArguments &,
+              llvm::json::Path);
+
+/// Response to `getModuleSymbols` request.
+struct ModuleSymbolsResponseBody {
+  /// The symbols for the specified module.
+  std::vector<Symbol> symbols;
+};
+llvm::json::Value toJSON(const ModuleSymbolsResponseBody &);
+
+struct ExceptionInfoArguments {
+  /// Thread for which exception information should be retrieved.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+};
+bool fromJSON(const llvm::json::Value &, ExceptionInfoArguments &,
+              llvm::json::Path);
+
+struct ExceptionInfoResponseBody {
+  /// ID of the exception that was thrown.
+  std::string exceptionId;
+
+  /// Descriptive text for the exception.
+  std::string description;
+
+  /// Mode that caused the exception notification to be raised.
+  ExceptionBreakMode breakMode = eExceptionBreakModeNever;
+
+  /// Detailed information about the exception.
+  std::optional<ExceptionDetails> details;
+};
+llvm::json::Value toJSON(const ExceptionInfoResponseBody &);
+
+/// The context in which the evaluate request is used.
+enum EvaluateContext : unsigned {
+  /// An unspecified or unknown evaluate context.
+  eEvaluateContextUnknown = 0,
+  /// 'watch': evaluate is called from a watch view context.
+  eEvaluateContextWatch = 1,
+  /// 'repl': evaluate is called from a REPL context.
+  eEvaluateContextRepl = 2,
+  /// 'hover': evaluate is called to generate the debug hover contents.
+  /// This value should only be used if the corresponding capability
+  /// `supportsEvaluateForHovers` is true.
+  eEvaluateContextHover = 3,
+  /// 'clipboard': evaluate is called to generate clipboard contents.
+  /// This value should only be used if the corresponding capability
+  /// `supportsClipboardContext` is true.
+  eEvaluateContextClipboard = 4,
+  /// 'variables': evaluate is called from a variables view context.
+  eEvaluateContextVariables = 5,
+};
+
+/// Arguments for `evaluate` request.
+struct EvaluateArguments {
+  /// The expression to evaluate.
+  std::string expression;
+
+  /// Evaluate the expression in the scope of this stack frame. If not
+  /// specified, the expression is evaluated in the global scope.
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
+
+  /// The contextual line where the expression should be evaluated. In the
+  /// 'hover' context, this should be set to the start of the expression being
+  /// hovered.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
+
+  /// The contextual column where the expression should be evaluated. This may
+  /// be provided if `line` is also provided.
+  ///
+  /// It is measured in UTF-16 code units and the client capability
+  /// `columnsStartAt1` determines whether it is 0- or 1-based.
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// The contextual source in which the `line` is found. This must be provided
+  /// if `line` is provided.
+  std::optional<Source> source;
+
+  /// The context in which the evaluate request is used.
+  /// Values:
+  /// 'watch': evaluate is called from a watch view context.
+  /// 'repl': evaluate is called from a REPL context.
+  /// 'hover': evaluate is called to generate the debug hover contents.
+  /// This value should only be used if the corresponding capability
+  /// `supportsEvaluateForHovers` is true.
+  /// 'clipboard': evaluate is called to generate clipboard contents.
+  /// This value should only be used if the corresponding capability
+  /// `supportsClipboardContext` is true.
+  /// 'variables': evaluate is called from a variables view context.
+  /// etc.
+  EvaluateContext context = eEvaluateContextUnknown;
+
+  /// Specifies details on how to format the result.
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsValueFormattingOptions` is true.
+  std::optional<ValueFormat> format;
+};
+bool fromJSON(const llvm::json::Value &, EvaluateArguments &, llvm::json::Path);
+
+/// Response to 'evaluate' request.
+struct EvaluateResponseBody {
+  /// The result of the evaluate request.
+  std::string result;
+
+  /// The type of the evaluate result.
+  /// This attribute should only be returned by a debug adapter if the
+  /// corresponding capability `supportsVariableType` is true.
+  std::string type;
+
+  /// Properties of an evaluate result that can be used to determine how to
+  /// render the result in the UI.
+  std::optional<VariablePresentationHint> presentationHint;
+
+  /// If `variablesReference` is > 0, the evaluate result is structured and its
+  /// children can be retrieved by passing `variablesReference` to the
+  /// `variables` request as long as execution remains suspended. See 'Lifetime
+  /// of Object References' in the Overview section for details.
+  int64_t variablesReference = 0;
+
+  /// The number of named child variables.
+  /// The client can use this information to present the variables in a paged
+  /// UI and fetch them in chunks.
+  /// The value should be less than or equal to 2147483647 (2^31-1).
+  uint32_t namedVariables = 0;
+
+  /// The number of indexed child variables.
+  /// The client can use this information to present the variables in a paged
+  /// UI and fetch them in chunks.
+  /// The value should be less than or equal to 2147483647 (2^31-1).
+  uint32_t indexedVariables = 0;
+
+  /// A memory reference to a location appropriate for this result.
+  /// For pointer type eval results, this is generally a reference to the
+  /// memory address contained in the pointer.
+  /// This attribute may be returned by a debug adapter if corresponding
+  /// capability `supportsMemoryReferences` is true.
+  std::string memoryReference;
+
+  /// A reference that allows the client to request the location where the
+  /// returned value is declared. For example, if a function pointer is
+  /// returned, the adapter may be able to look up the function's location.
+  /// This should be present only if the adapter is likely to be able to
+  /// resolve the location.
+  ///
+  /// This reference shares the same lifetime as the `variablesReference`. See
+  /// 'Lifetime of Object References' in the Overview section for details.
+  uint64_t valueLocationReference = LLDB_DAP_INVALID_VALUE_LOC;
+};
+llvm::json::Value toJSON(const EvaluateResponseBody &);
 
 } // namespace lldb_dap::protocol
 

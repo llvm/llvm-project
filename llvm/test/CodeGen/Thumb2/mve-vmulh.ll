@@ -790,15 +790,250 @@ entry:
   ret i16 %result
 }
 
-declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
+define arm_aapcs_vfpcc <4 x i32> @vmulhs_kb_v4i32(<4 x i32> %s0, <4 x i64> %s1) {
+; CHECK-LABEL: vmulhs_kb_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov r1, s9
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    smmul r0, r0, r1
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    smmul r1, r1, r2
+; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s11
+; CHECK-NEXT:    smmul r0, r0, r1
+; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    smmul r1, r1, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <4 x i32> %s0 to <4 x i64>
+  %s1s = ashr <4 x i64> %s1, <i64 32, i64 32, i64 32, i64 32>
+  %m = mul <4 x i64> %s0s, %s1s
+  %s = ashr <4 x i64> %m, <i64 32, i64 32, i64 32, i64 32>
+  %s2 = trunc <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %s2
+}
 
+define arm_aapcs_vfpcc <4 x i32> @vmulhu_kb_v4i32(<4 x i32> %s0, <4 x i64> %s1) {
+; CHECK-LABEL: vmulhu_kb_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov r1, s9
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    umull r0, r1, r0, r1
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    umull r0, r2, r0, r2
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r1
+; CHECK-NEXT:    vmov r1, s11
+; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    umull r0, r1, r0, r1
+; CHECK-NEXT:    vmov r0, s10
+; CHECK-NEXT:    umull r0, r2, r0, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r2, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <4 x i32> %s0 to <4 x i64>
+  %s1s = lshr <4 x i64> %s1, <i64 32, i64 32, i64 32, i64 32>
+  %m = mul <4 x i64> %s0s, %s1s
+  %s = lshr <4 x i64> %m, <i64 32, i64 32, i64 32, i64 32>
+  %s2 = trunc <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %s2
+}
 
-declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
-declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
-declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>)
-declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
-declare <8 x i16> @llvm.masked.load.v8i16.p0(ptr, i32 immarg, <8 x i1>, <8 x i16>)
-declare void @llvm.masked.store.v8i16.p0(<8 x i16>, ptr, i32 immarg, <8 x i1>)
-declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)
-declare <16 x i8> @llvm.masked.load.v16i8.p0(ptr, i32 immarg, <16 x i1>, <16 x i8>)
-declare void @llvm.masked.store.v16i8.p0(<16 x i8>, ptr, i32 immarg, <16 x i1>)
+define arm_aapcs_vfpcc <4 x i32> @vmulhs_kbc_v4i32(<4 x i32> %s0, <4 x i64> %s1) {
+; CHECK-LABEL: vmulhs_kbc_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov r1, s9
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    smmul r0, r1, r0
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    smmul r1, r2, r1
+; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s11
+; CHECK-NEXT:    smmul r0, r1, r0
+; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    smmul r1, r2, r1
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <4 x i32> %s0 to <4 x i64>
+  %s1s = ashr <4 x i64> %s1, <i64 32, i64 32, i64 32, i64 32>
+  %m = mul <4 x i64> %s1s, %s0s
+  %s = ashr <4 x i64> %m, <i64 32, i64 32, i64 32, i64 32>
+  %s2 = trunc <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %s2
+}
+
+define arm_aapcs_vfpcc <4 x i32> @vmulhu_kbc_v4i32(<4 x i32> %s0, <4 x i64> %s1) {
+; CHECK-LABEL: vmulhu_kbc_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov r1, s9
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    umull r0, r1, r1, r0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    umull r0, r2, r2, r0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r1
+; CHECK-NEXT:    vmov r1, s11
+; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    umull r0, r1, r1, r0
+; CHECK-NEXT:    vmov r0, s10
+; CHECK-NEXT:    umull r0, r2, r2, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r2, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <4 x i32> %s0 to <4 x i64>
+  %s1s = lshr <4 x i64> %s1, <i64 32, i64 32, i64 32, i64 32>
+  %m = mul <4 x i64> %s1s, %s0s
+  %s = lshr <4 x i64> %m, <i64 32, i64 32, i64 32, i64 32>
+  %s2 = trunc <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %s2
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmulhs_kb_v8i16(<8 x i16> %s0, <8 x i32> %s1) {
+; CHECK-LABEL: vmulhs_kb_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov.f32 s12, s5
+; CHECK-NEXT:    vmovlt.s16 q4, q0
+; CHECK-NEXT:    vmov.f32 s13, s7
+; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    vmov.f32 s5, s6
+; CHECK-NEXT:    vmov.f32 s14, s9
+; CHECK-NEXT:    vmov.f32 s15, s11
+; CHECK-NEXT:    vmov.f32 s6, s8
+; CHECK-NEXT:    vshr.s32 q3, q3, #16
+; CHECK-NEXT:    vmov.f32 s7, s10
+; CHECK-NEXT:    vmul.i32 q3, q4, q3
+; CHECK-NEXT:    vshr.s32 q1, q1, #16
+; CHECK-NEXT:    vshr.u32 q3, q3, #16
+; CHECK-NEXT:    vmul.i32 q0, q0, q1
+; CHECK-NEXT:    vshr.u32 q0, q0, #16
+; CHECK-NEXT:    vmovnt.i32 q0, q3
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <8 x i16> %s0 to <8 x i32>
+  %s1s = ashr <8 x i32> %s1, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %m = mul <8 x i32> %s0s, %s1s
+  %s = ashr <8 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s2 = trunc <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %s2
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmulhu_kb_v8i16(<8 x i16> %s0, <8 x i32> %s1) {
+; CHECK-LABEL: vmulhu_kb_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov.f32 s12, s5
+; CHECK-NEXT:    vmovlt.u16 q4, q0
+; CHECK-NEXT:    vmov.f32 s13, s7
+; CHECK-NEXT:    vmovlb.u16 q0, q0
+; CHECK-NEXT:    vmov.f32 s5, s6
+; CHECK-NEXT:    vmov.f32 s14, s9
+; CHECK-NEXT:    vmov.f32 s15, s11
+; CHECK-NEXT:    vmov.f32 s6, s8
+; CHECK-NEXT:    vshr.u32 q3, q3, #16
+; CHECK-NEXT:    vmov.f32 s7, s10
+; CHECK-NEXT:    vmul.i32 q3, q4, q3
+; CHECK-NEXT:    vshr.u32 q1, q1, #16
+; CHECK-NEXT:    vshr.u32 q3, q3, #16
+; CHECK-NEXT:    vmul.i32 q0, q0, q1
+; CHECK-NEXT:    vshr.u32 q0, q0, #16
+; CHECK-NEXT:    vmovnt.i32 q0, q3
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <8 x i16> %s0 to <8 x i32>
+  %s1s = lshr <8 x i32> %s1, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %m = mul <8 x i32> %s0s, %s1s
+  %s = lshr <8 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s2 = trunc <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %s2
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmulhs_kbc_v8i16(<8 x i16> %s0, <8 x i32> %s1) {
+; CHECK-LABEL: vmulhs_kbc_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov.f32 s12, s5
+; CHECK-NEXT:    vmovlt.s16 q4, q0
+; CHECK-NEXT:    vmov.f32 s13, s7
+; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    vmov.f32 s5, s6
+; CHECK-NEXT:    vmov.f32 s14, s9
+; CHECK-NEXT:    vmov.f32 s15, s11
+; CHECK-NEXT:    vmov.f32 s6, s8
+; CHECK-NEXT:    vshr.s32 q3, q3, #16
+; CHECK-NEXT:    vmov.f32 s7, s10
+; CHECK-NEXT:    vmul.i32 q3, q3, q4
+; CHECK-NEXT:    vshr.s32 q1, q1, #16
+; CHECK-NEXT:    vshr.u32 q3, q3, #16
+; CHECK-NEXT:    vmul.i32 q0, q1, q0
+; CHECK-NEXT:    vshr.u32 q0, q0, #16
+; CHECK-NEXT:    vmovnt.i32 q0, q3
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <8 x i16> %s0 to <8 x i32>
+  %s1s = ashr <8 x i32> %s1, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %m = mul <8 x i32> %s1s, %s0s
+  %s = ashr <8 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s2 = trunc <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %s2
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmulhu_kbc_v8i16(<8 x i16> %s0, <8 x i32> %s1) {
+; CHECK-LABEL: vmulhu_kbc_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov.f32 s12, s5
+; CHECK-NEXT:    vmovlt.u16 q4, q0
+; CHECK-NEXT:    vmov.f32 s13, s7
+; CHECK-NEXT:    vmovlb.u16 q0, q0
+; CHECK-NEXT:    vmov.f32 s5, s6
+; CHECK-NEXT:    vmov.f32 s14, s9
+; CHECK-NEXT:    vmov.f32 s15, s11
+; CHECK-NEXT:    vmov.f32 s6, s8
+; CHECK-NEXT:    vshr.u32 q3, q3, #16
+; CHECK-NEXT:    vmov.f32 s7, s10
+; CHECK-NEXT:    vmul.i32 q3, q3, q4
+; CHECK-NEXT:    vshr.u32 q1, q1, #16
+; CHECK-NEXT:    vshr.u32 q3, q3, #16
+; CHECK-NEXT:    vmul.i32 q0, q1, q0
+; CHECK-NEXT:    vshr.u32 q0, q0, #16
+; CHECK-NEXT:    vmovnt.i32 q0, q3
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <8 x i16> %s0 to <8 x i32>
+  %s1s = lshr <8 x i32> %s1, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %m = mul <8 x i32> %s1s, %s0s
+  %s = lshr <8 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s2 = trunc <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %s2
+}

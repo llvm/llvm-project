@@ -579,6 +579,7 @@ static Value lowerGenerateLikeOpBody(RewriterBase &rewriter, Location loc,
       linalg::MapOp::create(rewriter, loc, tensorType, /*inputs=*/ValueRange(),
                             /*init=*/tensorDestination);
   Block &linalgBody = linalgOp.getMapper().emplaceBlock();
+  linalgBody.addArgument(tensorType.getElementType(), loc);
 
   // Create linalg::IndexOps.
   rewriter.setInsertionPointToStart(&linalgBody);
@@ -970,10 +971,10 @@ struct ParallelInsertSliceOpInterface
                           BufferizationState &state) const {
     OpBuilder::InsertionGuard g(rewriter);
     auto parallelInsertSliceOp = cast<ParallelInsertSliceOp>(op);
-    ParallelCombiningOpInterface parallelCombiningParent =
+    InParallelOpInterface parallelCombiningParent =
         parallelInsertSliceOp.getParallelCombiningParent();
 
-    // Bufferize the op outside of the parallel combining terminator.
+    // Bufferize the op outside of the in parallel terminator.
     rewriter.setInsertionPoint(parallelCombiningParent);
 
     // Get source and destination buffers.
@@ -1068,6 +1069,7 @@ struct SplatOpInterface
                                           /*inputs=*/ValueRange(),
                                           /*init=*/*tensorAlloc);
     Block &linalgBody = linalgOp.getMapper().emplaceBlock();
+    linalgBody.addArgument(tensorType.getElementType(), loc);
 
     // Create linalg::IndexOps.
     rewriter.setInsertionPointToStart(&linalgBody);

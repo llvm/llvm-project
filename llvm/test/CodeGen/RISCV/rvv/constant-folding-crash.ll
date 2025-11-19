@@ -72,7 +72,7 @@ entry:
   %cmp = icmp eq i64 %trunc, 0
   %ptrs = select i1 %cmp, <4 x ptr> %lanes.a, <4 x ptr> %lanes.b
   %v67 = extractelement <4 x ptr> %ptrs, i64 0
-  %mask = shufflevector <4 x i1> %sel, <4 x i1> undef, <4 x i32> zeroinitializer
+  %mask = shufflevector <4 x i1> %sel, <4 x i1> poison, <4 x i32> zeroinitializer
   call void @llvm.masked.store.v4i32.p0(<4 x i32> <i32 10, i32 10, i32 10, i32 10>, ptr %v67, i32 16, <4 x i1> %mask)
   ret void
 }

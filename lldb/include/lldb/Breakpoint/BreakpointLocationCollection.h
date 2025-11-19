@@ -9,6 +9,7 @@
 #ifndef LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
 #define LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
 
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -19,11 +20,20 @@ namespace lldb_private {
 
 class BreakpointLocationCollection {
 public:
-  BreakpointLocationCollection();
+  /// Breakpoint locations don't keep their breakpoint owners alive, so neither
+  /// will a collection of breakpoint locations.  However, if you need to
+  /// use this collection in a context where some of the breakpoints whose
+  /// locations are in the collection might get deleted during its lifespan,
+  /// then you need to make sure the breakpoints don't get deleted out from
+  /// under you.  To do that, pass true for preserving, and so long as there is
+  /// a location for a given breakpoint in the collection, the breakpoint will
+  /// not get destroyed.
+  BreakpointLocationCollection(bool preserving = false);
 
   ~BreakpointLocationCollection();
 
-  BreakpointLocationCollection &operator=(const BreakpointLocationCollection &rhs);
+  BreakpointLocationCollection &
+  operator=(const BreakpointLocationCollection &rhs);
 
   /// Add the breakpoint \a bp_loc_sp to the list.
   ///
@@ -111,7 +121,8 @@ public:
   ///
   /// \return
   ///    \b true if we should stop, \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context);
+  bool ShouldStop(StoppointCallbackContext *context,
+                  BreakpointLocationCollection &stopped_bp_locs);
 
   /// Print a description of the breakpoint locations in this list
   /// to the stream \a s.
@@ -162,16 +173,20 @@ private:
                          lldb::break_id_t break_loc_id) const;
 
   collection m_break_loc_collection;
-  mutable std::mutex m_collection_mutex;
+  mutable std::recursive_mutex m_collection_mutex;
+  /// These are used if we're preserving breakpoints in this list:
+  const bool m_preserving_bkpts = false;
+  std::map<std::pair<lldb::break_id_t, lldb::break_id_t>, lldb::BreakpointSP>
+      m_preserved_bps;
 
 public:
-  typedef llvm::iterator_range<collection::const_iterator>
+  typedef LockingAdaptedIterable<std::recursive_mutex, collection>
       BreakpointLocationCollectionIterable;
   BreakpointLocationCollectionIterable BreakpointLocations() {
-    return BreakpointLocationCollectionIterable(m_break_loc_collection);
+    return BreakpointLocationCollectionIterable(m_break_loc_collection,
+                                                m_collection_mutex);
   }
 };
-
 } // namespace lldb_private
 
 #endif // LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H

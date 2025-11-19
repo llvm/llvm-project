@@ -31,15 +31,21 @@ const llvm::StringRef FooSrc = R"(
   }
 )";
 
-static ThreadSafeModule parseModule(llvm::StringRef Source,
-                                    llvm::StringRef Name) {
-  auto Ctx = std::make_unique<LLVMContext>();
+static std::unique_ptr<Module>
+parseModuleRaw(llvm::StringRef Source, llvm::StringRef Name, LLVMContext &Ctx) {
   SMDiagnostic Err;
-  auto M = parseIR(MemoryBufferRef(Source, Name), Err, *Ctx);
+  auto M = parseIR(MemoryBufferRef(Source, Name), Err, Ctx);
   if (!M) {
     Err.print("Testcase source failed to parse: ", errs());
     exit(1);
   }
+  return M;
+}
+
+static ThreadSafeModule parseModule(llvm::StringRef Source,
+                                    llvm::StringRef Name) {
+  auto Ctx = std::make_unique<LLVMContext>();
+  auto M = parseModuleRaw(Source, Name, *Ctx);
   return ThreadSafeModule(std::move(M), std::move(Ctx));
 }
 
@@ -126,6 +132,20 @@ TEST(ThreadSafeModuleTest, ConsumingModuleDo) {
   auto M = std::make_unique<Module>("M", *Ctx);
   ThreadSafeModule TSM(std::move(M), std::move(Ctx));
   TSM.consumingModuleDo([](std::unique_ptr<Module> M) {});
+}
+
+TEST(ThreadSafeModuleTest, CloneExternalModuleToNewContext) {
+  auto Ctx = std::make_unique<LLVMContext>();
+  auto M = parseModuleRaw(FooSrc, "foo.ll", *Ctx);
+  auto TSCtx = ThreadSafeContext(std::make_unique<LLVMContext>());
+  auto TSM = cloneExternalModuleToContext(*M, TSCtx);
+  TSM.withModuleDo([&](Module &NewM) {
+    EXPECT_NE(&NewM.getContext(), Ctx.get());
+    TSCtx.withContextDo(
+        [&](LLVMContext *NewCtx) { EXPECT_EQ(&NewM.getContext(), NewCtx); });
+    EXPECT_FALSE(NewM.empty());
+    EXPECT_FALSE(verifyModule(NewM, &errs()));
+  });
 }
 
 TEST(ThreadSafeModuleTest, CloneToNewContext) {

@@ -37,6 +37,8 @@ public:
     return Name;
   }
 
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
   void setStorageClass(XCOFF::StorageClass SC) {
     StorageClass = SC;
   };

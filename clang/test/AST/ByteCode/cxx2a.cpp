@@ -225,3 +225,31 @@ namespace Dtor {
   static_assert(pseudo(true, false)); // both-error {{constant expression}} both-note {{in call}}
   static_assert(pseudo(false, true));
 }
+
+namespace GH150705 {
+  struct A { };
+  struct B : A { };
+  struct C : A {
+    constexpr virtual int foo() const { return 0; }
+  };
+
+  constexpr auto p = &C::foo;
+  constexpr auto q = static_cast<int (A::*)() const>(p);
+  constexpr B b;
+  constexpr const A& a = b;
+  constexpr auto x = (a.*q)(); // both-error {{constant expression}}
+}
+
+namespace DependentRequiresExpr {
+  template <class T,
+            bool = []() -> bool { // both-error {{not a constant expression}}
+              if (requires { T::type; })
+                return true;
+              return false;
+            }()>
+  struct p {
+    using type = void;
+  };
+
+  template <class T> using P = p<T>::type; // both-note {{while checking a default template argument}}
+}

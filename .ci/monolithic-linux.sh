@@ -32,8 +32,6 @@ enable_cir="${6}"
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct"
 
 start-group "CMake"
-export PIP_BREAK_SYSTEM_PACKAGES=1
-pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 # Set the system llvm-symbolizer as preferred.
 export LLVM_SYMBOLIZER_PATH=`which llvm-symbolizer`
@@ -60,22 +58,28 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D LLDB_ENABLE_PYTHON=ON \
       -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+      -D CMAKE_EXE_LINKER_FLAGS="-no-pie" \
+      -D LLVM_ENABLE_WERROR=ON
 
 start-group "ninja"
 
-# Targets are not escaped as they are passed as separate arguments.
-ninja -C "${BUILD_DIR}" -k 0 ${targets}
+if [[ -n "${targets}" ]]; then
+  # Targets are not escaped as they are passed as separate arguments.
+  ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+  cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+fi
 
-if [[ "${runtime_targets}" != "" ]]; then
+if [[ -n "${runtime_targets}" ]]; then
   start-group "ninja Runtimes"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets}
+  ninja -C "${BUILD_DIR}" ${runtime_targets} |& tee ninja_runtimes.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes.ninja_log
 fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
-if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
+if [[ -n "${runtime_targets_needs_reconfig}" ]]; then
   start-group "CMake Runtimes C++26"
 
   cmake \
@@ -85,7 +89,9 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   start-group "ninja Runtimes C++26"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
+    |& tee ninja_runtimes_needs_reconfig1.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes_needs_reconig.ninja_log
 
   start-group "CMake Runtimes Clang Modules"
 
@@ -96,5 +102,7 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   start-group "ninja Runtimes Clang Modules"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
+    |& tee ninja_runtimes_needs_reconfig2.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes_needs_reconfig2.ninja_log
 fi

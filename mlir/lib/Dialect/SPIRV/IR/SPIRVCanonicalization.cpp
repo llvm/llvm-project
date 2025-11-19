@@ -93,7 +93,7 @@ namespace {
 /// `spirv::AccessChainOp` operation.
 struct CombineChainedAccessChain final
     : OpRewritePattern<spirv::AccessChainOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
                                 PatternRewriter &rewriter) const override {
@@ -128,7 +128,7 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 // We are required to use CompositeConstructOp to create a constant struct as
 // they are not yet implemented as constant, hence we can not do so in a fold.
 struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::IAddCarryOp op,
                                 PatternRewriter &rewriter) const override {
@@ -284,7 +284,7 @@ void spirv::SMulExtendedOp::getCanonicalizationPatterns(
 }
 
 struct UMulExtendedOpXOne final : OpRewritePattern<spirv::UMulExtendedOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::UMulExtendedOp op,
                                 PatternRewriter &rewriter) const override {
@@ -326,7 +326,7 @@ void spirv::UMulExtendedOp::getCanonicalizationPatterns(
 // The transformation is only applied if one divisor is a multiple of the other.
 
 struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::UModOp umodOp,
                                 PatternRewriter &rewriter) const override {
@@ -1271,7 +1271,7 @@ namespace {
 //                       +-------------+
 //
 struct ConvertSelectionOpToSelect final : OpRewritePattern<spirv::SelectionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::SelectionOp selectionOp,
                                 PatternRewriter &rewriter) const override {

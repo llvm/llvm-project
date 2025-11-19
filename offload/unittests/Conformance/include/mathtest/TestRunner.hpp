@@ -41,11 +41,11 @@ void printPreamble(const TestConfig &Config, size_t Index,
                    size_t Total) noexcept {
   using FunctionConfig = FunctionConfig<Func>;
 
-  llvm::outs() << "[" << (Index + 1) << "/" << Total << "] "
+  llvm::errs() << "[" << (Index + 1) << "/" << Total << "] "
                << "Running conformance test '" << FunctionConfig::Name
                << "' with '" << Config.Provider << "' on '" << Config.Platform
                << "'\n";
-  llvm::outs().flush();
+  llvm::errs().flush();
 }
 
 template <typename T>

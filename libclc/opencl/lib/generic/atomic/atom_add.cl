@@ -6,32 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/atomic/clc_atomic_fetch_add.h>
 #include <clc/opencl/atomic/atom_add.h>
-#include <clc/opencl/atomic/atomic_add.h>
+
+// Non-volatile overloads are for backward compatibility with OpenCL 1.0.
+
+#define __CLC_IMPL(AS, TYPE)                                                   \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_add(volatile AS TYPE *p, TYPE val) {        \
+    return __clc_atomic_fetch_add(p, val, __ATOMIC_RELAXED,                    \
+                                  __MEMORY_SCOPE_DEVICE);                      \
+  }                                                                            \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_add(AS TYPE *p, TYPE val) {                 \
+    return atom_add((volatile AS TYPE *)p, val);                               \
+  }
 
 #ifdef cl_khr_global_int32_base_atomics
-#define __CLC_ATOMIC_OP add
-#define __CLC_ATOMIC_ADDRESS_SPACE global
-#include "atom_int32_binary.inc"
+__CLC_IMPL(global, int)
+__CLC_IMPL(global, unsigned int)
 #endif // cl_khr_global_int32_base_atomics
 
 #ifdef cl_khr_local_int32_base_atomics
-#define __CLC_ATOMIC_OP add
-#define __CLC_ATOMIC_ADDRESS_SPACE local
-#include "atom_int32_binary.inc"
+__CLC_IMPL(local, int)
+__CLC_IMPL(local, unsigned int)
 #endif // cl_khr_local_int32_base_atomics
 
 #ifdef cl_khr_int64_base_atomics
 
-#define IMPL(AS, TYPE)                                                         \
-  _CLC_OVERLOAD _CLC_DEF TYPE atom_add(volatile AS TYPE *p, TYPE val) {        \
-    return __sync_fetch_and_add_8(p, val);                                     \
-  }
-
-IMPL(global, long)
-IMPL(global, unsigned long)
-IMPL(local, long)
-IMPL(local, unsigned long)
-#undef IMPL
+__CLC_IMPL(global, long)
+__CLC_IMPL(global, unsigned long)
+__CLC_IMPL(local, long)
+__CLC_IMPL(local, unsigned long)
 
 #endif // cl_khr_int64_base_atomics

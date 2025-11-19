@@ -10,10 +10,7 @@
 
 $test = comdat any
 
-declare i32 @__gxx_personality_v0(...)
-
-; Function Attrs: uwtable
-define dso_local void @test(i1 %arg) local_unnamed_addr #0 comdat align 2 personality ptr @__gxx_personality_v0 {
+define void @test(ptr %p, i1 %arg) {
 entry:
   br label %for.body51
 
@@ -26,9 +23,9 @@ for.cond80.loopexit:                              ; preds = %for.body89
 
 for.body89.lr.ph:                                 ; preds = %for.cond80.loopexit, %for.body51
   %i79.0179 = phi i32 [ %add90, %for.cond80.loopexit ], [ 0, %for.body51 ]
-  %next_index.4178 = phi i32 [ %inc94.lcssa, %for.cond80.loopexit ], [ undef, %for.body51 ]
+  %next_index.4178 = phi i32 [ %inc94.lcssa, %for.cond80.loopexit ], [ 0, %for.body51 ]
   %add90 = add nuw i32 %i79.0179, 1
-  %mul91 = mul i32 %add90, undef
+  %mul91 = mul i32 %add90, 7
   br label %for.body89
 
 for.body89:                                       ; preds = %for.body89, %for.body89.lr.ph
@@ -38,10 +35,10 @@ for.body89:                                       ; preds = %for.body89, %for.bo
   %add93 = add i32 %add92, %mul91
   %inc94 = add i32 %next_index.5174, 1
   %conv95 = zext i32 %next_index.5174 to i64
-  %arrayidx.i160 = getelementptr inbounds i32, ptr undef, i64 %conv95
+  %arrayidx.i160 = getelementptr inbounds i32, ptr %p, i64 %conv95
   store i32 %add93, ptr %arrayidx.i160, align 4
 ;, !tbaa !1
-  %cmp87 = icmp ult i32 %add92, undef
+  %cmp87 = icmp ult i32 %add92, 123
   br i1 %cmp87, label %for.body89, label %for.cond80.loopexit
 
 nrvo.skipdtor.loopexit:                           ; preds = %for.cond80.loopexit

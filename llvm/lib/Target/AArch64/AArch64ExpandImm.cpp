@@ -585,7 +585,7 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
     uint64_t ShiftedMask = (0xFFFFULL << Shift);
     uint64_t ZeroChunk = UImm & ~ShiftedMask;
     uint64_t OneChunk = UImm | ShiftedMask;
-    uint64_t RotatedImm = (UImm << 32) | (UImm >> 32);
+    uint64_t RotatedImm = llvm::rotl(UImm, 32);
     uint64_t ReplicateChunk = ZeroChunk | (RotatedImm & ShiftedMask);
     if (AArch64_AM::processLogicalImmediate(ZeroChunk, BitSize, Encoding) ||
         AArch64_AM::processLogicalImmediate(OneChunk, BitSize, Encoding) ||

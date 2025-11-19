@@ -1,0 +1,20 @@
+header: sorting.h
+standards:
+  - stdc
+functions:
+  - name: gunk
+    return_type: void
+    arguments:
+      - type: const char *
+  - name: _func_with_aliases
+    return_type: void
+    arguments:
+      - type: int
+  - name: func_with_aliases
+    return_type: void
+    arguments:
+      - type: int
+  - name: __func_with_aliases
+    return_type: void
+    arguments:
+      - type: int

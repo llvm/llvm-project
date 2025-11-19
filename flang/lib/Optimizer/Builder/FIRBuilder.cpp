@@ -147,8 +147,20 @@ mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
   assert((cst >= 0 || mlir::isa<mlir::IndexType>(ty) ||
           mlir::cast<mlir::IntegerType>(ty).getWidth() <= 64) &&
          "must use APint");
-  return mlir::arith::ConstantOp::create(*this, loc, ty,
-                                         getIntegerAttr(ty, cst));
+
+  mlir::Type cstType = ty;
+  if (auto intType = mlir::dyn_cast<mlir::IntegerType>(ty)) {
+    // Signed and unsigned constants must be encoded as signless
+    // arith.constant followed by fir.convert cast.
+    if (intType.isUnsigned())
+      cstType = mlir::IntegerType::get(getContext(), intType.getWidth());
+    else if (intType.isSigned())
+      TODO(loc, "signed integer constant");
+  }
+
+  mlir::Value cstValue = mlir::arith::ConstantOp::create(
+      *this, loc, cstType, getIntegerAttr(cstType, cst));
+  return createConvert(loc, ty, cstValue);
 }
 
 mlir::Value fir::FirOpBuilder::createAllOnesInteger(mlir::Location loc,
@@ -411,10 +423,12 @@ mlir::Value fir::FirOpBuilder::genTempDeclareOp(
     llvm::ArrayRef<mlir::Value> typeParams,
     fir::FortranVariableFlagsAttr fortranAttrs) {
   auto nameAttr = mlir::StringAttr::get(builder.getContext(), name);
-  return fir::DeclareOp::create(builder, loc, memref.getType(), memref, shape,
-                                typeParams,
-                                /*dummy_scope=*/nullptr, nameAttr, fortranAttrs,
-                                cuf::DataAttributeAttr{});
+  return fir::DeclareOp::create(
+      builder, loc, memref.getType(), memref, shape, typeParams,
+      /*dummy_scope=*/nullptr,
+      /*storage=*/nullptr,
+      /*storage_offset=*/0, nameAttr, fortranAttrs, cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 }
 
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
@@ -1379,12 +1393,10 @@ fir::ExtendedValue fir::factory::arraySectionElementToExtendedValue(
   return fir::factory::componentToExtendedValue(builder, loc, element);
 }
 
-void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
-                                       mlir::Location loc,
-                                       const fir::ExtendedValue &lhs,
-                                       const fir::ExtendedValue &rhs,
-                                       bool needFinalization,
-                                       bool isTemporaryLHS) {
+void fir::factory::genScalarAssignment(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::ExtendedValue &lhs, const fir::ExtendedValue &rhs,
+    bool needFinalization, bool isTemporaryLHS, mlir::ArrayAttr accessGroups) {
   assert(lhs.rank() == 0 && rhs.rank() == 0 && "must be scalars");
   auto type = fir::unwrapSequenceType(
       fir::unwrapPassByRefType(fir::getBase(lhs).getType()));
@@ -1406,7 +1418,9 @@ void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
     mlir::Value lhsAddr = fir::getBase(lhs);
     rhsVal = builder.createConvert(loc, fir::unwrapRefType(lhsAddr.getType()),
                                    rhsVal);
-    fir::StoreOp::create(builder, loc, rhsVal, lhsAddr);
+    fir::StoreOp store = fir::StoreOp::create(builder, loc, rhsVal, lhsAddr);
+    if (accessGroups)
+      store.setAccessGroupsAttr(accessGroups);
   }
 }
 
@@ -1930,7 +1944,7 @@ void fir::factory::genDimInfoFromBox(
     return;
 
   unsigned rank = fir::getBoxRank(boxType);
-  assert(rank != 0 && "must be an array of known rank");
+  assert(!boxType.isAssumedRank() && "must be an array of known rank");
   mlir::Type idxTy = builder.getIndexType();
   for (unsigned i = 0; i < rank; ++i) {
     mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
@@ -1947,17 +1961,39 @@ void fir::factory::genDimInfoFromBox(
 
 mlir::Value fir::factory::genLifetimeStart(mlir::OpBuilder &builder,
                                            mlir::Location loc,
-                                           fir::AllocaOp alloc, int64_t size,
+                                           fir::AllocaOp alloc,
                                            const mlir::DataLayout *dl) {
   mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(
       alloc.getContext(), getAllocaAddressSpace(dl));
   mlir::Value cast =
       fir::ConvertOp::create(builder, loc, ptrTy, alloc.getResult());
-  mlir::LLVM::LifetimeStartOp::create(builder, loc, size, cast);
+  mlir::LLVM::LifetimeStartOp::create(builder, loc, cast);
   return cast;
 }
 
 void fir::factory::genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
-                                  mlir::Value cast, int64_t size) {
-  mlir::LLVM::LifetimeEndOp::create(builder, loc, size, cast);
+                                  mlir::Value cast) {
+  mlir::LLVM::LifetimeEndOp::create(builder, loc, cast);
+}
+
+mlir::Value fir::factory::getDescriptorWithNewBaseAddress(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box,
+    mlir::Value newAddr) {
+  auto boxType = llvm::dyn_cast<fir::BaseBoxType>(box.getType());
+  assert(boxType &&
+         "expected a box type input in getDescriptorWithNewBaseAddress");
+  if (boxType.isAssumedRank())
+    TODO(loc, "changing descriptor base address for an assumed rank entity");
+  llvm::SmallVector<mlir::Value> lbounds;
+  fir::factory::genDimInfoFromBox(builder, loc, box, &lbounds,
+                                  /*extents=*/nullptr, /*strides=*/nullptr);
+  fir::BoxValue inputBoxValue(box, lbounds, /*explicitParams=*/{});
+  fir::ExtendedValue openedInput =
+      fir::factory::readBoxValue(builder, loc, inputBoxValue);
+  mlir::Value shape = fir::isArray(openedInput)
+                          ? builder.createShape(loc, openedInput)
+                          : mlir::Value{};
+  mlir::Value typeMold = fir::isPolymorphicType(boxType) ? box : mlir::Value{};
+  return builder.createBox(loc, boxType, newAddr, shape, /*slice=*/{},
+                           fir::getTypeParams(openedInput), typeMold);
 }

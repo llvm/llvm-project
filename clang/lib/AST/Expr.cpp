@@ -71,12 +71,13 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
   if (const PointerType *PTy = DerivedType->getAs<PointerType>())
     DerivedType = PTy->getPointeeType();
 
+  while (const ArrayType *ATy = DerivedType->getAsArrayTypeUnsafe())
+    DerivedType = ATy->getElementType();
+
   if (DerivedType->isDependentType())
     return nullptr;
 
-  const RecordType *Ty = DerivedType->castAs<RecordType>();
-  Decl *D = Ty->getDecl();
-  return cast<CXXRecordDecl>(D);
+  return DerivedType->castAsCXXRecordDecl();
 }
 
 const Expr *Expr::skipRValueSubobjectAdjustments(
@@ -91,8 +92,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
            CE->getCastKind() == CK_UncheckedDerivedToBase) &&
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
-        const auto *Derived =
-            cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
+        const auto *Derived = E->getType()->castAsCXXRecordDecl();
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
       }
@@ -268,7 +268,7 @@ QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
   if (const auto *ECD = getEnumConstantDecl()) {
     const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
     if (ED->isCompleteDefinition())
-      return Ctx.getTypeDeclType(ED);
+      return Ctx.getCanonicalTagType(ED);
   }
   return getType();
 }
@@ -2031,8 +2031,7 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(QualType unionType,
                                                         QualType opType) {
-  auto RD = unionType->castAs<RecordType>()->getDecl();
-  return getTargetFieldForToUnionCast(RD, opType);
+  return getTargetFieldForToUnionCast(unionType->castAsRecordDecl(), opType);
 }
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(const RecordDecl *RD,
@@ -2399,6 +2398,7 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
       Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
+  assert(getType()->isSignedIntegerType() && "IntTy should be signed");
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
@@ -2547,6 +2547,18 @@ Stmt *BlockExpr::getBody() {
 //===----------------------------------------------------------------------===//
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
+
+/// Helper to determine wether \c E is a CXXConstructExpr constructing
+/// a DecompositionDecl. Used to skip Clang-generated calls to std::get
+/// for structured bindings.
+static bool IsDecompositionDeclRefExpr(const Expr *E) {
+  const auto *Unwrapped = E->IgnoreUnlessSpelledInSource();
+  const auto *Ref = dyn_cast<DeclRefExpr>(Unwrapped);
+  if (!Ref)
+    return false;
+
+  return isa_and_nonnull<DecompositionDecl>(Ref->getDecl());
+}
 
 bool Expr::isReadIfDiscardedInCPlusPlus11() const {
   // In C++11, discarded-value expressions of a certain form are special,
@@ -2774,23 +2786,22 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case UserDefinedLiteralClass: {
     // If this is a direct call, get the callee.
     const CallExpr *CE = cast<CallExpr>(this);
-    if (const Decl *FD = CE->getCalleeDecl()) {
-      // If the callee has attribute pure, const, or warn_unused_result, warn
-      // about it. void foo() { strlen("bar"); } should warn.
-      //
-      // Note: If new cases are added here, DiagnoseUnusedExprResult should be
-      // updated to match for QoI.
-      if (CE->hasUnusedResultAttr(Ctx) ||
-          FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>()) {
-        WarnE = this;
-        Loc = CE->getCallee()->getBeginLoc();
-        R1 = CE->getCallee()->getSourceRange();
+    // If the callee has attribute pure, const, or warn_unused_result, warn
+    // about it. void foo() { strlen("bar"); } should warn.
+    // Note: If new cases are added here, DiagnoseUnusedExprResult should be
+    // updated to match for QoI.
+    const Decl *FD = CE->getCalleeDecl();
+    bool PureOrConst =
+        FD && (FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>());
+    if (CE->hasUnusedResultAttr(Ctx) || PureOrConst) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
 
-        if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
-                           CE->getArg(NumArgs - 1)->getEndLoc());
-        return true;
-      }
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
     }
     return false;
   }
@@ -2803,32 +2814,20 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
 
   case CXXTemporaryObjectExprClass:
   case CXXConstructExprClass: {
-    if (const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl()) {
-      const auto *WarnURAttr = Type->getAttr<WarnUnusedResultAttr>();
-      if (Type->hasAttr<WarnUnusedAttr>() ||
-          (WarnURAttr && WarnURAttr->IsCXX11NoDiscard())) {
-        WarnE = this;
-        Loc = getBeginLoc();
-        R1 = getSourceRange();
-        return true;
-      }
-    }
-
     const auto *CE = cast<CXXConstructExpr>(this);
-    if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
-      const auto *WarnURAttr = Ctor->getAttr<WarnUnusedResultAttr>();
-      if (WarnURAttr && WarnURAttr->IsCXX11NoDiscard()) {
-        WarnE = this;
-        Loc = getBeginLoc();
-        R1 = getSourceRange();
+    const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl();
 
-        if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
-                           CE->getArg(NumArgs - 1)->getEndLoc());
-        return true;
-      }
+    if ((Type && Type->hasAttr<WarnUnusedAttr>()) ||
+        CE->hasUnusedResultAttr(Ctx)) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
+
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
     }
-
     return false;
   }
 
@@ -3175,10 +3174,39 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     }
     return E;
   };
+
+  // Used when Clang generates calls to std::get for decomposing
+  // structured bindings.
+  auto IgnoreImplicitCallSingleStep = [](Expr *E) {
+    auto *C = dyn_cast<CallExpr>(E);
+    if (!C)
+      return E;
+
+    // Looking for calls to a std::get, which usually just takes
+    // 1 argument (i.e., the structure being decomposed). If it has
+    // more than 1 argument, the others need to be defaulted.
+    unsigned NumArgs = C->getNumArgs();
+    if (NumArgs == 0 || (NumArgs > 1 && !isa<CXXDefaultArgExpr>(C->getArg(1))))
+      return E;
+
+    Expr *A = C->getArg(0);
+
+    // This was spelled out in source. Don't ignore.
+    if (A->getSourceRange() != E->getSourceRange())
+      return E;
+
+    // If the argument refers to a DecompositionDecl construction,
+    // ignore it.
+    if (IsDecompositionDeclRefExpr(A))
+      return A;
+
+    return E;
+  };
+
   return IgnoreExprNodes(
       this, IgnoreImplicitSingleStep, IgnoreImplicitCastsExtraSingleStep,
       IgnoreParensOnlySingleStep, IgnoreImplicitConstructorSingleStep,
-      IgnoreImplicitMemberCallSingleStep);
+      IgnoreImplicitMemberCallSingleStep, IgnoreImplicitCallSingleStep);
 }
 
 bool Expr::isDefaultArgument() const {
@@ -3221,7 +3249,7 @@ static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
 /// isTemporaryObject - Determines if this expression produces a
 /// temporary of the given class type.
 bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
-  if (!C.hasSameUnqualifiedType(getType(), C.getTypeDeclType(TempTy)))
+  if (!C.hasSameUnqualifiedType(getType(), C.getCanonicalTagType(TempTy)))
     return false;
 
   const Expr *E = skipTemporaryBindingsNoOpCastsAndParens(this);
@@ -3407,7 +3435,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
-      RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
+      auto *RD = ILE->getType()->castAsRecordDecl();
 
       // In C++17, bases were added to the list of members used by aggregate
       // initialization.
@@ -3541,6 +3569,56 @@ bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
          Arg->EvaluateAsBooleanCondition(ArgVal, Ctx) && !ArgVal;
 }
 
+const AllocSizeAttr *CallExpr::getCalleeAllocSizeAttr() const {
+  if (const FunctionDecl *DirectCallee = getDirectCallee())
+    return DirectCallee->getAttr<AllocSizeAttr>();
+  if (const Decl *IndirectCallee = getCalleeDecl())
+    return IndirectCallee->getAttr<AllocSizeAttr>();
+  return nullptr;
+}
+
+std::optional<llvm::APInt>
+CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
+  const AllocSizeAttr *AllocSize = getCalleeAllocSizeAttr();
+
+  assert(AllocSize && AllocSize->getElemSizeParam().isValid());
+  unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
+  unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
+  if (getNumArgs() <= SizeArgNo)
+    return std::nullopt;
+
+  auto EvaluateAsSizeT = [&](const Expr *E, llvm::APSInt &Into) {
+    Expr::EvalResult ExprResult;
+    if (E->isValueDependent() ||
+        !E->EvaluateAsInt(ExprResult, Ctx, Expr::SE_AllowSideEffects))
+      return false;
+    Into = ExprResult.Val.getInt();
+    if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
+      return false;
+    Into = Into.zext(BitsInSizeT);
+    return true;
+  };
+
+  llvm::APSInt SizeOfElem;
+  if (!EvaluateAsSizeT(getArg(SizeArgNo), SizeOfElem))
+    return std::nullopt;
+
+  if (!AllocSize->getNumElemsParam().isValid())
+    return SizeOfElem;
+
+  llvm::APSInt NumberOfElems;
+  unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
+  if (!EvaluateAsSizeT(getArg(NumArgNo), NumberOfElems))
+    return std::nullopt;
+
+  bool Overflow;
+  llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
+  if (Overflow)
+    return std::nullopt;
+
+  return BytesAvailable;
+}
+
 bool CallExpr::isCallToStdMove() const {
   return getBuiltinCallee() == Builtin::BImove;
 }
@@ -3597,10 +3675,10 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 
   switch (getStmtClass()) {
   case NoStmtClass:
-  #define ABSTRACT_STMT(Type)
-  #define STMT(Type, Base) case Type##Class:
-  #define EXPR(Type, Base)
-  #include "clang/AST/StmtNodes.inc"
+#define ABSTRACT_STMT(Type)
+#define STMT(Type, Base) case Type##Class:
+#define EXPR(Type, Base)
+#include "clang/AST/StmtNodes.inc"
     llvm_unreachable("unexpected Expr kind");
 
   case DependentScopeDeclRefExprClass:
@@ -3756,8 +3834,8 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
 
   case GenericSelectionExprClass:
-    return cast<GenericSelectionExpr>(this)->getResultExpr()->
-        HasSideEffects(Ctx, IncludePossibleEffects);
+    return cast<GenericSelectionExpr>(this)->getResultExpr()->HasSideEffects(
+        Ctx, IncludePossibleEffects);
 
   case ChooseExprClass:
     return cast<ChooseExpr>(this)->getChosenSubExpr()->HasSideEffects(
@@ -3781,7 +3859,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     if (DCE->getTypeAsWritten()->isReferenceType() &&
         DCE->getCastKind() == CK_Dynamic)
       return true;
-    }
+  }
     [[fallthrough]];
   case ImplicitCastExprClass:
   case CStyleCastExprClass:
@@ -3870,7 +3948,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ObjCBridgedCastExprClass:
   case ObjCMessageExprClass:
   case ObjCPropertyRefExprClass:
-  // FIXME: Classify these cases better.
+    // FIXME: Classify these cases better.
     if (IncludePossibleEffects)
       return true;
     break;
@@ -4050,8 +4128,8 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
     return NPCK_CXX11_nullptr;
 
   if (const RecordType *UT = getType()->getAsUnionType())
-    if (!Ctx.getLangOpts().CPlusPlus11 &&
-        UT && UT->getDecl()->hasAttr<TransparentUnionAttr>())
+    if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
+        UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))
@@ -5211,6 +5289,33 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
       return {};
   }
   return OriginalTy;
+}
+
+QualType ArraySectionExpr::getElementType() const {
+  QualType BaseTy = getBase()->IgnoreParenImpCasts()->getType();
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    BaseTy = ASE->getElementType();
+
+  if (BaseTy->isAnyPointerType())
+    return BaseTy->getPointeeType();
+  if (BaseTy->isArrayType())
+    return BaseTy->castAsArrayTypeUnsafe()->getElementType();
+
+  // If this isn't a pointer or array, the base is a dependent expression, so
+  // just return the BaseTy anyway.
+  assert(BaseTy->isInstantiationDependentType());
+  return BaseTy;
+}
+
+QualType ArraySectionExpr::getBaseType() const {
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    return ASE->getElementType();
+
+  return getBase()->IgnoreParenImpCasts()->getType();
 }
 
 RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,

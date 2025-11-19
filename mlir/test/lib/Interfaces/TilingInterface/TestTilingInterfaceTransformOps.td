@@ -150,4 +150,27 @@ def TestTileAndFuseOuterParallelPartialReductionOp : Op<
   }];
 }
 
+def TestTileUsingCustomLoopOp : Op<
+    Transform_Dialect, "test.tile_using_custom_loop",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Test Transform op to tile an operation using custom loops.
+
+    The test just folds all the loops and into a single loop and then
+    delinearizes the indices.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root_op,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
+  let results  = (outs TransformHandleTypeInterface:$tiled_ops,
+                  Variadic<TransformHandleTypeInterface>:$loops);
+  
+  let assemblyFormat = [{
+    $root_op `tile_sizes` `=` $tile_sizes
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 #endif // TEST_TILINGINTERFACE_TRANSFORM_OPS

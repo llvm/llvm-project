@@ -119,6 +119,7 @@ protected:
 #    include <__locale>
 #    include <__type_traits/is_same.h>
 #    include <__utility/is_valid_range.h>
+#    include <__utility/scope_guard.h>
 #    include <climits>
 #    include <ios>
 #    include <iosfwd>
@@ -178,18 +179,27 @@ public:
   // Get and put areas:
   // 27.6.2.2.3 Get area:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 streamsize in_avail() {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     if (gptr() < egptr())
       return static_cast<streamsize>(egptr() - gptr());
     return showmanyc();
   }
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type snextc() {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     if (sbumpc() == traits_type::eof())
       return traits_type::eof();
     return sgetc();
   }
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sbumpc() {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     if (gptr() == egptr())
       return uflow();
     int_type __c = traits_type::to_int_type(*gptr());
@@ -198,6 +208,9 @@ public:
   }
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sgetc() {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     if (gptr() == egptr())
       return underflow();
     return traits_type::to_int_type(*gptr());
@@ -207,6 +220,9 @@ public:
 
   // 27.6.2.2.4 Putback:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sputbackc(char_type __c) {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     if (eback() == gptr() || !traits_type::eq(__c, *(gptr() - 1)))
       return pbackfail(traits_type::to_int_type(__c));
     this->gbump(-1);
@@ -214,6 +230,9 @@ public:
   }
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sungetc() {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     if (eback() == gptr())
       return pbackfail();
     this->gbump(-1);
@@ -222,6 +241,9 @@ public:
 
   // 27.6.2.2.5 Put area:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sputc(char_type __c) {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     if (pptr() == epptr())
       return overflow(traits_type::to_int_type(__c));
     *pptr() = __c;
@@ -317,6 +339,9 @@ protected:
   virtual streamsize showmanyc() { return 0; }
 
   virtual streamsize xsgetn(char_type* __s, streamsize __n) {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     int_type __c;
     streamsize __i = 0;
     while (__i < __n) {
@@ -338,6 +363,9 @@ protected:
 
   virtual int_type underflow() { return traits_type::eof(); }
   virtual int_type uflow() {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     if (underflow() == traits_type::eof())
       return traits_type::eof();
     int_type __c = traits_type::to_int_type(*gptr());
@@ -350,6 +378,9 @@ protected:
 
   // 27.6.2.4.5 Put area:
   virtual streamsize xsputn(const char_type* __s, streamsize __n) {
+    __check_invariants();
+    auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
+
     streamsize __i = 0;
     while (__i < __n) {
       if (pptr() >= epptr()) {
@@ -369,6 +400,15 @@ protected:
   }
 
   virtual int_type overflow(int_type = traits_type::eof()) { return traits_type::eof(); }
+
+  // This function checks some invariants of the class (it isn't exhaustive).
+  _LIBCPP_HIDE_FROM_ABI void __check_invariants() const {
+    _LIBCPP_ASSERT_INTERNAL(pbase() <= pptr(), "this is an invariant of the class");
+    _LIBCPP_ASSERT_INTERNAL(pptr() <= epptr(), "this is an invariant of the class");
+
+    _LIBCPP_ASSERT_INTERNAL(eback() <= gptr(), "this is an invariant of the class");
+    _LIBCPP_ASSERT_INTERNAL(gptr() <= egptr(), "this is an invariant of the class");
+  }
 
 private:
   locale __loc_;

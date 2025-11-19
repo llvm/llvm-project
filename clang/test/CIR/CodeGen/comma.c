@@ -16,7 +16,7 @@ void comma(void) {
     i = 100, 200;
 }
 
-// CIR-LABEL: cir.func{{.*}} @comma() {
+// CIR-LABEL: cir.func{{.*}} @comma()
 // CIR:         %[[B:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b"]
 // CIR:         %[[C:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["c"]
 // CIR:         %[[F:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f"]
@@ -24,7 +24,7 @@ void comma(void) {
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store{{.*}} %[[TRUE]], %[[B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:         %[[CHAR_INI_INIT:.*]] = cir.const #cir.int<65> : !s32i
-// CIR:         %[[CHAR_VAL:.*]] = cir.cast(integral, %[[CHAR_INI_INIT]] : !s32i), !s8i
+// CIR:         %[[CHAR_VAL:.*]] = cir.cast integral %[[CHAR_INI_INIT]] : !s32i -> !s8i
 // CIR:         cir.store{{.*}} %[[CHAR_VAL]], %[[C]] : !s8i, !cir.ptr<!s8i>
 // CIR:         %[[FLOAT_VAL:.*]] = cir.const #cir.fp<3.140000e+00> : !cir.float
 // CIR:         cir.store{{.*}} %[[FLOAT_VAL]], %[[F]] : !cir.float, !cir.ptr<!cir.float>
@@ -34,7 +34,7 @@ void comma(void) {
 // CIR:         cir.store{{.*}} %[[HUNDRED]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.return
 
-// LLVM-LABEL: define {{.*}}void @comma() {
+// LLVM-LABEL: define {{.*}}void @comma(){{.*}} {
 // LLVM:         %[[B_PTR:.*]] = alloca i8
 // LLVM:         %[[C_PTR:.*]] = alloca i8
 // LLVM:         %[[F_PTR:.*]] = alloca float

@@ -19,11 +19,11 @@ define hidden void @fptr_single_i32(i32 noundef %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[FPTR_SINGLE_I32_VARARG:%.*]], align 16
 ; ABI-NEXT:    [[TMP0:%.*]] = load volatile ptr, ptr @vararg_ptr, align 4
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[FPTR_SINGLE_I32_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[X:%.*]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void [[TMP0]](ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:
@@ -45,11 +45,11 @@ define hidden void @fptr_libcS(ptr noundef byval(%struct.libcS) align 8 %x) {
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[FPTR_LIBCS_VARARG:%.*]], align 16
 ; ABI-NEXT:    [[TMP0:%.*]] = load volatile ptr, ptr @vararg_ptr, align 4
 ; ABI-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[INDIRECTALLOCA]], ptr [[X:%.*]], i64 24, i1 false)
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[FPTR_LIBCS_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store ptr [[INDIRECTALLOCA]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void [[TMP0]](ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:

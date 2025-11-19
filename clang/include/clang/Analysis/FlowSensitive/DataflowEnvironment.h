@@ -157,10 +157,18 @@ public:
   };
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
-  /// the state of a program.
+  /// the state of a program. `FlowConditionToken` sets the flow condition
+  /// associated with the environment. Generally, new environments should be
+  /// initialized with a fresh token, by using one of the other
+  /// constructors. This constructor is for specialized use, including
+  /// deserialization and delegation from other constructors.
+  Environment(DataflowAnalysisContext &DACtx, Atom FlowConditionToken)
+      : DACtx(&DACtx), FlowConditionToken(FlowConditionToken) {}
+
+  /// Creates an environment that uses `DACtx` to store objects that encompass
+  /// the state of a program. Populates a fresh atom as flow condition token.
   explicit Environment(DataflowAnalysisContext &DACtx)
-      : DACtx(&DACtx),
-        FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
+      : Environment(DACtx, DACtx.arena().makeFlowConditionToken()) {}
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
   /// the state of a program, with `S` as the statement to analyze.

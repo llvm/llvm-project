@@ -18,10 +18,10 @@ declare i32 @func(i32, i32)
 ; CHECK-LABEL: define {{[^@]+}}@outlineable() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I1_LOC:%.*]] = alloca i32, align 4, addrspace(5)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p5(i64 -1, ptr addrspace(5) [[I1_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[I1_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 0, i32 1, ptr addrspace(5) [[I1_LOC]], i32 0)
 ; CHECK-NEXT:    [[I1_RELOAD:%.*]] = load i32, ptr addrspace(5) [[I1_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p5(i64 -1, ptr addrspace(5) [[I1_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[I1_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[I1_RELOAD]], i32 0, ptr addrspace(5) null, i32 -1)
 ; CHECK-NEXT:    ret i32 0
 ;

@@ -53,7 +53,7 @@ class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
                        mlir::LLVM::DIFileAttr fileAttr,
                        mlir::LLVM::DIScopeAttr scopeAttr,
                        fir::DebugTypeGenerator &typeGen,
-                       mlir::SymbolTable *symbolTable);
+                       mlir::SymbolTable *symbolTable, mlir::Value dummyScope);
 
 public:
   AddDebugInfoPass(fir::AddDebugInfoOptions options) : Base(options) {}
@@ -206,7 +206,8 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::LLVM::DIFileAttr fileAttr,
                                        mlir::LLVM::DIScopeAttr scopeAttr,
                                        fir::DebugTypeGenerator &typeGen,
-                                       mlir::SymbolTable *symbolTable) {
+                                       mlir::SymbolTable *symbolTable,
+                                       mlir::Value dummyScope) {
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
@@ -228,24 +229,11 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
     }
   }
 
-  // FIXME: There may be cases where an argument is processed a bit before
-  // DeclareOp is generated. In that case, DeclareOp may point to an
-  // intermediate op and not to BlockArgument.
-  // Moreover, with MLIR inlining we cannot use the BlockArgument
-  // position to identify the original number of the dummy argument.
-  // If we want to keep running AddDebugInfoPass late, the dummy argument
-  // position in the argument list has to be expressed in FIR (e.g. as a
-  // constant attribute of [hl]fir.declare/fircg.ext_declare operation that has
-  // a dummy_scope operand).
+  // Get the dummy argument position from the explicit attribute.
   unsigned argNo = 0;
-  if (declOp.getDummyScope()) {
-    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref())) {
-      // Check if it is the BlockArgument of the function's entry block.
-      if (auto funcLikeOp =
-              declOp->getParentOfType<mlir::FunctionOpInterface>())
-        if (arg.getOwner() == &funcLikeOp.front())
-          argNo = arg.getArgNumber() + 1;
-    }
+  if (dummyScope && declOp.getDummyScope() == dummyScope) {
+    if (auto argNoOpt = declOp.getDummyArgNo())
+      argNo = *argNoOpt;
   }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
@@ -285,11 +273,16 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
   } else {
+    // When decl is true, it means that module is only being used in this
+    // compilation unit and it is defined elsewhere. But if the file/line/scope
+    // fields are valid, the module is not merged with its definition and is
+    // considered different. So we only set those fields when decl is false.
     modAttr = mlir::LLVM::DIModuleAttr::get(
-        context, fileAttr, scope, mlir::StringAttr::get(context, name),
+        context, decl ? nullptr : fileAttr, decl ? nullptr : scope,
+        mlir::StringAttr::get(context, name),
         /* configMacros */ mlir::StringAttr(),
         /* includePath */ mlir::StringAttr(),
-        /* apinotes */ mlir::StringAttr(), line, decl);
+        /* apinotes */ mlir::StringAttr(), decl ? 0 : line, decl);
     moduleMap[name] = modAttr;
   }
   return modAttr;
@@ -618,6 +611,21 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
   addTargetOpDISP(/*lineTableOnly=*/false, entities);
 
+  // Find the first dummy_scope definition. This is the one of the current
+  // function. The other ones may come from inlined calls. The variables inside
+  // those inlined calls should not be identified as arguments of the current
+  // function.
+  mlir::Value dummyScope;
+  funcOp.walk([&](fir::UndefOp undef) -> mlir::WalkResult {
+    // TODO: delay fir.dummy_scope translation to undefined until
+    // codegeneration. This is nicer and safer to match.
+    if (llvm::isa<fir::DummyScopeType>(undef.getType())) {
+      dummyScope = undef;
+      return mlir::WalkResult::interrupt();
+    }
+    return mlir::WalkResult::advance();
+  });
+
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
     mlir::LLVM::DISubprogramAttr spTy = spAttr;
     if (auto tOp = declOp->getParentOfType<mlir::omp::TargetOp>()) {
@@ -627,7 +635,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
           spTy = sp;
       }
     }
-    handleDeclareOp(declOp, fileAttr, spTy, typeGen, symbolTable);
+    handleDeclareOp(declOp, fileAttr, spTy, typeGen, symbolTable, dummyScope);
   });
   // commonBlockMap ensures that we don't create multiple DICommonBlockAttr of
   // the same name in one function. But it is ok (rather required) to create
@@ -648,6 +656,19 @@ void AddDebugInfoPass::runOnOperation() {
     mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
     signalPassFailure();
     return;
+  }
+  mlir::OpBuilder builder(context);
+  if (dwarfVersion > 0) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(module.getBody());
+    llvm::SmallVector<mlir::Attribute> moduleFlags;
+    mlir::IntegerType int32Ty = mlir::IntegerType::get(context, 32);
+    moduleFlags.push_back(builder.getAttr<mlir::LLVM::ModuleFlagAttr>(
+        mlir::LLVM::ModFlagBehavior::Max,
+        mlir::StringAttr::get(context, "Dwarf Version"),
+        mlir::IntegerAttr::get(int32Ty, dwarfVersion)));
+    mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
+                                      builder.getArrayAttr(moduleFlags));
   }
   fir::DebugTypeGenerator typeGen(module, &symbolTable, *dl);
   // We need 2 type of file paths here.
@@ -681,12 +702,14 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
-      isOptimized, debugLevel);
+      isOptimized, debugLevel,
+      /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
+      splitDwarfFile.empty() ? mlir::StringAttr()
+                             : mlir::StringAttr::get(context, splitDwarfFile));
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     handleFuncOp(funcOp, fileAttr, cuAttr, typeGen, &symbolTable);
   });
-  mlir::OpBuilder builder(context);
   // We have processed all function. Attach common block variables to the
   // global that represent the storage.
   for (auto [global, exprs] : globalToGlobalExprsMap) {

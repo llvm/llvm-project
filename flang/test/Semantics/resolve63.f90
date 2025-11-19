@@ -165,13 +165,12 @@ contains
     logical :: l
     complex :: z
     y = y + z'1'  !OK
-    !ERROR: Operands of + must be numeric; have untyped and COMPLEX(4)
+    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types untyped and COMPLEX(4)
     z = z'1' + z
     y = +z'1'  !OK
     !ERROR: Operand of unary - must be numeric; have untyped
     y = -z'1'
-    !ERROR: Operands of + must be numeric; have LOGICAL(4) and untyped
-    y = x + z'1'
+    y = x + z'1' ! matches "add" with conversion of untyped to integer
     !ERROR: A NULL() pointer is not allowed as an operand here
     l = x /= null()
     !ERROR: A NULL() pointer is not allowed as a relational operand

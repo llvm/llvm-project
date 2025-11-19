@@ -594,7 +594,8 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
     auto clonedForOp = scf::ForOp::create(
         rewriter, loc, bvm.lookupOrDefault(forOp.getLowerBound()),
         bvm.lookupOrDefault(forOp.getUpperBound()),
-        bvm.lookupOrDefault(forOp.getStep()), hoistedPackedTensor);
+        bvm.lookupOrDefault(forOp.getStep()), hoistedPackedTensor,
+        /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
 
     // Map the induction var, region args and results to the `clonedForOp`.
     bvm.map(forOp.getInductionVar(), clonedForOp.getInductionVar());
@@ -912,8 +913,7 @@ static Value replaceByPackingResult(RewriterBase &rewriter,
       llvm_unreachable("loop independence prerequisite not met");
 
     // offsets = [maybe_leading_ivs = originalLoopIvs, 0 .. 0].
-    std::copy(loopIterationCounts.begin(), loopIterationCounts.end(),
-              offsets.begin());
+    llvm::copy(loopIterationCounts, offsets.begin());
     hoistedPackedTensor =
         scf::getForInductionVarOwner(packingResult.clonedLoopIvs.front())
             ->getResult(0);

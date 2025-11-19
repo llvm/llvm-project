@@ -92,6 +92,7 @@ public:
 private:
   llvm::PointerUnion<const Decl *, const Stmt *> Source;
 };
+static_assert(sizeof(SourceInfo) == sizeof(void *));
 
 using SourceMap = std::vector<std::pair<unsigned, SourceInfo>>;
 

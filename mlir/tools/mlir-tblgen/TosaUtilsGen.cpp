@@ -1,4 +1,4 @@
-//===- TosaUtilsGen.cpp - Tosa utility generator -===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -122,7 +122,7 @@ StringRef Availability::getMergeInstance() const {
 }
 
 // Returns the availability spec of the given `def`.
-std::vector<Availability> getAvailabilities(const Record &def) {
+static std::vector<Availability> getAvailabilities(const Record &def) {
   std::vector<Availability> availabilities;
 
   if (def.getValue("availability")) {

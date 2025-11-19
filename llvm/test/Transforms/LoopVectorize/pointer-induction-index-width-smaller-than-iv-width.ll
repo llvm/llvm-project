@@ -8,8 +8,8 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 define void @wide_ptr_induction_index_width_smaller_than_iv_width(ptr noalias %src, ptr noalias %dst.0, ptr noalias %dst.1) {
 ; CHECK-LABEL: define void @wide_ptr_induction_index_width_smaller_than_iv_width(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST_0:%.*]], ptr noalias [[DST_1:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[SRC]], i32 800
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -17,11 +17,14 @@ define void @wide_ptr_induction_index_width_smaller_than_iv_width(ptr noalias %s
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[SRC]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 8, i32 16, i32 24>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP2]]
@@ -29,25 +32,20 @@ define void @wide_ptr_induction_index_width_smaller_than_iv_width(ptr noalias %s
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP4]]
 ; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    store ptr [[TMP5]], ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 1
 ; CHECK-NEXT:    store ptr [[TMP12]], ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 2
 ; CHECK-NEXT:    store ptr [[TMP13]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 3
 ; CHECK-NEXT:    store ptr [[TMP14]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 32
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ [[SRC]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 100, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[TMP0]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV]], align 1
 ; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[L]], ptr [[GEP_DST_1]], align 8

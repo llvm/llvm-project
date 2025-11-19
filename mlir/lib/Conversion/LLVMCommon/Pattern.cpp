@@ -216,34 +216,14 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
   return memRefDescriptor;
 }
 
-LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
-    OpBuilder &builder, Location loc, TypeRange origTypes,
-    SmallVectorImpl<Value> &operands, bool toDynamic) const {
-  assert(origTypes.size() == operands.size() &&
-         "expected as may original types as operands");
-
-  // Find operands of unranked memref type and store them.
-  SmallVector<UnrankedMemRefDescriptor> unrankedMemrefs;
-  SmallVector<unsigned> unrankedAddressSpaces;
-  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
-    if (auto memRefType = dyn_cast<UnrankedMemRefType>(origTypes[i])) {
-      unrankedMemrefs.emplace_back(operands[i]);
-      FailureOr<unsigned> addressSpace =
-          getTypeConverter()->getMemRefAddressSpace(memRefType);
-      if (failed(addressSpace))
-        return failure();
-      unrankedAddressSpaces.emplace_back(*addressSpace);
-    }
-  }
-
-  if (unrankedMemrefs.empty())
-    return success();
-
-  // Compute allocation sizes.
-  SmallVector<Value> sizes;
-  UnrankedMemRefDescriptor::computeSizes(builder, loc, *getTypeConverter(),
-                                         unrankedMemrefs, unrankedAddressSpaces,
-                                         sizes);
+Value ConvertToLLVMPattern::copyUnrankedDescriptor(
+    OpBuilder &builder, Location loc, UnrankedMemRefType memRefType,
+    Value operand, bool toDynamic) const {
+  // Convert memory space.
+  FailureOr<unsigned> addressSpace =
+      getTypeConverter()->getMemRefAddressSpace(memRefType);
+  if (failed(addressSpace))
+    return {};
 
   // Get frequently used types.
   Type indexType = getTypeConverter()->getIndexType();
@@ -254,52 +234,61 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   if (toDynamic) {
     mallocFunc = LLVM::lookupOrCreateMallocFn(builder, module, indexType);
     if (failed(mallocFunc))
-      return failure();
+      return {};
   }
   if (!toDynamic) {
     freeFunc = LLVM::lookupOrCreateFreeFn(builder, module);
     if (failed(freeFunc))
-      return failure();
+      return {};
   }
 
-  unsigned unrankedMemrefPos = 0;
+  UnrankedMemRefDescriptor desc(operand);
+  Value allocationSize = UnrankedMemRefDescriptor::computeSize(
+      builder, loc, *getTypeConverter(), desc, *addressSpace);
+
+  // Allocate memory, copy, and free the source if necessary.
+  Value memory = toDynamic
+                     ? LLVM::CallOp::create(builder, loc, mallocFunc.value(),
+                                            allocationSize)
+                           .getResult()
+                     : LLVM::AllocaOp::create(builder, loc, getPtrType(),
+                                              IntegerType::get(getContext(), 8),
+                                              allocationSize,
+                                              /*alignment=*/0);
+  Value source = desc.memRefDescPtr(builder, loc);
+  LLVM::MemcpyOp::create(builder, loc, memory, source, allocationSize, false);
+  if (!toDynamic)
+    LLVM::CallOp::create(builder, loc, freeFunc.value(), source);
+
+  // Create a new descriptor. The same descriptor can be returned multiple
+  // times, attempting to modify its pointer can lead to memory leaks
+  // (allocated twice and overwritten) or double frees (the caller does not
+  // know if the descriptor points to the same memory).
+  Type descriptorType = getTypeConverter()->convertType(memRefType);
+  if (!descriptorType)
+    return {};
+  auto updatedDesc =
+      UnrankedMemRefDescriptor::poison(builder, loc, descriptorType);
+  Value rank = desc.rank(builder, loc);
+  updatedDesc.setRank(builder, loc, rank);
+  updatedDesc.setMemRefDescPtr(builder, loc, memory);
+  return updatedDesc;
+}
+
+LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
+    OpBuilder &builder, Location loc, TypeRange origTypes,
+    SmallVectorImpl<Value> &operands, bool toDynamic) const {
+  assert(origTypes.size() == operands.size() &&
+         "expected as may original types as operands");
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
-    Type type = origTypes[i];
-    if (!isa<UnrankedMemRefType>(type))
-      continue;
-    Value allocationSize = sizes[unrankedMemrefPos++];
-    UnrankedMemRefDescriptor desc(operands[i]);
-
-    // Allocate memory, copy, and free the source if necessary.
-    Value memory =
-        toDynamic ? LLVM::CallOp::create(builder, loc, mallocFunc.value(),
-                                         allocationSize)
-                        .getResult()
-                  : LLVM::AllocaOp::create(builder, loc, getPtrType(),
-                                           IntegerType::get(getContext(), 8),
-                                           allocationSize,
-                                           /*alignment=*/0);
-    Value source = desc.memRefDescPtr(builder, loc);
-    LLVM::MemcpyOp::create(builder, loc, memory, source, allocationSize, false);
-    if (!toDynamic)
-      LLVM::CallOp::create(builder, loc, freeFunc.value(), source);
-
-    // Create a new descriptor. The same descriptor can be returned multiple
-    // times, attempting to modify its pointer can lead to memory leaks
-    // (allocated twice and overwritten) or double frees (the caller does not
-    // know if the descriptor points to the same memory).
-    Type descriptorType = getTypeConverter()->convertType(type);
-    if (!descriptorType)
-      return failure();
-    auto updatedDesc =
-        UnrankedMemRefDescriptor::poison(builder, loc, descriptorType);
-    Value rank = desc.rank(builder, loc);
-    updatedDesc.setRank(builder, loc, rank);
-    updatedDesc.setMemRefDescPtr(builder, loc, memory);
-
-    operands[i] = updatedDesc;
+    if (auto memRefType = dyn_cast<UnrankedMemRefType>(origTypes[i])) {
+      Value updatedDesc = copyUnrankedDescriptor(builder, loc, memRefType,
+                                                 operands[i], toDynamic);
+      if (!updatedDesc)
+        return failure();
+      operands[i] = updatedDesc;
+    }
   }
-
   return success();
 }
 
@@ -307,19 +296,13 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 // Detail methods
 //===----------------------------------------------------------------------===//
 
-void LLVM::detail::setNativeProperties(Operation *op,
-                                       IntegerOverflowFlags overflowFlags) {
-  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op))
-    iface.setOverflowFlags(overflowFlags);
-}
-
 /// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
 LogicalResult LLVM::detail::oneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags) {
+    ArrayRef<NamedAttribute> targetAttrs, Attribute propertiesAttr,
+    const LLVMTypeConverter &typeConverter,
+    ConversionPatternRewriter &rewriter) {
   unsigned numResults = op->getNumResults();
 
   SmallVector<Type> resultTypes;
@@ -331,11 +314,10 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   }
 
   // Create the operation through state since we don't know its C++ type.
-  Operation *newOp =
-      rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
-                      resultTypes, targetAttrs);
-
-  setNativeProperties(newOp, overflowFlags);
+  OperationState state(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
+                       resultTypes, targetAttrs);
+  state.propertiesAttr = propertiesAttr;
+  Operation *newOp = rewriter.create(state);
 
   // If the operation produced 0 or 1 result, return them immediately.
   if (numResults == 0)
