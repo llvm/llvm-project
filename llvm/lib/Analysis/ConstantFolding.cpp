@@ -4442,19 +4442,19 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     auto *Vec = Operands[0];
     auto *VecTy = cast<VectorType>(Vec->getType());
 
+    ElementCount ResultEC =
+        VecTy->getElementCount().divideCoefficientBy(NumResults);
+
     if (auto *EltC = Vec->getSplatValue()) {
-      ElementCount HalfEC =
-          VecTy->getElementCount().divideCoefficientBy(NumResults);
-      auto *HalfVec = ConstantVector::getSplat(HalfEC, EltC);
-      SmallVector<Constant *, 8> Results(NumResults, HalfVec);
+      auto *ResultVec = ConstantVector::getSplat(ResultEC, EltC);
+      SmallVector<Constant *, 8> Results(NumResults, ResultVec);
       return ConstantStruct::get(StTy, Results);
     }
 
-    if (!isa<FixedVectorType>(Vec->getType()))
+    if (!ResultEC.isFixed())
       return nullptr;
 
-    unsigned NumElements =
-        VecTy->getElementCount().getFixedValue() / NumResults;
+    unsigned NumElements = ResultEC.getFixedValue();
     SmallVector<Constant *, 8> Results(NumResults);
     SmallVector<Constant *> Elements(NumElements);
     for (unsigned I = 0; I != NumResults; ++I) {
