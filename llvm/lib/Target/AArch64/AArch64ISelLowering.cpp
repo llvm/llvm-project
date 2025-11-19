@@ -19443,45 +19443,50 @@ AArch64TargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
   return CSNeg;
 }
 
-static std::optional<unsigned> IsSVECntIntrinsic(SDValue S) {
+static bool IsSVECntIntrinsic(SDValue S) {
   switch(getIntrinsicID(S.getNode())) {
   default:
     break;
   case Intrinsic::aarch64_sve_cntb:
-    return 8;
   case Intrinsic::aarch64_sve_cnth:
-    return 16;
   case Intrinsic::aarch64_sve_cntw:
-    return 32;
   case Intrinsic::aarch64_sve_cntd:
-    return 64;
+  case Intrinsic::aarch64_sve_cntp:
+    return true;
   }
   return {};
 }
 
-// Returns the element size associated with an SVE cnt[bhwdp] intrinsic. For
-// cntp (predicate), the element size corresponds to the legal (packed) SVE
-// vector type associated with the predicate. E.g. nxv4i1 returns 32.
-static std::optional<unsigned> GetSVECntElementSize(SDValue Op) {
-  if (auto ElementSize = IsSVECntIntrinsic(Op))
-    return ElementSize;
+// Creates a constexpr (IID, VT) pair that can be used in switch cases.
+static constexpr uint64_t intrinsicWithType(Intrinsic::ID IID, MVT VT) {
+  static_assert(sizeof(VT.SimpleTy) <= sizeof(uint32_t) &&
+                    sizeof(IID) <= sizeof(uint32_t),
+                "IID and MVT should fit in 64 bits");
+  return (uint64_t(IID) << 32) | uint64_t(VT.SimpleTy);
+}
+
+// Returns the maximum (scalable) value that can be returned by an SVE count
+// intrinsic. The supported intrinsics are covered by IsSVECntIntrinsic.
+static ElementCount getMaxValueForSVECntIntrinsic(SDValue Op) {
   Intrinsic::ID IID = getIntrinsicID(Op.getNode());
-  if (IID != Intrinsic::aarch64_sve_cntp)
-    return {};
-  EVT PredVT = Op.getOperand(Op.getNumOperands() - 1).getValueType();
-  switch (PredVT.getSimpleVT().SimpleTy) {
-  case MVT::nxv1i1:
-    return 128;
-  case MVT::nxv2i1:
-    return 64;
-  case MVT::nxv4i1:
-    return 32;
-  case MVT::nxv8i1:
-    return 16;
-  case MVT::nxv16i1:
-    return 8;
+  MVT VT = IID == Intrinsic::aarch64_sve_cntp
+               ? Op.getOperand(1).getValueType().getSimpleVT()
+               : MVT::Untyped;
+  switch (intrinsicWithType(IID, VT)) {
+  case intrinsicWithType(Intrinsic::aarch64_sve_cntd, MVT::Untyped):
+  case intrinsicWithType(Intrinsic::aarch64_sve_cntp, MVT::nxv2i1):
+    return ElementCount::getScalable(2);
+  case intrinsicWithType(Intrinsic::aarch64_sve_cntw, MVT::Untyped):
+  case intrinsicWithType(Intrinsic::aarch64_sve_cntp, MVT::nxv4i1):
+    return ElementCount::getScalable(4);
+  case intrinsicWithType(Intrinsic::aarch64_sve_cnth, MVT::Untyped):
+  case intrinsicWithType(Intrinsic::aarch64_sve_cntp, MVT::nxv8i1):
+    return ElementCount::getScalable(8);
+  case intrinsicWithType(Intrinsic::aarch64_sve_cntb, MVT::Untyped):
+  case intrinsicWithType(Intrinsic::aarch64_sve_cntp, MVT::nxv16i1):
+    return ElementCount::getScalable(16);
   default:
-    llvm_unreachable("unexpected predicate type");
+    llvm_unreachable("unexpected intrininc type pair");
   }
 }
 
@@ -31692,22 +31697,24 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
     return false;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    if (auto ElementSize = GetSVECntElementSize(Op)) {
-      unsigned MaxSVEVectorSizeInBits = Subtarget->getMaxSVEVectorSizeInBits();
-      if (!MaxSVEVectorSizeInBits)
-        MaxSVEVectorSizeInBits = AArch64::SVEMaxBitsPerVector;
-      unsigned MaxElements = MaxSVEVectorSizeInBits / *ElementSize;
-      // The SVE count intrinsics don't support the multiplier immediate so we
-      // don't have to account for that here. The value returned may be slightly
-      // over the true required bits, as this is based on the "ALL" pattern. The
-      // other patterns are also exposed by these intrinsics, but they all
-      // return a value that's strictly less than "ALL".
-      unsigned RequiredBits = llvm::bit_width(MaxElements);
-      unsigned BitWidth = Known.Zero.getBitWidth();
-      if (RequiredBits < BitWidth)
-        Known.Zero.setHighBits(BitWidth - RequiredBits);
+    if (!IsSVECntIntrinsic(Op))
       return false;
-    }
+    unsigned MaxSVEVectorSizeInBits = Subtarget->getMaxSVEVectorSizeInBits();
+    if (!MaxSVEVectorSizeInBits)
+      MaxSVEVectorSizeInBits = AArch64::SVEMaxBitsPerVector;
+    unsigned VscaleMax = MaxSVEVectorSizeInBits / 128;
+    unsigned MaxCount =
+        getMaxValueForSVECntIntrinsic(Op).getKnownMinValue() * VscaleMax;
+    // The SVE count intrinsics don't support the multiplier immediate so we
+    // don't have to account for that here. The value returned may be slightly
+    // over the true required bits, as this is based on the "ALL" pattern. The
+    // other patterns are also exposed by these intrinsics, but they all
+    // return a value that's strictly less than "ALL".
+    unsigned RequiredBits = llvm::bit_width(MaxCount);
+    unsigned BitWidth = Known.Zero.getBitWidth();
+    if (RequiredBits < BitWidth)
+      Known.Zero.setHighBits(BitWidth - RequiredBits);
+    return false;
   }
   }
 
