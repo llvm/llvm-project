@@ -24,7 +24,8 @@ public:
   struct Options {
     struct Runtime {
       Runtime(bool MinRuntime, bool MayReturn, bool PreserveRt)
-          : MinRuntime(MinRuntime), MayReturn(MayReturn), PreserveRt(PreserveRt) {}
+          : MinRuntime(MinRuntime), MayReturn(MayReturn),
+            PreserveRt(PreserveRt) {}
       bool MinRuntime;
       bool MayReturn;
       bool PreserveRt;
