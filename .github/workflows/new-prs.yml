@@ -62,4 +62,4 @@ jobs:
       - uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b # v6.0.1
         with:
           configuration-path: .github/new-prs-labeler.yml
-          repo-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
+          repo-token: ${{ github.token }}
