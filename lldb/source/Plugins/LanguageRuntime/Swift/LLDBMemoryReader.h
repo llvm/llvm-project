@@ -87,6 +87,11 @@ public:
   std::optional<swift::remote::RemoteAddress>
   resolveRemoteAddress(swift::remote::RemoteAddress address) const override;
 
+  swift::reflection::RemoteAddress
+  resolveIndirectAddressAtOffset(swift::reflection::RemoteAddress address,
+                                 uint64_t offset,
+                                 bool directnessEncodedInOffset) override;
+
   bool readBytes(swift::remote::RemoteAddress address, uint8_t *dest,
                  uint64_t size) override;
 
