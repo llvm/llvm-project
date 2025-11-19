@@ -15,6 +15,7 @@
 #include "XtensaConstantPoolValue.h"
 #include "XtensaInstrInfo.h"
 #include "XtensaMachineFunctionInfo.h"
+#include "XtensaSelectionDAGInfo.h"
 #include "XtensaSubtarget.h"
 #include "XtensaTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -1508,58 +1509,6 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
   default:
     report_fatal_error("Unexpected node to lower");
   }
-}
-
-const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case XtensaISD::BR_JT:
-    return "XtensaISD::BR_JT";
-  case XtensaISD::CALL:
-    return "XtensaISD::CALL";
-  case XtensaISD::CALLW8:
-    return "XtensaISD::CALLW8";
-  case XtensaISD::EXTUI:
-    return "XtensaISD::EXTUI";
-  case XtensaISD::MOVSP:
-    return "XtensaISD::MOVSP";
-  case XtensaISD::PCREL_WRAPPER:
-    return "XtensaISD::PCREL_WRAPPER";
-  case XtensaISD::RET:
-    return "XtensaISD::RET";
-  case XtensaISD::RETW:
-    return "XtensaISD::RETW";
-  case XtensaISD::RUR:
-    return "XtensaISD::RUR";
-  case XtensaISD::SELECT_CC:
-    return "XtensaISD::SELECT_CC";
-  case XtensaISD::SELECT_CC_FP:
-    return "XtensaISD::SELECT_CC_FP";
-  case XtensaISD::SRCL:
-    return "XtensaISD::SRCL";
-  case XtensaISD::SRCR:
-    return "XtensaISD::SRCR";
-  case XtensaISD::CMPUO:
-    return "XtensaISD::CMPUO";
-  case XtensaISD::CMPUEQ:
-    return "XtensaISD::CMPUEQ";
-  case XtensaISD::CMPULE:
-    return "XtensaISD::CMPULE";
-  case XtensaISD::CMPULT:
-    return "XtensaISD::CMPULT";
-  case XtensaISD::CMPOEQ:
-    return "XtensaISD::CMPOEQ";
-  case XtensaISD::CMPOLE:
-    return "XtensaISD::CMPOLE";
-  case XtensaISD::CMPOLT:
-    return "XtensaISD::CMPOLT";
-  case XtensaISD::MADD:
-    return "XtensaISD::MADD";
-  case XtensaISD::MSUB:
-    return "XtensaISD::MSUB";
-  case XtensaISD::MOVS:
-    return "XtensaISD::MOVS";
-  }
-  return nullptr;
 }
 
 TargetLowering::AtomicExpansionKind

@@ -16,9 +16,9 @@
 ; SelectionDAGBuilder for some reason changes the select type.
 ; VI: s_cselect_b64
 ; VI: v_cndmask_b32
-define amdgpu_kernel void @v_select_v2i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v2i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <2 x i8>, ptr addrspace(1) %a.ptr, align 2
-  %b = load <2 x i8>, ptr addrspace(4) %b.ptr, align 2
+  %b = load <2 x i8>, ptr addrspace(1) %b.ptr, align 2
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <2 x i8> %a, <2 x i8> %b
   store <2 x i8> %select, ptr addrspace(1) %out, align 2
@@ -28,9 +28,9 @@ define amdgpu_kernel void @v_select_v2i8(ptr addrspace(1) %out, ptr addrspace(1)
 ; GCN-LABEL: {{^}}v_select_v4i8:
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v4i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v4i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <4 x i8>, ptr addrspace(1) %a.ptr
-  %b = load <4 x i8>, ptr addrspace(4) %b.ptr
+  %b = load <4 x i8>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <4 x i8> %a, <4 x i8> %b
   store <4 x i8> %select, ptr addrspace(1) %out, align 4
@@ -41,9 +41,9 @@ define amdgpu_kernel void @v_select_v4i8(ptr addrspace(1) %out, ptr addrspace(1)
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v8i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v8i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <8 x i8>, ptr addrspace(1) %a.ptr
-  %b = load <8 x i8>, ptr addrspace(4) %b.ptr
+  %b = load <8 x i8>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <8 x i8> %a, <8 x i8> %b
   store <8 x i8> %select, ptr addrspace(1) %out, align 4
@@ -56,9 +56,9 @@ define amdgpu_kernel void @v_select_v8i8(ptr addrspace(1) %out, ptr addrspace(1)
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v16i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v16i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <16 x i8>, ptr addrspace(1) %a.ptr
-  %b = load <16 x i8>, ptr addrspace(4) %b.ptr
+  %b = load <16 x i8>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <16 x i8> %a, <16 x i8> %b
   store <16 x i8> %select, ptr addrspace(1) %out, align 4
@@ -93,16 +93,13 @@ define amdgpu_kernel void @select_v2i16(ptr addrspace(1) %out, <2 x i16> %a, <2 
 }
 
 ; GCN-LABEL: {{^}}v_select_v2i16:
-; GCN: {{buffer|flat|global}}_load_dword v
-; GCN: {{buffer|flat|global}}_load_dword v
+; GCN: buffer_load_dword v
+; GCN: buffer_load_dword v
 ; GCN: v_cndmask_b32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
-  %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.a = getelementptr <2 x i16>, ptr addrspace(1) %a.ptr, i32 %id
-  %gep.b = getelementptr <2 x i16>, ptr addrspace(4) %b.ptr, i32 %id
-  %a = load <2 x i16>, ptr addrspace(1) %gep.a
-  %b = load <2 x i16>, ptr addrspace(4) %gep.b
+define amdgpu_kernel void @v_select_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
+  %a = load <2 x i16>, ptr addrspace(1) %a.ptr
+  %b = load <2 x i16>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <2 x i16> %a, <2 x i16> %b
   store <2 x i16> %select, ptr addrspace(1) %out, align 4
@@ -117,9 +114,9 @@ define amdgpu_kernel void @v_select_v2i16(ptr addrspace(1) %out, ptr addrspace(1
 ; VI: s_cselect_b64
 ; GFX9: cndmask
 ; GFX9: cndmask
-define amdgpu_kernel void @v_select_v3i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v3i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <3 x i16>, ptr addrspace(1) %a.ptr
-  %b = load <3 x i16>, ptr addrspace(4) %b.ptr
+  %b = load <3 x i16>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <3 x i16> %a, <3 x i16> %b
   store <3 x i16> %select, ptr addrspace(1) %out, align 4
@@ -130,9 +127,9 @@ define amdgpu_kernel void @v_select_v3i16(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <4 x i16>, ptr addrspace(1) %a.ptr
-  %b = load <4 x i16>, ptr addrspace(4) %b.ptr
+  %b = load <4 x i16>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <4 x i16> %a, <4 x i16> %b
   store <4 x i16> %select, ptr addrspace(1) %out, align 4
@@ -145,9 +142,9 @@ define amdgpu_kernel void @v_select_v4i16(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v8i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v8i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <8 x i16>, ptr addrspace(1) %a.ptr
-  %b = load <8 x i16>, ptr addrspace(4) %b.ptr
+  %b = load <8 x i16>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <8 x i16> %a, <8 x i16> %b
   store <8 x i16> %select, ptr addrspace(1) %out, align 4
@@ -164,9 +161,9 @@ define amdgpu_kernel void @v_select_v8i16(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v16i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v16i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <16 x i16>, ptr addrspace(1) %a.ptr
-  %b = load <16 x i16>, ptr addrspace(4) %b.ptr
+  %b = load <16 x i16>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <16 x i16> %a, <16 x i16> %b
   store <16 x i16> %select, ptr addrspace(1) %out, align 4
@@ -191,9 +188,9 @@ define amdgpu_kernel void @v_select_v16i16(ptr addrspace(1) %out, ptr addrspace(
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v32i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v32i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <32 x i16>, ptr addrspace(1) %a.ptr
-  %b = load <32 x i16>, ptr addrspace(4) %b.ptr
+  %b = load <32 x i16>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <32 x i16> %a, <32 x i16> %b
   store <32 x i16> %select, ptr addrspace(1) %out, align 4
@@ -336,7 +333,6 @@ bb:
 define amdgpu_kernel void @s_select_v5f32(ptr addrspace(1) %out, <5 x float> %a, <5 x float> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <5 x float> %a, <5 x float> %b
-  call void asm "; use $0", "s"(<5 x float> %a)
   store <5 x float> %select, ptr addrspace(1) %out, align 16
   ret void
 }
@@ -404,7 +400,6 @@ define amdgpu_kernel void @select_v4f64(ptr addrspace(1) %out, <4 x double> %a, 
 ; GCN: s_cselect_b32
 define amdgpu_kernel void @select_v8f64(ptr addrspace(1) %out, <8 x double> %a, <8 x double> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
-  call void asm "; use $0", "s"(<8 x double> %a)
   %select = select i1 %cmp, <8 x double> %a, <8 x double> %b
   store <8 x double> %select, ptr addrspace(1) %out, align 16
   ret void
@@ -413,9 +408,9 @@ define amdgpu_kernel void @select_v8f64(ptr addrspace(1) %out, <8 x double> %a, 
 ; GCN-LABEL: {{^}}v_select_v2f16:
 ; GCN: v_cndmask_b32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <2 x half>, ptr addrspace(1) %a.ptr
-  %b = load <2 x half>, ptr addrspace(4) %b.ptr
+  %b = load <2 x half>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <2 x half> %a, <2 x half> %b
   store <2 x half> %select, ptr addrspace(1) %out, align 4
@@ -426,9 +421,9 @@ define amdgpu_kernel void @v_select_v2f16(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v3f16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v3f16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <3 x half>, ptr addrspace(1) %a.ptr
-  %b = load <3 x half>, ptr addrspace(4) %b.ptr
+  %b = load <3 x half>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <3 x half> %a, <3 x half> %b
   store <3 x half> %select, ptr addrspace(1) %out, align 4
@@ -439,9 +434,9 @@ define amdgpu_kernel void @v_select_v3f16(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
 ; GCN-NOT: cndmask
-define amdgpu_kernel void @v_select_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+define amdgpu_kernel void @v_select_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <4 x half>, ptr addrspace(1) %a.ptr
-  %b = load <4 x half>, ptr addrspace(4) %b.ptr
+  %b = load <4 x half>, ptr addrspace(1) %b.ptr
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <4 x half> %a, <4 x half> %b
   store <4 x half> %select, ptr addrspace(1) %out, align 4

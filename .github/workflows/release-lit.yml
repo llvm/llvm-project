@@ -45,7 +45,7 @@ jobs:
           ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
 
       - name: Setup Cpp
-        uses: aminya/setup-cpp@a276e6e3d1db9160db5edc458e99a30d3b109949 # v1.7.1
+        uses: aminya/setup-cpp@9bc9b8cd8a8d678f920e4e1e73f29da8010ced51 # v1.7.2
         with:
           compiler: llvm-16.0.6
           cmake: true

@@ -1103,6 +1103,7 @@ libc_support_library(
         ":func_realloc",
         ":hdr_stdio_macros",
         ":hdr_stdio_overlay",
+        ":string_memory_utils",
         ":types_off_t",
     ],
 )
@@ -6973,6 +6974,17 @@ libc_function(
     ],
 )
 
+libc_support_library(
+    name = "mprotect_common",
+    hdrs = ["src/sys/mman/linux/mprotect_common.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
 libc_function(
     name = "mprotect",
     srcs = ["src/sys/mman/linux/mprotect.cpp"],
@@ -6981,6 +6993,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":mprotect_common",
     ],
 )
 
@@ -7036,6 +7049,85 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_alloc",
+    srcs = ["src/sys/mman/linux/pkey_alloc.cpp"],
+    hdrs = ["src/sys/mman/pkey_alloc.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_free",
+    srcs = ["src/sys/mman/linux/pkey_free.cpp"],
+    hdrs = ["src/sys/mman/pkey_free.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_get",
+    srcs = ["src/sys/mman/linux/pkey_get.cpp"],
+    hdrs = ["src/sys/mman/pkey_get.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":pkey_common",
+    ],
+)
+
+libc_function(
+    name = "pkey_mprotect",
+    srcs = ["src/sys/mman/linux/pkey_mprotect.cpp"],
+    hdrs = ["src/sys/mman/pkey_mprotect.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":mprotect",
+        ":mprotect_common",
+        ":types_size_t",
+    ],
+)
+
+libc_function(
+    name = "pkey_set",
+    srcs = ["src/sys/mman/linux/pkey_set.cpp"],
+    hdrs = ["src/sys/mman/pkey_set.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":pkey_common",
+    ],
+)
+
+libc_support_library(
+    name = "pkey_common",
+    hdrs = [
+        "src/sys/mman/linux/pkey_common.h",
+    ] + selects.with_or({
+        PLATFORM_CPU_X86_64: ["src/sys/mman/linux/x86_64/pkey_common.h"],
+        "//conditions:default": ["src/sys/mman/linux/generic/pkey_common.h"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_properties_architectures",
+        ":hdr_errno_macros",
+        ":hdr_stdint_proxy",
     ],
 )
 

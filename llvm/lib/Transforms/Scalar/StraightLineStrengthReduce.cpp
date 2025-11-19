@@ -1275,8 +1275,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   // Build the dependency graph and sort candidate instructions from dependency
   // roots to leaves
   for (auto &C : Candidates) {
-    if (DependencyGraph.find(C.Ins) == DependencyGraph.end())
-      DependencyGraph[C.Ins] = {};
+    DependencyGraph.try_emplace(C.Ins);
     addDependency(C, C.Basis);
   }
   sortCandidateInstructions();

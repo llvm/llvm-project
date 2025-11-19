@@ -131,6 +131,14 @@ public:
     return cir::IntType::get(getContext(), n, false);
   }
 
+  static unsigned getCIRIntOrFloatBitWidth(mlir::Type eltTy) {
+    if (auto intType = mlir::dyn_cast<cir::IntTypeInterface>(eltTy))
+      return intType.getWidth();
+    if (auto floatType = mlir::dyn_cast<cir::FPTypeInterface>(eltTy))
+      return floatType.getWidth();
+
+    llvm_unreachable("Unsupported type in getCIRIntOrFloatBitWidth");
+  }
   cir::IntType getSIntNTy(int n) {
     return cir::IntType::get(getContext(), n, true);
   }
@@ -389,25 +397,6 @@ public:
     return createCallOp(loc, callee, cir::VoidType(), operands, attrs);
   }
 
-  cir::CallOp createTryCallOp(
-      mlir::Location loc, mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
-      mlir::Type returnType = cir::VoidType(),
-      mlir::ValueRange operands = mlir::ValueRange(),
-      [[maybe_unused]] cir::SideEffect sideEffect = cir::SideEffect::All) {
-    assert(!cir::MissingFeatures::opCallCallConv());
-    assert(!cir::MissingFeatures::opCallSideEffect());
-    return createCallOp(loc, callee, returnType, operands);
-  }
-
-  cir::CallOp createTryCallOp(
-      mlir::Location loc, cir::FuncOp callee, mlir::ValueRange operands,
-      [[maybe_unused]] cir::SideEffect sideEffect = cir::SideEffect::All) {
-    assert(!cir::MissingFeatures::opCallCallConv());
-    assert(!cir::MissingFeatures::opCallSideEffect());
-    return createTryCallOp(loc, mlir::SymbolRefAttr::get(callee),
-                           callee.getFunctionType().getReturnType(), operands);
-  }
-
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
@@ -582,6 +571,16 @@ public:
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
     return cir::CmpOp::create(*this, loc, getBoolTy(), kind, lhs, rhs);
+  }
+
+  cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
+                                 mlir::Value lhs, mlir::Value rhs) {
+    VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
+    IntType integralTy =
+        getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
+    VectorType integralVecTy =
+        VectorType::get(context, integralTy, vecCast.getSize());
+    return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
