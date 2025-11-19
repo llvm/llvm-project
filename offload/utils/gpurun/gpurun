@@ -203,13 +203,26 @@ if [ -z "$_num_local_ranks" ] && [ ! -z $SLURM_CPUS_ON_NODE ] ; then
    _num_local_ranks=$SLURM_CPUS_ON_NODE
    _local_rank_num=$SLURM_LOCALID
 fi
+
 if [ "$_use_numactl_rocr"  == "1" ] ; then
-   numactl --cpunodebind $ROCR_VISIBLE_DEVICES  --membind $ROCR_VISIBLE_DEVICES $*
-   exit $?
+  _cmd_binary=`which numactl`
+  if [ $? == 0 ] ; then
+    numactl --cpunodebind $ROCR_VISIBLE_DEVICES  --membind $ROCR_VISIBLE_DEVICES $*
+    exit $?
+  else
+    $*
+    exit $?
+  fi
 fi
 if [ "$_use_numactl_ompi" == "1" ] ; then
-   numactl --cpunodebind $OMPI_COMM_WORLD_LOCAL_RANK  --membind $OMPI_COMM_WORLD_LOCAL_RANK $*
-   exit $?
+  _cmd_binary=`which numactl`
+  if [ $? == 0 ] ; then
+    numactl --cpunodebind $OMPI_COMM_WORLD_LOCAL_RANK  --membind $OMPI_COMM_WORLD_LOCAL_RANK $*
+    exit $?
+  else
+    $*
+    exit $?
+  fi
 fi
 # If none of the above MPIs, assume gpurun is wrapper for single process on single GPU
 if [ -z "$_num_local_ranks" ] ; then
