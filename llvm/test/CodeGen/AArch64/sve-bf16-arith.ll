@@ -514,26 +514,19 @@ define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 
 ;
 
 define <vscale x 2 x bfloat> @fmul_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
-; NOB16B16-NONSTREAMING-LABEL: fmul_nxv2bf16:
-; NOB16B16-NONSTREAMING:       // %bb.0:
-; NOB16B16-NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
-; NOB16B16-NONSTREAMING-NEXT:    ptrue p0.d
-; NOB16B16-NONSTREAMING-NEXT:    bfmlalb z2.s, z0.h, z1.h
-; NOB16B16-NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z2.s
-; NOB16B16-NONSTREAMING-NEXT:    ret
+; NOB16B16-LABEL: fmul_nxv2bf16:
+; NOB16B16:       // %bb.0:
+; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
+; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
+; NOB16B16-NEXT:    ptrue p0.d
+; NOB16B16-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
+; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NOB16B16-NEXT:    ret
 ;
 ; B16B16-LABEL: fmul_nxv2bf16:
 ; B16B16:       // %bb.0:
 ; B16B16-NEXT:    bfmul z0.h, z0.h, z1.h
 ; B16B16-NEXT:    ret
-;
-; NOB16B16-STREAMING-LABEL: fmul_nxv2bf16:
-; NOB16B16-STREAMING:       // %bb.0:
-; NOB16B16-STREAMING-NEXT:    mov z2.s, #0 // =0x0
-; NOB16B16-STREAMING-NEXT:    ptrue p0.d
-; NOB16B16-STREAMING-NEXT:    bfmlalb z2.s, z0.h, z1.h
-; NOB16B16-STREAMING-NEXT:    bfcvt z0.h, p0/m, z2.s
-; NOB16B16-STREAMING-NEXT:    ret
   %res = fmul nsz <vscale x 2 x bfloat> %a, %b
   ret <vscale x 2 x bfloat> %res
 }
