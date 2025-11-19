@@ -105,7 +105,7 @@ set(intrinsics_sources
   __cuda_builtins.f90
 )
 
-if (LLVM_TARGET_TRIPLE MATCHES "^ppc" OR LLVM_TARGET_TRIPLE MATCHES "^powerpc")
+if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
   list(APPEND host_sources
     __ppc_types.f90
     __ppc_intrinsics.f90
@@ -213,7 +213,7 @@ else ()
   set(f128_sources "")
 endif ()
 
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+if (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${supported_sources})
