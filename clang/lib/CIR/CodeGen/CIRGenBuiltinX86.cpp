@@ -176,10 +176,26 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI_mm_setcsr:
-  case X86::BI__builtin_ia32_ldmxcsr:
+  case X86::BI__builtin_ia32_ldmxcsr: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    Address tmp = createMemTemp(e->getArg(0)->getType(), loc);
+    builder.createStore(loc, ops[0], tmp);
+    return emitIntrinsicCallOp(*this, e, "x86.sse.ldmxcsr", builder.getVoidTy(),
+                               tmp.getPointer());
+  }
   case X86::BI_mm_getcsr:
-  case X86::BI__builtin_ia32_stmxcsr:
+  case X86::BI__builtin_ia32_stmxcsr: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    Address tmp = createMemTemp(e->getType(), loc);
+    emitIntrinsicCallOp(*this, e, "x86.sse.stmxcsr", builder.getVoidTy(),
+                        tmp.getPointer());
+    return builder.createLoad(loc, tmp);
+  }
   case X86::BI__builtin_ia32_xsave:
   case X86::BI__builtin_ia32_xsave64:
   case X86::BI__builtin_ia32_xrstor:
