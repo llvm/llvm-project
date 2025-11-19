@@ -126,7 +126,7 @@ class RAIIMutexDescriptor {
         QualType ArgType = SecondArg->getType().getNonReferenceType();
         if (const auto *RD = ArgType->getAsRecordDecl();
             RD && RD->getName() == "defer_lock_t" &&
-            RD->getDeclContext()->isStdNamespace()) {
+            RD->isInStdNamespace()) {
           return false;
         }
       }
