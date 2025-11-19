@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 
-// __is_referenceable_v<Tp>
+// __libcpp_is_referenceable<Tp>
 //
 // [defns.referenceable] defines "a referenceable type" as:
 // An object type, a function type that does not have cv-qualifiers

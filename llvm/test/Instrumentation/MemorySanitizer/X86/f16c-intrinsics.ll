@@ -47,7 +47,7 @@ define void @test_x86_vcvtps2ph_256_m(ptr nocapture %d, <8 x float> %a) nounwind
 ; CHECK-LABEL: define void @test_x86_vcvtps2ph_256_m(
 ; CHECK-SAME: ptr captures(none) [[D:%.*]], <8 x float> [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP17:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = load <8 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne <8 x i32> [[TMP17]], zeroinitializer
@@ -76,7 +76,7 @@ define void @test_x86_vcvtps2ph_128_m(ptr nocapture %d, <4 x float> %a) nounwind
 ; CHECK-LABEL: define void @test_x86_vcvtps2ph_128_m(
 ; CHECK-SAME: ptr captures(none) [[D:%.*]], <4 x float> [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i32> [[TMP9]], zeroinitializer
@@ -109,7 +109,7 @@ define void @test_x86_vcvtps2ph_128_m2(ptr nocapture %hf4x16, <4 x float> %f4X86
 ; CHECK-LABEL: define void @test_x86_vcvtps2ph_128_m2(
 ; CHECK-SAME: ptr captures(none) [[HF4X16:%.*]], <4 x float> [[F4X86:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
@@ -145,7 +145,7 @@ define void @test_x86_vcvtps2ph_128_m3(ptr nocapture %hf4x16, <4 x float> %f4X86
 ; CHECK-LABEL: define void @test_x86_vcvtps2ph_128_m3(
 ; CHECK-SAME: ptr captures(none) [[HF4X16:%.*]], <4 x float> [[F4X86:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
@@ -178,3 +178,6 @@ entry:
 }
 
 attributes #0 = { sanitize_memory }
+;.
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
+;.

@@ -16,14 +16,14 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func @min_f32() -> f32 {
+// CHECK-LABEL:   wasmssa.func exported @min_f32() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.000000e+01 : f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 1.000000e+00 : f32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.max %[[VAL_0]] %[[VAL_1]] : f32
 // CHECK:           wasmssa.return %[[VAL_2]] : f32
 
 
-// CHECK-LABEL:   wasmssa.func @min_f64() -> f64 {
+// CHECK-LABEL:   wasmssa.func exported @min_f64() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.000000e+01 : f64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 1.000000e+00 : f64
 // CHECK:           %[[VAL_2:.*]] = wasmssa.max %[[VAL_0]] %[[VAL_1]] : f64

@@ -55,11 +55,11 @@ using namespace llvm;
 STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
+namespace llvm {
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
-namespace llvm {
 extern cl::opt<bool> EnableVTableProfileUse;
-}
+} // namespace llvm
 
 // Command line option to disable indirect-call promotion with the default as
 // false. This is for debug purpose.
@@ -83,7 +83,7 @@ static cl::opt<unsigned>
 // ICP the candidate function even when only a declaration is present.
 static cl::opt<bool> ICPAllowDecls(
     "icp-allow-decls", cl::init(false), cl::Hidden,
-    cl::desc("Promote the target candidate even when the defintion "
+    cl::desc("Promote the target candidate even when the definition "
              " is not available"));
 
 // ICP hot candidate functions only. When setting to false, non-cold functions

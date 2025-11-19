@@ -981,6 +981,28 @@ public:
   /// Return a reference to the internal implementation.
   detail::ConversionPatternRewriterImpl &getImpl();
 
+  /// Attempt to legalize the given operation. This can be used within
+  /// conversion patterns to change the default pre-order legalization order.
+  /// Returns "success" if the operation was legalized, "failure" otherwise.
+  ///
+  /// Note: In a partial conversion, this function returns "success" even if
+  /// the operation could not be legalized, as long as it was not explicitly
+  /// marked as illegal in the conversion target.
+  LogicalResult legalize(Operation *op);
+
+  /// Attempt to legalize the given region. This can be used within
+  /// conversion patterns to change the default pre-order legalization order.
+  /// Returns "success" if the region was legalized, "failure" otherwise.
+  ///
+  /// If the current pattern runs with a type converter, the entry block
+  /// signature will be converted before legalizing the operations in the
+  /// region.
+  ///
+  /// Note: In a partial conversion, this function returns "success" even if
+  /// an operation could not be legalized, as long as it was not explicitly
+  /// marked as illegal in the conversion target.
+  LogicalResult legalize(Region *r);
+
 private:
   // Allow OperationConverter to construct new rewriters.
   friend struct OperationConverter;
@@ -989,7 +1011,8 @@ private:
   /// conversions. They apply some IR rewrites in a delayed fashion and could
   /// bring the IR into an inconsistent state when used standalone.
   explicit ConversionPatternRewriter(MLIRContext *ctx,
-                                     const ConversionConfig &config);
+                                     const ConversionConfig &config,
+                                     OperationConverter &converter);
 
   // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;

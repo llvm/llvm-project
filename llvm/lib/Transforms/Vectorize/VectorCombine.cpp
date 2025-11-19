@@ -129,7 +129,9 @@ private:
   bool foldExtractedCmps(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
-  bool scalarizeLoadExtract(Instruction &I);
+  bool scalarizeLoad(Instruction &I);
+  bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
+  bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeExtExtract(Instruction &I);
   bool foldConcatOfBoolMasks(Instruction &I);
   bool foldPermuteOfBinops(Instruction &I);
@@ -696,11 +698,11 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
 /// shuffle.
 bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   // Match an insert (op (extract)) pattern.
-  Value *DestVec;
-  uint64_t Index;
+  Value *DstVec;
+  uint64_t ExtIdx, InsIdx;
   Instruction *FNeg;
-  if (!match(&I, m_InsertElt(m_Value(DestVec), m_OneUse(m_Instruction(FNeg)),
-                             m_ConstantInt(Index))))
+  if (!match(&I, m_InsertElt(m_Value(DstVec), m_OneUse(m_Instruction(FNeg)),
+                             m_ConstantInt(InsIdx))))
     return false;
 
   // Note: This handles the canonical fneg instruction and "fsub -0.0, X".
@@ -708,67 +710,74 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   Instruction *Extract;
   if (!match(FNeg, m_FNeg(m_CombineAnd(
                        m_Instruction(Extract),
-                       m_ExtractElt(m_Value(SrcVec), m_SpecificInt(Index))))))
+                       m_ExtractElt(m_Value(SrcVec), m_ConstantInt(ExtIdx))))))
     return false;
 
-  auto *VecTy = cast<FixedVectorType>(I.getType());
-  auto *ScalarTy = VecTy->getScalarType();
+  auto *DstVecTy = cast<FixedVectorType>(DstVec->getType());
+  auto *DstVecScalarTy = DstVecTy->getScalarType();
   auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcVec->getType());
-  if (!SrcVecTy || ScalarTy != SrcVecTy->getScalarType())
+  if (!SrcVecTy || DstVecScalarTy != SrcVecTy->getScalarType())
     return false;
 
-  // Ignore bogus insert/extract index.
-  unsigned NumElts = VecTy->getNumElements();
-  if (Index >= NumElts)
+  // Ignore if insert/extract index is out of bounds or destination vector has
+  // one element
+  unsigned NumDstElts = DstVecTy->getNumElements();
+  unsigned NumSrcElts = SrcVecTy->getNumElements();
+  if (ExtIdx > NumSrcElts || InsIdx >= NumDstElts || NumDstElts == 1)
     return false;
 
   // We are inserting the negated element into the same lane that we extracted
   // from. This is equivalent to a select-shuffle that chooses all but the
   // negated element from the destination vector.
-  SmallVector<int> Mask(NumElts);
+  SmallVector<int> Mask(NumDstElts);
   std::iota(Mask.begin(), Mask.end(), 0);
-  Mask[Index] = Index + NumElts;
+  Mask[InsIdx] = (ExtIdx % NumDstElts) + NumDstElts;
   InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(Instruction::FNeg, ScalarTy, CostKind) +
-      TTI.getVectorInstrCost(I, VecTy, CostKind, Index);
+      TTI.getArithmeticInstrCost(Instruction::FNeg, DstVecScalarTy, CostKind) +
+      TTI.getVectorInstrCost(I, DstVecTy, CostKind, InsIdx);
 
   // If the extract has one use, it will be eliminated, so count it in the
   // original cost. If it has more than one use, ignore the cost because it will
   // be the same before/after.
   if (Extract->hasOneUse())
-    OldCost += TTI.getVectorInstrCost(*Extract, VecTy, CostKind, Index);
+    OldCost += TTI.getVectorInstrCost(*Extract, SrcVecTy, CostKind, ExtIdx);
 
   InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(Instruction::FNeg, VecTy, CostKind) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, VecTy, VecTy,
-                         Mask, CostKind);
+      TTI.getArithmeticInstrCost(Instruction::FNeg, SrcVecTy, CostKind) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, DstVecTy,
+                         DstVecTy, Mask, CostKind);
 
-  bool NeedLenChg = SrcVecTy->getNumElements() != NumElts;
+  bool NeedLenChg = SrcVecTy->getNumElements() != NumDstElts;
   // If the lengths of the two vectors are not equal,
   // we need to add a length-change vector. Add this cost.
   SmallVector<int> SrcMask;
   if (NeedLenChg) {
-    SrcMask.assign(NumElts, PoisonMaskElem);
-    SrcMask[Index] = Index;
+    SrcMask.assign(NumDstElts, PoisonMaskElem);
+    SrcMask[ExtIdx % NumDstElts] = ExtIdx;
     NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                  VecTy, SrcVecTy, SrcMask, CostKind);
+                                  DstVecTy, SrcVecTy, SrcMask, CostKind);
   }
 
+  LLVM_DEBUG(dbgs() << "Found an insertion of (extract)fneg : " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
   if (NewCost > OldCost)
     return false;
 
-  Value *NewShuf;
-  // insertelt DestVec, (fneg (extractelt SrcVec, Index)), Index
+  Value *NewShuf, *LenChgShuf = nullptr;
+  // insertelt DstVec, (fneg (extractelt SrcVec, Index)), Index
   Value *VecFNeg = Builder.CreateFNegFMF(SrcVec, FNeg);
   if (NeedLenChg) {
-    // shuffle DestVec, (shuffle (fneg SrcVec), poison, SrcMask), Mask
-    Value *LenChgShuf = Builder.CreateShuffleVector(VecFNeg, SrcMask);
-    NewShuf = Builder.CreateShuffleVector(DestVec, LenChgShuf, Mask);
+    // shuffle DstVec, (shuffle (fneg SrcVec), poison, SrcMask), Mask
+    LenChgShuf = Builder.CreateShuffleVector(VecFNeg, SrcMask);
+    NewShuf = Builder.CreateShuffleVector(DstVec, LenChgShuf, Mask);
+    Worklist.pushValue(LenChgShuf);
   } else {
-    // shuffle DestVec, (fneg SrcVec), Mask
-    NewShuf = Builder.CreateShuffleVector(DestVec, VecFNeg, Mask);
+    // shuffle DstVec, (fneg SrcVec), Mask
+    NewShuf = Builder.CreateShuffleVector(DstVec, VecFNeg, Mask);
   }
 
+  Worklist.pushValue(VecFNeg);
   replaceValue(I, *NewShuf);
   return true;
 }
@@ -1845,11 +1854,9 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
   return false;
 }
 
-/// Try to scalarize vector loads feeding extractelement instructions.
-bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
-  if (!TTI.allowVectorElementIndexingUsingGEP())
-    return false;
-
+/// Try to scalarize vector loads feeding extractelement or bitcast
+/// instructions.
+bool VectorCombine::scalarizeLoad(Instruction &I) {
   Value *Ptr;
   if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
@@ -1859,35 +1866,30 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (LI->isVolatile() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
-  InstructionCost OriginalCost =
-      TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
-                          LI->getPointerAddressSpace(), CostKind);
-  InstructionCost ScalarizedCost = 0;
-
+  bool AllExtracts = true;
+  bool AllBitcasts = true;
   Instruction *LastCheckedInst = LI;
   unsigned NumInstChecked = 0;
-  DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
-  auto FailureGuard = make_scope_exit([&]() {
-    // If the transform is aborted, discard the ScalarizationResults.
-    for (auto &Pair : NeedFreeze)
-      Pair.second.discard();
-  });
 
-  // Check if all users of the load are extracts with no memory modifications
-  // between the load and the extract. Compute the cost of both the original
-  // code and the scalarized version.
+  // Check what type of users we have (must either all be extracts or
+  // bitcasts) and ensure no memory modifications between the load and
+  // its users.
   for (User *U : LI->users()) {
-    auto *UI = dyn_cast<ExtractElementInst>(U);
+    auto *UI = dyn_cast<Instruction>(U);
     if (!UI || UI->getParent() != LI->getParent())
       return false;
 
-    // If any extract is waiting to be erased, then bail out as this will
+    // If any user is waiting to be erased, then bail out as this will
     // distort the cost calculation and possibly lead to infinite loops.
     if (UI->use_empty())
       return false;
 
-    // Check if any instruction between the load and the extract may modify
-    // memory.
+    if (!isa<ExtractElementInst>(UI))
+      AllExtracts = false;
+    if (!isa<BitCastInst>(UI))
+      AllBitcasts = false;
+
+    // Check if any instruction between the load and the user may modify memory.
     if (LastCheckedInst->comesBefore(UI)) {
       for (Instruction &I :
            make_range(std::next(LI->getIterator()), UI->getIterator())) {
@@ -1899,6 +1901,35 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
       }
       LastCheckedInst = UI;
     }
+  }
+
+  if (AllExtracts)
+    return scalarizeLoadExtract(LI, VecTy, Ptr);
+  if (AllBitcasts)
+    return scalarizeLoadBitcast(LI, VecTy, Ptr);
+  return false;
+}
+
+/// Try to scalarize vector loads feeding extractelement instructions.
+bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
+                                         Value *Ptr) {
+  if (!TTI.allowVectorElementIndexingUsingGEP())
+    return false;
+
+  DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  auto FailureGuard = make_scope_exit([&]() {
+    // If the transform is aborted, discard the ScalarizationResults.
+    for (auto &Pair : NeedFreeze)
+      Pair.second.discard();
+  });
+
+  InstructionCost OriginalCost =
+      TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
+                          LI->getPointerAddressSpace(), CostKind);
+  InstructionCost ScalarizedCost = 0;
+
+  for (User *U : LI->users()) {
+    auto *UI = cast<ExtractElementInst>(U);
 
     auto ScalarIdx =
         canScalarizeAccess(VecTy, UI->getIndexOperand(), LI, AC, DT);
@@ -1920,7 +1951,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
                                                     nullptr, nullptr, CostKind);
   }
 
-  LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << I
+  LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << *LI
                     << "\n  LoadExtractCost: " << OriginalCost
                     << " vs ScalarizedCost: " << ScalarizedCost << "\n");
 
@@ -1963,6 +1994,72 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   }
 
   FailureGuard.release();
+  return true;
+}
+
+/// Try to scalarize vector loads feeding bitcast instructions.
+bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
+                                         Value *Ptr) {
+  InstructionCost OriginalCost =
+      TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
+                          LI->getPointerAddressSpace(), CostKind);
+
+  Type *TargetScalarType = nullptr;
+  unsigned VecBitWidth = DL->getTypeSizeInBits(VecTy);
+
+  for (User *U : LI->users()) {
+    auto *BC = cast<BitCastInst>(U);
+
+    Type *DestTy = BC->getDestTy();
+    if (!DestTy->isIntegerTy() && !DestTy->isFloatingPointTy())
+      return false;
+
+    unsigned DestBitWidth = DL->getTypeSizeInBits(DestTy);
+    if (DestBitWidth != VecBitWidth)
+      return false;
+
+    // All bitcasts must target the same scalar type.
+    if (!TargetScalarType)
+      TargetScalarType = DestTy;
+    else if (TargetScalarType != DestTy)
+      return false;
+
+    OriginalCost +=
+        TTI.getCastInstrCost(Instruction::BitCast, TargetScalarType, VecTy,
+                             TTI.getCastContextHint(BC), CostKind, BC);
+  }
+
+  if (!TargetScalarType)
+    return false;
+
+  assert(!LI->user_empty() && "Unexpected load without bitcast users");
+  InstructionCost ScalarizedCost =
+      TTI.getMemoryOpCost(Instruction::Load, TargetScalarType, LI->getAlign(),
+                          LI->getPointerAddressSpace(), CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found vector load feeding only bitcasts: " << *LI
+                    << "\n  OriginalCost: " << OriginalCost
+                    << " vs ScalarizedCost: " << ScalarizedCost << "\n");
+
+  if (ScalarizedCost >= OriginalCost)
+    return false;
+
+  // Ensure we add the load back to the worklist BEFORE its users so they can
+  // erased in the correct order.
+  Worklist.push(LI);
+
+  Builder.SetInsertPoint(LI);
+  auto *ScalarLoad =
+      Builder.CreateLoad(TargetScalarType, Ptr, LI->getName() + ".scalar");
+  ScalarLoad->setAlignment(LI->getAlign());
+  ScalarLoad->copyMetadata(*LI);
+
+  // Replace all bitcast users with the scalar load.
+  for (User *U : LI->users()) {
+    auto *BC = cast<BitCastInst>(U);
+    replaceValue(*BC, *ScalarLoad, false);
+  }
+
   return true;
 }
 
@@ -2017,8 +2114,31 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
 
   Value *ScalarV = Ext->getOperand(0);
   if (!isGuaranteedNotToBePoison(ScalarV, &AC, dyn_cast<Instruction>(ScalarV),
-                                 &DT))
-    ScalarV = Builder.CreateFreeze(ScalarV);
+                                 &DT)) {
+    // Check wether all lanes are extracted, all extracts trigger UB
+    // on poison, and the last extract (and hence all previous ones)
+    // are guaranteed to execute if Ext executes.  If so, we do not
+    // need to insert a freeze.
+    SmallDenseSet<ConstantInt *, 8> ExtractedLanes;
+    bool AllExtractsTriggerUB = true;
+    ExtractElementInst *LastExtract = nullptr;
+    BasicBlock *ExtBB = Ext->getParent();
+    for (User *U : Ext->users()) {
+      auto *Extract = cast<ExtractElementInst>(U);
+      if (Extract->getParent() != ExtBB || !programUndefinedIfPoison(Extract)) {
+        AllExtractsTriggerUB = false;
+        break;
+      }
+      ExtractedLanes.insert(cast<ConstantInt>(Extract->getIndexOperand()));
+      if (!LastExtract || LastExtract->comesBefore(Extract))
+        LastExtract = Extract;
+    }
+    if (ExtractedLanes.size() != DstTy->getNumElements() ||
+        !AllExtractsTriggerUB ||
+        !isGuaranteedToTransferExecutionToSuccessor(Ext->getIterator(),
+                                                    LastExtract->getIterator()))
+      ScalarV = Builder.CreateFreeze(ScalarV);
+  }
   ScalarV = Builder.CreateBitCast(
       ScalarV,
       IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
@@ -4555,7 +4675,7 @@ bool VectorCombine::run() {
     if (IsVectorType) {
       if (scalarizeOpOrCmp(I))
         return true;
-      if (scalarizeLoadExtract(I))
+      if (scalarizeLoad(I))
         return true;
       if (scalarizeExtExtract(I))
         return true;

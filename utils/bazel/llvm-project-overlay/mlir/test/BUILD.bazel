@@ -284,6 +284,7 @@ cc_library(
         "//mlir:InferTypeOpInterface",
         "//mlir:LLVMToLLVMIRTranslation",
         "//mlir:Pass",
+        "//mlir:SCFDialect",
         "//mlir:ToLLVMIRTranslation",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
@@ -385,6 +386,7 @@ cc_library(
         "//mlir:CallOpInterfaces",
         "//mlir:CommonFolders",
         "//mlir:ControlFlowInterfaces",
+        "//mlir:ControlFlowTransforms",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",
         "//mlir:DerivedAttributeOpInterface",
@@ -949,6 +951,23 @@ cc_library(
         "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "TestOpenACC",
+    srcs = glob(["lib/Dialect/OpenACC/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//llvm:Support",
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MemRefDialect",
+        "//mlir:OpenACCAnalysis",
+        "//mlir:OpenACCDialect",
+        "//mlir:Pass",
+        "//mlir:Support",
     ],
 )
 

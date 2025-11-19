@@ -10,7 +10,7 @@ define [2 x i32] @InsertValue(i32 %x, i32 %y) sanitize_memory {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [2 x i32] [i32 -1, i32 -1], i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[A:%.*]] = insertvalue [2 x i32] undef, i32 [[X]], 0
@@ -24,8 +24,8 @@ define [2 x i32] @InsertValue(i32 %x, i32 %y) sanitize_memory {
 ; CHECK-ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; CHECK-ORIGIN-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; CHECK-ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-ORIGIN-NEXT:    [[TMP3:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; CHECK-ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-ORIGIN-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; CHECK-ORIGIN-NEXT:    call void @llvm.donothing()
 ; CHECK-ORIGIN-NEXT:    [[TMP4:%.*]] = insertvalue [2 x i32] [i32 -1, i32 -1], i32 [[TMP0]], 0
 ; CHECK-ORIGIN-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP0]], 0
@@ -50,7 +50,7 @@ define [2 x double] @InsertValueDouble(double %x, double %y) sanitize_memory {
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [2 x i64] [i64 -1, i64 -1], i64 [[TMP0]], 0
 ; CHECK-NEXT:    [[A:%.*]] = insertvalue [2 x double] undef, double [[X]], 0
@@ -64,8 +64,8 @@ define [2 x double] @InsertValueDouble(double %x, double %y) sanitize_memory {
 ; CHECK-ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; CHECK-ORIGIN-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; CHECK-ORIGIN-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-ORIGIN-NEXT:    [[TMP3:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; CHECK-ORIGIN-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-ORIGIN-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; CHECK-ORIGIN-NEXT:    call void @llvm.donothing()
 ; CHECK-ORIGIN-NEXT:    [[TMP4:%.*]] = insertvalue [2 x i64] [i64 -1, i64 -1], i64 [[TMP0]], 0
 ; CHECK-ORIGIN-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP0]], 0

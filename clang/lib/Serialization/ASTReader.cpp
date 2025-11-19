@@ -225,7 +225,7 @@ bool ChainedASTReaderListener::ReadPreprocessorOptions(
 }
 
 void ChainedASTReaderListener::ReadCounter(const serialization::ModuleFile &M,
-                                           unsigned Value) {
+                                           uint32_t Value) {
   First->ReadCounter(M, Value);
   Second->ReadCounter(M, Value);
 }
@@ -973,7 +973,7 @@ bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
       PP.getPreprocessorOpts());
 }
 
-void PCHValidator::ReadCounter(const ModuleFile &M, unsigned Value) {
+void PCHValidator::ReadCounter(const ModuleFile &M, uint32_t Value) {
   PP.setCounterValue(Value);
 }
 
@@ -2228,9 +2228,10 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
         // We have a macro definition. Register the association
         PreprocessedEntityID
             GlobalID = getGlobalPreprocessedEntityID(F, Record[NextIndex]);
+        unsigned Index = translatePreprocessedEntityIDToIndex(GlobalID);
         PreprocessingRecord &PPRec = *PP.getPreprocessingRecord();
         PreprocessingRecord::PPEntityID PPID =
-            PPRec.getPPEntityID(GlobalID - 1, /*isLoaded=*/true);
+            PPRec.getPPEntityID(Index, /*isLoaded=*/true);
         MacroDefinitionRecord *PPDef = cast_or_null<MacroDefinitionRecord>(
             PPRec.getPreprocessedEntity(PPID));
         if (PPDef)
@@ -2261,16 +2262,22 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
 
 PreprocessedEntityID
 ASTReader::getGlobalPreprocessedEntityID(ModuleFile &M,
-                                         unsigned LocalID) const {
+                                         PreprocessedEntityID LocalID) const {
   if (!M.ModuleOffsetMap.empty())
     ReadModuleOffsetMap(M);
 
-  ContinuousRangeMap<uint32_t, int, 2>::const_iterator
-    I = M.PreprocessedEntityRemap.find(LocalID - NUM_PREDEF_PP_ENTITY_IDS);
-  assert(I != M.PreprocessedEntityRemap.end()
-         && "Invalid index into preprocessed entity index remap");
+  unsigned ModuleFileIndex = LocalID >> 32;
+  LocalID &= llvm::maskTrailingOnes<PreprocessedEntityID>(32);
+  ModuleFile *MF =
+      ModuleFileIndex ? M.TransitiveImports[ModuleFileIndex - 1] : &M;
+  assert(MF && "malformed identifier ID encoding?");
 
-  return LocalID + I->second;
+  if (!ModuleFileIndex) {
+    assert(LocalID >= NUM_PREDEF_PP_ENTITY_IDS);
+    LocalID -= NUM_PREDEF_PP_ENTITY_IDS;
+  }
+
+  return (static_cast<PreprocessedEntityID>(MF->Index + 1) << 32) | LocalID;
 }
 
 OptionalFileEntryRef
@@ -2547,6 +2554,13 @@ void ASTReader::markIdentifierUpToDate(const IdentifierInfo *II) {
     IdentifierGeneration[II] = getGeneration();
 }
 
+MacroID ASTReader::ReadMacroID(ModuleFile &F, const RecordDataImpl &Record,
+                               unsigned &Idx) {
+  uint64_t ModuleFileIndex = Record[Idx++] << 32;
+  uint64_t LocalIndex = Record[Idx++];
+  return getGlobalMacroID(F, (ModuleFileIndex | LocalIndex));
+}
+
 void ASTReader::resolvePendingMacro(IdentifierInfo *II,
                                     const PendingMacroInfo &PMInfo) {
   ModuleFile &M = *PMInfo.M;
@@ -2597,9 +2611,10 @@ void ASTReader::resolvePendingMacro(IdentifierInfo *II,
     case PP_MODULE_MACRO: {
       ModuleMacros.push_back(ModuleMacroRecord());
       auto &Info = ModuleMacros.back();
-      Info.SubModID = getGlobalSubmoduleID(M, Record[0]);
-      Info.MI = getMacro(getGlobalMacroID(M, Record[1]));
-      for (int I = 2, N = Record.size(); I != N; ++I)
+      unsigned Idx = 0;
+      Info.SubModID = getGlobalSubmoduleID(M, Record[Idx++]);
+      Info.MI = getMacro(ReadMacroID(M, Record, Idx));
+      for (int I = Idx, N = Record.size(); I != N; ++I)
         Info.Overrides.push_back(getGlobalSubmoduleID(M, Record[I]));
       continue;
     }
@@ -3189,6 +3204,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
             F.Kind == MK_ImplicitModule)
           N = ForceValidateUserInputs ? NumUserInputs : 0;
+
+        if (N != 0)
+          Diag(diag::remark_module_validation)
+              << N << F.ModuleName << F.FileName;
 
         for (unsigned I = 0; I < N; ++I) {
           InputFile IF = getInputFile(F, I+1, Complain);
@@ -4083,10 +4102,14 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             std::errc::illegal_byte_sequence,
             "Invalid PENDING_IMPLICIT_INSTANTIATIONS block");
 
-      for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
-        PendingInstantiations.push_back(
-            {ReadDeclID(F, Record, I),
-             ReadSourceLocation(F, Record, I).getRawEncoding()});
+      // For standard C++20 module, we will only reads the instantiations
+      // if it is the main file.
+      if (!F.StandardCXXModule || F.Kind == MK_MainFile) {
+        for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
+          PendingInstantiations.push_back(
+              {ReadDeclID(F, Record, I),
+               ReadSourceLocation(F, Record, I).getRawEncoding()});
+        }
       }
       break;
 
@@ -4103,8 +4126,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       assert(Blob.size() % sizeof(PPEntityOffset) == 0);
       F.NumPreprocessedEntities = Blob.size() / sizeof(PPEntityOffset);
 
-      unsigned LocalBasePreprocessedEntityID = Record[0];
-
       unsigned StartingID;
       if (!PP.getPreprocessingRecord())
         PP.createPreprocessingRecord();
@@ -4119,12 +4140,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         // Introduce the global -> local mapping for preprocessed entities in
         // this module.
         GlobalPreprocessedEntityMap.insert(std::make_pair(StartingID, &F));
-
-        // Introduce the local -> global mapping for preprocessed entities in
-        // this module.
-        F.PreprocessedEntityRemap.insertOrReplace(
-          std::make_pair(LocalBasePreprocessedEntityID,
-            F.BasePreprocessedEntityID - LocalBasePreprocessedEntityID));
       }
 
       break;
@@ -4335,21 +4350,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             "duplicate MACRO_OFFSET record in AST file");
       F.MacroOffsets = (const uint32_t *)Blob.data();
       F.LocalNumMacros = Record[0];
-      unsigned LocalBaseMacroID = Record[1];
-      F.MacroOffsetsBase = Record[2] + F.ASTBlockStartOffset;
+      F.MacroOffsetsBase = Record[1] + F.ASTBlockStartOffset;
       F.BaseMacroID = getTotalNumMacros();
 
-      if (F.LocalNumMacros > 0) {
-        // Introduce the global -> local mapping for macros within this module.
-        GlobalMacroMap.insert(std::make_pair(getTotalNumMacros() + 1, &F));
-
-        // Introduce the local -> global mapping for macros within this module.
-        F.MacroRemap.insertOrReplace(
-          std::make_pair(LocalBaseMacroID,
-                         F.BaseMacroID - LocalBaseMacroID));
-
+      if (F.LocalNumMacros > 0)
         MacrosLoaded.resize(MacrosLoaded.size() + F.LocalNumMacros);
-      }
       break;
     }
 
@@ -4455,8 +4460,6 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   F.ModuleOffsetMap = StringRef();
 
   using RemapBuilder = ContinuousRangeMap<uint32_t, int, 2>::Builder;
-  RemapBuilder MacroRemap(F.MacroRemap);
-  RemapBuilder PreprocessedEntityRemap(F.PreprocessedEntityRemap);
   RemapBuilder SubmoduleRemap(F.SubmoduleRemap);
   RemapBuilder SelectorRemap(F.SelectorRemap);
 
@@ -4486,10 +4489,6 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
 
     ImportedModuleVector.push_back(OM);
 
-    uint32_t MacroIDOffset =
-        endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    uint32_t PreprocessedEntityIDOffset =
-        endian::readNext<uint32_t, llvm::endianness::little>(Data);
     uint32_t SubmoduleIDOffset =
         endian::readNext<uint32_t, llvm::endianness::little>(Data);
     uint32_t SelectorIDOffset =
@@ -4503,9 +4502,6 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
                                     static_cast<int>(BaseOffset - Offset)));
     };
 
-    mapOffset(MacroIDOffset, OM->BaseMacroID, MacroRemap);
-    mapOffset(PreprocessedEntityIDOffset, OM->BasePreprocessedEntityID,
-              PreprocessedEntityRemap);
     mapOffset(SubmoduleIDOffset, OM->BaseSubmoduleID, SubmoduleRemap);
     mapOffset(SelectorIDOffset, OM->BaseSelectorID, SelectorRemap);
   }
@@ -5500,7 +5496,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid FILE type in AST file");
             return;
           }
-          Context.setFILEDecl(Tag->getOriginalDecl());
+          Context.setFILEDecl(Tag->getDecl());
         }
       }
     }
@@ -5521,7 +5517,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid jmp_buf type in AST file");
             return;
           }
-          Context.setjmp_bufDecl(Tag->getOriginalDecl());
+          Context.setjmp_bufDecl(Tag->getDecl());
         }
       }
     }
@@ -5539,7 +5535,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Sigjmp_bufType->getAs<TagType>();
           assert(Tag && "Invalid sigjmp_buf type in AST file");
-          Context.setsigjmp_bufDecl(Tag->getOriginalDecl());
+          Context.setsigjmp_bufDecl(Tag->getDecl());
         }
       }
     }
@@ -5574,7 +5570,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Ucontext_tType->getAs<TagType>();
           assert(Tag && "Invalid ucontext_t type in AST file");
-          Context.setucontext_tDecl(Tag->getOriginalDecl());
+          Context.setucontext_tDecl(Tag->getDecl());
         }
       }
     }
@@ -5807,7 +5803,13 @@ bool ASTReader::readASTFileControlBlock(
 
     // FIXME: This allows use of the VFS; we do not allow use of the
     // VFS when actually loading a module.
-    auto BufferOrErr = FileMgr.getBufferForFile(Filename);
+    auto Entry =
+        Filename == "-" ? FileMgr.getSTDIN() : FileMgr.getFileRef(Filename);
+    if (!Entry) {
+      llvm::consumeError(Entry.takeError());
+      return true;
+    }
+    auto BufferOrErr = FileMgr.getBufferForFile(*Entry);
     if (!BufferOrErr)
       return true;
     OwnedBuffer = std::move(*BufferOrErr);
@@ -6428,10 +6430,13 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
     case SUBMODULE_INITIALIZERS: {
       if (!ContextObj)
         break;
-      SmallVector<GlobalDeclID, 16> Inits;
-      for (unsigned I = 0; I < Record.size(); /*in loop*/)
-        Inits.push_back(ReadDeclID(F, Record, I));
-      ContextObj->addLazyModuleInitializers(CurrentModule, Inits);
+      // Standard C++ module has its own way to initialize variables.
+      if (!F.StandardCXXModule || F.Kind == MK_MainFile) {
+        SmallVector<GlobalDeclID, 16> Inits;
+        for (unsigned I = 0; I < Record.size(); /*in loop*/)
+          Inits.push_back(ReadDeclID(F, Record, I));
+        ContextObj->addLazyModuleInitializers(CurrentModule, Inits);
+      }
       break;
     }
 
@@ -6708,11 +6713,23 @@ SourceRange ASTReader::ReadSkippedRange(unsigned GlobalIndex) {
   return Range;
 }
 
+unsigned
+ASTReader::translatePreprocessedEntityIDToIndex(PreprocessedEntityID ID) const {
+  unsigned ModuleFileIndex = ID >> 32;
+  assert(ModuleFileIndex && "not translating loaded MacroID?");
+  assert(getModuleManager().size() > ModuleFileIndex - 1);
+  ModuleFile &MF = getModuleManager()[ModuleFileIndex - 1];
+
+  ID &= llvm::maskTrailingOnes<PreprocessedEntityID>(32);
+  return MF.BasePreprocessedEntityID + ID;
+}
+
 PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
-  PreprocessedEntityID PPID = Index+1;
   std::pair<ModuleFile *, unsigned> PPInfo = getModulePreprocessedEntity(Index);
   ModuleFile &M = *PPInfo.first;
   unsigned LocalIndex = PPInfo.second;
+  PreprocessedEntityID PPID =
+      (static_cast<PreprocessedEntityID>(M.Index + 1) << 32) | LocalIndex;
   const PPEntityOffset &PPOffs = M.PreprocessedEntityOffsets[LocalIndex];
 
   if (!PP.getPreprocessingRecord()) {
@@ -6760,8 +6777,9 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
     else {
       PreprocessedEntityID GlobalID =
           getGlobalPreprocessedEntityID(M, Record[1]);
-      Def = cast<MacroDefinitionRecord>(
-          PPRec.getLoadedPreprocessedEntity(GlobalID - 1));
+      unsigned Index = translatePreprocessedEntityIDToIndex(GlobalID);
+      Def =
+          cast<MacroDefinitionRecord>(PPRec.getLoadedPreprocessedEntity(Index));
     }
 
     MacroExpansion *ME;
@@ -6814,8 +6832,8 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
 /// \param SLocMapI points at a chunk of a module that contains no
 /// preprocessed entities or the entities it contains are not the ones we are
 /// looking for.
-PreprocessedEntityID ASTReader::findNextPreprocessedEntity(
-                       GlobalSLocOffsetMapType::const_iterator SLocMapI) const {
+unsigned ASTReader::findNextPreprocessedEntity(
+    GlobalSLocOffsetMapType::const_iterator SLocMapI) const {
   ++SLocMapI;
   for (GlobalSLocOffsetMapType::const_iterator
          EndI = GlobalSLocOffsetMap.end(); SLocMapI != EndI; ++SLocMapI) {
@@ -6858,8 +6876,8 @@ struct PPEntityComp {
 
 } // namespace
 
-PreprocessedEntityID ASTReader::findPreprocessedEntity(SourceLocation Loc,
-                                                       bool EndsAfter) const {
+unsigned ASTReader::findPreprocessedEntity(SourceLocation Loc,
+                                           bool EndsAfter) const {
   if (SourceMgr.isLocalSourceLocation(Loc))
     return getTotalNumPreprocessedEntities();
 
@@ -6919,9 +6937,8 @@ std::pair<unsigned, unsigned>
     return std::make_pair(0,0);
   assert(!SourceMgr.isBeforeInTranslationUnit(Range.getEnd(),Range.getBegin()));
 
-  PreprocessedEntityID BeginID =
-      findPreprocessedEntity(Range.getBegin(), false);
-  PreprocessedEntityID EndID = findPreprocessedEntity(Range.getEnd(), true);
+  unsigned BeginID = findPreprocessedEntity(Range.getBegin(), false);
+  unsigned EndID = findPreprocessedEntity(Range.getEnd(), true);
   return std::make_pair(BeginID, EndID);
 }
 
@@ -8946,7 +8963,6 @@ LLVM_DUMP_METHOD void ASTReader::dump() {
   llvm::errs() << "*** PCH/ModuleFile Remappings:\n";
   dumpModuleIDMap("Global bit offset map", GlobalBitOffsetsMap);
   dumpModuleIDMap("Global source location entry map", GlobalSLocEntryMap);
-  dumpModuleIDMap("Global macro map", GlobalMacroMap);
   dumpModuleIDMap("Global submodule map", GlobalSubmoduleMap);
   dumpModuleIDMap("Global selector map", GlobalSelectorMap);
   dumpModuleIDMap("Global preprocessed entity map",
@@ -9729,6 +9745,21 @@ IdentifierID ASTReader::getGlobalIdentifierID(ModuleFile &M, uint64_t LocalID) {
   return ((IdentifierID)(MF->Index + 1) << 32) | LocalID;
 }
 
+std::pair<ModuleFile *, unsigned>
+ASTReader::translateMacroIDToIndex(MacroID ID) const {
+  if (ID == 0)
+    return {nullptr, 0};
+
+  unsigned ModuleFileIndex = ID >> 32;
+  assert(ModuleFileIndex && "not translating loaded MacroID?");
+  assert(getModuleManager().size() > ModuleFileIndex - 1);
+  ModuleFile &MF = getModuleManager()[ModuleFileIndex - 1];
+
+  unsigned LocalID = ID & llvm::maskTrailingOnes<MacroID>(32);
+  assert(LocalID < MF.LocalNumMacros);
+  return {&MF, MF.BaseMacroID + LocalID};
+}
+
 MacroInfo *ASTReader::getMacro(MacroID ID) {
   if (ID == 0)
     return nullptr;
@@ -9738,36 +9769,40 @@ MacroInfo *ASTReader::getMacro(MacroID ID) {
     return nullptr;
   }
 
-  ID -= NUM_PREDEF_MACRO_IDS;
-  if (!MacrosLoaded[ID]) {
-    GlobalMacroMapType::iterator I
-      = GlobalMacroMap.find(ID + NUM_PREDEF_MACRO_IDS);
-    assert(I != GlobalMacroMap.end() && "Corrupted global macro map");
-    ModuleFile *M = I->second;
-    unsigned Index = ID - M->BaseMacroID;
-    MacrosLoaded[ID] =
-        ReadMacroRecord(*M, M->MacroOffsetsBase + M->MacroOffsets[Index]);
+  auto [M, Index] = translateMacroIDToIndex(ID);
+  if (!MacrosLoaded[Index]) {
+    assert(M != nullptr && "Untranslated Macro ID?");
+    assert(Index >= M->BaseMacroID);
+    unsigned LocalIndex = Index - M->BaseMacroID;
+    uint64_t DataOffset = M->MacroOffsetsBase + M->MacroOffsets[LocalIndex];
+    MacrosLoaded[Index] = ReadMacroRecord(*M, DataOffset);
 
     if (DeserializationListener)
-      DeserializationListener->MacroRead(ID + NUM_PREDEF_MACRO_IDS,
-                                         MacrosLoaded[ID]);
+      DeserializationListener->MacroRead(ID, MacrosLoaded[Index]);
   }
 
-  return MacrosLoaded[ID];
+  return MacrosLoaded[Index];
 }
 
-MacroID ASTReader::getGlobalMacroID(ModuleFile &M, unsigned LocalID) {
+MacroID ASTReader::getGlobalMacroID(ModuleFile &M, MacroID LocalID) {
   if (LocalID < NUM_PREDEF_MACRO_IDS)
     return LocalID;
 
   if (!M.ModuleOffsetMap.empty())
     ReadModuleOffsetMap(M);
 
-  ContinuousRangeMap<uint32_t, int, 2>::iterator I
-    = M.MacroRemap.find(LocalID - NUM_PREDEF_MACRO_IDS);
-  assert(I != M.MacroRemap.end() && "Invalid index into macro index remap");
+  unsigned ModuleFileIndex = LocalID >> 32;
+  LocalID &= llvm::maskTrailingOnes<MacroID>(32);
+  ModuleFile *MF =
+      ModuleFileIndex ? M.TransitiveImports[ModuleFileIndex - 1] : &M;
+  assert(MF && "malformed identifier ID encoding?");
 
-  return LocalID + I->second;
+  if (!ModuleFileIndex) {
+    assert(LocalID >= NUM_PREDEF_MACRO_IDS);
+    LocalID -= NUM_PREDEF_MACRO_IDS;
+  }
+
+  return (static_cast<MacroID>(MF->Index + 1) << 32) | LocalID;
 }
 
 serialization::SubmoduleID
@@ -11245,6 +11280,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_mergeable:
     C = new (Context) OMPMergeableClause();
     break;
+  case llvm::omp::OMPC_threadset:
+    C = new (Context) OMPThreadsetClause();
+    break;
   case llvm::omp::OMPC_read:
     C = new (Context) OMPReadClause();
     break;
@@ -11531,6 +11569,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_ompx_dyn_cgroup_mem:
     C = new (Context) OMPXDynCGroupMemClause();
     break;
+  case llvm::omp::OMPC_dyn_groupprivate:
+    C = new (Context) OMPDynGroupprivateClause();
+    break;
   case llvm::omp::OMPC_doacross: {
     unsigned NumVars = Record.readInt();
     unsigned NumLoops = Record.readInt();
@@ -11648,6 +11689,17 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setDefaultVariableCategoryLocation(Record.readSourceLocation());
 }
 
+// Read the parameter of threadset clause. This will have been saved when
+// OMPClauseWriter is called.
+void OMPClauseReader::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  SourceLocation ThreadsetKindLoc = Record.readSourceLocation();
+  C->setThreadsetKindLoc(ThreadsetKindLoc);
+  OpenMPThreadsetKind TKind =
+      static_cast<OpenMPThreadsetKind>(Record.readInt());
+  C->setThreadsetKind(TKind);
+}
+
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {
   C->setProcBindKind(static_cast<llvm::omp::ProcBindKind>(Record.readInt()));
   C->setLParenLoc(Record.readSourceLocation());
@@ -11684,7 +11736,10 @@ void OMPClauseReader::VisitOMPDetachClause(OMPDetachClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
 }
 
-void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *) {}
+void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPUntiedClause(OMPUntiedClause *) {}
 
@@ -12709,6 +12764,19 @@ void OMPClauseReader::VisitOMPXDynCGroupMemClause(OMPXDynCGroupMemClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
 }
 
+void OMPClauseReader::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  C->setDynGroupprivateModifier(
+      Record.readEnum<OpenMPDynGroupprivateClauseModifier>());
+  C->setDynGroupprivateFallbackModifier(
+      Record.readEnum<OpenMPDynGroupprivateClauseFallbackModifier>());
+  C->setSize(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setDynGroupprivateModifierLoc(Record.readSourceLocation());
+  C->setDynGroupprivateFallbackModifierLoc(Record.readSourceLocation());
+}
+
 void OMPClauseReader::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
   C->setDependenceType(
@@ -12860,10 +12928,9 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
 
     llvm::SmallVector<OpenACCPrivateRecipe> RecipeList;
     for (unsigned I = 0; I < VarList.size(); ++I) {
-      static_assert(sizeof(OpenACCPrivateRecipe) == 2 * sizeof(int *));
+      static_assert(sizeof(OpenACCPrivateRecipe) == 1 * sizeof(int *));
       VarDecl *Alloca = readDeclAs<VarDecl>();
-      Expr *InitExpr = readSubExpr();
-      RecipeList.push_back({Alloca, InitExpr});
+      RecipeList.push_back({Alloca});
     }
 
     return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
@@ -12886,11 +12953,10 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     llvm::SmallVector<OpenACCFirstPrivateRecipe> RecipeList;
     for (unsigned I = 0; I < VarList.size(); ++I) {
-      static_assert(sizeof(OpenACCFirstPrivateRecipe) == 3 * sizeof(int *));
+      static_assert(sizeof(OpenACCFirstPrivateRecipe) == 2 * sizeof(int *));
       VarDecl *Recipe = readDeclAs<VarDecl>();
-      Expr *InitExpr = readSubExpr();
       VarDecl *RecipeTemp = readDeclAs<VarDecl>();
-      RecipeList.push_back({Recipe, InitExpr, RecipeTemp});
+      RecipeList.push_back({Recipe, RecipeTemp});
     }
 
     return OpenACCFirstPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
@@ -13008,13 +13074,25 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
-    llvm::SmallVector<OpenACCReductionRecipe> RecipeList;
+    llvm::SmallVector<OpenACCReductionRecipeWithStorage> RecipeList;
 
     for (unsigned I = 0; I < VarList.size(); ++I) {
-      static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
       VarDecl *Recipe = readDeclAs<VarDecl>();
-      Expr *InitExpr = readSubExpr();
-      RecipeList.push_back({Recipe, InitExpr});
+
+      static_assert(sizeof(OpenACCReductionRecipe::CombinerRecipe) ==
+                    3 * sizeof(int *));
+
+      llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe> Combiners;
+      unsigned NumCombiners = readInt();
+      for (unsigned I = 0; I < NumCombiners; ++I) {
+        VarDecl *LHS = readDeclAs<VarDecl>();
+        VarDecl *RHS = readDeclAs<VarDecl>();
+        Expr *Op = readExpr();
+
+        Combiners.push_back({LHS, RHS, Op});
+      }
+
+      RecipeList.push_back({Recipe, Combiners});
     }
 
     return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,

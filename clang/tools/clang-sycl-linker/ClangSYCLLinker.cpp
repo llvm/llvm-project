@@ -27,22 +27,16 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Object/Archive.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -468,9 +462,10 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
 
 // TODO: Consider using LLVM-IR metadata to identify globals of interest
 bool isKernel(const Function &F) {
-  const CallingConv::ID CC = F.getCallingConv();
-  return CC == CallingConv::SPIR_KERNEL || CC == CallingConv::AMDGPU_KERNEL ||
-         CC == CallingConv::PTX_Kernel;
+  const llvm::CallingConv::ID CC = F.getCallingConv();
+  return CC == llvm::CallingConv::SPIR_KERNEL ||
+         CC == llvm::CallingConv::AMDGPU_KERNEL ||
+         CC == llvm::CallingConv::PTX_Kernel;
 }
 
 /// Performs the following steps:

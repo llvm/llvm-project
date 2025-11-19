@@ -300,6 +300,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_STRICT_FSQRT,
                                G_FPOW,
                                G_FEXP,
+                               G_FMODF,
                                G_FEXP2,
                                G_FLOG,
                                G_FLOG2,

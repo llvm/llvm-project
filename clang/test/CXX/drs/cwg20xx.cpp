@@ -401,6 +401,15 @@ namespace cwg2083 { // cwg2083: partial
 #endif
 } // namespace cwg2083
 
+namespace cwg2084 { // cwg2084: 3.1
+struct S {
+  S();
+};
+union U {
+  S s{}; // cxx98-error {{function definition does not declare parameters}}
+} u;
+} // namespace cwg2084
+
 namespace cwg2091 { // cwg2091: 10
 template<int &> struct X;
 template<int &N> void f(X<N>&);

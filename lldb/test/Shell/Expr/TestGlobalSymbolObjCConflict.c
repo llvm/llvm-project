@@ -1,3 +1,5 @@
+// XFAIL: target-windows
+
 // Tests that LLDB correctly parses global symbols
 // starting with 'O'. On some platforms (e.g., Darwin)
 // C-symbols are prefixed with a '_'. The LLDB Macho-O
@@ -9,7 +11,7 @@
 // RUN: %clang_host -c -g -fno-common %s -o %t.o
 // RUN: %clang_host %t.o -o %t.out
 // RUN: %lldb -b -x %t.out \
-// RUN:       -o "b 27" \
+// RUN:       -o "b 29" \
 // RUN:       -o "run" \
 // RUN:       -o "p OglobalVar" \
 // RUN:       -o "p Oabc" | FileCheck %s

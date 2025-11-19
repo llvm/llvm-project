@@ -262,6 +262,7 @@ set(files
   __chrono/gps_clock.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/is_clock.h
   __chrono/leap_second.h
   __chrono/literals.h
   __chrono/local_info.h
@@ -327,6 +328,8 @@ set(files
   __configuration/abi.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/experimental.h
+  __configuration/hardening.h
   __configuration/language.h
   __configuration/platform.h
   __coroutine/coroutine_handle.h
@@ -529,6 +532,7 @@ set(files
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
+  __locale_dir/support/netbsd.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
@@ -782,10 +786,8 @@ set(files
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
   __tuple/tuple_like.h
-  __tuple/tuple_like_ext.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
-  __tuple/tuple_types.h
   __type_traits/add_cv_quals.h
   __type_traits/add_pointer.h
   __type_traits/add_reference.h
@@ -820,7 +822,6 @@ set(files
   __type_traits/is_array.h
   __type_traits/is_assignable.h
   __type_traits/is_base_of.h
-  __type_traits/is_bounded_array.h
   __type_traits/is_callable.h
   __type_traits/is_char_like_type.h
   __type_traits/is_class.h
@@ -839,6 +840,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_generic_transparent_comparator.h
   __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
@@ -856,7 +858,6 @@ set(files
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
   __type_traits/is_referenceable.h
-  __type_traits/is_replaceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -870,17 +871,18 @@ set(files
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_relocatable.h
-  __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
   __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
+  __type_traits/is_within_lifetime.h
   __type_traits/lazy.h
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
+  __type_traits/make_transparent.h
   __type_traits/make_unsigned.h
   __type_traits/maybe_const.h
   __type_traits/nat.h
@@ -1062,7 +1064,6 @@ set(files
   sstream
   stack
   stdatomic.h
-  stdbool.h
   stddef.h
   stdexcept
   stdio.h
@@ -1592,7 +1593,6 @@ set(files
   __cxx03/cmath
   __cxx03/codecvt
   __cxx03/complex
-  __cxx03/complex.h
   __cxx03/condition_variable
   __cxx03/csetjmp
   __cxx03/csignal
@@ -1605,25 +1605,20 @@ set(files
   __cxx03/cstring
   __cxx03/ctgmath
   __cxx03/ctime
-  __cxx03/ctype.h
   __cxx03/cuchar
   __cxx03/cwchar
   __cxx03/cwctype
   __cxx03/deque
-  __cxx03/errno.h
   __cxx03/exception
   __cxx03/experimental/__config
   __cxx03/experimental/utility
   __cxx03/ext/__hash
   __cxx03/ext/hash_map
   __cxx03/ext/hash_set
-  __cxx03/fenv.h
-  __cxx03/float.h
   __cxx03/forward_list
   __cxx03/fstream
   __cxx03/functional
   __cxx03/future
-  __cxx03/inttypes.h
   __cxx03/iomanip
   __cxx03/ios
   __cxx03/iosfwd
@@ -1650,11 +1645,8 @@ set(files
   __cxx03/sstream
   __cxx03/stack
   __cxx03/stdatomic.h
-  __cxx03/stdbool.h
-  __cxx03/stddef.h
   __cxx03/stdexcept
   __cxx03/stdint.h
-  __cxx03/stdio.h
   __cxx03/stdlib.h
   __cxx03/streambuf
   __cxx03/string
@@ -1662,7 +1654,6 @@ set(files
   __cxx03/string_view
   __cxx03/strstream
   __cxx03/system_error
-  __cxx03/tgmath.h
   __cxx03/thread
   __cxx03/type_traits
   __cxx03/typeindex
@@ -1675,7 +1666,6 @@ set(files
   __cxx03/vector
   __cxx03/version
   __cxx03/wchar.h
-  __cxx03/wctype.h
   )
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)

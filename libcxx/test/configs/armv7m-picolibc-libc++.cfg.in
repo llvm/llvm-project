@@ -30,7 +30,7 @@ config.executor = (
     ' --cpu cortex-m3')
 config.substitutions.append(('%{exec}',
     '%{executor}'
-    ' --execdir %T'
+    ' --execdir %{temp}'
 ))
 
 import os, site

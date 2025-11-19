@@ -35,7 +35,8 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
         DestinationStyleOpInterface, LinalgRelayoutOpInterface,
         ConditionallySpeculatable, NoMemoryEffect,
-        DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+        DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+          "reifyResultShapes"]>,
         TypesMatchWith<"result type matches type of dest",
                    "dest", "result",
                    "$_self">])> {
@@ -57,7 +58,11 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// tile factors.
     DenseMap<int64_t, OpFoldResult> getDimAndTileMapping();
 
-    /// Return the tile sizes as OpFoldResult.
+    // TODO: Return the folded result.
+    /// Return the tile sizes as OpFoldResult. Will return the Value
+    /// of the constant Op, not the constant Attribute.
+    /// E.g., for %size = arith.constant 1 : i32 will return %size,
+    /// not 1.
     SmallVector<OpFoldResult> getMixedTiles();
 
     /// Return the tile sizes as `int64_t`. If a tile size is dynamic
@@ -104,7 +109,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     within [0, n).
      - The tiled dimensions (of size `inner_tiles`) are added to the end of the
      result tensor in the order in which they appear, i.e.
-     `shape(result)[rank(result) + i] = inner_tiles[i]` for `0 <= i < k`.
+     `shape(result)[rank(source) + i] = inner_tiles[i]` for `0 <= i < k`.
      - The following relationship for the tiled dimensions holds:
      `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`,
      where (⌈/⌉ indicates CeilDiv).

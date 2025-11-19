@@ -1,8 +1,6 @@
 
 // REQUIRES: amdgpu-registered-target
 
-// XFAIL: *
-
 // RUN: %clang_cc1 -E -fopenmp -x c -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -save-temps=cwd %s -o %t-openmp-amdgcn-amd-amdhsa-gfx90a.i
 // RUN: %clang_cc1 -fopenmp  -x c -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -save-temps=cwd -emit-llvm-bc %s -o %t-x86_64-unknown-unknown.bc
 // RUN: %clang_cc1 -fopenmp -x c -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -save-temps=cwd -emit-llvm -fopenmp-is-target-device -x cpp-output %t-openmp-amdgcn-amd-amdhsa-gfx90a.i -fopenmp-host-ir-file-path %t-x86_64-unknown-unknown.bc -o - | FileCheck %s

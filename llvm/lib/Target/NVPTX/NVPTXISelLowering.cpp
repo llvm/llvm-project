@@ -15,6 +15,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
@@ -233,7 +234,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // target supports 256-bit loads/stores
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2i8:
   case MVT::v2i64:
   case MVT::v2f64:
@@ -248,7 +249,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // global and the target supports 256-bit loads/stores.
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2i16:  // <1 x i16x2>
   case MVT::v2f16:  // <1 x f16x2>
   case MVT::v2bf16: // <1 x bf16x2>
@@ -270,7 +271,7 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
     // target supports 256-bit loads/stores
     if (!CanLowerTo256Bit)
       return std::nullopt;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2f32: // <1 x f32x2>
   case MVT::v4f32: // <2 x f32x2>
   case MVT::v2i32: // <1 x i32x2>
@@ -305,7 +306,8 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                uint64_t StartingOffset = 0) {
   SmallVector<EVT, 16> TempVTs;
   SmallVector<uint64_t, 16> TempOffsets;
-  ComputeValueVTs(TLI, DL, Ty, TempVTs, &TempOffsets, StartingOffset);
+  ComputeValueVTs(TLI, DL, Ty, TempVTs, /*MemVTs=*/nullptr, &TempOffsets,
+                  StartingOffset);
 
   for (const auto [VT, Off] : zip(TempVTs, TempOffsets)) {
     MVT RegisterVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
@@ -638,6 +640,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // No support for these operations with v2f32/v2i32
   setOperationAction(ISD::INSERT_VECTOR_ELT, {MVT::v2f32, MVT::v2i32}, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2f32, MVT::v2i32}, Expand);
+
+  setOperationAction(ISD::TRUNCATE, MVT::v2i16, Expand);
+  setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
+                     MVT::v2i32, Expand);
+
   // Need custom lowering in case the index is dynamic.
   if (STI.hasF32x2Instructions())
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, {MVT::v2f32, MVT::v2i32},
@@ -646,7 +653,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom conversions to/from v2i8.
   setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
 
-  // Only logical ops can be done on v4i8 directly, others must be done
+  // Only logical ops can be done on v4i8/v2i32 directly, others must be done
   // elementwise.
   setOperationAction(
       {ISD::ABS,         ISD::ADD,        ISD::ADDC,        ISD::ADDE,
@@ -664,7 +671,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
        ISD::UMIN,        ISD::UMULO,      ISD::UMUL_LOHI,   ISD::UREM,
        ISD::USHLSAT,     ISD::USUBO,      ISD::USUBO_CARRY, ISD::VSELECT,
        ISD::USUBSAT},
-      MVT::v4i8, Expand);
+      {MVT::v4i8, MVT::v2i32}, Expand);
 
   // Operations not directly supported by NVPTX.
   for (MVT VT : {MVT::bf16, MVT::f16, MVT::v2bf16, MVT::v2f16, MVT::f32,
@@ -684,7 +691,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8 , Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i16, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::v2i16, MVT::v2i32}, Expand);
 
   setOperationAction(ISD::SHL_PARTS, MVT::i32  , Custom);
   setOperationAction(ISD::SRA_PARTS, MVT::i32  , Custom);
@@ -744,7 +751,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
 
-  // Disable generations of extload/truncstore for v2i16/v2i8. The generic
+  // Disable generations of extload/truncstore for v2i32/v2i16/v2i8. The generic
   // expansion for these nodes when they are unaligned is incorrect if the
   // type is a vector.
   //
@@ -752,7 +759,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   //       TargetLowering::expandUnalignedLoad/Store.
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i16,
                    MVT::v2i8, Expand);
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i32,
+                   {MVT::v2i8, MVT::v2i16}, Expand);
   setTruncStoreAction(MVT::v2i16, MVT::v2i8, Expand);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i8, Expand);
 
   // Register custom handling for illegal type loads/stores. We'll try to custom
   // lower almost all illegal types and logic in the lowering will discard cases
@@ -1091,95 +1102,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Enable custom lowering for the following:
   //   * MVT::i128 - clusterlaunchcontrol
   //   * MVT::i32 - prmt
+  //   * MVT::v4f32 - cvt_rs fp{4/6/8}x4 intrinsics
   //   * MVT::Other - internal.addrspace.wrap
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, {MVT::i32, MVT::i128, MVT::Other},
-                     Custom);
-}
-
-const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
-
-#define MAKE_CASE(V)                                                           \
-  case V:                                                                      \
-    return #V;
-
-  switch ((NVPTXISD::NodeType)Opcode) {
-  case NVPTXISD::FIRST_NUMBER:
-    break;
-
-    MAKE_CASE(NVPTXISD::ATOMIC_CMP_SWAP_B128)
-    MAKE_CASE(NVPTXISD::ATOMIC_SWAP_B128)
-    MAKE_CASE(NVPTXISD::RET_GLUE)
-    MAKE_CASE(NVPTXISD::DeclareArrayParam)
-    MAKE_CASE(NVPTXISD::DeclareScalarParam)
-    MAKE_CASE(NVPTXISD::CALL)
-    MAKE_CASE(NVPTXISD::MoveParam)
-    MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
-    MAKE_CASE(NVPTXISD::BUILD_VECTOR)
-    MAKE_CASE(NVPTXISD::CallPrototype)
-    MAKE_CASE(NVPTXISD::ProxyReg)
-    MAKE_CASE(NVPTXISD::LoadV2)
-    MAKE_CASE(NVPTXISD::LoadV4)
-    MAKE_CASE(NVPTXISD::LoadV8)
-    MAKE_CASE(NVPTXISD::LDUV2)
-    MAKE_CASE(NVPTXISD::LDUV4)
-    MAKE_CASE(NVPTXISD::StoreV2)
-    MAKE_CASE(NVPTXISD::StoreV4)
-    MAKE_CASE(NVPTXISD::StoreV8)
-    MAKE_CASE(NVPTXISD::FSHL_CLAMP)
-    MAKE_CASE(NVPTXISD::FSHR_CLAMP)
-    MAKE_CASE(NVPTXISD::BFI)
-    MAKE_CASE(NVPTXISD::PRMT)
-    MAKE_CASE(NVPTXISD::FCOPYSIGN)
-    MAKE_CASE(NVPTXISD::FMAXNUM3)
-    MAKE_CASE(NVPTXISD::FMINNUM3)
-    MAKE_CASE(NVPTXISD::FMAXIMUM3)
-    MAKE_CASE(NVPTXISD::FMINIMUM3)
-    MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
-    MAKE_CASE(NVPTXISD::STACKRESTORE)
-    MAKE_CASE(NVPTXISD::STACKSAVE)
-    MAKE_CASE(NVPTXISD::SETP_F16X2)
-    MAKE_CASE(NVPTXISD::SETP_BF16X2)
-    MAKE_CASE(NVPTXISD::MUL_WIDE_SIGNED)
-    MAKE_CASE(NVPTXISD::MUL_WIDE_UNSIGNED)
-    MAKE_CASE(NVPTXISD::BrxEnd)
-    MAKE_CASE(NVPTXISD::BrxItem)
-    MAKE_CASE(NVPTXISD::BrxStart)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-  }
-  return nullptr;
-
-#undef MAKE_CASE
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN,
+                     {MVT::i32, MVT::i128, MVT::v4f32, MVT::Other}, Custom);
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -2016,7 +1942,7 @@ static ISD::NodeType getScalarOpcodeForReduction(unsigned ReductionOpcode) {
 }
 
 /// Get 3-input scalar reduction opcode
-static std::optional<NVPTXISD::NodeType>
+static std::optional<unsigned>
 getScalar3OpcodeForReduction(unsigned ReductionOpcode) {
   switch (ReductionOpcode) {
   case ISD::VECREDUCE_FMAX:
@@ -2898,6 +2824,61 @@ static SDValue LowerClusterLaunchControlQueryCancel(SDValue Op,
                      {TryCancelResponse0, TryCancelResponse1});
 }
 
+static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  SDValue F32Vec = N->getOperand(1);
+  SDValue RBits = N->getOperand(2);
+
+  unsigned IntrinsicID = N->getConstantOperandVal(0);
+
+  // Extract the 4 float elements from the vector
+  SmallVector<SDValue, 6> Ops;
+  for (unsigned i = 0; i < 4; ++i)
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
+                              DAG.getIntPtrConstant(i, DL)));
+
+  using NVPTX::PTXCvtMode::CvtMode;
+
+  auto [OpCode, RetTy, CvtModeFlag] =
+      [&]() -> std::tuple<unsigned, MVT::SimpleValueType, uint32_t> {
+    switch (IntrinsicID) {
+    case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite:
+      return {NVPTXISD::CVT_E4M3X4_F32X4_RS_SF, MVT::v4i8,
+              CvtMode::RS | CvtMode::RELU_FLAG};
+    case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_satfinite:
+      return {NVPTXISD::CVT_E4M3X4_F32X4_RS_SF, MVT::v4i8, CvtMode::RS};
+    case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite:
+      return {NVPTXISD::CVT_E5M2X4_F32X4_RS_SF, MVT::v4i8,
+              CvtMode::RS | CvtMode::RELU_FLAG};
+    case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_satfinite:
+      return {NVPTXISD::CVT_E5M2X4_F32X4_RS_SF, MVT::v4i8, CvtMode::RS};
+    case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite:
+      return {NVPTXISD::CVT_E2M3X4_F32X4_RS_SF, MVT::v4i8,
+              CvtMode::RS | CvtMode::RELU_FLAG};
+    case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_satfinite:
+      return {NVPTXISD::CVT_E2M3X4_F32X4_RS_SF, MVT::v4i8, CvtMode::RS};
+    case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite:
+      return {NVPTXISD::CVT_E3M2X4_F32X4_RS_SF, MVT::v4i8,
+              CvtMode::RS | CvtMode::RELU_FLAG};
+    case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_satfinite:
+      return {NVPTXISD::CVT_E3M2X4_F32X4_RS_SF, MVT::v4i8, CvtMode::RS};
+    case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
+      return {NVPTXISD::CVT_E2M1X4_F32X4_RS_SF, MVT::i16,
+              CvtMode::RS | CvtMode::RELU_FLAG};
+    case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
+      return {NVPTXISD::CVT_E2M1X4_F32X4_RS_SF, MVT::i16, CvtMode::RS};
+    default:
+      llvm_unreachable("unsupported/unhandled intrinsic");
+    }
+  }();
+
+  Ops.push_back(RBits);
+  Ops.push_back(DAG.getConstant(CvtModeFlag, DL, MVT::i32));
+
+  return DAG.getNode(OpCode, DL, RetTy, Ops);
+}
+
 static SDValue lowerPrmtIntrinsic(SDValue Op, SelectionDAG &DAG) {
   const unsigned Mode = [&]() {
     switch (Op->getConstantOperandVal(0)) {
@@ -2967,6 +2948,17 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z:
     return LowerClusterLaunchControlQueryCancel(Op, DAG);
+  case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
+  case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
+    return lowerCvtRSIntrinsics(Op, DAG);
   }
 }
 
@@ -3232,7 +3224,7 @@ SDValue NVPTXTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
   // Generate BrxEnd nodes
   SDValue EndOps[] = {Chain.getValue(0), DAG.getBasicBlock(MBBs.back()), Index,
                       IdV, Chain.getValue(1)};
-  SDValue BrxEnd = DAG.getNode(NVPTXISD::BrxEnd, DL, VTs, EndOps);
+  SDValue BrxEnd = DAG.getNode(NVPTXISD::BrxEnd, DL, MVT::Other, EndOps);
 
   return BrxEnd;
 }
@@ -5339,8 +5331,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (!NVPTX::isPackedVectorTy(ElementVT) || ElementVT == MVT::v4i8)
     return SDValue();
 
-  SmallVector<SDNode *> DeadCopyToRegs;
-
   // Check whether all outputs are either used by an extractelt or are
   // glue/chain nodes
   if (!all_of(N->uses(), [&](SDUse &U) {
@@ -5377,7 +5367,7 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(LD);
 
   // the new opcode after we double the number of operands
-  NVPTXISD::NodeType Opcode;
+  unsigned Opcode;
   SmallVector<SDValue> Operands(LD->ops());
   unsigned OldNumOutputs; // non-glue, non-chain outputs
   switch (LD->getOpcode()) {
@@ -5460,7 +5450,7 @@ static SDValue combinePackingMovIntoStore(SDNode *N,
   auto *ST = cast<MemSDNode>(N);
 
   // The new opcode after we double the number of operands.
-  NVPTXISD::NodeType Opcode;
+  unsigned Opcode;
   switch (N->getOpcode()) {
   case ISD::STORE:
     // Any packed type is legal, so the legalizer will not have lowered
@@ -5595,7 +5585,7 @@ static SDValue PerformFADDCombine(SDNode *N,
 }
 
 /// Get 3-input version of a 2-input min/max opcode
-static NVPTXISD::NodeType getMinMax3Opcode(unsigned MinMax2Opcode) {
+static unsigned getMinMax3Opcode(unsigned MinMax2Opcode) {
   switch (MinMax2Opcode) {
   case ISD::FMAXNUM:
   case ISD::FMAXIMUMNUM:
@@ -5626,7 +5616,7 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   unsigned MinMaxOp2 = N->getOpcode();
-  NVPTXISD::NodeType MinMaxOp3 = getMinMax3Opcode(MinMaxOp2);
+  unsigned MinMaxOp3 = getMinMax3Opcode(MinMaxOp2);
 
   if (Op0.getOpcode() == MinMaxOp2 && Op0.hasOneUse()) {
     // (maxnum (maxnum a, b), c) -> (maxnum3 a, b, c)
@@ -6672,7 +6662,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::BinOp::Xchg:
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AtomicRMWInst::BinOp::And:
   case AtomicRMWInst::BinOp::Or:
   case AtomicRMWInst::BinOp::Xor:

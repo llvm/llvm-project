@@ -30,6 +30,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   LLVM_APPEND_VC_REV
   LLVM_HAS_LOGF128
+  LLVM_ENABLE_ONDISK_CAS
   )
 
 configure_lit_site_cfg(
@@ -81,6 +82,7 @@ set(LLVM_TEST_DEPENDS
   llvm-bcanalyzer
   llvm-bitcode-strip
   llvm-c-test
+  llvm-cas
   llvm-cat
   llvm-cfi-verify
   llvm-cgdata
@@ -123,6 +125,7 @@ set(LLVM_TEST_DEPENDS
   llvm-objdump
   llvm-opt-fuzzer
   llvm-opt-report
+  llvm-offload-binary
   llvm-offload-wrapper
   llvm-otool
   llvm-pdbutil
@@ -247,7 +250,7 @@ if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   list(APPEND LLVM_TEST_DEPENDS spirv-link)
 endif()
 
-add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})
+add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS} UnitTests)
 set_target_properties(llvm-test-depends PROPERTIES FOLDER "LLVM/Tests")
 
 if(LLVM_BUILD_TOOLS)
@@ -259,7 +262,7 @@ endif()
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   ${exclude_from_check_all}
-  DEPENDS ${LLVM_TEST_DEPENDS}
+  DEPENDS ${LLVM_TEST_DEPENDS} UnitTests
   )
 set_target_properties(check-llvm PROPERTIES FOLDER "LLVM/Tests")
 
