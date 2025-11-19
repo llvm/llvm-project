@@ -88,6 +88,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
   if (TuneCPU.empty())
     TuneCPU = CPU;
+  if (TuneCPU == "generic")
+    TuneCPU = Is64Bit ? "generic-rv64" : "generic-rv32";
 
   TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo(TuneCPU);
   // If there is no TuneInfo for this CPU, we fail back to generic.
