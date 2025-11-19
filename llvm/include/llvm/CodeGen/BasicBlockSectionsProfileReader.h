@@ -42,14 +42,11 @@ struct BBClusterInfo {
   unsigned PositionInCluster;
 };
 
-// Assuming a block is split into subblocks across its callsites, this struct
-// uniquely identifies the subblock in block `BBID` which starts from right
-// after call number `SubblockIndex` (or the beginning of the block if
-// `SubblockIndex` is zero) to the call number `SubblockIndex+1` (or the end of
-// the block if `SubblockIndex` is the last call in the block).
-struct SubblockID {
+// The prefetch symbol is emitted immediately after the call of the given index
+// in block `BBID` (or at the beginning of the block if CallsiteIndex is -1).
+struct CallsiteID {
   UniqueBBID BBID;
-  unsigned SubblockIndex;
+  int CallsiteIndex;
 };
 
 // This represents the raw input profile for one function.
@@ -60,9 +57,9 @@ struct FunctionPathAndClusterInfo {
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
-  // Code prefetch targets, specified by the subblock ID of which beginning must
-  // be targetted for prefetching.
-  SmallVector<SubblockID> PrefetchTargets;
+  // Code prefetch targets, specified by the callsite ID immediately after
+  // which beginning must be targetted for prefetching.
+  SmallVector<CallsiteID> PrefetchTargets;
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
   // Edge counts for each edge.
@@ -99,9 +96,9 @@ public:
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &SinkBBID) const;
 
-  // Returns the prefetch targets (identified by their containing subblocks) for
-  // function `FuncName`.
-  SmallVector<SubblockID>
+  // Returns the prefetch targets (identified by their containing callsite IDs)
+  // for function `FuncName`.
+  SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;
 
 private:
@@ -213,7 +210,7 @@ public:
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
 
-  SmallVector<SubblockID>
+  SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and

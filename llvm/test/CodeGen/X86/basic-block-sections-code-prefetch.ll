@@ -7,6 +7,7 @@
 ; RUN: echo 't 1,0' >> %t
 ; RUN: echo 't 1,1' >> %t
 ; RUN: echo 't 2,1' >> %t
+; RUN: echo 't 4,0' >> %t
 ; RUN: echo 'f _Z3barv' >> %t
 ; RUN: echo 't 0,0' >> %t
 ; RUN: echo 't 21,1' >> %t
@@ -48,6 +49,10 @@ define i32 @_Z3foob(i1 zeroext %0) nounwind {
 13:                                               ; preds = %11, %9
   %14 = load i32, ptr %2, align 4
   ret i32 %14
+; CHECK:      .LBB0_3:
+; CHECK-NEXT:   .globl	__llvm_prefetch_target__Z3foob_4_0
+; CHECK-NEXT: __llvm_prefetch_target__Z3foob_4_0:
+
 }
 
 define weak i32 @_Z3barv() nounwind {
