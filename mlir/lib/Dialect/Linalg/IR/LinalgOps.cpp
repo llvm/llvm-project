@@ -1338,8 +1338,6 @@ Speculation::Speculatability GenericOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
-LogicalResult GenericOp::verify() { return success(); }
-
 namespace {
 
 /// Remove linalg operations that are just copying the values from inputs to
@@ -4883,13 +4881,6 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
 
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);
-}
-
-LogicalResult ElementwiseOp::verify() {
-  // All necessary checks are done either by
-  // - EnumAttr (e.g. unknown operation kind)
-  // - verifyStructuredOpInterface (incorrect map, sizes).
-  return success();
 }
 
 /// Implements the block region builder for the ElementwiseOp. This is called by
