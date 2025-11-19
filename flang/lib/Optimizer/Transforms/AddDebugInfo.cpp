@@ -467,7 +467,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       mlir::LLVM::DIFileAttr::get(context, fileName, filePath);
 
   // Only definitions need a distinct identifier and a compilation unit.
-  mlir::DistinctAttr id, id2;
+  mlir::DistinctAttr id;
   mlir::LLVM::DIScopeAttr Scope = fileAttr;
   mlir::LLVM::DICompileUnitAttr compilationUnit;
   mlir::LLVM::DISubprogramFlags subprogramFlags =
@@ -567,7 +567,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         }
       }
 
-      // Use same 'id' for both placeholder and final - recId handles the recursion
+      // Use same 'id' for both placeholder and final - recId handles the
+      // recursion
       spAttr = mlir::LLVM::DISubprogramAttr::get(
           context, recId, /*isRecSelf=*/false, id, compilationUnit, Scope, name,
           name, funcFileAttr, line, line, flags, spTy, opEntities,
