@@ -717,8 +717,7 @@ private:
   /// Hold potentially faulting loads.
   SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
 
-  /// Whether or not we can assume SCEV overflow doesn't occur and generate
-  /// runtime checks later.
+  /// Whether or not creating SCEV predicates is allowed.
   bool AllowRuntimeSCEVChecks;
 
   // Alias Analysis results used to check for possible aliasing with loads
