@@ -8,6 +8,8 @@ NVPTX toolchain. While a NVVM op usually maps to a single LLVM IR intrinsic,
 the NVVM dialect uses type polymorphism and other attributes so that a single
 NVVM op can map to different LLVM intrinsics.
 
+[TOC]
+
 ## Scope and Capabilities
 
 The dialect covers core GPU features such as thread/block builtins, barriers
@@ -83,5 +85,16 @@ dialects (e.g., `nvgpu`, `gpu`, or project-specific dialects). The design
 intent is a thin, predictable, low-level surface with near-mechanical lowering
 to NVVM/LLVM IR.
 
-[TOC]
+
+## Operations
+
+All operations in the NVIDIA's instruction set have a custom form in MLIR. The mnemonic
+of an operation is that used in LLVM IR prefixed with "`nvvm.`".
+
+[include "Dialects/NVVMOps.md"]
+
+
+## Op Interfaces
+
+[include "Dialects/NVVMRequiresSMTraits.md"]
 
