@@ -211,6 +211,24 @@ struct LLVMPointerPointerLikeModel
   Type getElementType(Type pointer) const { return Type(); }
 };
 
+struct MemrefAddressOfGlobalModel
+    : public AddressOfGlobalOpInterface::ExternalModel<
+          MemrefAddressOfGlobalModel, memref::GetGlobalOp> {
+  SymbolRefAttr getSymbol(Operation *op) const {
+    auto getGlobalOp = cast<memref::GetGlobalOp>(op);
+    return getGlobalOp.getNameAttr();
+  }
+};
+
+struct MemrefGlobalVariableModel
+    : public GlobalVariableOpInterface::ExternalModel<MemrefGlobalVariableModel,
+                                                      memref::GlobalOp> {
+  bool isConstant(Operation *op) const {
+    auto globalOp = cast<memref::GlobalOp>(op);
+    return globalOp.getConstant();
+  }
+};
+
 /// Helper function for any of the times we need to modify an ArrayAttr based on
 /// a device type list.  Returns a new ArrayAttr with all of the
 /// existingDeviceTypes, plus the effective new ones(or an added none if hte new
@@ -302,6 +320,11 @@ void OpenACCDialect::initialize() {
       MemRefPointerLikeModel<UnrankedMemRefType>>(*getContext());
   LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
       *getContext());
+
+  // Attach operation interfaces
+  memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
+      *getContext());
+  memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//
