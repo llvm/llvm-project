@@ -493,6 +493,10 @@ void VPSingleDefRecipe::dump() const { VPDef::dump(); }
 void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
   printRecipe(O, Indent, SlotTracker);
+  if (auto DL = getDebugLoc()) {
+    O << ", !dbg ";
+    DL.print(O);
+  }
 }
 #endif
 
@@ -1481,11 +1485,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
 
   printFlags(O);
   printOperands(O, SlotTracker);
-
-  if (auto DL = getDebugLoc()) {
-    O << ", !dbg ";
-    DL.print(O);
-  }
 }
 #endif
 
