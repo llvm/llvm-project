@@ -82,3 +82,6 @@ that lower to no intrinsic at all. Such abstractions belong in higher-level
 dialects (e.g., `nvgpu`, `gpu`, or project-specific dialects). The design
 intent is a thin, predictable, low-level surface with near-mechanical lowering
 to NVVM/LLVM IR.
+
+[TOC]
+
