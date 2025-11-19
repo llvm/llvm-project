@@ -4018,6 +4018,39 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// FPClass Test Flags
+//===----------------------------------------------------------------------===//
+
+def FPClassTestEnum : CIR_I32EnumAttr<"FPClassTest", "floating-point class test flags", [
+  // Basic flags
+  I32EnumAttrCase<"SignalingNaN", 1, "fcSNan">,
+  I32EnumAttrCase<"QuietNaN", 2, "fcQNan">,
+  I32EnumAttrCase<"NegativeInfinity", 4, "fcNegInf">,
+  I32EnumAttrCase<"NegativeNormal", 8, "fcNegNormal">,
+  I32EnumAttrCase<"NegativeSubnormal", 16, "fcNegSubnormal">,
+  I32EnumAttrCase<"NegativeZero", 32, "fcNegZero">,
+  I32EnumAttrCase<"PositiveZero", 64, "fcPosZero">,
+  I32EnumAttrCase<"PositiveSubnormal", 128, "fcPosSubnormal">,
+  I32EnumAttrCase<"PositiveNormal", 256, "fcPosNormal">,
+  I32EnumAttrCase<"PositiveInfinity", 512, "fcPosInf">,
+
+  // Composite flags
+  I32EnumAttrCase<"Nan", 3, "fcNan">,                   // fcSNan | fcQNan
+  I32EnumAttrCase<"Infinity", 516, "fcInf">,            // fcPosInf | fcNegInf
+  I32EnumAttrCase<"Normal", 264, "fcNormal">,           // fcPosNormal | fcNegNormal
+  I32EnumAttrCase<"Subnormal", 144, "fcSubnormal">,     // fcPosSubnormal | fcNegSubnormal
+  I32EnumAttrCase<"Zero", 96, "fcZero">,                // fcPosZero | fcNegZero
+  I32EnumAttrCase<"PositiveFinite", 448, "fcPosFinite">,// fcPosNormal | fcPosSubnormal | fcPosZero
+  I32EnumAttrCase<"NegativeFinite", 56, "fcNegFinite">, // fcNegNormal | fcNegSubnormal | fcNegZero
+  I32EnumAttrCase<"Finite", 504, "fcFinite">,           // fcPosFinite | fcNegFinite
+  I32EnumAttrCase<"Positive", 960, "fcPositive">,       // fcPosFinite | fcPosInf
+  I32EnumAttrCase<"Negative", 60, "fcNegative">,        // fcNegFinite | fcNegInf
+  I32EnumAttrCase<"All", 1023, "fcAllFlags">,           // fcNan | fcInf | fcFinite
+]> {
+  let cppNamespace = "::cir";
+}
+
 def CIR_IsFPClassOp : CIR_Op<"is_fp_class"> {
   let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
 
@@ -4044,7 +4077,7 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class"> {
   }];
 
   let arguments = (ins CIR_AnyFloatType:$src,
-                       I32Attr:$flags);
+                       FPClassTestEnum:$flags);
   let results = (outs CIR_BoolType:$result);
   let assemblyFormat = [{
     $src `,` $flags `:` functional-type($src, $result) attr-dict

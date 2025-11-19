@@ -533,7 +533,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, FPClassTest::fcNan),
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Nan),
         convertType(e->getType())));
   }
 
@@ -542,7 +542,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, FPClassTest::fcSNan),
+        builder.createIsFPClass(loc, v, cir::FPClassTest::SignalingNaN),
         convertType(e->getType())));
   }
 
@@ -552,7 +552,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, FPClassTest::fcInf),
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Infinity),
         convertType(e->getType())));
   }
 
@@ -568,7 +568,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, FPClassTest::fcFinite),
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Finite),
         convertType(e->getType())));
   }
 
@@ -577,7 +577,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, FPClassTest::fcNormal),
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Normal),
         convertType(e->getType())));
   }
 
@@ -586,7 +586,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, FPClassTest::fcSubnormal),
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Subnormal),
         convertType(e->getType())));
   }
 
@@ -595,7 +595,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, FPClassTest::fcZero),
+        builder.createIsFPClass(loc, v, cir::FPClassTest::Zero),
         convertType(e->getType())));
   }
   case Builtin::BI__builtin_isfpclass: {
@@ -609,7 +609,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Location loc = getLoc(e->getBeginLoc());
     //
     return RValue::get(builder.createBoolToInt(
-        builder.createIsFPClass(loc, v, test), convertType(e->getType())));
+        builder.createIsFPClass(loc, v, cir::FPClassTest(test)), convertType(e->getType())));
   }
   }
 

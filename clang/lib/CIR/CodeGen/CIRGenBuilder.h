@@ -335,7 +335,7 @@ public:
   }
 
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
-                                   unsigned flags) {
+                                   cir::FPClassTest flags) {
     return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
