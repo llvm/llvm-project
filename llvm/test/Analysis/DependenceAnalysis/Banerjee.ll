@@ -660,7 +660,7 @@ define void @banerjee7(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
 ; DELIN-NEXT:    da analyze - none!
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
-; DELIN-NEXT:    da analyze - flow [> <=]!
+; DELIN-NEXT:    da analyze - consistent flow [-1 0]!
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: %0 = load i64, ptr %arrayidx7, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
@@ -916,7 +916,7 @@ define void @banerjee10(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
 ; DELIN-NEXT:    da analyze - none!
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: %1 = load i64, ptr %arrayidx6, align 8
-; DELIN-NEXT:    da analyze - flow [<> 0]!
+; DELIN-NEXT:    da analyze - flow [-11 0]!
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: %1 = load i64, ptr %arrayidx6, align 8 --> Dst: %1 = load i64, ptr %arrayidx6, align 8

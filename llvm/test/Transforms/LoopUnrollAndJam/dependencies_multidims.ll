@@ -3,6 +3,10 @@
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
+; XFAIL: *
+; The transformation seems to have succeeded "accidentally". It should be fixed
+; by PR #156578.
+
 ; CHECK-LABEL: sub_sub_less
 ; CHECK: %j = phi
 ; CHECK-NOT: %j.1 = phi
