@@ -2923,6 +2923,14 @@ TreePattern::TreePattern(const Record *TheRec, const DagInit *Pat, bool isInput,
   Trees.push_back(ParseTreePattern(Pat, ""));
 }
 
+TreePattern::TreePattern(const Record *TheRec, ArrayRef<const Init *> Args,
+                         ArrayRef<const StringInit *> ArgNames, bool isInput,
+                         CodeGenDAGPatterns &cdp)
+    : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
+      Infer(*this) {
+  Trees.push_back(ParseRootlessTreePattern(Args, ArgNames));
+}
+
 TreePattern::TreePattern(const Record *TheRec, TreePatternNodePtr Pat,
                          bool isInput, CodeGenDAGPatterns &cdp)
     : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
@@ -2949,6 +2957,19 @@ void TreePattern::ComputeNamedNodes(TreePatternNode &N) {
 
   for (TreePatternNode &Child : N.children())
     ComputeNamedNodes(Child);
+}
+
+TreePatternNodePtr
+TreePattern::ParseRootlessTreePattern(ArrayRef<const Init *> Args,
+                                      ArrayRef<const StringInit *> ArgNames) {
+  std::vector<TreePatternNodePtr> Children;
+
+  for (auto [Arg, ArgName] : llvm::zip_equal(Args, ArgNames)) {
+    StringRef NameStr = ArgName ? ArgName->getValue() : "";
+    Children.push_back(ParseTreePattern(Arg, NameStr));
+  }
+
+  return makeIntrusiveRefCnt<TreePatternNode>(nullptr, std::move(Children), 1);
 }
 
 TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
@@ -3488,20 +3509,12 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
   ArrayRef<const Record *> DefaultOps =
       Records.getAllDerivedDefinitions("OperandWithDefaultOps");
 
-  // Find some SDNode.
-  assert(!SDNodes.empty() && "No SDNodes parsed?");
-  const Init *SomeSDNode = SDNodes.begin()->first->getDefInit();
-
   for (unsigned i = 0, e = DefaultOps.size(); i != e; ++i) {
     const DagInit *DefaultInfo = DefaultOps[i]->getValueAsDag("DefaultOps");
 
-    // Clone the DefaultInfo dag node, changing the operator from 'ops' to
-    // SomeSDnode so that we can parse this.
-    const DagInit *DI = DagInit::get(SomeSDNode, DefaultInfo->getArgs(),
-                                     DefaultInfo->getArgNames());
-
     // Create a TreePattern to parse this.
-    TreePattern P(DefaultOps[i], DI, false, *this);
+    TreePattern P(DefaultOps[i], DefaultInfo->getArgs(),
+                  DefaultInfo->getArgNames(), false, *this);
     assert(P.getNumTrees() == 1 && "This ctor can only produce one tree!");
 
     // Copy the operands over into a DAGDefaultOperand.
