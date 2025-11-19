@@ -620,14 +620,13 @@ private:
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
-  // Adjust the recipes for reductions. For in-loop reductions the chain of
-  // instructions leading from the loop exit instr to the phi need to be
-  // converted to reductions, with one operand being vector and the other being
-  // the scalar reduction chain. For other reductions, a select is introduced
-  // between the phi and users outside the vector region when folding the tail.
-  void adjustRecipesForReductions(VPlanPtr &Plan,
-                                  VPRecipeBuilder &RecipeBuilder,
-                                  ElementCount MinVF);
+  /// Add recipes to compute the final reduction result (ComputeFindIVResult,
+  /// ComputeAnyOfResult, ComputeReductionResult depending on the reduction) in
+  /// the middle block. Selects are introduced for regular reductions between
+  /// the phi and users outside the vector region when folding the tail.
+  void addReductionResultComputation(VPlanPtr &Plan,
+                                     VPRecipeBuilder &RecipeBuilder,
+                                     ElementCount MinVF);
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

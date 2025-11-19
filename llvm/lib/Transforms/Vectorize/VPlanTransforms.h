@@ -113,6 +113,15 @@ struct VPlanTransforms {
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
+  /// Create VPReductionRecipes for in-loop reductions. This processes chains
+  /// of operations contributing to in-loop reductions and creates appropriate
+  /// VPReductionRecipe instances. Block masks from \p BlockMaskCache are used
+  /// to add predication for blocks in \p BlocksNeedingPredication.
+  static void createVPReductionRecipesForInLoopReductions(
+      VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
+      const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+      ElementCount MinVF);
+
   /// Update \p Plan to account for all early exits.
   LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
                                                  bool HasUncountableExit);
