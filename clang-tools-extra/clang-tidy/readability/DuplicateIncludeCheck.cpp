@@ -69,9 +69,8 @@ private:
 DuplicateIncludeCheck::DuplicateIncludeCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoredFilesList(
-          llvm::ArrayRef<llvm::StringRef>(utils::options::parseStringList(
-              Options.get("IgnoredFilesList", "")))) {}
+      IgnoredFilesList(utils::options::parseStringList(
+          Options.get("IgnoredFilesList", ""))) {}
 
 DuplicateIncludeCallbacks::DuplicateIncludeCallbacks(
     DuplicateIncludeCheck &Check, const SourceManager &SM,

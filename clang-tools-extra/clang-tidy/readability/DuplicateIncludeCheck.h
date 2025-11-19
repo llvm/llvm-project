@@ -28,7 +28,7 @@ public:
 private:
   // Semicolon-separated list of regexes or file names to ignore from duplicate
   // warnings.
-  const llvm::SmallVector<StringRef, 0> IgnoredFilesList;
+  const std::vector<StringRef> IgnoredFilesList;
 };
 
 } // namespace clang::tidy::readability
