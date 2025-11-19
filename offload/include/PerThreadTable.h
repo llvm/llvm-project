@@ -20,7 +20,7 @@
 #include <mutex>
 #include <type_traits>
 
-template <typename ObjectType> struct PerThread {
+template <typename ObjectType> class PerThread {
   struct PerThreadData {
     std::unique_ptr<ObjectType> ThreadEntry;
   };
@@ -28,6 +28,25 @@ template <typename ObjectType> struct PerThread {
   std::mutex Mutex;
   llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
 
+  PerThreadData &getThreadData() {
+    static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
+    if (!ThreadData) {
+      ThreadData = std::make_shared<PerThreadData>();
+      std::lock_guard<std::mutex> Lock(Mutex);
+      ThreadDataList.push_back(ThreadData);
+    }
+    return *ThreadData;
+  }
+
+  ObjectType &getThreadEntry() {
+    PerThreadData &ThreadData = getThreadData();
+    if (ThreadData.ThreadEntry)
+      return *ThreadData.ThreadEntry;
+    ThreadData.ThreadEntry = std::make_unique<ObjectType>();
+    return *ThreadData.ThreadEntry;
+  }
+
+public:
   // define default constructors, disable copy and move constructors
   PerThread() = default;
   PerThread(const PerThread &) = delete;
@@ -40,27 +59,6 @@ template <typename ObjectType> struct PerThread {
     ThreadDataList.clear();
   }
 
-private:
-  PerThreadData &getThreadData() {
-    static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
-    if (!ThreadData) {
-      ThreadData = std::make_shared<PerThreadData>();
-      std::lock_guard<std::mutex> Lock(Mutex);
-      ThreadDataList.push_back(ThreadData);
-    }
-    return *ThreadData;
-  }
-
-protected:
-  ObjectType &getThreadEntry() {
-    PerThreadData &ThreadData = getThreadData();
-    if (ThreadData.ThreadEntry)
-      return *ThreadData.ThreadEntry;
-    ThreadData.ThreadEntry = std::make_unique<ObjectType>();
-    return *ThreadData.ThreadEntry;
-  }
-
-public:
   ObjectType &get() { return getThreadEntry(); }
 
   template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
@@ -78,10 +76,10 @@ public:
 // Using an STL container (such as std::vector) indexed by thread ID has
 // too many race conditions issues so we store each thread entry into a
 // thread_local variable.
-// T is the container type used to store the objects, e.g., std::vector,
-// std::set, etc. by each thread. O is the type of the stored objects e.g.,
-// omp_interop_val_t *, ...
-template <typename ContainerType, typename ObjectType> struct PerThreadTable {
+// ContainerType is the container type used to store the objects, e.g.,
+// std::vector, std::set, etc. by each thread. ObjectType is the type of the
+// stored objects e.g., omp_interop_val_t *, ...
+template <typename ContainerType, typename ObjectType> class PerThreadTable {
   using iterator = typename ContainerType::iterator;
 
   template <typename, typename = std::void_t<>>
@@ -115,19 +113,6 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
   std::mutex Mutex;
   llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
 
-  // define default constructors, disable copy and move constructors
-  PerThreadTable() = default;
-  PerThreadTable(const PerThreadTable &) = delete;
-  PerThreadTable(PerThreadTable &&) = delete;
-  PerThreadTable &operator=(const PerThreadTable &) = delete;
-  PerThreadTable &operator=(PerThreadTable &&) = delete;
-  ~PerThreadTable() {
-    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
-           "Cannot be deleted while other threads are adding entries");
-    ThreadDataList.clear();
-  }
-
-private:
   PerThreadData &getThreadData() {
     static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
     if (!ThreadData) {
@@ -158,6 +143,18 @@ protected:
   }
 
 public:
+  // define default constructors, disable copy and move constructors
+  PerThreadTable() = default;
+  PerThreadTable(const PerThreadTable &) = delete;
+  PerThreadTable(PerThreadTable &&) = delete;
+  PerThreadTable &operator=(const PerThreadTable &) = delete;
+  PerThreadTable &operator=(PerThreadTable &&) = delete;
+  ~PerThreadTable() {
+    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
+           "Cannot be deleted while other threads are adding entries");
+    ThreadDataList.clear();
+  }
+
   void add(ObjectType obj) {
     ContainerType &Entry = getThreadEntry();
     size_t &NElements = getThreadNElements();
@@ -239,8 +236,8 @@ struct ContainerValueType<T, std::void_t<typename T::mapped_type>> {
   using type = typename T::mapped_type;
 };
 
-template <typename ContainerType, size_t reserveSize = 0>
-struct PerThreadContainer
+template <typename ContainerType, size_t ReserveSize = 0>
+class PerThreadContainer
     : public PerThreadTable<ContainerType,
                             typename ContainerValueType<ContainerType>::type> {
 
@@ -265,7 +262,7 @@ struct PerThreadContainer
 
   using IndexType = typename indexType<ContainerType>::type;
   using ObjectType = typename ContainerValueType<ContainerType>::type;
-
+public:
   // Get the object for the given index in the current thread
   ObjectType &get(IndexType Index) {
     ContainerType &Entry = this->getThreadEntry();
@@ -273,10 +270,9 @@ struct PerThreadContainer
     // specialized code for vector-like containers
     if constexpr (has_resize<ContainerType>::value) {
       if (Index >= Entry.size()) {
-        if constexpr (has_reserve<ContainerType>::value && reserveSize > 0) {
-          if (Entry.capacity() < reserveSize)
-            Entry.reserve(reserveSize);
-        }
+        if constexpr (has_reserve<ContainerType>::value && ReserveSize > 0)
+          Entry.reserve(ReserveSize);
+
         // If the index is out of bounds, try resize the container
         Entry.resize(Index + 1);
       }
