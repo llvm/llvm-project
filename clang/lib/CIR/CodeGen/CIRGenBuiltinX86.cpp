@@ -39,10 +39,10 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Value mask,
   unsigned maskWidth = maskIntType.getWidth();
 
   // Create a vector of bool type with maskWidth elements
-  auto maskVecTy =
+  auto maskVecType =
       cir::VectorType::get(builder.getContext(),
                            cir::BoolType::get(builder.getContext()), maskWidth);
-  mlir::Value maskVec = builder.createBitcast(mask, maskVecTy);
+  mlir::Value maskVec = builder.createBitcast(mask, maskVecType);
 
   // If we have less than 8 elements, then the starting mask was an i8 and
   // we need to extract down to the right number of elements.
