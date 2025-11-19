@@ -1239,10 +1239,6 @@ bool DarwinAsmParser::parsePtrAuthKernelABIVersion(StringRef Directive,
   return false;
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createDarwinAsmParser() {
+MCAsmParserExtension *llvm::createDarwinAsmParser() {
   return new DarwinAsmParser;
 }
-
-} // end llvm namespace
