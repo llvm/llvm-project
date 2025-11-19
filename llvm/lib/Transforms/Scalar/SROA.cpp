@@ -5209,63 +5209,62 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// promoted.
 AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
                                    Partition &P) {
-  // Try to compute a friendly type for this partition of the alloca. This
-  // won't always succeed, in which case we fall back to a legal integer type
+  // Try to compute a friendly type for `PartitionTy`, which is the type of the new alloca
+  // for this partition. This won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
-  Type *SliceTy = nullptr;
-  VectorType *SliceVecTy = nullptr;
+  Type *PartitionTy = nullptr;
+  IntegerType *LargestIntegerUsedTy = nullptr;
+  bool IsVectorPromotable = false;
   const DataLayout &DL = AI.getDataLayout();
   unsigned VScale = AI.getFunction()->getVScaleValue();
 
-  std::pair<Type *, IntegerType *> CommonUseTy =
-      findCommonType(P.begin(), P.end(), P.endOffset());
-  // Do all uses operate on the same type?
-  if (CommonUseTy.first) {
-    TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy.first);
-    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
-      SliceTy = CommonUseTy.first;
-      SliceVecTy = dyn_cast<VectorType>(SliceTy);
+  // First check if the partition can be promoted to a vector. If it can, we are done.
+  VectorType *VecTy = isVectorPromotionViable(P, DL, VScale);
+  if (VecTy) {
+    PartitionTy = VecTy;
+    IsVectorPromotable = true;
+  }
+
+  if (!PartitionTy) {
+    // Otherwise, check if there is a common type that all slices of the partition use.
+    // Collect the largest integer type used as a backup.
+    auto CommonUseTy =
+        findCommonType(P.begin(), P.end(), P.endOffset());
+    LargestIntegerUsedTy = CommonUseTy.second;
+    // If there is a common type that spans the partition, use it.
+    if (CommonUseTy.first) {
+      TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy.first);
+      if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
+        PartitionTy = CommonUseTy.first;
+      }
     }
   }
-  // If not, can we find an appropriate subtype in the original allocated type?
-  if (!SliceTy)
+
+  if (!PartitionTy)
+    // Otherwise, check if there is an appropriate subtype of the original alloca type to use.
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                  P.beginOffset(), P.size()))
-      SliceTy = TypePartitionTy;
+      PartitionTy = TypePartitionTy;
 
-  // If still not, can we use the largest bitwidth integer type used?
-  if (!SliceTy && CommonUseTy.second)
-    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size()) {
-      SliceTy = CommonUseTy.second;
-      SliceVecTy = dyn_cast<VectorType>(SliceTy);
-    }
-  if ((!SliceTy || (SliceTy->isArrayTy() &&
-                    SliceTy->getArrayElementType()->isIntegerTy())) &&
-      DL.isLegalInteger(P.size() * 8)) {
-    SliceTy = Type::getIntNTy(*C, P.size() * 8);
-  }
+  // If the type has not been selected yet OR if the type selected is a non-promotable aggregate
+  if ((!PartitionTy || (!IsVectorPromotable && !PartitionTy->isSingleValueType())))
+    // If the largest integer type used spans the partition, use it.
+      if (LargestIntegerUsedTy && DL.getTypeAllocSize(LargestIntegerUsedTy).getFixedValue() >= P.size())
+        PartitionTy = LargestIntegerUsedTy;
 
-  // If the common use types are not viable for promotion then attempt to find
-  // another type that is viable.
-  if (SliceVecTy && !checkVectorTypeForPromotion(P, SliceVecTy, DL, VScale))
-    if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
-                                                 P.beginOffset(), P.size())) {
-      VectorType *TypePartitionVecTy = dyn_cast<VectorType>(TypePartitionTy);
-      if (TypePartitionVecTy &&
-          checkVectorTypeForPromotion(P, TypePartitionVecTy, DL, VScale))
-        SliceTy = TypePartitionTy;
-    }
+  // If the type has not been selected yet OR if the type selected is an array of integers, try to select
+  // a legal integer type of the same size as the alloca.
+  if ((!PartitionTy || (PartitionTy->isArrayTy() &&
+                    PartitionTy->getArrayElementType()->isIntegerTy())) &&
+      DL.isLegalInteger(P.size() * 8))
+    PartitionTy = Type::getIntNTy(*C, P.size() * 8);
+  
+  // Finally, if nothing worked, fall back to an i8 array of the appropriate size.
+  if (!PartitionTy)
+    PartitionTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
+  assert(DL.getTypeAllocSize(PartitionTy).getFixedValue() >= P.size());
 
-  if (!SliceTy)
-    SliceTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
-  assert(DL.getTypeAllocSize(SliceTy).getFixedValue() >= P.size());
-
-  bool IsIntegerPromotable = isIntegerWideningViable(P, SliceTy, DL);
-
-  VectorType *VecTy =
-      IsIntegerPromotable ? nullptr : isVectorPromotionViable(P, DL, VScale);
-  if (VecTy)
-    SliceTy = VecTy;
+  bool IsIntegerPromotable = isIntegerWideningViable(P, PartitionTy, DL);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -5274,7 +5273,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // P.beginOffset() can be non-zero even with the same type in a case with
   // out-of-bounds access (e.g. @PR35657 function in SROA/basictest.ll).
   AllocaInst *NewAI;
-  if (SliceTy == AI.getAllocatedType() && P.beginOffset() == 0) {
+  if (PartitionTy == AI.getAllocatedType() && P.beginOffset() == 0) {
     NewAI = &AI;
     // FIXME: We should be able to bail at this point with "nothing changed".
     // FIXME: We might want to defer PHI speculation until after here.
@@ -5284,10 +5283,10 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     const Align Alignment = commonAlignment(AI.getAlign(), P.beginOffset());
     // If we will get at least this much alignment from the type alone, leave
     // the alloca's alignment unconstrained.
-    const bool IsUnconstrained = Alignment <= DL.getABITypeAlign(SliceTy);
+    const bool IsUnconstrained = Alignment <= DL.getABITypeAlign(PartitionTy);
     NewAI = new AllocaInst(
-        SliceTy, AI.getAddressSpace(), nullptr,
-        IsUnconstrained ? DL.getPrefTypeAlign(SliceTy) : Alignment,
+        PartitionTy, AI.getAddressSpace(), nullptr,
+        IsUnconstrained ? DL.getPrefTypeAlign(PartitionTy) : Alignment,
         AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
         AI.getIterator());
     // Copy the old AI debug location over to the new one.
