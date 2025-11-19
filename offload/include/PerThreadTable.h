@@ -20,14 +20,21 @@
 #include <mutex>
 #include <type_traits>
 
-template <typename ObjectType> struct PerThread {
-  struct PerThreadData {
-    std::unique_ptr<ObjectType> ThreadEntry;
-  };
-
+template <typename ObjectType> class PerThread {
   std::mutex Mutex;
-  llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
+  llvm::SmallVector<std::shared_ptr<ObjectType>> ThreadDataList;
 
+  ObjectType &getThreadData() {
+    static thread_local std::shared_ptr<ObjectType> ThreadData = nullptr;
+    if (!ThreadData) {
+      ThreadData = std::make_shared<ObjectType>();
+      std::lock_guard<std::mutex> Lock(Mutex);
+      ThreadDataList.push_back(ThreadData);
+    }
+    return *ThreadData;
+  }
+
+public:
   // define default constructors, disable copy and move constructors
   PerThread() = default;
   PerThread(const PerThread &) = delete;
@@ -40,72 +47,73 @@ template <typename ObjectType> struct PerThread {
     ThreadDataList.clear();
   }
 
-private:
-  PerThreadData &getThreadData() {
-    static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
-    if (!ThreadData) {
-      ThreadData = std::make_shared<PerThreadData>();
-      std::lock_guard<std::mutex> Lock(Mutex);
-      ThreadDataList.push_back(ThreadData);
-    }
-    return *ThreadData;
-  }
-
-protected:
-  ObjectType &getThreadEntry() {
-    PerThreadData &ThreadData = getThreadData();
-    if (ThreadData.ThreadEntry)
-      return *ThreadData.ThreadEntry;
-    ThreadData.ThreadEntry = std::make_unique<ObjectType>();
-    return *ThreadData.ThreadEntry;
-  }
-
-public:
-  ObjectType &get() { return getThreadEntry(); }
+  ObjectType &get() { return getThreadData(); }
 
   template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
     assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
            "Clear cannot be called while other threads are adding entries");
-    for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
-      if (!ThreadData->ThreadEntry)
+    for (std::shared_ptr<ObjectType> ThreadData : ThreadDataList) {
+      if (!ThreadData)
         continue;
-      ClearFunc(*ThreadData->ThreadEntry);
+      ClearFunc(*ThreadData);
     }
     ThreadDataList.clear();
   }
 };
 
+template <typename ContainerTy> struct ContainerConcepts {
+  template <typename, template <typename> class, typename = std::void_t<>>
+  struct has : std::false_type {};
+  template <typename Ty, template <typename> class Op>
+  struct has<Ty, Op, std::void_t<Op<Ty>>> : std::true_type {};
+
+  template <typename Ty> using IteratorTypeCheck = typename Ty::iterator;
+  template <typename Ty> using MappedTypeCheck = typename Ty::mapped_type;
+  template <typename Ty> using ValueTypeCheck = typename Ty::value_type;
+  template <typename Ty> using KeyTypeCheck = typename Ty::key_type;
+  template <typename Ty> using SizeTyCheck = typename Ty::size_type;
+
+  template <typename Ty>
+  using ClearCheck = decltype(std::declval<Ty>().clear());
+  template <typename Ty>
+  using ReserveCheck = decltype(std::declval<Ty>().reserve(1));
+  template <typename Ty>
+  using ResizeCheck = decltype(std::declval<Ty>().resize(1));
+
+  static constexpr bool hasIterator =
+      has<ContainerTy, IteratorTypeCheck>::value;
+  static constexpr bool hasClear = has<ContainerTy, ClearCheck>::value;
+  static constexpr bool isAssociative =
+      has<ContainerTy, MappedTypeCheck>::value;
+  static constexpr bool hasReserve = has<ContainerTy, ReserveCheck>::value;
+  static constexpr bool hasResize = has<ContainerTy, ResizeCheck>::value;
+
+  template <typename, template <typename> class, typename = std::void_t<>>
+  struct has_type {
+    using type = void;
+  };
+  template <typename Ty, template <typename> class Op>
+  struct has_type<Ty, Op, std::void_t<Op<Ty>>> {
+    using type = Op<Ty>;
+  };
+
+  using iterator = typename has_type<ContainerTy, IteratorTypeCheck>::type;
+  using value_type = typename std::conditional_t<
+      isAssociative, typename has_type<ContainerTy, MappedTypeCheck>::type,
+      typename has_type<ContainerTy, ValueTypeCheck>::type>;
+  using key_type = typename std::conditional_t<
+      isAssociative, typename has_type<ContainerTy, KeyTypeCheck>::type,
+      typename has_type<ContainerTy, SizeTyCheck>::type>;
+};
+
 // Using an STL container (such as std::vector) indexed by thread ID has
 // too many race conditions issues so we store each thread entry into a
 // thread_local variable.
-// T is the container type used to store the objects, e.g., std::vector,
-// std::set, etc. by each thread. O is the type of the stored objects e.g.,
-// omp_interop_val_t *, ...
-template <typename ContainerType, typename ObjectType> struct PerThreadTable {
-  using iterator = typename ContainerType::iterator;
-
-  template <typename, typename = std::void_t<>>
-  struct has_iterator : std::false_type {};
-  template <typename T>
-  struct has_iterator<T, std::void_t<typename T::iterator>> : std::true_type {};
-
-  template <typename T, typename = std::void_t<>>
-  struct has_clear : std::false_type {};
-  template <typename T>
-  struct has_clear<T, std::void_t<decltype(std::declval<T>().clear())>>
-      : std::true_type {};
-
-  template <typename T, typename = std::void_t<>>
-  struct has_clearAll : std::false_type {};
-  template <typename T>
-  struct has_clearAll<T, std::void_t<decltype(std::declval<T>().clearAll(1))>>
-      : std::true_type {};
-
-  template <typename, typename = std::void_t<>>
-  struct is_associative : std::false_type {};
-  template <typename T>
-  struct is_associative<T, std::void_t<typename T::mapped_type>>
-      : std::true_type {};
+// ContainerType is the container type used to store the objects, e.g.,
+// std::vector, std::set, etc. by each thread. ObjectType is the type of the
+// stored objects e.g., omp_interop_val_t *, ...
+template <typename ContainerType, typename ObjectType> class PerThreadTable {
+  using iterator = typename ContainerConcepts<ContainerType>::iterator;
 
   struct PerThreadData {
     size_t NElements = 0;
@@ -115,19 +123,6 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
   std::mutex Mutex;
   llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
 
-  // define default constructors, disable copy and move constructors
-  PerThreadTable() = default;
-  PerThreadTable(const PerThreadTable &) = delete;
-  PerThreadTable(PerThreadTable &&) = delete;
-  PerThreadTable &operator=(const PerThreadTable &) = delete;
-  PerThreadTable &operator=(PerThreadTable &&) = delete;
-  ~PerThreadTable() {
-    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
-           "Cannot be deleted while other threads are adding entries");
-    ThreadDataList.clear();
-  }
-
-private:
   PerThreadData &getThreadData() {
     static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
     if (!ThreadData) {
@@ -158,6 +153,18 @@ protected:
   }
 
 public:
+  // define default constructors, disable copy and move constructors
+  PerThreadTable() = default;
+  PerThreadTable(const PerThreadTable &) = delete;
+  PerThreadTable(PerThreadTable &&) = delete;
+  PerThreadTable &operator=(const PerThreadTable &) = delete;
+  PerThreadTable &operator=(PerThreadTable &&) = delete;
+  ~PerThreadTable() {
+    assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
+           "Cannot be deleted while other threads are adding entries");
+    ThreadDataList.clear();
+  }
+
   void add(ObjectType obj) {
     ContainerType &Entry = getThreadEntry();
     size_t &NElements = getThreadNElements();
@@ -191,12 +198,10 @@ public:
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
-      if constexpr (has_clearAll<ContainerType>::value) {
-        ThreadData->ThreadEntry->clearAll(ClearFunc);
-      } else if constexpr (has_iterator<ContainerType>::value &&
-                           has_clear<ContainerType>::value) {
+      if constexpr (ContainerConcepts<ContainerType>::hasIterator &&
+                    ContainerConcepts<ContainerType>::hasClear) {
         for (auto &Obj : *ThreadData->ThreadEntry) {
-          if constexpr (is_associative<ContainerType>::value) {
+          if constexpr (ContainerConcepts<ContainerType>::isAssociative) {
             ClearFunc(Obj.second);
           } else {
             ClearFunc(Obj);
@@ -218,7 +223,7 @@ public:
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
       for (auto &Obj : *ThreadData->ThreadEntry) {
-        if constexpr (is_associative<ContainerType>::value) {
+        if constexpr (ContainerConcepts<ContainerType>::isAssociative) {
           if (auto Err = DeinitFunc(Obj.second))
             return Err;
         } else {
@@ -231,52 +236,26 @@ public:
   }
 };
 
-template <typename T, typename = std::void_t<>> struct ContainerValueType {
-  using type = typename T::value_type;
-};
-template <typename T>
-struct ContainerValueType<T, std::void_t<typename T::mapped_type>> {
-  using type = typename T::mapped_type;
-};
+template <typename ContainerType, size_t ReserveSize = 0>
+class PerThreadContainer
+    : public PerThreadTable<ContainerType, typename ContainerConcepts<
+                                               ContainerType>::value_type> {
 
-template <typename ContainerType, size_t reserveSize = 0>
-struct PerThreadContainer
-    : public PerThreadTable<ContainerType,
-                            typename ContainerValueType<ContainerType>::type> {
+  using IndexType = typename ContainerConcepts<ContainerType>::key_type;
+  using ObjectType = typename ContainerConcepts<ContainerType>::value_type;
 
-  // helpers
-  template <typename T, typename = std::void_t<>> struct indexType {
-    using type = typename T::size_type;
-  };
-  template <typename T> struct indexType<T, std::void_t<typename T::key_type>> {
-    using type = typename T::key_type;
-  };
-  template <typename T, typename = std::void_t<>>
-  struct has_resize : std::false_type {};
-  template <typename T>
-  struct has_resize<T, std::void_t<decltype(std::declval<T>().resize(1))>>
-      : std::true_type {};
-
-  template <typename T, typename = std::void_t<>>
-  struct has_reserve : std::false_type {};
-  template <typename T>
-  struct has_reserve<T, std::void_t<decltype(std::declval<T>().reserve(1))>>
-      : std::true_type {};
-
-  using IndexType = typename indexType<ContainerType>::type;
-  using ObjectType = typename ContainerValueType<ContainerType>::type;
-
+public:
   // Get the object for the given index in the current thread
   ObjectType &get(IndexType Index) {
     ContainerType &Entry = this->getThreadEntry();
 
     // specialized code for vector-like containers
-    if constexpr (has_resize<ContainerType>::value) {
+    if constexpr (ContainerConcepts<ContainerType>::hasResize) {
       if (Index >= Entry.size()) {
-        if constexpr (has_reserve<ContainerType>::value && reserveSize > 0) {
-          if (Entry.capacity() < reserveSize)
-            Entry.reserve(reserveSize);
-        }
+        if constexpr (ContainerConcepts<ContainerType>::hasReserve &&
+                      ReserveSize > 0)
+          Entry.reserve(ReserveSize);
+
         // If the index is out of bounds, try resize the container
         Entry.resize(Index + 1);
       }
