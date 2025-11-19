@@ -943,24 +943,23 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     }
   }
 
-  OS << "#if defined(GET_INSTRINFO_MC_DESC) || "
-        "defined(GET_INSTRINFO_CTOR_DTOR)\n";
+  {
+    IfGuardEmitter IfGuard(
+        OS,
+        "defined(GET_INSTRINFO_MC_DESC) || defined(GET_INSTRINFO_CTOR_DTOR)");
+    NamespaceEmitter NS(OS, "llvm");
 
-  OS << "namespace llvm {\n\n";
-
-  OS << "struct " << TargetName << "InstrTable {\n";
-  OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
-  OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
-        "\"Unwanted padding between Insts and OperandInfo\");\n";
-  OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
-  OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
-        "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
-  OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U) << "];\n";
-  OS << "};\n\n";
-
-  OS << "} // end namespace llvm\n";
-  OS << "#endif // defined(GET_INSTRINFO_MC_DESC) || "
-        "defined(GET_INSTRINFO_CTOR_DTOR)\n\n";
+    OS << "struct " << TargetName << "InstrTable {\n";
+    OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
+    OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
+          "\"Unwanted padding between Insts and OperandInfo\");\n";
+    OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
+    OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
+          "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
+    OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U)
+       << "];\n";
+    OS << "};";
+  }
 
   const CodeGenRegBank &RegBank = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();

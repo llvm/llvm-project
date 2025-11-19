@@ -2388,9 +2388,9 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       // type, so evaluating it returns a null Value.  However, a conditional
       // with non-void type must return a non-null Value.
       if (!result && !e->getType()->isVoidType()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "throw expression in conditional operator");
-        result = {};
+        result = builder.getConstant(
+            loc, cir::PoisonAttr::get(builder.getContext(),
+                                      cgf.convertType(e->getType())));
       }
 
       return result;
