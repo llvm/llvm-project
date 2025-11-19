@@ -2566,7 +2566,7 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
     else
       truncResultExt = mlir::LLVM::ZExtOp::create(rewriter, loc,
                                                   encompassedLLVMTy, truncResult);
-    mlir::Value truncOverflow =
+    auto truncOverflow =
         mlir::LLVM::ICmpOp::create(rewriter, loc, mlir::LLVM::ICmpPredicate::ne,
                                    truncResultExt, result);
 
