@@ -56,6 +56,35 @@ class StdAtomicTestCase(TestBase):
         self.assertEqual(s.GetChildAtIndex(0).GetValueAsUnsigned(0), 1, "s.x == 1")
         self.assertEqual(s.GetChildAtIndex(1).GetValueAsUnsigned(0), 2, "s.y == 2")
 
+        # float
+        atomic_float = self.get_variable("atomic_float")
+        val_float = atomic_float.child[0]
+        self.assertIsNotNone(val_float, msg="atomic_float child is None.")
+        self.assertAlmostEqual(float(val_float.value), 3.14, places=2)
+        # double
+        atomic_double = self.get_variable("atomic_double")
+        val_float = atomic_double.child[0]
+        self.assertIsNotNone(val_float, msg="atomic_double child is None.")
+        self.assertAlmostEqual(float(val_float.value), 6.28, places=2)
+
+        # bool
+        atomic_bool = self.get_variable("atomic_bool")
+        val_bool = atomic_bool.child[0]
+        self.assertIsNotNone(val_bool, msg="atomic_bool child is None.")
+        self.assertEqual(bool(val_bool.unsigned), True)
+
+        # func
+        atomic_func = self.get_variable("atomic_func")
+        val_func = atomic_func.child[0]
+        self.assertIsNotNone(val_func, msg="atomic_func child is None.")
+        self.assertNotEqual(val_func.unsigned, 0)
+
+        # pointer
+        atomic_pointer = self.get_variable("atomic_pointer")
+        val_pointer = atomic_pointer.child[0]
+        self.assertIsNotNone(val_pointer, msg="atomic_pointer child is None.")
+        self.assertNotEqual(val_pointer.unsigned, 0)
+
         # Try printing the child that points to its own parent object.
         # This should just treat the atomic pointer as a normal pointer.
         self.expect("frame var p.child", substrs=["Value = 0x"])
@@ -64,10 +93,29 @@ class StdAtomicTestCase(TestBase):
             "frame var p.child.parent", substrs=["p.child.parent = {\n  Value = 0x"]
         )
 
+    def verify_floating_point_equal(self, value: str, expected: float):
+        self.assertAlmostEqual(float(value), float(expected), places=4)
+
     @skipIf(compiler=["gcc"])
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    # the data layout is different in new libstdc++ versions
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx_11(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-std=c++11"})
+        self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx_17(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-std=c++17"})
         self.do_test()
 
     @add_test_categories(["msvcstl"])

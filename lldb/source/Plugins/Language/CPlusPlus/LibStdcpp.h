@@ -44,6 +44,9 @@ bool LibStdcppVariantSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libstdc++ std::variant<>
 
+bool LibStdcppAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+
 bool LibStdcppPartialOrderingSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libstdc++ std::partial_ordering
@@ -55,6 +58,10 @@ bool LibStdcppWeakOrderingSummaryProvider(
 bool LibStdcppStrongOrderingSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libstdc++ std::strong_ordering
+
+SyntheticChildrenFrontEnd *
+LibStdcppAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        const lldb::ValueObjectSP &);
 
 SyntheticChildrenFrontEnd *
 LibstdcppMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,

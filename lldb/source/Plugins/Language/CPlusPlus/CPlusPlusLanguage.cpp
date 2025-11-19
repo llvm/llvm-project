@@ -1526,6 +1526,24 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
+GenericAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                      const lldb::ValueObjectSP &valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlAtomic(*valobj_sp))
+    return MsvcStlAtomicSyntheticFrontEndCreator(children, valobj_sp);
+  return LibStdcppAtomicSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static bool GenericAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
+                                         const TypeSummaryOptions &options) {
+  if (IsMsvcStlAtomic(valobj))
+    return MsvcStlAtomicSummaryProvider(valobj, stream, options);
+  return LibStdcppAtomicSummaryProvider(valobj, stream, options);
+}
+
+static lldb_private::SyntheticChildrenFrontEnd *
 GenericSmartPointerSyntheticFrontEndCreator(CXXSyntheticChildren *children,
                                             lldb::ValueObjectSP valobj_sp) {
   if (!valobj_sp)
@@ -1797,6 +1815,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring_view summary provider"));
 
+  AddCXXSynthetic(cpp_category_sp, GenericAtomicSyntheticFrontEndCreator,
+                  "std::atomic synthetic children", "^std::atomic<.+>$",
+                  stl_synth_flags, true);
   // NOTE: it is loaded as a common formatter because the libc++ version is not
   // in the `__1` namespace, hence we need to dispatch based on the class
   // layout.
@@ -1854,6 +1875,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "std::initializer_list summary provider",
                 "^std::initializer_list<.+>$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericAtomicSummaryProvider,
+                "std::atomic summary provider", "^std::atomic<.+>$",
+                stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
                 "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
@@ -1941,13 +1965,6 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   stl_summary_flags.SetDontShowChildren(false);
 
-  AddCXXSynthetic(cpp_category_sp, MsvcStlAtomicSyntheticFrontEndCreator,
-                  "MSVC STL std::atomic synthetic children",
-                  "^std::atomic<.+>$", stl_synth_flags, true);
-
-  AddCXXSummary(cpp_category_sp, MsvcStlAtomicSummaryProvider,
-                "MSVC STL std::atomic summary provider", "^std::atomic<.+>$",
-                stl_summary_flags, true);
   AddCXXSynthetic(cpp_category_sp, MsvcStlTreeIterSyntheticFrontEndCreator,
                   "MSVC STL tree iterator synthetic children",
                   "^std::_Tree(_const)?_iterator<.+>(( )?&)?$", stl_synth_flags,
