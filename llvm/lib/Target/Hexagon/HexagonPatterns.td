@@ -391,7 +391,6 @@ def Fptoui: pf1<fp_to_uint>;
 def Sitofp: pf1<sint_to_fp>;
 def Uitofp: pf1<uint_to_fp>;
 
-
 // --(1) Immediate -------------------------------------------------------
 //
 
@@ -474,6 +473,18 @@ def: OpR_R_pat<F2_conv_df2uw_chop, pf1<fp_to_uint>, i32, F64>;
 def: OpR_R_pat<F2_conv_sf2ud_chop, pf1<fp_to_uint>, i64, F32>;
 def: OpR_R_pat<F2_conv_df2ud_chop, pf1<fp_to_uint>, i64, F64>;
 
+def: Pat<(i32 (fp_to_bf16 F32:$v)),
+         (C2_mux (F2_sfclass F32:$v, 0x10), (A2_tfrsi(i32 0x7fff)),
+           (C2_mux
+             (C2_cmpeq
+               (A2_and F32:$v, (A2_tfrsi (i32 0x1FFFF))),
+               (A2_tfrsi (i32 0x08000))),
+             (A2_and (A2_asrh F32:$v), (A2_tfrsi (i32 65535))),
+             (A2_and
+               (A2_asrh
+                 (A2_add F32:$v, (A2_and F32:$v, (A2_tfrsi (i32 0x8000))))),
+                 (A2_tfrsi (i32 65535))))
+         )>;
 // Bitcast is different than [fp|sint|uint]_to_[sint|uint|fp].
 def: Pat<(i32 (bitconvert F32:$v)), (I32:$v)>;
 def: Pat<(f32 (bitconvert I32:$v)), (F32:$v)>;
