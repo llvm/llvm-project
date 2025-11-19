@@ -769,6 +769,7 @@ void CodeGenAction::generateLLVMIR() {
     config.NSWOnLoopVarInc = false;
 
   config.ComplexRange = opts.getComplexRange();
+  config.LowerThroughMLIR = invoc.getLoweringOpts().getLowerThroughMLIR();
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());

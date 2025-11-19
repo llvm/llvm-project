@@ -109,6 +109,21 @@ void addDebugInfoPass(mlir::PassManager &pm,
 
 void addFIRToLLVMPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config) {
+  if (disableFirToLlvmIr)
+    return;
+
+  if (config.LowerThroughMLIR) {
+    pm.addPass(createConvertFIRToMLIRPass());
+    pm.addPass(mlir::memref::createFoldMemRefAliasOpsPass());
+    pm.addPass(mlir::createMem2Reg());
+    pm.addPass(mlir::createCSEPass());
+    pm.addPass(mlir::createCanonicalizerPass());
+    pm.addPass(mlir::memref::createExpandOpsPass());
+    pm.addPass(mlir::memref::createExpandStridedMetadataPass());
+    pm.addPass(mlir::createLowerAffinePass());
+    pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
+  }
+
   fir::FIRToLLVMPassOptions options;
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
   options.skipExternalRttiDefinition = skipExternalRttiDefinition;
@@ -117,13 +132,11 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
   options.ComplexRange = config.ComplexRange;
-  addPassConditionally(pm, disableFirToLlvmIr,
-                       [&]() { return fir::createFIRToLLVMPass(options); });
+  pm.addPass(fir::createFIRToLLVMPass(options));
+
   // The dialect conversion framework may leave dead unrealized_conversion_cast
   // ops behind, so run reconcile-unrealized-casts to clean them up.
-  addPassConditionally(pm, disableFirToLlvmIr, [&]() {
-    return mlir::createReconcileUnrealizedCastsPass();
-  });
+  pm.addPass(mlir::createReconcileUnrealizedCastsPass());
 }
 
 void addLLVMDialectToLLVMPass(mlir::PassManager &pm,

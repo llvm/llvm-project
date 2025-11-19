@@ -137,6 +137,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
+  bool LowerThroughMLIR = false; ///< Lower form FIR through MLIR to LLVM
   std::string InstrumentFunctionEntry =
       ""; ///< Name of the instrument-function that is called on each
           ///< function-entry

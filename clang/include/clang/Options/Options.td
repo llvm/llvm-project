@@ -7217,6 +7217,11 @@ def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
 
+def flang_experimental_lower_through_mlir
+  : Flag<["-"], "flang-experimental-lower-through-mlir">,
+    Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
+    HelpText<"Lower form FIR through MLIR to LLVM (experimental)">;
+
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
