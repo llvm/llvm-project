@@ -8302,6 +8302,49 @@ SDValue TargetLowering::expandFunnelShift(SDNode *Node,
   return DAG.getNode(ISD::OR, DL, VT, ShX, ShY);
 }
 
+SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue X = Node->getOperand(0);
+  SDValue Y = Node->getOperand(1);
+  unsigned BW = VT.getScalarSizeInBits();
+
+  if (VT.isVector() && isOperationLegalOrCustomOrPromote(
+                           Node->getOpcode(), VT.getVectorElementType()))
+    return DAG.UnrollVectorOp(Node);
+
+  SDValue Res = DAG.getConstant(0, DL, VT);
+  switch (Node->getOpcode()) {
+  case ISD::CLMUL: {
+    for (unsigned I = 0; I < BW; ++I) {
+      SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
+      SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
+      Res = DAG.getNode(ISD::XOR, DL, VT, Res, Mul);
+    }
+    break;
+  }
+  case ISD::CLMULR: {
+    SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
+    SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
+    SDValue ResR = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
+    Res = DAG.getNode(ISD::BITREVERSE, DL, VT, ResR);
+    break;
+  }
+  case ISD::CLMULH: {
+    EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), 2 * BW);
+    SDValue XExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, X);
+    SDValue YExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, Y);
+    SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, ExtVT, XExt, YExt);
+    SDValue HiBits = DAG.getNode(ISD::SRL, DL, ExtVT, ClMul,
+                                 DAG.getShiftAmountConstant(BW, VT, DL));
+    Res = DAG.getNode(ISD::TRUNCATE, DL, VT, HiBits);
+    break;
+  }
+  }
+  return Res;
+}
+
 // TODO: Merge with expandFunnelShift.
 SDValue TargetLowering::expandROT(SDNode *Node, bool AllowVectorOps,
                                   SelectionDAG &DAG) const {

@@ -204,6 +204,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
   case ISD::VP_AND:
   case ISD::VP_OR:
   case ISD::VP_XOR:
@@ -3162,6 +3165,12 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
     ExpandIntRes_FunnelShift(N, Lo, Hi);
     break;
 
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
+    ExpandIntRes_CLMUL(N, Lo, Hi);
+    break;
+
   case ISD::VSCALE:
     ExpandIntRes_VSCALE(N, Lo, Hi);
     break;
@@ -5490,6 +5499,11 @@ void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N, SDValue &Lo,
   SDValue Select3 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In3, In4);
   Lo = DAG.getNode(Opc, DL, HalfVT, Select2, Select1, NewShAmt);
   Hi = DAG.getNode(Opc, DL, HalfVT, Select3, Select2, NewShAmt);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandCLMUL(N, DAG);
+  SplitInteger(Res, Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
