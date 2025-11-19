@@ -1842,15 +1842,15 @@ def SVPMULLT_PAIR_N_U64 : SInst<"svpmullt_pair[_n_{d}]", "dda", "Ul", MergeNone,
 }
 
 let SVETargetGuard = "sve-aes2", SMETargetGuard = "sve-aes2,ssve-aes" in {
-def SVAESD_X2   : SInst<"svaesd_laneq[_{d}_x2]",   "22di", "Uc", MergeNone, "aarch64_sve_aesd_laneq_x2", [IsOverloadNone, VerifyRuntimeMode]>;
-def SVAESDIMC_X2 : SInst<"svaesdimc_laneq[_{d}_x2]", "22di",  "Uc", MergeNone, "aarch64_sve_aesdimc_laneq_x2", [IsOverloadNone, VerifyRuntimeMode]>;
-def SVAESE_X2   : SInst<"svaese_laneq[_{d}_x2]",   "22di", "Uc", MergeNone, "aarch64_sve_aese_laneq_x2", [IsOverloadNone, VerifyRuntimeMode]>;
-def SVAESEMC_X2  : SInst<"svaesemc_laneq[_{d}_x2]",  "22di",  "Uc", MergeNone, "aarch64_sve_aesemc_laneq_x2", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESD_X2   : SInst<"svaesd_lane[_{d}_x2]",   "22di", "Uc", MergeNone, "aarch64_sve_aesd_lane_x2", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESDIMC_X2 : SInst<"svaesdimc_lane[_{d}_x2]", "22di",  "Uc", MergeNone, "aarch64_sve_aesdimc_lane_x2", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESE_X2   : SInst<"svaese_lane[_{d}_x2]",   "22di", "Uc", MergeNone, "aarch64_sve_aese_lane_x2", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESEMC_X2  : SInst<"svaesemc_lane[_{d}_x2]",  "22di",  "Uc", MergeNone, "aarch64_sve_aesemc_lane_x2", [IsOverloadNone, VerifyRuntimeMode]>;
 
-def SVAESD_X4   : SInst<"svaesd_laneq[_{d}_x4]",   "44di", "Uc", MergeNone, "aarch64_sve_aesd_laneq_x4", [IsOverloadNone, VerifyRuntimeMode]>;
-def SVAESDIMC_X4 : SInst<"svaesdimc_laneq[_{d}_x4]", "44di",  "Uc", MergeNone, "aarch64_sve_aesdimc_laneq_x4", [IsOverloadNone, VerifyRuntimeMode]>;
-def SVAESE_X4   : SInst<"svaese_laneq[_{d}_x4]",   "44di", "Uc", MergeNone, "aarch64_sve_aese_laneq_x4", [IsOverloadNone, VerifyRuntimeMode]>;
-def SVAESEMC_X4  : SInst<"svaesemc_laneq[_{d}_x4]",  "44di",  "Uc", MergeNone, "aarch64_sve_aesemc_laneq_x4", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESD_X4   : SInst<"svaesd_lane[_{d}_x4]",   "44di", "Uc", MergeNone, "aarch64_sve_aesd_lane_x4", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESDIMC_X4 : SInst<"svaesdimc_lane[_{d}_x4]", "44di",  "Uc", MergeNone, "aarch64_sve_aesdimc_lane_x4", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESE_X4   : SInst<"svaese_lane[_{d}_x4]",   "44di", "Uc", MergeNone, "aarch64_sve_aese_lane_x4", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESEMC_X4  : SInst<"svaesemc_lane[_{d}_x4]",  "44di",  "Uc", MergeNone, "aarch64_sve_aesemc_lane_x4", [IsOverloadNone, VerifyRuntimeMode]>;
 
 def SVPMULL_PAIR_U64   : SInst<"svpmull_pair[_{d}_x2]",   "2dd", "Ul", MergeNone, "aarch64_sve_pmull_pair_x2", [IsOverloadNone, VerifyRuntimeMode]>;
 def SVPMULL_PAIR_N_U64 : SInst<"svpmull_pair[_n_{d}_x2]", "2da", "Ul", MergeNone, "aarch64_sve_pmull_pair_x2", [IsOverloadNone, VerifyRuntimeMode]>;

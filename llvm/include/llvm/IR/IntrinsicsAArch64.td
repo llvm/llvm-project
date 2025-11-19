@@ -4206,15 +4206,15 @@ let TargetPrefix = "aarch64" in {
        llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_i32_ty],
       [ImmArg<ArgIndex<5>>, IntrNoMem]>;
 
-  def int_aarch64_sve_aesd_laneq_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
-  def int_aarch64_sve_aesdimc_laneq_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
-  def int_aarch64_sve_aese_laneq_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
-  def int_aarch64_sve_aesemc_laneq_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
+  def int_aarch64_sve_aesd_lane_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
+  def int_aarch64_sve_aesdimc_lane_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
+  def int_aarch64_sve_aese_lane_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
+  def int_aarch64_sve_aesemc_lane_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
 
-  def int_aarch64_sve_aesd_laneq_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
-  def int_aarch64_sve_aesdimc_laneq_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
-  def int_aarch64_sve_aese_laneq_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
-  def int_aarch64_sve_aesemc_laneq_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
+  def int_aarch64_sve_aesd_lane_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
+  def int_aarch64_sve_aesdimc_lane_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
+  def int_aarch64_sve_aese_lane_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
+  def int_aarch64_sve_aesemc_lane_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
 
   def int_aarch64_sve_pmull_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
       [llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;

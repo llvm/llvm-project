@@ -6249,28 +6249,28 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::FMINNM_VG4_4Z4Z_S, AArch64::FMINNM_VG4_4Z4Z_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
       return;
-    case Intrinsic::aarch64_sve_aese_laneq_x2:
+    case Intrinsic::aarch64_sve_aese_lane_x2:
       SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::AESE_2ZZI_B);
       return;
-    case Intrinsic::aarch64_sve_aesd_laneq_x2:
+    case Intrinsic::aarch64_sve_aesd_lane_x2:
       SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::AESD_2ZZI_B);
       return;
-    case Intrinsic::aarch64_sve_aesemc_laneq_x2:
+    case Intrinsic::aarch64_sve_aesemc_lane_x2:
       SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::AESEMC_2ZZI_B);
       return;
-    case Intrinsic::aarch64_sve_aesdimc_laneq_x2:
+    case Intrinsic::aarch64_sve_aesdimc_lane_x2:
       SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::AESDIMC_2ZZI_B);
       return;
-    case Intrinsic::aarch64_sve_aese_laneq_x4:
+    case Intrinsic::aarch64_sve_aese_lane_x4:
       SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESE_4ZZI_B);
       return;
-    case Intrinsic::aarch64_sve_aesd_laneq_x4:
+    case Intrinsic::aarch64_sve_aesd_lane_x4:
       SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESD_4ZZI_B);
       return;
-    case Intrinsic::aarch64_sve_aesemc_laneq_x4:
+    case Intrinsic::aarch64_sve_aesemc_lane_x4:
       SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESEMC_4ZZI_B);
       return;
-    case Intrinsic::aarch64_sve_aesdimc_laneq_x4:
+    case Intrinsic::aarch64_sve_aesdimc_lane_x4:
       SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESDIMC_4ZZI_B);
       return;
     case Intrinsic::aarch64_sve_pmlal_pair_x2:

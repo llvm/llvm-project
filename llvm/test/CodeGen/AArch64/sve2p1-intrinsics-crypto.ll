@@ -13,7 +13,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @aese_x2(<vscale x 16 x i8> %a
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    aese { z0.b, z1.b }, { z0.b, z1.b }, z2.q[0]
 ; CHECK-NEXT:    ret
-  %out = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.laneq.x2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 0)
+  %out = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.lane.x2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 0)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %out
 }
 
@@ -26,7 +26,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    aese { z0.b - z3.b }, { z0.b - z3.b }, z2.q[0]
 ; CHECK-NEXT:    ret
-  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }  @llvm.aarch64.sve.aese.laneq.x4(<vscale x 16 x i8> %a,
+  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }  @llvm.aarch64.sve.aese.lane.x4(<vscale x 16 x i8> %a,
                                                                                                     <vscale x 16 x i8> %b, <vscale x 16 x i8> %c,
                                                                                                     <vscale x 16 x i8> %d, <vscale x 16 x i8> %c , i32 0)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %out
@@ -43,7 +43,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @aesd_x2(<vscale x 16 x i8> %a
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    aesd { z0.b, z1.b }, { z0.b, z1.b }, z2.q[0]
 ; CHECK-NEXT:    ret
-  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.laneq.x2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 0)
+  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.lane.x2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 0)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %out
 }
 
@@ -56,7 +56,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    aesd { z0.b - z3.b }, { z0.b - z3.b }, z2.q[0]
 ; CHECK-NEXT:    ret
-  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }  @llvm.aarch64.sve.aesd.laneq.x4(<vscale x 16 x i8> %a,
+  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }  @llvm.aarch64.sve.aesd.lane.x4(<vscale x 16 x i8> %a,
                                                                                                     <vscale x 16 x i8> %b, <vscale x 16 x i8> %c,
                                                                                                     <vscale x 16 x i8> %d, <vscale x 16 x i8> %c , i32 0)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %out
@@ -74,7 +74,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @aesemc_x2(<vscale x 16 x i8> 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    aesemc { z0.b, z1.b }, { z0.b, z1.b }, z2.q[0]
 ; CHECK-NEXT:    ret
-  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.laneq.x2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 0)
+  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.lane.x2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 0)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %out
 }
 
@@ -87,7 +87,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    aesemc { z0.b - z3.b }, { z0.b - z3.b }, z2.q[0]
 ; CHECK-NEXT:    ret
-  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }  @llvm.aarch64.sve.aesemc.laneq.x4(<vscale x 16 x i8> %a,
+  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }  @llvm.aarch64.sve.aesemc.lane.x4(<vscale x 16 x i8> %a,
                                                                                                     <vscale x 16 x i8> %b, <vscale x 16 x i8> %c,
                                                                                                     <vscale x 16 x i8> %d, <vscale x 16 x i8> %c , i32 0)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %out
@@ -104,7 +104,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @aesdimc_x2(<vscale x 16 x i8>
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    aesdimc { z0.b, z1.b }, { z0.b, z1.b }, z2.q[0]
 ; CHECK-NEXT:    ret
-  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.laneq.x2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 0)
+  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.lane.x2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 0)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %out
 }
 
@@ -117,7 +117,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    aesdimc { z0.b - z3.b }, { z0.b - z3.b }, z2.q[0]
 ; CHECK-NEXT:    ret
-  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }  @llvm.aarch64.sve.aesdimc.laneq.x4(<vscale x 16 x i8> %a,
+  %out= call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }  @llvm.aarch64.sve.aesdimc.lane.x4(<vscale x 16 x i8> %a,
                                                                                                     <vscale x 16 x i8> %b, <vscale x 16 x i8> %c,
                                                                                                     <vscale x 16 x i8> %d, <vscale x 16 x i8> %c , i32 0)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %out

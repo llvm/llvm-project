@@ -28,122 +28,122 @@
 
 // CHECK-LABEL: @test_svaesd_u8_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.laneq.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.lane.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svaesd_u8_x211svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.laneq.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.lane.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x2_t test_svaesd_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesd_laneq,_u8_x2)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesd_lane,_u8_x2)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesdimc_u8_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.laneq.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.lane.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svaesdimc_u8_x211svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.laneq.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.lane.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x2_t test_svaesdimc_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesdimc_laneq,_u8_x2)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesdimc_lane,_u8_x2)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaese_u8_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.laneq.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.lane.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svaese_u8_x211svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.laneq.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.lane.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x2_t test_svaese_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaese_laneq,_u8_x2)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaese_lane,_u8_x2)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesemc_u8_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.laneq.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.lane.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svaesemc_u8_x211svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.laneq.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.lane.x2(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x2_t test_svaesemc_u8_x2(svuint8x2_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesemc_laneq,_u8_x2)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesemc_lane,_u8_x2)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesd_u8_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.laneq.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.lane.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svaesd_u8_x411svuint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.laneq.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesd.lane.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x4_t test_svaesd_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesd_laneq,_u8_x4)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesd_lane,_u8_x4)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesdimc_u8_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.laneq.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.lane.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svaesdimc_u8_x411svuint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.laneq.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesdimc.lane.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x4_t test_svaesdimc_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesdimc_laneq,_u8_x4)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesdimc_lane,_u8_x4)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaese_u8_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.laneq.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.lane.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svaese_u8_x411svuint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.laneq.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aese.lane.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x4_t test_svaese_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaese_laneq,_u8_x4)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaese_lane,_u8_x4)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svaesemc_u8_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.laneq.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.lane.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svaesemc_u8_x411svuint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.laneq.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.aesemc.lane.x4(<vscale x 16 x i8> [[OP1_COERCE0:%.*]], <vscale x 16 x i8> [[OP1_COERCE1:%.*]], <vscale x 16 x i8> [[OP1_COERCE2:%.*]], <vscale x 16 x i8> [[OP1_COERCE3:%.*]], <vscale x 16 x i8> [[OP2:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 svuint8x4_t test_svaesemc_u8_x4(svuint8x4_t op1, svuint8_t op2) STREAMING
 {
-  return SVE_ACLE_FUNC(svaesemc_laneq,_u8_x4)(op1, op2, 0);
+  return SVE_ACLE_FUNC(svaesemc_lane,_u8_x4)(op1, op2, 0);
 }
 
 // CHECK-LABEL: @test_svpmull_u64_x2(
