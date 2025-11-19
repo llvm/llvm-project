@@ -18,41 +18,41 @@
 # RUN: llvm-readelf -d %t.exe | FileCheck --check-prefix=DYN-INIT %s
 # RUN: llvm-readelf -l %t.exe | FileCheck --check-prefix=PH-INTERP %s
 # RUN: llvm-readelf -r %t.exe | FileCheck --check-prefix=RELOC-PIE %s
-# RUN: llvm-bolt %t.exe -o %t --instrument
+# RUN: llvm-bolt %t.exe -o %t --instrument | FileCheck --check-prefix=CHECK-BOLT-RT-EP %s
 # RUN: llvm-readelf -hdrs %t | FileCheck --check-prefix=CHECK-INIT-EP %s
-# RUN: llvm-bolt %t.exe -o %t-no-ep --instrument --runtime-lib-init-hook=init
+# RUN: llvm-bolt %t.exe -o %t-no-ep --instrument --runtime-lib-init-hook=init | FileCheck --check-prefix=CHECK-BOLT-RT-INIT %s
 # RUN: llvm-readelf -hdrs %t-no-ep | FileCheck --check-prefix=CHECK-INIT-NO-EP %s
-# RUN: llvm-bolt %t.exe -o %t-no-ep --instrument --runtime-lib-init-hook=init_array
+# RUN: llvm-bolt %t.exe -o %t-no-ep --instrument --runtime-lib-init-hook=init_array | FileCheck --check-prefix=CHECK-BOLT-RT-INIT-ARRAY %s
 # RUN: llvm-readelf -hdrs %t-no-ep | FileCheck --check-prefix=CHECK-INIT-ARRAY-NO-EP %s
 
 # RUN: %clang -shared %cflags -pie %s -Wl,-q -o %t-shared.exe
 # RUN: llvm-readelf -d %t-shared.exe | FileCheck --check-prefix=DYN-INIT %s
 # RUN: llvm-readelf -l %t-shared.exe | FileCheck --check-prefix=PH-INTERP-SHARED %s
 # RUN: llvm-readelf -r %t-shared.exe | FileCheck --check-prefix=RELOC-SHARED-PIE %s
-# RUN: llvm-bolt %t-shared.exe -o %t-shared --instrument
+# RUN: llvm-bolt %t-shared.exe -o %t-shared --instrument | FileCheck --check-prefix=CHECK-BOLT-RT-INIT %s
 # RUN: llvm-readelf -hdrs %t-shared | FileCheck --check-prefix=CHECK-SHARED-INIT %s
 
 # RUN: %clang %cflags -pie %s -Wl,-q,-init=0 -o %t-no-init.exe
 # RUN: llvm-readelf -d %t-no-init.exe | FileCheck --check-prefix=DYN-NO-INIT %s
 # RUN: llvm-readelf -l %t-no-init.exe | FileCheck --check-prefix=PH-INTERP %s
 # RUN: llvm-readelf -r %t-no-init.exe | FileCheck --check-prefix=RELOC-PIE %s
-# RUN: llvm-bolt %t-no-init.exe -o %t-no-init --instrument
+# RUN: llvm-bolt %t-no-init.exe -o %t-no-init --instrument | FileCheck --check-prefix=CHECK-BOLT-RT-EP %s
 # RUN: llvm-readelf -hdrs %t-no-init | FileCheck --check-prefix=CHECK-NO-INIT-EP %s
-# RUN: llvm-bolt %t-no-init.exe -o %t-no-init-no-ep --instrument --runtime-lib-init-hook=init
+# RUN: llvm-bolt %t-no-init.exe -o %t-no-init-no-ep --instrument --runtime-lib-init-hook=init | FileCheck --check-prefix=CHECK-BOLT-RT-INIT-ARRAY %s
 # RUN: llvm-readelf -hdrs %t-no-init-no-ep | FileCheck --check-prefix=CHECK-NO-INIT-NO-EP %s
 
 # RUN: %clang -shared %cflags -pie %s -Wl,-q,-init=0 -o %t-shared-no-init.exe
 # RUN: llvm-readelf -d %t-shared-no-init.exe | FileCheck --check-prefix=DYN-NO-INIT %s
 # RUN: llvm-readelf -l %t-shared-no-init.exe | FileCheck --check-prefix=PH-INTERP-SHARED %s
 # RUN: llvm-readelf -r %t-shared-no-init.exe | FileCheck --check-prefix=RELOC-SHARED-PIE %s
-# RUN: llvm-bolt %t-shared-no-init.exe -o %t-shared-no-init --instrument
+# RUN: llvm-bolt %t-shared-no-init.exe -o %t-shared-no-init --instrument | FileCheck --check-prefix=CHECK-BOLT-RT-INIT-ARRAY %s
 # RUN: llvm-readelf -drs %t-shared-no-init | FileCheck --check-prefix=CHECK-SHARED-NO-INIT %s
 
 ## Create a dummy shared library to link against to force creation of the dynamic section.
 # RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -shared -o %t-stub.so
 # RUN: %clang %cflags %s -no-pie -Wl,-q,-init=0 %t-stub.so -o %t-no-pie-no-init.exe
 # RUN: llvm-readelf -r %t-no-pie-no-init.exe | FileCheck --check-prefix=RELOC-NO-PIE %s
-# RUN: llvm-bolt %t-no-pie-no-init.exe -o %t-no-pie-no-init --instrument
+# RUN: llvm-bolt %t-no-pie-no-init.exe -o %t-no-pie-no-init --instrument | FileCheck --check-prefix=CHECK-BOLT-RT-EP %s
 # RUN: llvm-readelf -hds %t-no-pie-no-init | FileCheck --check-prefix=CHECK-NO-PIE-NO-INIT-EP %s
 
 ## With init: dynamic section should contain DT_INIT
@@ -79,6 +79,21 @@
 
 ## Without PIE: binary should not have relative relocations
 # RELOC-NO-PIE-NOT: R_AARCH64_RELATIVE
+
+## Check BOLT output output initialization hook (ELF Header Entry Point)
+# CHECK-BOLT-RT-EP: runtime library initialization was hooked via ELF Header Entry Point
+# CHECK-BOLT-RT-EP-NOT: runtime library initialization was hooked via DT_INIT
+# CHECK-BOLT-RT-EP-NOT: runtime library initialization was hooked via .init_array entry
+
+## Check BOLT output output initialization hook (DT_INIT)
+# CHECK-BOLT-RT-INIT-NOT: runtime library initialization was hooked via ELF Header Entry Point
+# CHECK-BOLT-RT-INIT: runtime library initialization was hooked via DT_INIT
+# CHECK-BOLT-RT-INIT-NOT: runtime library initialization was hooked via .init_array entry
+
+## Check BOLT output output initialization hook (.init_array entry)
+# CHECK-BOLT-RT-INIT-ARRAY-NOT: runtime library initialization was hooked via ELF Header Entry Point
+# CHECK-BOLT-RT-INIT-ARRAY-NOT: runtime library initialization was hooked via DT_INIT
+# CHECK-BOLT-RT-INIT-ARRAY: runtime library initialization was hooked via .init_array entry
 
 ## Check that entry point address is set to __bolt_runtime_start for PIE executable with DT_INIT
 # CHECK-INIT-EP:               ELF Header:
