@@ -16,11 +16,11 @@ define amdgpu_kernel void @v_permlanex16_b32(ptr addrspace(1) %out, i32 %src0, i
 }
 
 ; CHECK:  DIVERGENT:   %v = call i32 @llvm.amdgcn.permlane16.var(i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
-; CHECK:               %v1 = call i32 @llvm.amdgcn.permlanex16.i32(i32 %v, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+; CHECK:               %v1 = call i32 @llvm.amdgcn.permlanex16.i32(i32 %src0, i32 %v, i32 %src1, i32 %src2, i1 false, i1 false)
 ; CHECK:               store i32 %v1, ptr addrspace(1) %out, align 4
 define amdgpu_kernel void @div_permlane16_var_uni_usr_x16(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #0 {
   %v = call i32 @llvm.amdgcn.permlane16.var(i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
-  %v1 = call i32 @llvm.amdgcn.permlanex16.i32(i32 %v, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+  %v1 = call i32 @llvm.amdgcn.permlanex16.i32(i32 %src0, i32 %v, i32 %src1, i32 %src2, i1 false, i1 false) #0
   store i32 %v1, ptr addrspace(1) %out
   ret void
 }
@@ -36,11 +36,11 @@ define amdgpu_kernel void @div_permlane16_var_uni_x16(ptr addrspace(1) %out, i32
 }
 
 ; CHECK:  DIVERGENT:   %v = call i32 @llvm.amdgcn.permlane16.var(i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
-; CHECK:               %v1 = call i32 @llvm.amdgcn.permlane16.i32(i32 %v, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+; CHECK:               %v1 = call i32 @llvm.amdgcn.permlane16.i32(i32 %src0, i32 %v, i32 %src1, i32 %src2, i1 false, i1 false)
 ; CHECK:               store i32 %v1, ptr addrspace(1) %out, align 4
 define amdgpu_kernel void @div_permlane16_var_uni_usr_16(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #0 {
   %v = call i32 @llvm.amdgcn.permlane16.var(i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
-  %v1 = call i32 @llvm.amdgcn.permlane16.i32(i32 %v, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+  %v1 = call i32 @llvm.amdgcn.permlane16.i32(i32 %src0, i32 %v, i32 %src1, i32 %src2, i1 false, i1 false) #0
   store i32 %v1, ptr addrspace(1) %out
   ret void
 }
