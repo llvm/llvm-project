@@ -835,7 +835,6 @@ def CIR_CtorKind : CIR_I32EnumAttr<"CtorKind", "CXX Constructor Kind", [
   let genSpecializedAttr = 0;
 }
 
-
 def CIR_CXXCtorAttr : CIR_Attr<"CXXCtor", "cxx_ctor"> {
   let summary = "Marks a function as a C++ constructor";
   let description = [{

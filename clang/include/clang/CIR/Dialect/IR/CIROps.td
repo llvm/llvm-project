@@ -2583,7 +2583,6 @@ def CIR_FuncOp : CIR_Op<"func", [
     bool isCXXSpecialMemberFunction();
 
     bool isCxxConstructor();
-
     bool isCxxDestructor();
 
     /// Returns true if this function is a copy or move assignment operator.
