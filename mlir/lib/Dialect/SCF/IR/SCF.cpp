@@ -3582,8 +3582,9 @@ struct WhileMoveIfDown : public OpRewritePattern<WhileOp> {
 
   LogicalResult matchAndRewrite(WhileOp op,
                                 PatternRewriter &rewriter) const override {
-    // Check that the first operation in the before region is an scf.if whose
-    // condition matches the condition of the scf.condition op.
+    // Check that the first opeation produces one result and that result must
+    // have exactly two uses (these two uses come from the `scf.if` and
+    // `scf.condition` operations).
     Operation &condOp = op.getBeforeBody()->front();
     if (condOp.getNumResults() != 1 || !condOp.getResult(0).hasNUses(2))
       return failure();
