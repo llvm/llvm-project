@@ -485,9 +485,8 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
                          SmallVectorImpl<MachineInstr *> &InsInstrs,
                          SmallVectorImpl<MachineInstr *> &DelInstrs,
                          MachineTraceMetrics::Ensemble *TraceEnsemble,
-                         SparseSet<LiveRegUnit> &RegUnits,
-                         const TargetInstrInfo *TII, unsigned Pattern,
-                         bool IncrementalUpdate) {
+                         LiveRegUnitSet &RegUnits, const TargetInstrInfo *TII,
+                         unsigned Pattern, bool IncrementalUpdate) {
   // If we want to fix up some placeholder for some target, do it now.
   // We need this because in genAlternativeCodeSequence, we have not decided the
   // better pattern InsInstrs or DelInstrs, so we don't want generate some
@@ -568,7 +567,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   if (!TraceEnsemble)
     TraceEnsemble = Traces->getEnsemble(TII->getMachineCombinerTraceStrategy());
 
-  SparseSet<LiveRegUnit> RegUnits;
+  LiveRegUnitSet RegUnits;
   RegUnits.setUniverse(TRI->getNumRegUnits());
 
   bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);

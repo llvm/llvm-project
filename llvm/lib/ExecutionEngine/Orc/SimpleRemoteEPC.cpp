@@ -448,7 +448,7 @@ Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {
   if (const char *ErrMsg = WFR.getOutOfBandError())
     return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
 
-  detail::SPSSerializableError Info;
+  orc::shared::detail::SPSSerializableError Info;
   SPSInputBuffer IB(WFR.data(), WFR.size());
   if (!SPSArgList<SPSError>::deserialize(IB, Info))
     return make_error<StringError>("Could not deserialize hangup info",

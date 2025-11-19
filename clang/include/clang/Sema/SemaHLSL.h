@@ -20,7 +20,9 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
@@ -130,9 +132,6 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
-  bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D);
-  void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                               const HLSLAnnotationAttr *AnnotationAttr);
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
   void DiagnoseAttrStageMismatch(
@@ -179,18 +178,11 @@ public:
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
-  T *createSemanticAttr(const ParsedAttr &AL,
+  T *createSemanticAttr(const AttributeCommonInfo &ACI,
                         std::optional<unsigned> Location) {
-    T *Attr = ::new (getASTContext()) T(getASTContext(), AL);
-    if (Attr->isSemanticIndexable())
-      Attr->setSemanticIndex(Location ? *Location : 0);
-    else if (Location.has_value()) {
-      Diag(Attr->getLocation(), diag::err_hlsl_semantic_indexing_not_supported)
-          << Attr->getAttrName()->getName();
-      return nullptr;
-    }
-
-    return Attr;
+    return ::new (getASTContext())
+        T(getASTContext(), ACI, ACI.getAttrName()->getName(),
+          Location.value_or(0));
   }
 
   void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
@@ -247,10 +239,27 @@ private:
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
 
+  struct SemanticInfo {
+    HLSLParsedSemanticAttr *Semantic;
+    std::optional<uint32_t> Index;
+  };
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                const RecordType *RT);
+
+  void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
+                               const HLSLAppliedSemanticAttr *SemanticAttr);
+  bool determineActiveSemanticOnScalar(FunctionDecl *FD,
+                                       DeclaratorDecl *OutputDecl,
+                                       DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic,
+                                       llvm::StringSet<> &ActiveInputSemantics);
+  bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *OutputDecl,
+                               DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+                               llvm::StringSet<> &ActiveInputSemantics);
+
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);

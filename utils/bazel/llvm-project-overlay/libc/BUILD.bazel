@@ -1000,6 +1000,7 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
         ":__support_uint128",
+        ":__support_wctype_utils",
         ":hdr_errno_macros",
     ],
 )
@@ -1024,6 +1025,7 @@ libc_support_library(
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
+        ":__support_wctype_utils",
         ":hdr_errno_macros",
     ],
 )
@@ -1101,6 +1103,7 @@ libc_support_library(
         ":func_realloc",
         ":hdr_stdio_macros",
         ":hdr_stdio_overlay",
+        ":string_memory_utils",
         ":types_off_t",
     ],
 )
@@ -1804,6 +1807,7 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":types_wchar_t",
         ":types_wint_t",
     ],
 )
@@ -1858,6 +1862,7 @@ libc_function(
     hdrs = ["src/ctype/isalnum.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1868,6 +1873,7 @@ libc_function(
     hdrs = ["src/ctype/isalpha.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1908,6 +1914,7 @@ libc_function(
     hdrs = ["src/ctype/isdigit.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1918,6 +1925,7 @@ libc_function(
     hdrs = ["src/ctype/isgraph.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1928,6 +1936,7 @@ libc_function(
     hdrs = ["src/ctype/islower.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1948,6 +1957,7 @@ libc_function(
     hdrs = ["src/ctype/ispunct.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1958,6 +1968,7 @@ libc_function(
     hdrs = ["src/ctype/isspace.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1968,6 +1979,7 @@ libc_function(
     hdrs = ["src/ctype/isupper.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1978,6 +1990,7 @@ libc_function(
     hdrs = ["src/ctype/isxdigit.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -1998,6 +2011,7 @@ libc_function(
     hdrs = ["src/ctype/tolower.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -2008,6 +2022,7 @@ libc_function(
     hdrs = ["src/ctype/toupper.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
     ],
 )
@@ -2964,6 +2979,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_exp2m1f16",
+    hdrs = ["src/__support/math/exp2m1f16.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_math_common_constants",
+        ":__support_math_expxf16_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_exp10",
     hdrs = ["src/__support/math/exp10.h"],
     deps = [
@@ -3092,8 +3123,12 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_sincosf_utils",
-    hdrs = ["src/__support/math/sincosf_utils.h"],
+    hdrs = [
+        "src/__support/math/sincosf_float_eval.h",
+        "src/__support/math/sincosf_utils.h",
+    ],
     deps = [
+        ":__support_fputil_double_double",
         ":__support_fputil_fp_bits",
         ":__support_fputil_polyeval",
         ":__support_range_reduction",
@@ -3757,7 +3792,7 @@ libc_math_function(
 libc_math_function(
     name = "exp2m1f16",
     additional_deps = [
-        ":__support_math_expxf16_utils",
+        ":__support_math_exp2m1f16",
     ],
 )
 
@@ -5248,6 +5283,7 @@ libc_function(
     hdrs = ["src/stdlib/strfromf.h"],
     deps = [
         ":__support_common",
+        ":printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -5258,6 +5294,7 @@ libc_function(
     hdrs = ["src/stdlib/strfromd.h"],
     deps = [
         ":__support_common",
+        ":printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -5268,6 +5305,7 @@ libc_function(
     hdrs = ["src/stdlib/strfroml.h"],
     deps = [
         ":__support_common",
+        ":printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -6481,12 +6519,34 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "printf_error_mapper",
+    hdrs = [
+        "src/stdio/printf_core/error_mapper.h",
+    ] + select({
+        "@platforms//os:linux": [
+            "src/stdio/printf_core/linux/error_mapper.h",
+        ],
+        "//conditions:default": [
+            "src/stdio/printf_core/generic/error_mapper.h",
+        ],
+    }),
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_error_or",
+        ":__support_macros_properties_architectures",
+        ":hdr_errno_macros",
+        ":printf_core_structs",
+    ],
+)
+
+libc_support_library(
     name = "printf_main",
     hdrs = ["src/stdio/printf_core/printf_main.h"],
     deps = [
         ":__support_arg_list",
         ":printf_converter",
         ":printf_core_structs",
+        ":printf_error_mapper",
         ":printf_parser",
         ":printf_writer",
     ],
@@ -6914,6 +6974,17 @@ libc_function(
     ],
 )
 
+libc_support_library(
+    name = "mprotect_common",
+    hdrs = ["src/sys/mman/linux/mprotect_common.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
 libc_function(
     name = "mprotect",
     srcs = ["src/sys/mman/linux/mprotect.cpp"],
@@ -6922,6 +6993,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":mprotect_common",
     ],
 )
 
@@ -6977,6 +7049,85 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_alloc",
+    srcs = ["src/sys/mman/linux/pkey_alloc.cpp"],
+    hdrs = ["src/sys/mman/pkey_alloc.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_free",
+    srcs = ["src/sys/mman/linux/pkey_free.cpp"],
+    hdrs = ["src/sys/mman/pkey_free.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_get",
+    srcs = ["src/sys/mman/linux/pkey_get.cpp"],
+    hdrs = ["src/sys/mman/pkey_get.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":pkey_common",
+    ],
+)
+
+libc_function(
+    name = "pkey_mprotect",
+    srcs = ["src/sys/mman/linux/pkey_mprotect.cpp"],
+    hdrs = ["src/sys/mman/pkey_mprotect.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":mprotect",
+        ":mprotect_common",
+        ":types_size_t",
+    ],
+)
+
+libc_function(
+    name = "pkey_set",
+    srcs = ["src/sys/mman/linux/pkey_set.cpp"],
+    hdrs = ["src/sys/mman/pkey_set.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":pkey_common",
+    ],
+)
+
+libc_support_library(
+    name = "pkey_common",
+    hdrs = [
+        "src/sys/mman/linux/pkey_common.h",
+    ] + selects.with_or({
+        PLATFORM_CPU_X86_64: ["src/sys/mman/linux/x86_64/pkey_common.h"],
+        "//conditions:default": ["src/sys/mman/linux/generic/pkey_common.h"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_properties_architectures",
+        ":hdr_errno_macros",
+        ":hdr_stdint_proxy",
     ],
 )
 

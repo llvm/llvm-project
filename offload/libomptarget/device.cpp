@@ -367,3 +367,7 @@ bool DeviceTy::useAutoZeroCopy() {
     return false;
   return RTL->use_auto_zero_copy(RTLDeviceID);
 }
+
+bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return RTL->is_accessible_ptr(RTLDeviceID, Ptr, Size);
+}

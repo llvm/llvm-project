@@ -466,12 +466,10 @@ define <vscale x 2 x bfloat> @fmla_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 
 define <vscale x 4 x bfloat> @fmla_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, <vscale x 4 x bfloat> %c) {
 ; NOB16B16-LABEL: fmla_nxv4bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
 ; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
-; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NOB16B16-NEXT:    bfmlalb z2.s, z0.h, z1.h
+; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z2.s
 ; NOB16B16-NEXT:    ret
 ;
 ; B16B16-LABEL: fmla_nxv4bf16:
@@ -486,24 +484,20 @@ define <vscale x 4 x bfloat> @fmla_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c) {
 ; NOB16B16-LABEL: fmla_nxv8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z3.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z4.s, z0.h
-; NOB16B16-NEXT:    uunpkhi z5.s, z2.h
+; NOB16B16-NEXT:    uunpkhi z3.s, z2.h
+; NOB16B16-NEXT:    uunpklo z2.s, z2.h
+; NOB16B16-NEXT:    uunpkhi z4.s, z1.h
+; NOB16B16-NEXT:    uunpkhi z5.s, z0.h
 ; NOB16B16-NEXT:    uunpklo z1.s, z1.h
 ; NOB16B16-NEXT:    uunpklo z0.s, z0.h
-; NOB16B16-NEXT:    uunpklo z2.s, z2.h
 ; NOB16B16-NEXT:    ptrue p0.s
 ; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z4.s, z4.s, #16
-; NOB16B16-NEXT:    lsl z5.s, z5.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
 ; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    fmad z3.s, p0/m, z4.s, z5.s
-; NOB16B16-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
-; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z3.s
-; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
-; NOB16B16-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NOB16B16-NEXT:    bfmlalb z3.s, z5.h, z4.h
+; NOB16B16-NEXT:    bfmlalb z2.s, z0.h, z1.h
+; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z3.s
+; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NOB16B16-NEXT:    uzp1 z0.h, z1.h, z0.h
 ; NOB16B16-NEXT:    ret
 ;
 ; B16B16-LABEL: fmla_nxv8bf16:

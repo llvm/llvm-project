@@ -66,7 +66,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
 #include <numeric>
-#include <type_traits>
 #include <vector>
 
 namespace llvm {
@@ -499,9 +498,9 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
-  unsigned EstimatedLoopInvocationWeight = 0;
   std::optional<unsigned> OriginalTripCount =
-      llvm::getLoopEstimatedTripCount(L, &EstimatedLoopInvocationWeight);
+      llvm::getLoopEstimatedTripCount(L);
+  BranchProbability OriginalLoopProb = llvm::getLoopProbability(L);
 
   // Effectively "DCE" unrolled iterations that are beyond the max tripcount
   // and will never be executed.
@@ -592,11 +591,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                               : isEpilogProfitable(L);
 
   if (ULO.Runtime &&
-      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
-                                  EpilogProfitability, ULO.UnrollRemainder,
-                                  ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
-                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
+      !UnrollRuntimeLoopRemainder(
+          L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
+          ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+          PreserveLCSSA, ULO.SCEVExpansionBudget, ULO.RuntimeUnrollMultiExit,
+          RemainderLoop, OriginalTripCount, OriginalLoopProb)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -1130,11 +1129,46 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     LI->erase(L);
     // We shouldn't try to use `L` anymore.
     L = nullptr;
-  } else if (OriginalTripCount) {
-    // Update the trip count. Note that the remainder has already logic
-    // computing it in `UnrollRuntimeLoopRemainder`.
-    setLoopEstimatedTripCount(L, *OriginalTripCount / ULO.Count,
-                              EstimatedLoopInvocationWeight);
+  } else {
+    // Update metadata for the loop's branch weights and estimated trip count:
+    // - If ULO.Runtime, UnrollRuntimeLoopRemainder sets the guard branch
+    //   weights, latch branch weights, and estimated trip count of the
+    //   remainder loop it creates.  It also sets the branch weights for the
+    //   unrolled loop guard it creates.  The branch weights for the unrolled
+    //   loop latch are adjusted below.  FIXME: Handle prologue loops.
+    // - Otherwise, if unrolled loop iteration latches become unconditional,
+    //   branch weights are adjusted above.  FIXME: Actually handle such
+    //   unconditional latches.
+    // - Otherwise, the original loop's branch weights are correct for the
+    //   unrolled loop, so do not adjust them.
+    // - In all cases, the unrolled loop's estimated trip count is set below.
+    //
+    // As an example of the last case, consider what happens if the unroll count
+    // is 4 for a loop with an estimated trip count of 10 when we do not create
+    // a remainder loop and all iterations' latches remain conditional.  Each
+    // unrolled iteration's latch still has the same probability of exiting the
+    // loop as it did when in the original loop, and thus it should still have
+    // the same branch weights.  Each unrolled iteration's non-zero probability
+    // of exiting already appropriately reduces the probability of reaching the
+    // remaining iterations just as it did in the original loop.  Trying to also
+    // adjust the branch weights of the final unrolled iteration's latch (i.e.,
+    // the backedge for the unrolled loop as a whole) to reflect its new trip
+    // count of 3 will erroneously further reduce its block frequencies.
+    // However, in case an analysis later needs to estimate the trip count of
+    // the unrolled loop as a whole without considering the branch weights for
+    // each unrolled iteration's latch within it, we store the new trip count as
+    // separate metadata.
+    if (!OriginalLoopProb.isUnknown() && ULO.Runtime && EpilogProfitability) {
+      // Where p is always the probability of executing at least 1 more
+      // iteration, the probability for at least n more iterations is p^n.
+      setLoopProbability(L, OriginalLoopProb.pow(ULO.Count));
+    }
+    if (OriginalTripCount) {
+      unsigned NewTripCount = *OriginalTripCount / ULO.Count;
+      if (!ULO.Runtime && *OriginalTripCount % ULO.Count)
+        ++NewTripCount;
+      setLoopEstimatedTripCount(L, NewTripCount);
+    }
   }
 
   // LoopInfo should not be valid, confirm that.

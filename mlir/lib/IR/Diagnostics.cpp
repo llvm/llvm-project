@@ -138,6 +138,10 @@ Diagnostic &Diagnostic::operator<<(Operation &op) {
   return appendOp(op, OpPrintingFlags());
 }
 
+Diagnostic &Diagnostic::operator<<(OpWithFlags op) {
+  return appendOp(*op.getOperation(), op.flags());
+}
+
 Diagnostic &Diagnostic::appendOp(Operation &op, const OpPrintingFlags &flags) {
   std::string str;
   llvm::raw_string_ostream os(str);
@@ -378,10 +382,8 @@ struct SourceMgrDiagnosticHandlerImpl {
     }
 
     // Otherwise, try to load the source file.
-    auto bufferOrErr = llvm::MemoryBuffer::getFile(filename);
-    if (!bufferOrErr)
-      return 0;
-    unsigned id = mgr.AddNewSourceBuffer(std::move(*bufferOrErr), SMLoc());
+    std::string ignored;
+    unsigned id = mgr.AddIncludeFile(std::string(filename), SMLoc(), ignored);
     filenameToBufId[filename] = id;
     return id;
   }

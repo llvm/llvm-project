@@ -1,8 +1,8 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -polly-report -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -polly-print-detect -polly-report -disable-output < %s 2>&1 | FileCheck %s
 target datalayout = "e-i64:64-f80:128-s:64-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(ptr %A) #0 !dbg !4 {
+define void @foo(ptr %A) !dbg !4 {
 entry:
   br label %entry.split
 
@@ -28,7 +28,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: test.c:3: End of scop
 
 ; Function Attrs: nounwind uwtable
-define void @bar(ptr %A) #0 !dbg !7 {
+define void @bar(ptr %A) !dbg !7 {
 entry:
   br label %entry.split
 
@@ -53,8 +53,6 @@ for.end:                                          ; preds = %for.body
 ; CHECK: test.c:9: Start of scop
 ; CHECK: test.c:13: End of scop
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
@@ -77,4 +75,3 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"=
 !16 = distinct !DILexicalBlock(line: 9, column: 0, file: !1, scope: !7)
 !17 = !DILocation(line: 13, scope: !16)
 !18 = !DILocation(line: 14, scope: !7)
-

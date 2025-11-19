@@ -508,7 +508,7 @@ const ARMBaseTargetMachine &ARMTargetLowering::getTM() const {
 
 ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                                      const ARMSubtarget &STI)
-    : TargetLowering(TM_), Subtarget(&STI),
+    : TargetLowering(TM_, STI), Subtarget(&STI),
       RegInfo(Subtarget->getRegisterInfo()),
       Itins(Subtarget->getInstrItineraryData()) {
   const auto &TM = static_cast<const ARMBaseTargetMachine &>(TM_);
@@ -601,10 +601,20 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
 
-    if (!Subtarget->hasVFP2Base())
+    if (!Subtarget->hasVFP2Base()) {
       setAllExpand(MVT::f32);
-    if (!Subtarget->hasFP64())
+    } else {
+      for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                      ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
+        setOperationAction(Op, MVT::f32, Legal);
+    }
+    if (!Subtarget->hasFP64()) {
       setAllExpand(MVT::f64);
+    } else {
+      for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                      ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
+        setOperationAction(Op, MVT::f64, Legal);
+    }
   }
 
   if (Subtarget->hasFullFP16()) {
@@ -1089,7 +1099,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   // Register based DivRem for AEABI (RTABI 4.2)
   if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+      TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isOSWindows()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
     HasStandaloneRem = false;
@@ -1281,12 +1291,16 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     if (!Subtarget->hasFPARMv8Base() || !Subtarget->hasFP64()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, LibCall);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, LibCall);
     }
 
     // fp16 is a special v7 extension that adds f16 <-> f32 conversions.
     if (!Subtarget->hasFP16()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, LibCall);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, LibCall);
     }
 
     // Strict floating-point comparisons need custom lowering.
@@ -1298,12 +1312,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   }
 
-  // Use __sincos_stret if available.
-  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
-      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
-    setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
-  }
+  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // FP-ARMv8 implements a lot of rounding-like FP operations.
   if (Subtarget->hasFPARMv8Base()) {
@@ -1337,30 +1347,42 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   }
 
   // FP16 often need to be promoted to call lib functions
+  // clang-format off
   if (Subtarget->hasFullFP16()) {
-    setOperationAction(ISD::FREM, MVT::f16, Promote);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
-    setOperationAction(ISD::FSIN, MVT::f16, Promote);
-    setOperationAction(ISD::FCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FTAN, MVT::f16, Promote);
-    setOperationAction(ISD::FSINCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FPOWI, MVT::f16, Promote);
-    setOperationAction(ISD::FPOW, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP2, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP10, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG10, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG2, MVT::f16, Promote);
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
+    setOperationAction(ISD::LROUND, MVT::f16, Expand);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
+  
+    for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                  ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                  ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                  ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                  ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                  ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                  ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                  ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                  ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                  ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                  ISD::STRICT_FTAN}) {
+        setOperationAction(Op, MVT::f16, Promote);
+    }
 
-    setOperationAction(ISD::FROUND, MVT::f16, Legal);
-    setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
-    setOperationAction(ISD::FTRUNC, MVT::f16, Legal);
-    setOperationAction(ISD::FNEARBYINT, MVT::f16, Legal);
-    setOperationAction(ISD::FRINT, MVT::f16, Legal);
-    setOperationAction(ISD::FFLOOR, MVT::f16, Legal);
-    setOperationAction(ISD::FCEIL, MVT::f16, Legal);
+    // Round-to-integer need custom lowering for fp16, as Promote doesn't work
+    // because the result type is integer.
+    for (auto Op : {ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
+      setOperationAction(Op, MVT::f16, Custom);
+  
+    for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
+                    ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR, 
+                    ISD::FCEIL,          ISD::STRICT_FROUND,     ISD::STRICT_FROUNDEVEN,
+                    ISD::STRICT_FTRUNC,  ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT, 
+                    ISD::STRICT_FFLOOR,  ISD::STRICT_FCEIL}) {
+      setOperationAction(Op, MVT::f16, Legal);
+    }
+    // clang-format on
   }
 
   if (Subtarget->hasNEON()) {
@@ -1532,220 +1554,6 @@ ARMTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
     break;
   }
   return std::make_pair(RRC, Cost);
-}
-
-const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
-#define MAKE_CASE(V)                                                           \
-  case V:                                                                      \
-    return #V;
-  switch ((ARMISD::NodeType)Opcode) {
-  case ARMISD::FIRST_NUMBER:
-    break;
-    MAKE_CASE(ARMISD::Wrapper)
-    MAKE_CASE(ARMISD::WrapperPIC)
-    MAKE_CASE(ARMISD::WrapperJT)
-    MAKE_CASE(ARMISD::COPY_STRUCT_BYVAL)
-    MAKE_CASE(ARMISD::CALL)
-    MAKE_CASE(ARMISD::CALL_PRED)
-    MAKE_CASE(ARMISD::CALL_NOLINK)
-    MAKE_CASE(ARMISD::tSECALL)
-    MAKE_CASE(ARMISD::t2CALL_BTI)
-    MAKE_CASE(ARMISD::BRCOND)
-    MAKE_CASE(ARMISD::BR_JT)
-    MAKE_CASE(ARMISD::BR2_JT)
-    MAKE_CASE(ARMISD::RET_GLUE)
-    MAKE_CASE(ARMISD::SERET_GLUE)
-    MAKE_CASE(ARMISD::INTRET_GLUE)
-    MAKE_CASE(ARMISD::PIC_ADD)
-    MAKE_CASE(ARMISD::CMP)
-    MAKE_CASE(ARMISD::CMN)
-    MAKE_CASE(ARMISD::CMPZ)
-    MAKE_CASE(ARMISD::CMPFP)
-    MAKE_CASE(ARMISD::CMPFPE)
-    MAKE_CASE(ARMISD::CMPFPw0)
-    MAKE_CASE(ARMISD::CMPFPEw0)
-    MAKE_CASE(ARMISD::BCC_i64)
-    MAKE_CASE(ARMISD::FMSTAT)
-    MAKE_CASE(ARMISD::CMOV)
-    MAKE_CASE(ARMISD::SSAT)
-    MAKE_CASE(ARMISD::USAT)
-    MAKE_CASE(ARMISD::ASRL)
-    MAKE_CASE(ARMISD::LSRL)
-    MAKE_CASE(ARMISD::LSLL)
-    MAKE_CASE(ARMISD::LSLS)
-    MAKE_CASE(ARMISD::LSRS1)
-    MAKE_CASE(ARMISD::ASRS1)
-    MAKE_CASE(ARMISD::RRX)
-    MAKE_CASE(ARMISD::ADDC)
-    MAKE_CASE(ARMISD::ADDE)
-    MAKE_CASE(ARMISD::SUBC)
-    MAKE_CASE(ARMISD::SUBE)
-    MAKE_CASE(ARMISD::VMOVRRD)
-    MAKE_CASE(ARMISD::VMOVDRR)
-    MAKE_CASE(ARMISD::VMOVhr)
-    MAKE_CASE(ARMISD::VMOVrh)
-    MAKE_CASE(ARMISD::VMOVSR)
-    MAKE_CASE(ARMISD::EH_SJLJ_SETJMP)
-    MAKE_CASE(ARMISD::EH_SJLJ_LONGJMP)
-    MAKE_CASE(ARMISD::EH_SJLJ_SETUP_DISPATCH)
-    MAKE_CASE(ARMISD::TC_RETURN)
-    MAKE_CASE(ARMISD::THREAD_POINTER)
-    MAKE_CASE(ARMISD::DYN_ALLOC)
-    MAKE_CASE(ARMISD::MEMBARRIER_MCR)
-    MAKE_CASE(ARMISD::PRELOAD)
-    MAKE_CASE(ARMISD::LDRD)
-    MAKE_CASE(ARMISD::STRD)
-    MAKE_CASE(ARMISD::WIN__CHKSTK)
-    MAKE_CASE(ARMISD::WIN__DBZCHK)
-    MAKE_CASE(ARMISD::PREDICATE_CAST)
-    MAKE_CASE(ARMISD::VECTOR_REG_CAST)
-    MAKE_CASE(ARMISD::MVESEXT)
-    MAKE_CASE(ARMISD::MVEZEXT)
-    MAKE_CASE(ARMISD::MVETRUNC)
-    MAKE_CASE(ARMISD::VCMP)
-    MAKE_CASE(ARMISD::VCMPZ)
-    MAKE_CASE(ARMISD::VTST)
-    MAKE_CASE(ARMISD::VSHLs)
-    MAKE_CASE(ARMISD::VSHLu)
-    MAKE_CASE(ARMISD::VSHLIMM)
-    MAKE_CASE(ARMISD::VSHRsIMM)
-    MAKE_CASE(ARMISD::VSHRuIMM)
-    MAKE_CASE(ARMISD::VRSHRsIMM)
-    MAKE_CASE(ARMISD::VRSHRuIMM)
-    MAKE_CASE(ARMISD::VRSHRNIMM)
-    MAKE_CASE(ARMISD::VQSHLsIMM)
-    MAKE_CASE(ARMISD::VQSHLuIMM)
-    MAKE_CASE(ARMISD::VQSHLsuIMM)
-    MAKE_CASE(ARMISD::VQSHRNsIMM)
-    MAKE_CASE(ARMISD::VQSHRNuIMM)
-    MAKE_CASE(ARMISD::VQSHRNsuIMM)
-    MAKE_CASE(ARMISD::VQRSHRNsIMM)
-    MAKE_CASE(ARMISD::VQRSHRNuIMM)
-    MAKE_CASE(ARMISD::VQRSHRNsuIMM)
-    MAKE_CASE(ARMISD::VSLIIMM)
-    MAKE_CASE(ARMISD::VSRIIMM)
-    MAKE_CASE(ARMISD::VGETLANEu)
-    MAKE_CASE(ARMISD::VGETLANEs)
-    MAKE_CASE(ARMISD::VMOVIMM)
-    MAKE_CASE(ARMISD::VMVNIMM)
-    MAKE_CASE(ARMISD::VMOVFPIMM)
-    MAKE_CASE(ARMISD::VDUP)
-    MAKE_CASE(ARMISD::VDUPLANE)
-    MAKE_CASE(ARMISD::VEXT)
-    MAKE_CASE(ARMISD::VREV64)
-    MAKE_CASE(ARMISD::VREV32)
-    MAKE_CASE(ARMISD::VREV16)
-    MAKE_CASE(ARMISD::VZIP)
-    MAKE_CASE(ARMISD::VUZP)
-    MAKE_CASE(ARMISD::VTRN)
-    MAKE_CASE(ARMISD::VTBL1)
-    MAKE_CASE(ARMISD::VTBL2)
-    MAKE_CASE(ARMISD::VMOVN)
-    MAKE_CASE(ARMISD::VQMOVNs)
-    MAKE_CASE(ARMISD::VQMOVNu)
-    MAKE_CASE(ARMISD::VCVTN)
-    MAKE_CASE(ARMISD::VCVTL)
-    MAKE_CASE(ARMISD::VIDUP)
-    MAKE_CASE(ARMISD::VMULLs)
-    MAKE_CASE(ARMISD::VMULLu)
-    MAKE_CASE(ARMISD::VQDMULH)
-    MAKE_CASE(ARMISD::VADDVs)
-    MAKE_CASE(ARMISD::VADDVu)
-    MAKE_CASE(ARMISD::VADDVps)
-    MAKE_CASE(ARMISD::VADDVpu)
-    MAKE_CASE(ARMISD::VADDLVs)
-    MAKE_CASE(ARMISD::VADDLVu)
-    MAKE_CASE(ARMISD::VADDLVAs)
-    MAKE_CASE(ARMISD::VADDLVAu)
-    MAKE_CASE(ARMISD::VADDLVps)
-    MAKE_CASE(ARMISD::VADDLVpu)
-    MAKE_CASE(ARMISD::VADDLVAps)
-    MAKE_CASE(ARMISD::VADDLVApu)
-    MAKE_CASE(ARMISD::VMLAVs)
-    MAKE_CASE(ARMISD::VMLAVu)
-    MAKE_CASE(ARMISD::VMLAVps)
-    MAKE_CASE(ARMISD::VMLAVpu)
-    MAKE_CASE(ARMISD::VMLALVs)
-    MAKE_CASE(ARMISD::VMLALVu)
-    MAKE_CASE(ARMISD::VMLALVps)
-    MAKE_CASE(ARMISD::VMLALVpu)
-    MAKE_CASE(ARMISD::VMLALVAs)
-    MAKE_CASE(ARMISD::VMLALVAu)
-    MAKE_CASE(ARMISD::VMLALVAps)
-    MAKE_CASE(ARMISD::VMLALVApu)
-    MAKE_CASE(ARMISD::VMINVu)
-    MAKE_CASE(ARMISD::VMINVs)
-    MAKE_CASE(ARMISD::VMAXVu)
-    MAKE_CASE(ARMISD::VMAXVs)
-    MAKE_CASE(ARMISD::UMAAL)
-    MAKE_CASE(ARMISD::UMLAL)
-    MAKE_CASE(ARMISD::SMLAL)
-    MAKE_CASE(ARMISD::SMLALBB)
-    MAKE_CASE(ARMISD::SMLALBT)
-    MAKE_CASE(ARMISD::SMLALTB)
-    MAKE_CASE(ARMISD::SMLALTT)
-    MAKE_CASE(ARMISD::SMULWB)
-    MAKE_CASE(ARMISD::SMULWT)
-    MAKE_CASE(ARMISD::SMLALD)
-    MAKE_CASE(ARMISD::SMLALDX)
-    MAKE_CASE(ARMISD::SMLSLD)
-    MAKE_CASE(ARMISD::SMLSLDX)
-    MAKE_CASE(ARMISD::SMMLAR)
-    MAKE_CASE(ARMISD::SMMLSR)
-    MAKE_CASE(ARMISD::QADD16b)
-    MAKE_CASE(ARMISD::QSUB16b)
-    MAKE_CASE(ARMISD::QADD8b)
-    MAKE_CASE(ARMISD::QSUB8b)
-    MAKE_CASE(ARMISD::UQADD16b)
-    MAKE_CASE(ARMISD::UQSUB16b)
-    MAKE_CASE(ARMISD::UQADD8b)
-    MAKE_CASE(ARMISD::UQSUB8b)
-    MAKE_CASE(ARMISD::BUILD_VECTOR)
-    MAKE_CASE(ARMISD::BFI)
-    MAKE_CASE(ARMISD::VORRIMM)
-    MAKE_CASE(ARMISD::VBICIMM)
-    MAKE_CASE(ARMISD::VBSP)
-    MAKE_CASE(ARMISD::MEMCPY)
-    MAKE_CASE(ARMISD::VLD1DUP)
-    MAKE_CASE(ARMISD::VLD2DUP)
-    MAKE_CASE(ARMISD::VLD3DUP)
-    MAKE_CASE(ARMISD::VLD4DUP)
-    MAKE_CASE(ARMISD::VLD1_UPD)
-    MAKE_CASE(ARMISD::VLD2_UPD)
-    MAKE_CASE(ARMISD::VLD3_UPD)
-    MAKE_CASE(ARMISD::VLD4_UPD)
-    MAKE_CASE(ARMISD::VLD1x2_UPD)
-    MAKE_CASE(ARMISD::VLD1x3_UPD)
-    MAKE_CASE(ARMISD::VLD1x4_UPD)
-    MAKE_CASE(ARMISD::VLD2LN_UPD)
-    MAKE_CASE(ARMISD::VLD3LN_UPD)
-    MAKE_CASE(ARMISD::VLD4LN_UPD)
-    MAKE_CASE(ARMISD::VLD1DUP_UPD)
-    MAKE_CASE(ARMISD::VLD2DUP_UPD)
-    MAKE_CASE(ARMISD::VLD3DUP_UPD)
-    MAKE_CASE(ARMISD::VLD4DUP_UPD)
-    MAKE_CASE(ARMISD::VST1_UPD)
-    MAKE_CASE(ARMISD::VST2_UPD)
-    MAKE_CASE(ARMISD::VST3_UPD)
-    MAKE_CASE(ARMISD::VST4_UPD)
-    MAKE_CASE(ARMISD::VST1x2_UPD)
-    MAKE_CASE(ARMISD::VST1x3_UPD)
-    MAKE_CASE(ARMISD::VST1x4_UPD)
-    MAKE_CASE(ARMISD::VST2LN_UPD)
-    MAKE_CASE(ARMISD::VST3LN_UPD)
-    MAKE_CASE(ARMISD::VST4LN_UPD)
-    MAKE_CASE(ARMISD::WLS)
-    MAKE_CASE(ARMISD::WLSSETUP)
-    MAKE_CASE(ARMISD::LE)
-    MAKE_CASE(ARMISD::LOOP_DEC)
-    MAKE_CASE(ARMISD::CSINV)
-    MAKE_CASE(ARMISD::CSNEG)
-    MAKE_CASE(ARMISD::CSINC)
-    MAKE_CASE(ARMISD::MEMCPYLOOP)
-    MAKE_CASE(ARMISD::MEMSETLOOP)
-#undef MAKE_CASE
-  }
-  return nullptr;
 }
 
 EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
@@ -2488,9 +2296,44 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (isTailCall && VA.isMemLoc() && !AfterFormalArgLoads) {
       Chain = DAG.getStackArgumentTokenFactor(Chain);
-      if (ByValTempChain)
+      if (ByValTempChain) {
+        // In case of large byval copies, re-using the stackframe for tail-calls
+        // can lead to overwriting incoming arguments on the stack. Force
+        // loading these stack arguments before the copy to avoid that.
+        SmallVector<SDValue, 8> IncomingLoad;
+        for (unsigned I = 0; I < OutVals.size(); ++I) {
+          if (Outs[I].Flags.isByVal())
+            continue;
+
+          SDValue OutVal = OutVals[I];
+          LoadSDNode *OutLN = dyn_cast_or_null<LoadSDNode>(OutVal);
+          if (!OutLN)
+            continue;
+
+          FrameIndexSDNode *FIN =
+              dyn_cast_or_null<FrameIndexSDNode>(OutLN->getBasePtr());
+          if (!FIN)
+            continue;
+
+          if (!MFI.isFixedObjectIndex(FIN->getIndex()))
+            continue;
+
+          for (const CCValAssign &VA : ArgLocs) {
+            if (VA.isMemLoc())
+              IncomingLoad.push_back(OutVal.getValue(1));
+          }
+        }
+
+        // Update the chain to force loads for potentially clobbered argument
+        // loads to happen before the byval copy.
+        if (!IncomingLoad.empty()) {
+          IncomingLoad.push_back(Chain);
+          Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, IncomingLoad);
+        }
+
         Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain,
                             ByValTempChain);
+      }
       AfterFormalArgLoads = true;
     }
 
@@ -2848,6 +2691,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (isTailCall) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(ARMISD::TC_RETURN, dl, MVT::Other, Ops);
+    if (CLI.CFIType)
+      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
@@ -2855,6 +2700,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Returns a chain and a flag for retval copy to use.
   Chain = DAG.getNode(CallOpc, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
@@ -3283,8 +3130,8 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     return LowerInterruptReturn(RetOps, dl, DAG);
   }
 
-  ARMISD::NodeType RetNode = AFI->isCmseNSEntryFunction() ? ARMISD::SERET_GLUE :
-                                                            ARMISD::RET_GLUE;
+  unsigned RetNode =
+      AFI->isCmseNSEntryFunction() ? ARMISD::SERET_GLUE : ARMISD::RET_GLUE;
   return DAG.getNode(RetNode, dl, MVT::Other, RetOps);
 }
 
@@ -4800,7 +4647,7 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     }
   }
 
-  ARMISD::NodeType CompareType;
+  unsigned CompareType;
   switch (CondCode) {
   default:
     CompareType = ARMISD::CMP;
@@ -9829,73 +9676,6 @@ static SDValue LowerUADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, Carry);
 }
 
-SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetDarwin());
-
-  // For iOS, we want to call an alternative entry point: __sincos_stret,
-  // return values are passed via sret.
-  SDLoc dl(Op);
-  SDValue Arg = Op.getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
-
-  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
-
-  // Pair of floats / doubles used to pass the result.
-  Type *RetTy = StructType::get(ArgTy, ArgTy);
-  auto &DL = DAG.getDataLayout();
-
-  ArgListTy Args;
-  bool ShouldUseSRet = getTM().isAPCS_ABI();
-  SDValue SRet;
-  if (ShouldUseSRet) {
-    // Create stack object for sret.
-    const uint64_t ByteSize = DL.getTypeAllocSize(RetTy);
-    const Align StackAlign = DL.getPrefTypeAlign(RetTy);
-    int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
-    SRet = DAG.getFrameIndex(FrameIdx, getPointerTy(DL));
-
-    ArgListEntry Entry(SRet, PointerType::getUnqual(RetTy->getContext()));
-    Entry.IsSExt = false;
-    Entry.IsZExt = false;
-    Entry.IsSRet = true;
-    Args.push_back(Entry);
-    RetTy = Type::getVoidTy(*DAG.getContext());
-  }
-
-  Args.emplace_back(Arg, ArgTy);
-
-  RTLIB::Libcall LC =
-      (ArgVT == MVT::f64) ? RTLIB::SINCOS_STRET_F64 : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = getLibcallName(LC);
-  CallingConv::ID CC = getLibcallCallingConv(LC);
-  SDValue Callee = DAG.getExternalSymbol(LibcallName, getPointerTy(DL));
-
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl)
-      .setChain(DAG.getEntryNode())
-      .setCallee(CC, RetTy, Callee, std::move(Args))
-      .setDiscardResult(ShouldUseSRet);
-  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
-
-  if (!ShouldUseSRet)
-    return CallResult.first;
-
-  SDValue LoadSin =
-      DAG.getLoad(ArgVT, dl, CallResult.second, SRet, MachinePointerInfo());
-
-  // Address of cos field.
-  SDValue Add = DAG.getNode(ISD::ADD, dl, PtrVT, SRet,
-                            DAG.getIntPtrConstant(ArgVT.getStoreSize(), dl));
-  SDValue LoadCos =
-      DAG.getLoad(ArgVT, dl, LoadSin.getValue(1), Add, MachinePointerInfo());
-
-  SDVTList Tys = DAG.getVTList(ArgVT, ArgVT);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, Tys,
-                     LoadSin.getValue(0), LoadCos.getValue(0));
-}
-
 SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
                                                   bool Signed,
                                                   SDValue &Chain) const {
@@ -10697,8 +10477,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_SMAX:
     return LowerVecReduceMinMax(Op, DAG, Subtarget);
   case ISD::ATOMIC_LOAD:
-  case ISD::ATOMIC_STORE:  return LowerAtomicLoadStore(Op, DAG);
-  case ISD::FSINCOS:       return LowerFSINCOS(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    return LowerAtomicLoadStore(Op, DAG);
   case ISD::SDIVREM:
   case ISD::UDIVREM:       return LowerDivRem(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
@@ -10721,6 +10501,19 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerCMP(Op, DAG);
   case ISD::ABS:
     return LowerABS(Op, DAG);
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT: {
+    assert((Op.getOperand(1).getValueType() == MVT::f16 ||
+            Op.getOperand(1).getValueType() == MVT::bf16) &&
+           "Expected custom lowering of rounding operations only for f16");
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
+                              {Op.getOperand(0), Op.getOperand(1)});
+    return DAG.getNode(Op.getOpcode(), DL, {Op.getValueType(), MVT::Other},
+                       {Ext.getValue(1), Ext.getValue(0)});
+  }
   }
 }
 
@@ -12005,6 +11798,71 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
   BuildMI(TpLoopBody, Dl, TII->get(ARM::t2B))
       .addMBB(TpExit)
       .add(predOps(ARMCC::AL));
+}
+
+bool ARMTargetLowering::supportKCFIBundles() const {
+  // KCFI is supported in all ARM/Thumb modes
+  return true;
+}
+
+MachineInstr *
+ARMTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::instr_iterator &MBBI,
+                                 const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  MachineOperand *TargetOp = nullptr;
+  switch (MBBI->getOpcode()) {
+  // ARM mode opcodes
+  case ARM::BLX:
+  case ARM::BLX_pred:
+  case ARM::BLX_noip:
+  case ARM::BLX_pred_noip:
+  case ARM::BX_CALL:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
+  case ARM::TAILJMPr:
+  case ARM::TAILJMPr4:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  // Thumb mode opcodes (Thumb1 and Thumb2)
+  // Note: Most Thumb call instructions have predicate operands before the
+  // target register Format: tBLXr pred, predreg, target_register, ...
+  case ARM::tBLXr:      // Thumb1/Thumb2: BLX register (requires V5T)
+  case ARM::tBLXr_noip: // Thumb1/Thumb2: BLX register, no IP clobber
+  case ARM::tBX_CALL:   // Thumb1 only: BX call (push LR, BX)
+    TargetOp = &MBBI->getOperand(2);
+    break;
+  // Tail call instructions don't have predicates, target is operand 0
+  case ARM::tTAILJMPr: // Thumb1/Thumb2: Tail call via register
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  assert(TargetOp && TargetOp->isReg() && "Invalid target operand");
+  TargetOp->setIsRenamable(false);
+
+  // Select the appropriate KCFI_CHECK variant based on the instruction set
+  unsigned KCFICheckOpcode;
+  if (Subtarget->isThumb()) {
+    if (Subtarget->isThumb2()) {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb2;
+    } else {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb1;
+    }
+  } else {
+    KCFICheckOpcode = ARM::KCFI_CHECK_ARM;
+  }
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(KCFICheckOpcode))
+      .addReg(TargetOp->getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
 }
 
 MachineBasicBlock *
@@ -20574,7 +20432,7 @@ static TargetLowering::ArgListTy getDivRemArgList(
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   assert((Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
           Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI() ||
-          Subtarget->isTargetWindows()) &&
+          Subtarget->isTargetFuchsia() || Subtarget->isTargetWindows()) &&
          "Register-based DivRem lowering only");
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&
@@ -21311,15 +21169,6 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
   TargetLowering::insertSSPDeclarations(M);
 }
 
-Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  RTLIB::LibcallImpl SecurityCheckCookie =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookie != RTLIB::Unsupported)
-    return M.getFunction(getLibcallImplName(SecurityCheckCookie));
-  return TargetLowering::getSSPStackGuardCheck(M);
-}
-
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                                   unsigned &Cost) const {
   // If we do not have NEON, vector types are not natively supported.
@@ -22009,6 +21858,11 @@ bool ARMTargetLowering::isComplexDeinterleavingOperationSupported(
   return Subtarget->hasMVEIntegerOps() &&
          (ScalarTy->isIntegerTy(8) || ScalarTy->isIntegerTy(16) ||
           ScalarTy->isIntegerTy(32));
+}
+
+ArrayRef<MCPhysReg> ARMTargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {ARM::FPSCR_RM};
+  return RCRegs;
 }
 
 Value *ARMTargetLowering::createComplexDeinterleavingIR(

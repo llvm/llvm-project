@@ -51,20 +51,8 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program, stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
 
-        self.dap_server.request_configurationDone()
-        self.dap_server.wait_for_stopped()
-        # Once the "configuration done" event is sent, we should get a stopped
-        # event immediately because of stopOnEntry.
-        self.assertTrue(
-            len(self.dap_server.thread_stop_reasons) > 0,
-            "expected stopped event during launch",
-        )
-        for _, body in self.dap_server.thread_stop_reasons.items():
-            if "reason" in body:
-                reason = body["reason"]
-                self.assertNotEqual(
-                    reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
-                )
+        self.continue_to_next_stop()
+        self.verify_stop_on_entry()
 
         # Then, if we continue, we should hit the breakpoint at main.
         self.continue_to_breakpoints([bp_main])
@@ -73,17 +61,7 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         # main.
         resp = self.dap_server.request_restart()
         self.assertTrue(resp["success"])
-        stopped_events = self.dap_server.wait_for_stopped()
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" in body:
-                    reason = body["reason"]
-                    self.assertNotEqual(
-                        reason,
-                        "breakpoint",
-                        'verify stop after restart isn\'t "main" breakpoint',
-                    )
+        self.verify_stop_on_entry()
 
     @skipIfWindows
     def test_arguments(self):

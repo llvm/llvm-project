@@ -16,7 +16,6 @@
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
-#include <optional>
 
 namespace llvm {
 namespace remarks {

@@ -135,7 +135,7 @@ public:
   MCRegister getLastCalleeSavedAlias(MCRegister PhysReg) const {
     MCRegister CSR;
     for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-      CSR = CalleeSavedAliases[Unit];
+      CSR = CalleeSavedAliases[static_cast<unsigned>(Unit)];
       if (CSR)
         break;
     }

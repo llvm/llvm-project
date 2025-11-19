@@ -101,6 +101,7 @@ inline constexpr bool isSignedType(PrimType T) {
 
 enum class CastKind : uint8_t {
   Reinterpret,
+  ReinterpretLike,
   Volatile,
   Dynamic,
 };
@@ -110,6 +111,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   switch (CK) {
   case interp::CastKind::Reinterpret:
     OS << "reinterpret_cast";
+    break;
+  case interp::CastKind::ReinterpretLike:
+    OS << "reinterpret_like";
     break;
   case interp::CastKind::Volatile:
     OS << "volatile";

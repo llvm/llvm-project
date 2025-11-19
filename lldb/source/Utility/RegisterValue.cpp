@@ -127,7 +127,7 @@ bool RegisterValue::GetScalarValue(Scalar &scalar) const {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -180,8 +180,6 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
   if (src_len > reg_info.byte_size)
     src_len = reg_info.byte_size;
 
-  type128 int128;
-
   m_type = eTypeInvalid;
   switch (reg_info.encoding) {
   case eEncodingInvalid:
@@ -196,17 +194,15 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       SetUInt32(src.GetMaxU32(&src_offset, src_len));
     else if (reg_info.byte_size <= 8)
       SetUInt64(src.GetMaxU64(&src_offset, src_len));
-    else if (reg_info.byte_size <= 16) {
-      uint64_t data1 = src.GetU64(&src_offset);
-      uint64_t data2 = src.GetU64(&src_offset);
-      if (src.GetByteOrder() == eByteOrderLittle) {
-        int128.x[0] = data1;
-        int128.x[1] = data2;
-      } else {
-        int128.x[0] = data2;
-        int128.x[1] = data1;
-      }
-      SetUInt128(llvm::APInt(128, 2, int128.x));
+    else {
+      std::vector<uint8_t> native_endian_src(src_len, 0);
+      src.ExtractBytes(src_offset, src_len,
+                       llvm::sys::IsLittleEndianHost ? eByteOrderLittle
+                                                     : eByteOrderBig,
+                       native_endian_src.data());
+      llvm::APInt uint = llvm::APInt::getZero(src_len * 8);
+      llvm::LoadIntFromMemory(uint, native_endian_src.data(), src_len);
+      SetUIntN(uint);
     }
     break;
   case eEncodingIEEE754:
@@ -442,7 +438,7 @@ bool RegisterValue::SignExtend(uint32_t sign_bitpos) {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
     return m_scalar.SignExtend(sign_bitpos);
   case eTypeFloat:
   case eTypeDouble:
@@ -465,7 +461,7 @@ bool RegisterValue::CopyValue(const RegisterValue &rhs) {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -581,7 +577,7 @@ llvm::APInt RegisterValue::GetAsUInt128(const llvm::APInt &fail_value,
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -596,8 +592,10 @@ llvm::APInt RegisterValue::GetAsUInt128(const llvm::APInt &fail_value,
     case 8:
     case 16:
       return llvm::APInt(
-          BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-          (reinterpret_cast<const type128 *>(buffer.bytes.data()))->x);
+          BITWIDTH_INT128,
+          llvm::ArrayRef(
+              (reinterpret_cast<const type128 *>(buffer.bytes.data()))->x,
+              NUM_OF_WORDS_INT128));
     }
   } break;
   }
@@ -614,7 +612,7 @@ float RegisterValue::GetAsFloat(float fail_value, bool *success_ptr) const {
     break;
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -634,7 +632,7 @@ double RegisterValue::GetAsDouble(double fail_value, bool *success_ptr) const {
 
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -655,7 +653,7 @@ long double RegisterValue::GetAsLongDouble(long double fail_value,
 
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -674,7 +672,7 @@ const void *RegisterValue::GetBytes() const {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -696,7 +694,7 @@ uint32_t RegisterValue::GetByteSize() const {
     return 2;
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
@@ -719,7 +717,7 @@ bool RegisterValue::SetUInt(uint64_t uint, uint32_t byte_size) {
   } else if (byte_size <= 8) {
     SetUInt64(uint);
   } else if (byte_size <= 16) {
-    SetUInt128(llvm::APInt(128, uint));
+    SetUIntN(llvm::APInt(128, uint));
   } else
     return false;
   return true;
@@ -747,7 +745,7 @@ bool RegisterValue::operator==(const RegisterValue &rhs) const {
     case eTypeUInt16:
     case eTypeUInt32:
     case eTypeUInt64:
-    case eTypeUInt128:
+    case eTypeUIntN:
     case eTypeFloat:
     case eTypeDouble:
     case eTypeLongDouble:
@@ -772,7 +770,7 @@ bool RegisterValue::ClearBit(uint32_t bit) {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
     if (bit < (GetByteSize() * 8)) {
       return m_scalar.ClearBit(bit);
     }
@@ -812,7 +810,7 @@ bool RegisterValue::SetBit(uint32_t bit) {
   case eTypeUInt16:
   case eTypeUInt32:
   case eTypeUInt64:
-  case eTypeUInt128:
+  case eTypeUIntN:
     if (bit < (GetByteSize() * 8)) {
       return m_scalar.SetBit(bit);
     }
