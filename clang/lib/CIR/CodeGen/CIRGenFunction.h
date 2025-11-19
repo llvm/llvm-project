@@ -30,6 +30,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
@@ -1477,7 +1478,8 @@ public:
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
   RValue emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
-                                    const CallExpr *call, bool isDelete);
+                                    const CallExpr *callExpr,
+                                    OverloadedOperatorKind op);
 
   void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
                         Address ptr);
