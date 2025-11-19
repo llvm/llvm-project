@@ -1071,7 +1071,9 @@ ModuleDepCollector::ModuleDepCollector(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
-  PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));
+  auto CollectorPP = std::make_unique<ModuleDepCollectorPP>(*this);
+  CollectorPPPtr = CollectorPP.get();
+  PP.addPPCallbacks(std::move(CollectorPP));
 }
 
 void ModuleDepCollector::attachToASTReader(ASTReader &R) {}

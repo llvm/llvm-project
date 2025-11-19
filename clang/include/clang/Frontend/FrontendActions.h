@@ -319,16 +319,6 @@ protected:
 
   bool hasPCHSupport() const override { return true; }
 };
-
-class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
-  StringRef ModuleName;
-  void ExecuteAction() override;
-
-public:
-  GetDependenciesByModuleNameAction(StringRef ModuleName)
-      : ModuleName(ModuleName) {}
-};
-
 }  // end namespace clang
 
 #endif

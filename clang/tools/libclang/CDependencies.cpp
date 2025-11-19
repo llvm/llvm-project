@@ -371,14 +371,25 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
   auto Controller = DependencyScanningTool::createActionController(
       *Worker, std::move(LookupOutputs));
 
-  bool Result = ModuleName
-                    ? Worker->computeDependencies(WorkingDirectory, Compilation,
-                                                  DepConsumer, *Controller,
-                                                  *SerialDiagConsumer,
-                                                  StringRef(ModuleName))
-                    : Worker->computeDependencies(WorkingDirectory, Compilation,
-                                                  DepConsumer, *Controller,
-                                                  *SerialDiagConsumer);
+  bool Result = false;
+  if (ModuleName) {
+    Result = Worker->initializeCompilerInstanceWithContext(
+        WorkingDirectory, Compilation, SerialDiagConsumer.get());
+    if (!Result)
+      return CXError_Failure;
+    Result = Worker->computeDependenciesByNameWithContext(
+        StringRef(ModuleName), DepConsumer, *Controller);
+    if (!Result)
+      return CXError_Failure;
+    Result = Worker->finalizeCompilerInstance();
+    if (!Result)
+      return CXError_Failure;
+  } else {
+    Result =
+        Worker->computeDependencies(WorkingDirectory, Compilation, DepConsumer,
+                                    *Controller, *SerialDiagConsumer);
+  }
+
   if (!Result)
     return CXError_Failure;
 

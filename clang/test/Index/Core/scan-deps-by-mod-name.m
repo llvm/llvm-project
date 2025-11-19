@@ -32,5 +32,5 @@
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:       ModA:[[HASH_MOD_A]]
 // CHECK-NEXT:     file-deps:
-// CHECK-NEXT:       {{.*}}ModA-{{.*}}.input
+// CHECK-NEXT:       {{.*}}ScanningByName-{{.*}}.input
 // CHECK-NEXT:     build-args: -cc1 {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm

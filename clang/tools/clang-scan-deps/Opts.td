@@ -27,7 +27,9 @@ def cache_negative_stats : F<"cache-negative-stats", "Cache stat failures">;
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
 
 defm compilation_database : Eq<"compilation-database", "Compilation database">;
-defm module_name : Eq<"module-name", "the module of which the dependencies are to be computed">;
+defm module_names
+    : Eq<"module-names", "A comma separated list of names of modules of which "
+                         "the dependencies are to be computed">;
 defm dependency_target : Eq<"dependency-target", "The names of dependency targets for the dependency file">;
 
 defm tu_buffer_path: Eq<"tu-buffer-path", "The path to the translation unit for depscan. Not compatible with -module-name">;
