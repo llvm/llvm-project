@@ -44,8 +44,7 @@ public:
         m_frozen_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
     if (dyn_sp && dyn_sp->UpdateValueIfNeeded())
       return dyn_sp;
-    else
-      return m_frozen_sp;
+    return m_frozen_sp;
   }
 
   uint8_t *GetValueBytes();
@@ -70,7 +69,7 @@ public:
   void SetName(ConstString name) { m_frozen_sp->SetName(name); }
 
   // This function is used to copy the address-of m_live_sp into m_frozen_sp.
-  // This is necessary because the results of certain cast and pointer-
+  // It is necessary because the results of certain cast and pointer-
   // arithmetic operations (such as those described in bugzilla issues 11588
   // and 11618) generate frozen objects that do not have a valid address-of,
   // which can be troublesome when using synthetic children providers.
@@ -145,7 +144,6 @@ public:
   lldb::ValueObjectSP m_live_sp;
   /// @}
 
-  // LLVMCastKind m_kind;
   lldb::DynamicValueType m_dyn_option = lldb::eNoDynamicValues;
 };
 

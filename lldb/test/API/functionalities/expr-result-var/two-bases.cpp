@@ -37,7 +37,6 @@ int main() {
 
   Base *base_through_1 = my_derived.return_base_1();
   Base *base_through_2 = my_derived.return_base_2();
-  ;
 
   // Call this to make sure the compiler makes it.
   Base *fake_base = MakeADerivedReportABase();

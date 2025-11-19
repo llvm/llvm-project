@@ -38,10 +38,10 @@ char PersistentExpressionState::ID;
 PersistentExpressionState::PersistentExpressionState() = default;
 
 void ExpressionVariable::TransferAddress(bool force) {
-  if (m_live_sp.get() == nullptr)
+  if (!m_live_sp)
     return;
 
-  if (m_frozen_sp.get() == nullptr)
+  if (!m_frozen_sp)
     return;
 
   if (force || (m_frozen_sp->GetLiveAddress() == LLDB_INVALID_ADDRESS)) {
