@@ -275,7 +275,7 @@ using stacktrace = basic_stacktrace<polymorphic_allocator<stacktrace_entry>>;
 // Non-member functions [stacktrace.basic.nonmem]
 
 template <class _Allocator>
-_LIBCPP_HIDE_FROM_ABI inline void
+_LIBCPP_HIDE_FROM_ABI void
 swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexcept(noexcept(__a.swap(__b))) {
   __a.swap(__b);
 }
@@ -283,12 +283,12 @@ swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexc
 #  if _LIBCPP_HAS_LOCALIZATION
 
 template <class _Allocator>
-_LIBCPP_HIDE_FROM_ABI inline string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
+_LIBCPP_HIDE_FROM_ABI string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
   return ((__stacktrace::_Trace const&)__stacktrace).to_string();
 }
 
 template <class _Allocator>
-_LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
+_LIBCPP_HIDE_FROM_ABI ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
   return ((__stacktrace::_Trace const&)__stacktrace).write_to(__os);
 }
 
