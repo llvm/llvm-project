@@ -1731,6 +1731,22 @@ TLI_DEFINE_ENUM_INTERNAL(llabs)
 TLI_DEFINE_STRING_INTERNAL("llabs")
 TLI_DEFINE_SIG_INTERNAL(LLong, LLong)
 
+//long long llrint ( double num );
+TLI_DEFINE_ENUM_INTERNAL(llrint)
+TLI_DEFINE_STRING_INTERNAL("llrint")
+TLI_DEFINE_SIG_INTERNAL(LLong,Dbl)
+
+
+//long long llrintf( float arg );
+TLI_DEFINE_ENUM_INTERNAL(llrintf)
+TLI_DEFINE_STRING_INTERNAL("llrintf")
+TLI_DEFINE_SIG_INTERNAL(LLong,Flt)
+
+//long long llrintl( long double arg );
+TLI_DEFINE_ENUM_INTERNAL(llrintl)
+TLI_DEFINE_STRING_INTERNAL("llrintl")
+TLI_DEFINE_SIG_INTERNAL(LLong,LDbl)
+
 /// double log(double x);
 TLI_DEFINE_ENUM_INTERNAL(log)
 TLI_DEFINE_STRING_INTERNAL("log")
