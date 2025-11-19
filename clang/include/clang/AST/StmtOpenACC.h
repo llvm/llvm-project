@@ -818,14 +818,57 @@ public:
 
   // A struct to represent a broken-down version of the associated statement,
   // providing the information specified in OpenACC3.3 Section 2.12.
-  struct StmtInfo {
+  struct SingleStmtInfo {
+    // Holds the entire expression for this. In the case of a normal
+    // read/write/update, this should just be the associated statement.  in the
+    // case of an update, this is going to be the sub-expression this
+    // represents.
+    const Expr *WholeExpr;
     const Expr *V;
     const Expr *X;
     // Listed as 'expr' in the standard, this is typically a generic expression
     // as a component.
     const Expr *RefExpr;
-    // TODO: OpenACC: We should expand this as we're implementing the other
-    // atomic construct kinds.
+    static SingleStmtInfo Empty() {
+      return {nullptr, nullptr, nullptr, nullptr};
+    }
+
+    static SingleStmtInfo createRead(const Expr *WholeExpr, const Expr *V,
+                                     const Expr *X) {
+      return {WholeExpr, V, X, /*RefExpr=*/nullptr};
+    }
+    static SingleStmtInfo createWrite(const Expr *WholeExpr, const Expr *X,
+                                      const Expr *RefExpr) {
+      return {WholeExpr, /*V=*/nullptr, X, RefExpr};
+    }
+    static SingleStmtInfo createUpdate(const Expr *WholeExpr, const Expr *X) {
+      return {WholeExpr, /*V=*/nullptr, X, /*RefExpr=*/nullptr};
+    }
+  };
+
+  struct StmtInfo {
+    enum class StmtForm {
+      Read,
+      Write,
+      Update,
+      ReadWrite,
+      ReadUpdate,
+      UpdateRead
+    } Form;
+    SingleStmtInfo First, Second;
+
+    static StmtInfo createUpdateRead(SingleStmtInfo First,
+                                     SingleStmtInfo Second) {
+      return {StmtForm::UpdateRead, First, Second};
+    }
+    static StmtInfo createReadWrite(SingleStmtInfo First,
+                                    SingleStmtInfo Second) {
+      return {StmtForm::ReadWrite, First, Second};
+    }
+    static StmtInfo createReadUpdate(SingleStmtInfo First,
+                                     SingleStmtInfo Second) {
+      return {StmtForm::ReadUpdate, First, Second};
+    }
   };
 
   const StmtInfo getAssociatedStmtInfo() const;

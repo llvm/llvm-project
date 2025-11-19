@@ -1462,6 +1462,24 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
     unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
+  // Do not consider loops with a backedge that isn't taken, e.g. an
+  // unconditional branch true/false, as candidates for interchange.
+  // TODO: when interchange is forced, we should probably also allow
+  // interchange for these loops, and thus this logic should be moved just
+  // below the cost-model ignore check below. But this check is done first
+  // to avoid the issue in #163954.
+  const SCEV *InnerBTC = SE->getBackedgeTakenCount(InnerLoop);
+  const SCEV *OuterBTC = SE->getBackedgeTakenCount(OuterLoop);
+  if (InnerBTC && InnerBTC->isZero()) {
+    LLVM_DEBUG(dbgs() << "Inner loop back-edge isn't taken, rejecting "
+                         "single iteration loop\n");
+    return false;
+  }
+  if (OuterBTC && OuterBTC->isZero()) {
+    LLVM_DEBUG(dbgs() << "Outer loop back-edge isn't taken, rejecting "
+                         "single iteration loop\n");
+    return false;
+  }
 
   // Return true if interchange is forced and the cost-model ignored.
   if (Profitabilities.size() == 1 && Profitabilities[0] == RuleTy::Ignore)
