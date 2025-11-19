@@ -27,7 +27,7 @@ jobs:
         with:
           sparse-checkout: |
             .ci/metrics/
-            .github/workflows/containers/github-action-ci/
+            .github/actions/build-container
       - name: Build Container
         uses: ./.github/actions/build-container
         with:
