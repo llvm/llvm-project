@@ -53,7 +53,7 @@ struct CodeGenTypeCache {
 
   /// void*, void** in the target's default address space (often 0)
   union {
-    llvm::PointerType *UnqualPtrTy;
+    llvm::PointerType *DefaultPtrTy;
     llvm::PointerType *VoidPtrTy;
     llvm::PointerType *Int8PtrTy;
     llvm::PointerType *VoidPtrPtrTy;

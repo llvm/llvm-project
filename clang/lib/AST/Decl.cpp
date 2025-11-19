@@ -3180,7 +3180,7 @@ void FunctionDecl::DefaultedOrDeletedFunctionInfo::setDeletedMessage(
 }
 
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
-FunctionDecl::getDefalutedOrDeletedInfo() const {
+FunctionDecl::getDefaultedOrDeletedInfo() const {
   return FunctionDeclBits.HasDefaultedOrDeletedInfo ? DefaultedOrDeletedInfo
                                                     : nullptr;
 }
@@ -3380,11 +3380,11 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
     return false;
 
   return llvm::StringSwitch<bool>(getName())
-      .Cases("main",     // an ANSI console app
-             "wmain",    // a Unicode console App
-             "WinMain",  // an ANSI GUI app
-             "wWinMain", // a Unicode GUI app
-             "DllMain",  // a DLL
+      .Cases({"main",     // an ANSI console app
+              "wmain",    // a Unicode console App
+              "WinMain",  // an ANSI GUI app
+              "wWinMain", // a Unicode GUI app
+              "DllMain"}, // a DLL
              true)
       .Default(false);
 }

@@ -28,7 +28,6 @@
 ; CORRECT-NOT: warning: {{.*}}
 ; CORRECT-NOT: remark: {{.*}}
 
-
 ; ModuleID = 'misexpect-switch.c'
 source_filename = "misexpect-switch.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -40,10 +39,10 @@ target triple = "x86_64-unknown-linux-gnu"
 @arry = dso_local global [25 x i32] zeroinitializer, align 16, !dbg !12
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @init_arry() #0 !dbg !21 {
+define dso_local void @init_arry() !dbg !21 {
 entry:
   %i = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(ptr %i) #6, !dbg !26
+  call void @llvm.lifetime.start.p0(ptr %i), !dbg !26
   call void @llvm.dbg.declare(metadata ptr %i, metadata !25, metadata !DIExpression()), !dbg !27
   store i32 0, ptr %i, align 4, !dbg !28, !tbaa !30
   br label %for.cond, !dbg !34
@@ -54,7 +53,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end, !dbg !38
 
 for.body:                                         ; preds = %for.cond
-  %call = call i32 @rand() #6, !dbg !39
+  %call = call i32 @rand(), !dbg !39
   %rem = srem i32 %call, 10, !dbg !41
   %1 = load i32, ptr %i, align 4, !dbg !42, !tbaa !30
   %idxprom = sext i32 %1 to i64, !dbg !43
@@ -69,24 +68,24 @@ for.inc:                                          ; preds = %for.body
   br label %for.cond, !dbg !47, !llvm.loop !48
 
 for.end:                                          ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(ptr %i) #6, !dbg !50
+  call void @llvm.lifetime.end.p0(ptr %i), !dbg !50
   ret void, !dbg !50
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind
-declare dso_local i32 @rand() #3
+declare dso_local i32 @rand()
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @main() #0 !dbg !51 {
+define dso_local i32 @main() !dbg !51 {
 entry:
   %retval = alloca i32, align 4
   %val = alloca i32, align 4
@@ -94,10 +93,10 @@ entry:
   %condition = alloca i32, align 4
   store i32 0, ptr %retval, align 4
   call void @init_arry(), !dbg !62
-  call void @llvm.lifetime.start.p0(ptr %val) #6, !dbg !63
+  call void @llvm.lifetime.start.p0(ptr %val), !dbg !63
   call void @llvm.dbg.declare(metadata ptr %val, metadata !55, metadata !DIExpression()), !dbg !64
   store i32 0, ptr %val, align 4, !dbg !64, !tbaa !30
-  call void @llvm.lifetime.start.p0(ptr %j) #6, !dbg !65
+  call void @llvm.lifetime.start.p0(ptr %j), !dbg !65
   call void @llvm.dbg.declare(metadata ptr %j, metadata !56, metadata !DIExpression()), !dbg !66
   store i32 0, ptr %j, align 4, !dbg !67, !tbaa !30
   br label %for.cond, !dbg !68
@@ -108,9 +107,9 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end, !dbg !71
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start.p0(ptr %condition) #6, !dbg !72
+  call void @llvm.lifetime.start.p0(ptr %condition), !dbg !72
   call void @llvm.dbg.declare(metadata ptr %condition, metadata !57, metadata !DIExpression()), !dbg !73
-  %call = call i32 @rand() #6, !dbg !74
+  %call = call i32 @rand(), !dbg !74
   %rem = srem i32 %call, 5, !dbg !75
   store i32 %rem, ptr %condition, align 4, !dbg !73, !tbaa !30
   %1 = load i32, ptr %condition, align 4, !dbg !76, !tbaa !30
@@ -145,7 +144,7 @@ sw.default:                                       ; preds = %for.body
   unreachable, !dbg !87
 
 sw.epilog:                                        ; preds = %sw.bb3, %sw.bb2, %sw.bb
-  call void @llvm.lifetime.end.p0(ptr %condition) #6, !dbg !88
+  call void @llvm.lifetime.end.p0(ptr %condition), !dbg !88
   br label %for.inc, !dbg !89
 
 for.inc:                                          ; preds = %sw.epilog
@@ -155,25 +154,17 @@ for.inc:                                          ; preds = %sw.epilog
   br label %for.cond, !dbg !91, !llvm.loop !92
 
 for.end:                                          ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(ptr %j) #6, !dbg !94
-  call void @llvm.lifetime.end.p0(ptr %val) #6, !dbg !94
+  call void @llvm.lifetime.end.p0(ptr %j), !dbg !94
+  call void @llvm.lifetime.end.p0(ptr %val), !dbg !94
   ret i32 0, !dbg !95
 }
 
 ; Function Attrs: nounwind readnone willreturn
-declare i64 @llvm.expect.i64(i64, i64) #4
+declare i64 @llvm.expect.i64(i64, i64)
 
-declare dso_local i32 @sum(ptr, i32) #5
+declare dso_local i32 @sum(ptr, i32)
 
-declare dso_local i32 @random_sample(ptr, i32) #5
-
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind willreturn }
-attributes #2 = { nounwind readnone speculatable willreturn }
-attributes #3 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind readnone willreturn }
-attributes #5 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #6 = { nounwind }
+declare dso_local i32 @random_sample(ptr, i32)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!17, !18, !19}

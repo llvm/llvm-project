@@ -12,7 +12,7 @@ YAML is a human-readable data serialization language.  The full YAML language
 spec can be read at `yaml.org
 <http://www.yaml.org/spec/1.2/spec.html#Introduction>`_.  The simplest form of
 YAML is just "scalars", "mappings", and "sequences".  A scalar is any number
-or string.  The pound/hash symbol (#) begins a comment line.   A mapping is
+or string.  The pound/hash symbol (``#``) begins a comment line.   A mapping is
 a set of key-value pairs where the key ends with a colon.  For example:
 
 .. code-block:: yaml
@@ -21,7 +21,7 @@ a set of key-value pairs where the key ends with a colon.  For example:
      name:      Tom
      hat-size:  7
 
-A sequence is a list of items where each item starts with a leading dash ('-').
+A sequence is a list of items where each item starts with a leading dash (``-``).
 For example:
 
 .. code-block:: yaml
@@ -221,7 +221,7 @@ Similar errors are produced for other input not conforming to the schema.
 Scalars
 =======
 
-YAML scalars are just strings (i.e. not a sequence or mapping).  The YAML I/O
+YAML scalars are just strings (i.e., not a sequence or mapping).  The YAML I/O
 library provides support for translating between YAML scalars and specific
 C++ types.
 
@@ -230,19 +230,19 @@ Built-in types
 --------------
 The following types have built-in support in YAML I/O:
 
-* bool
-* float
-* double
-* StringRef
-* std::string
-* int64_t
-* int32_t
-* int16_t
-* int8_t
-* uint64_t
-* uint32_t
-* uint16_t
-* uint8_t
+* ``bool``
+* ``float``
+* ``double``
+* ``StringRef``
+* ``std::string``
+* ``int64_t``
+* ``int32_t``
+* ``int16_t``
+* ``int8_t``
+* ``uint64_t``
+* ``uint32_t``
+* ``uint16_t``
+* ``uint8_t``
 
 That is, you can use those types in fields of ``MappingTraits`` or as the element type
 in a sequence.  When reading, YAML I/O will validate that the string found
@@ -264,7 +264,7 @@ operators to and from the base type.  For example:
     LLVM_YAML_STRONG_TYPEDEF(uint32_t, MyFooFlags)
     LLVM_YAML_STRONG_TYPEDEF(uint32_t, MyBarFlags)
 
-This generates two classes MyFooFlags and MyBarFlags which you can use in your
+This generates two classes ``MyFooFlags`` and ``MyBarFlags`` which you can use in your
 native data structures instead of ``uint32_t``. They are implicitly
 converted to and from ``uint32_t``.  The point of creating these unique types
 is that you can now specify traits on them to get different YAML conversions.
@@ -275,12 +275,12 @@ An example use of a unique type is that YAML I/O provides fixed-sized unsigned
 integers that are written with YAML I/O as hexadecimal instead of the decimal
 format used by the built-in integer types:
 
-* Hex64
-* Hex32
-* Hex16
-* Hex8
+* ``Hex64``
+* ``Hex32``
+* ``Hex16``
+* ``Hex8``
 
-You can use ``llvm::yaml::Hex32`` instead of ``uint32_t`` and the only difference will
+You can use ``llvm::yaml::Hex32`` instead of ``uint32_t``. The only difference will
 be that when YAML I/O writes out that type it will be formatted in hexadecimal.
 
 
@@ -356,8 +356,8 @@ had the following bit flags defined:
 
     LLVM_YAML_STRONG_TYPEDEF(uint32_t, MyFlags)
 
-To support reading and writing of MyFlags, you specialize ``ScalarBitSetTraits<>``
-on MyFlags and provide the bit values and their names.
+To support reading and writing of ``MyFlags``, you specialize ``ScalarBitSetTraits<>``
+on ``MyFlags`` and provide the bit values and their names.
 
 .. code-block:: c++
 
@@ -441,7 +441,7 @@ Custom Scalar
 Sometimes, for readability, a scalar needs to be formatted in a custom way. For
 instance, your internal data structure may use an integer for time (seconds since
 some epoch), but in YAML it would be much nicer to express that integer in
-some time format (e.g. 4-May-2012 10:30pm).  YAML I/O has a way to support
+some time format (e.g., ``4-May-2012 10:30pm``).  YAML I/O has a way to support
 custom formatting and parsing of scalar types by specializing ``ScalarTraits<>`` on
 your data type.  When writing, YAML I/O will provide the native type and
 your specialization must create a temporary ``llvm::StringRef``.  When reading,
@@ -523,8 +523,8 @@ An example of a custom type with an appropriate specialization of
 Mappings
 ========
 
-To be translated to or from a YAML mapping for your type T you must specialize
-``llvm::yaml::MappingTraits`` on T and implement the "void mapping(IO &io, T&)"
+To be translated to or from a YAML mapping for your type ``T``, you must specialize
+``llvm::yaml::MappingTraits`` on ``T`` and implement the ``void mapping(IO &io, T&)``
 method. If your native data structures use pointers to a class everywhere,
 you can specialize on the class pointer.  Examples:
 
@@ -685,13 +685,13 @@ normalized instance is stack allocated.  In these cases, the utility template
 ``MappingNormalizationHeap<>`` can be used instead.  It just like
 ``MappingNormalization<>`` except that it heap allocates the normalized object
 when reading YAML.  It never destroys the normalized object.  The ``denormalize()``
-method can this return "this".
+method can this return ``this``.
 
 
 Default values
 --------------
 Within a ``mapping()`` method, calls to ``io.mapRequired()`` mean that that key is
-required to exist when parsing YAML documents, otherwise YAML I/O will issue an
+required to exist when parsing YAML documents; otherwise, YAML I/O will issue an
 error.
 
 On the other hand, keys registered with ``io.mapOptional()`` are allowed to not
@@ -708,7 +708,7 @@ does not have that key.
 There is one important difference between those two ways (default constructor
 and third parameter to ``mapOptional()``). When YAML I/O generates a YAML document,
 if the ``mapOptional()`` third parameter is used, if the actual value being written
-is the same as (using ==) the default value, then that key/value is not written.
+is the same as (using ``==``) the default value, then that key/value is not written.
 
 
 Order of Keys
@@ -772,7 +772,7 @@ not.  This is similar to something having no syntax errors, but still having
 semantic errors.  To support semantic-level checking, YAML I/O allows
 an optional ``validate()`` method in a MappingTraits template specialization.
 
-When parsing YAML, the ``validate()`` method is call *after* all key/values in
+When parsing YAML, the ``validate()`` method is called *after* all key/values in
 the map have been processed. Any error message returned by the ``validate()``
 method during input will be printed just like a syntax error would be printed.
 When writing YAML, the ``validate()`` method is called *before* the YAML
@@ -807,7 +807,7 @@ Flow Mapping
 A YAML "flow mapping" is a mapping that uses the inline notation
 (e.g { x: 1, y: 0 } ) when written to YAML. To specify that a type should be
 written in YAML using flow mapping, your MappingTraits specialization should
-add "static const bool flow = true;". For instance:
+add ``static constexpr bool flow = true;``. For instance:
 
 .. code-block:: c++
 
@@ -824,7 +824,7 @@ add "static const bool flow = true;". For instance:
         ...
       }
 
-      static const bool flow = true;
+      static constexpr bool flow = true;
     }
 
 Flow mappings are subject to line wrapping according to the ``Output`` object
@@ -833,8 +833,8 @@ configuration.
 Sequence
 ========
 
-To be translated to or from a YAML sequence for your type T you must specialize
-``llvm::yaml::SequenceTraits`` on T and implement two methods:
+To be translated to or from a YAML sequence for your type ``T``, you must specialize
+``llvm::yaml::SequenceTraits`` on ``T`` and implement two methods:
 ``size_t size(IO &io, T&)`` and
 ``T::value_type& element(IO &io, T&, size_t indx)``.  For example:
 
@@ -857,9 +857,9 @@ a reference to that new allocated space.
 Flow Sequence
 -------------
 A YAML "flow sequence" is a sequence that when written to YAML it uses the
-inline notation (e.g [ foo, bar ] ).  To specify that a sequence type should
+inline notation (e.g., ``[ foo, bar ]`` ).  To specify that a sequence type should
 be written in YAML as a flow sequence, your SequenceTraits specialization should
-add "static const bool flow = true;".  For instance:
+add ``static constexpr bool flow = true;``.  For instance:
 
 .. code-block:: c++
 
@@ -869,12 +869,12 @@ add "static const bool flow = true;".  For instance:
     static MyListEl &element(IO &io, MyList &list, size_t index) { ... }
 
     // The existence of this member causes YAML I/O to use a flow sequence
-    static const bool flow = true;
+    static constexpr bool flow = true;
   };
 
-With the above, if you used MyList as the data type in your native data
+With the above, if you used ``MyList`` as the data type in your native data
 structures, then when converted to YAML, a flow sequence of integers
-will be used (e.g. [ 10, -3, 4 ]).
+will be used (e.g., ``[ 10, -3, 4 ]``).
 
 Flow sequences are subject to line wrapping according to the Output object
 configuration.
@@ -900,8 +900,8 @@ Document List
 =============
 
 YAML allows you to define multiple "documents" in a single YAML file.  Each
-new document starts with a left aligned "---" token.  The end of all documents
-is denoted with a left aligned "..." token.  Many users of YAML will never
+new document starts with a left aligned ``---`` token.  The end of all documents
+is denoted with a left aligned ``...`` token.  Many users of YAML will never
 have need for multiple documents.  The top level node in their YAML schema
 will be a mapping or sequence. For those cases, the following is not needed.
 But for cases where you do want multiple documents, you can specify a
@@ -955,7 +955,7 @@ to write your native data as YAML. One thing to recall is that a YAML file
 can contain multiple "documents".  If the top level data structure you are
 streaming as YAML is a mapping, scalar, or sequence, then ``Output`` assumes you
 are generating one document and wraps the mapping output
-with  "``---``" and trailing "``...``".
+with ``---`` and trailing ``...``.
 
 The ``WrapColumn`` parameter will cause the flow mappings and sequences to
 line-wrap when they go over the supplied column. Pass 0 to completely
@@ -981,8 +981,8 @@ The above could produce output like:
 
 On the other hand, if the top level data structure you are streaming as YAML
 has a ``DocumentListTraits`` specialization, then Output walks through each element
-of your DocumentList and generates a "---" before the start of each element
-and ends with a "...".
+of your DocumentList and generates a ``---`` before the start of each element
+and ends with a ``...``.
 
 .. code-block:: c++
 
@@ -1022,7 +1022,7 @@ pointer:
 Once you have an ``Input`` object, you can use the C++ stream operator to read
 the document(s).  If you expect there might be multiple YAML documents in
 one file, you'll need to specialize ``DocumentListTraits`` on a list of your
-document type and stream in that document list type.  Otherwise you can
+document type and stream in that document list type.  Otherwise, you can
 just stream in the document type.  Also, you can check if there was
 any syntax errors in the YAML by calling the ``error()`` method on the ``Input``
 object.  For example:

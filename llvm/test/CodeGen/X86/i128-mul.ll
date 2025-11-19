@@ -111,62 +111,63 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X86-NOBMI-NEXT:    orl %ecx, %eax
 ; X86-NOBMI-NEXT:    je .LBB1_3
 ; X86-NOBMI-NEXT:  # %bb.1: # %for.body.preheader
-; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:    xorl %edx, %edx
+; X86-NOBMI-NEXT:    xorl %esi, %esi
 ; X86-NOBMI-NEXT:    xorl %ecx, %ecx
-; X86-NOBMI-NEXT:    movl $0, (%esp) # 4-byte Folded Spill
+; X86-NOBMI-NEXT:    xorl %edi, %edi
+; X86-NOBMI-NEXT:    xorl %ebp, %ebp
 ; X86-NOBMI-NEXT:    .p2align 4
 ; X86-NOBMI-NEXT:  .LBB1_2: # %for.body
 ; X86-NOBMI-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NOBMI-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    movl (%eax,%edi,8), %ebp
+; X86-NOBMI-NEXT:    movl 4(%eax,%edi,8), %ebx
+; X86-NOBMI-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NOBMI-NEXT:    movl %ebp, %eax
+; X86-NOBMI-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NOBMI-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOBMI-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    movl (%eax,%ecx,8), %edi
-; X86-NOBMI-NEXT:    movl 4(%eax,%ecx,8), %ebx
-; X86-NOBMI-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NOBMI-NEXT:    movl %edi, %eax
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOBMI-NEXT:    mull %esi
-; X86-NOBMI-NEXT:    movl %edx, %ebp
-; X86-NOBMI-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOBMI-NEXT:    movl %ebx, %eax
-; X86-NOBMI-NEXT:    mull %esi
-; X86-NOBMI-NEXT:    movl %edx, %ebx
-; X86-NOBMI-NEXT:    movl %eax, %esi
-; X86-NOBMI-NEXT:    addl %ebp, %esi
-; X86-NOBMI-NEXT:    adcl $0, %ebx
-; X86-NOBMI-NEXT:    movl %edi, %eax
+; X86-NOBMI-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NOBMI-NEXT:    movl %eax, %ebx
+; X86-NOBMI-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
+; X86-NOBMI-NEXT:    adcl $0, %edx
+; X86-NOBMI-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; X86-NOBMI-NEXT:    movl %ebp, %eax
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    mull %edx
-; X86-NOBMI-NEXT:    movl %edx, %ebp
-; X86-NOBMI-NEXT:    movl %eax, %edi
-; X86-NOBMI-NEXT:    addl %esi, %edi
-; X86-NOBMI-NEXT:    adcl %ebx, %ebp
-; X86-NOBMI-NEXT:    setb %bl
+; X86-NOBMI-NEXT:    movl %eax, %ebp
+; X86-NOBMI-NEXT:    addl %ebx, %ebp
+; X86-NOBMI-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NOBMI-NEXT:    adcl (%esp), %edx # 4-byte Folded Reload
+; X86-NOBMI-NEXT:    movl %edx, %ebx
+; X86-NOBMI-NEXT:    setb (%esp) # 1-byte Folded Spill
 ; X86-NOBMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NOBMI-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NOBMI-NEXT:    addl %ebp, %eax
-; X86-NOBMI-NEXT:    movzbl %bl, %esi
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NOBMI-NEXT:    adcl %esi, %edx
-; X86-NOBMI-NEXT:    movl %ecx, %ebx
-; X86-NOBMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NOBMI-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; X86-NOBMI-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; X86-NOBMI-NEXT:    adcl $0, %eax
-; X86-NOBMI-NEXT:    adcl $0, %edx
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOBMI-NEXT:    movl %ecx, (%esi,%ebx,8)
-; X86-NOBMI-NEXT:    movl %ebx, %ecx
-; X86-NOBMI-NEXT:    movl %edi, 4(%esi,%ebx,8)
-; X86-NOBMI-NEXT:    addl $1, %ecx
-; X86-NOBMI-NEXT:    movl (%esp), %edi # 4-byte Reload
-; X86-NOBMI-NEXT:    adcl $0, %edi
-; X86-NOBMI-NEXT:    movl %ecx, %esi
-; X86-NOBMI-NEXT:    xorl {{[0-9]+}}(%esp), %esi
-; X86-NOBMI-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; X86-NOBMI-NEXT:    xorl %ebp, %edi
-; X86-NOBMI-NEXT:    orl %esi, %edi
+; X86-NOBMI-NEXT:    movl %eax, %esi
+; X86-NOBMI-NEXT:    addl %ebx, %esi
+; X86-NOBMI-NEXT:    movl %ecx, %eax
+; X86-NOBMI-NEXT:    movzbl (%esp), %ebx # 1-byte Folded Reload
+; X86-NOBMI-NEXT:    movl %edx, %ecx
+; X86-NOBMI-NEXT:    adcl %ebx, %ecx
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOBMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-NOBMI-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NOBMI-NEXT:    adcl %eax, %ebp
+; X86-NOBMI-NEXT:    adcl $0, %esi
+; X86-NOBMI-NEXT:    adcl $0, %ecx
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    movl %edx, (%eax,%edi,8)
+; X86-NOBMI-NEXT:    movl %ebp, 4(%eax,%edi,8)
+; X86-NOBMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOBMI-NEXT:    addl $1, %edi
+; X86-NOBMI-NEXT:    adcl $0, %ebp
+; X86-NOBMI-NEXT:    movl %edi, %eax
+; X86-NOBMI-NEXT:    xorl %edx, %eax
+; X86-NOBMI-NEXT:    movl %ebp, %edx
+; X86-NOBMI-NEXT:    xorl %ebx, %edx
+; X86-NOBMI-NEXT:    orl %eax, %edx
 ; X86-NOBMI-NEXT:    jne .LBB1_2
 ; X86-NOBMI-NEXT:  .LBB1_3: # %for.end
 ; X86-NOBMI-NEXT:    xorl %eax, %eax
@@ -184,71 +185,66 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X86-BMI-NEXT:    pushl %ebx
 ; X86-BMI-NEXT:    pushl %edi
 ; X86-BMI-NEXT:    pushl %esi
-; X86-BMI-NEXT:    subl $20, %esp
+; X86-BMI-NEXT:    subl $16, %esp
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    orl %ecx, %eax
 ; X86-BMI-NEXT:    je .LBB1_3
 ; X86-BMI-NEXT:  # %bb.1: # %for.body.preheader
-; X86-BMI-NEXT:    xorl %ecx, %ecx
-; X86-BMI-NEXT:    xorl %eax, %eax
+; X86-BMI-NEXT:    xorl %esi, %esi
+; X86-BMI-NEXT:    xorl %edi, %edi
 ; X86-BMI-NEXT:    xorl %ebx, %ebx
-; X86-BMI-NEXT:    xorl %ebp, %ebp
+; X86-BMI-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-BMI-NEXT:    .p2align 4
 ; X86-BMI-NEXT:  .LBB1_2: # %for.body
 ; X86-BMI-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-BMI-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-BMI-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-BMI-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    movl (%eax,%ebx,8), %ecx
-; X86-BMI-NEXT:    movl 4(%eax,%ebx,8), %esi
-; X86-BMI-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-BMI-NEXT:    movl 4(%eax,%ebx,8), %ebp
+; X86-BMI-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-BMI-NEXT:    movl %ecx, %edx
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-BMI-NEXT:    mulxl %eax, %edx, %edi
+; X86-BMI-NEXT:    mulxl {{[0-9]+}}(%esp), %edx, %eax
+; X86-BMI-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-BMI-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-BMI-NEXT:    movl %esi, %edx
-; X86-BMI-NEXT:    mulxl %eax, %esi, %eax
-; X86-BMI-NEXT:    addl %edi, %esi
-; X86-BMI-NEXT:    adcl $0, %eax
-; X86-BMI-NEXT:    movl %ecx, %edx
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    mulxl %ecx, %edi, %ebp
-; X86-BMI-NEXT:    addl %esi, %edi
-; X86-BMI-NEXT:    adcl %eax, %ebp
-; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; X86-BMI-NEXT:    mulxl %ecx, %ecx, %eax
-; X86-BMI-NEXT:    setb %dl
-; X86-BMI-NEXT:    addl %ebp, %ecx
-; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-BMI-NEXT:    movzbl %dl, %edx
-; X86-BMI-NEXT:    adcl %edx, %eax
-; X86-BMI-NEXT:    movl %eax, %edx
-; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-BMI-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-BMI-NEXT:    adcl (%esp), %edi # 4-byte Folded Reload
-; X86-BMI-NEXT:    adcl $0, %ecx
-; X86-BMI-NEXT:    adcl $0, %edx
-; X86-BMI-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-BMI-NEXT:    movl %eax, (%edx,%ebx,8)
-; X86-BMI-NEXT:    movl %edi, 4(%edx,%ebx,8)
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-BMI-NEXT:    addl $1, %ebx
+; X86-BMI-NEXT:    movl %ebp, %edx
+; X86-BMI-NEXT:    mulxl {{[0-9]+}}(%esp), %eax, %ebp
+; X86-BMI-NEXT:    addl (%esp), %eax # 4-byte Folded Reload
 ; X86-BMI-NEXT:    adcl $0, %ebp
-; X86-BMI-NEXT:    movl %ebx, %edx
-; X86-BMI-NEXT:    xorl %esi, %edx
-; X86-BMI-NEXT:    movl %ebp, %esi
-; X86-BMI-NEXT:    xorl %edi, %esi
-; X86-BMI-NEXT:    orl %edx, %esi
-; X86-BMI-NEXT:    movl (%esp), %eax # 4-byte Reload
+; X86-BMI-NEXT:    movl %ecx, %edx
+; X86-BMI-NEXT:    mulxl {{[0-9]+}}(%esp), %ecx, %edx
+; X86-BMI-NEXT:    addl %eax, %ecx
+; X86-BMI-NEXT:    movl %edi, (%esp) # 4-byte Spill
+; X86-BMI-NEXT:    movl %esi, %eax
+; X86-BMI-NEXT:    adcl %ebp, %edx
+; X86-BMI-NEXT:    movl %edx, %ebp
+; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-BMI-NEXT:    mulxl {{[0-9]+}}(%esp), %esi, %edi
+; X86-BMI-NEXT:    setb %dl
+; X86-BMI-NEXT:    addl %ebp, %esi
+; X86-BMI-NEXT:    movzbl %dl, %edx
+; X86-BMI-NEXT:    adcl %edx, %edi
+; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-BMI-NEXT:    addl %eax, %edx
+; X86-BMI-NEXT:    adcl (%esp), %ecx # 4-byte Folded Reload
+; X86-BMI-NEXT:    adcl $0, %esi
+; X86-BMI-NEXT:    adcl $0, %edi
+; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    movl %edx, (%eax,%ebx,8)
+; X86-BMI-NEXT:    movl %ecx, 4(%eax,%ebx,8)
+; X86-BMI-NEXT:    addl $1, %ebx
+; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-BMI-NEXT:    adcl $0, %ecx
+; X86-BMI-NEXT:    movl %ebx, %eax
+; X86-BMI-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-BMI-NEXT:    xorl %ebp, %ecx
+; X86-BMI-NEXT:    orl %eax, %ecx
 ; X86-BMI-NEXT:    jne .LBB1_2
 ; X86-BMI-NEXT:  .LBB1_3: # %for.end
 ; X86-BMI-NEXT:    xorl %eax, %eax
 ; X86-BMI-NEXT:    xorl %edx, %edx
-; X86-BMI-NEXT:    addl $20, %esp
+; X86-BMI-NEXT:    addl $16, %esp
 ; X86-BMI-NEXT:    popl %esi
 ; X86-BMI-NEXT:    popl %edi
 ; X86-BMI-NEXT:    popl %ebx
@@ -261,11 +257,12 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X64-NOBMI-NEXT:    je .LBB1_3
 ; X64-NOBMI-NEXT:  # %bb.1: # %for.body.preheader
 ; X64-NOBMI-NEXT:    movq %rdx, %r8
-; X64-NOBMI-NEXT:    xorl %r10d, %r10d
+; X64-NOBMI-NEXT:    xorl %edx, %edx
 ; X64-NOBMI-NEXT:    xorl %r9d, %r9d
 ; X64-NOBMI-NEXT:    .p2align 4
 ; X64-NOBMI-NEXT:  .LBB1_2: # %for.body
 ; X64-NOBMI-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NOBMI-NEXT:    movq %rdx, %r10
 ; X64-NOBMI-NEXT:    movq %rcx, %rax
 ; X64-NOBMI-NEXT:    mulq (%r8,%r9,8)
 ; X64-NOBMI-NEXT:    addq %r10, %rax
@@ -273,7 +270,6 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X64-NOBMI-NEXT:    movq %rax, (%rsi,%r9,8)
 ; X64-NOBMI-NEXT:    incq %r9
 ; X64-NOBMI-NEXT:    cmpq %r9, %rdi
-; X64-NOBMI-NEXT:    movq %rdx, %r10
 ; X64-NOBMI-NEXT:    jne .LBB1_2
 ; X64-NOBMI-NEXT:  .LBB1_3: # %for.end
 ; X64-NOBMI-NEXT:    xorl %eax, %eax
@@ -285,11 +281,12 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X64-BMI-NEXT:    je .LBB1_3
 ; X64-BMI-NEXT:  # %bb.1: # %for.body.preheader
 ; X64-BMI-NEXT:    movq %rdx, %rax
-; X64-BMI-NEXT:    xorl %r9d, %r9d
+; X64-BMI-NEXT:    xorl %edx, %edx
 ; X64-BMI-NEXT:    xorl %r8d, %r8d
 ; X64-BMI-NEXT:    .p2align 4
 ; X64-BMI-NEXT:  .LBB1_2: # %for.body
 ; X64-BMI-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-BMI-NEXT:    movq %rdx, %r9
 ; X64-BMI-NEXT:    movq %rcx, %rdx
 ; X64-BMI-NEXT:    mulxq (%rax,%r8,8), %r10, %rdx
 ; X64-BMI-NEXT:    addq %r9, %r10
@@ -297,7 +294,6 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X64-BMI-NEXT:    movq %r10, (%rsi,%r8,8)
 ; X64-BMI-NEXT:    incq %r8
 ; X64-BMI-NEXT:    cmpq %r8, %rdi
-; X64-BMI-NEXT:    movq %rdx, %r9
 ; X64-BMI-NEXT:    jne .LBB1_2
 ; X64-BMI-NEXT:  .LBB1_3: # %for.end
 ; X64-BMI-NEXT:    xorl %eax, %eax

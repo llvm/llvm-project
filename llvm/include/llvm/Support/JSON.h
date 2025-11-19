@@ -154,7 +154,7 @@ public:
   LLVM_ABI const json::Array *getArray(StringRef K) const;
   LLVM_ABI json::Array *getArray(StringRef K);
 
-  friend bool operator==(const Object &LHS, const Object &RHS);
+  friend LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 };
 LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 inline bool operator!=(const Object &LHS, const Object &RHS) {
@@ -318,7 +318,7 @@ public:
   Value(std::string V) : Type(T_String) {
     if (LLVM_UNLIKELY(!isUTF8(V))) {
       assert(false && "Invalid UTF-8 in value used as JSON");
-      V = fixUTF8(std::move(V));
+      V = fixUTF8(V);
     }
     create<std::string>(std::move(V));
   }
@@ -549,10 +549,10 @@ inline const Value &Array::back() const { return V.back(); }
 inline Value *Array::data() { return V.data(); }
 inline const Value *Array::data() const { return V.data(); }
 
-inline typename Array::iterator Array::begin() { return V.begin(); }
-inline typename Array::const_iterator Array::begin() const { return V.begin(); }
-inline typename Array::iterator Array::end() { return V.end(); }
-inline typename Array::const_iterator Array::end() const { return V.end(); }
+inline Array::iterator Array::begin() { return V.begin(); }
+inline Array::const_iterator Array::begin() const { return V.begin(); }
+inline Array::iterator Array::end() { return V.end(); }
+inline Array::const_iterator Array::end() const { return V.end(); }
 
 inline bool Array::empty() const { return V.empty(); }
 inline size_t Array::size() const { return V.size(); }
@@ -565,18 +565,18 @@ template <typename... Args> inline void Array::emplace_back(Args &&...A) {
   V.emplace_back(std::forward<Args>(A)...);
 }
 inline void Array::pop_back() { V.pop_back(); }
-inline typename Array::iterator Array::insert(const_iterator P, const Value &E) {
+inline Array::iterator Array::insert(const_iterator P, const Value &E) {
   return V.insert(P, E);
 }
-inline typename Array::iterator Array::insert(const_iterator P, Value &&E) {
+inline Array::iterator Array::insert(const_iterator P, Value &&E) {
   return V.insert(P, std::move(E));
 }
 template <typename It>
-inline typename Array::iterator Array::insert(const_iterator P, It A, It Z) {
+inline Array::iterator Array::insert(const_iterator P, It A, It Z) {
   return V.insert(P, A, Z);
 }
 template <typename... Args>
-inline typename Array::iterator Array::emplace(const_iterator P, Args &&...A) {
+inline Array::iterator Array::emplace(const_iterator P, Args &&...A) {
   return V.emplace(P, std::forward<Args>(A)...);
 }
 inline bool operator==(const Array &L, const Array &R) { return L.V == R.V; }
@@ -591,7 +591,7 @@ public:
   ObjectKey(std::string S) : Owned(new std::string(std::move(S))) {
     if (LLVM_UNLIKELY(!isUTF8(*Owned))) {
       assert(false && "Invalid UTF-8 in value used as JSON");
-      *Owned = fixUTF8(std::move(*Owned));
+      *Owned = fixUTF8(*Owned);
     }
     Data = *Owned;
   }

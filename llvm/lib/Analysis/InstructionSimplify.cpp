@@ -41,6 +41,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
@@ -4866,6 +4867,89 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
   return nullptr;
 }
 
+/// Look for the following pattern and simplify %to_fold to %identicalPhi.
+/// Here %phi, %to_fold and %phi.next perform the same functionality as
+/// %identicalPhi and hence the select instruction %to_fold can be folded
+/// into %identicalPhi.
+///
+/// BB1:
+///   %identicalPhi = phi [ X, %BB0 ], [ %identicalPhi.next, %BB1 ]
+///   %phi = phi [ X, %BB0 ], [ %phi.next, %BB1 ]
+///   ...
+///   %identicalPhi.next = select %cmp, %val, %identicalPhi
+///                      (or select %cmp, %identicalPhi, %val)
+///   %to_fold = select %cmp2, %identicalPhi, %phi
+///   %phi.next = select %cmp, %val, %to_fold
+///             (or select %cmp, %to_fold, %val)
+///
+/// Prove that %phi and %identicalPhi are the same by induction:
+///
+/// Base case: Both %phi and %identicalPhi are equal on entry to the loop.
+/// Inductive case:
+/// Suppose %phi and %identicalPhi are equal at iteration i.
+/// We look at their values at iteration i+1 which are %phi.next and
+/// %identicalPhi.next. They would have become different only when %cmp is
+/// false and the corresponding values %to_fold and %identicalPhi differ
+/// (similar reason for the other "or" case in the bracket).
+///
+/// The only condition when %to_fold and %identicalPh could differ is when %cmp2
+/// is false and %to_fold is %phi, which contradicts our inductive hypothesis
+/// that %phi and %identicalPhi are equal. Thus %phi and %identicalPhi are
+/// always equal at iteration i+1.
+bool isSelectWithIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
+  if (PN.getParent() != IdenticalPN.getParent())
+    return false;
+  if (PN.getNumIncomingValues() != 2)
+    return false;
+
+  // Check that only the backedge incoming value is different.
+  unsigned DiffVals = 0;
+  BasicBlock *DiffValBB = nullptr;
+  for (unsigned i = 0; i < 2; i++) {
+    BasicBlock *PredBB = PN.getIncomingBlock(i);
+    if (PN.getIncomingValue(i) !=
+        IdenticalPN.getIncomingValueForBlock(PredBB)) {
+      DiffVals++;
+      DiffValBB = PredBB;
+    }
+  }
+  if (DiffVals != 1)
+    return false;
+  // Now check that the backedge incoming values are two select
+  // instructions with the same condition. Either their true
+  // values are the same, or their false values are the same.
+  auto *SI = dyn_cast<SelectInst>(PN.getIncomingValueForBlock(DiffValBB));
+  auto *IdenticalSI =
+      dyn_cast<SelectInst>(IdenticalPN.getIncomingValueForBlock(DiffValBB));
+  if (!SI || !IdenticalSI)
+    return false;
+  if (SI->getCondition() != IdenticalSI->getCondition())
+    return false;
+
+  SelectInst *SIOtherVal = nullptr;
+  Value *IdenticalSIOtherVal = nullptr;
+  if (SI->getTrueValue() == IdenticalSI->getTrueValue()) {
+    SIOtherVal = dyn_cast<SelectInst>(SI->getFalseValue());
+    IdenticalSIOtherVal = IdenticalSI->getFalseValue();
+  } else if (SI->getFalseValue() == IdenticalSI->getFalseValue()) {
+    SIOtherVal = dyn_cast<SelectInst>(SI->getTrueValue());
+    IdenticalSIOtherVal = IdenticalSI->getTrueValue();
+  } else {
+    return false;
+  }
+
+  // Now check that the other values in select, i.e., %to_fold and
+  // %identicalPhi, are essentially the same value.
+  if (!SIOtherVal || IdenticalSIOtherVal != &IdenticalPN)
+    return false;
+  if (!(SIOtherVal->getTrueValue() == &IdenticalPN &&
+        SIOtherVal->getFalseValue() == &PN) &&
+      !(SIOtherVal->getTrueValue() == &PN &&
+        SIOtherVal->getFalseValue() == &IdenticalPN))
+    return false;
+  return true;
+}
+
 /// Given operands for a SelectInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
@@ -5041,7 +5125,14 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);
   if (Imp)
     return *Imp ? TrueVal : FalseVal;
-
+  // Look for same PHIs in the true and false values.
+  if (auto *TruePHI = dyn_cast<PHINode>(TrueVal))
+    if (auto *FalsePHI = dyn_cast<PHINode>(FalseVal)) {
+      if (isSelectWithIdenticalPHI(*TruePHI, *FalsePHI))
+        return FalseVal;
+      if (isSelectWithIdenticalPHI(*FalsePHI, *TruePHI))
+        return TrueVal;
+    }
   return nullptr;
 }
 
@@ -5106,32 +5197,33 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
         return Ptr;
 
       // The following transforms are only safe if the ptrtoint cast
-      // doesn't truncate the pointers.
-      if (Indices[0]->getType()->getScalarSizeInBits() ==
-          Q.DL.getPointerSizeInBits(AS)) {
+      // doesn't truncate the address of the pointers. The non-address bits
+      // must be the same, as the underlying objects are the same.
+      if (Indices[0]->getType()->getScalarSizeInBits() >=
+          Q.DL.getAddressSizeInBits(AS)) {
         auto CanSimplify = [GEPTy, &P, Ptr]() -> bool {
           return P->getType() == GEPTy &&
                  getUnderlyingObject(P) == getUnderlyingObject(Ptr);
         };
         // getelementptr V, (sub P, V) -> P if P points to a type of size 1.
         if (TyAllocSize == 1 &&
-            match(Indices[0],
-                  m_Sub(m_PtrToInt(m_Value(P)), m_PtrToInt(m_Specific(Ptr)))) &&
+            match(Indices[0], m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                    m_PtrToIntOrAddr(m_Specific(Ptr)))) &&
             CanSimplify())
           return P;
 
         // getelementptr V, (ashr (sub P, V), C) -> P if P points to a type of
         // size 1 << C.
-        if (match(Indices[0], m_AShr(m_Sub(m_PtrToInt(m_Value(P)),
-                                           m_PtrToInt(m_Specific(Ptr))),
+        if (match(Indices[0], m_AShr(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
                                      m_ConstantInt(C))) &&
             TyAllocSize == 1ULL << C && CanSimplify())
           return P;
 
         // getelementptr V, (sdiv (sub P, V), C) -> P if P points to a type of
         // size C.
-        if (match(Indices[0], m_SDiv(m_Sub(m_PtrToInt(m_Value(P)),
-                                           m_PtrToInt(m_Specific(Ptr))),
+        if (match(Indices[0], m_SDiv(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
                                      m_SpecificInt(TyAllocSize))) &&
             CanSimplify())
           return P;
@@ -5440,9 +5532,10 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 
   // ptrtoint (ptradd (Ptr, X - ptrtoint(Ptr))) -> X
   Value *Ptr, *X;
-  if (CastOpc == Instruction::PtrToInt &&
-      match(Op, m_PtrAdd(m_Value(Ptr),
-                         m_Sub(m_Value(X), m_PtrToInt(m_Deferred(Ptr))))) &&
+  if ((CastOpc == Instruction::PtrToInt || CastOpc == Instruction::PtrToAddr) &&
+      match(Op,
+            m_PtrAdd(m_Value(Ptr),
+                     m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
       X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
     return X;
 
@@ -6584,6 +6677,62 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
   return MinMaxOptResult::CannotOptimize;
 }
 
+static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
+                                      Value *Op0, Value *Op1) {
+  Constant *C0 = dyn_cast<Constant>(Op0);
+  Constant *C1 = dyn_cast<Constant>(Op1);
+  unsigned Width = ReturnType->getPrimitiveSizeInBits();
+
+  // All false predicate or reduction of neutral values ==> neutral result.
+  switch (IID) {
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isNullValue()))
+      return ConstantInt::get(ReturnType, 0);
+    break;
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_uminv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isAllOnesValue()))
+      return ConstantInt::get(ReturnType, APInt::getMaxValue(Width));
+    break;
+  case Intrinsic::aarch64_sve_smaxv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isMinSignedValue()))
+      return ConstantInt::get(ReturnType, APInt::getSignedMinValue(Width));
+    break;
+  case Intrinsic::aarch64_sve_sminv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isMaxSignedValue()))
+      return ConstantInt::get(ReturnType, APInt::getSignedMaxValue(Width));
+    break;
+  }
+
+  switch (IID) {
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_uminv:
+    // sve_reduce_##(all, splat(X)) ==> X
+    if (C0 && C0->isAllOnesValue()) {
+      if (Value *SplatVal = getSplatValue(Op1)) {
+        assert(SplatVal->getType() == ReturnType && "Unexpected result type!");
+        return SplatVal;
+      }
+    }
+    break;
+  case Intrinsic::aarch64_sve_eorv:
+    // sve_reduce_xor(all, splat(X)) ==> 0
+    if (C0 && C0->isAllOnesValue())
+      return ConstantInt::get(ReturnType, 0);
+    break;
+  }
+
+  return nullptr;
+}
+
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                      Value *Op0, Value *Op1,
                                      const SimplifyQuery &Q,
@@ -6893,8 +7042,12 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
           // VectorShuffle instruction, which is not allowed in simplifyBinOp.
           OptResult = MinMaxOptResult::UseEither;
           for (unsigned i = 0; i != ElemCount.getFixedValue(); ++i) {
-            auto ElemResult = OptimizeConstMinMax(C->getAggregateElement(i),
-                                                  IID, Call, &NewConst);
+            auto *Elt = C->getAggregateElement(i);
+            if (!Elt) {
+              OptResult = MinMaxOptResult::CannotOptimize;
+              break;
+            }
+            auto ElemResult = OptimizeConstMinMax(Elt, IID, Call, &NewConst);
             if (ElemResult == MinMaxOptResult::CannotOptimize ||
                 (ElemResult != OptResult &&
                  OptResult != MinMaxOptResult::UseEither &&
@@ -6941,6 +7094,17 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     break;
   }
+
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_uminv:
+    return simplifySVEIntReduction(IID, ReturnType, Op0, Op1);
   default:
     break;
   }
@@ -6987,8 +7151,8 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   switch (IID) {
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather: {
-    Value *MaskArg = Args[2];
-    Value *PassthruArg = Args[3];
+    Value *MaskArg = Args[1];
+    Value *PassthruArg = Args[2];
     // If the mask is all zeros or undef, the "passthru" argument is the result.
     if (maskIsAllZeroOrUndef(MaskArg))
       return PassthruArg;

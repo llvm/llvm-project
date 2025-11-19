@@ -69,6 +69,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:     InlineHLFIRAssign
 // PASSES-NEXT:   ConvertHLFIRtoFIR
 // PASSES-NEXT:   LowerWorkshare
+// PASSES-NEXT:   LowerWorkdistribute
 // PASSES-NEXT:   CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
@@ -131,6 +132,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   SetRuntimeCallAttributes
+// PASSES-NEXT: MIFOpConversion 
 // PASSES-NEXT: BoxedProcedurePass
 // PASSES-NEXT: AddAliasTags
 
@@ -159,4 +161,5 @@ func.func @_QQmain() {
 // PASSES-NEXT:  LowerNontemporalPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
+// PASSES-NEXT: PrepareForOMPOffloadPrivatizationPass
 // PASSES-NEXT: LLVMIRLoweringPass

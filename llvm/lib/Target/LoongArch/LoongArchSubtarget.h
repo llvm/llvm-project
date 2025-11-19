@@ -45,7 +45,6 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   LoongArchABI::ABI TargetABI = LoongArchABI::ABI_Unknown;
   LoongArchFrameLowering FrameLowering;
   LoongArchInstrInfo InstrInfo;
-  LoongArchRegisterInfo RegInfo;
   LoongArchTargetLowering TLInfo;
   SelectionDAGTargetInfo TSInfo;
 
@@ -78,7 +77,7 @@ public:
   }
   const LoongArchInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const LoongArchRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const LoongArchTargetLowering *getTargetLowering() const override {
     return &TLInfo;

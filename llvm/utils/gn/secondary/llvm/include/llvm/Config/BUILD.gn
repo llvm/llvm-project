@@ -301,7 +301,6 @@ write_cmake_config("llvm-config") {
     "LLVM_BUILD_SHARED_LIBS=",
     "LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS=",
     "LLVM_ENABLE_TELEMETRY=",
-    "LLVM_ENABLE_ONDISK_CAS=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE=",
     "LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN=",
@@ -365,6 +364,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
+  }
+
+  if (llvm_enable_ondisk_cas) {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=" ]
   }
 
   if (llvm_enable_threads) {

@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -verify-dom-info -passes=polly-codegen -S < %s \
-; RUN: -polly-invariant-load-hoisting=true | FileCheck %s
+; RUN: opt %loadNPMPolly -verify-dom-info '-passes=polly<no-default-opts>' -S -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; This caused an infinite recursion during invariant load hoisting at some
 ; point. Check it does not and we add a "false" runtime check.

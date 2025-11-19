@@ -717,7 +717,15 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   case arith::AtomicRMWKind::ori:
     return vector::ReductionOp::create(builder, vector.getLoc(),
                                        CombiningKind::OR, vector);
-  // TODO: Add remaining reduction operations.
+  case arith::AtomicRMWKind::minnumf:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MINNUMF, vector);
+  case arith::AtomicRMWKind::maxnumf:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MAXNUMF, vector);
+  case arith::AtomicRMWKind::xori:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::XOR, vector);
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
     break;
@@ -4336,7 +4344,7 @@ OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   // ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
   if (auto splat =
           llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
-    DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
+    return DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
 
   // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
   return foldExtractStridedSliceNonSplatConstant(*this, adaptor.getSource());
@@ -6058,19 +6066,21 @@ LogicalResult ScatterOp::verify() {
   VectorType indVType = getIndexVectorType();
   VectorType maskVType = getMaskVectorType();
   VectorType valueVType = getVectorType();
-  MemRefType memType = getMemRefType();
+  ShapedType baseType = getBaseType();
 
-  if (valueVType.getElementType() != memType.getElementType())
+  if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
+    return emitOpError("requires base to be a memref or ranked tensor type");
+
+  if (valueVType.getElementType() != baseType.getElementType())
     return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getOffsets()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (llvm::size(getOffsets()) != baseType.getRank())
+    return emitOpError("requires ") << baseType.getRank() << " indices";
   if (valueVType.getShape() != indVType.getShape())
     return emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore dim to match mask dim");
   return success();
 }
-
 namespace {
 class ScatterFolder final : public OpRewritePattern<ScatterOp> {
 public:
@@ -6835,6 +6845,73 @@ public:
   }
 };
 
+/// Folds transpose(from_elements(...)) into a new from_elements with permuted
+/// operands matching the transposed shape.
+///
+/// Example:
+///
+///   %v = vector.from_elements %a00, %a01, %a02, %a10, %a11, %a12 :
+///   vector<2x3xi32> %t = vector.transpose %v, [1, 0] : vector<2x3xi32> to
+///   vector<3x2xi32>
+///
+/// becomes ->
+///
+///   %r = vector.from_elements %a00, %a10, %a01, %a11, %a02, %a12 :
+///   vector<3x2xi32>
+///
+class FoldTransposeFromElements final : public OpRewritePattern<TransposeOp> {
+public:
+  using Base::Base;
+  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    auto fromElementsOp =
+        transposeOp.getVector().getDefiningOp<vector::FromElementsOp>();
+    if (!fromElementsOp)
+      return failure();
+
+    VectorType srcTy = fromElementsOp.getDest().getType();
+    VectorType dstTy = transposeOp.getType();
+
+    ArrayRef<int64_t> permutation = transposeOp.getPermutation();
+    int64_t rank = srcTy.getRank();
+
+    // Build inverse permutation to map destination indices back to source.
+    SmallVector<int64_t> inversePerm(rank, 0);
+    for (int64_t i = 0; i < rank; ++i)
+      inversePerm[permutation[i]] = i;
+
+    ArrayRef<int64_t> srcShape = srcTy.getShape();
+    ArrayRef<int64_t> dstShape = dstTy.getShape();
+    SmallVector<int64_t> srcIdx(rank, 0);
+    SmallVector<int64_t> dstIdx(rank, 0);
+    SmallVector<int64_t> srcStrides = computeStrides(srcShape);
+    SmallVector<int64_t> dstStrides = computeStrides(dstShape);
+
+    auto elementsOld = fromElementsOp.getElements();
+    SmallVector<Value> elementsNew;
+    int64_t dstNumElements = dstTy.getNumElements();
+    elementsNew.reserve(dstNumElements);
+
+    // For each element in destination row-major order, pick the corresponding
+    // source element.
+    for (int64_t linearIdx = 0; linearIdx < dstNumElements; ++linearIdx) {
+      // Pick the destination element index.
+      dstIdx = delinearize(linearIdx, dstStrides);
+      // Map the destination element index to the source element index.
+      for (int64_t j = 0; j < rank; ++j)
+        srcIdx[j] = dstIdx[inversePerm[j]];
+      // Linearize the source element index.
+      int64_t srcLin = linearize(srcIdx, srcStrides);
+      // Add the source element to the new elements.
+      elementsNew.push_back(elementsOld[srcLin]);
+    }
+
+    rewriter.replaceOpWithNewOp<FromElementsOp>(transposeOp, dstTy,
+                                                elementsNew);
+    return success();
+  }
+};
+
 /// Folds transpose(broadcast(x)) to broadcast(x) if the transpose is
 /// 'order preserving', where 'order preserving' means the flattened
 /// inputs and outputs of the transpose have identical (numerical) values.
@@ -6935,7 +7012,8 @@ public:
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<FoldTransposeCreateMask, FoldTransposeShapeCast, TransposeFolder,
-              FoldTransposeSplat, FoldTransposeBroadcast>(context);
+              FoldTransposeSplat, FoldTransposeFromElements,
+              FoldTransposeBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//

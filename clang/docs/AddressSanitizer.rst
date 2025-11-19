@@ -159,7 +159,7 @@ eliminating this check (``-fsanitize-address-use-after-return=never``).
 
 To summarize: ``-fsanitize-address-use-after-return=<mode>``
   * ``never``: Completely disables detection of UAR errors (reduces code size).
-  * ``runtime``: Adds the code for detection, but it can be disable via the
+  * ``runtime``: Adds the code for detection, but it can be disabled via the
     runtime environment (``ASAN_OPTIONS=detect_stack_use_after_return=0``).
   * ``always``: Enables detection of UAR errors in all cases. (reduces code
     size, but not as much as ``never``).
@@ -239,7 +239,7 @@ from adding redzones around it and detecting out of bounds accesses.
 
 AddressSanitizer also supports
 ``__attribute__((disable_sanitizer_instrumentation))``. This attribute
-works similar to ``__attribute__((no_sanitize("address")))``, but it also
+works similarly to ``__attribute__((no_sanitize("address")))``, but it also
 prevents instrumentation performed by other sanitizers.
 
 Suppressing Errors in Recompiled Code (Ignorelist)
@@ -305,7 +305,7 @@ Limitations
 ===========
 
 * AddressSanitizer uses more real memory than a native run. Exact overhead
-  depends on the allocations sizes. The smaller the allocations you make the
+  depends on the allocation sizes. The smaller the allocations you make the
   bigger the overhead is.
 * AddressSanitizer uses more stack memory. We have seen up to 3x increase.
 * On 64-bit platforms AddressSanitizer maps (but not reserves) 16+ Terabytes of

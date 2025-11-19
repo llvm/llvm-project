@@ -221,7 +221,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
   // file.
   for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
     SmallString<256> Result(Dir);
-    llvm::sys::fs::make_absolute(Result);
+    FileMgr.makeAbsolutePath(Result);
     if (ModuleName.contains(':'))
       // The separator of C++20 modules partitions (':') is not good for file
       // systems, here clang and gcc choose '-' by default since it is not a
@@ -246,7 +246,7 @@ std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
   StringRef ModuleCacheHash = HSOpts.DisableModuleHash ? "" : getModuleHash();
   for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
     SmallString<256> CachePath(Dir);
-    llvm::sys::fs::make_absolute(CachePath);
+    FileMgr.makeAbsolutePath(CachePath);
     llvm::sys::path::append(CachePath, ModuleCacheHash);
     std::string FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
@@ -2186,6 +2186,8 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 void clang::normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
                                      SmallVectorImpl<char> &NormalizedPath) {
   NormalizedPath.assign(Path.begin(), Path.end());
-  FileMgr.makeAbsolutePath(NormalizedPath);
-  llvm::sys::path::remove_dots(NormalizedPath);
+  if (!NormalizedPath.empty()) {
+    FileMgr.makeAbsolutePath(NormalizedPath);
+    llvm::sys::path::remove_dots(NormalizedPath);
+  }
 }

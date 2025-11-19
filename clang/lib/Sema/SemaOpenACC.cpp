@@ -2996,12 +2996,14 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
 
   case OpenACCReductionOperator::Max:
   case OpenACCReductionOperator::Min:
+    BinOp = BinaryOperatorKind::BO_LT;
+    break;
   case OpenACCReductionOperator::And:
+    BinOp = BinaryOperatorKind::BO_LAnd;
+    break;
   case OpenACCReductionOperator::Or:
-    // We just want a 'NYI' error in the backend, so leave an empty combiner
-    // recipe, and claim success.
-    CombinerRecipes.push_back({nullptr, nullptr, nullptr});
-    return false;
+    BinOp = BinaryOperatorKind::BO_LOr;
+    break;
   }
 
   // If VarTy is an array type, at the top level only, we want to do our
@@ -3011,26 +3013,94 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
 
   assert(!VarTy->isArrayType() && "Only 1 level of array allowed");
 
+  enum class CombinerFailureKind {
+    None = 0,
+    BinOp = 1,
+    Conditional = 2,
+    Assignment = 3,
+  };
+
+  auto genCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE)
+      -> std::pair<ExprResult, CombinerFailureKind> {
+    ExprResult BinOpRes =
+        SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc, BinOp, LHSDRE, RHSDRE,
+                           /*ForFoldExpr=*/false);
+    switch (ReductionOperator) {
+    case OpenACCReductionOperator::Addition:
+    case OpenACCReductionOperator::Multiplication:
+    case OpenACCReductionOperator::BitwiseAnd:
+    case OpenACCReductionOperator::BitwiseOr:
+    case OpenACCReductionOperator::BitwiseXOr:
+      // These 5 are simple and are being done  as compound operators, so we can
+      // immediately quit here.
+      return {BinOpRes, BinOpRes.isUsable() ? CombinerFailureKind::None
+                                            : CombinerFailureKind::BinOp};
+    case OpenACCReductionOperator::Max:
+    case OpenACCReductionOperator::Min: {
+      // These are done as:
+      // LHS = (LHS < RHS) ? LHS : RHS; and LHS = (LHS < RHS) ? RHS : LHS;
+      //
+      // The BinOpRes should have been created with the less-than, so we just
+      // have to build the conditional and assignment.
+      if (!BinOpRes.isUsable())
+        return {BinOpRes, CombinerFailureKind::BinOp};
+
+      // Create the correct conditional operator, swapping the results
+      // (true/false value) depending on min/max.
+      ExprResult CondRes;
+      if (ReductionOperator == OpenACCReductionOperator::Min)
+        CondRes = SemaRef.ActOnConditionalOp(Loc, Loc, BinOpRes.get(), LHSDRE,
+                                             RHSDRE);
+      else
+        CondRes = SemaRef.ActOnConditionalOp(Loc, Loc, BinOpRes.get(), RHSDRE,
+                                             LHSDRE);
+
+      if (!CondRes.isUsable())
+        return {CondRes, CombinerFailureKind::Conditional};
+
+      // Build assignment.
+      ExprResult Assignment = SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc,
+                                                 BinaryOperatorKind::BO_Assign,
+                                                 LHSDRE, CondRes.get(),
+                                                 /*ForFoldExpr=*/false);
+      return {Assignment, Assignment.isUsable()
+                              ? CombinerFailureKind::None
+                              : CombinerFailureKind::Assignment};
+    }
+    case OpenACCReductionOperator::And:
+    case OpenACCReductionOperator::Or: {
+      // These are done as LHS = LHS && RHS (or LHS = LHS || RHS). So after the
+      // binop, all we have to do is the assignment.
+      if (!BinOpRes.isUsable())
+        return {BinOpRes, CombinerFailureKind::BinOp};
+
+      // Build assignment.
+      ExprResult Assignment = SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc,
+                                                 BinaryOperatorKind::BO_Assign,
+                                                 LHSDRE, BinOpRes.get(),
+                                                 /*ForFoldExpr=*/false);
+      return {Assignment, Assignment.isUsable()
+                              ? CombinerFailureKind::None
+                              : CombinerFailureKind::Assignment};
+    }
+    case OpenACCReductionOperator::Invalid:
+      llvm_unreachable("Invalid should have been caught above");
+    }
+    llvm_unreachable("Unhandled case");
+  };
+
   auto tryCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE,
                                bool IncludeTrap) {
-    // TODO: OpenACC: we have to figure out based on the bin-op how to do the
-    // ones that we can't just use compound operators for.  So &&, ||, max, and
-    // min aren't really clear what we could do here.
     if (IncludeTrap) {
       // Trap all of the errors here, we'll emit our own at the end.
       Sema::TentativeAnalysisScope Trap{SemaRef};
-
-      return SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc, BinOp, LHSDRE,
-                                RHSDRE,
-                                /*ForFoldExpr=*/false);
-    } else {
-      return SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc, BinOp, LHSDRE,
-                                RHSDRE,
-                                /*ForFoldExpr=*/false);
+      return genCombiner(LHSDRE, RHSDRE);
     }
+    return genCombiner(LHSDRE, RHSDRE);
   };
 
   struct CombinerAttemptTy {
+    CombinerFailureKind FailKind;
     VarDecl *LHS;
     DeclRefExpr *LHSDRE;
     VarDecl *RHS;
@@ -3058,9 +3128,11 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
                             RHSDecl->getBeginLoc()},
         Ty, clang::VK_LValue, RHSDecl, nullptr, NOUR_None);
 
-    ExprResult BinOpResult = tryCombiner(LHSDRE, RHSDRE, /*IncludeTrap=*/true);
+    std::pair<ExprResult, CombinerFailureKind> BinOpResult =
+        tryCombiner(LHSDRE, RHSDRE, /*IncludeTrap=*/true);
 
-    return {LHSDecl, LHSDRE, RHSDecl, RHSDRE, BinOpResult.get()};
+    return {BinOpResult.second,     LHSDecl, LHSDRE, RHSDecl, RHSDRE,
+            BinOpResult.first.get()};
   };
 
   CombinerAttemptTy TopLevelCombinerInfo = formCombiner(VarTy);
@@ -3081,12 +3153,20 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
     }
   }
 
+  auto EmitFailureNote = [&](CombinerFailureKind CFK) {
+    if (CFK == CombinerFailureKind::BinOp)
+      return Diag(Loc, diag::note_acc_reduction_combiner_forming)
+             << CFK << BinaryOperator::getOpcodeStr(BinOp);
+    return Diag(Loc, diag::note_acc_reduction_combiner_forming) << CFK;
+  };
+
   // Since the 'root' level didn't fail, the only thing that could be successful
   // is a struct that we decompose on its individual fields.
 
   RecordDecl *RD = VarTy->getAsRecordDecl();
   if (!RD) {
     Diag(Loc, diag::err_acc_reduction_recipe_no_op) << VarTy;
+    EmitFailureNote(TopLevelCombinerInfo.FailKind);
     tryCombiner(TopLevelCombinerInfo.LHSDRE, TopLevelCombinerInfo.RHSDRE,
                 /*IncludeTrap=*/false);
     return true;
@@ -3098,6 +3178,7 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
     if (!FieldCombinerInfo.Op || FieldCombinerInfo.Op->containsErrors()) {
       Diag(Loc, diag::err_acc_reduction_recipe_no_op) << FD->getType();
       Diag(FD->getBeginLoc(), diag::note_acc_reduction_recipe_noop_field) << RD;
+      EmitFailureNote(FieldCombinerInfo.FailKind);
       tryCombiner(FieldCombinerInfo.LHSDRE, FieldCombinerInfo.RHSDRE,
                   /*IncludeTrap=*/false);
       return true;

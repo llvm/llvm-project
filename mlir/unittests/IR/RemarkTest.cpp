@@ -327,8 +327,6 @@ TEST(Remark, TestRemarkFinal) {
 
   std::string categoryLoopunroll("LoopUnroll");
 
-  std::string seenMsg = "";
-
   {
     MLIRContext context;
     Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);

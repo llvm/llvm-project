@@ -2927,6 +2927,8 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
           CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
+    else
+      SrcExpr = Self.DefaultLvalueConversion(SrcExpr.get());
     Kind = CK_HLSLElementwiseCast;
     return true;
   }
@@ -2935,6 +2937,7 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
   // If the relative order of this and the HLSLElementWise cast checks
   // are changed, it might change which cast handles what in a few cases
   if (Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
+    SrcExpr = Self.DefaultLvalueConversion(SrcExpr.get());
     const VectorType *VT = SrcTy->getAs<VectorType>();
     // change splat from vec1 case to splat from scalar
     if (VT && VT->getNumElements() == 1)

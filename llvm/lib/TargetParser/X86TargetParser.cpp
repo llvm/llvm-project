@@ -143,8 +143,7 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
     FeaturePPX | FeatureNDD | FeatureNF | FeatureMOVRS | FeatureAMX_MOVRS |
-    FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
-    FeatureAMX_TRANSPOSE | FeatureUSERMSR;
+    FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -177,7 +176,9 @@ constexpr FeatureBitset FeaturesArrowlakeS =
 constexpr FeatureBitset FeaturesPantherlake =
     (FeaturesArrowlakeS ^ FeatureWIDEKL);
 constexpr FeatureBitset FeaturesNovalake =
-    FeaturesPantherlake | FeaturePREFETCHI;
+    FeaturesPantherlake | FeaturePREFETCHI | FeatureAVX10_2 | FeatureMOVRS |
+    FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 | FeaturePPX |
+    FeatureNDD | FeatureNF;
 constexpr FeatureBitset FeaturesClearwaterforest =
     (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
     FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
@@ -545,6 +546,8 @@ constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
 constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE1 = {};
 constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE2 = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE3 = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE4 = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
@@ -616,7 +619,6 @@ constexpr FeatureBitset ImpliedFeaturesAMX_FP16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_COMPLEX = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
-constexpr FeatureBitset ImpliedFeaturesAMX_TRANSPOSE = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
     FeatureAMX_TILE | FeatureAVX10_2;
@@ -646,8 +648,6 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16 |
     FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;
-constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 = FeatureAVX10_1;
-constexpr FeatureBitset ImpliedFeaturesAVX10_2_512 = FeatureAVX10_2;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};

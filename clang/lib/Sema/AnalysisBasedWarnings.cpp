@@ -2734,6 +2734,70 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
     S.Diag(D.Loc, D.PD);
 }
 
+template <typename Iterator>
+static void emitPossiblyUnreachableDiags(Sema &S, AnalysisDeclContext &AC,
+                                         std::pair<Iterator, Iterator> PUDs) {
+
+  if (PUDs.first == PUDs.second)
+    return;
+
+  for (auto I = PUDs.first; I != PUDs.second; ++I) {
+    for (const Stmt *S : I->Stmts)
+      AC.registerForcedBlockExpression(S);
+  }
+
+  if (AC.getCFG()) {
+    CFGReverseBlockReachabilityAnalysis *Analysis =
+        AC.getCFGReachablityAnalysis();
+
+    for (auto I = PUDs.first; I != PUDs.second; ++I) {
+      const auto &D = *I;
+      if (llvm::all_of(D.Stmts, [&](const Stmt *St) {
+            const CFGBlock *Block = AC.getBlockForRegisteredExpression(St);
+            // FIXME: We should be able to assert that block is non-null, but
+            // the CFG analysis can skip potentially-evaluated expressions in
+            // edge cases; see test/Sema/vla-2.c.
+            if (Block && Analysis)
+              if (!Analysis->isReachable(&AC.getCFG()->getEntry(), Block))
+                return false;
+            return true;
+          })) {
+        S.Diag(D.Loc, D.PD);
+      }
+    }
+  } else {
+    for (auto I = PUDs.first; I != PUDs.second; ++I)
+      S.Diag(I->Loc, I->PD);
+  }
+}
+
+void sema::AnalysisBasedWarnings::registerVarDeclWarning(
+    VarDecl *VD, clang::sema::PossiblyUnreachableDiag PUD) {
+  VarDeclPossiblyUnreachableDiags.emplace(VD, PUD);
+}
+
+void sema::AnalysisBasedWarnings::issueWarningsForRegisteredVarDecl(
+    VarDecl *VD) {
+  if (!llvm::is_contained(VarDeclPossiblyUnreachableDiags, VD))
+    return;
+
+  AnalysisDeclContext AC(/*Mgr=*/nullptr, VD);
+
+  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
+  AC.getCFGBuildOptions().AddEHEdges = false;
+  AC.getCFGBuildOptions().AddInitializers = true;
+  AC.getCFGBuildOptions().AddImplicitDtors = true;
+  AC.getCFGBuildOptions().AddTemporaryDtors = true;
+  AC.getCFGBuildOptions().AddCXXNewAllocator = false;
+  AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+
+  auto Range = VarDeclPossiblyUnreachableDiags.equal_range(VD);
+  auto SecondRange =
+      llvm::make_second_range(llvm::make_range(Range.first, Range.second));
+  emitPossiblyUnreachableDiags(
+      S, AC, std::make_pair(SecondRange.begin(), SecondRange.end()));
+}
+
 // An AST Visitor that calls a callback function on each callable DEFINITION
 // that is NOT in a dependent context:
 class CallableVisitor : public DynamicRecursiveASTVisitor {
@@ -2806,6 +2870,18 @@ public:
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getEndLoc();
+  }
+
+  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *EscapeExpr,
+                            SourceLocation ExpiryLoc, Confidence C) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           C == Confidence::Definite
+               ? diag::warn_lifetime_safety_return_stack_addr_permissive
+               : diag::warn_lifetime_safety_return_stack_addr_strict)
+        << IssueExpr->getEndLoc();
+
+    S.Diag(EscapeExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+        << EscapeExpr->getEndLoc();
   }
 
 private:
@@ -2945,45 +3021,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // Emit delayed diagnostics.
-  if (!fscope->PossiblyUnreachableDiags.empty()) {
-    bool analyzed = false;
-
-    // Register the expressions with the CFGBuilder.
-    for (const auto &D : fscope->PossiblyUnreachableDiags) {
-      for (const Stmt *S : D.Stmts)
-        AC.registerForcedBlockExpression(S);
-    }
-
-    if (AC.getCFG()) {
-      analyzed = true;
-      for (const auto &D : fscope->PossiblyUnreachableDiags) {
-        bool AllReachable = true;
-        for (const Stmt *S : D.Stmts) {
-          const CFGBlock *block = AC.getBlockForRegisteredExpression(S);
-          CFGReverseBlockReachabilityAnalysis *cra =
-              AC.getCFGReachablityAnalysis();
-          // FIXME: We should be able to assert that block is non-null, but
-          // the CFG analysis can skip potentially-evaluated expressions in
-          // edge cases; see test/Sema/vla-2.c.
-          if (block && cra) {
-            // Can this block be reached from the entrance?
-            if (!cra->isReachable(&AC.getCFG()->getEntry(), block)) {
-              AllReachable = false;
-              break;
-            }
-          }
-          // If we cannot map to a basic block, assume the statement is
-          // reachable.
-        }
-
-        if (AllReachable)
-          S.Diag(D.Loc, D.PD);
-      }
-    }
-
-    if (!analyzed)
-      flushDiagnostics(S, fscope);
-  }
+  auto &PUDs = fscope->PossiblyUnreachableDiags;
+  emitPossiblyUnreachableDiags(S, AC, std::make_pair(PUDs.begin(), PUDs.end()));
 
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {

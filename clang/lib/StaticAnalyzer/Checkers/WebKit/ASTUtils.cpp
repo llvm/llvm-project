@@ -173,6 +173,14 @@ bool tryToFindPtrOrigin(
           if (isSingleton(E->getFoundDecl()))
             return callback(E, true);
         }
+
+        if (auto *MemberExpr = dyn_cast<CXXDependentScopeMemberExpr>(CalleeE)) {
+          auto *Base = MemberExpr->getBase();
+          auto MemberName = MemberExpr->getMember().getAsString();
+          bool IsGetter = MemberName == "get" || MemberName == "ptr";
+          if (Base && isSafePtrType(Base->getType()) && IsGetter)
+            return callback(E, true);
+        }
       }
 
       // Sometimes, canonical type erroneously turns Ref<T> into T.
