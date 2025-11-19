@@ -14,7 +14,9 @@
 /// be the beginning of any dynamic basic block, that is the beginning of a
 /// machine basic block, or immediately after a callsite. A global symbol is
 /// emitted at the position of the target so it can be addressed from the
-/// prefetch instruction from any module.
+/// prefetch instruction from any module. In order to insert prefetch hints,
+/// `TargetInstrInfo::insertCodePrefetchInstr` must be implemented by the
+/// target.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/InsertCodePrefetch.h"
@@ -110,6 +112,8 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
   DenseMap<UniqueBBID, SmallVector<PrefetchHint>> PrefetchHintsBySiteBBID;
   for (const auto &H : PrefetchHints)
     PrefetchHintsBySiteBBID[H.SiteID.BBID].push_back(H);
+  // Sort prefetch hints by their callsite index so we can insert them by one
+  // pass over the block's instructions.
   for (auto &[SiteBBID, Hints] : PrefetchHintsBySiteBBID) {
     llvm::sort(Hints, [](const PrefetchHint &H1, const PrefetchHint &H2) {
       return H1.SiteID.CallsiteIndex < H2.SiteID.CallsiteIndex;
@@ -127,6 +131,8 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     auto InstrIt = BB.begin();
     for (auto HintIt = PrefetchHints.begin(); HintIt != PrefetchHints.end();) {
       auto NextInstrIt = InstrIt == BB.end() ? BB.end() : std::next(InstrIt);
+      // Insert all the prefetch hints which must be placed after this call (or
+      // at the beginning of the block if `NumCallsInBB` is zero.
       while (HintIt != PrefetchHints.end() &&
              NumCallsInBB >= HintIt->SiteID.CallsiteIndex) {
         auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(
