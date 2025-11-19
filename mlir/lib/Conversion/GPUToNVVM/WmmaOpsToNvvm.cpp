@@ -286,7 +286,7 @@ struct WmmaConstantOpToNVVMLowering
     Type type = convertMMAToLLVMType(
         cast<gpu::MMAMatrixType>(subgroupMmaConstantOp.getType()));
     // If the element is not a struct, it means it's a scalar f64.
-    LLVM::LLVMStructType structType = dyn_cast<LLVM::LLVMStructType>(type);
+    auto structType = dyn_cast<LLVM::LLVMStructType>(type);
     if (!structType) {
       rewriter.replaceOp(subgroupMmaConstantOp, cst);
       return success();
