@@ -184,4 +184,10 @@ def int_dx_load_input
                             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
                              llvm_i32_ty],
                             [IntrConvergent]>;
+
+def int_dx_store_output
+    : DefaultAttrsIntrinsic<[],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
+                             llvm_i32_ty, llvm_any_ty],
+                            [IntrConvergent]>;
 }

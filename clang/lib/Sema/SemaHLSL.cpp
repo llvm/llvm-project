@@ -773,7 +773,7 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 
 bool SemaHLSL::determineActiveSemanticOnScalar(
     FunctionDecl *FD, DeclaratorDecl *OutputDecl, DeclaratorDecl *D,
-    SemanticInfo &ActiveSemantic, llvm::StringSet<> &ActiveInputSemantics) {
+    SemanticInfo &ActiveSemantic, llvm::StringSet<> &UsedSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -805,7 +805,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   for (unsigned I = 0; I < ElementCount; ++I) {
     Twine VariableName = BaseName.concat(Twine(Location + I));
 
-    auto [_, Inserted] = ActiveInputSemantics.insert(VariableName.str());
+    auto [_, Inserted] = UsedSemantics.insert(VariableName.str());
     if (!Inserted) {
       Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
           << VariableName.str();
@@ -816,26 +816,29 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   return true;
 }
 
-bool SemaHLSL::determineActiveSemantic(
-    FunctionDecl *FD, DeclaratorDecl *OutputDecl, DeclaratorDecl *D,
-    SemanticInfo &ActiveSemantic, llvm::StringSet<> &ActiveInputSemantics) {
+bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
+                                       DeclaratorDecl *OutputDecl,
+                                       DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic,
+                                       llvm::StringSet<> &UsedSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   }
 
-  const Type *T = D->getType()->getUnqualifiedDesugaredType();
+  const Type *T = D == FD ? &*FD->getReturnType() : &*D->getType();
+  T = T->getUnqualifiedDesugaredType();
+
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
     return determineActiveSemanticOnScalar(FD, OutputDecl, D, ActiveSemantic,
-                                           ActiveInputSemantics);
+                                           UsedSemantics);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!determineActiveSemantic(FD, OutputDecl, Field, Info,
-                                 ActiveInputSemantics)) {
+    if (!determineActiveSemantic(FD, OutputDecl, Field, Info, UsedSemantics)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
@@ -915,13 +918,21 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     if (ActiveSemantic.Semantic)
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
 
+    // FIXME: Verify output semantics in parameters.
     if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic,
                                  ActiveInputSemantics)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
   }
-  // FIXME: Verify return type semantic annotation.
+
+  SemanticInfo ActiveSemantic;
+  llvm::StringSet<> ActiveOutputSemantics;
+  ActiveSemantic.Semantic = FD->getAttr<HLSLParsedSemanticAttr>();
+  if (ActiveSemantic.Semantic)
+    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  if (!FD->getReturnType()->isVoidType())
+    determineActiveSemantic(FD, FD, FD, ActiveSemantic, ActiveOutputSemantics);
 }
 
 void SemaHLSL::checkSemanticAnnotation(
