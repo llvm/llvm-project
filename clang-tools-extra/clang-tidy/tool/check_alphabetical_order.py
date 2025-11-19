@@ -29,7 +29,7 @@ import io
 import os
 import re
 import sys
-from typing import Dict, List, Optional, Sequence, Tuple, Union, overload
+from typing import Dict, List, Optional, Sequence, Tuple, NamedTuple
 from operator import itemgetter
 
 # Matches a :doc:`label <path>` or :doc:`label` reference anywhere in text and
@@ -50,6 +50,63 @@ LIST_DOC = os.path.join(CHECKS_DOCS_DIR, "list.rst")
 RELEASE_NOTES_DOC = os.path.join(DOCS_DIR, "ReleaseNotes.rst")
 
 
+CheckLabel = str
+Lines = List[str]
+BulletBlock = List[str]
+BulletItem = Tuple[CheckLabel, BulletBlock]
+BulletStart = int
+
+
+class BulletBlocks(NamedTuple):
+    """Structured result of parsing a bullet-list section.
+
+    - prefix: lines before the first bullet within the section range.
+    - blocks: list of (label, block-lines) pairs for each bullet block.
+    - suffix: lines after the last bullet within the section range.
+    """
+    prefix: Lines
+    blocks: List[BulletItem]
+    suffix: Lines
+
+class ScannedBlocks(NamedTuple):
+    """Result of scanning bullet blocks within a section range.
+
+    - blocks_with_pos: list of (start_index, block_lines) for each bullet block.
+    - next_index: index where scanning stopped; start of the suffix region.
+    """
+    blocks_with_pos: List[Tuple[BulletStart, BulletBlock]]
+    next_index: int
+
+
+def _scan_bullet_blocks(
+    lines: Sequence[str], start: int, end: int
+) -> ScannedBlocks:
+    """Scan consecutive bullet blocks and return (blocks_with_pos, next_index).
+
+    Each entry in blocks_with_pos is a tuple of (start_index, block_lines).
+    next_index is the index where scanning stopped (start of suffix).
+    """
+    i = start
+    n = end
+    blocks_with_pos: List[Tuple[BulletStart, BulletBlock]] = []
+    while i < n:
+        if not _is_bullet_start(lines[i]):
+            break
+        bstart = i
+        i += 1
+        while i < n and not _is_bullet_start(lines[i]):
+            if (
+                i + 1 < n
+                and set(lines[i + 1].rstrip("\n")) == {"^"}
+                and lines[i].strip()
+            ):
+                break
+            i += 1
+        block: BulletBlock = list(lines[bstart:i])
+        blocks_with_pos.append((bstart, block))
+    return ScannedBlocks(blocks_with_pos, i)
+
+
 def read_text(path: str) -> List[str]:
     with io.open(path, "r", encoding="utf-8") as f:
         return f.read().splitlines(True)
@@ -66,7 +123,7 @@ def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
     i = 0
     n = len(lines)
 
-    def key_for(line: str):
+    def check_name(line: str):
         m = DOC_LINE_RE.match(line)
         if not m:
             return (1, "")
@@ -89,7 +146,7 @@ def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
                 entries.append(lines[i])
                 i += 1
 
-            entries_sorted = sorted(entries, key=key_for)
+            entries_sorted = sorted(entries, key=check_name)
             out.extend(entries_sorted)
             continue
 
@@ -99,27 +156,10 @@ def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
     return out
 
 
-@overload
 def normalize_list_rst(data: str) -> str:
-    ...
-
-
-@overload
-def normalize_list_rst(data: List[str]) -> List[str]:
-    ...
-
-
-def normalize_list_rst(data: Union[str, List[str]]) -> Union[str, List[str]]:
-    """Normalize list.rst; returns same type as input (str or list).
-
-    - If given a string, returns a single normalized string.
-    - If given a sequence of lines, returns a list of lines.
-    """
-    if isinstance(data, str):
-        lines = data.splitlines(True)
-        return "".join(_normalize_list_rst_lines(lines))
-    else:
-        return _normalize_list_rst_lines(data)
+    """Normalize list.rst content and return a string."""
+    lines = data.splitlines(True)
+    return "".join(_normalize_list_rst_lines(lines))
 
 
 def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
@@ -134,7 +174,7 @@ def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
     for i in range(len(lines) - 1):
         if lines[i].rstrip("\n") == title:
             underline = lines[i + 1].rstrip("\n")
-            if underline and set(underline) == {"^"} and len(underline) >= len(title):
+            if underline and set(underline) == {"^"} and len(underline) == len(title):
                 return i
     return None
 
@@ -144,44 +184,31 @@ def extract_label(text: str) -> str:
     return m.group("label") if m else text
 
 
-def is_bullet_start(line: str) -> bool:
+def _is_bullet_start(line: str) -> bool:
     return line.startswith("- ")
 
 
-def parse_bullet_blocks(
+def _parse_bullet_blocks(
     lines: Sequence[str], start: int, end: int
-) -> Tuple[List[str], List[Tuple[str, List[str]]], List[str]]:
+) -> BulletBlocks:
     i = start
     n = end
     first_bullet = i
-    while first_bullet < n and not is_bullet_start(lines[first_bullet]):
+    while first_bullet < n and not _is_bullet_start(lines[first_bullet]):
         first_bullet += 1
-    prefix = list(lines[i:first_bullet])
+    prefix: Lines = list(lines[i:first_bullet])
 
-    blocks: List[Tuple[str, List[str]]] = []
-    i = first_bullet
-    while i < n:
-        if not is_bullet_start(lines[i]):
-            break
-        bstart = i
-        i += 1
-        while i < n and not is_bullet_start(lines[i]):
-            if (
-                i + 1 < n
-                and set(lines[i + 1].rstrip("\n")) == {"^"}
-                and lines[i].strip()
-            ):
-                break
-            i += 1
-        block = list(lines[bstart:i])
-        key = extract_label(block[0])
+    blocks: List[BulletItem] = []
+    res = _scan_bullet_blocks(lines, first_bullet, n)
+    for _, block in res.blocks_with_pos:
+        key: CheckLabel = extract_label(block[0])
         blocks.append((key, block))
 
-    suffix = list(lines[i:n])
-    return prefix, blocks, suffix
+    suffix: Lines = list(lines[res.next_index:n])
+    return BulletBlocks(prefix, blocks, suffix)
 
 
-def sort_blocks(blocks: List[Tuple[str, List[str]]]) -> List[List[str]]:
+def sort_blocks(blocks: List[BulletItem]) -> List[BulletBlock]:
     """Return blocks sorted deterministically by their extracted label.
 
     Duplicates are preserved; merging is left to authors to handle manually.
@@ -206,24 +233,12 @@ def find_duplicate_entries(
     i = sec_start
     n = sec_end
 
-    while i < n and not is_bullet_start(lines[i]):
+    while i < n and not _is_bullet_start(lines[i]):
         i += 1
 
     blocks_with_pos: List[Tuple[str, int, List[str]]] = []
-    while i < n:
-        if not is_bullet_start(lines[i]):
-            break
-        bstart = i
-        i += 1
-        while i < n and not is_bullet_start(lines[i]):
-            if (
-                i + 1 < n
-                and set(lines[i + 1].rstrip("\n")) == {"^"}
-                and lines[i].strip()
-            ):
-                break
-            i += 1
-        block = list(lines[bstart:i])
+    res = _scan_bullet_blocks(lines, i, n)
+    for bstart, block in res.blocks_with_pos:
         key = extract_label(block[0])
         blocks_with_pos.append((key, bstart, block))
 
@@ -287,7 +302,7 @@ def _normalize_release_notes_section(
         return list(lines)
     _, sec_start, sec_end = bounds
 
-    prefix, blocks, suffix = parse_bullet_blocks(lines, sec_start, sec_end)
+    prefix, blocks, suffix = _parse_bullet_blocks(lines, sec_start, sec_end)
     sorted_blocks = sort_blocks(blocks)
 
     new_section: List[str] = []
@@ -374,20 +389,8 @@ def main(argv: Sequence[str]) -> int:
         else:
             return process_checks_list(out_path, list_doc)
 
-    list_lines = read_text(list_doc)
-    rn_lines = read_text(rn_doc)
-    list_norm = normalize_list_rst("".join(list_lines))
-    rn_norm = normalize_release_notes(rn_lines)
-    if "".join(list_lines) != list_norm:
-        write_text(list_doc, list_norm)
-    if "".join(rn_lines) != rn_norm:
-        write_text(rn_doc, rn_norm)
-
-    report = _emit_duplicate_report(rn_lines, "Changes in existing checks")
-    if report:
-        sys.stderr.write(report)
-        return 3
-    return 0
+    process_checks_list(list_doc, list_doc)
+    return process_release_notes(rn_doc, rn_doc)
 
 
 if __name__ == "__main__":

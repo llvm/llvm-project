@@ -41,9 +41,6 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         out_str = _mod.normalize_list_rst("".join(input_lines))
         self.assertEqual(out_str, "".join(expected_lines))
 
-        out_lines = _mod.normalize_list_rst(input_lines)
-        self.assertEqual(out_lines, expected_lines)
-
     def test_find_heading(self):
         lines = [
             "- Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been\n",
@@ -280,6 +277,64 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             with open(out_path, "r", encoding="utf-8") as f:
                 out = f.read()
             self.assertEqual(out, "".join(rn_lines))
+
+    def test_release_notes_handles_nested_sub_bullets(self):
+        rn_lines = [
+            "Changes in existing checks\n",
+            "^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+            "\n",
+            "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+            "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+            "  correcting a spelling mistake on its option\n",
+            "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+            "\n",
+            "- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals\n",
+            "  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:\n",
+            "\n",
+            "  - Fix-it handles callees with nested-name-specifier correctly.\n",
+            "\n",
+            "  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are\n",
+            "    handled correctly.\n",
+            "\n",
+            "  - ``for`` loops are supported.\n",
+            "\n",
+            "- Improved :doc:`bugprone-exception-escape\n",
+            "  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:\n",
+            "  exceptions from captures are now diagnosed, exceptions in the bodies of\n",
+            "  lambdas that aren't actually invoked are not.\n",
+            "\n",
+        ]
+
+        out = _mod.normalize_release_notes(rn_lines)
+
+        expected_out = "".join(
+            [
+                "Changes in existing checks\n",
+                "^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+                "\n",
+                "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+                "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+                "  correcting a spelling mistake on its option\n",
+                "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+                "\n",
+                "- Improved :doc:`bugprone-exception-escape\n",
+                "  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:\n",
+                "  exceptions from captures are now diagnosed, exceptions in the bodies of\n",
+                "  lambdas that aren't actually invoked are not.\n",
+                "\n",
+                "- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals\n",
+                "  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:\n",
+                "\n",
+                "  - Fix-it handles callees with nested-name-specifier correctly.\n",
+                "\n",
+                "  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are\n",
+                "    handled correctly.\n",
+                "\n",
+                "  - ``for`` loops are supported.\n",
+                "\n\n",
+            ]
+        )
+        self.assertEqual(out, expected_out)
 
     def test_process_checks_list_normalizes_output(self):
         list_lines = [
