@@ -2617,7 +2617,7 @@ CIRToLLVMBinOpOverflowOpLowering::EncompassedTypeInfo
 CIRToLLVMBinOpOverflowOpLowering::computeEncompassedTypeWidth(
     cir::IntType operandTy, cir::IntType resultTy) {
   auto sign = operandTy.getIsSigned() || resultTy.getIsSigned();
-  auto width = std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
+  unsigned width = std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
                         resultTy.getWidth() + (sign && resultTy.isUnsigned()));
   return {sign, width};
 }
