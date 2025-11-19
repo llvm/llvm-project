@@ -224,9 +224,6 @@ class ShrinkWrapImpl {
 
   /// Initialize the pass for \p MF.
   void init(MachineFunction &MF) {
-    RCI = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
-    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     Save = nullptr;
     Restore = nullptr;
     EntryFreq = MBFI->getEntryFreq();
@@ -247,10 +244,11 @@ class ShrinkWrapImpl {
   bool ArePointsInteresting() const { return Save != Entry && Save && Restore; }
 
 public:
-  ShrinkWrapImpl(MachineDominatorTree *MDT, MachinePostDominatorTree *MPDT,
+  ShrinkWrapImpl(RegisterClassInfo *RCI, MachineDominatorTree *MDT,
+                 MachinePostDominatorTree *MPDT,
                  MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *MLI,
                  MachineOptimizationRemarkEmitter *ORE)
-      : MDT(MDT), MPDT(MPDT), MBFI(MBFI), MLI(MLI), ORE(ORE) {}
+      : RCI(RCI), MDT(MDT), MPDT(MPDT), MBFI(MBFI), MLI(MLI), ORE(ORE) {}
 
   /// Check if shrink wrapping is enabled for this target and function.
   static bool isShrinkWrapEnabled(const MachineFunction &MF);
@@ -988,6 +986,8 @@ bool ShrinkWrapLegacy::runOnMachineFunction(MachineFunction &MF) {
       !ShrinkWrapImpl::isShrinkWrapEnabled(MF))
     return false;
 
+  RegisterClassInfo *RCI =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachinePostDominatorTree *MPDT =
