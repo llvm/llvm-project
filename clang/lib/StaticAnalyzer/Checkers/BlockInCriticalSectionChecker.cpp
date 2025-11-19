@@ -125,8 +125,7 @@ class RAIIMutexDescriptor {
         const Expr *SecondArg = C->getArgExpr(1);
         QualType ArgType = SecondArg->getType().getNonReferenceType();
         if (const auto *RD = ArgType->getAsRecordDecl();
-            RD && RD->getName() == "defer_lock_t" &&
-            RD->isInStdNamespace()) {
+            RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace()) {
           return false;
         }
       }
