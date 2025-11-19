@@ -55,7 +55,7 @@ _LIBCPP_EXPORTED_FROM_ABI string _Trace::to_string() const {
 #endif // _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_EXPORTED_FROM_ABI size_t _Trace::hash() const {
-  size_t __ret = 0xc3a5c85c97cb3127ull; // just a big prime number; taken from __functional/hash.h
+  size_t __ret = size_t(0xc3a5c85c97cb3127ull); // taken from __functional/hash.h
   for (_Entry const& __e : __entry_iters_()) {
     __ret = (__ret << 1) ^ __e.hash();
   }
