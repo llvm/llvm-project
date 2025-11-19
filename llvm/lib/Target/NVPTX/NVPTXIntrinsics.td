@@ -5625,7 +5625,7 @@ class Tcgen05MMADisableOutputLaneSDNode<bit Sp, string ASpace,
                 # "_DISABLE_OUTPUT_LANE_CG" # CtaGroup
                 # !if(!eq(AShift, 1), "_ASHIFT", ""),
         Tcgen05MMADisableOutputLaneTypeProfile<Sp, ASpace, CtaGroup, ScaleInput>,
-                    [SDNPHasChain, SDNPSideEffect]>;
+                    [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
 
 class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace,
                      string Kind, int CtaGroup, string CollectorUsageStr,
