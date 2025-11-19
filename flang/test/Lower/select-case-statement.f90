@@ -101,7 +101,7 @@
       ! CHECK: cf.cond_br
       case (.true.)
         n8 = 2
-      ! CHECK-NOT: constant 888
+      ! CHECK-NOT: 888
       case default ! dead
         n8 = 888
     end select
@@ -150,10 +150,7 @@
 
   ! CHECK-LABEL: func.func @_QPscharacter1
   subroutine scharacter1(s)
-    ! CHECK-DAG: %[[V_S:[0-9]+]] = fir.declare {{.*}} arg 1 {uniq_name = "_QFscharacter1Es"} : (!fir.ref<!fir.char<1,3>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,3>>
     character(len=3) :: s
-    ! CHECK-DAG: %[[V_N:[0-9]+]] = fir.declare {{.*}} {uniq_name = "_QFscharacter1En"} : (!fir.ref<i32>) -> !fir.ref<i32>
-    ! CHECK:     fir.store %c0_i32 to %[[V_N]] : !fir.ref<i32>
     n = 0
 
     ! lge() is lowered to various loops and "if" statements that work with "00".
@@ -236,33 +233,27 @@
 
   ! CHECK-LABEL: func @_QPscharacter2
   subroutine scharacter2(s)
-    ! CHECK-DAG: %[[V_0:[0-9]+]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
-    ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
     character(len=3) :: s
-
+    ! CHECK: %[[N:[0-9]+]] = fir.declare {{.*}} {uniq_name = "_QFscharacter2En"}
+    ! CHECK: fir.store %c-10_i32 to %[[N]] : !fir.ref<i32>
     n = -10
-    ! CHECK:   %[[V_12:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
-    ! CHECK:   %[[V_13:[0-9]+]] = fir.box_addr %[[V_12]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-    ! CHECK:   br ^bb1
-    ! CHECK: ^bb1:  // pred: ^bb0
-    ! CHECK:   fir.store %c9{{.*}}
-    ! CHECK:   br ^bb2
-    ! CHECK: ^bb2:  // pred: ^bb1
-    ! CHECK:   fir.freemem %[[V_13]] : !fir.heap<!fir.char<1,?>>
+    ! CHECK: fir.call @_FortranATrim(
     select case(trim(s))
     case default
+      ! CHECK: fir.store %c9_i32 to %[[N]] : !fir.ref<i32>
       n = 9
     end select
+
+    ! CHECK: fir.call @_FortranAioBeginExternalListOutput(
     print*, n
 
+    ! CHECK:  fir.store %c-2_i32 to %[[N]] : !fir.ref<i32>
     n = -2
-    ! CHECK:   %[[V_28:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
-    ! CHECK:   %[[V_29:[0-9]+]] = fir.box_addr %[[V_28]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-    ! CHECK:   br ^bb3
-    ! CHECK: ^bb3:  // pred: ^bb2
-    ! CHECK:   fir.freemem %[[V_29]] : !fir.heap<!fir.char<1,?>>
+
+    ! CHECK: fir.call @_FortranATrim(
     select case(trim(s))
     end select
+    ! CHECK: fir.call @_FortranAioBeginExternalListOutput(
     print*, n
   end subroutine
 
