@@ -20,6 +20,7 @@
 #include "PPCMachineFunctionInfo.h"
 #include "PPCPerfectShuffle.h"
 #include "PPCRegisterInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/APFloat.h"
@@ -209,8 +210,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // setbc instruction.
   if (!Subtarget.hasP10Vector()) {
     setOperationAction(ISD::SSUBO, MVT::i32, Custom);
-    if (isPPC64)
+    setOperationAction(ISD::SADDO, MVT::i32, Custom);
+    if (isPPC64) {
       setOperationAction(ISD::SSUBO, MVT::i64, Custom);
+      setOperationAction(ISD::SADDO, MVT::i64, Custom);
+    }
   }
 
   // Match BITREVERSE to customized fast code sequence in the td file.
@@ -1676,190 +1680,6 @@ bool PPCTargetLowering::shallExtractConstSplatVectorElementToStore(
     }
   }
   return false;
-}
-
-const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((PPCISD::NodeType)Opcode) {
-  case PPCISD::FIRST_NUMBER:    break;
-  case PPCISD::FSEL:            return "PPCISD::FSEL";
-  case PPCISD::XSMAXC:          return "PPCISD::XSMAXC";
-  case PPCISD::XSMINC:          return "PPCISD::XSMINC";
-  case PPCISD::FCFID:           return "PPCISD::FCFID";
-  case PPCISD::FCFIDU:          return "PPCISD::FCFIDU";
-  case PPCISD::FCFIDS:          return "PPCISD::FCFIDS";
-  case PPCISD::FCFIDUS:         return "PPCISD::FCFIDUS";
-  case PPCISD::FCTIDZ:          return "PPCISD::FCTIDZ";
-  case PPCISD::FCTIWZ:          return "PPCISD::FCTIWZ";
-  case PPCISD::FCTIDUZ:         return "PPCISD::FCTIDUZ";
-  case PPCISD::FCTIWUZ:         return "PPCISD::FCTIWUZ";
-  case PPCISD::FRE:             return "PPCISD::FRE";
-  case PPCISD::FRSQRTE:         return "PPCISD::FRSQRTE";
-  case PPCISD::FTSQRT:
-    return "PPCISD::FTSQRT";
-  case PPCISD::FSQRT:
-    return "PPCISD::FSQRT";
-  case PPCISD::STFIWX:          return "PPCISD::STFIWX";
-  case PPCISD::VPERM:           return "PPCISD::VPERM";
-  case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
-  case PPCISD::XXSPLTI_SP_TO_DP:
-    return "PPCISD::XXSPLTI_SP_TO_DP";
-  case PPCISD::XXSPLTI32DX:
-    return "PPCISD::XXSPLTI32DX";
-  case PPCISD::VECINSERT:       return "PPCISD::VECINSERT";
-  case PPCISD::XXPERMDI:        return "PPCISD::XXPERMDI";
-  case PPCISD::XXPERM:
-    return "PPCISD::XXPERM";
-  case PPCISD::VECSHL:          return "PPCISD::VECSHL";
-  case PPCISD::VSRQ:
-    return "PPCISD::VSRQ";
-  case PPCISD::CMPB:            return "PPCISD::CMPB";
-  case PPCISD::Hi:              return "PPCISD::Hi";
-  case PPCISD::Lo:              return "PPCISD::Lo";
-  case PPCISD::TOC_ENTRY:       return "PPCISD::TOC_ENTRY";
-  case PPCISD::ATOMIC_CMP_SWAP_8: return "PPCISD::ATOMIC_CMP_SWAP_8";
-  case PPCISD::ATOMIC_CMP_SWAP_16: return "PPCISD::ATOMIC_CMP_SWAP_16";
-  case PPCISD::DYNALLOC:        return "PPCISD::DYNALLOC";
-  case PPCISD::DYNAREAOFFSET:   return "PPCISD::DYNAREAOFFSET";
-  case PPCISD::PROBED_ALLOCA:   return "PPCISD::PROBED_ALLOCA";
-  case PPCISD::GlobalBaseReg:   return "PPCISD::GlobalBaseReg";
-  case PPCISD::SRL:             return "PPCISD::SRL";
-  case PPCISD::SRA:             return "PPCISD::SRA";
-  case PPCISD::SHL:             return "PPCISD::SHL";
-  case PPCISD::SRA_ADDZE:       return "PPCISD::SRA_ADDZE";
-  case PPCISD::CALL:            return "PPCISD::CALL";
-  case PPCISD::CALL_NOP:        return "PPCISD::CALL_NOP";
-  case PPCISD::CALL_NOTOC:      return "PPCISD::CALL_NOTOC";
-  case PPCISD::CALL_RM:
-    return "PPCISD::CALL_RM";
-  case PPCISD::CALL_NOP_RM:
-    return "PPCISD::CALL_NOP_RM";
-  case PPCISD::CALL_NOTOC_RM:
-    return "PPCISD::CALL_NOTOC_RM";
-  case PPCISD::MTCTR:           return "PPCISD::MTCTR";
-  case PPCISD::BCTRL:           return "PPCISD::BCTRL";
-  case PPCISD::BCTRL_LOAD_TOC:  return "PPCISD::BCTRL_LOAD_TOC";
-  case PPCISD::BCTRL_RM:
-    return "PPCISD::BCTRL_RM";
-  case PPCISD::BCTRL_LOAD_TOC_RM:
-    return "PPCISD::BCTRL_LOAD_TOC_RM";
-  case PPCISD::RET_GLUE:        return "PPCISD::RET_GLUE";
-  case PPCISD::READ_TIME_BASE:  return "PPCISD::READ_TIME_BASE";
-  case PPCISD::EH_SJLJ_SETJMP:  return "PPCISD::EH_SJLJ_SETJMP";
-  case PPCISD::EH_SJLJ_LONGJMP: return "PPCISD::EH_SJLJ_LONGJMP";
-  case PPCISD::MFOCRF:          return "PPCISD::MFOCRF";
-  case PPCISD::MFVSR:           return "PPCISD::MFVSR";
-  case PPCISD::MTVSRA:          return "PPCISD::MTVSRA";
-  case PPCISD::MTVSRZ:          return "PPCISD::MTVSRZ";
-  case PPCISD::SINT_VEC_TO_FP:  return "PPCISD::SINT_VEC_TO_FP";
-  case PPCISD::UINT_VEC_TO_FP:  return "PPCISD::UINT_VEC_TO_FP";
-  case PPCISD::SCALAR_TO_VECTOR_PERMUTED:
-    return "PPCISD::SCALAR_TO_VECTOR_PERMUTED";
-  case PPCISD::ANDI_rec_1_EQ_BIT:
-    return "PPCISD::ANDI_rec_1_EQ_BIT";
-  case PPCISD::ANDI_rec_1_GT_BIT:
-    return "PPCISD::ANDI_rec_1_GT_BIT";
-  case PPCISD::VCMP:            return "PPCISD::VCMP";
-  case PPCISD::VCMP_rec:        return "PPCISD::VCMP_rec";
-  case PPCISD::LBRX:            return "PPCISD::LBRX";
-  case PPCISD::STBRX:           return "PPCISD::STBRX";
-  case PPCISD::LFIWAX:          return "PPCISD::LFIWAX";
-  case PPCISD::LFIWZX:          return "PPCISD::LFIWZX";
-  case PPCISD::LXSIZX:          return "PPCISD::LXSIZX";
-  case PPCISD::STXSIX:          return "PPCISD::STXSIX";
-  case PPCISD::VEXTS:           return "PPCISD::VEXTS";
-  case PPCISD::LXVD2X:          return "PPCISD::LXVD2X";
-  case PPCISD::STXVD2X:         return "PPCISD::STXVD2X";
-  case PPCISD::LOAD_VEC_BE:     return "PPCISD::LOAD_VEC_BE";
-  case PPCISD::STORE_VEC_BE:    return "PPCISD::STORE_VEC_BE";
-  case PPCISD::ST_VSR_SCAL_INT:
-                                return "PPCISD::ST_VSR_SCAL_INT";
-  case PPCISD::COND_BRANCH:     return "PPCISD::COND_BRANCH";
-  case PPCISD::BDNZ:            return "PPCISD::BDNZ";
-  case PPCISD::BDZ:             return "PPCISD::BDZ";
-  case PPCISD::MFFS:            return "PPCISD::MFFS";
-  case PPCISD::FADDRTZ:         return "PPCISD::FADDRTZ";
-  case PPCISD::TC_RETURN:       return "PPCISD::TC_RETURN";
-  case PPCISD::CR6SET:          return "PPCISD::CR6SET";
-  case PPCISD::CR6UNSET:        return "PPCISD::CR6UNSET";
-  case PPCISD::PPC32_GOT:       return "PPCISD::PPC32_GOT";
-  case PPCISD::PPC32_PICGOT:    return "PPCISD::PPC32_PICGOT";
-  case PPCISD::ADDIS_GOT_TPREL_HA: return "PPCISD::ADDIS_GOT_TPREL_HA";
-  case PPCISD::LD_GOT_TPREL_L:  return "PPCISD::LD_GOT_TPREL_L";
-  case PPCISD::ADD_TLS:         return "PPCISD::ADD_TLS";
-  case PPCISD::ADDIS_TLSGD_HA:  return "PPCISD::ADDIS_TLSGD_HA";
-  case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
-  case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
-  case PPCISD::GET_TLS_MOD_AIX: return "PPCISD::GET_TLS_MOD_AIX";
-  case PPCISD::GET_TPOINTER:    return "PPCISD::GET_TPOINTER";
-  case PPCISD::ADDI_TLSGD_L_ADDR: return "PPCISD::ADDI_TLSGD_L_ADDR";
-  case PPCISD::TLSGD_AIX:       return "PPCISD::TLSGD_AIX";
-  case PPCISD::TLSLD_AIX:       return "PPCISD::TLSLD_AIX";
-  case PPCISD::ADDIS_TLSLD_HA:  return "PPCISD::ADDIS_TLSLD_HA";
-  case PPCISD::ADDI_TLSLD_L:    return "PPCISD::ADDI_TLSLD_L";
-  case PPCISD::GET_TLSLD_ADDR:  return "PPCISD::GET_TLSLD_ADDR";
-  case PPCISD::ADDI_TLSLD_L_ADDR: return "PPCISD::ADDI_TLSLD_L_ADDR";
-  case PPCISD::ADDIS_DTPREL_HA: return "PPCISD::ADDIS_DTPREL_HA";
-  case PPCISD::ADDI_DTPREL_L:   return "PPCISD::ADDI_DTPREL_L";
-  case PPCISD::PADDI_DTPREL:
-    return "PPCISD::PADDI_DTPREL";
-  case PPCISD::VADD_SPLAT:
-    return "PPCISD::VADD_SPLAT";
-  case PPCISD::XXSWAPD:         return "PPCISD::XXSWAPD";
-  case PPCISD::SWAP_NO_CHAIN:   return "PPCISD::SWAP_NO_CHAIN";
-  case PPCISD::BUILD_FP128:     return "PPCISD::BUILD_FP128";
-  case PPCISD::BUILD_SPE64:     return "PPCISD::BUILD_SPE64";
-  case PPCISD::EXTRACT_SPE:     return "PPCISD::EXTRACT_SPE";
-  case PPCISD::EXTSWSLI:        return "PPCISD::EXTSWSLI";
-  case PPCISD::LD_VSX_LH:       return "PPCISD::LD_VSX_LH";
-  case PPCISD::FP_EXTEND_HALF:  return "PPCISD::FP_EXTEND_HALF";
-  case PPCISD::MAT_PCREL_ADDR:  return "PPCISD::MAT_PCREL_ADDR";
-  case PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR:
-    return "PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR";
-  case PPCISD::TLS_LOCAL_EXEC_MAT_ADDR:
-    return "PPCISD::TLS_LOCAL_EXEC_MAT_ADDR";
-  case PPCISD::ACC_BUILD:       return "PPCISD::ACC_BUILD";
-  case PPCISD::PAIR_BUILD:      return "PPCISD::PAIR_BUILD";
-  case PPCISD::EXTRACT_VSX_REG: return "PPCISD::EXTRACT_VSX_REG";
-  case PPCISD::XXMFACC:         return "PPCISD::XXMFACC";
-  case PPCISD::LD_SPLAT:        return "PPCISD::LD_SPLAT";
-  case PPCISD::ZEXT_LD_SPLAT:   return "PPCISD::ZEXT_LD_SPLAT";
-  case PPCISD::SEXT_LD_SPLAT:   return "PPCISD::SEXT_LD_SPLAT";
-  case PPCISD::FNMSUB:          return "PPCISD::FNMSUB";
-  case PPCISD::STRICT_FADDRTZ:
-    return "PPCISD::STRICT_FADDRTZ";
-  case PPCISD::STRICT_FCTIDZ:
-    return "PPCISD::STRICT_FCTIDZ";
-  case PPCISD::STRICT_FCTIWZ:
-    return "PPCISD::STRICT_FCTIWZ";
-  case PPCISD::STRICT_FCTIDUZ:
-    return "PPCISD::STRICT_FCTIDUZ";
-  case PPCISD::STRICT_FCTIWUZ:
-    return "PPCISD::STRICT_FCTIWUZ";
-  case PPCISD::STRICT_FCFID:
-    return "PPCISD::STRICT_FCFID";
-  case PPCISD::STRICT_FCFIDU:
-    return "PPCISD::STRICT_FCFIDU";
-  case PPCISD::STRICT_FCFIDS:
-    return "PPCISD::STRICT_FCFIDS";
-  case PPCISD::STRICT_FCFIDUS:
-    return "PPCISD::STRICT_FCFIDUS";
-  case PPCISD::LXVRZX:          return "PPCISD::LXVRZX";
-  case PPCISD::STORE_COND:
-    return "PPCISD::STORE_COND";
-  case PPCISD::SETBC:
-    return "PPCISD::SETBC";
-  case PPCISD::SETBCR:
-    return "PPCISD::SETBCR";
-  case PPCISD::ADDC:
-    return "PPCISD::ADDC";
-  case PPCISD::ADDE:
-    return "PPCISD::ADDE";
-  case PPCISD::SUBC:
-    return "PPCISD::SUBC";
-  case PPCISD::SUBE:
-    return "PPCISD::SUBE";
-  }
-  return nullptr;
 }
 
 EVT PPCTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &C,
@@ -12697,6 +12517,37 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
 }
 
+/// Implements signed add with overflow detection using the rule:
+/// (x eqv y) & (sum xor x), where the overflow bit is extracted from the sign
+SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT VT = Op.getNode()->getValueType(0);
+
+  SDValue Sum = DAG.getNode(ISD::ADD, dl, VT, LHS, RHS);
+
+  // Compute ~(x xor y)
+  SDValue XorXY = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
+  SDValue EqvXY = DAG.getNOT(dl, XorXY, VT);
+  // Compute (s xor x)
+  SDValue SumXorX = DAG.getNode(ISD::XOR, dl, VT, Sum, LHS);
+
+  // overflow = (x eqv y) & (s xor x)
+  SDValue OverflowInSign = DAG.getNode(ISD::AND, dl, VT, EqvXY, SumXorX);
+
+  // Shift sign bit down to LSB
+  SDValue Overflow =
+      DAG.getNode(ISD::SRL, dl, VT, OverflowInSign,
+                  DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
+  // Truncate to the overflow type (i1)
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+
+  return DAG.getMergeValues({Sum, OverflowTrunc}, dl);
+}
+
 // Lower unsigned 3-way compare producing -1/0/1.
 SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -12748,6 +12599,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::SSUBO:
     return LowerSSUBO(Op, DAG);
+  case ISD::SADDO:
+    return LowerSADDO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);
