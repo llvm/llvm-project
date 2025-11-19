@@ -1257,6 +1257,12 @@ namespace cwg686 { // cwg686: 3.0
     // cxx98-14-error@-1 {{'Q' cannot be defined in a type specifier}}
 #endif
   }
+  int f2(int, double) {
+    struct N {
+      operator struct O{}(){};
+      // expected-error@-1 {{'cwg686::f2(int, double)::N::O' cannot be defined in a type specifier}}
+    };
+  }
   template<struct R *> struct X;
   template<struct R {} *> struct Y;
   // expected-error@-1 {{'cwg686::R' cannot be defined in a type specifier}}
