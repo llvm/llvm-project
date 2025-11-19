@@ -1566,14 +1566,19 @@ let TargetPrefix = "nvvm" in {
 
   foreach rnd = ["rn", "rz"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff2bf16x2_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
+      foreach satfinite = ["", "_satfinite"] in {
+        def int_nvvm_ff2bf16x2_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
 
-      def int_nvvm_ff2f16x2_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
+        def int_nvvm_ff2f16x2_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
 
-      def int_nvvm_f2bf16_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+        def int_nvvm_f2bf16_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+            
+        def int_nvvm_f2f16_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_half_ty], [llvm_float_ty]>;
+      }
     }
   }
 
