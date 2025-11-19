@@ -93,6 +93,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <optional>
+#include <set>
 #include <utility>
 
 using namespace clang;
@@ -451,6 +452,123 @@ public:
 };
 } // namespace
 
+namespace {
+enum class AttrComparisonKind { Equal, NotEqual };
+
+/// Represents the result of comparing the attribute sets on two decls. If the
+/// sets are incompatible, A1/A2 point to the offending attributes.
+struct AttrComparisonResult {
+  AttrComparisonKind Kind = AttrComparisonKind::Equal;
+  const Attr *A1 = nullptr, *A2 = nullptr;
+};
+} // namespace
+
+static AttrComparisonResult
+areAvailabilityAttrsEqual(const AvailabilityAttr *A1,
+                          const AvailabilityAttr *A2) {
+  if (A1->getPlatform() == A2->getPlatform() &&
+      A1->getIntroduced() == A2->getIntroduced() &&
+      A1->getDeprecated() == A2->getDeprecated() &&
+      A1->getObsoleted() == A2->getObsoleted() &&
+      A1->getUnavailable() == A2->getUnavailable() &&
+      A1->getMessage() == A2->getMessage() &&
+      A1->getReplacement() == A2->getReplacement() &&
+      A1->getStrict() == A2->getStrict() &&
+      A1->getPriority() == A2->getPriority() &&
+      A1->getEnvironment() == A2->getEnvironment())
+    return {AttrComparisonKind::Equal};
+  return {AttrComparisonKind::NotEqual, A1, A2};
+}
+
+static AttrComparisonResult
+areEnumExtensibilityAttrsEqual(const EnumExtensibilityAttr *A1,
+                               const EnumExtensibilityAttr *A2) {
+  if (A1->getExtensibility() == A2->getExtensibility())
+    return {AttrComparisonKind::Equal};
+  return {AttrComparisonKind::NotEqual, A1, A2};
+}
+
+static AttrComparisonResult areAttrsEqual(const Attr *A1, const Attr *A2) {
+  auto Kind1 = A1->getKind(), Kind2 = A2->getKind();
+  if (Kind1 != Kind2)
+    return {AttrComparisonKind::NotEqual, A1, A2};
+
+  switch (Kind1) {
+  case attr::Availability:
+    return areAvailabilityAttrsEqual(cast<AvailabilityAttr>(A1),
+                                     cast<AvailabilityAttr>(A2));
+  case attr::EnumExtensibility:
+    return areEnumExtensibilityAttrsEqual(cast<EnumExtensibilityAttr>(A1),
+                                          cast<EnumExtensibilityAttr>(A2));
+  case attr::Unused:
+    return {AttrComparisonKind::Equal};
+  default:
+    llvm_unreachable("unexpected attr kind");
+  }
+}
+
+static bool compareAttrKind(const Attr *A1, const Attr *A2) {
+  return A1->getKind() < A2->getKind();
+}
+
+namespace {
+using AttrSet = std::multiset<const Attr *, decltype(&compareAttrKind)>;
+}
+
+/// Collects all supported, non-inherited attributes from the given decl.
+/// Returns true on success. If the decl contains any unsupported attribute,
+/// returns false and sets UnsupportedAttr to point to that attribute.
+static bool collectComparableAttrs(const Decl *D, AttrSet &Attrs,
+                                   const Attr *&UnsupportedAttr) {
+  for (const Attr *A : D->attrs()) {
+    switch (A->getKind()) {
+    case attr::Availability:
+    case attr::EnumExtensibility:
+    case attr::Unused:
+      if (!A->isInherited())
+        Attrs.insert(A);
+      break;
+
+    default:
+      UnsupportedAttr = A;
+      return false; // unsupported attribute
+    }
+  }
+
+  return true;
+}
+
+/// Determines whether D1 and D2 have compatible sets of attributes for the
+/// purposes of structural equivalence checking.
+static AttrComparisonResult areDeclAttrsEquivalent(const Decl *D1,
+                                                   const Decl *D2) {
+  if (D1->isImplicit() || D2->isImplicit())
+    return {AttrComparisonKind::Equal};
+
+  AttrSet A1(&compareAttrKind), A2(&compareAttrKind);
+
+  const Attr *UnsupportedAttr1 = nullptr, *UnsupportedAttr2 = nullptr;
+  bool HasUnsupportedAttr1 = collectComparableAttrs(D1, A1, UnsupportedAttr1);
+  bool HasUnsupportedAttr2 = collectComparableAttrs(D2, A2, UnsupportedAttr2);
+
+  if (!HasUnsupportedAttr1 || !HasUnsupportedAttr2)
+    return {AttrComparisonKind::NotEqual, UnsupportedAttr1, UnsupportedAttr2};
+
+  auto I1 = A1.begin(), E1 = A1.end(), I2 = A2.begin(), E2 = A2.end();
+  for (; I1 != E1 && I2 != E2; ++I1, ++I2) {
+    AttrComparisonResult R = areAttrsEqual(*I1, *I2);
+    if (R.Kind != AttrComparisonKind::Equal)
+      return R;
+  }
+
+  if (I1 != E1)
+    return {AttrComparisonKind::NotEqual, *I1};
+  if (I2 != E2)
+    return {AttrComparisonKind::NotEqual, nullptr, *I2};
+
+  return {AttrComparisonKind::Equal};
+}
+
 static bool
 CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
                                       const Decl *D1, const Decl *D2,
@@ -465,21 +583,17 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
   // the same semantic attribute, differences in attribute arguments, order
   // in which attributes are applied, how to merge attributes if the types are
   // structurally equivalent, etc.
-  const Attr *D1Attr = nullptr, *D2Attr = nullptr;
-  if (D1->hasAttrs())
-    D1Attr = *D1->getAttrs().begin();
-  if (D2->hasAttrs())
-    D2Attr = *D2->getAttrs().begin();
-  if ((D1Attr || D2Attr) && !D1->isImplicit() && !D2->isImplicit()) {
+  AttrComparisonResult R = areDeclAttrsEquivalent(D1, D2);
+  if (R.Kind != AttrComparisonKind::Equal) {
     const auto *DiagnoseDecl = cast<TypeDecl>(PrimaryDecl ? PrimaryDecl : D2);
     Context.Diag2(DiagnoseDecl->getLocation(),
                   diag::warn_odr_tag_type_with_attributes)
         << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
         << (PrimaryDecl != nullptr);
-    if (D1Attr)
-      Context.Diag1(D1Attr->getLoc(), diag::note_odr_attr_here) << D1Attr;
-    if (D2Attr)
-      Context.Diag1(D2Attr->getLoc(), diag::note_odr_attr_here) << D2Attr;
+    if (R.A1)
+      Context.Diag1(R.A1->getLoc(), diag::note_odr_attr_here) << R.A1;
+    if (R.A2)
+      Context.Diag1(R.A2->getLoc(), diag::note_odr_attr_here) << R.A2;
   }
 
   // The above diagnostic is a warning which defaults to an error. If treated
@@ -1791,12 +1905,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     }
   }
 
-  // In C23 mode, check for structural equivalence of attributes on the record
-  // itself. FIXME: Should this happen in C++ as well?
-  if (Context.LangOpts.C23 &&
-      !CheckStructurallyEquivalentAttributes(Context, D1, D2))
-    return false;
-
   // If the records occur in different context (namespace), these should be
   // different. This is specially important if the definition of one or both
   // records is missing. In C23, different contexts do not make for a different
@@ -1837,6 +1945,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   D2 = D2->getDefinition();
   if (!D1 || !D2)
     return !Context.LangOpts.C23;
+
+  // In C23 mode, check for structural equivalence of attributes on the record
+  // itself. FIXME: Should this happen in C++ as well?
+  if (Context.LangOpts.C23 &&
+      !CheckStructurallyEquivalentAttributes(Context, D1, D2))
+    return false;
 
   // If any of the records has external storage and we do a minimal check (or
   // AST import) we assume they are equivalent. (If we didn't have this

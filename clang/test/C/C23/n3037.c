@@ -515,3 +515,90 @@ void gh149965(void) {
   enum E2 *eptr2;
   [[maybe_unused]] __typeof__(x2.h) *ptr2 = eptr2;
 }
+
+struct __attribute__((availability(ios, introduced = 14), availability(macos, introduced = 12))) AvailS0 {
+  // c17-note@-1 4 {{previous definition is here}}
+  // c23-note@-2 2 {{attribute 'availability' here}}
+  int f0 __attribute__((availability(ios, introduced = 15, deprecated = 16)));
+  // c23-note@-1 {{attribute 'availability' here}}
+};
+
+struct __attribute__((availability(ios, introduced = 14), availability(macos, introduced = 12))) AvailS0 {
+  // c17-error@-1 {{redefinition of 'AvailS0'}}
+  int f0 __attribute__((availability(ios, introduced = 15, deprecated = 16)));
+};
+
+// The order of the attributes matters.
+struct __attribute__((availability(macos, introduced = 12), availability(ios, introduced = 14))) AvailS0 {
+  // c17-error@-1 {{redefinition of 'AvailS0'}}
+  // c23-error@-2 {{type 'struct AvailS0' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'availability' here}}
+  int f0 __attribute__((availability(ios, introduced = 15, deprecated = 16)));
+};
+
+struct __attribute__((availability(ios, introduced = 14))) [[__maybe_unused__]] AvailS0 {
+  // c17-error@-1 {{redefinition of 'AvailS0'}}
+  // c23-error@-2 {{type 'struct AvailS0' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'maybe_unused' here}}
+  int f0 __attribute__((availability(ios, introduced = 15, deprecated = 16)));
+};
+
+struct __attribute__((availability(ios, introduced = 14), availability(macos, introduced = 12))) AvailS0 {
+  // c17-error@-1 {{redefinition of 'AvailS0'}}
+  // c23-error@-2 {{type 'struct AvailS0' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
+  int f0 __attribute__((availability(macos, introduced = 13)));
+  // c23-note@-1 {{attribute 'availability' here}}
+};
+
+enum __attribute__((availability(macos, introduced = 12), warn_unused_result)) AvailE0 {
+  // c17-note@-1 {{previous definition is here}}
+  // c23-note@-2 {{attribute 'warn_unused_result' here}}
+  A_E0
+  // c17-note@-1 {{previous definition is here}}
+};
+
+enum __attribute__((availability(macos, introduced = 12), warn_unused_result)) AvailE0 {
+  // c17-error@-1 {{redefinition of 'AvailE0'}}
+  // c23-error@-2 {{type 'enum AvailE0' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  // c23-note@-3 {{attribute 'warn_unused_result' here}}
+  A_E0
+  // c17-error@-1 {{redefinition of enumerator 'A_E0'}}
+};
+
+enum __attribute__((enum_extensibility(closed))) AvailE1 {
+  // c17-note@-1 {{previous definition is here}}
+  A_E1
+  // c17-note@-1 {{previous definition is here}}
+};
+
+enum __attribute__((enum_extensibility(closed))) AvailE1 {
+  // c17-error@-1 {{redefinition of 'AvailE1'}}
+  A_E1
+  // c17-error@-1 {{redefinition of enumerator 'A_E1'}}
+};
+
+struct [[__maybe_unused__]] AvailS1;
+
+struct __attribute__((availability(macos, introduced = 12))) AvailS1 {
+  // c17-note@-1 {{previous definition is here}}
+  int a;
+};
+
+struct __attribute__((availability(macos, introduced = 12))) AvailS1 {
+  // c17-error@-1 {{redefinition of 'AvailS1'}}
+  int a;
+};
+
+struct __attribute__((warn_unused_result)) AvailS2;
+// c23-note@-1 {{attribute 'warn_unused_result' here}}
+
+struct __attribute__((availability(macos, introduced = 12))) AvailS2 {
+  // c17-note@-1 {{previous definition is here}}
+  int a;
+};
+
+struct __attribute__((availability(macos, introduced = 12))) AvailS2 {
+  // c17-error@-1 {{redefinition of 'AvailS2'}}
+  // c23-error@-2 {{type 'struct AvailS2' has an attribute which currently causes the types to be treated as though they are incompatible}}
+  int a;
+};
