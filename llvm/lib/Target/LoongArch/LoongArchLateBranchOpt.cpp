@@ -54,21 +54,27 @@ INITIALIZE_PASS(LoongArchLateBranchOpt, "loongarch-late-branch-opt",
                 LOONGARCH_LATE_BRANCH_OPT_NAME, false, false)
 
 // Return true if the instruction is a load immediate instruction.
-// TODO: Need more consideration?
+// TODO: More consideration?
 bool LoongArchLateBranchOpt::isLoadImm(const MachineInstr *MI,
                                        int64_t &Imm) const {
-  unsigned Addi = ST->is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
-  if (MI->getOpcode() == Addi && MI->getOperand(1).isReg() &&
-      MI->getOperand(1).getReg() == LoongArch::R0) {
-    Imm = MI->getOperand(2).getImm();
+  unsigned Shift = 0;
+  switch (MI->getOpcode()) {
+  default:
+    return false;
+  case LoongArch::LU52I_D:
+    Shift = 52;
+    [[fallthrough]];
+  case LoongArch::ORI:
+  case LoongArch::ADDI_W:
+    if (!MI->getOperand(1).isReg() ||
+        MI->getOperand(1).getReg() != LoongArch::R0)
+      return false;
+    Imm = MI->getOperand(2).getImm() << Shift;
+    return true;
+  case LoongArch::LU12I_W:
+    Imm = MI->getOperand(1).getImm() << 12;
     return true;
   }
-  if (MI->getOpcode() == LoongArch::ORI && MI->getOperand(1).isReg() &&
-      MI->getOperand(1).getReg() == LoongArch::R0) {
-    Imm = MI->getOperand(2).getImm();
-    return true;
-  }
-  return false;
 }
 
 // Return true if the operand is a load immediate instruction and
