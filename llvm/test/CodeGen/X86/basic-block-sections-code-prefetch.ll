@@ -7,17 +7,13 @@
 ; RUN: echo 't 1,0' >> %t
 ; RUN: echo 't 1,1' >> %t
 ; RUN: echo 't 2,1' >> %t
-<<<<<<< HEAD
 ; RUN: echo 't 3,0' >> %t
-=======
-; RUN: echo 't 4,0' >> %t
-; RUN: echo 'i 3@0 _Z3barv@0@0' >> %t
-; RUN: echo 'i 2@1 _Z3foob@1@0' >> %t
->>>>>>> d2ddce6b2050 (Expand the test case to prefetch hints.)
+; RUN: echo 'i 3,0 _Z3barv,0,0' >> %t
+; RUN: echo 'i 2,1 _Z3foob,1,0' >> %t
 ; RUN: echo 'f _Z3barv' >> %t
 ; RUN: echo 't 0,0' >> %t
 ; RUN: echo 't 21,1' >> %t
-; RUN: echo 'i 0@1 _Z3foob@0@0' >> %t
+; RUN: echo 'i 0,1 _Z3foob,0,0' >> %t
 ;;
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -asm-verbose=false -function-sections -basic-block-sections=%t  | FileCheck %s
 
@@ -62,8 +58,6 @@ define i32 @_Z3foob(i1 zeroext %0) nounwind {
 ; CHECK-NEXT: __llvm_prefetch_target__Z3foob_3_0:
 ; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target__Z3barv_0_0(%rip)
 ; CHECK:        retq
-
->>>>>>> d2ddce6b2050 (Expand the test case to prefetch hints.)
 }
 
 define weak i32 @_Z3barv() nounwind {

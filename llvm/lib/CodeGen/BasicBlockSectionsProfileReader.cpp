@@ -167,8 +167,8 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // instruct the compiler to emit a prefetch symbol for the given target.
 // A prefetch target is specified by a pair "<bbid>,<subblock_index>" where
 // bbid specifies the target basic block and subblock_index is a zero-based
-// index. Subblock 0 refers to the region at the beginning of the block up to
-// the first callsite. Subblock `i > 0` refers to the region immediately after
+// index. Callsite 0 refers to the region at the beginning of the block up to
+// the first callsite. Callsite `i > 0` refers to the region immediately after
 // the `i`-th callsite up to the `i+1`-th callsite (or the end of the block).
 // The prefetch target is always emitted at the beginning of the subblock.
 // This is the beginning of the basic block for `i = 0` and immediately after
@@ -180,15 +180,15 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // subblock.
 //
 // +----------------------------------+
-// | __llvm_prefetch_target_foo_10_0: | <- Subblock 0 (before call_A)
+// | __llvm_prefetch_target_foo_10_0: | <- Callsite 0 (before call_A)
 // |  Instruction 1                   |
 // |  Instruction 2                   |
 // |  call_A (Callsite 0)             |
-// | __llvm_prefetch_target_foo_10_1: | <--- Subblock 1 (after call_A,
+// | __llvm_prefetch_target_foo_10_1: | <--- Callsite 1 (after call_A,
 // |                                  |                  before call_B)
 // |  Instruction 3                   |
 // |  call_B (Callsite 1)             |
-// | __llvm_prefetch_target_foo_10_2: | <--- Subblock 2 (after call_B,
+// | __llvm_prefetch_target_foo_10_2: | <--- Callsite 2 (after call_B,
 // |                                  |                  before call_C)
 // |  Instruction 4                   |
 // +----------------------------------+
@@ -368,8 +368,8 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       auto SiteBBID = parseUniqueBBID(PrefetchSiteStr[0]);
       if (!SiteBBID)
         return SiteBBID.takeError();
-      unsigned long long SiteSubblockIndex;
-      if (getAsUnsignedInteger(PrefetchSiteStr[1], 10, SiteSubblockIndex))
+      unsigned long long SiteCallsiteIndex;
+      if (getAsUnsignedInteger(PrefetchSiteStr[1], 10, SiteCallsiteIndex))
         return createProfileParseError(Twine("unsigned integer expected: '") +
                                        PrefetchSiteStr[1]);
 
@@ -381,14 +381,14 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[1]);
       if (!TargetBBID)
         return TargetBBID.takeError();
-      unsigned long long TargetSubblockIndex;
-      if (getAsUnsignedInteger(PrefetchTargetStr[2], 10, TargetSubblockIndex))
+      unsigned long long TargetCallsiteIndex;
+      if (getAsUnsignedInteger(PrefetchTargetStr[2], 10, TargetCallsiteIndex))
         return createProfileParseError(Twine("unsigned integer expected: '") +
                                        PrefetchTargetStr[2]);
       FI->second.PrefetchHints.push_back(PrefetchHint{
-          SubblockID{*SiteBBID, static_cast<unsigned>(SiteSubblockIndex)},
+          CallsiteID{*SiteBBID, static_cast<unsigned>(SiteCallsiteIndex)},
           PrefetchTargetStr[0],
-          SubblockID{*TargetBBID, static_cast<unsigned>(TargetSubblockIndex)}});
+          CallsiteID{*TargetBBID, static_cast<unsigned>(TargetCallsiteIndex)}});
       continue;
     }
     case 't': { // Prefetch target specifier.
@@ -399,7 +399,6 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       SmallVector<StringRef, 2> PrefetchTargetStr;
       if (Values.size() != 1)
         return createProfileParseError(Twine("Prefetch target expected: ") + S);
-      SmallVector<StringRef, 2> PrefetchTargetStr;
       Values[0].split(PrefetchTargetStr, ',');
       if (PrefetchTargetStr.size() != 2)
         return createProfileParseError(Twine("Prefetch target expected: ") +

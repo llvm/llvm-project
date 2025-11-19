@@ -53,9 +53,9 @@ struct CallsiteID {
 // This represents a prefetch hint to be injected at site `SiteID`, targetting
 // `TargetID` in function `TargetFunction`.
 struct PrefetchHint {
-  SubblockID SiteID;
+  CallsiteID SiteID;
   StringRef TargetFunction;
-  SubblockID TargetID;
+  CallsiteID TargetID;
 };
 
 // This represents the raw input profile for one function.

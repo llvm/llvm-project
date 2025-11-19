@@ -37,13 +37,13 @@ using namespace llvm;
 namespace llvm {
 SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName,
                                              const UniqueBBID &BBID,
-                                             unsigned SubblockIndex) {
+                                             unsigned CallsiteIndex) {
   SmallString<128> R("__llvm_prefetch_target_");
   R += FunctionName;
   R += "_";
   R += utostr(BBID.BaseID);
   R += "_";
-  R += utostr(SubblockIndex);
+  R += utostr(CallsiteIndex);
   return R;
 }
 } // namespace llvm
@@ -112,7 +112,7 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     PrefetchHintsBySiteBBID[H.SiteID.BBID].push_back(H);
   for (auto &[SiteBBID, Hints] : PrefetchHintsBySiteBBID) {
     llvm::sort(Hints, [](const PrefetchHint &H1, const PrefetchHint &H2) {
-      return H1.SiteID.SubblockIndex < H2.SiteID.SubblockIndex;
+      return H1.SiteID.CallsiteIndex < H2.SiteID.CallsiteIndex;
     });
   }
   auto PtrTy =
@@ -128,11 +128,11 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     for (auto HintIt = PrefetchHints.begin(); HintIt != PrefetchHints.end();) {
       auto NextInstrIt = InstrIt == BB.end() ? BB.end() : std::next(InstrIt);
       while (HintIt != PrefetchHints.end() &&
-             NumCallsInBB >= HintIt->SiteID.SubblockIndex) {
+             NumCallsInBB >= HintIt->SiteID.CallsiteIndex) {
         auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(
             getPrefetchTargetSymbolName(HintIt->TargetFunction,
                                         HintIt->TargetID.BBID,
-                                        HintIt->TargetID.SubblockIndex),
+                                        HintIt->TargetID.CallsiteIndex),
             PtrTy);
         TII->insertCodePrefetchInstr(BB, InstrIt, GV);
         ++HintIt;
