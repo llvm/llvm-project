@@ -6640,23 +6640,25 @@ inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
   // Check all elements match.
   for (unsigned i = 0; i != NumElts; i += 2) {
     if (M[i] >= 0) {
-      if ((unsigned)M[i] != i / 2)
+      unsigned EvenElt = (unsigned)M[i];
+      if (EvenElt != i / 2)
         Variant0Order0 = false;
-      if ((unsigned)M[i] != NumElts / 2 + i / 2)
+      if (EvenElt != NumElts / 2 + i / 2)
         Variant1Order0 = false;
-      if ((unsigned)M[i] != NumElts + i / 2)
+      if (EvenElt != NumElts + i / 2)
         Variant0Order1 = false;
-      if ((unsigned)M[i] != NumElts + NumElts / 2 + i / 2)
+      if (EvenElt != NumElts + NumElts / 2 + i / 2)
         Variant1Order1 = false;
     }
     if (M[i + 1] >= 0) {
-      if ((unsigned)M[i + 1] != NumElts + i / 2)
+      unsigned OddElt = (unsigned)M[i + 1];
+      if (OddElt != NumElts + i / 2)
         Variant0Order0 = false;
-      if ((unsigned)M[i + 1] != NumElts + NumElts / 2 + i / 2)
+      if (OddElt != NumElts + NumElts / 2 + i / 2)
         Variant1Order0 = false;
-      if ((unsigned)M[i + 1] != i / 2)
+      if (OddElt != i / 2)
         Variant0Order1 = false;
-      if ((unsigned)M[i + 1] != NumElts / 2 + i / 2)
+      if (OddElt != NumElts / 2 + i / 2)
         Variant1Order1 = false;
     }
   }
