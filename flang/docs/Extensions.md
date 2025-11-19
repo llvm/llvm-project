@@ -946,6 +946,17 @@ print *, [(j,j=1,10)]
   This design allows format-driven input with `DT` editing to retain
   control over advancement in child input, while otherwise allowing it.
 
+* When output takes place to a file under `ACCESS="STREAM"` after
+  repositioning it to an earlier position, some compilers will
+  truncate the file; this behavior is similar to the implicit
+  `ENDFILE` that takes place under sequential output after a
+  `BACKSPACE` or `REWIND` statement.
+  Truncation of streams is not specified in the standard, however,
+  and it does not take place with all compilers.
+  In this one, truncation is optional; it occurs by default,
+  but it can be disabled via `FORT_TRUNCATE_STREAM=0` in the
+  environment at execution time.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
