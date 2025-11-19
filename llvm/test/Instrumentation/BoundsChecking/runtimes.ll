@@ -111,6 +111,22 @@ define void @f1(i64 %x) nounwind {
 ; MINRT-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal() #[[ATTR1:[0-9]+]], !nosanitize [[META0]]
 ; MINRT-NOMERGE-NEXT:    br label %[[BB7]], !nosanitize [[META0]]
 ;
+; MINRT-PRESERVE-NOMERGE-LABEL: define void @f1(
+; MINRT-PRESERVE-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    br i1 [[TMP6]], label %[[TRAP:.*]], label %[[BB7:.*]]
+; MINRT-PRESERVE-NOMERGE:       [[BB7]]:
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
+; MINRT-PRESERVE-NOMERGE-NEXT:    ret void
+; MINRT-PRESERVE-NOMERGE:       [[TRAP]]:
+; MINRT-PRESERVE-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal_preserve() #[[ATTR1:[0-9]+]], !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    br label %[[BB7]], !nosanitize [[META0]]
+;
 ; MINRTABORT-NOMERGE-LABEL: define void @f1(
 ; MINRTABORT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; MINRTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]

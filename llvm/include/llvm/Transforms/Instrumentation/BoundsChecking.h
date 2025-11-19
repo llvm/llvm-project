@@ -23,10 +23,11 @@ class BoundsCheckingPass : public PassInfoMixin<BoundsCheckingPass> {
 public:
   struct Options {
     struct Runtime {
-      Runtime(bool MinRuntime, bool MayReturn)
-          : MinRuntime(MinRuntime), MayReturn(MayReturn) {}
+      Runtime(bool MinRuntime, bool MayReturn, bool PreserveRt)
+          : MinRuntime(MinRuntime), MayReturn(MayReturn), PreserveRt(PreserveRt) {}
       bool MinRuntime;
       bool MayReturn;
+      bool PreserveRt;
     };
     std::optional<Runtime> Rt; // Trap if empty.
     bool Merge = false;

@@ -9,6 +9,9 @@
 
 // RUN: %clang_cc1 -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=RECOVER_MIN %s
 
+// RUN: %clang_cc1 -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -fsanitize-preserve-runtime -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=PRESERVE_MIN %s
+
+
 // TRAP-LABEL: define hidden void @f(
 // TRAP-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
 // TRAP-NEXT:  [[ENTRY:.*:]]
@@ -33,6 +36,11 @@
 // RECOVER_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
 // RECOVER_MIN-NEXT:  [[ENTRY:.*:]]
 // RECOVER_MIN-NEXT:    ret void
+//
+// PRESERVE_MIN-LABEL: define hidden void @f(
+// PRESERVE_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
+// PRESERVE_MIN-NEXT:  [[ENTRY:.*:]]
+// PRESERVE_MIN-NEXT:    ret void
 //
 void f() {
 }
@@ -146,6 +154,27 @@ void xf();
 // RECOVER_MIN-NEXT:    call void (...) [[TMP2]]()
 // RECOVER_MIN-NEXT:    ret void
 //
+// PRESERVE_MIN-LABEL: define hidden void @g(
+// PRESERVE_MIN-SAME: i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META8:![0-9]+]] !type [[META9:![0-9]+]] {
+// PRESERVE_MIN-NEXT:  [[ENTRY:.*:]]
+// PRESERVE_MIN-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// PRESERVE_MIN-NEXT:    [[FP:%.*]] = alloca ptr, align 8
+// PRESERVE_MIN-NEXT:    store i32 [[B]], ptr [[B_ADDR]], align 4
+// PRESERVE_MIN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B_ADDR]], align 4
+// PRESERVE_MIN-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
+// PRESERVE_MIN-NEXT:    [[TMP1:%.*]] = zext i1 [[TOBOOL]] to i64
+// PRESERVE_MIN-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr @f, ptr @xf
+// PRESERVE_MIN-NEXT:    store ptr [[COND]], ptr [[FP]], align 8
+// PRESERVE_MIN-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FP]], align 8
+// PRESERVE_MIN-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[TMP2]], metadata !"_ZTSFvE"), !nosanitize [[META10:![0-9]+]]
+// PRESERVE_MIN-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF11:![0-9]+]], !nosanitize [[META10]]
+// PRESERVE_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
+// PRESERVE_MIN-NEXT:    call preserve_allcc void @__ubsan_handle_cfi_check_fail_minimal_preserve() #[[ATTR4:[0-9]+]], !nosanitize [[META10]]
+// PRESERVE_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META10]]
+// PRESERVE_MIN:       [[CONT]]:
+// PRESERVE_MIN-NEXT:    call void (...) [[TMP2]]()
+// PRESERVE_MIN-NEXT:    ret void
+//
 void g(int b) {
   void (*fp)() = b ? f : xf;
   fp();
@@ -185,4 +214,11 @@ void g(int b) {
 // RECOVER_MIN: [[META9]] = !{i64 0, !"_ZTSFviE.generalized"}
 // RECOVER_MIN: [[META10]] = !{}
 // RECOVER_MIN: [[PROF11]] = !{!"branch_weights", i32 1048575, i32 1}
+//.
+// PRESERVE_MIN: [[META6]] = !{i64 0, !"_ZTSFvE"}
+// PRESERVE_MIN: [[META7]] = !{i64 0, !"_ZTSFvE.generalized"}
+// PRESERVE_MIN: [[META8]] = !{i64 0, !"_ZTSFviE"}
+// PRESERVE_MIN: [[META9]] = !{i64 0, !"_ZTSFviE.generalized"}
+// PRESERVE_MIN: [[META10]] = !{}
+// PRESERVE_MIN: [[PROF11]] = !{!"branch_weights", i32 1048575, i32 1}
 //.
