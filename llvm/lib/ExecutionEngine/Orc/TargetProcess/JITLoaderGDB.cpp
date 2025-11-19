@@ -88,19 +88,3 @@ llvm_orc_registerJITLoaderGDBAllocAction(const char *ArgData, size_t ArgSize) {
              })
       .release();
 }
-
-extern "C" orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderGDBWrapper(const char *ArgData, size_t ArgSize) {
-  using namespace orc::shared;
-  return WrapperFunction<SPSError(SPSExecutorAddrRange, bool)>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddrRange R, bool AutoRegisterCode) {
-               appendJITDebugDescriptor(R.Start.toPtr<const char *>(),
-                                        R.size());
-               // Run into the rendezvous breakpoint.
-               if (AutoRegisterCode)
-                 __jit_debug_register_code();
-               return Error::success();
-             })
-      .release();
-}
