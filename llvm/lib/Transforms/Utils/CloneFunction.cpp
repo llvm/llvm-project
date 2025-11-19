@@ -92,19 +92,6 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
     if (isa<DICompileUnit>(MD))
       return true;
 
-    // Clone no types but local
-    if (auto *Type = dyn_cast<DIType>(MD)) {
-      if (SPClonedWithinModule == nullptr)
-        return true;
-
-      auto *LScope = dyn_cast_or_null<DILocalScope>(Type->getScope());
-      if (!LScope)
-        return true;
-
-      if (ShouldKeep(LScope->getSubprogram()))
-        return true;
-    }
-
     if (auto *SP = dyn_cast<DISubprogram>(MD))
       return ShouldKeep(SP);
 
@@ -116,6 +103,29 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
     if (auto *DV = dyn_cast<DILocalVariable>(MD))
       if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
         return ShouldKeep(S->getSubprogram());
+
+    // Clone types that are local to subprograms being cloned.
+    // Avoid cloning other types.
+    auto *Type = dyn_cast<DIType>(MD);
+    if (!Type)
+      return false;
+
+    // No need to clone types if subprograms are not cloned.
+    if (SPClonedWithinModule == nullptr)
+      return true;
+
+    // Scopeless types may be derived from local types (e.g. pointers to local
+    // types). They may need cloning.
+    if (const DIDerivedType *DTy = dyn_cast_or_null<DIDerivedType>(Type);
+        DTy && !DTy->getScope())
+      return false;
+
+    auto *LScope = dyn_cast_or_null<DILocalScope>(Type->getScope());
+    if (!LScope)
+      return true;
+
+    if (ShouldKeep(LScope->getSubprogram()))
+      return true;
 
     return false;
   };

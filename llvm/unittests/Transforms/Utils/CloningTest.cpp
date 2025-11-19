@@ -813,8 +813,10 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !3 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !5, metadata !DIExpression()), !dbg !7
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !25, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !5, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !25, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !28, metadata !DIExpression()), !dbg !8
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !30, metadata !DIExpression()), !dbg !8
       ret void
     }
 
@@ -831,7 +833,7 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
     !6 = distinct !DILexicalBlock(scope: !4, file: !1, line: 1)
     !7 = !DILocation(line: 1, scope: !6, inlinedAt: !8)
     !8 = !DILocation(line: 10, scope: !3)
-    !9 = !{!15, !17, !18, !23}
+    !9 = !{!15, !17, !18, !23, !26, !28, !30}
     !14 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, scope: !0, file: !1, line: 13, size: 200, elements: !{})
     !15 = !DILocalVariable(name: "a", scope: !3)
     !16 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, scope: !3, file: !1, line: 13, size: 208, elements: !{})
@@ -842,6 +844,11 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
     !float_type = !{!23}
     !25 = !DILocalVariable(name: "inlined2", scope: !4, type: !23)
     !inlined2 = !{!25}
+    !26 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, name: "mystruct", scope: !3, file: !1, line: 13, size: 208, elements: !{})
+    !27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !26, size: 64)
+    !28 = !DILocalVariable(name: "ptr", scope: !3, type: !27)
+    !29 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !27)
+    !30 = !DILocalVariable(name: "const_ptr", scope: !3, type: !29)
   )";
 
   LLVMContext Context;
@@ -869,36 +876,63 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
   DISubprogram *ClonedSP = ClonedFunc->getSubprogram();
   EXPECT_NE(FuncSP, nullptr);
   EXPECT_NE(ClonedSP, nullptr);
-  EXPECT_EQ(FuncSP->getRetainedNodes().size(), 4u);
+  EXPECT_EQ(FuncSP->getRetainedNodes().size(), 7u);
   EXPECT_EQ(FuncSP->getRetainedNodes().size(),
             ClonedSP->getRetainedNodes().size());
-  for (unsigned I = 0; I < FuncSP->getRetainedNodes().size(); ++I) {
-    auto *Node = FuncSP->getRetainedNodes()[I];
-    auto *Copy = ClonedSP->getRetainedNodes()[I];
 
-    // Check that the order of retainedNodes is preserved by
-    // checking that the corresponding node has the same name.
-    if (auto *Var = dyn_cast<DILocalVariable>(Node)) {
-      auto *VarCopy = dyn_cast<DILocalVariable>(Copy);
-      EXPECT_NE(VarCopy, nullptr);
-      EXPECT_EQ(Var->getName(), VarCopy->getName());
-    } else if (auto *Label = dyn_cast<DILabel>(Node)) {
-      auto *LabelCopy = dyn_cast<DILabel>(Copy);
-      EXPECT_NE(LabelCopy, nullptr);
-      EXPECT_EQ(Label->getName(), LabelCopy->getName());
-    } else if (auto *IE = dyn_cast<DIImportedEntity>(Node)) {
-      auto *IECopy = dyn_cast<DIImportedEntity>(Copy);
-      EXPECT_NE(IECopy, nullptr);
-      EXPECT_EQ(IE->getName(), IECopy->getName());
-    } else if (auto *Ty = dyn_cast<DIType>(Node)) {
-      auto *TyCopy = dyn_cast<DIType>(Copy);
-      EXPECT_NE(TyCopy, nullptr);
-      EXPECT_EQ(Ty->getName(), TyCopy->getName());
-    }
+  // Ensure that Orig node is a clone of Copy by checking that they are
+  // different objects with the same name.
+  auto CheckNodeIsCloned = [](auto *Orig, auto *Copy) {
+    EXPECT_FALSE(Orig->getName().empty());
+    EXPECT_EQ(Orig->getName(), Copy->getName());
 
-    // Check that node was copied
-    EXPECT_NE(Node, Copy);
-  }
+    // Check that node was copied.
+    EXPECT_NE(Orig, Copy);
+  };
+
+  // Check that retained nodes are cloned.
+  unsigned I = 0;
+  auto CheckRetainedNode = [&](auto *Node) {
+    // The order of retained nodes should be preserved.
+    auto *Copy =
+        cast<std::decay_t<decltype(*Node)>>(ClonedSP->getRetainedNodes()[I]);
+
+    CheckNodeIsCloned(Node, Copy);
+
+    ++I;
+  };
+  FuncSP->forEachRetainedNode(CheckRetainedNode, CheckRetainedNode,
+                              CheckRetainedNode, CheckRetainedNode);
+
+  auto ToDerived = [](const DIType *Ty) { return cast<DIDerivedType>(Ty); };
+
+  // Check that derived type (pointer type) referencing local type is remapped
+  // in the cloned function even though it doesn't have an explicit scope.
+  auto CheckPointerTypeIsCloned = [&](const DIType *PtrTy,
+                                      const DIType *PtrTyCopy) {
+    auto *PointerType = ToDerived(PtrTy);
+    auto *PointerTypeCopy = ToDerived(PtrTyCopy);
+    ASSERT_EQ(PointerType->getBaseType()->getName(), "mystruct");
+    ASSERT_EQ(PointerType->getScope(), nullptr);
+    CheckNodeIsCloned(PointerType->getBaseType(),
+                      PointerTypeCopy->getBaseType());
+  };
+  auto *PointerOrig = cast<DILocalVariable>(FuncSP->getRetainedNodes()[5]);
+  auto *PointerCopy = cast<DILocalVariable>(ClonedSP->getRetainedNodes()[5]);
+  ASSERT_EQ(PointerOrig->getName(), "ptr");
+  CheckPointerTypeIsCloned(PointerOrig->getType(), PointerCopy->getType());
+
+  // Check that scopeless derived type (const type) referencing scopeless
+  // derived type (pointer type) referencing local type gets cloned.
+  auto *ConstPointerOrig = cast<DILocalVariable>(FuncSP->getRetainedNodes()[6]);
+  auto *ConstPointerCopy =
+      cast<DILocalVariable>(ClonedSP->getRetainedNodes()[6]);
+  ASSERT_EQ(ConstPointerOrig->getName(), "const_ptr");
+  auto *ConstPointerTypeOrig = ToDerived(ConstPointerOrig->getType());
+  auto *ConstPointerTypeCopy = ToDerived(ConstPointerCopy->getType());
+  ASSERT_NE(ConstPointerOrig, ConstPointerCopy);
+  CheckPointerTypeIsCloned(ToDerived(ConstPointerTypeOrig)->getBaseType(),
+                           ToDerived(ConstPointerTypeCopy)->getBaseType());
 
   auto *FloatType = dyn_cast<DIType>(
       ImplModule->getNamedMetadata("float_type")->getOperand(0));
