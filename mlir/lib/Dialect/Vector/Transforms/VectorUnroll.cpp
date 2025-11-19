@@ -1003,10 +1003,11 @@ private:
   vector::UnrollVectorOptions options;
 };
 
-/// Checks whether extractShape is contiguous in shape.
+/// Checks whether extractShape is a contiguous slice of shape.
 /// For extractShape to be contiguous in shape:
-/// 1) The inner dimensions of extractShape and shape must match exactly.
-/// 2) The total number of elements in shape must be evenly divisible by
+/// 1) All but the leading dimension of extractShape and shape must match
+/// exactly. 2) The total number of elements in shape must be evenly divisible
+/// by
 ///    the total number of elements in extractShape.
 /// Examples:
 ///   isContiguous([4, 4], [8, 4]) == true
@@ -1037,18 +1038,18 @@ static bool isContiguous(ArrayRef<int64_t> extractShape,
   return shapeElements % extractElements == 0;
 }
 
-/// This function determines what shape to use with
-/// `vector.extract_strided_slice` to extract a contiguous memory region from a
-/// source vector. The extraction must be contiguous and contain exactly the
-/// specified number of elements. If such an extraction shape cannot be
-/// determined, the function returns std::nullopt.
-/// Examples:
+/// Determines what shape to use with `vector.extract_strided_slice` to extract
+/// a contiguous memory region from a source vector. The extraction must be
+/// contiguous and contain exactly the specified number of elements. If such an
+/// extraction shape cannot be determined, returns std::nullopt.
+/// EXAMPLE 1:
 ///   sourceShape = [16], targetElements = 8
 ///   Working right-to-left:
 ///   - Take min(8, 16) = 8 from only dim → extractShape = [8],
 ///     remaining = 8/8 = 1
 ///     Result: [8]
 ///
+///  EXAMPLE 2:
 ///   sourceShape = [4, 4], targetElements = 8
 ///   Working right-to-left:
 ///   - Take min(8, 4) = 4 from last dim → extractShape = [4],
