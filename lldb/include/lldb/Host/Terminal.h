@@ -174,10 +174,11 @@ protected:
 /// The value is cached after the first computation.
 ///
 /// On POSIX systems, we check if the LANG environment variable contains the
-/// substring "UTF-8";
+/// substring "UTF-8", case insensitive.
 ///
-/// On Windows, we check that we are running from the Windows Terminal
-/// application.
+/// On Windows, we always return true since we use the `WriteConsoleW` API
+/// internally. Note that the default Windows codepage (437) does not support
+/// all Unicode characters. This function does not check the codepage.
 bool TerminalSupportsUnicode();
 
 } // namespace lldb_private
