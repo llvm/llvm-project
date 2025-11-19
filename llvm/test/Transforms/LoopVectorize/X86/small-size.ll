@@ -591,7 +591,7 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ; CHECK-NEXT:    br label [[TMP30:%.*]]
 ; CHECK:       25:
 ; CHECK-NEXT:    [[TMP25:%.*]] = xor <4 x i1> [[TMP33]], splat (i1 true)
-; CHECK-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP25]], i1 true)
+; CHECK-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP25]], i1 false)
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP26]], -1
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i64> [[VEC_IND]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = add nsw i64 [[TMP28]], 1

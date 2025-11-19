@@ -560,8 +560,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
-  case VPInstruction::FirstActiveLane:
-  case VPInstruction::LastActiveLane:
   case VPInstruction::Not:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Unpack:
@@ -592,6 +590,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Switch:
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -1005,8 +1005,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::FirstActiveLane: {
     if (getNumOperands() == 1) {
       Value *Mask = State.get(getOperand(0));
+      // LastActiveLane might get expanded to a FirstActiveLane with an all-ones
+      // mask, so make sure zero returns VF and not poison.
       return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
-                                                  true, Name);
+                                                  /*ZeroIsPoison=*/false, Name);
     }
     // If there are multiple operands, create a chain of selects to pick the
     // first operand with an active lane and add the number of lanes of the
@@ -1022,9 +1024,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                     Builder.CreateICmpEQ(State.get(getOperand(Idx)),
                                          Builder.getFalse()),
                     Builder.getInt64Ty())
-              : Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(),
-                                                     State.get(getOperand(Idx)),
-                                                     true, Name);
+              : Builder.CreateCountTrailingZeroElems(
+                    Builder.getInt64Ty(), State.get(getOperand(Idx)),
+                    /*ZeroIsPoison=*/false, Name);
       Value *Current = Builder.CreateAdd(
           Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
       if (Res) {
