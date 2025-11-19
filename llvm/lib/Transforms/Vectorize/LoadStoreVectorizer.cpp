@@ -642,10 +642,10 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
     // Allow redundancy: partial or full overlap counts as contiguous.
     bool AreContiguous = false;
     if (It->OffsetFromLeader.sle(PrevReadEnd)) {
-      assert(8 * (PrevReadEnd - It->OffsetFromLeader).getZExtValue() %
-                 ChainElemTyBits ==
-             0);
-      AreContiguous = true;
+      // Check overlap is a multiple of the element size after vectorization.
+      uint64_t Overlap = (PrevReadEnd - It->OffsetFromLeader).getZExtValue();
+      if (8 * Overlap % ChainElemTyBits == 0)
+        AreContiguous = true;
     }
 
     LLVM_DEBUG(dbgs() << "LSV: Instruction is "

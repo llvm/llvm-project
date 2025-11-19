@@ -60,3 +60,50 @@ define void @test2() {
   %vecins.7 = insertelement <8 x float> %vecins.6, float %11, i64 7
   ret void
 }
+
+define void @vect_zext_bitcast_i8_st4_to_i32_idx(ptr addrspace(1) %arg1, i32 %base) {
+; CHECK-LABEL: define void @vect_zext_bitcast_i8_st4_to_i32_idx(
+; CHECK-SAME: ptr addrspace(1) [[ARG1:%.*]], i32 [[BASE:%.*]]) {
+; CHECK-NEXT:    [[ADD1:%.*]] = add nuw i32 [[BASE]], 0
+; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i32 [[ADD1]] to i64
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG1]], i64 [[ZEXT1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[ADD25:%.*]] = add nuw i32 [[BASE]], 6
+; CHECK-NEXT:    [[ZEXT25:%.*]] = zext i32 [[ADD25]] to i64
+; CHECK-NEXT:    [[GEP25:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG1]], i64 [[ZEXT25]]
+; CHECK-NEXT:    [[LOAD25:%.*]] = load i32, ptr addrspace(1) [[GEP25]], align 4
+; CHECK-NEXT:    [[ADD3:%.*]] = add nuw i32 [[BASE]], 8
+; CHECK-NEXT:    [[ZEXT3:%.*]] = zext i32 [[ADD3]] to i64
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG1]], i64 [[ZEXT3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP3]], align 4
+; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    ret void
+;
+  %add1 = add nuw i32 %base, 0
+  %zext1 = zext i32 %add1 to i64
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %arg1, i64 %zext1
+  %load1 = load i32, ptr addrspace(1) %gep1, align 4
+  %add2 = add nuw i32 %base, 4
+  %zext2 = zext i32 %add2 to i64
+  %gep2 = getelementptr inbounds i8,ptr addrspace(1) %arg1, i64 %zext2
+  %load2 = load i32, ptr addrspace(1) %gep2, align 4
+
+  ; A load with 2-byte overlap breaks continuity.
+  %add25 = add nuw i32 %base, 6
+  %zext25 = zext i32 %add25 to i64
+  %gep25 = getelementptr inbounds i8,ptr addrspace(1) %arg1, i64 %zext25
+  %load25 = load i32, ptr addrspace(1) %gep25, align 4
+
+  %add3 = add nuw i32 %base, 8
+  %zext3 = zext i32 %add3 to i64
+  %gep3 = getelementptr inbounds i8, ptr addrspace(1) %arg1, i64 %zext3
+  %load3 = load i32, ptr addrspace(1) %gep3, align 4
+  %add4 = add nuw i32 %base, 12
+  %zext4 = zext i32 %add4 to i64
+  %gep4 = getelementptr inbounds i8, ptr addrspace(1) %arg1, i64 %zext4
+  %load4 = load i32, ptr addrspace(1) %gep4, align 4
+  ret void
+}
