@@ -1282,12 +1282,6 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let hasCanonicalizer = 1;
 }
 
-def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
-class StaticShared1DMemRefOf<list<Type> allowedTypes> :
-  ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
-     "statically shaped " # MemRefOf<allowedTypes>.summary # " for shared memory",
-     "mlir::MemRefType">;
-
 class SizeInBits<string name> :
   StrFunc<"llvm::cast<mlir::ShapedType>($" # name # ".getType()).getNumElements()"
           "*llvm::cast<mlir::ShapedType>($" # name # ".getType()).getElementTypeBitWidth()">;
@@ -1304,11 +1298,12 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     as the underlying shared local memory.
 
     Arguments:
-     - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
+     - `source` : 1D or 2D statically shape memref, representing the raw SLM buffer. 
+                  The provided memref must be contiguous.  
     Results:
      - `mem_desc` : the memory descriptor.
   }];
-  let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
+  let arguments = (ins AnyTypeOf<[StaticShared1DMemRefOf<[XeGPU_ScalarType]>, StaticShared2DMemRefOf<[XeGPU_ScalarType]>]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
   let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
 }
