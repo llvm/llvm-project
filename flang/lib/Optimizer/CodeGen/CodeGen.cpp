@@ -1008,6 +1008,29 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(convert, toTy, op0);
         return mlir::success();
       }
+      // Pointer to MemRef conversion.
+      if (mlir::isa<mlir::MemRefType>(toFirTy)) {
+        auto dstMemRef = mlir::MemRefDescriptor::poison(rewriter, loc, toTy);
+        dstMemRef.setAlignedPtr(rewriter, loc, op0);
+        dstMemRef.setOffset(
+            rewriter, loc,
+            createIndexAttrConstant(rewriter, loc, getIndexType(), 0));
+        rewriter.replaceOp(convert, {dstMemRef});
+        return mlir::success();
+      }
+    } else if (mlir::isa<mlir::MemRefType>(fromFirTy) &&
+               mlir::isa<mlir::LLVM::LLVMPointerType>(toTy)) {
+      // MemRef to pointer conversion.
+      auto srcMemRef = mlir::MemRefDescriptor(op0);
+      mlir::Type elementType = typeConverter->convertType(
+          mlir::cast<mlir::MemRefType>(fromFirTy).getElementType());
+      mlir::Value srcBasePtr = srcMemRef.alignedPtr(rewriter, loc);
+      mlir::Value srcOffset = srcMemRef.offset(rewriter, loc);
+      mlir::Value srcPtr =
+          mlir::LLVM::GEPOp::create(rewriter, loc, srcBasePtr.getType(),
+                                    elementType, srcBasePtr, srcOffset);
+      rewriter.replaceOp(convert, srcPtr);
+      return mlir::success();
     }
     return emitError(loc) << "cannot convert " << fromTy << " to " << toTy;
   }
