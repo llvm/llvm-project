@@ -13558,7 +13558,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_alignq256:
   case X86::BI__builtin_ia32_alignq512: {
     APValue R;
-    const unsigned NumElems = E->getType()->castAs<VectorType>()->getNumElements();
+    unsigned NumElems = E->getType()->castAs<VectorType>()->getNumElements();
     if (!evalShuffleGeneric(
             Info, E, R, [NumElems](unsigned DstIdx, unsigned Shift) {
               unsigned Imm = Shift & 0xFF;
