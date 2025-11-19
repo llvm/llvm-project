@@ -283,7 +283,7 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
   assert(EndOfPredefines == getNumFixedInstructions() &&
          "Missing generic opcode");
 
-  unsigned SkippedInsts = 0;
+  [[maybe_unused]] unsigned SkippedInsts = 0;
 
   for (const auto &[_, CGIUp] : InstMap) {
     const CodeGenInstruction *CGI = CGIUp.get();
