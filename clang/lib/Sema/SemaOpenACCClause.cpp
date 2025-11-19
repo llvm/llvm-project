@@ -1891,13 +1891,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   if (DiagnoseAllowedClauses(Clause.getDirectiveKind(), Clause.getClauseKind(),
                              Clause.getBeginLoc()))
     return nullptr;
-  //// Diagnose that we don't support this clause on this directive.
-  // if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
-  //                                 Clause.getClauseKind())) {
-  //   Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
-  //       << Clause.getDirectiveKind() << Clause.getClauseKind();
-  //   return nullptr;
-  // }
 
   if (const auto *DevTypeClause = llvm::find_if(
           ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
@@ -2254,6 +2247,14 @@ SemaOpenACC::CheckLinkClauseVarList(ArrayRef<Expr *> VarExprs) {
     if (isa<MemberExpr>(VarExpr)) {
       NewVarList.push_back(VarExpr);
       continue;
+    }
+
+    while (isa<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
+      if (auto *ASE = dyn_cast<ArraySectionExpr>(VarExpr))
+        VarExpr = ASE->getBase()->IgnoreParenImpCasts();
+      else
+        VarExpr =
+            cast<ArraySubscriptExpr>(VarExpr)->getBase()->IgnoreParenImpCasts();
     }
 
     const auto *DRE = cast<DeclRefExpr>(VarExpr);
