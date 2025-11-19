@@ -731,10 +731,18 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
   }
 
   if (SemanticName == "SV_POSITION") {
-    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel)
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::FragCoord */ 15);
+    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                      Semantic->getAttrName()->getName(),
+                                      /* BuiltIn::FragCoord */ 15);
+      if (CGM.getTarget().getTriple().isDXIL())
+        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+    }
+
+    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Vertex) {
+      return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
+    }
   }
 
   llvm_unreachable("non-handled system semantic. FIXME.");
@@ -760,11 +768,14 @@ void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
                                             std::optional<unsigned> Index) {
 
   std::string SemanticName = Semantic->getAttrName()->getName().upper();
-  if (SemanticName == "SV_POSITION")
-    createSPIRVBuiltinStore(B, CGM.getModule(), Source,
-                            Semantic->getAttrName()->getName(),
-                            /* BuiltIn::Position */ 0);
-  else
+  if (SemanticName == "SV_POSITION") {
+    if (CGM.getTarget().getTriple().isDXIL())
+      emitDXILUserSemanticStore(B, Source, Semantic, Index);
+    else if (CGM.getTarget().getTriple().isSPIRV())
+      createSPIRVBuiltinStore(B, CGM.getModule(), Source,
+                              Semantic->getAttrName()->getName(),
+                              /* BuiltIn::Position */ 0);
+  } else
     llvm_unreachable("non-handled system semantic. FIXME.");
 }
 
