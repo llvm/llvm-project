@@ -7,6 +7,8 @@
 #include <spawn.h>
 #include <stdio.h>
 #include <sys/wait.h>
+#include <string.h>
+#include <stdlib.h>
 
 int main(int argc, char **argv) {
   if (argc > 1) {
@@ -23,10 +25,15 @@ int main(int argc, char **argv) {
       argv[0], "2", "3", "4", "2", "3", "4", "2", "3", "4",
       "2",     "3", "4", "2", "3", "4", "2", "3", "4", NULL,
   };
-  char *const env[] = {
+  const char *env[] = {
       "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B",
       "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", NULL,
   };
+
+  char *lib_path = getenv("DYLD_LIRARY_PATH");
+  if (lib_path) {
+    env[0] = strdup(lib_path);
+  }
 
   pid_t pid;
   int s = posix_spawn(&pid, argv[0], &file_actions, &attr, args, env);
