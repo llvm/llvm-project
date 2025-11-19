@@ -1851,7 +1851,7 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
   "expected 'auto' or 'decltype(auto)' after concept name">;
 }
 
-let CategoryName = "Reflection Issue" in {
+let CategoryName = "Reflection Diagnostics" in {
 def err_cannot_reflect_operand : Error<
   "expected reflectable entity">;
 }
