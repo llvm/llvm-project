@@ -1121,8 +1121,9 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
         OutStreamer->emitSymbolAttribute(Sym, GO.hasExternalWeakLinkage()
                                                   ? MCSA_WeakReference
                                                   : MCSA_Global);
-        OutStreamer->emitSymbolAttribute(Sym, isa<Function>(GO) ? MCSA_Code
-                                                                : MCSA_Data);
+        OutStreamer->emitSymbolAttribute(Sym, isa<Function>(GO)
+                                                  ? MCSA_ELF_TypeFunction
+                                                  : MCSA_ELF_TypeObject);
       }
     }
     OutStreamer->switchSection(
@@ -1614,7 +1615,7 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   // Make CELQSTRT symbol.
   const char *StartSymbolName = "CELQSTRT";
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
-  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Code);
+  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_ELF_TypeFunction);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_OSLinkage);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Global);
 
@@ -1783,7 +1784,7 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
     OutStreamer->emitInt32(DSAAndFlags);
 
     // Functions denote CODE.
-    OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_Code);
+    OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
   }
 
   AsmPrinter::emitFunctionEntryLabel();

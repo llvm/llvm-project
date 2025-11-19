@@ -48,8 +48,6 @@ enum MCSymbolAttr {
   MCSA_WeakDefAutoPrivate,      ///< .weak_def_can_be_hidden (MachO)
   MCSA_WeakAntiDep,             ///< .weak_anti_dep (COFF)
   MCSA_Memtag,                  ///< .memtag (ELF)
-  MCSA_Code,                    ///< symbol is code (GOFF)
-  MCSA_Data,                    ///< symbol is data (GOFF)
   MCSA_OSLinkage,               ///< symbol uses OS linkage (GOFF)
   MCSA_XPLinkage,               ///< symbol uses XP linkage (GOFF)
 };

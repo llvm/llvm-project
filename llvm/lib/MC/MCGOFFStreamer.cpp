@@ -51,9 +51,7 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   switch (Attribute) {
   case MCSA_Invalid:
   case MCSA_Cold:
-  case MCSA_ELF_TypeFunction:
   case MCSA_ELF_TypeIndFunction:
-  case MCSA_ELF_TypeObject:
   case MCSA_ELF_TypeTLS:
   case MCSA_ELF_TypeCommon:
   case MCSA_ELF_TypeNoType:
@@ -76,10 +74,10 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_Memtag:
     return false;
 
-  case MCSA_Code:
+  case MCSA_ELF_TypeFunction:
     Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_CODE);
     break;
-  case MCSA_Data:
+  case MCSA_ELF_TypeObject:
     Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_DATA);
     break;
   case MCSA_OSLinkage:
