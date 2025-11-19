@@ -179,36 +179,36 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // specified as a pair "<bbid>,<callsite_index>" similar to prefetch
 // targets, and target is specified as a triple
 // "<function_name>,<bbid>,<callsite_index>".
-    //
-    // Example: A basic block in function "foo" with BBID 10 and two call
-    // instructions (call_A, call_B). This block is conceptually split into
-    // subblocks, with the prefetch target symbol emitted at the beginning of
-    // each subblock.
-    //
-    // +----------------------------------+
-    // | __llvm_prefetch_target_foo_10_0: | <- Callsite 0 (before call_A)
-    // |  Instruction 1                   |
-    // |  Instruction 2                   |
-    // |  call_A (Callsite 0)             |
-    // | __llvm_prefetch_target_foo_10_1: | <--- Callsite 1 (after call_A,
-    // |                                  |                  before call_B)
-    // |  Instruction 3                   |
-    // |  call_B (Callsite 1)             |
-    // | __llvm_prefetch_target_foo_10_2: | <--- Callsite 2 (after call_B,
-    // |                                  |                  before call_C)
-    // |  Instruction 4                   |
-    // +----------------------------------+
-    //
-    // A prefetch hint specified in function "bar" as "120,1 foo,10,2" results
-    // in a a hint inserted after the first call in block #120 of bar:
-    // B
-    // +----------------------------------------------------+
-    // | Instruction 1                                      |
-    // | call_C (Callsite 1)                                |
-    // | code_prefetch __llvm_prfetch_target_foo_10         |
-    // | Instruction 2                                      |
-    // +----------------------------------------------------+
-    //
+//
+// Example: A basic block in function "foo" with BBID 10 and two call
+// instructions (call_A, call_B). This block is conceptually split into
+// subblocks, with the prefetch target symbol emitted at the beginning of
+// each subblock.
+//
+// +----------------------------------+
+// | __llvm_prefetch_target_foo_10_0: | <- Callsite 0 (before call_A)
+// |  Instruction 1                   |
+// |  Instruction 2                   |
+// |  call_A (Callsite 0)             |
+// | __llvm_prefetch_target_foo_10_1: | <--- Callsite 1 (after call_A,
+// |                                  |                  before call_B)
+// |  Instruction 3                   |
+// |  call_B (Callsite 1)             |
+// | __llvm_prefetch_target_foo_10_2: | <--- Callsite 2 (after call_B,
+// |                                  |                  before call_C)
+// |  Instruction 4                   |
+// +----------------------------------+
+//
+// A prefetch hint specified in function "bar" as "120,1 foo,10,2" results
+// in a a hint inserted after the first call in block #120 of bar:
+// B
+// +----------------------------------------------------+
+// | Instruction 1                                      |
+// | call_C (Callsite 1)                                |
+// | code_prefetch __llvm_prfetch_target_foo_10         |
+// | Instruction 2                                      |
+// +----------------------------------------------------+
+//
 Error BasicBlockSectionsProfileReader::ReadV1Profile() {
   auto FI = ProgramPathAndClusterInfo.end();
 
