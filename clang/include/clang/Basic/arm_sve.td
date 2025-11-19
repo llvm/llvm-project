@@ -2086,7 +2086,11 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,sve-bfscale" in {
   // BFMUL
   defm SVBFMUL : BfSingleMultiVector<"mul">;
   // BFSCALE
-  defm SVBFSCALE : BfSingleMultiVector<"scale">;
+  def SVBFSCALE_SINGLE_X2 : SInst<"svscale[_single_{d}_x2]", "22x", "b", MergeNone, "aarch64_sve_fscale_single_x2", [IsStreaming], []>;
+  def SVBFSCALE_SINGLE_X4 : SInst<"svscale[_single_{d}_x4]", "44x", "b", MergeNone, "aarch64_sve_fscale_single_x4", [IsStreaming], []>;
+
+  def SVBFSCALE_X2 : SInst<"svscale[_{d}_x2]", "222.x", "b", MergeNone, "aarch64_sve_fscale_x2", [IsStreaming], []>;
+  def SVBFSCALE_X4 : SInst<"svscale[_{d}_x4]", "444.x", "b", MergeNone, "aarch64_sve_fscale_x4", [IsStreaming], []>;
 }
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {

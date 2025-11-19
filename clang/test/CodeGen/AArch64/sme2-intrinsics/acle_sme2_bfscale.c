@@ -15,62 +15,62 @@
 #endif
 
 // CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_svscale_single_bf16_x2(
-// CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.single.x2.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZM]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.single.x2.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x i16> [[ZM]])
 // CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @_Z27test_svscale_single_bf16_x214svbfloat16x2_tu14__SVBfloat16_t(
-// CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]]) #[[ATTR0:[0-9]+]] {
+// CPP-CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @_Z27test_svscale_single_bf16_x214svbfloat16x2_tu11__SVInt16_t(
+// CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.single.x2.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZM]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.single.x2.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x i16> [[ZM]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-svbfloat16x2_t test_svscale_single_bf16_x2(svbfloat16x2_t zdn, svbfloat16_t zm) __arm_streaming{
+svbfloat16x2_t test_svscale_single_bf16_x2(svbfloat16x2_t zdn, svint16_t zm) __arm_streaming{
   return SVE_ACLE_FUNC(svscale,_single_bf16_x2)(zdn, zm);
 }
 // CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_svscale_single_bf16_x4(
-// CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE3:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE3:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.single.x4.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZDN_COERCE2]], <vscale x 8 x bfloat> [[ZDN_COERCE3]], <vscale x 8 x bfloat> [[ZM]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.single.x4.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZDN_COERCE2]], <vscale x 8 x bfloat> [[ZDN_COERCE3]], <vscale x 8 x i16> [[ZM]])
 // CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @_Z27test_svscale_single_bf16_x414svbfloat16x4_tu14__SVBfloat16_t(
-// CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE3:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @_Z27test_svscale_single_bf16_x414svbfloat16x4_tu11__SVInt16_t(
+// CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE3:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.single.x4.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZDN_COERCE2]], <vscale x 8 x bfloat> [[ZDN_COERCE3]], <vscale x 8 x bfloat> [[ZM]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.single.x4.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZDN_COERCE2]], <vscale x 8 x bfloat> [[ZDN_COERCE3]], <vscale x 8 x i16> [[ZM]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-svbfloat16x4_t test_svscale_single_bf16_x4(svbfloat16x4_t zdn, svbfloat16_t zm) __arm_streaming{
+svbfloat16x4_t test_svscale_single_bf16_x4(svbfloat16x4_t zdn, svint16_t zm) __arm_streaming{
   return SVE_ACLE_FUNC(svscale,_single_bf16_x4)(zdn, zm);
 }
 // CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_svscale_bf16_x2(
-// CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE1:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x i16> [[ZM_COERCE0:%.*]], <vscale x 8 x i16> [[ZM_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.x2.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZM_COERCE0]], <vscale x 8 x bfloat> [[ZM_COERCE1]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.x2.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x i16> [[ZM_COERCE0]], <vscale x 8 x i16> [[ZM_COERCE1]])
 // CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @_Z20test_svscale_bf16_x214svbfloat16x2_tS_(
-// CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE1:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @_Z20test_svscale_bf16_x214svbfloat16x2_t11svint16x2_t(
+// CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x i16> [[ZM_COERCE0:%.*]], <vscale x 8 x i16> [[ZM_COERCE1:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.x2.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZM_COERCE0]], <vscale x 8 x bfloat> [[ZM_COERCE1]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.x2.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x i16> [[ZM_COERCE0]], <vscale x 8 x i16> [[ZM_COERCE1]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-svbfloat16x2_t test_svscale_bf16_x2(svbfloat16x2_t zdn, svbfloat16x2_t zm) __arm_streaming{
+svbfloat16x2_t test_svscale_bf16_x2(svbfloat16x2_t zdn, svint16x2_t zm) __arm_streaming{
   return SVE_ACLE_FUNC(svscale,_bf16_x2)(zdn, zm);
 }
 // CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_svscale_bf16_x4(
-// CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE3:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE3:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE3:%.*]], <vscale x 8 x i16> [[ZM_COERCE0:%.*]], <vscale x 8 x i16> [[ZM_COERCE1:%.*]], <vscale x 8 x i16> [[ZM_COERCE2:%.*]], <vscale x 8 x i16> [[ZM_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.x4.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZDN_COERCE2]], <vscale x 8 x bfloat> [[ZDN_COERCE3]], <vscale x 8 x bfloat> [[ZM_COERCE0]], <vscale x 8 x bfloat> [[ZM_COERCE1]], <vscale x 8 x bfloat> [[ZM_COERCE2]], <vscale x 8 x bfloat> [[ZM_COERCE3]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.x4.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZDN_COERCE2]], <vscale x 8 x bfloat> [[ZDN_COERCE3]], <vscale x 8 x i16> [[ZM_COERCE0]], <vscale x 8 x i16> [[ZM_COERCE1]], <vscale x 8 x i16> [[ZM_COERCE2]], <vscale x 8 x i16> [[ZM_COERCE3]])
 // CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @_Z20test_svscale_bf16_x414svbfloat16x4_tS_(
-// CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE3:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZM_COERCE3:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @_Z20test_svscale_bf16_x414svbfloat16x4_t11svint16x4_t(
+// CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ZDN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZDN_COERCE3:%.*]], <vscale x 8 x i16> [[ZM_COERCE0:%.*]], <vscale x 8 x i16> [[ZM_COERCE1:%.*]], <vscale x 8 x i16> [[ZM_COERCE2:%.*]], <vscale x 8 x i16> [[ZM_COERCE3:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.x4.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZDN_COERCE2]], <vscale x 8 x bfloat> [[ZDN_COERCE3]], <vscale x 8 x bfloat> [[ZM_COERCE0]], <vscale x 8 x bfloat> [[ZM_COERCE1]], <vscale x 8 x bfloat> [[ZM_COERCE2]], <vscale x 8 x bfloat> [[ZM_COERCE3]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fscale.x4.nxv8bf16(<vscale x 8 x bfloat> [[ZDN_COERCE0]], <vscale x 8 x bfloat> [[ZDN_COERCE1]], <vscale x 8 x bfloat> [[ZDN_COERCE2]], <vscale x 8 x bfloat> [[ZDN_COERCE3]], <vscale x 8 x i16> [[ZM_COERCE0]], <vscale x 8 x i16> [[ZM_COERCE1]], <vscale x 8 x i16> [[ZM_COERCE2]], <vscale x 8 x i16> [[ZM_COERCE3]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-svbfloat16x4_t test_svscale_bf16_x4(svbfloat16x4_t zdn, svbfloat16x4_t zm) __arm_streaming{
+svbfloat16x4_t test_svscale_bf16_x4(svbfloat16x4_t zdn, svint16x4_t zm) __arm_streaming{
   return SVE_ACLE_FUNC(svscale,_bf16_x4)(zdn, zm);
 }
