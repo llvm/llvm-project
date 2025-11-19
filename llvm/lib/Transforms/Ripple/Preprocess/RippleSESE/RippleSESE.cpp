@@ -38,6 +38,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -381,12 +382,14 @@ Error fixCFGForSESE(TargetMachine *TM, Function &F, FunctionAnalysisManager &AM,
       // un-cloned BBs lie outside the SESE. Update the predecessor of the basic
       // block with incoming edge from outside to make that happen.
       SmallVector<BasicBlock *> BBPredsInBetween;
-      for (auto *PredBB : predecessors(BB)) {
-        if (BBsInBetweenSet.contains(PredBB) || PredBB == BranchBB) {
-          BBPredsInBetween.push_back(PredBB);
-          removeIncomingBlockFromPhis(PredBB, BB);
-        } else {
-          removeIncomingBlockFromPhis(PredBB, Clones[BB]);
+      for (auto *BBToClone : BBsToClone) {
+        for (auto *PredBB : predecessors(BBToClone)) {
+          if (BBsInBetweenSet.contains(PredBB) || PredBB == BranchBB) {
+            if (!BBsToClone.contains(PredBB)) {
+              BBPredsInBetween.push_back(PredBB);
+              removeIncomingBlockFromPhis(PredBB, BBToClone);
+            }
+          }
         }
       }
       remapInstructionsInBlocks(BBPredsInBetween, VMap);
@@ -394,6 +397,12 @@ Error fixCFGForSESE(TargetMachine *TM, Function &F, FunctionAnalysisManager &AM,
       // Use the values in VMap to map the values in the cloned basic blocks.
       remapInstructionsInBlocks(
           to_vector_of<BasicBlock *>(make_second_range(Clones)), VMap);
+
+      // In the clone of the BB with external predecessor, remove external preds
+      // from it.
+      for (auto *PredBB : predecessors(BB))
+        if (!(BBsInBetweenSet.contains(PredBB) || PredBB == BranchBB))
+          removeIncomingBlockFromPhis(PredBB, Clones[BB]);
 
       // We only need to update the phis in PostDom, because no basic blocks
       // (expect already in clones) would be dominated by the cloned basic
@@ -442,5 +451,15 @@ PreservedAnalyses RippleSESEPass::run(Function &F,
 
   // Print the CFG after.
   LLVM_DEBUG(writeCFGToDotFile(F, AM, "ripplesese.after."););
+
+  LLVM_DEBUG({
+    if (verifyFunction(F, &errs())) {
+      dbgs() << "Function verification failed after ripple-sese pass: "
+             << F.getName() << "\n";
+    } else {
+      dbgs() << "Function verified successfully: " << F.getName() << "\n";
+    }
+  });
+
   return PA;
 }
