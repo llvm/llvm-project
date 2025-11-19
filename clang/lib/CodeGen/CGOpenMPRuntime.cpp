@@ -8993,11 +8993,9 @@ public:
       }
     }
     // Extract defaultmap clause information.
-    for (const auto *C : Dir.getClausesOfKind<OMPDefaultmapClause>()) {
-      if (C->getDefaultmapModifier() == OMPC_DEFAULTMAP_MODIFIER_firstprivate) {
+    for (const auto *C : Dir.getClausesOfKind<OMPDefaultmapClause>())
+      if (C->getDefaultmapModifier() == OMPC_DEFAULTMAP_MODIFIER_firstprivate)
         DefaultmapFirstprivateKinds.insert(C->getDefaultmapKind());
-      }
-    }
     // Extract device pointer clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
       for (auto L : C->component_lists())
@@ -9631,7 +9629,7 @@ public:
       CombinedInfo.DevicePtrDecls.push_back(nullptr);
       CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
       CombinedInfo.Pointers.push_back(CV);
-      bool isFirstprivate =
+      bool IsFirstprivate =
           isEffectivelyFirstprivate(VD, RI.getType().getNonReferenceType());
 
       if (!RI.getType()->isAnyPointerType()) {
@@ -9641,7 +9639,7 @@ public:
             OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
         CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
             CGF.getTypeSize(RI.getType()), CGF.Int64Ty, /*isSigned=*/true));
-      } else if (isFirstprivate) {
+      } else if (IsFirstprivate) {
         // Firstprivate pointers should be passed by value (as literals)
         // without performing a present table lookup at runtime.
         CombinedInfo.Types.push_back(
@@ -9662,14 +9660,14 @@ public:
       const auto *PtrTy = cast<ReferenceType>(RI.getType().getTypePtr());
       QualType ElementType = PtrTy->getPointeeType();
       const VarDecl *VD = CI.getCapturedVar();
-      bool isFirstprivate = isEffectivelyFirstprivate(VD, ElementType);
+      bool IsFirstprivate = isEffectivelyFirstprivate(VD, ElementType);
       CombinedInfo.Exprs.push_back(VD->getCanonicalDecl());
       CombinedInfo.BasePointers.push_back(CV);
       CombinedInfo.DevicePtrDecls.push_back(nullptr);
       CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
 
       // For firstprivate pointers, pass by value instead of dereferencing
-      if (isFirstprivate && ElementType->isAnyPointerType()) {
+      if (IsFirstprivate && ElementType->isAnyPointerType()) {
         // Treat as a literal value (pass the pointer value itself)
         CombinedInfo.Pointers.push_back(CV);
         // Use zero size for pointer literals
