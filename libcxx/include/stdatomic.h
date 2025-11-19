@@ -135,7 +135,12 @@ using std::atomic_signal_fence                         // see below
 #      undef _Atomic
 #    endif
 
-#    define _Atomic(_Tp) ::std::atomic<_Tp>
+_LIBCPP_BEGIN_NAMESPACE_STD
+template <class _Tp>
+using __libcpp_atomic_alias _LIBCPP_NODEBUG = atomic<_Tp>;
+_LIBCPP_END_NAMESPACE_STD
+
+#    define _Atomic(_Tp) ::std::__libcpp_atomic_alias<_Tp>
 
 using std::memory_order _LIBCPP_USING_IF_EXISTS;
 using std::memory_order_relaxed _LIBCPP_USING_IF_EXISTS;
