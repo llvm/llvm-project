@@ -2360,6 +2360,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenCallingConv.inc",
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/ARM/ARMGenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/ARM/ARMGenSubtargetInfo.inc",
             ),
@@ -2869,6 +2873,10 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-subtarget"],
                 "lib/Target/NVPTX/NVPTXGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/NVPTX/NVPTXGenSDNodeInfo.inc",
             ),
         ],
     },
@@ -4550,7 +4558,7 @@ cc_binary(
             "-Wl,--export-dynamic-symbol=__gxx_personality_v0",
             "-Wl,--export-dynamic-symbol=__cxa_allocate_exception",
             "-Wl,--export-dynamic-symbol=__cxa_throw",
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
             "-Wl,--export-dynamic-symbol=llvm_orc_registerEHFrameSectionWrapper",
             "-Wl,--export-dynamic-symbol=llvm_orc_deregisterEHFrameSectionWrapper",
         ],
@@ -5100,7 +5108,7 @@ cc_binary(
             "-Wl,--export-dynamic-symbol=__gxx_personality_v0",
             "-Wl,--export-dynamic-symbol=__cxa_allocate_exception",
             "-Wl,--export-dynamic-symbol=__cxa_throw",
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
         ],
     }),
     stamp = 0,

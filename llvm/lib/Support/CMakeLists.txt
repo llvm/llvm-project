@@ -311,6 +311,7 @@ add_llvm_component_library(LLVMSupport
   Threading.cpp
   Valgrind.cpp
   Watchdog.cpp
+  zOSLibFunctions.cpp
 
   ADDITIONAL_HEADER_DIRS
   Unix
