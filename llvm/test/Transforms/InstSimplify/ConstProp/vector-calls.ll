@@ -69,6 +69,16 @@ define <vscale x 8 x i32> @fold_scalable_vector_interleave2_splat() {
   ret <vscale x 8 x i32> %1
 }
 
+; Negative test.
+define <vscale x 8 x i32> @fold_scalable_vector_interleave2_mismatch_splat() {
+; CHECK-LABEL: define <vscale x 8 x i32> @fold_scalable_vector_interleave2_mismatch_splat() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 2))
+; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
+;
+  %1 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 2))
+  ret <vscale x 8 x i32> %1
+}
+
 define <12 x i32> @fold_vector_interleave3() {
 ; CHECK-LABEL: define <12 x i32> @fold_vector_interleave3() {
 ; CHECK-NEXT:    ret <12 x i32> <i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11, i32 4, i32 8, i32 12>
