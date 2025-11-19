@@ -19457,7 +19457,7 @@ static bool IsSVECntIntrinsic(SDValue S) {
 }
 
 // Returns the maximum (scalable) value that can be returned by an SVE count
-// intrinsic. Returns std::nullopt if \p Op is not aarch64_sve_cnt*. 
+// intrinsic. Returns std::nullopt if \p Op is not aarch64_sve_cnt*.
 static std::optional<ElementCount> getMaxValueForSVECntIntrinsic(SDValue Op) {
   Intrinsic::ID IID = getIntrinsicID(Op.getNode());
   if (IID == Intrinsic::aarch64_sve_cntp)
