@@ -636,4 +636,8 @@ def BubbleDownMemorySpaceCasts :
   }];
 }
 
+def HoistPureOps :
+    Pass<"hoist-pure-ops"> {
+}
+
 #endif // MLIR_TRANSFORMS_PASSES
