@@ -5510,7 +5510,7 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
 CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
   StringRef name_ref = name.GetStringRef();
   llvm::Regex re("^(unsigned )?_BitInt\\((.*)\\)$");
-  llvm::SmallVector<llvm::StringRef, 4> matches;
+  llvm::SmallVector<llvm::StringRef, 3> matches;
   bool is_bitint = re.match(name_ref, &matches);
   if (is_bitint && matches.size() == 3) {
     bool is_unsigned = matches[1] == "unsigned ";
