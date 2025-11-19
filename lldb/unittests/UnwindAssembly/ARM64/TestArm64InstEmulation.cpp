@@ -964,3 +964,110 @@ TEST_F(TestArm64InstEmulation, TestPrologueStartsWithStrD8) {
     EXPECT_TRUE(regloc.IsSame());
   }
 }
+
+TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
+  ArchSpec arch("arm64-apple-ios15");
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
+      static_cast<UnwindAssemblyInstEmulation *>(
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
+  ASSERT_NE(nullptr, engine);
+
+  const UnwindPlan::Row *row;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+
+  // clang-format off
+  uint8_t data[] = {
+      0xff, 0xc3, 0x00, 0xd1, // <+0>:  sub    sp, sp, #0x30
+      0xfd, 0x7b, 0x02, 0xa9, // <+4>:  stp    x29, x30, [sp, #0x20]
+      0xfd, 0x83, 0x00, 0x91, // <+8>:  add    x29, sp, #0x20
+      0x1f, 0x04, 0x00, 0xf1, // <+12>: cmp    x0, #0x1
+      0x21, 0x01, 0x00, 0x54, // <+16>: b.ne   ; <+52> DO_SOMETHING_AND_GOTO_AFTER_EPILOGUE
+      0xfd, 0x7b, 0x42, 0xa9, // <+20>: ldp    x29, x30, [sp, #0x20]
+      0xff, 0xc3, 0x00, 0x91, // <+24>: add    sp, sp, #0x30
+      0xc0, 0x03, 0x5f, 0xd6, // <+28>: ret
+      // AFTER_EPILOGUE:  LLDB computes the next 5 unwind states incorrectly.
+      0x37, 0x00, 0x80, 0xd2, // <+32>: mov    x23, #0x1
+      0xf6, 0x5f, 0x41, 0xa9, // <+36>: ldp    x22, x23, [sp, #0x10]
+      0xfd, 0x7b, 0x42, 0xa9, // <+40>: ldp    x29, x30, [sp, #0x20]
+      0xff, 0xc3, 0x00, 0x91, // <+44>: add    sp, sp, #0x30
+      0xc0, 0x03, 0x5f, 0xd6, // <+48>: ret
+      // DO_SOMETHING_AND_GOTO_AFTER_EPILOGUE
+      0xf6, 0x5f, 0x01, 0xa9, // <+52>: stp    x22, x23, [sp, #0x10]
+      0x36, 0x00, 0x80, 0xd2, // <+56>: mov    x22, #0x1
+      0x37, 0x00, 0x80, 0xd2, // <+60>: mov    x23, #0x1
+      0xf8, 0xff, 0xff, 0x17, // <+64>: b      ; <+32> AFTER_EPILOGUE
+  };
+
+  // UnwindPlan we expect:
+  // row[0]:    0: CFA=sp +0 =>
+  // row[1]:    4: CFA=sp+48 =>
+  // row[2]:    8: CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
+  // row[3]:   12: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8]
+  // row[4]:   24: CFA=sp+48 => fp=<same>   lr=<same>
+  //
+  // This must come from +56
+  // row[5]:   32: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8] x22=[CFA-24], x23=[CFA-32]
+  // row[6]:   40: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8] x22=same,     x23 = same
+  // row[6]:   44: CFA=sp+48 => fp=same     lr=same    x22=same,     x23 = same
+  // row[6]:   48: CFA=sp0   => fp=same     lr=same    x22=same,     x23 = same
+  //
+  // row[x]:   52: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8]
+  // row[x]:   56: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8] x22=[CFA-24], x23=[CFA-32]
+  // clang-format on
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      sample_range, data, sizeof(data), unwind_plan));
+
+  // At the end of prologue (+12), CFA = fp + 16.
+  // <+0>:  sub    sp, sp, #0x30
+  // <+4>:  stp    x29, x30, [sp, #0x20]
+  // <+8>:  add    x29, sp, #0x20
+  row = unwind_plan.GetRowForFunctionOffset(12);
+  EXPECT_EQ(12, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
+  EXPECT_EQ(row->GetCFAValue().GetRegisterNumber(), gpr_fp_arm64);
+  EXPECT_EQ(row->GetCFAValue().GetOffset(), 16);
+
+  // +16 and +20 are the same as +12.
+  // <+12>: cmp    x0, #0x1
+  // <+16>: b.ne   ; <+52> DO_SOMETHING_AND_GOTO_AFTER_EPILOGUE
+  EXPECT_EQ(12, unwind_plan.GetRowForFunctionOffset(16)->GetOffset());
+  EXPECT_EQ(12, unwind_plan.GetRowForFunctionOffset(20)->GetOffset());
+
+  // After restoring $fp to caller's value, CFA = $sp + 48
+  // <+20>: ldp    x29, x30, [sp, #0x20]
+  row = unwind_plan.GetRowForFunctionOffset(24);
+  EXPECT_EQ(24, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
+  EXPECT_EQ(row->GetCFAValue().GetOffset(), 48);
+
+  // $sp has been restored
+  // <+24>: add    sp, sp, #0x30
+  row = unwind_plan.GetRowForFunctionOffset(28);
+  EXPECT_EQ(28, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
+  EXPECT_EQ(row->GetCFAValue().GetOffset(), 0);
+
+  // FIXME: Row for offset +32 incorrectly inherits the state of the `ret`
+  // instruction, but +32 _never_ executes after the `ret`.
+  // <+28>: ret
+  // <+32>: mov    x23, #0x1
+  row = unwind_plan.GetRowForFunctionOffset(32);
+  // FIXME: EXPECT_NE(32, row->GetOffset());
+
+  // Check that the state of this branch
+  // <+16>: b.ne   ; <+52> DO_SOMETHING_AND_GOTO_AFTER_EPILOGUE
+  // was forwarded to the branch target:
+  // <+52>: stp    x22, x23, [sp, #0x10]
+  row = unwind_plan.GetRowForFunctionOffset(52);
+  EXPECT_EQ(52, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
+  EXPECT_EQ(row->GetCFAValue().GetRegisterNumber(), gpr_fp_arm64);
+  EXPECT_EQ(row->GetCFAValue().GetOffset(), 16);
+}
