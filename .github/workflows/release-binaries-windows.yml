@@ -32,3 +32,11 @@ jobs:
           subst S: ${{ github.workspace }}
           cd S:\llvm\utils\release\
           .\build_llvm_release.bat --x64 --version 22.0.0 --local-python --skip-checkout
+      - if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: build-dir
+          # Due to path differences on Windows when running in bash vs running on node,
+          # we need to search for files in the current workspace.
+          path: |
+            S:\llvm\utils\release\llvm_package_22.0.0\build_amd64
