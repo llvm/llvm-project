@@ -4574,7 +4574,7 @@ vwsub.wx v8, v16, x30
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]
-# CHECK-NEXT:  -     1120.00  -     -      -      -     4016.00  -
+# CHECK-NEXT:  -     1120.00  -     -      -      -     4808.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]    Instructions:
