@@ -69,6 +69,19 @@ public:
   std::error_code isLocal(const Twine &Path, bool &Result) final {
     return FS->isLocal(Path, Result);
   }
+  void visitChildFileSystems(VisitCallbackTy Callback) override {
+    Callback(*FS);
+    FS->visitChildFileSystems(Callback);
+  }
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override {
+    printIndent(OS, IndentLevel);
+    OS << "CASProvidingFilesystem\n";
+    if (Type == PrintType::Summary)
+      return;
+    FS->print(OS, Type == PrintType::Contents ? PrintType::Summary : Type,
+              IndentLevel + 1);
+  }
 
   llvm::Expected<std::unique_ptr<CASBackedFile>>
   openCASBackedFileForRead(const Twine &Path) final {
