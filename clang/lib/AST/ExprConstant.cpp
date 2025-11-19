@@ -13558,16 +13558,14 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_alignq256:
   case X86::BI__builtin_ia32_alignq512: {
     APValue R;
-    const unsigned NumElts =
-        E->getType()->castAs<VectorType>()->getNumElements();
+    const unsigned NumElems = E->getType()->castAs<VectorType>()->getNumElements();
     if (!evalShuffleGeneric(
-            Info, E, R, [NumElts](unsigned DstIdx, unsigned Shift) {
+            Info, E, R, [NumElems](unsigned DstIdx, unsigned Shift) {
               unsigned Imm = Shift & 0xFF;
-              unsigned EffectiveShift = Imm & (NumElts - 1);
+              unsigned EffectiveShift = Imm & (NumElems - 1);
               unsigned SourcePos = DstIdx + EffectiveShift;
-              unsigned VecIdx = SourcePos < NumElts ? 1 : 0;
-              unsigned ElemIdx =
-                  SourcePos < NumElts ? SourcePos : SourcePos - NumElts;
+              unsigned VecIdx = SourcePos < NumElems ? 1 : 0;
+              unsigned ElemIdx = SourcePos & (NumElems - 1);
 
               return std::pair<unsigned, int>{VecIdx,
                                               static_cast<int>(ElemIdx)};

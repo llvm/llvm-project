@@ -4780,16 +4780,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_alignq128:
   case X86::BI__builtin_ia32_alignq256:
   case X86::BI__builtin_ia32_alignq512: {
-    unsigned NumElems =
-        Call->getType()->castAs<VectorType>()->getNumElements();
+    unsigned NumElems = Call->getType()->castAs<VectorType>()->getNumElements();
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [NumElems](unsigned DstIdx, unsigned Shift) {
           unsigned Imm = Shift & 0xFF;
           unsigned EffectiveShift = Imm & (NumElems - 1);
           unsigned SourcePos = DstIdx + EffectiveShift;
           unsigned VecIdx = SourcePos < NumElems ? 1u : 0u;
-          unsigned ElemIdx =
-              SourcePos < NumElems ? SourcePos : SourcePos - NumElems;
+          unsigned ElemIdx = SourcePos & (NumElems - 1);
           return std::pair<unsigned, int>{VecIdx, static_cast<int>(ElemIdx)};
         });
   }
