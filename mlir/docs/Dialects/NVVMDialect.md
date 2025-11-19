@@ -1,4 +1,4 @@
-# NVVM Dialect
+# 'nvvm' Dialect
 
 The NVVM dialect is MLIR's LLVM-IR-based, NVIDIA-specific backend dialect. It
 models NVVM intrinsics and public ISA functionality and introduces NVIDIA
@@ -92,9 +92,4 @@ All operations in the NVIDIA's instruction set have a custom form in MLIR. The m
 of an operation is that used in LLVM IR prefixed with "`nvvm.`".
 
 [include "Dialects/NVVMOps.md"]
-
-
-## Op Interfaces
-
-[include "Dialects/NVVMRequiresSMTraits.md"]
 
