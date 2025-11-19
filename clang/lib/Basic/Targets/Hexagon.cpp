@@ -155,8 +155,13 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     HasFastHalfType = true;
     HasFloat16 = true;
   }
+  if (CPU.compare("hexagonv81") >= 0)
+    HasBFloat16 = true;
+
   return true;
 }
+
+bool HexagonTargetInfo::hasBFloat16Type() const { return HasBFloat16; }
 
 const char *const HexagonTargetInfo::GCCRegNames[] = {
     // Scalar registers:
