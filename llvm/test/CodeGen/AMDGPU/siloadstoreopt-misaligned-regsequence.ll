@@ -14,7 +14,7 @@ define amdgpu_kernel void @foo(ptr %0) {
 ; CHECK-NEXT:    flat_store_dwordx3 v[0:1], v[2:4]
 ; CHECK-NEXT:    s_endpgm
 entry:
-  %1 = getelementptr i8, ptr %0, i64 4
+  %1 = getelementptr inbounds i8, ptr %0, i64 4
   store i32 0, ptr %0, align 4
   store i64 0, ptr %1, align 4
   ret void
