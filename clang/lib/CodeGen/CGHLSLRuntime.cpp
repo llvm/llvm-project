@@ -27,6 +27,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -905,7 +906,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  std::unordered_map<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
+  llvm::DenseMap<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
 
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
@@ -913,7 +914,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       SRetOffset = 1;
       llvm::Type *VarType = Param.getParamStructRetType();
       llvm::Value *Var = B.CreateAlloca(VarType);
-      OutputSemantic.emplace(FD, Var);
+      OutputSemantic.try_emplace(FD, Var);
       Args.push_back(Var);
       continue;
     }
@@ -949,7 +950,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   CI->setCallingConv(Fn->getCallingConv());
 
   if (Fn->getReturnType() != CGM.VoidTy)
-    OutputSemantic.emplace(FD, CI);
+    OutputSemantic.try_emplace(FD, CI);
 
   for (auto &[Decl, Source] : OutputSemantic) {
     AllocaInst *AI = dyn_cast<AllocaInst>(Source);
