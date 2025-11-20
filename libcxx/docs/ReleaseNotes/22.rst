@@ -114,5 +114,8 @@ ABI Affecting Changes
   potentially inheriting from the types they wrap. At this point in time we are not aware of any ABI changes caused by
   this.
 
+- ``ranges::iota_view`` is now aware of ``__int128``. This causes ``iota_view::difference_type`` to change from
+  ``long long`` to ``__int128`` in some cases.
+
 Build System Changes
 --------------------

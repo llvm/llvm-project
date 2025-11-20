@@ -1266,9 +1266,7 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   // Frame address.  Currently handles register +- offset only.
   assert(MI->isIndirectDebugValue());
   OS << '[';
-  for (unsigned I = 0, E = std::distance(MI->debug_operands().begin(),
-                                         MI->debug_operands().end());
-       I < E; ++I) {
+  for (unsigned I = 0, E = llvm::size(MI->debug_operands()); I < E; ++I) {
     if (I != 0)
       OS << ", ";
     printOperand(MI, I, OS);

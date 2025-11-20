@@ -110,9 +110,9 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createGlobalDCEPass());
+    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
-    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
@@ -206,7 +206,7 @@ DirectXTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 DirectXTargetLowering::DirectXTargetLowering(const DirectXTargetMachine &TM,
                                              const DirectXSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI) {
   addRegisterClass(MVT::i32, &dxil::DXILClassRegClass);
   computeRegisterProperties(STI.getRegisterInfo());
 }

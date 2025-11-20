@@ -72,6 +72,10 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 // Define customized scheduler read/write types specific to the Neoverse N2.
 
 //===----------------------------------------------------------------------===//
+
+// Define generic 0 micro-op types
+def N2Write_0c : SchedWriteRes<[]> { let Latency = 0; }
+
 // Define generic 1 micro-op types
 
 def N2Write_1c_1B   : SchedWriteRes<[N2UnitB]>   { let Latency = 1; }
@@ -646,6 +650,21 @@ def N2Write_11c_9L01_9S_9V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
 }
 
 //===----------------------------------------------------------------------===//
+// Define predicate-controlled types
+
+def N2Write_0or1c_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N2Write_0c]>,
+                      SchedVar<NoSchedPred,      [N2Write_1c_1I]>]>;
+
+def N2Write_0or2c_1V : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N2Write_0c]>,
+                      SchedVar<NoSchedPred,      [N2Write_2c_1V]>]>;
+
+def N2Write_0or3c_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N2Write_0c]>,
+                      SchedVar<NoSchedPred,      [N2Write_3c_1M0]>]>;
+
+//===----------------------------------------------------------------------===//
 // Define types for arithmetic and logical ops with short shifts
 def N2Write_Arith : SchedWriteVariant<[
                       SchedVar<IsCheapLSL,  [N2Write_1c_1I]>,
@@ -680,6 +699,7 @@ def : InstRW<[N2Write_1c_1B_1S], (instrs BL, BLR)>;
 // ALU, basic
 // ALU, basic, flagset
 def : SchedAlias<WriteI,     N2Write_1c_1I>;
+def : InstRW<[N2Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, N2Write_2c_1M>;
@@ -691,7 +711,8 @@ def : SchedAlias<WriteISReg, N2Write_Arith>;
 
 // Logical, shift, no flagset
 def : InstRW<[N2Write_1c_1I],
-             (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+             (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[N2Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
 def : InstRW<[N2Write_Logical], (instregex "^(AND|BIC)S[WX]rs$")>;
@@ -882,8 +903,7 @@ def : SchedAlias<WriteFImm, N2Write_2c_1V>;
 def : InstRW<[N2Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
-def : InstRW<[N2Write_3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr,
-                                        FMOVHWr, FMOVHXr, FMOVSWr, FMOVDXr)>;
+def : InstRW<[N2Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
 // FP transfer, from gen to high half of vec reg
 def : InstRW<[N2Write_5c_1M0_1V], (instrs FMOVXDHighr)>;
@@ -1224,6 +1244,8 @@ def : InstRW<[N2Write_3c_1V0], (instrs BFCVT)>;
 // ASIMD transpose
 // ASIMD unzip/zip
 // Handled by SchedAlias<WriteV[dq], ...>
+
+def : InstRW<[N2Write_0or2c_1V], (instrs MOVID, MOVIv2d_ns)>;
 
 // ASIMD duplicate, gen reg
 def : InstRW<[N2Write_3c_1M0], (instregex "^DUPv.+gpr")>;

@@ -856,3 +856,111 @@ TEST_F(TestArm64InstEmulation, TestCFAResetToSP) {
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
 }
+
+TEST_F(TestArm64InstEmulation, TestPrologueStartsWithStrD8) {
+  ArchSpec arch("aarch64");
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
+      static_cast<UnwindAssemblyInstEmulation *>(
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
+  ASSERT_NE(nullptr, engine);
+
+  const UnwindPlan::Row *row;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+
+  // The sample function is built with 'clang --target aarch64 -O1':
+  //
+  //   int bar(float x);
+  //   int foo(float x) {
+  //     return bar(x) + bar(x);
+  //   }
+  //
+  // The function uses one floating point register and spills it with
+  // 'str d8, [sp, #-0x20]!'.
+
+  // clang-format off
+  uint8_t data[] = {
+      // prologue
+      0xe8, 0x0f, 0x1e, 0xfc, //  0: fc1e0fe8    str  d8, [sp, #-0x20]!
+      0xfd, 0xfb, 0x00, 0xa9, //  4: a900fbfd    stp  x29, x30, [sp, #0x8]
+      0xf3, 0x0f, 0x00, 0xf9, //  8: f9000ff3    str  x19, [sp, #0x18]
+      0xfd, 0x23, 0x00, 0x91, // 12: 910023fd    add  x29, sp, #0x8
+
+      // epilogue
+      0xfd, 0xfb, 0x40, 0xa9, // 16: a940fbfd    ldp  x29, x30, [sp, #0x8]
+      0xf3, 0x0f, 0x40, 0xf9, // 20: f9400ff3    ldr  x19, [sp, #0x18]
+      0xe8, 0x07, 0x42, 0xfc, // 24: fc4207e8    ldr  d8, [sp], #0x20
+      0xc0, 0x03, 0x5f, 0xd6, // 28: d65f03c0    ret
+  };
+  // clang-format on
+
+  // UnwindPlan we expect:
+  //   0: CFA=sp +0 =>
+  //   4: CFA=sp+32 => d8=[CFA-32]
+  //   8: CFA=sp+32 => fp=[CFA-24] lr=[CFA-16] d8=[CFA-32]
+  //  12: CFA=sp+32 => x19=[CFA-8] fp=[CFA-24] lr=[CFA-16] d8=[CFA-32]
+  //  16: CFA=fp+24 => x19=[CFA-8] fp=[CFA-24] lr=[CFA-16] d8=[CFA-32]
+  //  20: CFA=sp+32 => x19=[CFA-8] fp=<same> lr=<same> d8=[CFA-32]
+  //  24: CFA=sp+32 => x19=<same> fp=<same> lr=<same> d8=[CFA-32]
+  //  28: CFA=sp +0 => x19=<same> fp=<same> lr=<same> d8=<same>
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      sample_range, data, sizeof(data), unwind_plan));
+
+  //   4: CFA=sp+32 => d8=[CFA-32]
+  row = unwind_plan.GetRowForFunctionOffset(4);
+  EXPECT_EQ(4, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(32, row->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row->GetRegisterInfo(fpu_d8_arm64, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-32, regloc.GetOffset());
+
+  //  16: CFA=fp+24 => x19=[CFA-8] fp=[CFA-24] lr=[CFA-16] d8=[CFA-32]
+  row = unwind_plan.GetRowForFunctionOffset(16);
+  EXPECT_EQ(16, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_fp_arm64);
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(24, row->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row->GetRegisterInfo(gpr_x19_arm64, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  EXPECT_TRUE(row->GetRegisterInfo(gpr_fp_arm64, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-24, regloc.GetOffset());
+
+  EXPECT_TRUE(row->GetRegisterInfo(gpr_lr_arm64, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-16, regloc.GetOffset());
+
+  EXPECT_TRUE(row->GetRegisterInfo(fpu_d8_arm64, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-32, regloc.GetOffset());
+
+  //  28: CFA=sp +0 => x19=<same> fp=<same> lr=<same> d8=<same>
+  row = unwind_plan.GetRowForFunctionOffset(28);
+  EXPECT_EQ(28, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(0, row->GetCFAValue().GetOffset());
+
+  if (row->GetRegisterInfo(gpr_x19_arm64, regloc)) {
+    EXPECT_TRUE(regloc.IsSame());
+  }
+  if (row->GetRegisterInfo(gpr_fp_arm64, regloc)) {
+    EXPECT_TRUE(regloc.IsSame());
+  }
+  if (row->GetRegisterInfo(gpr_lr_arm64, regloc)) {
+    EXPECT_TRUE(regloc.IsSame());
+  }
+  if (row->GetRegisterInfo(fpu_d8_arm64, regloc)) {
+    EXPECT_TRUE(regloc.IsSame());
+  }
+}

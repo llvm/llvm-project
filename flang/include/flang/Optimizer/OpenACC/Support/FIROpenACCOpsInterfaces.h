@@ -16,7 +16,9 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace fir {
+class AddrOfOp;
 class DeclareOp;
+class GlobalOp;
 } // namespace fir
 
 namespace hlfir {
@@ -51,6 +53,18 @@ struct PartialEntityAccessModel<hlfir::DeclareOp>
           PartialEntityAccessModel<hlfir::DeclareOp>, hlfir::DeclareOp> {
   mlir::Value getBaseEntity(mlir::Operation *op) const;
   bool isCompleteView(mlir::Operation *op) const;
+};
+
+struct AddressOfGlobalModel
+    : public mlir::acc::AddressOfGlobalOpInterface::ExternalModel<
+          AddressOfGlobalModel, fir::AddrOfOp> {
+  mlir::SymbolRefAttr getSymbol(mlir::Operation *op) const;
+};
+
+struct GlobalVariableModel
+    : public mlir::acc::GlobalVariableOpInterface::ExternalModel<
+          GlobalVariableModel, fir::GlobalOp> {
+  bool isConstant(mlir::Operation *op) const;
 };
 
 } // namespace fir::acc

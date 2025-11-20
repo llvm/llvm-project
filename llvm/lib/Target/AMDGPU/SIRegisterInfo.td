@@ -644,7 +644,7 @@ def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg1
 // Identical to VGPR_32 except it only contains the low 256 (Lo256) registers.
 def VGPR_32_Lo256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
                                     (add (sequence "VGPR%u", 0, 255))> {
-  let AllocationPriority = 0;
+  let AllocationPriority = !add(3, !mul(BaseClassPriority, BaseClassScaleFactor));
   let GeneratePressureSet = 0;
   let Size = 32;
   let Weight = 1;

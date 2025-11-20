@@ -446,7 +446,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
   if(implicit_it_flag)
     set(assembly_files
       arm/mulsf3.S
-      arm/divsf3.S)
+      arm/divsf3.S
+      )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
     set(arm_or_thumb2_optimized_fp_SOURCES

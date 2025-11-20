@@ -298,6 +298,17 @@ HANDLE_TARGET_OPCODE(G_ABDS)
 /// Generic absolute difference unsigned instruction.
 HANDLE_TARGET_OPCODE(G_ABDU)
 
+/// Generic vector average with truncate unsigned instruction.
+HANDLE_TARGET_OPCODE(G_UAVGFLOOR)
+
+/// Generic vector average with round unsigned instruction.
+HANDLE_TARGET_OPCODE(G_UAVGCEIL)
+
+/// Generic vector average with truncate signed instruction.
+HANDLE_TARGET_OPCODE(G_SAVGFLOOR)
+
+/// Generic vector average with round signed instruction.
+HANDLE_TARGET_OPCODE(G_SAVGCEIL)
 
 HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
 

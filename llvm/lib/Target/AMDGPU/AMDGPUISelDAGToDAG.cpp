@@ -1850,72 +1850,83 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
          isFlatScratchBaseLegal(Addr))) {
       int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
-      const SIInstrInfo *TII = Subtarget->getInstrInfo();
-      if (TII->isLegalFLATOffset(COffsetVal, AS, FlatVariant)) {
-        Addr = N0;
-        OffsetVal = COffsetVal;
-      } else {
-        // If the offset doesn't fit, put the low bits into the offset field and
-        // add the rest.
-        //
-        // For a FLAT instruction the hardware decides whether to access
-        // global/scratch/shared memory based on the high bits of vaddr,
-        // ignoring the offset field, so we have to ensure that when we add
-        // remainder to vaddr it still points into the same underlying object.
-        // The easiest way to do that is to make sure that we split the offset
-        // into two pieces that are both >= 0 or both <= 0.
-
-        SDLoc DL(N);
-        uint64_t RemainderOffset;
-
-        std::tie(OffsetVal, RemainderOffset) =
-            TII->splitFlatOffset(COffsetVal, AS, FlatVariant);
-
-        SDValue AddOffsetLo =
-            getMaterializedScalarImm32(Lo_32(RemainderOffset), DL);
-        SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
-
-        if (Addr.getValueType().getSizeInBits() == 32) {
-          SmallVector<SDValue, 3> Opnds;
-          Opnds.push_back(N0);
-          Opnds.push_back(AddOffsetLo);
-          unsigned AddOp = AMDGPU::V_ADD_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
-            AddOp = AMDGPU::V_ADD_U32_e64;
-            Opnds.push_back(Clamp);
-          }
-          Addr = SDValue(CurDAG->getMachineNode(AddOp, DL, MVT::i32, Opnds), 0);
+      // Adding the offset to the base address in a FLAT instruction must not
+      // change the memory aperture in which the address falls. Therefore we can
+      // only fold offsets from inbounds GEPs into FLAT instructions.
+      bool IsInBounds =
+          Addr.getOpcode() == ISD::PTRADD && Addr->getFlags().hasInBounds();
+      if (COffsetVal == 0 || FlatVariant != SIInstrFlags::FLAT || IsInBounds) {
+        const SIInstrInfo *TII = Subtarget->getInstrInfo();
+        if (TII->isLegalFLATOffset(COffsetVal, AS, FlatVariant)) {
+          Addr = N0;
+          OffsetVal = COffsetVal;
         } else {
-          // TODO: Should this try to use a scalar add pseudo if the base address
-          // is uniform and saddr is usable?
-          SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
-          SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
+          // If the offset doesn't fit, put the low bits into the offset field
+          // and add the rest.
+          //
+          // For a FLAT instruction the hardware decides whether to access
+          // global/scratch/shared memory based on the high bits of vaddr,
+          // ignoring the offset field, so we have to ensure that when we add
+          // remainder to vaddr it still points into the same underlying object.
+          // The easiest way to do that is to make sure that we split the offset
+          // into two pieces that are both >= 0 or both <= 0.
 
-          SDNode *N0Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
-                                                DL, MVT::i32, N0, Sub0);
-          SDNode *N0Hi = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
-                                                DL, MVT::i32, N0, Sub1);
+          SDLoc DL(N);
+          uint64_t RemainderOffset;
 
-          SDValue AddOffsetHi =
-              getMaterializedScalarImm32(Hi_32(RemainderOffset), DL);
+          std::tie(OffsetVal, RemainderOffset) =
+              TII->splitFlatOffset(COffsetVal, AS, FlatVariant);
 
-          SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i1);
+          SDValue AddOffsetLo =
+              getMaterializedScalarImm32(Lo_32(RemainderOffset), DL);
+          SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
 
-          SDNode *Add =
-              CurDAG->getMachineNode(AMDGPU::V_ADD_CO_U32_e64, DL, VTs,
-                                     {AddOffsetLo, SDValue(N0Lo, 0), Clamp});
+          if (Addr.getValueType().getSizeInBits() == 32) {
+            SmallVector<SDValue, 3> Opnds;
+            Opnds.push_back(N0);
+            Opnds.push_back(AddOffsetLo);
+            unsigned AddOp = AMDGPU::V_ADD_CO_U32_e32;
+            if (Subtarget->hasAddNoCarry()) {
+              AddOp = AMDGPU::V_ADD_U32_e64;
+              Opnds.push_back(Clamp);
+            }
+            Addr =
+                SDValue(CurDAG->getMachineNode(AddOp, DL, MVT::i32, Opnds), 0);
+          } else {
+            // TODO: Should this try to use a scalar add pseudo if the base
+            // address is uniform and saddr is usable?
+            SDValue Sub0 =
+                CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
+            SDValue Sub1 =
+                CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
 
-          SDNode *Addc = CurDAG->getMachineNode(
-              AMDGPU::V_ADDC_U32_e64, DL, VTs,
-              {AddOffsetHi, SDValue(N0Hi, 0), SDValue(Add, 1), Clamp});
+            SDNode *N0Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
+                                                  DL, MVT::i32, N0, Sub0);
+            SDNode *N0Hi = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
+                                                  DL, MVT::i32, N0, Sub1);
 
-          SDValue RegSequenceArgs[] = {
-              CurDAG->getTargetConstant(AMDGPU::VReg_64RegClassID, DL, MVT::i32),
-              SDValue(Add, 0), Sub0, SDValue(Addc, 0), Sub1};
+            SDValue AddOffsetHi =
+                getMaterializedScalarImm32(Hi_32(RemainderOffset), DL);
 
-          Addr = SDValue(CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
-                                                MVT::i64, RegSequenceArgs),
-                         0);
+            SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i1);
+
+            SDNode *Add =
+                CurDAG->getMachineNode(AMDGPU::V_ADD_CO_U32_e64, DL, VTs,
+                                       {AddOffsetLo, SDValue(N0Lo, 0), Clamp});
+
+            SDNode *Addc = CurDAG->getMachineNode(
+                AMDGPU::V_ADDC_U32_e64, DL, VTs,
+                {AddOffsetHi, SDValue(N0Hi, 0), SDValue(Add, 1), Clamp});
+
+            SDValue RegSequenceArgs[] = {
+                CurDAG->getTargetConstant(AMDGPU::VReg_64RegClassID, DL,
+                                          MVT::i32),
+                SDValue(Add, 0), Sub0, SDValue(Addc, 0), Sub1};
+
+            Addr = SDValue(CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
+                                                  MVT::i64, RegSequenceArgs),
+                           0);
+          }
         }
       }
     }

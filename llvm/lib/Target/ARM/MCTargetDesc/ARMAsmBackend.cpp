@@ -428,7 +428,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // signed 16bit range.
   if ((Kind == ARM::fixup_arm_movw_lo16 || Kind == ARM::fixup_arm_movt_hi16 ||
        Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16) &&
-      (Addend < minIntN(16) || Addend > maxIntN(16))) {
+      !IsResolved && (Addend < minIntN(16) || Addend > maxIntN(16))) {
     Ctx.reportError(Fixup.getLoc(), "Relocation Not In Range");
     return 0;
   }

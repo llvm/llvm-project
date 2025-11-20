@@ -42,12 +42,12 @@ public:
     /// it. Otherwise, the source's loan set is merged into the destination's
     /// loan set.
     OriginFlow,
-    /// An origin escapes the function by flowing into the return value.
-    ReturnOfOrigin,
     /// An origin is used (eg. appears as l-value expression like DeclRefExpr).
     Use,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
+    /// An origin that escapes the function scope (e.g., via return).
+    OriginEscapes,
   };
 
 private:
@@ -136,16 +136,19 @@ public:
             const OriginManager &OM) const override;
 };
 
-class ReturnOfOriginFact : public Fact {
+class OriginEscapesFact : public Fact {
   OriginID OID;
+  const Expr *EscapeExpr;
 
 public:
   static bool classof(const Fact *F) {
-    return F->getKind() == Kind::ReturnOfOrigin;
+    return F->getKind() == Kind::OriginEscapes;
   }
 
-  ReturnOfOriginFact(OriginID OID) : Fact(Kind::ReturnOfOrigin), OID(OID) {}
-  OriginID getReturnedOriginID() const { return OID; }
+  OriginEscapesFact(OriginID OID, const Expr *EscapeExpr)
+      : Fact(Kind::OriginEscapes), OID(OID), EscapeExpr(EscapeExpr) {}
+  OriginID getEscapedOriginID() const { return OID; }
+  const Expr *getEscapeExpr() const { return EscapeExpr; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
@@ -225,6 +228,9 @@ public:
   /// user-defined locations in the code.
   /// \note This is intended for testing only.
   llvm::StringMap<ProgramPoint> getTestPoints() const;
+  /// Retrieves all the facts in the block containing Program Point P.
+  /// \note This is intended for testing only.
+  llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) const;
 
   unsigned getNumFacts() const { return NextFactID.Value; }
 

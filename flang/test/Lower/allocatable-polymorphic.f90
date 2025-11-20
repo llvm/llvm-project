@@ -460,7 +460,7 @@ contains
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]](%{{.*}}) {uniq_name = "_QMpolyFtest_allocate_with_moldEx"} : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>)
 
 ! CHECK: %[[EMBOX_X:.*]] = fir.embox %[[X_DECL]]#0(%{{.*}}) : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>
-! CHECK: %[[RANK:.*]] = arith.constant 1 : i32 
+! CHECK: %[[RANK:.*]] = arith.constant 1 : i32
 ! CHECK: %[[P_BOX_NONE:.*]] = fir.convert %[[P_DECL]]#0 : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[X_BOX_NONE:.*]] = fir.convert %[[EMBOX_X]] : (!fir.box<!fir.array<10x!fir.type<_QMpolyTp2{p1:!fir.type<_QMpolyTp1{a:i32,b:i32}>,c:i32}>>>) -> !fir.box<none>
 ! CHECK: fir.call @_FortranAPointerApplyMold(%[[P_BOX_NONE]], %[[X_BOX_NONE]], %[[RANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()
@@ -614,10 +614,10 @@ end
 ! LLVM: %[[TYPE_CODE:.*]] = load i8, ptr %[[TYPE_CODE_GEP]]
 ! LLVM-NEXT: %[[EXT_TYPE_CODE:.*]] = sext i8 %[[TYPE_CODE]] to i32
 ! LLVM: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELEM_SIZE]], 1
-! LLVM: %[[TRUNC_TYPE_CODE:.*]] = trunc i32 %[[EXT_TYPE_CODE]] to i8 
+! LLVM: %[[TRUNC_TYPE_CODE:.*]] = trunc i32 %[[EXT_TYPE_CODE]] to i8
 ! LLVM: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %{{.*}}, i8 %[[TRUNC_TYPE_CODE]], 4
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %{{.*}}, ptr %[[TMP:.*]]
-! LLVM: call void %{{.*}}(ptr %{{.*}}) 
+! LLVM: call void %{{.*}}(ptr %{{.*}})
 
 ! LLVM: call void @llvm.memcpy.p0.p0.i32
 ! LLVM: %[[GEP_TDESC_C2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 7
@@ -628,7 +628,7 @@ end
 ! LLVM: %[[TYPE_CODE:.*]] = load i8, ptr %[[TYPE_CODE_GEP]]
 ! LLVM-NEXT: %[[EXT_TYPE_CODE:.*]] = sext i8 %[[TYPE_CODE]] to i32
 ! LLVM: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELEM_SIZE]], 1
-! LLVM: %[[TRUNC_TYPE_CODE:.*]] = trunc i32 %[[EXT_TYPE_CODE]] to i8 
+! LLVM: %[[TRUNC_TYPE_CODE:.*]] = trunc i32 %[[EXT_TYPE_CODE]] to i8
 ! LLVM: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %{{.*}}, i8 %[[TRUNC_TYPE_CODE]], 4
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %{{.*}}, ptr %{{.*}}
 ! LLVM: call void %{{.*}}(ptr %{{.*}})

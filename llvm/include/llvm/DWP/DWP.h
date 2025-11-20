@@ -22,6 +22,12 @@ enum OnCuIndexOverflow {
   Continue,
 };
 
+enum Dwarf64StrOffsetsPromotion {
+  Disabled, ///< Don't do any conversion of .debug_str_offsets tables.
+  Enabled,  ///< Convert any .debug_str_offsets tables to DWARF64 if needed.
+  Always,   ///< Always emit .debug_str_offsets talbes as DWARF64 for testing.
+};
+
 struct UnitIndexEntry {
   DWARFUnitIndex::Entry::SectionContribution Contributions[8];
   std::string Name;
@@ -68,7 +74,10 @@ struct CompileUnitIdentifiers {
 };
 
 LLVM_ABI Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-                     OnCuIndexOverflow OverflowOptValue);
+                     OnCuIndexOverflow OverflowOptValue,
+                     Dwarf64StrOffsetsPromotion StrOffsetsOptValue);
+
+typedef std::vector<std::pair<DWARFSectionKind, uint32_t>> SectionLengths;
 
 LLVM_ABI Error handleSection(
     const StringMap<std::pair<MCSection *, DWARFSectionKind>> &KnownSections,
@@ -82,7 +91,7 @@ LLVM_ABI Error handleSection(
     std::vector<StringRef> &CurTypesSection,
     std::vector<StringRef> &CurInfoSection, StringRef &AbbrevSection,
     StringRef &CurCUIndexSection, StringRef &CurTUIndexSection,
-    std::vector<std::pair<DWARFSectionKind, uint32_t>> &SectionLength);
+    SectionLengths &SectionLength);
 
 LLVM_ABI Expected<InfoSectionUnitHeader>
 parseInfoSectionUnitHeader(StringRef Info);

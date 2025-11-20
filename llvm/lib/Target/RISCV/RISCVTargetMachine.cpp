@@ -123,7 +123,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
-  initializeRISCVCodeGenPreparePass(*PR);
+  initializeRISCVCodeGenPrepareLegacyPassPass(*PR);
   initializeRISCVPostRAExpandPseudoPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsPass(*PR);
@@ -461,7 +461,7 @@ void RISCVPassConfig::addIRPasses() {
 
     addPass(createRISCVGatherScatterLoweringPass());
     addPass(createInterleavedAccessPass());
-    addPass(createRISCVCodeGenPreparePass());
+    addPass(createRISCVCodeGenPrepareLegacyPass());
   }
 
   TargetPassConfig::addIRPasses();
@@ -636,6 +636,9 @@ bool RISCVPassConfig::addILPOpts() {
 }
 
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "RISCVPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerLateLoopOptimizationsEPCallback([=](LoopPassManager &LPM,
                                                  OptimizationLevel Level) {
     if (Level != OptimizationLevel::O0)

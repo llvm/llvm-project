@@ -74,12 +74,7 @@ add_mlir_python_common_capi_library(StandalonePythonCAPI
 
 set(StandalonePythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
 
-set(_mlir_python_stubgen_enabled ON)
-if(CMAKE_CROSSCOMPILING OR (NOT LLVM_USE_SANITIZER STREQUAL ""))
-  set(_mlir_python_stubgen_enabled OFF)
-endif()
-
-if(_mlir_python_stubgen_enabled)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   # Everything here is very tightly coupled. See the ample descriptions at the bottom of
   # mlir/python/CMakeLists.txt.
 
@@ -146,7 +141,7 @@ set(_declared_sources
 )
 # For an external projects build, the MLIRPythonExtension.Core.type_stub_gen
 # target already exists and can just be added to DECLARED_SOURCES.
-if(EXTERNAL_PROJECT_BUILD AND _mlir_python_stubgen_enabled)
+if(EXTERNAL_PROJECT_BUILD AND MLIR_PYTHON_STUBGEN_ENABLED)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()
 
@@ -158,7 +153,7 @@ add_mlir_python_modules(StandalonePythonModules
     StandalonePythonCAPI
 )
 
-if(_mlir_python_stubgen_enabled)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   if(NOT EXTERNAL_PROJECT_BUILD)
     add_dependencies(StandalonePythonModules "${_mlir_typestub_gen_target}")
   endif()

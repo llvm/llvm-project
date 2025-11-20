@@ -437,7 +437,8 @@ define void @prop7(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: store i32 %conv, ptr %arrayidx7, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx13, align 4
-; CHECK-NEXT:    da analyze - flow [* <>]!
+; CHECK-NEXT:    da analyze - flow [* -38] splitable!
+; CHECK-NEXT:    da analyze - split level = 1, iteration = 4!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx13, align 4 --> Dst: %0 = load i32, ptr %arrayidx13, align 4

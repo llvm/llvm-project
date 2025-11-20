@@ -2929,9 +2929,9 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       continue;
     }
 
-    for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
-      FuncMax = std::max(FuncMax, Func.Counts[I]);
-      FuncSum += Func.Counts[I];
+    for (uint64_t Count : Func.Counts) {
+      FuncMax = std::max(FuncMax, Count);
+      FuncSum += Count;
     }
 
     if (FuncMax < ShowValueCutoff) {

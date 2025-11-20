@@ -796,6 +796,112 @@ every time. For more information, refer PTX ISA
 Membar/Fences
 -------------
 
+'``llvm.nvvm.fence.acquire/release.sync_restrict.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+The `nvvm.fence.{semantics}.sync_restrict.*` restrict the class of memory
+operations for which the fence instruction provides the memory ordering guarantees.
+When `.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`. For more details,
+please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.mbarrier_init.release.cluster``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.mbarrier_init.release.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.mbarrier_init.release.cluster` intrinsic restrict the class of
+memory operations for which the fence instruction provides the memory ordering
+guarantees. The `mbarrier_init` modifiers restricts the synchronizing effect to
+the prior `mbarrier_init` operation executed by the same thread on mbarrier objects
+in `shared_cta` memory space. For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.async_generic.acquire/release.sync_restrict``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.async.generic.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.proxy.async.generic.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.async_generic.{semantics}.sync_restrict` are used to establish
+ordering between a prior memory access performed via the `async proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+and a subsequent memory access performed via the generic proxy.
+``nvvm.fence.proxy.async_generic.release.sync_restrict`` can form a release
+sequence that synchronizes with an acquire sequence that contains the
+``nvvm.fence.proxy.async_generic.acquire.sync_restrict`` proxy fence. When
+`.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`.
+For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.<proxykind>``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.alias()
+  declare void @llvm.nvvm.fence.proxy.async()
+  declare void @llvm.nvvm.fence.proxy.async.global()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cluster()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cta()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.{proxykind}` intrinsics represent a fence with bi-directional
+proxy ordering that is established between the memory accesses done between the
+`generic proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+and the proxy specified by `proxykind`. A `bi-directional proxy` ordering between
+two proxykinds establishes two `uni-directional` proxy orderings: one from the
+first proxykind to the second proxykind and the other from the second proxykind
+to the first proxykind.
+
+`alias` proxykind refers to memory accesses performed using virtually aliased
+addresses to the same memory location
+
+`async` proxykind specifies that the memory ordering is established between the
+`async proxy` and the `generic proxy`. The memory ordering is limited only to
+operations performed on objects in the state space specified (`generic`, `global`,
+`shared_cluster`, `shared_cta`). If no state space is specified, then the memory
+ordering applies on all state spaces. For more details, please refer the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
 '``llvm.nvvm.fence.proxy.tensormap_generic.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

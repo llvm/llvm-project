@@ -5,6 +5,7 @@
 // CHECK-NO-TOKEN-ALLOC-NOT: "-fsanitize=alloc-token"
 
 // RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fno-sanitize-ignorelist -fsanitize=alloc-token,undefined,cfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-COMPATIBLE
+// RUN: %clang --target=aarch64-linux-android -march=armv8-a+memtag -flto -fvisibility=hidden -fsanitize=alloc-token,kcfi,memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-COMPATIBLE
 // CHECK-COMPATIBLE: "-fsanitize={{.*}}alloc-token"
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=alloc-token -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MINIMAL

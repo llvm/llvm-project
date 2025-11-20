@@ -10279,11 +10279,11 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    v_writelane_b32 v62, s3, 5
 ; GFX8-NEXT:    v_readlane_b32 s2, v62, 2
 ; GFX8-NEXT:    v_readlane_b32 s3, v62, 3
+; GFX8-NEXT:    s_bfe_i64 s[50:51], s[50:51], 0x10000
 ; GFX8-NEXT:    v_mov_b32_e32 v35, s49
 ; GFX8-NEXT:    s_bfe_i64 s[48:49], s[4:5], 0x10000
 ; GFX8-NEXT:    s_bfe_i64 s[4:5], s[2:3], 0x10000
 ; GFX8-NEXT:    v_readlane_b32 s2, v62, 0
-; GFX8-NEXT:    s_bfe_i64 s[50:51], s[50:51], 0x10000
 ; GFX8-NEXT:    v_readlane_b32 s3, v62, 1
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s75
 ; GFX8-NEXT:    v_mov_b32_e32 v13, s73
@@ -10577,8 +10577,8 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s2
-; GFX8-NEXT:    v_readlane_b32 s2, v62, 4
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GFX8-NEXT:    v_readlane_b32 s2, v62, 4
 ; GFX8-NEXT:    v_readlane_b32 s3, v62, 5
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s30

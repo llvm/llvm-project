@@ -796,10 +796,4 @@ bool COFFAsmParser::parseAtUnwindOrAtExcept(bool &unwind, bool &except) {
   return false;
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createCOFFAsmParser() {
-  return new COFFAsmParser;
-}
-
-} // end namespace llvm
+MCAsmParserExtension *llvm::createCOFFAsmParser() { return new COFFAsmParser; }
