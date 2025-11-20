@@ -143,20 +143,19 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p2.s
 ; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    compact z0.s, p2, z0.s
-; CHECK-NEXT:    cntp x8, p1, p2.s
+; CHECK-NEXT:    compact z0.s, p1, z0.s
+; CHECK-NEXT:    cntp x8, p2, p1.s
 ; CHECK-NEXT:    compact z1.s, p0, z1.s
 ; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    mov w8, w8
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1w { z1.s }, p1, [x9, x8, lsl #2]
+; CHECK-NEXT:    st1w { z1.s }, p2, [x9, x8, lsl #2]
 ; CHECK-NEXT:    ldr z0, [sp]
 ; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #2
