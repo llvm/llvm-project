@@ -844,13 +844,11 @@ define i32 @test_ctlz_i512(i512 %a0) nounwind {
 ; AVX512-NEXT:    vmovq %rcx, %xmm2
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    vmovq %r8, %xmm1
-; AVX512-NEXT:    vmovq %r9, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = mem[2,3,0,1]
+; AVX512-NEXT:    vmovq %r8, %xmm2
+; AVX512-NEXT:    vmovq %r9, %xmm3
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vplzcntq %zmm0, %zmm1
 ; AVX512-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
@@ -2071,13 +2069,11 @@ define i32 @test_ctlz_undef_i512(i512 %a0) nounwind {
 ; AVX512-NEXT:    vmovq %rcx, %xmm2
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    vmovq %r8, %xmm1
-; AVX512-NEXT:    vmovq %r9, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = mem[2,3,0,1]
+; AVX512-NEXT:    vmovq %r8, %xmm2
+; AVX512-NEXT:    vmovq %r9, %xmm3
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512-NEXT:    vplzcntq %zmm0, %zmm0
