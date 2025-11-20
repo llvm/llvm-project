@@ -3926,20 +3926,8 @@ private:
         if (!isCharSelector)
           return mlir::arith::CmpIOp::create(*builder, loc, pred, selector,
                                              rhs);
-        fir::factory::CharacterExprHelper charHelper{*builder, loc};
-        std::pair<mlir::Value, mlir::Value> lhsVal =
-            charHelper.createUnboxChar(selector);
-        std::pair<mlir::Value, mlir::Value> rhsVal =
-            charHelper.createUnboxChar(rhs);
-        if (pred == mlir::arith::CmpIPredicate::eq) {
-          auto cmp = hlfir::CmpCharOp::create(*builder, loc, pred, lhsVal.first,
-                                              rhsVal.first);
-          return hlfir::EntityWithAttributes{cmp};
-        } else {
-          return fir::runtime::genCharCompare(*builder, loc, pred, lhsVal.first,
-                                              lhsVal.second, rhsVal.first,
-                                              rhsVal.second);
-        }
+        else
+          return hlfir::CmpCharOp::create(*builder, loc, pred, selector, rhs);
       };
       mlir::Block *newBlock = insertBlock(*caseBlock);
       if (mlir::isa<fir::ClosedIntervalAttr>(attr)) {
