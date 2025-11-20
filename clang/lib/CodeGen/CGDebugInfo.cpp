@@ -6161,27 +6161,9 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
-<<<<<<< HEAD
-        GVE = CollectAnonRecordDecls(RT->getDecl()->getDefinitionOrSelf(), Unit,
-                     LineNo, LinkageName, MS, Var, DContext);
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
-        GVE = CollectAnonRecordDecls(
-            RT->getOriginalDecl()->getDefinitionOrSelf(), Unit, LineNo,
-            LinkageName, MS, Var, DContext);
-||||||||| db8cad0c8d00
-        GVE =
-            CollectAnonRecordDecls(RT->getOriginalDecl()->getDefinitionOrSelf(),
-                                   Unit, LineNo, LinkageName, Var, DContext);
-=========
-        GVE = CollectAnonRecordDecls(RT->getDecl()->getDefinitionOrSelf(), Unit,
-                                     LineNo, LinkageName, Var, DContext);
->>>>>>>>> Temporary merge branch 2
-=======
         GVE = CollectAnonRecordDecls(
             RT->getDecl()->getDefinitionOrSelf(), Unit, LineNo,
             LinkageName, MS, Var, DContext);
->>>>>>> amd-debug
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.

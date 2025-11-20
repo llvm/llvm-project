@@ -1692,27 +1692,8 @@ unsigned SIInstrInfo::getVectorRegSpillSaveOpcode(
 
 void SIInstrInfo::storeRegToStackSlotImpl(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-<<<<<<< HEAD
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags, bool NeedsCFI) const {
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags, bool NeedsCFI) const {
-||||||||| db8cad0c8d00
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
-=========
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-    MachineInstr::MIFlag Flags) const {
->>>>>>>>> Temporary merge branch 2
-=======
     bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags, bool NeedsCFI) const {
->>>>>>> amd-debug
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
@@ -1768,23 +1749,9 @@ void SIInstrInfo::storeRegToStackSlotImpl(
 
 void SIInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-<<<<<<< HEAD
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    Register VReg,
-||||||| merged common ancestors
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-=======
     bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
->>>>>>> amd-debug
     MachineInstr::MIFlag Flags) const {
-<<<<<<< HEAD
-  storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, &TRI, VReg,
-||||||| merged common ancestors
-  storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, TRI, VReg,
-=======
   storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, VReg,
->>>>>>> amd-debug
                          Flags, false);
 }
 

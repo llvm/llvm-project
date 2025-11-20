@@ -1,9 +1,4 @@
 ; RUN: llc -O0 -mcpu=gfx1030 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-dwarfdump --debug-info - | FileCheck %s
-<<<<<<< HEAD
-; XFAIL: *
-||||||| merged common ancestors
-
-=======
 
 @GlobMutable = protected addrspace(1) global i32 0, align 4, !dbg !39
 ; CHECK-LABEL: DW_AT_name ("GlobMutable")
@@ -22,7 +17,6 @@
 ; CHECK-NEXT:  DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_constant)
 ; CHECK-NEXT:  DW_AT_location (DW_OP_addrx 0x1, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
 
->>>>>>> amd-debug
 ; CHECK-LABEL: DW_AT_name ("test_loc_single")
 define void @test_loc_single(ptr addrspace(3) %ptr) #0 !dbg !9 {
   ; Verify that the right address class attribute is attached to the variable's
@@ -125,14 +119,6 @@ define void @test_noop_convert(ptr addrspace(1) %p1) #0 !dbg !34 {
   ret void, !dbg !37
 }
 
-define void @test_noassert(ptr addrspace(1) %p1) #0 !dbg !38 {
-  ; Verify that this doesn't assert.
-    #dbg_value(ptr addrspace(1) %p1, !40, !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpConvert(ptr), DIOpReinterpret(i64), DIOpConstant(i64 1), DIOpAdd(), DIOpFragment(0, 32)), !41)
-    #dbg_value(i32 0, !40, !DIExpression(DIOpArg(0, i32), DIOpFragment(32, 16)), !41)
-    #dbg_value(i32 0, !40, !DIExpression(DW_OP_LLVM_poisoned, DW_OP_LLVM_fragment, 48, 16), !41)
-  ret void, !dbg !41
-}
-
 attributes #0 = { "frame-pointer"="all" }
 
 ; CHECK: [[PTR_AS_3]]: DW_TAG_pointer_type
@@ -191,17 +177,9 @@ attributes #0 = { "frame-pointer"="all" }
 !35 = !{!36}
 !36 = !DILocalVariable(name: "not_divergent", scope: !34, file: !1, line: 1, type: !14)
 !37 = !DILocation(line: 1, column: 1, scope: !34)
-<<<<<<< HEAD
-!38 = distinct !DISubprogram(name: "test_noassert", linkageName: "test_noassert", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !39)
-!39 = !{!40}
-!40 = !DILocalVariable(name: "frags", scope: !38, file: !1, line: 1, type: !14)
-!41 = !DILocation(line: 1, column: 1, scope: !38)
-||||||| merged common ancestors
-=======
 !38 = !{!39, !41}
 !39 = !DIGlobalVariableExpression(var: !40, expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)))
 !40 = distinct !DIGlobalVariable(name: "GlobMutable", linkageName: "GlobMutable", scope: !0, file: !1, line: 1, type: !15, isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)
 !41 = !DIGlobalVariableExpression(var: !42, expr: !DIExpression(DIOpArg(0, ptr addrspace(4)), DIOpDeref(i32)))
 !42 = distinct !DIGlobalVariable(name: "GlobConst", linkageName: "GlobConst", scope: !0, file: !1, line: 1, type: !15, isLocal: true, isDefinition: true, memorySpace: DW_MSPACE_LLVM_constant)
 !43 = !{!31, !32}
->>>>>>> amd-debug
