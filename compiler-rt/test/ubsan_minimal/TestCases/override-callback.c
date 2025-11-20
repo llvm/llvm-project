@@ -1,5 +1,5 @@
 // RUN: %clang_min_runtime -fsanitize=implicit-integer-sign-change                                        %s -o %t &&             %run %t 2>&1 | FileCheck %s
-// RUN: %clang_min_runtime -fsanitize=implicit-integer-sign-change -fsanitize-preserve-runtime            %s -o %t &&             %run %t 2>&1 | FileCheck %s --check-prefixes=PRESERVE
+// RUN: %clang_min_runtime -fsanitize=implicit-integer-sign-change -fsanitize-handler-preserve-all-regs-experimental            %s -o %t &&             %run %t 2>&1 | FileCheck %s --check-prefixes=PRESERVE
 // RUN: %clang_min_runtime -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=all              %s -o %t && not --crash %run %t 2>&1 | FileCheck %s
 // RUN: %clang_min_runtime -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=all -DOVERRIDE=1 %s -o %t && not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=FATAL
 

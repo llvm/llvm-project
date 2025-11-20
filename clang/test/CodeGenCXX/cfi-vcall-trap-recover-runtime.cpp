@@ -9,7 +9,7 @@
 
 // RUN: %clang_cc1 -fsanitize=cfi-vcall -fno-sanitize-trap=cfi-vcall -fsanitize-recover=cfi-vcall -fsanitize-minimal-runtime -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=RECOVER_MIN %s
 
-// RUN: %clang_cc1 -fsanitize=cfi-vcall -fno-sanitize-trap=cfi-vcall -fsanitize-recover=cfi-vcall -fsanitize-minimal-runtime -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -fsanitize-preserve-runtime -emit-llvm -o - %s | FileCheck --check-prefix=PRESERVE_MIN %s
+// RUN: %clang_cc1 -fsanitize=cfi-vcall -fno-sanitize-trap=cfi-vcall -fsanitize-recover=cfi-vcall -fsanitize-minimal-runtime -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -fsanitize-handler-preserve-all-regs-experimental -emit-llvm -o - %s | FileCheck --check-prefix=PRESERVE_MIN %s
 
 struct S1 {
   virtual void f();

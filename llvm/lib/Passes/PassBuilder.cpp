@@ -1590,31 +1590,31 @@ parseBoundsCheckingOptions(StringRef Params) {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/true,
-          /*PreserveRt=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/false,
-          /*PreserveRt=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/true,
-          /*PreserveRt=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
-    } else if (ParamName == "min-rt-preserve") {
+    } else if (ParamName == "min-rt-handler-preserve-all-regs") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/true,
-          /*PreserveRt=*/true,
+          /*HandlerPreserveAllRegs=*/true,
       };
     } else if (ParamName == "min-rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/false,
-          /*PreserveRt=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "merge") {
       Options.Merge = true;

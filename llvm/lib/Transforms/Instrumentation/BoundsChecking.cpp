@@ -179,7 +179,7 @@ getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
   }
   if (!Opts.MayReturn)
     Name += "_abort";
-  if (Opts.PreserveRt && Opts.MinRuntime)
+  if (Opts.HandlerPreserveAllRegs && Opts.MinRuntime)
     Name += "_preserve";
   return Name;
 }
