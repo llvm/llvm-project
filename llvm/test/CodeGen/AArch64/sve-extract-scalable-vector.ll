@@ -612,13 +612,6 @@ define <vscale x 14 x i8> @extract_nxv14i8_nxv28i8_14(<vscale x 28 x i8> %in) {
 ; CHECK-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z3.s
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z0.s
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 14 x i8> @llvm.vector.extract.nxv14i8.nxv28i8(<vscale x 28 x i8> %in, i64 14)

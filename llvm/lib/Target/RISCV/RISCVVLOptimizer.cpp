@@ -62,7 +62,7 @@ struct DemandedVL {
 };
 
 class RISCVVLOptimizer : public MachineFunctionPass {
-  const MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
   const TargetInstrInfo *TII;
 
@@ -1392,6 +1392,42 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
+/// Given a vslidedown.vx like:
+///
+/// %slideamt = ADDI %x, -1
+/// %v = PseudoVSLIDEDOWN_VX %passthru, %src, %slideamt, avl=1
+///
+/// %v will only read the first %slideamt + 1 lanes of %src, which = %x.
+/// This is a common case when lowering extractelement.
+///
+/// Note that if %x is 0, %slideamt will be all ones. In this case %src will be
+/// completely slid down and none of its lanes will be read (since %slideamt is
+/// greater than the largest VLMAX of 65536) so we can demand any minimum VL.
+static std::optional<DemandedVL>
+getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
+                             const MachineRegisterInfo *MRI) {
+  const MachineInstr &MI = *UserOp.getParent();
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VSLIDEDOWN_VX)
+    return std::nullopt;
+  // We're looking at what lanes are used from the src operand.
+  if (UserOp.getOperandNo() != 2)
+    return std::nullopt;
+  // For now, the AVL must be 1.
+  const MachineOperand &AVL = MI.getOperand(4);
+  if (!AVL.isImm() || AVL.getImm() != 1)
+    return std::nullopt;
+  // The slide amount must be %x - 1.
+  const MachineOperand &SlideAmt = MI.getOperand(3);
+  if (!SlideAmt.getReg().isVirtual())
+    return std::nullopt;
+  MachineInstr *SlideAmtDef = MRI->getUniqueVRegDef(SlideAmt.getReg());
+  if (SlideAmtDef->getOpcode() != RISCV::ADDI ||
+      SlideAmtDef->getOperand(2).getImm() != -AVL.getImm() ||
+      !SlideAmtDef->getOperand(1).getReg().isVirtual())
+    return std::nullopt;
+  return SlideAmtDef->getOperand(1);
+}
+
 DemandedVL
 RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MachineInstr &UserMI = *UserOp.getParent();
@@ -1405,6 +1441,9 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
                          " use VLMAX\n");
     return DemandedVL::vlmax();
   }
+
+  if (auto VL = getMinimumVLForVSLIDEDOWN_VX(UserOp, MRI))
+    return *VL;
 
   if (RISCVII::readsPastVL(
           TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
@@ -1622,6 +1661,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
 
   // All our checks passed. We can reduce VL.
   VLOp.ChangeToRegister(CommonVL.getReg(), false);
+  MRI->constrainRegClass(CommonVL.getReg(), &RISCV::GPRNoX0RegClass);
   return true;
 }
 

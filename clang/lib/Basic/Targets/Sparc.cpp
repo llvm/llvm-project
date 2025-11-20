@@ -19,6 +19,7 @@ using namespace clang;
 using namespace clang::targets;
 
 const char *const SparcTargetInfo::GCCRegNames[] = {
+    // clang-format off
     // Integer registers
     "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",  "r8",  "r9",  "r10",
     "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19", "r20", "r21",
@@ -30,6 +31,10 @@ const char *const SparcTargetInfo::GCCRegNames[] = {
     "f22", "f23", "f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31", "f32",
     "f34", "f36", "f38", "f40", "f42", "f44", "f46", "f48", "f50", "f52", "f54",
     "f56", "f58", "f60", "f62",
+
+    // Condition code registers
+    "icc", "fcc0", "fcc1", "fcc2", "fcc3",
+    // clang-format on
 };
 
 ArrayRef<const char *> SparcTargetInfo::getGCCRegNames() const {
