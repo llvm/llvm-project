@@ -16593,6 +16593,37 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Vec.getVectorElt(Idx).getInt(), E);
   }
 
+  case clang::X86::BI__builtin_ia32_cvtb2mask128:
+  case clang::X86::BI__builtin_ia32_cvtb2mask256:
+  case clang::X86::BI__builtin_ia32_cvtb2mask512:
+  case clang::X86::BI__builtin_ia32_cvtw2mask128:
+  case clang::X86::BI__builtin_ia32_cvtw2mask256:
+  case clang::X86::BI__builtin_ia32_cvtw2mask512:
+  case clang::X86::BI__builtin_ia32_cvtd2mask128:
+  case clang::X86::BI__builtin_ia32_cvtd2mask256:
+  case clang::X86::BI__builtin_ia32_cvtd2mask512:
+  case clang::X86::BI__builtin_ia32_cvtq2mask128:
+  case clang::X86::BI__builtin_ia32_cvtq2mask256:
+  case clang::X86::BI__builtin_ia32_cvtq2mask512: {
+    assert(E->getNumArgs() == 1);
+    APValue Vec;
+    if (!EvaluateVector(E->getArg(0), Vec, Info))
+      return false;
+
+    unsigned VectorLen = Vec.getVectorLength();
+    unsigned RetWidth = Info.Ctx.getIntWidth(E->getType());
+    llvm::APInt Bits(RetWidth, 0);
+
+    for (unsigned ElemNum = 0; ElemNum != VectorLen; ++ElemNum) {
+      const APSInt &A = Vec.getVectorElt(ElemNum).getInt();
+      unsigned MSB = A[A.getBitWidth() - 1];
+      Bits.setBitVal(ElemNum, MSB);
+    }
+
+    APSInt RetMask(Bits, /*isUnsigned=*/true);
+    return Success(APValue(RetMask), E);
+  }
+
   case clang::X86::BI__builtin_ia32_cmpb128_mask:
   case clang::X86::BI__builtin_ia32_cmpw128_mask:
   case clang::X86::BI__builtin_ia32_cmpd128_mask:
