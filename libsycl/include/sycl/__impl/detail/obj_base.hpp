@@ -39,7 +39,9 @@ protected:
   explicit ObjBase(const ImplType &pImpl) : impl(pImpl) {}
   ObjBase() = default;
 
-  static SyclObject createSyclProxy(const ImplType &impl) { return SyclObject(impl); }
+  static SyclObject createSyclProxy(const ImplType &impl) {
+    return SyclObject(impl);
+  }
 
   template <class Obj>
   friend const typename Obj::ImplType &getSyclObjImpl(const Obj &Object);

@@ -16,15 +16,17 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-platform_impl& platform_impl::getPlatformImpl(ol_platform_handle_t Platform) {
+platform_impl &platform_impl::getPlatformImpl(ol_platform_handle_t Platform) {
   auto &PlatformCache = getPlatformCache();
   for (auto &PlatImpl : PlatformCache) {
     if (PlatImpl.getHandleRef() == Platform)
       return PlatImpl;
   }
 
-  throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
-                              "Platform for requested handle can't be created. This handle is not in the list of platforms discovered by liboffload");
+  throw sycl::exception(
+      sycl::make_error_code(sycl::errc::runtime),
+      "Platform for requested handle can't be created. This handle is not in "
+      "the list of platforms discovered by liboffload");
 }
 
 range_view<platform_impl> platform_impl::getPlatforms() {
@@ -34,7 +36,8 @@ range_view<platform_impl> platform_impl::getPlatforms() {
     for (const auto &Topo : getOffloadTopologies()) {
       size_t PlatformIndex = 0;
       for (const auto &OffloadPlatform : Topo.platforms()) {
-        PlatformCache.emplace_back(platform_impl(OffloadPlatform, PlatformIndex++));
+        PlatformCache.emplace_back(
+            platform_impl(OffloadPlatform, PlatformIndex++));
       }
     }
     return true;

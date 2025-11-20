@@ -70,7 +70,7 @@ public:
   /// \param PlatformIndex is a platform index in a backend (needed for a proper
   /// indexing in device selector).
   /// \return the platform_impl representing the offloading RT platform
-  static platform_impl& getPlatformImpl(ol_platform_handle_t Platform);
+  static platform_impl &getPlatformImpl(ol_platform_handle_t Platform);
 
   /// Queries this SYCL platform for info.
   ///
