@@ -1115,6 +1115,8 @@
         public :: omp_is_initial_device
         public :: omp_get_initial_device
         public :: omp_get_device_num
+        public :: omp_get_uid_from_device
+        public :: omp_get_device_from_uid
         public :: omp_pause_resource
         public :: omp_pause_resource_all
         public :: omp_get_supported_active_levels
