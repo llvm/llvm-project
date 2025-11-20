@@ -1316,8 +1316,8 @@ struct WgToSgVectorConstantMaskOp
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType resultType = VectorType::get(sgShape, type.getElementType());
 
-    // Each subgroup computes its local mask size as: min(max(wgMaskSize -
-    // offset, 0), sgDimSize)
+    // In each dimension, each subgroup computes its local mask size as:
+    // min(max(wgMaskSize[d] - offset[d], 0), sgDimSize[d])
     SmallVector<Value> newCreateMaskOps;
     for (auto offsetSet : *sgOffsets) {
       SmallVector<Value> maskOperands;
