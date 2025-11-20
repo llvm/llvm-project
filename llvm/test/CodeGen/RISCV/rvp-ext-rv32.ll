@@ -496,6 +496,33 @@ define void @test_extract_vector_8(ptr %ret_ptr, ptr %a_ptr) {
   ret void
 }
 
+; Test for splat
+define void @test_non_const_splat_i8(ptr %ret_ptr, ptr %a_ptr, i8 %elt) {
+; CHECK-LABEL: test_non_const_splat_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.bs a1, zero, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %insert = insertelement <4 x i8> poison, i8 %elt, i32 0
+  %splat = shufflevector <4 x i8> %insert, <4 x i8> poison, <4 x i32> zeroinitializer
+  store <4 x i8> %splat, ptr %ret_ptr
+  ret void
+}
+
+define void @test_non_const_splat_i16(ptr %ret_ptr, ptr %a_ptr, i16 %elt) {
+; CHECK-LABEL: test_non_const_splat_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.hs a1, zero, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %insert = insertelement <2 x i16> poison, i16 %elt, i32 0
+  %splat = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer
+  store <2 x i16> %splat, ptr %ret_ptr
+  ret void
+}
+
 ; Intrinsic declarations
 declare <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16>, <2 x i16>)
 declare <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16>, <2 x i16>)

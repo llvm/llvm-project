@@ -247,7 +247,7 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    fcvt s18, h18
 ; NONEON-NOSVE-NEXT:    ldr h13, [sp, #90]
 ; NONEON-NOSVE-NEXT:    ldr h14, [sp, #74]
-; NONEON-NOSVE-NEXT:    str h0, [sp, #14] // 2-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str h0, [sp, #14] // 2-byte Spill
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldr h11, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldr h12, [sp, #72]
@@ -301,7 +301,7 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt h4, s4
 ; NONEON-NOSVE-NEXT:    fmul s2, s3, s2
-; NONEON-NOSVE-NEXT:    ldr h3, [sp, #14] // 2-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr h3, [sp, #14] // 2-byte Reload
 ; NONEON-NOSVE-NEXT:    fcvt s16, h16
 ; NONEON-NOSVE-NEXT:    fcvt s6, h6
 ; NONEON-NOSVE-NEXT:    fcvt s3, h3

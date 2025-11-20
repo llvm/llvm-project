@@ -469,7 +469,8 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
           }
 
           ModuleSP module_sp = LoadModuleAtAddress(
-              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
+              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr,
+              /*base_addr_is_offset=*/true);
           if (!module_sp.get())
             return;
 
@@ -726,9 +727,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       task_group.async(load_module_fn, *I);
     task_group.wait();
   } else {
-    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
       load_module_fn(*I);
-    }
   }
 
   m_process->GetTarget().ModulesDidLoad(module_list);

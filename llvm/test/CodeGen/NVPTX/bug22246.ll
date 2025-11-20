@@ -9,20 +9,19 @@ define void @_Z3foobbbPb(i1 zeroext %p1, i1 zeroext %p2, i1 zeroext %p3, ptr noc
 ; CHECK-LABEL: _Z3foobbbPb(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b8 %rs1, [_Z3foobbbPb_param_0];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    mov.b64 %rd1, _Z3foobbbPb_param_2;
-; CHECK-NEXT:    mov.b64 %rd2, _Z3foobbbPb_param_1;
-; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
-; CHECK-NEXT:    ld.param.b8 %rs3, [%rd3];
-; CHECK-NEXT:    and.b16 %rs4, %rs3, 1;
-; CHECK-NEXT:    ld.param.b64 %rd4, [_Z3foobbbPb_param_3];
-; CHECK-NEXT:    st.b8 [%rd4], %rs4;
+; CHECK-NEXT:    ld.param.b8 %rs3, [_Z3foobbbPb_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs4, [_Z3foobbbPb_param_2];
+; CHECK-NEXT:    selp.b16 %rs5, %rs3, %rs4, %p1;
+; CHECK-NEXT:    and.b16 %rs6, %rs5, 1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [_Z3foobbbPb_param_3];
+; CHECK-NEXT:    st.b8 [%rd1], %rs6;
 ; CHECK-NEXT:    ret;
 entry:
   %.sink.v = select i1 %p1, i1 %p2, i1 %p3
