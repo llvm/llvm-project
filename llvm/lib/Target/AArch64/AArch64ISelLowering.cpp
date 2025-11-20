@@ -18508,16 +18508,10 @@ bool AArch64TargetLowering::findOptimalMemOpLowering(
     const AttributeList &FuncAttributes) const {
   if (!Op.isMemset() && !Op.allowOverlap()) {
     uint64_t Size = Op.size();
-    bool HandledSize = (Size >= 5 && Size <= 7) ||
-                       (Size == 9) ||
-                       (Size >= 11 && Size <= 15) ||
-                       (Size >= 17 && Size <= 23) ||
-                       (Size >= 25 && Size <= 31) ||
-                       (Size >= 33 && Size <= 47) ||
-                       (Size >= 49 && Size <= 63) ||
-                       (Size == 65);
-
-    if (HandledSize) {
+    // Only handle non-power-of-two sizes > 4 and <= 65, excluding size 10
+    // which doesn't show improvement. Check if size is non-power-of-two:
+    // (Size & (Size - 1)) != 0
+    if (Size > 4 && Size <= 65 && Size != 10 && (Size & (Size - 1)) != 0) {
       auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
         if (Op.isAligned(AlignCheck))
           return true;
