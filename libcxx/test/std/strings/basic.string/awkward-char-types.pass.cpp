@@ -5,7 +5,7 @@
 
 #include "test_macros.h"
 
-template<typename Char>
+template <typename Char>
 void test_string() {
   // Make a test string.
   std::basic_string<Char> s;
@@ -26,7 +26,7 @@ void test_string() {
   }
 }
 
-template<typename Integer, size_t N>
+template <typename Integer, size_t N>
 struct TestChar {
   Integer values[N];
 
@@ -37,15 +37,11 @@ struct TestChar {
     return ch;
   }
 
-  bool operator==(const TestChar &other) const {
-    return 0 == memcmp(values, other.values, sizeof(values));
-  }
-  bool operator<(const TestChar &other) const {
-    return 0 < memcmp(values, other.values, sizeof(values));
-  }
+  bool operator==(const TestChar& other) const { return 0 == memcmp(values, other.values, sizeof(values)); }
+  bool operator<(const TestChar& other) const { return 0 < memcmp(values, other.values, sizeof(values)); }
 };
 
-template<typename Integer, size_t N>
+template <typename Integer, size_t N>
 struct std::char_traits<TestChar<Integer, N>> {
   using char_type  = TestChar<Integer, N>;
   using int_type   = int;
