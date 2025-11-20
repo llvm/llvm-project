@@ -34,19 +34,19 @@ public:
   using Base = ObjBase<Impl &, SyclObject>;
 
 protected:
-  ImplType &impl;
+  const ImplType &impl;
 
-  explicit ObjBase(ImplType &pImpl) : impl(pImpl) {}
+  explicit ObjBase(const ImplType &pImpl) : impl(pImpl) {}
   ObjBase() = default;
 
-  static SyclObject createSyclProxy(ImplType &impl) { return SyclObject(impl); }
+  static SyclObject createSyclProxy(const ImplType &impl) { return SyclObject(impl); }
 
   template <class Obj>
   friend const typename Obj::ImplType &getSyclObjImpl(const Obj &Object);
 
   template <class Obj>
   friend Obj createSyclObjFromImpl(
-      std::add_lvalue_reference_t<typename Obj::ImplType> ImplObj);
+      std::add_lvalue_reference_t<const typename Obj::ImplType> ImplObj);
 };
 
 template <class Obj>
@@ -56,7 +56,7 @@ const typename Obj::ImplType &getSyclObjImpl(const Obj &Object) {
 
 template <class Obj>
 Obj createSyclObjFromImpl(
-    std::add_lvalue_reference_t<typename Obj::ImplType> ImplObj) {
+    std::add_lvalue_reference_t<const typename Obj::ImplType> ImplObj) {
   return Obj::Base::createSyclProxy(ImplObj);
 }
 

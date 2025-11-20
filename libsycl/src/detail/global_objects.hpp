@@ -24,7 +24,7 @@ class platform_impl;
 // Offload topologies (one per backend) discovered from liboffload.
 std::vector<detail::OffloadTopology> &getOffloadTopologies();
 
-std::vector<std::unique_ptr<platform_impl>> &getPlatformCache();
+std::vector<platform_impl> &getPlatformCache();
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

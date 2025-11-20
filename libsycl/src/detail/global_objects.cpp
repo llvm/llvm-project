@@ -24,8 +24,8 @@ std::vector<detail::OffloadTopology> &getOffloadTopologies() {
   return Topologies;
 }
 
-std::vector<std::unique_ptr<platform_impl>> &getPlatformCache() {
-  static std::vector<std::unique_ptr<platform_impl>> PlatformCache{};
+std::vector<platform_impl> &getPlatformCache() {
+  static std::vector<platform_impl> PlatformCache{};
   return PlatformCache;
 }
 
