@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -40,10 +41,11 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
     case InstructionUniformity::AlwaysUniform:
       addUniformOverride(I);
       break;
-    case InstructionUniformity::Default:
-      break;
-    default:
+    case InstructionUniformity::Custom:
+      // Instructions requiring custom uniformity analysis based on operands
       addUniformInstruction(&I, IU);
+      break;
+    case InstructionUniformity::Default:
       break;
     }
   }
@@ -114,18 +116,16 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
 }
 
 template <>
-bool GenericUniformityAnalysisImpl<SSAContext>::isOperandUniform(
-    const Instruction &I, InstructionUniformity IU) const {
-  switch (IU) {
-  case InstructionUniformity::AnyOfFirstTwoUseOp:
-    // For permlane16/permlanex16: <old> <src0> <src1> <src2> <fi>
-    // <bound_control> Check if either src0 (operand 1) or src1 (operand 2 -
-    // lane select) is uniform
-    return !isDivergentUse(I.getOperandUse(1)) ||
-           !isDivergentUse(I.getOperandUse(2));
-  default:
-    return false;
+bool GenericUniformityAnalysisImpl<SSAContext>::isCustomUniform(
+    const Instruction &I) const {
+  // Build bitvector of uniform operands
+  SmallBitVector UniformArgs(I.getNumOperands());
+  for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
+    UniformArgs[OpIdx] = !isDivergentUse(I.getOperandUse(OpIdx));
   }
+
+  // Query target-specific uniformity callback
+  return TTI->isUniform(&I, UniformArgs);
 }
 
 // This ensures explicit instantiation of

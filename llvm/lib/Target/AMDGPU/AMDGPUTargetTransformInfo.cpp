@@ -18,6 +18,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1579,14 +1580,12 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
 // with additional support for new uniformity classifications
 InstructionUniformity
 GCNTTIImpl::getInstructionUniformity(const Value *V) const {
-  // Check for new special cases first (permlane16/permlanex16)
-  // These need operand-dependent uniformity analysis
+  // Check for special cases requiring custom uniformity analysis
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
     switch (Intrinsic->getIntrinsicID()) {
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16:
-      // Result value can be uniform if either of first two operands are uniform
-      return InstructionUniformity::AnyOfFirstTwoUseOp;
+      return InstructionUniformity::Custom;
     default:
       break;
     }
@@ -1602,4 +1601,29 @@ GCNTTIImpl::getInstructionUniformity(const Value *V) const {
 
   // Default behavior
   return InstructionUniformity::Default;
+}
+
+bool GCNTTIImpl::isUniform(const Instruction *I,
+                           const SmallBitVector &UniformArgs) const {
+  // Custom uniformity check for permlane16/permlanex16
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(I)) {
+    switch (Intrinsic->getIntrinsicID()) {
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16:
+      // For permlane16/permlanex16:
+      // Operand 0: old value (ignored for uniformity)
+      // Operand 1: src0 (source value to permute)
+      // Operand 2: src1 (lane select within 16-lane group)
+      // Operand 3: src2 (which 16-lane group)
+      // Result is uniform if either src0 (op 1) or src1 (op 2) is uniform
+      if (UniformArgs.size() > 2) {
+        return UniformArgs[1] || UniformArgs[2];
+      }
+      return false;
+    default:
+      break;
+    }
+  }
+
+  return false;
 }

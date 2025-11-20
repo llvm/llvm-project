@@ -1640,6 +1640,9 @@ public:
   InstructionUniformity
   getInstructionUniformity(const MachineInstr &MI) const final;
 
+  bool isUniform(const MachineInstr &MI,
+                 const SmallBitVector &UniformArgs) const final;
+
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;
 

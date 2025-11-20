@@ -408,9 +408,11 @@ public:
   void recordTemporalDivergence(ConstValueRefT, const InstructionT *,
                                 const CycleT *);
 
-  bool isOperandUniform(const InstructionT &I, InstructionUniformity IU) const;
+  /// Check if an instruction with Custom uniformity can be proven uniform
+  /// based on its operands. This queries the target-specific callback.
+  bool isCustomUniform(const InstructionT &I) const;
 
-  /// \brief keep track of target instruction that can be proven uniform.
+  /// \brief keep track of instructions that require custom uniformity analysis.
   void addUniformInstruction(const InstructionT *I, InstructionUniformity IU);
 
 protected:
@@ -795,10 +797,13 @@ void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
   if (isAlwaysUniform(I))
     return;
+  // Check if instruction requires custom uniformity analysis
   auto It = UniformInstruction.find(&I);
-  if (It != UniformInstruction.end() && isOperandUniform(I, It->second)) {
-    addUniformOverride(I);
-    return;
+  if (It != UniformInstruction.end()) {
+    if (It->second == InstructionUniformity::Custom && isCustomUniform(I)) {
+      addUniformOverride(I);
+      return;
+    }
   }
   bool Marked = false;
   if (I.isTerminator()) {
