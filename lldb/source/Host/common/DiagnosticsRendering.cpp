@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include <cstdint>
 
 using namespace lldb_private;

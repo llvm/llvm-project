@@ -9,8 +9,8 @@
 #ifndef LLDB_VALUEOBJECT_DILPARSER_H
 #define LLDB_VALUEOBJECT_DILPARSER_H
 
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILLexer.h"
