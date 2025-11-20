@@ -1,0 +1,6 @@
+# REQUIRES: amdgpu-registered-target
+## Check that update_mir_test_checks handles inlined functions correctly
+## even when the RUN line that inlines comes before the one that doesn't
+
+# RUN: cp -f %S/Inputs/inlined-function-swapped.mir %t.mir && %update_mir_test_checks %t.mir
+# RUN: diff -u %S/Inputs/inlined-function-swapped.mir.expected %t.mir
