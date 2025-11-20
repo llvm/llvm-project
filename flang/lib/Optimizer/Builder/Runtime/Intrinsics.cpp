@@ -477,3 +477,23 @@ void fir::runtime::genShowDescriptor(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(ShowDescriptor)>(loc, builder)};
   fir::CallOp::create(builder, loc, func, descAddr);
 }
+
+mlir::Value fir::runtime::genIrand(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value i) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Irand)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, i);
+  return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
+}
+
+mlir::Value fir::runtime::genRand(fir::FirOpBuilder &builder,
+                                  mlir::Location loc, mlir::Value i) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Rand)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, i);
+  return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
+}

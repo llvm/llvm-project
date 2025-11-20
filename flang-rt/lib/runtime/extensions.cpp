@@ -12,6 +12,7 @@
 #include "flang/Runtime/extensions.h"
 #include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang/Runtime/command.h"
@@ -23,6 +24,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <limits>
 #include <signal.h>
 #include <stdlib.h>
 #include <thread>
@@ -59,6 +61,12 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 #endif
 
 namespace Fortran::runtime {
+
+#define GFC_RAND_A 16807
+#define GFC_RAND_M 2147483647
+#define GFC_RAND_M1 (GFC_RAND_M - 1)
+static unsigned rand_seed = 1;
+static Lock rand_seed_lock;
 
 // Common implementation that could be used for either SECNDS() or DSECNDS(),
 // which are defined for float or double.
@@ -417,28 +425,54 @@ void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
   }
 }
 
+static void _internal_srand(int seed) { rand_seed = seed ? seed : 123459876; }
+
 // IRAND(I)
-int FORTRAN_PROCEDURE_NAME(irand)(int i) {
-  switch (i) {
+int RTNAME(Irand)(int *i) {
+  int j;
+  if (i)
+    j = *i;
+  else
+    j = 0;
+
+  rand_seed_lock.Take();
+  switch (j) {
   case 0:
     break;
   case 1:
-    FORTRAN_PROCEDURE_NAME(srand)(0);
+    _internal_srand(0);
     break;
   default:
-    FORTRAN_PROCEDURE_NAME(srand)(i);
+    _internal_srand(j);
     break;
   }
-  return rand();
+
+  rand_seed = GFC_RAND_A * rand_seed % GFC_RAND_M;
+  j = (int)rand_seed;
+  rand_seed_lock.Drop();
+  return j;
 }
 
 // RAND(I)
-float FORTRAN_PROCEDURE_NAME(rand)(int i) {
-  return (float)(FORTRAN_PROCEDURE_NAME(irand)(i));
+float RTNAME(Rand)(int *i) {
+  unsigned mask;
+  auto radix = std::numeric_limits<float>::radix;
+  auto digits = std::numeric_limits<float>::digits;
+  if (radix == 2)
+    mask = ~(unsigned)0u << (32 - digits + 1);
+  else if (radix == 16)
+    mask = ~(unsigned)0u << ((8 - digits) * 4 + 1);
+  else
+    std::fprintf(stderr, "Radix unknown value");
+  return ((unsigned)(RTNAME(Irand)(i) - 1) & mask) * (float)0x1.p-31f;
 }
 
 // SRAND(SEED)
-void FORTRAN_PROCEDURE_NAME(srand)(int seed) { srand(seed); }
+void FORTRAN_PROCEDURE_NAME(srand)(int *seed) {
+  rand_seed_lock.Take();
+  _internal_srand(*seed);
+  rand_seed_lock.Drop();
+}
 
 // Extension procedures related to I/O
 

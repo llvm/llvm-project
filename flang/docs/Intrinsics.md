@@ -1486,7 +1486,7 @@ The return value is of `INTEGER` type of kind 4.
 ### Non-Standard Intrinsics: RAND
 
 #### Description
-`RAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and a system-dependent limit.
+`RAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and 1.
 If `FLAG` is 0, the next number in the current sequence is returned;
 If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
 If `FLAG` has any other value, it is used as a new seed with `SRAND`.
