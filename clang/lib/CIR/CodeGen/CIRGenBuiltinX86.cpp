@@ -95,7 +95,7 @@ static mlir::Value emitKunpckOp(CIRGenBuilderTy &builder, mlir::Value op0,
   unsigned numElems = maskIntType.getWidth();
   mlir::Value lhs = convertKunpckMaskToVector(builder, op0, numElems);
   mlir::Value rhs = convertKunpckMaskToVector(builder, op1, numElems);
-  
+
   // Build shuffle indices as attributes to avoid redundant conversion.
   llvm::SmallVector<mlir::Attribute, 64> indices;
   mlir::Type i32Ty = builder.getSInt32Ty();
