@@ -10,8 +10,9 @@ body: |
     ; CHECK-LABEL: name: commute_tied_subreg_def_part
     ; CHECK: %A:gr64_with_sub_8bit = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (volatile load (s64))
     ; CHECK-NEXT: %B:gr64_with_sub_8bit = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64))
-    ; CHECK-NEXT: %B.sub_32bit:gr64_with_sub_8bit = AND32rr %B.sub_32bit, %A.sub_32bit, implicit-def dead $eflags
-    ; CHECK-NEXT: MOV64mr $noreg, 1, $noreg, 0, $noreg, %B :: (store (s64))
+    ; CHECK-NEXT: %A.sub_32bit:gr64_with_sub_8bit = AND32rr %A.sub_32bit, %B.sub_32bit, implicit-def dead $eflags
+    ; CHECK-NEXT: MOV64mr $noreg, 1, $noreg, 0, $noreg, %A :: (store (s64))
+    ; CHECK-NEXT: %B:gr64_with_sub_8bit = COPY %A
     ; CHECK-NEXT: RET 0, implicit %B
     %A:gr64_with_sub_8bit = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (volatile load (s64))
     %B:gr64_with_sub_8bit = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64))
