@@ -5897,13 +5897,13 @@ _mm_cvttss_u64 (__m128 __A)
                                        (__v16sf)_mm512_permute_ps((X), (C)), \
                                        (__v16sf)_mm512_setzero_ps()))
 
-static __inline__ __m512d __DEFAULT_FN_ATTRS512
+static __inline__ __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutevar_pd(__m512d __A, __m512i __C)
 {
   return (__m512d)__builtin_ia32_vpermilvarpd512((__v8df)__A, (__v8di)__C);
 }
 
-static __inline__ __m512d __DEFAULT_FN_ATTRS512
+static __inline__ __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_permutevar_pd(__m512d __W, __mmask8 __U, __m512d __A, __m512i __C)
 {
   return (__m512d)__builtin_ia32_selectpd_512((__mmask8)__U,
@@ -5911,7 +5911,7 @@ _mm512_mask_permutevar_pd(__m512d __W, __mmask8 __U, __m512d __A, __m512i __C)
                                          (__v8df)__W);
 }
 
-static __inline__ __m512d __DEFAULT_FN_ATTRS512
+static __inline__ __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_maskz_permutevar_pd(__mmask8 __U, __m512d __A, __m512i __C)
 {
   return (__m512d)__builtin_ia32_selectpd_512((__mmask8)__U,
@@ -5919,13 +5919,13 @@ _mm512_maskz_permutevar_pd(__mmask8 __U, __m512d __A, __m512i __C)
                                          (__v8df)_mm512_setzero_pd());
 }
 
-static __inline__ __m512 __DEFAULT_FN_ATTRS512
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutevar_ps(__m512 __A, __m512i __C)
 {
   return (__m512)__builtin_ia32_vpermilvarps512((__v16sf)__A, (__v16si)__C);
 }
 
-static __inline__ __m512 __DEFAULT_FN_ATTRS512
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_permutevar_ps(__m512 __W, __mmask16 __U, __m512 __A, __m512i __C)
 {
   return (__m512)__builtin_ia32_selectps_512((__mmask16)__U,
@@ -5933,7 +5933,7 @@ _mm512_mask_permutevar_ps(__m512 __W, __mmask16 __U, __m512 __A, __m512i __C)
                                         (__v16sf)__W);
 }
 
-static __inline__ __m512 __DEFAULT_FN_ATTRS512
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_maskz_permutevar_ps(__mmask16 __U, __m512 __A, __m512i __C)
 {
   return (__m512)__builtin_ia32_selectps_512((__mmask16)__U,
