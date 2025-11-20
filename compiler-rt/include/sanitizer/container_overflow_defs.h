@@ -66,18 +66,18 @@ extern "C" {
 /// \note  Unaligned <c><i>beg</i></c> or <c><i>end</i></c> may miss bugs in
 /// these granules.
 ///
-/// \param beg Beginning of memory region.
-/// \param end End of memory region.
-/// \param old_mid Old middle of memory region.
-/// \param new_mid New middle of memory region.
+/// \param __beg Beginning of memory region.
+/// \param __end End of memory region.
+/// \param __old_mid Old middle of memory region.
+/// \param __new_mid New middle of memory region.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 __attribute__((__internal_linkage__)) inline void SANITIZER_CDECL
-__sanitizer_annotate_contiguous_container(const void *beg, const void *end,
-                                          const void *old_mid,
-                                          const void *new_mid) {}
+__sanitizer_annotate_contiguous_container(const void *__beg, const void *__end,
+                                          const void *__old_mid,
+                                          const void *__new_mid) {}
 #else
 void SANITIZER_CDECL __sanitizer_annotate_contiguous_container(
-    const void *beg, const void *end, const void *old_mid, const void *new_mid);
+    const void *__beg, const void *__end, const void *__old_mid, const void *__new_mid);
 #endif
 
 /// Similar to <c>__sanitizer_annotate_contiguous_container</c>.
@@ -103,23 +103,23 @@ void SANITIZER_CDECL __sanitizer_annotate_contiguous_container(
 /// - old_container_beg_p == old_container_end_p
 /// During poisoning after last element was removed:
 /// - new_container_beg_p == new_container_end_p
-/// \param storage_beg Beginning of memory region.
-/// \param storage_end End of memory region.
-/// \param old_container_beg Old beginning of used region.
-/// \param old_container_end End of used region.
-/// \param new_container_beg New beginning of used region.
-/// \param new_container_end New end of used region.
+/// \param __storage_beg Beginning of memory region.
+/// \param __storage_end End of memory region.
+/// \param __old_container_beg Old beginning of used region.
+/// \param __old_container_end End of used region.
+/// \param __new_container_beg New beginning of used region.
+/// \param __new_container_end New end of used region.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 __attribute__((__internal_linkage__)) inline void
     SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
-        const void *storage_beg, const void *storage_end,
-        const void *old_container_beg, const void *old_container_end,
-        const void *new_container_beg, const void *new_container_end) {}
+        const void *__storage_beg, const void *__storage_end,
+        const void *__old_container_beg, const void *__old_container_end,
+        const void *__new_container_beg, const void *__new_container_end) {}
 #else
 void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
-    const void *storage_beg, const void *storage_end,
-    const void *old_container_beg, const void *old_container_end,
-    const void *new_container_beg, const void *new_container_end);
+    const void *__storage_beg, const void *__storage_end,
+    const void *__old_container_beg, const void *__old_container_end,
+    const void *__new_container_beg, const void *__new_container_end);
 #endif
 
 /// Copies memory annotations from a source storage region to a destination
@@ -151,20 +151,20 @@ void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
 /// source region. Addresses may be granule-unaligned, but this may affect
 /// performance.
 ///
-/// \param src_begin Begin of the source container region.
-/// \param src_end End of the source container region.
-/// \param dst_begin Begin of the destination container region.
-/// \param dst_end End of the destination container region.
+/// \param __src_begin Begin of the source container region.
+/// \param __src_end End of the source container region.
+/// \param __dst_begin Begin of the destination container region.
+/// \param __dst_end End of the destination container region.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 __attribute__((__internal_linkage__)) inline void SANITIZER_CDECL
-__sanitizer_copy_contiguous_container_annotations(const void *src_begin,
-                                                  const void *src_end,
-                                                  const void *dst_begin,
-                                                  const void *dst_end) {}
+__sanitizer_copy_contiguous_container_annotations(const void *__src_begin,
+                                                  const void *__src_end,
+                                                  const void *__dst_begin,
+                                                  const void *__dst_end) {}
 #else
 void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
-    const void *src_begin, const void *src_end, const void *dst_begin,
-    const void *dst_end);
+    const void *__src_begin, const void *__src_end, const void *__dst_begin,
+    const void *__dst_end);
 #endif
 
 /// Returns true if the contiguous container <c>[beg, end)</c> is properly
@@ -177,21 +177,21 @@ void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
 /// to avoid such complexity by touching only parts of the container around
 /// <c><i>beg</i></c>, <c><i>mid</i></c>, and <c><i>end</i></c>.
 ///
-/// \param beg Beginning of memory region.
-/// \param mid Middle of memory region.
-/// \param end Old end of memory region.
+/// \param __beg Beginning of memory region.
+/// \param __mid Middle of memory region.
+/// \param __end Old end of memory region.
 ///
 /// \returns True if the contiguous container <c>[beg, end)</c> is properly
 ///  poisoned.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 __attribute__((__internal_linkage__)) inline int
-    SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
-                                                            const void *mid,
-                                                            const void *end) {}
+    SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *__beg,
+                                                            const void *__mid,
+                                                            const void *__end) {}
 #else
-int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
-                                                            const void *mid,
-                                                            const void *end);
+int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *__beg,
+                                                            const void *__mid,
+                                                            const void *__end);
 #endif
 
 /// Returns true if the double ended contiguous
@@ -207,24 +207,24 @@ int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
 /// <c><i>container_beg</i></c>, <c><i>container_end</i></c>, and
 /// <c><i>storage_end</i></c>.
 ///
-/// \param storage_beg Beginning of memory region.
-/// \param container_beg Beginning of used region.
-/// \param container_end End of used region.
-/// \param storage_end End of memory region.
+/// \param __storage_beg Beginning of memory region.
+/// \param __container_beg Beginning of used region.
+/// \param __container_end End of used region.
+/// \param __storage_end End of memory region.
 ///
 /// \returns True if the double-ended contiguous container <c>[storage_beg,
 /// container_beg, container_end, end)</c> is properly poisoned - only
 /// [container_beg; container_end) is addressable.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 __attribute__((__internal_linkage__)) inline int SANITIZER_CDECL
-__sanitizer_verify_double_ended_contiguous_container(const void *storage_beg,
-                                                     const void *container_beg,
-                                                     const void *container_end,
-                                                     const void *storage_end) {}
+__sanitizer_verify_double_ended_contiguous_container(const void *__storage_beg,
+                                                     const void *__container_beg,
+                                                     const void *__container_end,
+                                                     const void *__storage_end) {}
 #else
 int SANITIZER_CDECL __sanitizer_verify_double_ended_contiguous_container(
-    const void *storage_beg, const void *container_beg,
-    const void *container_end, const void *storage_end);
+    const void *__storage_beg, const void *__container_beg,
+    const void *__container_end, const void *__storage_end);
 #endif
 
 /// Similar to <c>__sanitizer_verify_contiguous_container()</c> but also
@@ -232,41 +232,41 @@ int SANITIZER_CDECL __sanitizer_verify_double_ended_contiguous_container(
 ///
 /// Returns NULL if the area is poisoned properly.
 ///
-/// \param beg Beginning of memory region.
-/// \param mid Middle of memory region.
-/// \param end Old end of memory region.
+/// \param __beg Beginning of memory region.
+/// \param __mid Middle of memory region.
+/// \param __end Old end of memory region.
 ///
 /// \returns The bad address or NULL.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 __attribute__((__internal_linkage__)) inline const void *SANITIZER_CDECL
-__sanitizer_contiguous_container_find_bad_address(const void *beg,
-                                                  const void *mid,
-                                                  const void *end) {}
+__sanitizer_contiguous_container_find_bad_address(const void *__beg,
+                                                  const void *__mid,
+                                                  const void *__end) {}
 #else
 const void *SANITIZER_CDECL __sanitizer_contiguous_container_find_bad_address(
-    const void *beg, const void *mid, const void *end);
+    const void *__beg, const void *__mid, const void *__end);
 #endif
 
 /// returns the address of the first improperly poisoned byte.
 ///
 /// Returns NULL if the area is poisoned properly.
 ///
-/// \param storage_beg Beginning of memory region.
-/// \param container_beg Beginning of used region.
-/// \param container_end End of used region.
-/// \param storage_end End of memory region.
+/// \param __storage_beg Beginning of memory region.
+/// \param __container_beg Beginning of used region.
+/// \param __container_end End of used region.
+/// \param __storage_end End of memory region.
 ///
 /// \returns The bad address or NULL.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 __attribute__((__internal_linkage__)) inline const void *SANITIZER_CDECL
 __sanitizer_double_ended_contiguous_container_find_bad_address(
-    const void *storage_beg, const void *container_beg,
-    const void *container_end, const void *storage_end) {}
+    const void *__storage_beg, const void *__container_beg,
+    const void *__container_end, const void *__storage_end) {}
 #else
 const void *SANITIZER_CDECL
 __sanitizer_double_ended_contiguous_container_find_bad_address(
-    const void *storage_beg, const void *container_beg,
-    const void *container_end, const void *storage_end);
+    const void *__storage_beg, const void *__container_beg,
+    const void *__container_end, const void *__storage_end);
 #endif
 
 #ifdef __cplusplus
