@@ -954,7 +954,7 @@ void ConstructInitializer(const Symbol &symbol,
 }
 
 void ConvertToInitializers(
-    DataInitializations &inits, evaluate::ExpressionAnalyzer &exprAnalyzer) {\
+    DataInitializations &inits, evaluate::ExpressionAnalyzer &exprAnalyzer, bool processScopes) {
   // Process DATA-style component /initializers/ now, so that they appear as
   // default values in time for EQUIVALENCE processing in ProcessScopes.
   for (auto &[symbolPtr, initialization] : inits) {
@@ -967,7 +967,7 @@ void ConvertToInitializers(
   // once before the DataChecker and once after to combine initializations from Non-Legacy 
   // Initialization?
   // Note, it passes all tests with just Running this code in CompileDataInitializationsIntoInitializers.
-  if (ProcessScopes(
+  if (processScopes && ProcessScopes(
           exprAnalyzer.context().globalScope(), exprAnalyzer, inits)) {
     for (auto &[symbolPtr, initialization] : inits) {
       if (!symbolPtr->owner().IsDerivedType()) {
