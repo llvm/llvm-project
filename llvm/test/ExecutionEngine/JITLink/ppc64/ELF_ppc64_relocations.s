@@ -25,6 +25,10 @@
 # RUN:              --abs pcrel_external_tls=0x36668880 \
 # RUN:              --check %s %t/elf_reloc.o
 
+# There seems to be issue with cross-build using dlsym for *host* symbols.
+# Disabling for SystemZ - reloc_tlsgd_pcrel34 fails to resolve __tls_get_addr.
+# UNSUPPORTED: target=s390{{.*}}
+
 # jitlink-check: section_addr(elf_reloc.o, $__GOT) + 0x8000 = __TOC__
   .text
   .abiversion 2
