@@ -10,6 +10,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
+extern char **environ;
+
 int main(int argc, char **argv) {
   if (argc > 1) {
     // CHECK: SPAWNED
@@ -30,9 +32,11 @@ int main(int argc, char **argv) {
       "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", NULL,
   };
 
-  char *lib_path = getenv("DYLD_LIRARY_PATH");
-  if (lib_path) {
-    env[0] = strdup(lib_path);
+  for (char **e = environ; *e; e++) {
+    if (strncmp(*e, "DYLD_LIBRARY_PATH=", sizeof("DYLD_LIBRARY_PATH=") - 1) ==
+        0) {
+      env[0] = *e;
+    }
   }
 
   pid_t pid;
