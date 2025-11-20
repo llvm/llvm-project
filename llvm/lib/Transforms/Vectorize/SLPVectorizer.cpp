@@ -5663,6 +5663,14 @@ private:
             // reordered.
             auto *It = find(Bundle->getTreeEntry()->Scalars, In);
             SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>> Checked;
+            bool IsNonSchedulableWithParentPhiNode =
+                Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
+                Bundle->getTreeEntry()->UserTreeIndex &&
+                Bundle->getTreeEntry()->UserTreeIndex.UserTE->hasState() &&
+                Bundle->getTreeEntry()->UserTreeIndex.UserTE->State !=
+                    TreeEntry::SplitVectorize &&
+                Bundle->getTreeEntry()->UserTreeIndex.UserTE->getOpcode() ==
+                    Instruction::PHI;
             do {
               int Lane =
                   std::distance(Bundle->getTreeEntry()->Scalars.begin(), It);
@@ -5687,14 +5695,6 @@ private:
                       Bundle->getTreeEntry()->isCopyableElement(In)) &&
                      "Missed TreeEntry operands?");
 
-              bool IsNonSchedulableWithParentPhiNode =
-                  Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
-                  Bundle->getTreeEntry()->UserTreeIndex &&
-                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->hasState() &&
-                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->State !=
-                      TreeEntry::SplitVectorize &&
-                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->getOpcode() ==
-                      Instruction::PHI;
               // Count the number of unique phi nodes, which are the parent for
               // parent entry, and exit, if all the unique phis are processed.
               if (IsNonSchedulableWithParentPhiNode) {
@@ -21182,6 +21182,26 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         return false;
       }))
     return std::nullopt;
+  if (S.areInstructionsWithCopyableElements() && EI) {
+    bool IsNonSchedulableWithParentPhiNode =
+        EI.UserTE->doesNotNeedToSchedule() && EI.UserTE->UserTreeIndex &&
+        EI.UserTE->UserTreeIndex.UserTE->hasState() &&
+        EI.UserTE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
+        EI.UserTE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
+    if (IsNonSchedulableWithParentPhiNode) {
+      SmallSet<std::pair<Value *, Value *>, 4> Values;
+      for (const auto [Idx, V] :
+           enumerate(EI.UserTE->UserTreeIndex.UserTE->Scalars)) {
+        Value *Op = EI.UserTE->UserTreeIndex.UserTE->getOperand(
+            EI.UserTE->UserTreeIndex.EdgeIdx)[Idx];
+        auto *I = dyn_cast<Instruction>(Op);
+        if (!I || !isCommutative(I))
+          continue;
+        if (!Values.insert(std::make_pair(V, Op)).second)
+          return std::nullopt;
+      }
+    }
+  }
   bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
        all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {

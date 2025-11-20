@@ -22,7 +22,6 @@
 #include "Generators.h"
 #include "Representation.h"
 #include "support/Utils.h"
-#include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
@@ -41,7 +40,6 @@
 #include <mutex>
 #include <string>
 
-using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
 

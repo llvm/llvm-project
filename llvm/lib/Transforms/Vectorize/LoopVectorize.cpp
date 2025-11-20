@@ -7660,7 +7660,7 @@ createWidenInductionRecipes(VPInstruction *PhiR,
 }
 
 VPHeaderPHIRecipe *
-VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI, VFRange &Range) {
+VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI) {
   auto *Phi = cast<PHINode>(VPI->getUnderlyingInstr());
 
   // Check if this is an integer or fp induction. If so, build the recipe that
@@ -7671,14 +7671,9 @@ VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI, VFRange &Range) {
   // Check if this is pointer induction. If so, build the recipe for it.
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
     VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
-    return new VPWidenPointerInductionRecipe(
-        Phi, VPI->getOperand(0), Step, &Plan.getVFxUF(), *II,
-        LoopVectorizationPlanner::getDecisionAndClampRange(
-            [&](ElementCount VF) {
-              return CM.isScalarAfterVectorization(Phi, VF);
-            },
-            Range),
-        VPI->getDebugLoc());
+    return new VPWidenPointerInductionRecipe(Phi, VPI->getOperand(0), Step,
+                                             &Plan.getVFxUF(), *II,
+                                             VPI->getDebugLoc());
   }
   return nullptr;
 }
@@ -8199,7 +8194,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
            "Non-header phis should have been handled during predication");
     auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
     assert(R->getNumOperands() == 2 && "Must have 2 operands for header phis");
-    if ((Recipe = tryToOptimizeInductionPHI(PhiR, Range)))
+    if ((Recipe = tryToOptimizeInductionPHI(PhiR)))
       return Recipe;
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
