@@ -295,7 +295,7 @@ static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
-// Return wave active max that corresponds to the QT scalar type
+// Return wave prefix sum that corresponds to the QT scalar type
 static Intrinsic::ID getWavePrefixSumIntrinsic(llvm::Triple::ArchType Arch,
                                                CGHLSLRuntime &RT, QualType QT) {
   switch (Arch) {
