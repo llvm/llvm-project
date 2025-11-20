@@ -2686,10 +2686,10 @@ def int_amdgcn_call_whole_wave:
 
 // <result>
 //   llvm.amdgcn.wave.shuffle <value> <id>
-// value and result can be 32bit floating-point, integer,
-// or Boolean types, and must be the same type. Any index
+// value and result can be a 32bit floating-point or
+// integer type, and must be the same type. Any index
 // value that's outside the valid range will wrap around,
-// and reading from an inactive lane will return 0.
+// and reading from an inactive lane will return poison.
 def int_amdgcn_wave_shuffle :
   DefaultAttrsIntrinsic<[llvm_any_ty],                                                            // return types
                         [LLVMMatchType<0>, llvm_i32_ty],                                          // arg types

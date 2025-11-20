@@ -7383,9 +7383,7 @@ static SDValue lowerWaveShuffle(const SITargetLowering &TLI, SDNode *N,
                                    ShiftAmount);
 
   // Intrinsics will require i32 to operate on
-  SDValue ValueI32 = Value;
-  if (VT.isFloatingPoint())
-    ValueI32 = DAG.getBitcast(MVT::i32, Value);
+  SDValue ValueI32 = DAG.getBitcast(MVT::i32, Value);
 
   auto MakeIntrinsic = [&DAG, &SL](unsigned IID, MVT RetVT,
                                    SmallVector<SDValue> IntrinArgs) -> SDValue {
@@ -7406,13 +7404,12 @@ static SDValue lowerWaveShuffle(const SITargetLowering &TLI, SDNode *N,
 
   // Otherwise, we need to make use of whole wave mode
   SDValue PoisonVal = DAG.getPOISON(ValueI32->getValueType(0));
-  SDValue PoisonIndex = DAG.getPOISON(ShiftedIndex->getValueType(0));
 
   // Set inactive lanes to poison
   SDValue WWMValue = MakeIntrinsic(Intrinsic::amdgcn_set_inactive, MVT::i32,
                                    {ValueI32, PoisonVal});
   SDValue WWMIndex = MakeIntrinsic(Intrinsic::amdgcn_set_inactive, MVT::i32,
-                                   {ShiftedIndex, PoisonIndex});
+                                   {ShiftedIndex, PoisonVal});
 
   SDValue Swapped =
       MakeIntrinsic(Intrinsic::amdgcn_permlane64, MVT::i32, {WWMValue});
