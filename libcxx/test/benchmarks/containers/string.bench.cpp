@@ -11,7 +11,10 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <deque>
+#include <iterator>
 #include <new>
+#include <list>
 #include <vector>
 
 #include "../CartesianBenchmarks.h"
@@ -121,6 +124,26 @@ static void BM_StringResizeAndOverwrite(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_StringResizeAndOverwrite);
+
+template <class Container>
+static void BM_StringAppend(benchmark::State& state) {
+  std::string orig_str = "This is some data so the string isn't empty";
+  std::string str = orig_str;
+
+  const char to_append_str[] = "This is a long string to make sure append does some work";
+  Container to_append;
+  std::copy(std::begin(to_append_str), std::end(to_append_str), std::back_inserter(to_append));
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(str);
+    str.append(to_append.begin(), to_append.end());
+    benchmark::DoNotOptimize(str);
+    str.resize(orig_str.size());
+  }
+}
+BENCHMARK(BM_StringAppend<std::vector<char>>);
+BENCHMARK(BM_StringAppend<std::deque<char>>);
+BENCHMARK(BM_StringAppend<std::list<char>>);
 
 enum class Length { Empty, Small, Large, Huge };
 struct AllLengths : EnumValuesAsTuple<AllLengths, Length, 4> {

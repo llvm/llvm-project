@@ -1440,24 +1440,51 @@ public:
   template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   append(_ForwardIterator __first, _ForwardIterator __last) {
-    size_type __sz  = size();
-    size_type __cap = capacity();
-    size_type __n   = static_cast<size_type>(std::distance(__first, __last));
+    const size_type __size = size();
+    const size_type __cap  = capacity();
+    const size_type __n    = static_cast<size_type>(std::distance(__first, __last));
     if (__n == 0)
       return *this;
 
-    if (__string_is_trivial_iterator_v<_ForwardIterator> && !__addr_in_range(*__first)) {
-      if (__cap - __sz < __n)
-        __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
-      __annotate_increase(__n);
-      auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__get_pointer() + __sz));
-      traits_type::assign(*__end, value_type());
-      __set_size(__sz + __n);
-      return *this;
+    __annotate_delete();
+    auto __asan_guard = std::__make_scope_guard(__annotate_new_size(*this));
+
+    if (__n > __cap - __size) {
+      __long __buffer  = __allocate_long_buffer(__alloc_, __get_amortized_growth_capacity(__size + __n));
+      __buffer.__size_ = __size + __n;
+      auto __guard     = std::__make_exception_guard([&] {
+        __alloc_traits::deallocate(__alloc_, __buffer.__data_, __buffer.__cap_ * __endian_factor);
+      });
+      auto __end       = __copy_non_overlapping_range(__first, __last, std::__to_address(__buffer.__data_) + __size);
+      traits_type::assign(*__end, _CharT());
+      traits_type::copy(std::__to_address(__buffer.__data_), data(), __size);
+      __guard.__complete();
+      __reset_internal_buffer(__buffer);
     } else {
-      const basic_string __temp(__first, __last, __alloc_);
-      return append(__temp.data(), __temp.size());
+      _CharT* const __ptr = std::__to_address(__get_pointer());
+#  ifndef _LIBCPP_CXX03_LANG
+      if constexpr (__libcpp_is_contiguous_iterator<_ForwardIterator>::value &&
+                    is_same<value_type, __remove_cvref_t<decltype(*__first)>>::value) {
+        traits_type::move(__ptr + __size, std::__to_address(__first), __last - __first);
+      } else if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
+        auto __dest = __ptr + __size + __n;
+        while (__first != __last) {
+          --__last;
+          --__dest;
+          traits_type::assign(*__dest, *__last);
+        }
+      } else
+#  endif
+      {
+        _CharT __first_val = *__first;
+        ++__first;
+        __copy_non_overlapping_range(__first, __last, __ptr + __size + 1);
+        traits_type::assign(__ptr[__size], __first_val);
+      }
+      traits_type::assign(__ptr[__size + __n], _CharT());
+      __set_size(__size + __n);
     }
+    return *this;
   }
 
 #  if _LIBCPP_STD_VER >= 23
