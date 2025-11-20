@@ -559,7 +559,7 @@ static AttrComparisonResult areDeclAttrsEquivalent(const Decl *D1,
 
   if (I1 != E1)
     return {AttrComparisonKind::NotEqual, *I1};
-  else if (I2 != E2)
+  if (I2 != E2)
     return {AttrComparisonKind::NotEqual, nullptr, *I2};
 
   return {AttrComparisonKind::Equal};
