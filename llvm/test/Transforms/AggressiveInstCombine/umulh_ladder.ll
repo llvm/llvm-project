@@ -816,3 +816,43 @@ define i64 @umulh_variant__mul_use__u2(i64 %x, i64 %y) {
   %hw64 = add nuw i64 %u2, %u1_hi
   ret i64 %hw64
 }
+
+define [2 x i64] @XXH_mult64to128(i64 noundef %lhs, i64 noundef %rhs) {
+; CHECK-LABEL: define [2 x i64] @XXH_mult64to128(
+; CHECK-SAME: i64 noundef [[LHS:%.*]], i64 noundef [[RHS:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i64 [[RHS]] to i128
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[LHS]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i128 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i128 [[TMP2]], 64
+; CHECK-NEXT:    [[ADD16:%.*]] = trunc nuw i128 [[TMP3]] to i64
+; CHECK-NEXT:    [[SHR102:%.*]] = mul i64 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[SHR102]], 0
+; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[ADD16]], 1
+; CHECK-NEXT:    ret [2 x i64] [[DOTFCA_1_INSERT]]
+;
+entry:
+  %and = and i64 %lhs, 4294967295
+  %and1 = and i64 %rhs, 4294967295
+  %mul.i = mul nuw i64 %and1, %and
+  %shr = lshr i64 %lhs, 32
+  %mul.i27 = mul nuw i64 %and1, %shr
+  %shr5 = lshr i64 %rhs, 32
+  %mul.i28 = mul nuw i64 %shr5, %and
+  %mul.i29 = mul nuw i64 %shr5, %shr
+  %shr10 = lshr i64 %mul.i, 32
+  %and11 = and i64 %mul.i27, 4294967295
+  %add = add nuw i64 %and11, %mul.i28
+  %add12 = add nuw i64 %add, %shr10
+  %shr13 = lshr i64 %mul.i27, 32
+  %shr14 = lshr i64 %add12, 32
+  %add15 = add nuw i64 %shr13, %mul.i29
+  %add16 = add nuw i64 %add15, %shr14
+  %shl = shl i64 %add12, 32
+  %and17 = and i64 %mul.i, 4294967295
+  %or = or disjoint i64 %shl, %and17
+  %.fca.0.insert = insertvalue [2 x i64] poison, i64 %or, 0
+  %.fca.1.insert = insertvalue [2 x i64] %.fca.0.insert, i64 %add16, 1
+  ret [2 x i64] %.fca.1.insert
+}
+
