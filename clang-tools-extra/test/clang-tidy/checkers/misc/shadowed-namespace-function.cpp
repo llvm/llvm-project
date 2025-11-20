@@ -14,6 +14,42 @@ void f1_general() {}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+void f1_ambiguous();
+namespace foo_ambiguous {
+  void f0_ambiguous();
+  void f1_ambiguous();
+}
+namespace foo_ambiguous2 {
+  void f0_ambiguous();
+  void f1_ambiguous();
+}
+void f0_ambiguous() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f0_ambiguous' shadows at least 'foo_ambiguous::f0_ambiguous' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+void f1_ambiguous() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f1_ambiguous' shadows at least 'foo_ambiguous::f1_ambiguous' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+void f1_ambiguous_nested();
+namespace foo_ambiguous_nested::foo2::foo3 {
+  void f0_ambiguous_nested();
+  void f1_ambiguous_nested();
+}
+namespace foo_ambiguous_nested::foo2::foo4 {
+  void f0_ambiguous_nested();
+  void f1_ambiguous_nested();
+}
+void f0_ambiguous_nested() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f0_ambiguous_nested' shadows at least 'foo_ambiguous_nested::foo2::foo3::f0_ambiguous_nested' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+void f1_ambiguous_nested() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f1_ambiguous_nested' shadows at least 'foo_ambiguous_nested::foo2::foo3::f1_ambiguous_nested' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
 void f1_variadic(...);
 namespace foo_variadic {
   void f0_variadic(...);

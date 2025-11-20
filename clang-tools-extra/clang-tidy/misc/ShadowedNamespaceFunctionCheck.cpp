@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -35,22 +36,27 @@ static bool hasSameParameters(const FunctionDecl *Func1,
 
 static std::pair<const FunctionDecl *, const NamespaceDecl *>
 findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
-                        const std::string &GlobalFuncName) {
+                        const std::string &GlobalFuncName,
+                        llvm::SmallPtrSet<const FunctionDecl *, 16> &All) {
 
   if (NS->isAnonymousNamespace())
     return {nullptr, nullptr};
 
+  const FunctionDecl *ShadowedFunc = nullptr;
+  const NamespaceDecl *ShadowedNamespace = nullptr;
+
   for (const auto *Decl : NS->decls()) {
     // Check nested namespaces
     if (const auto *NestedNS = dyn_cast<NamespaceDecl>(Decl)) {
-      auto [ShadowedFunc, ShadowedNamespace] =
-          findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName);
-      if (ShadowedFunc)
-        return {ShadowedFunc, ShadowedNamespace};
+      auto [NestedShadowedFunc, NestedShadowedNamespace] =
+          findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName, All);
+      if (!ShadowedFunc)
+        std::tie(ShadowedFunc, ShadowedNamespace) = std::tie(NestedShadowedFunc, NestedShadowedNamespace);
     }
 
     // Check functions
     if (const auto *Func = dyn_cast<FunctionDecl>(Decl)) {
+      // TODO: syncronize this check with the matcher?
       if (Func == GlobalFunc || Func->isTemplated() ||
           Func->isThisDeclarationADefinition())
         continue;
@@ -59,11 +65,13 @@ findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
           hasSameParameters(Func, GlobalFunc) &&
           Func->getReturnType().getCanonicalType() ==
               GlobalFunc->getReturnType().getCanonicalType()) {
-        return {Func, NS};
+        All.insert(Func);
+        if (!ShadowedFunc)
+          std::tie(ShadowedFunc, ShadowedNamespace) = std::tie(Func, NS);
       }
     }
   }
-  return {nullptr, nullptr};
+  return {ShadowedFunc, ShadowedNamespace};
 }
 
 void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
@@ -86,39 +94,45 @@ void ShadowedNamespaceFunctionCheck::check(
 
   const ASTContext *Context = Result.Context;
 
+  llvm::SmallPtrSet<const FunctionDecl *, 16> AllShadowedFuncs;
   const FunctionDecl *ShadowedFunc = nullptr;
   const NamespaceDecl *ShadowedNamespace = nullptr;
 
   for (const auto *Decl : Context->getTranslationUnitDecl()->decls()) {
     if (const auto *NS = dyn_cast<NamespaceDecl>(Decl)) {
-      std::tie(ShadowedFunc, ShadowedNamespace) =
-          findShadowedInNamespace(NS, Func, FuncName);
-      if (ShadowedFunc)
-        break;
+      auto [NestedShadowedFunc, NestedShadowedNamespace] =
+          findShadowedInNamespace(NS, Func, FuncName, AllShadowedFuncs);
+      if (!ShadowedFunc)
+        std::tie(ShadowedFunc, ShadowedNamespace) = std::tie(NestedShadowedFunc, NestedShadowedNamespace);
     }
   }
 
   if (!ShadowedFunc || !ShadowedNamespace)
     return;
 
+  // TODO: should it be inside findShadowedInNamespace?
   if (ShadowedFunc->getDefinition())
     return;
 
+  const bool Ambiguous = AllShadowedFuncs.size() > 1;
   const std::string NamespaceName =
       ShadowedNamespace->getQualifiedNameAsString();
-  auto Diag = diag(Func->getLocation(), "free function %0 shadows '%1::%2'")
-              << Func->getDeclName() << NamespaceName
+  auto Diag = diag(Func->getLocation(), "free function %0 shadows %select{|at least }1'%2::%3'")
+              << Func->getDeclName()
+              << Ambiguous
+              << NamespaceName
               << ShadowedFunc->getDeclName().getAsString();
 
   const SourceLocation NameLoc = Func->getLocation();
-  if (NameLoc.isValid() && !Func->getPreviousDecl()) {
+  if (NameLoc.isValid() && !Func->getPreviousDecl() && !Ambiguous) {
     const std::string Fix = NamespaceName + "::";
     Diag << FixItHint::CreateInsertion(NameLoc, Fix);
   }
 
-  diag(ShadowedFunc->getLocation(), "function %0 declared here",
-       DiagnosticIDs::Note)
-      << ShadowedFunc->getDeclName();
+  for (const FunctionDecl *NoteShadowedFunc : AllShadowedFuncs)
+    diag(NoteShadowedFunc->getLocation(), "function %0 declared here",
+        DiagnosticIDs::Note)
+        << NoteShadowedFunc->getDeclName();
 }
 
 } // namespace clang::tidy::misc
