@@ -1864,7 +1864,7 @@ public:
   }
 
   /// Create a BTI landing pad instruction.
-  virtual void createBTI(MCInst &Inst, bool CouldCall, bool CouldJump) const {
+  virtual void createBTI(MCInst &Inst, bool CallTarget, bool JumpTarget) const {
     llvm_unreachable("not implemented");
   }
 

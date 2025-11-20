@@ -2748,9 +2748,10 @@ public:
     return Insts;
   }
 
-  void createBTI(MCInst &Inst, bool CouldCall, bool CouldJump) const override {
+  void createBTI(MCInst &Inst, bool CallTarget,
+                 bool JumpTarget) const override {
     Inst.setOpcode(AArch64::HINT);
-    unsigned HintNum = getBTIHintNum(CouldCall, CouldJump);
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
     Inst.addOperand(MCOperand::createImm(HintNum));
   }
 

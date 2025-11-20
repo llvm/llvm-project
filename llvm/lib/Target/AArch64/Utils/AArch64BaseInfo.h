@@ -987,11 +987,11 @@ AArch64StringToPACKeyID(StringRef Name) {
   return std::nullopt;
 }
 
-inline static unsigned getBTIHintNum(bool CouldCall, bool CouldJump) {
+inline static unsigned getBTIHintNum(bool CallTarget, bool JumpTarget) {
   unsigned HintNum = 32;
-  if (CouldCall)
+  if (CallTarget)
     HintNum |= 2;
-  if (CouldJump)
+  if (JumpTarget)
     HintNum |= 4;
   assert(HintNum != 32 && "No target kinds!");
   return HintNum;
