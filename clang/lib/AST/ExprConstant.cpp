@@ -11774,7 +11774,7 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Elements, E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: support Expr Constant for Matrix Truncation
+    // TODO: See #168935. Add matrix truncation support to expr constant.
     return Error(E);
   }
   case CK_HLSLAggregateSplatCast: {
@@ -18168,7 +18168,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Val.getVectorElt(0), E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: support Expr Constant for Matrix Truncation
+    // TODO: See #168935. Add matrix truncation support to expr constant.
     return Error(E);
   }
   case CK_HLSLElementwiseCast: {
@@ -18765,7 +18765,7 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Val.getVectorElt(0), E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: support Expr Constant for Matrix Truncation
+    // TODO: See #168935. Add matrix truncation support to expr constant.
     return Error(E);
   }
   case CK_HLSLElementwiseCast: {

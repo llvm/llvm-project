@@ -198,7 +198,7 @@ class Sema;
     /// HLSL vector truncation.
     ICK_HLSL_Vector_Truncation,
 
-    /// HLSL Matrid truncation.
+    /// HLSL Matrix truncation.
     ICK_HLSL_Matrix_Truncation,
 
     /// HLSL non-decaying array rvalue cast.
