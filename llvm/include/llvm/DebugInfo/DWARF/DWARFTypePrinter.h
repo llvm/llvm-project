@@ -78,6 +78,12 @@ private:
     }
     return false;
   }
+
+  /// If FormValue is a valid constant Form, print into \c OS the integral value
+  /// casted to the type referred to by \c Cast.
+  template <typename FormValueType>
+  void appendCastedValue(const FormValueType &FormValue, DieType Cast,
+                         bool IsUnsigned);
 };
 
 template <typename DieType>
@@ -414,6 +420,31 @@ DieType DWARFTypePrinter<DieType>::appendQualifiedNameBefore(DieType D) {
 }
 
 template <typename DieType>
+template <typename FormValueType>
+void DWARFTypePrinter<DieType>::appendCastedValue(
+    const FormValueType &FormValue, DieType Cast, bool IsUnsigned) {
+  std::string ValStr;
+  if (IsUnsigned) {
+    std::optional<uint64_t> UVal = FormValue.getAsUnsignedConstant();
+    if (!UVal)
+      return;
+
+    ValStr = std::to_string(*UVal);
+  } else {
+    std::optional<int64_t> SVal = FormValue.getAsSignedConstant();
+    if (!SVal)
+      return;
+
+    ValStr = std::to_string(*SVal);
+  }
+
+  OS << '(';
+  appendQualifiedName(Cast);
+  OS << ')';
+  OS << std::move(ValStr);
+}
+
+template <typename DieType>
 bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
                                                          bool *FirstParameter) {
   bool FirstParameterValue = true;
@@ -438,13 +469,11 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
       DieType T = detail::resolveReferencedType(C);
       Sep();
       if (T.getTag() == dwarf::DW_TAG_enumeration_type) {
-        OS << '(';
-        appendQualifiedName(T);
-        OS << ')';
         auto V = C.find(dwarf::DW_AT_const_value);
-        OS << std::to_string(*V->getAsSignedConstant());
+        appendCastedValue(*V, T, /*IsUnsigned=*/false);
         continue;
       }
+
       // /Maybe/ we could do pointer/reference type parameters, looking for the
       // symbol in the ELF symbol table to get back to the variable...
       // but probably not worth it.
@@ -539,6 +568,12 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
           else
             OS << llvm::format("'\\U%08" PRIx64 "'", Val);
         }
+        // FIXME: Handle _BitInt's larger than 64-bits which are emitted as
+        // block data.
+      } else if (Name.starts_with("_BitInt")) {
+        appendCastedValue(*V, T, /*IsUnsigned=*/false);
+      } else if (Name.starts_with("unsigned _BitInt")) {
+        appendCastedValue(*V, T, /*IsUnsigned=*/true);
       }
       continue;
     }

@@ -519,9 +519,7 @@ void SelectionDAGISel::initializeAnalysisResults(
 
   SP = &FAM.getResult<SSPLayoutAnalysis>(Fn);
 
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
-#endif
 }
 
 void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
@@ -578,9 +576,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
 
   SP = &MFP.getAnalysis<StackProtector>().getLayoutInfo();
 
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
-#endif
 }
 
 bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
@@ -593,7 +589,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << '\n');
 
-  SDB->init(GFI, getBatchAA(), AC, LibInfo);
+  SDB->init(GFI, getBatchAA(), AC, LibInfo, *TTI);
 
   MF->setHasInlineAsm(false);
 
@@ -2782,8 +2778,8 @@ void SelectionDAGISel::UpdateChains(
 /// induce cycles in the DAG) and if so, creating a TokenFactor node. that will
 /// be used as the input node chain for the generated nodes.
 static SDValue
-HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
-                       SelectionDAG *CurDAG) {
+HandleMergeInputChains(const SmallVectorImpl<SDNode *> &ChainNodesMatched,
+                       SDValue InputGlue, SelectionDAG *CurDAG) {
 
   SmallPtrSet<const SDNode *, 16> Visited;
   SmallVector<const SDNode *, 8> Worklist;
@@ -2826,8 +2822,16 @@ HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
   // node that is both the predecessor and successor of the
   // to-be-merged nodes. Fail.
   Visited.clear();
-  for (SDValue V : InputChains)
+  for (SDValue V : InputChains) {
+    // If we need to create a TokenFactor, and any of the input chain nodes will
+    // also be glued to the output, we cannot merge the chains. The TokenFactor
+    // would prevent the glue from being honored.
+    if (InputChains.size() != 1 &&
+        V->getValueType(V->getNumValues() - 1) == MVT::Glue &&
+        InputGlue.getNode() == V.getNode())
+      return SDValue();
     Worklist.push_back(V.getNode());
+  }
 
   for (auto *N : ChainNodesMatched)
     if (SDNode::hasPredecessorHelper(N, Visited, Worklist, Max, true))
@@ -3989,7 +3993,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       }
 
       // Merge the input chains if they are not intra-pattern references.
-      InputChain = HandleMergeInputChains(ChainNodesMatched, CurDAG);
+      InputChain = HandleMergeInputChains(ChainNodesMatched, InputGlue, CurDAG);
 
       if (!InputChain.getNode())
         break;  // Failed to merge.
@@ -4033,7 +4037,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
 
       // Merge the input chains if they are not intra-pattern references.
-      InputChain = HandleMergeInputChains(ChainNodesMatched, CurDAG);
+      InputChain = HandleMergeInputChains(ChainNodesMatched, InputGlue, CurDAG);
 
       if (!InputChain.getNode())
         break;  // Failed to merge.

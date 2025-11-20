@@ -16,23 +16,70 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/IR/IntrinsicsX86.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
+template <typename... Operands>
+static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
+                                       const std::string &str,
+                                       const mlir::Type &resTy,
+                                       Operands &&...op) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location location = cgf.getLoc(e->getExprLoc());
+  return cir::LLVMIntrinsicCallOp::create(builder, location,
+                                          builder.getStringAttr(str), resTy,
+                                          std::forward<Operands>(op)...)
+      .getResult();
+}
+
+// OG has unordered comparison as a form of optimization in addition to
+// ordered comparison, while CIR doesn't.
+//
+// This means that we can't encode the comparison code of UGT (unordered
+// greater than), at least not at the CIR level.
+//
+// The boolean shouldInvert compensates for this.
+// For example: to get to the comparison code UGT, we pass in
+// emitVectorFCmp (OLE, shouldInvert = true) since OLE is the inverse of UGT.
+
+// There are several ways to support this otherwise:
+// - register extra CmpOpKind for unordered comparison types and build the
+// translation code for
+//    to go from CIR -> LLVM dialect. Notice we get this naturally with
+//    shouldInvert, benefiting from existing infrastructure, albeit having to
+//    generate an extra `not` at CIR).
+// - Just add extra comparison code to a new VecCmpOpKind instead of
+// cluttering CmpOpKind.
+// - Add a boolean in VecCmpOp to indicate if it's doing unordered or ordered
+// comparison
+// - Just emit the intrinsics call instead of calling this helper, see how the
+// LLVM lowering handles this.
+static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
+                                  llvm::SmallVector<mlir::Value> &ops,
+                                  mlir::Location loc, cir::CmpOpKind pred,
+                                  bool shouldInvert) {
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  // TODO(cir): Add isSignaling boolean once emitConstrainedFPCall implemented
+  assert(!cir::MissingFeatures::emitConstrainedFPCall());
+  mlir::Value cmp = builder.createVecCompare(loc, pred, ops[0], ops[1]);
+  mlir::Value bitCast = builder.createBitcast(
+      shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
+  return bitCast;
+}
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
-                                               const CallExpr *e) {
+                                               const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
-    cgm.errorNYI(e->getSourceRange(), "__builtin_cpu_is");
+    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_is");
     return {};
   }
   if (builtinID == Builtin::BI__builtin_cpu_supports) {
-    cgm.errorNYI(e->getSourceRange(), "__builtin_cpu_supports");
+    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_supports");
     return {};
   }
   if (builtinID == Builtin::BI__builtin_cpu_init) {
-    cgm.errorNYI(e->getSourceRange(), "__builtin_cpu_init");
+    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_init");
     return {};
   }
 
@@ -43,26 +90,64 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
+  // The operands of the builtin call
+  llvm::SmallVector<mlir::Value> ops;
+
+  // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
+  // is required to be a constant integer expression.
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Error while getting builtin type.");
+
+  for (auto [idx, arg] : llvm::enumerate(expr->arguments()))
+    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+
+  CIRGenBuilderTy &builder = getBuilder();
+  mlir::Type voidTy = builder.getVoidTy();
+
   switch (builtinID) {
   default:
     return {};
-  case X86::BI_mm_prefetch:
   case X86::BI_mm_clflush:
+    return emitIntrinsicCallOp(*this, expr, "x86.sse2.clflush", voidTy, ops[0]);
   case X86::BI_mm_lfence:
+    return emitIntrinsicCallOp(*this, expr, "x86.sse2.lfence", voidTy);
   case X86::BI_mm_pause:
+    return emitIntrinsicCallOp(*this, expr, "x86.sse2.pause", voidTy);
   case X86::BI_mm_mfence:
+    return emitIntrinsicCallOp(*this, expr, "x86.sse2.mfence", voidTy);
   case X86::BI_mm_sfence:
+    return emitIntrinsicCallOp(*this, expr, "x86.sse.sfence", voidTy);
+  case X86::BI_mm_prefetch:
   case X86::BI__rdtsc:
-  case X86::BI__builtin_ia32_rdtscp:
+  case X86::BI__builtin_ia32_rdtscp: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
+  }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
-  case X86::BI__builtin_ia32_lzcnt_u64:
+  case X86::BI__builtin_ia32_lzcnt_u64: {
+    mlir::Value isZeroPoison = builder.getFalse(getLoc(expr->getExprLoc()));
+    return emitIntrinsicCallOp(*this, expr, "ctlz", ops[0].getType(),
+                               mlir::ValueRange{ops[0], isZeroPoison});
+  }
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
-  case X86::BI__builtin_ia32_tzcnt_u64:
+  case X86::BI__builtin_ia32_tzcnt_u64: {
+    mlir::Value isZeroPoison = builder.getFalse(getLoc(expr->getExprLoc()));
+    return emitIntrinsicCallOp(*this, expr, "cttz", ops[0].getType(),
+                               mlir::ValueRange{ops[0], isZeroPoison});
+  }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
@@ -72,7 +157,22 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_ext_v32qi:
   case X86::BI__builtin_ia32_vec_ext_v16hi:
   case X86::BI__builtin_ia32_vec_ext_v8si:
-  case X86::BI__builtin_ia32_vec_ext_v4di:
+  case X86::BI__builtin_ia32_vec_ext_v4di: {
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+
+    uint64_t index =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+
+    index &= numElts - 1;
+
+    cir::ConstantOp indexVal =
+        builder.getUInt64(index, getLoc(expr->getExprLoc()));
+
+    // These builtins exist so we can ensure the index is an ICE and in range.
+    // Otherwise we could just do this in the header file.
+    return cir::VecExtractOp::create(builder, getLoc(expr->getExprLoc()),
+                                     ops[0], indexVal);
+  }
   case X86::BI__builtin_ia32_vec_set_v4hi:
   case X86::BI__builtin_ia32_vec_set_v16qi:
   case X86::BI__builtin_ia32_vec_set_v8hi:
@@ -82,10 +182,26 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI_mm_setcsr:
-  case X86::BI__builtin_ia32_ldmxcsr:
+  case X86::BI__builtin_ia32_ldmxcsr: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address tmp = createMemTemp(expr->getArg(0)->getType(), loc);
+    builder.createStore(loc, ops[0], tmp);
+    return emitIntrinsicCallOp(*this, expr, "x86.sse.ldmxcsr",
+                               builder.getVoidTy(), tmp.getPointer());
+  }
   case X86::BI_mm_getcsr:
-  case X86::BI__builtin_ia32_stmxcsr:
+  case X86::BI__builtin_ia32_stmxcsr: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address tmp = createMemTemp(expr->getType(), loc);
+    emitIntrinsicCallOp(*this, expr, "x86.sse.stmxcsr", builder.getVoidTy(),
+                        tmp.getPointer());
+    return builder.createLoad(loc, tmp);
+  }
   case X86::BI__builtin_ia32_xsave:
   case X86::BI__builtin_ia32_xsave64:
   case X86::BI__builtin_ia32_xrstor:
@@ -160,13 +276,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vcvtuw2ph512_mask:
   case X86::BI__builtin_ia32_vcvtudq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
-  case X86::BI__builtin_ia32_vfmaddss3:
-  case X86::BI__builtin_ia32_vfmaddsd3:
   case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
-  case X86::BI__builtin_ia32_vfmaddss:
-  case X86::BI__builtin_ia32_vfmaddsd:
   case X86::BI__builtin_ia32_vfmaddsh3_maskz:
   case X86::BI__builtin_ia32_vfmaddss3_maskz:
   case X86::BI__builtin_ia32_vfmaddsd3_maskz:
@@ -710,10 +822,18 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_cmpunordpd:
   case X86::BI__builtin_ia32_cmpneqps:
   case X86::BI__builtin_ia32_cmpneqpd:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
+    return emitVectorFCmp(builder, ops, getLoc(expr->getExprLoc()),
+                          cir::CmpOpKind::lt, /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpnleps:
   case X86::BI__builtin_ia32_cmpnlepd:
+    return emitVectorFCmp(builder, ops, getLoc(expr->getExprLoc()),
+                          cir::CmpOpKind::le, /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
   case X86::BI__builtin_ia32_cmpph128_mask:
@@ -798,7 +918,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vfcmaddcsh_round_mask3:
   case X86::BI__builtin_ia32_vfmaddcsh_round_mask3:
   case X86::BI__builtin_ia32_prefetchi:
-    cgm.errorNYI(e->getSourceRange(),
+    cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return {};

@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Transforms/Utils/LoopVersioning.h"
 
 #define DEBUG_TYPE "vplan"
 
@@ -36,6 +37,9 @@ class PlainCFGBuilder {
 
   // Loop Info analysis.
   LoopInfo *LI;
+
+  // Loop versioning for alias metadata.
+  LoopVersioning *LVer;
 
   // Vectorization plan that we are working on.
   std::unique_ptr<VPlan> Plan;
@@ -65,8 +69,8 @@ class PlainCFGBuilder {
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
 
 public:
-  PlainCFGBuilder(Loop *Lp, LoopInfo *LI)
-      : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)) {}
+  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer)
+      : TheLoop(Lp), LI(LI), LVer(LVer), Plan(std::make_unique<VPlan>(Lp)) {}
 
   /// Build plain CFG for TheLoop and connect it to Plan's entry.
   std::unique_ptr<VPlan> buildPlainCFG();
@@ -186,7 +190,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // recipes.
       if (Br->isConditional()) {
         VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
-        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst);
+        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst, {},
+                                 VPIRMetadata(*Inst), Inst->getDebugLoc());
       }
 
       // Skip the rest of the Instruction processing for Branch instructions.
@@ -200,7 +205,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       SmallVector<VPValue *> Ops = {getOrCreateVPOperand(SI->getCondition())};
       for (auto Case : SI->cases())
         Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));
-      VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst);
+      VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst, {},
+                               VPIRMetadata(*Inst), Inst->getDebugLoc());
       continue;
     }
 
@@ -228,6 +234,18 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
               VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
       }
     } else {
+      // Build VPIRMetadata from the instruction and add loop versioning
+      // metadata for loads and stores.
+      VPIRMetadata MD(*Inst);
+      if (isa<LoadInst, StoreInst>(Inst) && LVer) {
+        const auto &[AliasScopeMD, NoAliasMD] =
+            LVer->getNoAliasMetadataFor(Inst);
+        if (AliasScopeMD)
+          MD.setMetadata(LLVMContext::MD_alias_scope, AliasScopeMD);
+        if (NoAliasMD)
+          MD.setMetadata(LLVMContext::MD_noalias, NoAliasMD);
+      }
+
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
       SmallVector<VPValue *, 4> VPOperands;
@@ -236,12 +254,15 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
       if (auto *CI = dyn_cast<CastInst>(Inst)) {
         NewR = VPIRBuilder.createScalarCast(CI->getOpcode(), VPOperands[0],
-                                            CI->getType(), CI->getDebugLoc());
+                                            CI->getType(), CI->getDebugLoc(),
+                                            VPIRFlags(*CI), MD);
         NewR->setUnderlyingValue(CI);
       } else {
         // Build VPInstruction for any arbitrary Instruction without specific
         // representation in VPlan.
-        NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst);
+        NewR =
+            VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
+                                     VPIRFlags(*Inst), MD, Inst->getDebugLoc());
       }
     }
 
@@ -537,8 +558,9 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-                             DebugLoc IVDL, PredicatedScalarEvolution &PSE) {
-  PlainCFGBuilder Builder(TheLoop, &LI);
+                             DebugLoc IVDL, PredicatedScalarEvolution &PSE,
+                             LoopVersioning *LVer) {
+  PlainCFGBuilder Builder(TheLoop, &LI, LVer);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   return VPlan0;
@@ -672,7 +694,7 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
-    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+    Term->setMetadata(LLVMContext::MD_prof, BranchWeights);
   }
 }
 
@@ -756,7 +778,7 @@ void VPlanTransforms::addMinimumIterationCheck(
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights = MDB.createBranchWeights(
         ArrayRef(MinItersBypassWeights, 2), /*IsExpected=*/false);
-    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+    Term->setMetadata(LLVMContext::MD_prof, BranchWeights);
   }
 }
 
@@ -793,7 +815,18 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   MDBuilder MDB(Plan.getContext());
   MDNode *BranchWeights =
       MDB.createBranchWeights(Weights, /*IsExpected=*/false);
-  Branch->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  Branch->setMetadata(LLVMContext::MD_prof, BranchWeights);
+}
+
+/// If \p RedPhiR is used by a ComputeReductionResult recipe, return it.
+/// Otherwise return nullptr.
+static VPInstruction *
+findComputeReductionResult(VPReductionPHIRecipe *RedPhiR) {
+  auto It = find_if(RedPhiR->users(), [](VPUser *U) {
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+  });
+  return It == RedPhiR->user_end() ? nullptr : cast<VPInstruction>(*It);
 }
 
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
@@ -900,13 +933,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
-    auto *RdxResult = find_singleton<VPSingleDefRecipe>(
-        RedPhiR->users(), [](VPUser *U, bool) -> VPSingleDefRecipe * {
-          auto *VPI = dyn_cast<VPInstruction>(U);
-          if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
-            return VPI;
-          return nullptr;
-        });
+    auto *RdxResult = findComputeReductionResult(RedPhiR);
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
                                               RdxResult->getOperand(1));

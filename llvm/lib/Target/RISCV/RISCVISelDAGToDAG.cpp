@@ -2691,6 +2691,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case ISD::SCALAR_TO_VECTOR:
+    if (Subtarget->enablePExtCodeGen()) {
+      MVT SrcVT = Node->getOperand(0).getSimpleValueType();
+      if (VT == MVT::v2i32 && SrcVT == MVT::i64) {
+        ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+        CurDAG->RemoveDeadNode(Node);
+        return;
+      }
+    }
+    break;
   case ISD::INSERT_SUBVECTOR:
   case RISCVISD::TUPLE_INSERT: {
     SDValue V = Node->getOperand(0);

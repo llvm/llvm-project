@@ -1566,14 +1566,19 @@ let TargetPrefix = "nvvm" in {
 
   foreach rnd = ["rn", "rz"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff2bf16x2_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
+      foreach satfinite = ["", "_satfinite"] in {
+        def int_nvvm_ff2bf16x2_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
 
-      def int_nvvm_ff2f16x2_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
+        def int_nvvm_ff2f16x2_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
 
-      def int_nvvm_f2bf16_ # rnd # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+        def int_nvvm_f2bf16_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+            
+        def int_nvvm_f2f16_ # rnd # relu # satfinite : NVVMBuiltin,
+            PureIntrinsic<[llvm_half_ty], [llvm_float_ty]>;
+      }
     }
   }
 
@@ -1746,32 +1751,64 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_barrier_cluster_wait_aligned : Intrinsic<[]>;
   }
 
-  //
-  // Membar
-  //
-  let IntrProperties = [IntrNoCallback] in {
+//
+// Membar / Fence
+//
+let IntrProperties = [IntrNoCallback] in {
     def int_nvvm_membar_cta : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_membar_gl : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_membar_sys : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_fence_sc_cluster : Intrinsic<[]>;
-  }
 
-  //
-  // Proxy fence (uni-directional)
-  //
+    // Operation fence
+    def int_nvvm_fence_mbarrier_init_release_cluster: Intrinsic<[], [], [],
+            "llvm.nvvm.fence.mbarrier_init.release.cluster">;
+
+    // Thread fence
+    def int_nvvm_fence_acquire_sync_restrict_space_cluster_scope_cluster :
+          Intrinsic<[], [], [],
+            "llvm.nvvm.fence.acquire.sync_restrict.space.cluster.scope.cluster">;
+
+    def int_nvvm_fence_release_sync_restrict_space_cta_scope_cluster :
+          Intrinsic<[], [], [],
+            "llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster">;
+
+//
+// Proxy fence (uni-directional)
+//
+
+  def int_nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster :
+        Intrinsic<[], [], [],
+          "llvm.nvvm.fence.proxy.async_generic.acquire.sync_restrict.space.cluster.scope.cluster">;
+
+  def int_nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster :
+        Intrinsic<[], [], [],
+          "llvm.nvvm.fence.proxy.async_generic.release.sync_restrict.space.cta.scope.cluster">;
+
   foreach scope = ["cta", "cluster", "gpu", "sys"] in {
 
     def int_nvvm_fence_proxy_tensormap_generic_release_ # scope :
-          Intrinsic<[], [], [IntrNoCallback],
+          Intrinsic<[], [], [],
           "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
 
     // The imm-arg 'size' can only be 128.
     def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope :
-          Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
-                    [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>,
-                    Range<ArgIndex<1>, 128, 129>],
-                    "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
+          Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], [],
+                    "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope> {
+      let IntrProperties = [IntrNoCallback, IntrArgMemOnly,
+                            ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 128, 129>];
+    }
   }
+
+//
+// Proxy fence (bi-directional)
+//
+  foreach proxykind = ["alias", "async", "async.global", "async.shared_cta",
+                        "async.shared_cluster"] in {
+    defvar Intr = IntrinsicName<"llvm.nvvm.fence.proxy." # proxykind>;
+    def Intr.record_name: Intrinsic<[], [], [], Intr.intr_name>;
+  }
+}
 
 //
 // Async Copy
@@ -2716,8 +2753,19 @@ def int_nvvm_cp_async_bulk_global_to_shared_cluster
       [llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty],                // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>]>;
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+
+// From Global to Shared CTA
+def int_nvvm_cp_async_bulk_global_to_shared_cta
+  : DefaultAttrsIntrinsicFlags<[],
+      [llvm_shared_ptr_ty, // dst_shared_cta_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i64_ty],       // cache_hint
+      [llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
 
 // From Shared CTA to Shared Cluster
 def int_nvvm_cp_async_bulk_shared_cta_to_cluster
@@ -2727,9 +2775,7 @@ def int_nvvm_cp_async_bulk_shared_cta_to_cluster
        llvm_shared_ptr_ty,         // src_smem_ptr
        llvm_i32_ty],               // copy_size
       [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-       NoCapture<ArgIndex<2>>]>;
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
 
 // From Shared CTA to Global memory
 def int_nvvm_cp_async_bulk_shared_cta_to_global
@@ -2740,8 +2786,7 @@ def int_nvvm_cp_async_bulk_shared_cta_to_global
        llvm_i64_ty],       // cache_hint
       [llvm_i1_ty],        // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
 // From Shared CTA to Global memory with bytemask
 def int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask
@@ -2947,7 +2992,14 @@ foreach sp = [0, 1] in {
         defvar nargs = !size(args);
         defvar scale_d_imm = ArgIndex<!sub(nargs, 1)>;
         defvar scale_d_imm_range = [ImmArg<scale_d_imm>, Range<scale_d_imm, 0, 16>];
-        defvar intrinsic_properties = !listconcat(
+
+        // Check if this is the specific llvm.nvvm.tcgen05.mma.tensor intrinsic.
+        defvar is_target_intrinsic = !and(!eq(sp, 0), 
+                                          !eq(space, "tensor"), 
+                                          !eq(scale_d, 0), 
+                                          !eq(ashift, 0));
+
+        defvar base_properties = !listconcat(
           mma.common_intr_props,
           !if(!eq(scale_d, 1), scale_d_imm_range, []),
           [Range<ArgIndex<nargs>, 0, !if(!eq(scale_d, 1), 2, 4)>, // kind
@@ -2956,6 +3008,13 @@ foreach sp = [0, 1] in {
                           !if(!eq(ashift, 1), 2, 4)>              // collector_usage
           ]
         );
+
+        defvar intrinsic_properties = !if(is_target_intrinsic, 
+          !listconcat(base_properties,
+            [ArgInfo<ArgIndex<nargs>, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
+             ArgInfo<ArgIndex<!add(nargs, 1)>, [ArgName<"cta_group">]>,
+             ArgInfo<ArgIndex<!add(nargs, 2)>, [ArgName<"collector">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]),
+          base_properties);
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,

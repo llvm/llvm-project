@@ -12540,6 +12540,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.AMDGPUTextureTy;
       break;
     }
+    case 'r': {
+      Type = Context.HLSLResourceTy;
+      break;
+    }
     default:
       llvm_unreachable("Unexpected target builtin type");
     }
@@ -13331,6 +13335,71 @@ void ASTContext::setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
 
 bool ASTContext::isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const {
   return TypeAwareOperatorNewAndDeletes.contains(FD->getCanonicalDecl());
+}
+
+void ASTContext::addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                           FunctionDecl *OperatorDelete,
+                                           OperatorDeleteKind K) const {
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    OperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] = OperatorDelete;
+    break;
+  case OperatorDeleteKind::GlobalRegular:
+    GlobalOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  case OperatorDeleteKind::Array:
+    ArrayOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  case OperatorDeleteKind::ArrayGlobal:
+    GlobalArrayOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  }
+}
+
+bool ASTContext::dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
+                                       OperatorDeleteKind K) const {
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    return OperatorDeletesForVirtualDtor.contains(Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::GlobalRegular:
+    return GlobalOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::Array:
+    return ArrayOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::ArrayGlobal:
+    return GlobalArrayOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  }
+  return false;
+}
+
+FunctionDecl *
+ASTContext::getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                      OperatorDeleteKind K) const {
+  const CXXDestructorDecl *Canon = Dtor->getCanonicalDecl();
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    if (OperatorDeletesForVirtualDtor.contains(Canon))
+      return OperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::GlobalRegular:
+    if (GlobalOperatorDeletesForVirtualDtor.contains(Canon))
+      return GlobalOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::Array:
+    if (ArrayOperatorDeletesForVirtualDtor.contains(Canon))
+      return ArrayOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::ArrayGlobal:
+    if (GlobalArrayOperatorDeletesForVirtualDtor.contains(Canon))
+      return GlobalArrayOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  }
+  return nullptr;
 }
 
 MangleNumberingContext &

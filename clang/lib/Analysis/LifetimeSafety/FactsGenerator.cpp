@@ -58,6 +58,7 @@ void FactsGenerator::run() {
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
+    EscapesInCurrentBlock.clear();
     for (unsigned I = 0; I < Block->size(); ++I) {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
@@ -66,6 +67,8 @@ void FactsGenerator::run() {
                    Element.getAs<CFGAutomaticObjDtor>())
         handleDestructor(*DtorOpt);
     }
+    CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
+                             EscapesInCurrentBlock.end());
     FactMgr.addBlockFacts(Block, CurrentBlockFacts);
   }
 }
@@ -166,7 +169,8 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
   if (const Expr *RetExpr = RS->getRetValue()) {
     if (hasOrigin(RetExpr)) {
       OriginID OID = FactMgr.getOriginMgr().getOrCreate(*RetExpr);
-      CurrentBlockFacts.push_back(FactMgr.createFact<ReturnOfOriginFact>(OID));
+      EscapesInCurrentBlock.push_back(
+          FactMgr.createFact<OriginEscapesFact>(OID, RetExpr));
     }
   }
 }
@@ -174,6 +178,15 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
+}
+
+void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
+  if (hasOrigin(CO)) {
+    // Merge origins from both branches of the conditional operator.
+    // We kill to clear the initial state and merge both origins into it.
+    killAndFlowOrigin(*CO, *CO->getTrueExpr());
+    flowOrigin(*CO, *CO->getFalseExpr());
+  }
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {

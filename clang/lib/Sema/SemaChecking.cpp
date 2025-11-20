@@ -1512,7 +1512,7 @@ static bool checkBuiltinInferAllocToken(Sema &S, CallExpr *TheCall) {
       return S.Diag(Arg->getBeginLoc(), diag::err_param_with_void_type);
   }
 
-  TheCall->setType(S.Context.UnsignedLongLongTy);
+  TheCall->setType(S.Context.getSizeType());
   return false;
 }
 
@@ -2215,6 +2215,39 @@ static bool BuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
   if (!IsCPUSupports && !TheTI->validateCpuIs(Feature))
     return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_is)
            << Arg->getSourceRange();
+  return false;
+}
+
+/// Checks that __builtin_bswapg was called with a single argument, which is an
+/// unsigned integer, and overrides the return value type to the integer type.
+static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+  if (Arg->isTypeDependent())
+    return false;
+
+  QualType ArgTy = Arg->getType();
+
+  if (!ArgTy->isIntegerType()) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*scalar=*/1 << /*unsigned integer=*/1 << /*floating point=*/0
+        << ArgTy;
+    return true;
+  }
+  if (const auto *BT = dyn_cast<BitIntType>(ArgTy)) {
+    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8) {
+      S.Diag(Arg->getBeginLoc(), diag::err_bswapg_invalid_bit_width)
+          << ArgTy << BT->getNumBits();
+      return true;
+    }
+  }
+  TheCall->setType(ArgTy);
   return false;
 }
 
@@ -3522,6 +3555,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_bswapg:
+    if (BuiltinBswapg(*this, TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_popcountg:
     if (BuiltinPopcountg(*this, TheCall))
       return ExprError();

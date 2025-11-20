@@ -3065,6 +3065,14 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
 
+  case TargetOpcode::G_FPEXT:
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_INTRINSIC_LRINT:
@@ -3431,6 +3439,18 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+    Observer.changingInstr(MI);
+
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy);
+    else
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_INTTOPTR:
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -7589,7 +7609,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
   }
   case TargetOpcode::G_CTLZ: {
     auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
-    unsigned Len = SrcTy.getSizeInBits();
+    unsigned Len = SrcTy.getScalarSizeInBits();
 
     if (isSupported({TargetOpcode::G_CTLZ_ZERO_UNDEF, {DstTy, SrcTy}})) {
       // If CTLZ_ZERO_UNDEF is supported, emit that and a select for zero.
@@ -7637,7 +7657,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
   case TargetOpcode::G_CTTZ: {
     auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
 
-    unsigned Len = SrcTy.getSizeInBits();
+    unsigned Len = SrcTy.getScalarSizeInBits();
     if (isSupported({TargetOpcode::G_CTTZ_ZERO_UNDEF, {DstTy, SrcTy}})) {
       // If CTTZ_ZERO_UNDEF is legal or custom, emit that and a select with
       // zero.
@@ -7675,8 +7695,12 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
   case TargetOpcode::G_CTPOP: {
     Register SrcReg = MI.getOperand(1).getReg();
     LLT Ty = MRI.getType(SrcReg);
-    unsigned Size = Ty.getSizeInBits();
+    unsigned Size = Ty.getScalarSizeInBits();
     MachineIRBuilder &B = MIRBuilder;
+
+    // Bail out on irregular type lengths.
+    if (Size > 128 || Size % 8 != 0)
+      return UnableToLegalize;
 
     // Count set bits in blocks of 2 bits. Default approach would be
     // B2Count = { val & 0x55555555 } + { (val >> 1) & 0x55555555 }

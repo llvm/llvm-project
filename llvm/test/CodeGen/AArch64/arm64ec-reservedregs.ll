@@ -10,17 +10,17 @@ define i32 @no_int_regs(i32 %x) nounwind {
 ; CHECK-LABEL: no_int_regs:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x29, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x27, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x27, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str w0, [sp, #28] // 4-byte Folded Spill
+; CHECK-NEXT:    str w0, [sp, #28] // 4-byte Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr w0, [sp, #28] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr w0, [sp, #28] // 4-byte Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x27, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x27, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x30, x29, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -33,7 +33,7 @@ define i32 @one_int_reg(i32 %x) nounwind {
 ; CHECK-LABEL: one_int_reg:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x29, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x27, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x27, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov w30, w0
 ; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
@@ -41,7 +41,7 @@ define i32 @one_int_reg(i32 %x) nounwind {
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x27, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x27, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w0, w30
 ; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
@@ -60,11 +60,11 @@ define float @no_float_regs(float %x) nounwind {
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
