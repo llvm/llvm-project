@@ -2141,15 +2141,18 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isTailCall = false;
   }
 
-  if (isTailCall && !IsMustTail) {
+  if (isTailCall) {
     // Check if it's really possible to do a tail call.
-    isTailCall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs,
-                                                   IsCalleePopSRet);
+    IsSibcall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs,
+                                                  IsCalleePopSRet);
 
-    // Sibcalls are automatically detected tailcalls which do not require
-    // ABI changes.
-    if (!IsGuaranteeTCO && isTailCall)
-      IsSibcall = true;
+    if (!IsMustTail) {
+      isTailCall = IsSibcall;
+
+      // Sibcalls are automatically detected tailcalls which do not require
+      // ABI changes.
+      IsSibcall = IsSibcall && !IsGuaranteeTCO;
+    }
 
     if (isTailCall)
       ++NumTailCalls;
@@ -2171,8 +2174,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   else if (IsGuaranteeTCO && canGuaranteeTCO(CallConv))
     NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
 
+  // A sibcall is ABI-compatible and does not need to adjust the stack pointer.
   int FPDiff = 0;
-  if (isTailCall &&
+  if (isTailCall && !IsSibcall &&
       shouldGuaranteeTCO(CallConv,
                          MF.getTarget().Options.GuaranteedTailCallOpt)) {
     // Lower arguments at fp - stackoffset + fpdiff.
