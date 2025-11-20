@@ -8638,13 +8638,8 @@ private:
         if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
                 C->getIteratorModifier()->IgnoreParenImpCasts())) {
           const auto *VD =
-              llvm::dyn_cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+              cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
           CGF.EmitVarDecl(*VD);
-
-          OMPIteratorGeneratorScope IteratorScope(
-              CGF, cast_or_null<OMPIteratorExpr>(
-                       IteratorExpr ? IteratorExpr->IgnoreParenImpCasts()
-                                    : nullptr));
         }
       }
 
@@ -8669,13 +8664,8 @@ private:
         if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
                 C->getIteratorModifier()->IgnoreParenImpCasts())) {
           const auto *VD =
-              llvm::dyn_cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+              cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
           CGF.EmitVarDecl(*VD);
-
-          OMPIteratorGeneratorScope IteratorScope(
-              CGF, cast_or_null<OMPIteratorExpr>(
-                       IteratorExpr ? IteratorExpr->IgnoreParenImpCasts()
-                                    : nullptr));
         }
       }
 
