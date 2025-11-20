@@ -265,6 +265,8 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     bool MayReturn = Opts.Rt && Opts.Rt->MayReturn;
     if (MayReturn) {
       IRB.CreateBr(Cont);
+      if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && Opts.Rt->MinRuntime)
+        TrapCall->setCallingConv(CallingConv::PreserveAll);
     } else {
       TrapCall->setDoesNotReturn();
       IRB.CreateUnreachable();
