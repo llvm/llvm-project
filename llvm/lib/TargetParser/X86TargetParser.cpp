@@ -542,10 +542,6 @@ constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
 constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
-constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE1 = {};
-constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE2 = {};
-constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE3 = {};
-constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE4 = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
@@ -781,14 +777,13 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #ifndef NDEBUG
   // Check that priorities are set properly in the .def file. We expect that
   // "compat" features are assigned non-duplicate consecutive priorities
-  // starting from one (1, ..., 37) and multiple zeros.
+  // starting from one (1, ..., MAX_PRIORITY) and multiple zeros.
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
   };
   std::array<unsigned, std::size(Priorities)> HelperList;
-  const size_t MaxPriority = 35;
-  std::iota(HelperList.begin(), HelperList.begin() + MaxPriority + 1, 0);
+  std::iota(HelperList.begin(), HelperList.begin() + MAX_PRIORITY + 1, 0);
   for (size_t i = MaxPriority + 1; i != std::size(Priorities); ++i)
     HelperList[i] = 0;
   assert(std::is_permutation(HelperList.begin(), HelperList.end(),
