@@ -119,12 +119,7 @@ def push_dynamic_library_lookup_path(config, new_path):
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
 use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if use_lit_shell:
-    # 0 is external, "" is default, and everything else is internal.
-    execute_external = use_lit_shell == "0"
-else:
-    # Otherwise we default to internal everywhere.
-    execute_external = False
+execute_external = use_lit_shell == "0"
 
 # Allow expanding substitutions that are based on other substitutions
 config.recursiveExpansionLimit = 10
