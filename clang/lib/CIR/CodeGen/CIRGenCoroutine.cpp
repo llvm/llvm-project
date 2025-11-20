@@ -103,6 +103,7 @@ RValue CIRGenFunction::emitCoroutineFrame() {
     return RValue::get(curCoro.data->coroBegin);
   }
   cgm.errorNYI("NYI");
+  return RValue();
 }
 
 static void createCoroData(CIRGenFunction &cgf,
