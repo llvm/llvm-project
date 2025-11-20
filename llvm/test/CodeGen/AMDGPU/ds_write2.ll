@@ -13,8 +13,8 @@ define amdgpu_kernel void @simple_write2_one_val_f32(ptr addrspace(1) %C, ptr ad
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dword v1, v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -60,8 +60,8 @@ define amdgpu_kernel void @simple_write2_two_val_f32(ptr addrspace(1) %C, ptr ad
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
 ; CI-NEXT:    s_waitcnt vmcnt(0)
@@ -115,8 +115,8 @@ define amdgpu_kernel void @simple_write2_two_val_f32_volatile_0(ptr addrspace(1)
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[0:1], s[2:3]
@@ -176,8 +176,8 @@ define amdgpu_kernel void @simple_write2_two_val_f32_volatile_1(ptr addrspace(1)
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[0:1], s[2:3]
@@ -403,8 +403,8 @@ define amdgpu_kernel void @simple_write2_two_val_max_offset_f32(ptr addrspace(1)
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
 ; CI-NEXT:    s_waitcnt vmcnt(0)
@@ -458,8 +458,8 @@ define amdgpu_kernel void @simple_write2_two_val_too_far_f32(ptr addrspace(1) %C
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[0:1], s[2:3]
@@ -520,8 +520,8 @@ define amdgpu_kernel void @simple_write2_two_val_f32_x2(ptr addrspace(1) %C, ptr
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[0:1], s[2:3]
@@ -591,8 +591,8 @@ define amdgpu_kernel void @simple_write2_two_val_f32_x2_nonzero_base(ptr addrspa
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[0:1], s[2:3]
@@ -740,8 +740,8 @@ define amdgpu_kernel void @simple_write2_one_val_f64(ptr addrspace(1) %C, ptr ad
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dwordx2 v[1:2], v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -788,8 +788,8 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1)
 ; CI-NEXT:    s_load_dword s4, s[4:5], 0x4
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dwordx2 v[1:2], v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
@@ -844,8 +844,8 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrsp
 ; CI-NEXT:    s_load_dword s4, s[4:5], 0x4
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dwordx2 v[1:2], v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
@@ -942,8 +942,8 @@ define amdgpu_kernel void @simple_write2_two_val_f64(ptr addrspace(1) %C, ptr ad
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64 glc
 ; CI-NEXT:    s_waitcnt vmcnt(0)

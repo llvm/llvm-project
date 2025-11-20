@@ -122,9 +122,9 @@ LLDB_NUMBER_TYPEMAP(enum SWIGTYPE);
 }
 
 // Disable default type checking for this method to avoid SWIG dispatch issues.
-// 
+//
 // Problem: SBThread::GetStopDescription has two overloads:
-//   1. GetStopDescription(char* dst_or_null, size_t dst_len) 
+//   1. GetStopDescription(char* dst_or_null, size_t dst_len)
 //   2. GetStopDescription(lldb::SBStream& stream)
 //
 // SWIG generates a dispatch function to select the correct overload based on argument types.
@@ -132,9 +132,9 @@ LLDB_NUMBER_TYPEMAP(enum SWIGTYPE);
 // However, this dispatcher doesn't consider typemaps that transform function signatures.
 //
 // In lua, our typemap converts GetStopDescription(char*, size_t) to GetStopDescription(int).
-// The dispatcher still checks against the original (char*, size_t) signature instead of 
+// The dispatcher still checks against the original (char*, size_t) signature instead of
 // the transformed (int) signature, causing type matching to fail.
-// This only affects SBThread::GetStopDescription since the type check also matches 
+// This only affects SBThread::GetStopDescription since the type check also matches
 // the argument name, which is unique to this function.
 %typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) (char *dst_or_null, size_t dst_len) ""
 
@@ -251,7 +251,8 @@ LLDB_NUMBER_TYPEMAP(enum SWIGTYPE);
 %typemap(in) lldb::FileSP {
   luaL_Stream *p = (luaL_Stream *)luaL_checkudata(L, $input, LUA_FILEHANDLE);
   lldb::FileSP file_sp;
-  file_sp = std::make_shared<lldb_private::NativeFile>(p->f, false);
+  file_sp = std::make_shared<lldb_private::NativeFile>(
+      p->f, lldb_private::NativeFile::eOpenOptionReadWrite, false);
   if (!file_sp->IsValid())
     return luaL_error(L, "Invalid file");
   $1 = file_sp;

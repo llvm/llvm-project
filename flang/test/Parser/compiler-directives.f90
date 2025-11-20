@@ -96,3 +96,10 @@ subroutine inline
     subroutine g()
     end subroutine
 end subroutine
+
+subroutine ivdep 
+  !dir$ ivdep 
+  ! CHECK: !DIR$ IVDEP 
+  do i=1,10
+  enddo
+end subroutine
