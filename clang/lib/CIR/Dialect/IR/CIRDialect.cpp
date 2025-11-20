@@ -722,58 +722,21 @@ unsigned cir::CallOp::getNumArgOperands() {
 }
 
 static mlir::ParseResult
-parseTryCallBranches(mlir::OpAsmParser &parser, mlir::OperationState &result,
-                     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand>
-                         &continueOperands,
-                     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand>
-                         &landingPadOperands,
-                     llvm::SmallVectorImpl<mlir::Type> &continueTypes,
-                     llvm::SmallVectorImpl<mlir::Type> &landingPadTypes,
-                     llvm::SMLoc &continueOperandsLoc,
-                     llvm::SMLoc &landingPadOperandsLoc) {
-  mlir::Block *continueSuccessor = nullptr;
-  mlir::Block *landingPadSuccessor = nullptr;
-
-  if (parser.parseSuccessor(continueSuccessor))
+parseTryCallDestinations(mlir::OpAsmParser &parser,
+                         mlir::OperationState &result) {
+  mlir::Block *normalDestSuccessor;
+  if (parser.parseSuccessor(normalDestSuccessor))
     return mlir::failure();
-
-  if (mlir::succeeded(parser.parseOptionalLParen())) {
-    continueOperandsLoc = parser.getCurrentLocation();
-    if (parser.parseOperandList(continueOperands))
-      return mlir::failure();
-    if (parser.parseColon())
-      return mlir::failure();
-
-    if (parser.parseTypeList(continueTypes))
-      return mlir::failure();
-    if (parser.parseRParen())
-      return mlir::failure();
-  }
 
   if (parser.parseComma())
     return mlir::failure();
 
-  if (parser.parseSuccessor(landingPadSuccessor))
+  mlir::Block *unwindDestSuccessor;
+  if (parser.parseSuccessor(unwindDestSuccessor))
     return mlir::failure();
 
-  if (mlir::succeeded(parser.parseOptionalLParen())) {
-    landingPadOperandsLoc = parser.getCurrentLocation();
-    if (parser.parseOperandList(landingPadOperands))
-      return mlir::failure();
-    if (parser.parseColon())
-      return mlir::failure();
-
-    if (parser.parseTypeList(landingPadTypes))
-      return mlir::failure();
-    if (parser.parseRParen())
-      return mlir::failure();
-  }
-
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return mlir::failure();
-
-  result.addSuccessors(continueSuccessor);
-  result.addSuccessors(landingPadSuccessor);
+  result.addSuccessors(normalDestSuccessor);
+  result.addSuccessors(unwindDestSuccessor);
   return mlir::success();
 }
 
@@ -815,10 +778,7 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     return mlir::failure();
 
   if (hasDestinationBlocks &&
-      parseTryCallBranches(parser, result, continueOperands, landingPadOperands,
-                           continueTypes, landingPadTypes, continueOperandsLoc,
-                           landingPadOperandsLoc)
-          .failed()) {
+      parseTryCallDestinations(parser, result).failed()) {
     return ::mlir::failure();
   }
 
@@ -880,8 +840,8 @@ static void printCallCommon(mlir::Operation *op,
                             mlir::Value indirectCallee,
                             mlir::OpAsmPrinter &printer, bool isNothrow,
                             cir::SideEffect sideEffect,
-                            mlir::Block *cont = nullptr,
-                            mlir::Block *landingPad = nullptr) {
+                            mlir::Block *normalDest = nullptr,
+                            mlir::Block *unwindDest = nullptr) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -898,28 +858,28 @@ static void printCallCommon(mlir::Operation *op,
 
   printer << "(" << ops << ")";
 
-  if (cont) {
+  if (normalDest) {
     assert(landingPad && "expected two successors");
     auto tryCall = dyn_cast<cir::TryCallOp>(op);
     assert(tryCall && "regular calls do not branch");
-    printer << ' ' << tryCall.getCont();
-    if (!tryCall.getContOperands().empty()) {
+    printer << ' ' << tryCall.getNormalDest();
+    if (!tryCall.getNormalDestOperands().empty()) {
       printer << "(";
-      printer << tryCall.getContOperands();
+      printer << tryCall.getNormalDestOperands();
       printer << ' ' << ":";
       printer << ' ';
-      printer << tryCall.getContOperands().getTypes();
+      printer << tryCall.getNormalDestOperands().getTypes();
       printer << ")";
     }
     printer << ",";
     printer << ' ';
-    printer << tryCall.getLandingPad();
-    if (!tryCall.getLandingPadOperands().empty()) {
+    printer << tryCall.getUnwindDest();
+    if (!tryCall.getUnwindDestOperands().empty()) {
       printer << "(";
-      printer << tryCall.getLandingPadOperands();
+      printer << tryCall.getUnwindDestOperands();
       printer << ' ' << ":";
       printer << ' ';
-      printer << tryCall.getLandingPadOperands().getTypes();
+      printer << tryCall.getUnwindDestOperands().getTypes();
       printer << ")";
     }
   }
@@ -1069,15 +1029,15 @@ void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect, getCont(), getLandingPad());
+                  sideEffect, getNormalDest(), getUnwindDest());
 }
 
 mlir::SuccessorOperands cir::TryCallOp::getSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
   if (index == 0)
-    return SuccessorOperands(getContOperandsMutable());
+    return SuccessorOperands(getNormalDestOperandsMutable());
   if (index == 1)
-    return SuccessorOperands(getLandingPadOperandsMutable());
+    return SuccessorOperands(getUnwindDestOperandsMutable());
 
   // index == 2
   return SuccessorOperands(getArgOperandsMutable());

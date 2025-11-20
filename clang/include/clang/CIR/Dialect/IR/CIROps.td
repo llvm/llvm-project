@@ -2870,27 +2870,29 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
 
     ```mlir
     // Direct call
-    %result = cir.try_call @division(%a, %b) ^continue, ^landing_pad 
+    %result = cir.try_call @division(%a, %b) ^normalDest, ^unwindDest 
       : (f32, f32) -> f32
     ```
   }];
 
   let arguments = !con((ins
-    Variadic<CIR_AnyType>:$contOperands,
-    Variadic<CIR_AnyType>:$landingPadOperands
+    Variadic<CIR_AnyType>:$normalDestOperands,
+    Variadic<CIR_AnyType>:$unwindDestOperands
   ), commonArgs);
 
   let results = (outs Optional<CIR_AnyType>:$result);
-  let successors = (successor AnySuccessor:$cont, AnySuccessor:$landing_pad);
+  let successors = (successor AnySuccessor:$normalDest, AnySuccessor:$unwindDest);
 
   let skipDefaultBuilders = 1;
+  let hasLLVMLowering = false;
 
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
-               "mlir::Block *":$cont, "mlir::Block *":$landing_pad,
+               "mlir::Block *":$normalDest,
+               "mlir::Block *":$unwindDest,
                CArg<"mlir::ValueRange", "{}">:$operands,
-               CArg<"mlir::ValueRange", "{}">:$contOperands,
-               CArg<"mlir::ValueRange", "{}">:$landingPadOperands,
+               CArg<"mlir::ValueRange", "{}">:$normalDestOperands,
+               CArg<"mlir::ValueRange", "{}">:$unwindDestOperands,
                CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       $_state.addOperands(operands);
       if (callee)
@@ -2902,24 +2904,25 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
         SideEffectAttr::get($_builder.getContext(), sideEffect));
 
       // Handle branches
-      $_state.addOperands(contOperands);
-      $_state.addOperands(landingPadOperands);
+      $_state.addOperands(normalDestOperands);
+      $_state.addOperands(unwindDestOperands);
       // The TryCall ODS layout is: cont, landing_pad, operands.
       llvm::copy(::llvm::ArrayRef<int32_t>({
-        static_cast<int32_t>(contOperands.size()),
-        static_cast<int32_t>(landingPadOperands.size()),
+        static_cast<int32_t>(normalDestOperands.size()),
+        static_cast<int32_t>(unwindDestOperands.size()),
         static_cast<int32_t>(operands.size())
         }),
         odsState.getOrAddProperties<Properties>().operandSegmentSizes.begin());
-      $_state.addSuccessors(cont);
-      $_state.addSuccessors(landing_pad);
+      $_state.addSuccessors(normalDest);
+      $_state.addSuccessors(unwindDest);
     }]>,
     OpBuilder<(ins "mlir::Value":$ind_target,
                "FuncType":$fn_type,
-               "mlir::Block *":$cont, "mlir::Block *":$landing_pad,
+               "mlir::Block *":$normalDest,
+               "mlir::Block *":$unwindDest,
                CArg<"mlir::ValueRange", "{}">:$operands,
-               CArg<"mlir::ValueRange", "{}">:$contOperands,
-               CArg<"mlir::ValueRange", "{}">:$landingPadOperands, 
+               CArg<"mlir::ValueRange", "{}">:$normalDestOperands,
+               CArg<"mlir::ValueRange", "{}">:$unwindDestOperands, 
                CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
       finalCallOperands.append(operands.begin(), operands.end());
@@ -2932,17 +2935,17 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
         SideEffectAttr::get($_builder.getContext(), sideEffect));
 
       // Handle branches
-      $_state.addOperands(contOperands);
-      $_state.addOperands(landingPadOperands);
+      $_state.addOperands(normalDestOperands);
+      $_state.addOperands(unwindDestOperands);
       // The TryCall ODS layout is: cont, landing_pad, operands.
       llvm::copy(::llvm::ArrayRef<int32_t>({
-        static_cast<int32_t>(contOperands.size()),
-        static_cast<int32_t>(landingPadOperands.size()),
+        static_cast<int32_t>(normalDestOperands.size()),
+        static_cast<int32_t>(unwindDestOperands.size()),
         static_cast<int32_t>(finalCallOperands.size())
         }),
         odsState.getOrAddProperties<Properties>().operandSegmentSizes.begin());
-      $_state.addSuccessors(cont);
-      $_state.addSuccessors(landing_pad);
+      $_state.addSuccessors(normalDest);
+      $_state.addSuccessors(unwindDest);
     }]>
   ];
 }
