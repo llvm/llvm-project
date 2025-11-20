@@ -200,8 +200,8 @@ body: |
   bb.0:
     liveins: $x10
 
-    ; PseudoLD_RV32_OPT with symbolic operand and non-consecutive registers (x11, x14)
-    ; Should decompose back to two LW instructions preserving symbolic references
+    ; PseudoLD_RV32_OPT with first destination register overlapping base register ($x11)
+    ; Should decompose back to two LW instructions when first reg overlaps base reg
     ; CHECK-LABEL: name: overlapped_first_reg_base_reg
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
