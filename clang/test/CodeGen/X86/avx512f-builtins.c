@@ -5488,6 +5488,13 @@ __m512d test_mm512_permutevar_pd(__m512d __A, __m512i __C) {
   // CHECK: @llvm.x86.avx512.vpermilvar.pd.512
   return _mm512_permutevar_pd(__A, __C); 
 }
+TEST_CONSTEXPR(match_m512d(
+  _mm512_permutevar_pd(
+    ((__m512d){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}),
+    ((__m512i){0b10, 0b00, 0b10, 0b00, 0b10, 0b00, 0b10, 0b00})
+  ),
+  1.0, 0.0, 3.0, 2.0, 5.0, 4.0, 7.0, 6.0
+));
 
 __m512d test_mm512_mask_permutevar_pd(__m512d __W, __mmask8 __U, __m512d __A, __m512i __C) {
   // CHECK-LABEL: test_mm512_mask_permutevar_pd
@@ -5495,6 +5502,15 @@ __m512d test_mm512_mask_permutevar_pd(__m512d __W, __mmask8 __U, __m512d __A, __
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_permutevar_pd(__W, __U, __A, __C); 
 }
+TEST_CONSTEXPR(match_m512d(
+  _mm512_mask_permutevar_pd(
+    ((__m512d){8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0}),
+    (__mmask8)0b01010101,
+    ((__m512d){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}),
+    ((__m512i){0b10, 0b00, 0b10, 0b00, 0b10, 0b00, 0b10, 0b00})
+  ),
+  1.0, 9.0, 3.0, 11.0, 5.0, 13.0, 7.0, 15.0
+));
 
 __m512d test_mm512_maskz_permutevar_pd(__mmask8 __U, __m512d __A, __m512i __C) {
   // CHECK-LABEL: test_mm512_maskz_permutevar_pd
@@ -5502,12 +5518,27 @@ __m512d test_mm512_maskz_permutevar_pd(__mmask8 __U, __m512d __A, __m512i __C) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_permutevar_pd(__U, __A, __C); 
 }
+TEST_CONSTEXPR(match_m512d(
+  _mm512_maskz_permutevar_pd(
+    (__mmask8)0b01010101,
+    ((__m512d){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}),
+    ((__m512i){0b10, 0b00, 0b10, 0b00, 0b10, 0b00, 0b10, 0b00})
+  ),
+  1.0, 0.0, 3.0, 0.0, 5.0, 0.0, 7.0, 0.0
+));
 
 __m512 test_mm512_permutevar_ps(__m512 __A, __m512i __C) {
   // CHECK-LABEL: test_mm512_permutevar_ps
   // CHECK: @llvm.x86.avx512.vpermilvar.ps.512
   return _mm512_permutevar_ps(__A, __C); 
 }
+TEST_CONSTEXPR(match_m512(
+  _mm512_permutevar_ps(
+    ((__m512){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0}),
+    ((__m512i){0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01})
+  ),
+  3.0, 2.0, 1.0, 0.0, 7.0, 6.0, 5.0, 4.0, 11.0, 10.0, 9.0, 8.0, 15.0, 14.0, 13.0, 12.0
+));
 
 __m512 test_mm512_mask_permutevar_ps(__m512 __W, __mmask16 __U, __m512 __A, __m512i __C) {
   // CHECK-LABEL: test_mm512_mask_permutevar_ps
@@ -5515,6 +5546,15 @@ __m512 test_mm512_mask_permutevar_ps(__m512 __W, __mmask16 __U, __m512 __A, __m5
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_permutevar_ps(__W, __U, __A, __C); 
 }
+TEST_CONSTEXPR(match_m512(
+  _mm512_mask_permutevar_ps(
+    ((__m512){16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0}),
+    (__mmask16)0b0101010101010101,
+    ((__m512){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0}),
+    ((__m512i){0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01})
+  ),
+  3.0, 17.0, 1.0, 19.0, 7.0, 21.0, 5.0, 23.0, 11.0, 25.0, 9.0, 27.0, 15.0, 29.0, 13.0, 31.0
+));
 
 __m512 test_mm512_maskz_permutevar_ps(__mmask16 __U, __m512 __A, __m512i __C) {
   // CHECK-LABEL: test_mm512_maskz_permutevar_ps
@@ -5522,6 +5562,14 @@ __m512 test_mm512_maskz_permutevar_ps(__mmask16 __U, __m512 __A, __m512i __C) {
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_permutevar_ps(__U, __A, __C); 
 }
+TEST_CONSTEXPR(match_m512(
+  _mm512_maskz_permutevar_ps(
+    (__mmask16)0b0101010101010101,
+    ((__m512){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0}),
+    ((__m512i){0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01, 0b11 + (0b10ULL << 32), 0b01})
+  ),
+  3.0, 0.0, 1.0, 0.0, 7.0, 0.0, 5.0, 0.0, 11.0, 0.0, 9.0, 0.0, 15.0, 0.0, 13.0, 0.0
+));
 
 __m512i test_mm512_permutex2var_epi32(__m512i __A, __m512i __I, __m512i __B) {
   // CHECK-LABEL: test_mm512_permutex2var_epi32
