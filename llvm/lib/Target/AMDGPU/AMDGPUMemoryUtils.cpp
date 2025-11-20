@@ -273,6 +273,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   //      this is a re-run of the pass
   //      so we don't have anything to do.
   //    - No variables are absolute.
+  // Named-barriers which are absolute symbols are removed
+  // from the maps.
   std::optional<bool> HasAbsoluteGVs;
   bool HasSpecialGVs = false;
   for (auto &Map : {DirectMapKernel, IndirectMapKernel}) {
@@ -284,6 +286,10 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         if (IsDirectMapDynLDSGV)
           continue;
         if (isNamedBarrier(*GV)) {
+          if (IsAbsolute) {
+            DirectMapKernel[Fn].erase(GV);
+            IndirectMapKernel[Fn].erase(GV);
+          }
           HasSpecialGVs = true;
           continue;
         }
@@ -360,6 +366,7 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_s_barrier:
+    case Intrinsic::amdgcn_s_cluster_barrier:
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:

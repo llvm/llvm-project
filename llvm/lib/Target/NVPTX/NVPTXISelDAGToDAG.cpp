@@ -38,6 +38,13 @@ static cl::opt<bool>
     EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
                    cl::desc("Enable reciprocal sqrt optimization"));
 
+// FIXME: This is a WAR to recover lost performance from #155024.
+// We still need to investigate the regression and find a more permanent
+// solution.
+static cl::opt<bool> EnableMADWide("nvptx-mad-wide-opt", cl::init(false),
+                                   cl::Hidden,
+                                   cl::desc("Enable MAD wide optimization"));
+
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
@@ -83,6 +90,8 @@ bool NVPTXDAGToDAGISel::allowFMA() const {
 }
 
 bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
+
+bool NVPTXDAGToDAGISel::doMADWideOpt() const { return EnableMADWide; }
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
@@ -271,6 +280,10 @@ static unsigned getTcgen05LdOpcode(unsigned IID, bool enablePack) {
 }
 
 void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
+  if (!Subtarget->hasTcgen05InstSupport())
+    report_fatal_error(
+        "tcgen05.ld is not supported on this architecture variant");
+
   SDLoc DL(N);
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 
@@ -1018,6 +1031,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i16,
   case MVT::f32:
     return Opcode_i32;
   case MVT::v2f32:
+  case MVT::v2i32:
   case MVT::i64:
   case MVT::f64:
     return Opcode_i64;
@@ -1822,7 +1836,7 @@ bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
   return true;
 }
 
-NVPTXScopes::NVPTXScopes(LLVMContext &C) {
+NVPTXScopes::NVPTXScopes(LLVMContext &C) : Context(&C) {
   Scopes[C.getOrInsertSyncScopeID("singlethread")] = NVPTX::Scope::Thread;
   Scopes[C.getOrInsertSyncScopeID("")] = NVPTX::Scope::System;
   Scopes[C.getOrInsertSyncScopeID("block")] = NVPTX::Scope::Block;
@@ -1837,11 +1851,21 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
 
   auto S = Scopes.find(ID);
   if (S == Scopes.end()) {
-    // TODO:
-    // - Add API to LLVMContext to get the name of a single scope.
-    // - Use that API here to print an error containing the name
-    //   of this Unknown ID.
-    report_fatal_error(formatv("Could not find scope ID={}.", int(ID)));
+    auto scopeName = Context->getSyncScopeName(ID);
+    assert(scopeName.has_value() && "Scope name must exist.");
+
+    // Build list of supported syncscopes programmatically
+    SmallVector<StringRef> supportedScopes;
+    for (const auto &Entry : Scopes) {
+      if (auto name = Context->getSyncScopeName(Entry.first))
+        supportedScopes.push_back(name->empty() ? "<empty string>" : *name);
+    }
+
+    reportFatalUsageError(
+        formatv("NVPTX backend does not support syncscope \"{0}\" (ID={1}).\n"
+                "Supported syncscopes are: {2}.",
+                scopeName.value(), int(ID),
+                make_range(supportedScopes.begin(), supportedScopes.end())));
   }
   return S->second;
 }
@@ -1856,17 +1880,6 @@ bool NVPTXScopes::empty() const { return Scopes.size() == 0; }
 #define GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(dim, mode, is_ch, is_s32)      \
   (is_ch ? (CP_ASYNC_BULK_TENSOR_OPCODE(RED, dim, mode, is_s32, _CH))          \
          : (CP_ASYNC_BULK_TENSOR_OPCODE(RED, dim, mode, is_s32, )))
-
-#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(dim, mode, is_mc, is_ch, is_s32)   \
-  [&]() -> auto {                                                              \
-    if (is_mc && is_ch)                                                        \
-      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, _MC_CH);      \
-    if (is_ch)                                                                 \
-      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, _CH);         \
-    if (is_mc)                                                                 \
-      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, _MC);         \
-    return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, );              \
-  }()
 
 static unsigned GetCpAsyncBulkTensorS2GReductionOpcode(size_t Dim,
                                                        bool IsShared32,
@@ -1909,112 +1922,6 @@ static unsigned GetCpAsyncBulkTensorS2GReductionOpcode(size_t Dim,
                        "GetCpAsyncBulkTensorS2GReductionOpcode.");
     }
   }
-}
-
-static unsigned GetCpAsyncBulkTensorG2SOpcode(size_t Dim, bool IsShared32,
-                                              bool IsMultiCast,
-                                              bool IsCacheHint, bool IsIm2Col) {
-  if (IsIm2Col) {
-    switch (Dim) {
-    case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(3D, IM2COL, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(4D, IM2COL, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(5D, IM2COL, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    default:
-      llvm_unreachable("Invalid Dimension in im2col mode for "
-                       "GetCpAsyncBulkTensorG2SOpcode.");
-    }
-  } else {
-    switch (Dim) {
-    case 1:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(1D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 2:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(2D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(3D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(4D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(5D, TILE, IsMultiCast,
-                                                 IsCacheHint, IsShared32);
-    default:
-      llvm_unreachable(
-          "Invalid Dimension in tile mode for GetCpAsyncBulkTensorG2SOpcode.");
-    }
-  }
-}
-
-static size_t GetDimsFromIntrinsic(unsigned IID) {
-  switch (IID) {
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d:
-    return 3;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d:
-    return 4;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d:
-    return 5;
-  default:
-    llvm_unreachable("Invalid im2col intrinsic in GetDimsFromIntrinsic.");
-  }
-}
-
-void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2SCommon(SDNode *N,
-                                                         bool IsIm2Col) {
-  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
-  // {dst, mbar, src, dims{d0...dN}, im2col_offsets{dims-2}
-  // multicast, cache_hint,
-  // multicast_flag, cache_hint_flag, cta_group_flag}
-  // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {8 + dims + im2col_offsets}
-  size_t NumOps = N->getNumOperands();
-  size_t NumDims = IsIm2Col ? GetDimsFromIntrinsic(N->getConstantOperandVal(1))
-                            : (NumOps - 10);
-  // Offsets is always 'NumDims - 2' and only for im2col mode
-  size_t NumOffsets = IsIm2Col ? (NumDims - 2) : 0;
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 2) == 1;
-  bool IsMultiCast = N->getConstantOperandVal(NumOps - 3) == 1;
-  size_t NumBaseArgs = NumDims + NumOffsets + 3; // for {dst, mbar, src}
-  size_t MultiCastIdx = NumBaseArgs + 2;         // for Chain and IID
-
-  unsigned CTAGroupVal = N->getConstantOperandVal(NumOps - 1);
-  if ((CTAGroupVal > 0) && !Subtarget->hasCpAsyncBulkTensorCTAGroupSupport())
-    report_fatal_error(
-        formatv("CpAsyncBulkTensorG2S cta_group::1/2 is not supported on sm_{}",
-                Subtarget->getSmVersion()));
-
-  SDLoc DL(N);
-  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumBaseArgs));
-
-  // Push MultiCast operand, if available
-  if (IsMultiCast)
-    Ops.push_back(N->getOperand(MultiCastIdx));
-
-  // Push CacheHint operand, if available
-  if (IsCacheHint)
-    Ops.push_back(N->getOperand(MultiCastIdx + 1));
-
-  // Flag for CTA Group
-  Ops.push_back(getI32Imm(CTAGroupVal, DL));
-
-  // Finally, the chain operand
-  Ops.push_back(N->getOperand(0));
-
-  bool IsShared32 =
-      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
-  unsigned Opcode = GetCpAsyncBulkTensorG2SOpcode(
-      NumDims, IsShared32, IsMultiCast, IsCacheHint, IsIm2Col);
-  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
 void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorReduceCommon(SDNode *N,
@@ -2126,6 +2033,10 @@ static unsigned getTcgen05StOpcode(unsigned IID, bool enableUnpack) {
 }
 
 void NVPTXDAGToDAGISel::SelectTcgen05St(SDNode *N, bool hasOffset) {
+  if (!Subtarget->hasTcgen05InstSupport())
+    report_fatal_error(
+        "tcgen05.st is not supported on this architecture variant");
+
   SDLoc DL(N);
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 
@@ -2157,18 +2068,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   switch (IID) {
   default:
     return false;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d:
-    SelectCpAsyncBulkTensorG2SCommon(N);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
-    SelectCpAsyncBulkTensorG2SCommon(N, /*IsIm2Col=*/true);
-    return true;
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_2d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_3d:

@@ -9,10 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
-#include <future>
 #include <sstream>
 
 #if defined(LLVM_ON_UNIX)
@@ -183,24 +181,15 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
   }
 
   // Run finalization actions and get deinitlization action list.
-  std::vector<shared::WrapperFunctionCall> DeinitializeActions;
-  {
-    std::promise<MSVCPExpected<std::vector<shared::WrapperFunctionCall>>> P;
-    auto F = P.get_future();
-    shared::runFinalizeActions(
-        FR.Actions, [&](Expected<std::vector<shared::WrapperFunctionCall>> R) {
-          P.set_value(std::move(R));
-        });
-    if (auto DeinitializeActionsOrErr = F.get())
-      DeinitializeActions = std::move(*DeinitializeActionsOrErr);
-    else
-      return DeinitializeActionsOrErr.takeError();
+  auto DeinitializeActions = shared::runFinalizeActions(FR.Actions);
+  if (!DeinitializeActions) {
+    return DeinitializeActions.takeError();
   }
 
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     Allocations[MinAddr].DeinitializationActions =
-        std::move(DeinitializeActions);
+        std::move(*DeinitializeActions);
     Reservations[Reservation.toPtr<void *>()].Allocations.push_back(MinAddr);
   }
 
@@ -221,11 +210,10 @@ Error ExecutorSharedMemoryMapperService::deinitialize(
     std::lock_guard<std::mutex> Lock(Mutex);
 
     for (auto Base : llvm::reverse(Bases)) {
-      shared::runDeallocActions(
-          Allocations[Base].DeinitializationActions, [&](Error Err) {
-            if (Err)
-              AllErr = joinErrors(std::move(AllErr), std::move(Err));
-          });
+      if (Error Err = shared::runDeallocActions(
+              Allocations[Base].DeinitializationActions)) {
+        AllErr = joinErrors(std::move(AllErr), std::move(Err));
+      }
 
       // Remove the allocation from the allocation list of its reservation
       for (auto &Reservation : Reservations) {

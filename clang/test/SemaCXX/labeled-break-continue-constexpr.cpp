@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fnamed-loops -std=c++23 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fnamed-loops -std=c++23 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 // expected-no-diagnostics
 
 struct Tracker {

@@ -32,6 +32,8 @@ executable("llvm-tblgen") {
     "DFAPacketizerEmitter.cpp",
     "DXILEmitter.cpp",
     "DecoderEmitter.cpp",
+    "DecoderTableEmitter.cpp",
+    "DecoderTree.cpp",
     "DisassemblerEmitter.cpp",
     "ExegesisEmitter.cpp",
     "FastISelEmitter.cpp",

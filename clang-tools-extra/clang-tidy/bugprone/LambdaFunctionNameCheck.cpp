@@ -1,4 +1,4 @@
-//===--- LambdaFunctionNameCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +40,7 @@ public:
     bool HasLine = false;
     for (const Token &T : MD.getMacroInfo()->tokens()) {
       if (T.is(tok::identifier)) {
-        StringRef IdentName = T.getIdentifierInfo()->getName();
+        const StringRef IdentName = T.getIdentifierInfo()->getName();
         if (IdentName == "__FILE__") {
           HasFile = true;
         } else if (IdentName == "__LINE__") {

@@ -20,88 +20,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
-namespace NVPTXISD {
-enum NodeType : unsigned {
-  // Start the numbering from where ISD NodeType finishes.
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  RET_GLUE,
-
-  /// These nodes represent a parameter declaration. In PTX this will look like:
-  ///   .param .align 16 .b8 param0[1024];
-  ///   .param .b32 retval0;
-  ///
-  /// DeclareArrayParam(Chain, Externalsym, Align, Size, Glue)
-  /// DeclareScalarParam(Chain, Externalsym, Size, Glue)
-  DeclareScalarParam,
-  DeclareArrayParam,
-
-  /// This node represents a PTX call instruction. It's operands are as follows:
-  ///
-  /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-  ///      NumParams, Callee, Proto)
-  CALL,
-
-  MoveParam,
-  CallPrototype,
-  ProxyReg,
-  FSHL_CLAMP,
-  FSHR_CLAMP,
-  MUL_WIDE_SIGNED,
-  MUL_WIDE_UNSIGNED,
-  SETP_F16X2,
-  SETP_BF16X2,
-  BFI,
-  PRMT,
-
-  /// This node is similar to ISD::BUILD_VECTOR except that the output may be
-  /// implicitly bitcast to a scalar. This allows for the representation of
-  /// packing move instructions for vector types which are not legal i.e. v2i32
-  BUILD_VECTOR,
-
-  /// This node is the inverse of NVPTX::BUILD_VECTOR. It takes a single value
-  /// which may be a scalar and unpacks it into multiple values by implicitly
-  /// converting it to a vector.
-  UNPACK_VECTOR,
-
-  FCOPYSIGN,
-  FMAXNUM3,
-  FMINNUM3,
-  FMAXIMUM3,
-  FMINIMUM3,
-
-  DYNAMIC_STACKALLOC,
-  STACKRESTORE,
-  STACKSAVE,
-  BrxStart,
-  BrxItem,
-  BrxEnd,
-  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED,
-  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X,
-  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y,
-  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z,
-
-  FIRST_MEMORY_OPCODE,
-
-  /// These nodes are used to lower atomic instructions with i128 type. They are
-  /// similar to the generic nodes, but the input and output values are split
-  /// into two 64-bit values.
-  /// ValLo, ValHi, OUTCHAIN = ATOMIC_CMP_SWAP_B128(INCHAIN, ptr, cmpLo, cmpHi,
-  ///                                               swapLo, swapHi)
-  /// ValLo, ValHi, OUTCHAIN = ATOMIC_SWAP_B128(INCHAIN, ptr, amtLo, amtHi)
-  ATOMIC_CMP_SWAP_B128 = FIRST_MEMORY_OPCODE,
-  ATOMIC_SWAP_B128,
-
-  LoadV2,
-  LoadV4,
-  LoadV8,
-  LDUV2, // LDU.v2
-  LDUV4, // LDU.v4
-  StoreV2,
-  StoreV4,
-  StoreV8,
-  LAST_MEMORY_OPCODE = StoreV8,
-};
-}
 
 class NVPTXSubtarget;
 
@@ -113,8 +31,6 @@ public:
   explicit NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-
-  const char *getTargetNodeName(unsigned Opcode) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
                           MachineFunction &MF,

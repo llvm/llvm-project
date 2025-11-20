@@ -64,7 +64,7 @@ bool isLegalShaderModel(Triple &T) {
   } break;
   case Triple::EnvironmentType::RootSignature:
     VersionTuple MinVer(1, 0);
-    VersionTuple MaxVer(1, 1);
+    VersionTuple MaxVer(1, 2);
     return MinVer <= Version && Version <= MaxVer;
   }
   return false;
@@ -191,23 +191,35 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
   // The extensions that are commented out are supported in DXC, but the SPIR-V
   // backend does not know about them yet.
   static const std::vector<StringRef> DxcSupportedExtensions = {
-      "SPV_KHR_16bit_storage", "SPV_KHR_device_group",
-      "SPV_KHR_fragment_shading_rate", "SPV_KHR_multiview",
-      "SPV_KHR_post_depth_coverage", "SPV_KHR_non_semantic_info",
-      "SPV_KHR_shader_draw_parameters", "SPV_KHR_ray_tracing",
-      "SPV_KHR_shader_clock", "SPV_EXT_demote_to_helper_invocation",
-      "SPV_EXT_descriptor_indexing", "SPV_EXT_fragment_fully_covered",
+      "SPV_KHR_16bit_storage",
+      "SPV_KHR_device_group",
+      "SPV_KHR_fragment_shading_rate",
+      "SPV_KHR_multiview",
+      "SPV_KHR_post_depth_coverage",
+      "SPV_KHR_non_semantic_info",
+      "SPV_KHR_shader_draw_parameters",
+      "SPV_KHR_ray_tracing",
+      "SPV_KHR_shader_clock",
+      "SPV_EXT_demote_to_helper_invocation",
+      "SPV_EXT_descriptor_indexing",
+      "SPV_EXT_fragment_fully_covered",
       "SPV_EXT_fragment_invocation_density",
-      "SPV_EXT_fragment_shader_interlock", "SPV_EXT_mesh_shader",
-      "SPV_EXT_shader_stencil_export", "SPV_EXT_shader_viewport_index_layer",
+      "SPV_EXT_fragment_shader_interlock",
+      "SPV_EXT_mesh_shader",
+      "SPV_EXT_shader_stencil_export",
+      "SPV_EXT_shader_viewport_index_layer",
       // "SPV_AMD_shader_early_and_late_fragment_tests",
-      "SPV_GOOGLE_hlsl_functionality1", "SPV_GOOGLE_user_type",
-      "SPV_KHR_ray_query", "SPV_EXT_shader_image_int64",
-      "SPV_KHR_fragment_shader_barycentric", "SPV_KHR_physical_storage_buffer",
+      "SPV_GOOGLE_hlsl_functionality1",
+      "SPV_GOOGLE_user_type",
+      "SPV_KHR_ray_query",
+      "SPV_EXT_shader_image_int64",
+      "SPV_KHR_fragment_shader_barycentric",
+      "SPV_KHR_physical_storage_buffer",
       "SPV_KHR_vulkan_memory_model",
       // "SPV_KHR_compute_shader_derivatives",
-      // "SPV_KHR_maximal_reconvergence",
-      "SPV_KHR_float_controls", "SPV_NV_shader_subgroup_partitioned",
+      "SPV_KHR_maximal_reconvergence",
+      "SPV_KHR_float_controls",
+      "SPV_NV_shader_subgroup_partitioned",
       // "SPV_KHR_quad_control"
   };
 
@@ -218,7 +230,6 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
 
   if (SpvExtensionArg.compare_insensitive("DXC") == 0) {
     bool first = true;
-    std::string Operand;
     for (StringRef E : DxcSupportedExtensions) {
       if (!first)
         out << ",";
@@ -487,6 +498,15 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       continue;
     }
 
+    if (A->getOption().getID() == options::OPT_enable_16bit_types) {
+      // Translate -enable-16bit-types into -fnative-half-type and
+      // -fnative-int16-type
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_half_type));
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_int16_type));
+      A->claim();
+      continue;
+    }
+
     DAL->append(A);
   }
 
@@ -546,4 +566,8 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
   // No translation, validation, or objcopy are required, so this action must
   // output to the result file.
   return true;
+}
+
+void HLSLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wconversion");
 }

@@ -116,12 +116,12 @@ def configure_dexter_substitutions():
     dexter_path = os.path.join(
         config.cross_project_tests_src_root, "debuginfo-tests", "dexter", "dexter.py"
     )
-    tools.append(ToolSubst("%dexter", f'"{sys.executable}" "{dexter_path}" test'))
+    tools.append(ToolSubst("%dexter", f'"{sys.executable}" "{dexter_path}" test -v'))
     if lldb_dap_path is not None:
         tools.append(
             ToolSubst(
                 "%dexter_lldb_args",
-                f'--lldb-executable "{lldb_dap_path}" --debugger lldb-dap',
+                f'--lldb-executable "{lldb_dap_path}" --debugger lldb-dap --dap-message-log=-e',
             )
         )
 
@@ -148,7 +148,9 @@ def configure_dexter_substitutions():
         dexter_regression_test_c_builder = "clang"
         dexter_regression_test_cxx_builder = "clang++"
         dexter_regression_test_debugger = "lldb-dap"
-        dexter_regression_test_additional_flags = f'--lldb-executable "{lldb_dap_path}"'
+        dexter_regression_test_additional_flags = (
+            f'--lldb-executable "{lldb_dap_path}" --dap-message-log=-e'
+        )
         dexter_regression_test_c_flags = "-O0 -glldb -std=gnu11"
         dexter_regression_test_cxx_flags = "-O0 -glldb -std=gnu++11"
 
@@ -167,7 +169,7 @@ def configure_dexter_substitutions():
             '"{}"'.format(sys.executable),
             '"{}"'.format(dexter_path),
             "test",
-            "--fail-lt 1.0 -w",
+            "--fail-lt 1.0 -w -v",
             "--debugger",
             dexter_regression_test_debugger,
             dexter_regression_test_additional_flags,

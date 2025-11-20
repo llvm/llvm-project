@@ -16,11 +16,7 @@
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include "llvm/Transforms/Coroutines/CoroShape.h"
 
-namespace llvm {
-
-class CallGraph;
-
-namespace coro {
+namespace llvm::coro {
 
 bool isSuspendBlock(BasicBlock *BB);
 bool declaresAnyIntrinsic(const Module &M);
@@ -61,7 +57,6 @@ void normalizeCoroutine(Function &F, coro::Shape &Shape,
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
                              TargetTransformInfo &TTI,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
-} // End namespace coro.
-} // End namespace llvm
+} // End namespace llvm::coro
 
 #endif

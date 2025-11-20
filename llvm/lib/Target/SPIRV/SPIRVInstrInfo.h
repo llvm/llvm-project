@@ -36,7 +36,8 @@ public:
   bool isTypeDeclInstr(const MachineInstr &MI) const;
   bool isDecorationInstr(const MachineInstr &MI) const;
   bool isAliasingInstr(const MachineInstr &MI) const;
-  bool canUseFastMathFlags(const MachineInstr &MI) const;
+  bool canUseFastMathFlags(const MachineInstr &MI,
+                           bool KHRFloatControls2) const;
   bool canUseNSW(const MachineInstr &MI) const;
   bool canUseNUW(const MachineInstr &MI) const;
 
@@ -61,7 +62,9 @@ public:
 namespace SPIRV {
 enum AsmComments {
   // It is a half type
-  ASM_PRINTER_WIDTH16 = MachineInstr::TAsmComments
+  ASM_PRINTER_WIDTH16 = MachineInstr::TAsmComments,
+  // It is a 64 bit type
+  ASM_PRINTER_WIDTH64 = ASM_PRINTER_WIDTH16 << 1,
 };
 } // namespace SPIRV
 

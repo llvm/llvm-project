@@ -185,8 +185,7 @@ LLVM_ABI bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *,
                           TargetLibraryInfo *, Loop *, MemorySSAUpdater &,
                           ScalarEvolution *, ICFLoopSafetyInfo *,
                           SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
-                          bool, bool AllowSpeculation,
-                          bool HasCoroSuspendInst = false);
+                          bool, bool AllowSpeculation);
 
 /// Return true if the induction variable \p IV in a Loop whose latch is
 /// \p LatchBlock would become dead if the exit test \p Cond were removed.
@@ -323,22 +322,82 @@ LLVM_ABI TransformationMode hasLICMVersioningTransformation(const Loop *L);
 LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                                       unsigned V = 0);
 
-/// Returns a loop's estimated trip count based on branch weight metadata.
-/// In addition if \p EstimatedLoopInvocationWeight is not null it is
-/// initialized with weight of loop's latch leading to the exit.
-/// Returns a valid positive trip count, saturated at UINT_MAX, or std::nullopt
-/// when a meaningful estimate cannot be made.
+/// Return either:
+/// - \c std::nullopt, if the implementation is unable to handle the loop form
+///   of \p L (e.g., \p L must have a latch block that controls the loop exit).
+/// - The value of \c llvm.loop.estimated_trip_count from the loop metadata of
+///   \p L, if that metadata is present.
+/// - Else, a new estimate of the trip count from the latch branch weights of
+///   \p L.
+///
+/// An estimated trip count is always a valid positive trip count, saturated at
+/// \c UINT_MAX.
+///
+/// In addition, if \p EstimatedLoopInvocationWeight, then either:
+/// - Set \c *EstimatedLoopInvocationWeight to the weight of the latch's branch
+///   to the loop exit.
+/// - Do not set it, and return \c std::nullopt, if the current implementation
+///   cannot compute that weight (e.g., if \p L does not have a latch block that
+///   controls the loop exit) or the weight is zero (because zero cannot be
+///   used to compute new branch weights that reflect the estimated trip count).
+///
+/// TODO: Eventually, once all passes have migrated away from setting branch
+/// weights to indicate estimated trip counts, this function will drop the
+/// \p EstimatedLoopInvocationWeight parameter.
 LLVM_ABI std::optional<unsigned>
 getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr);
 
-/// Set a loop's branch weight metadata to reflect that loop has \p
-/// EstimatedTripCount iterations and \p EstimatedLoopInvocationWeight exits
-/// through latch. Returns true if metadata is successfully updated, false
-/// otherwise. Note that loop must have a latch block which controls loop exit
-/// in order to succeed.
-LLVM_ABI bool setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
-                                        unsigned EstimatedLoopInvocationWeight);
+/// Set \c llvm.loop.estimated_trip_count with the value \p EstimatedTripCount
+/// in the loop metadata of \p L.  Return false if the implementation is unable
+/// to handle the loop form of \p L (e.g., \p L must have a latch block that
+/// controls the loop exit).  Otherwise, return true.
+///
+/// In addition, if \p EstimatedLoopInvocationWeight, set the branch weight
+/// metadata of \p L to reflect that \p L has an estimated
+/// \p EstimatedTripCount iterations and has \c *EstimatedLoopInvocationWeight
+/// exit weight through the loop's latch.
+///
+/// TODO: Eventually, once all passes have migrated away from setting branch
+/// weights to indicate estimated trip counts, this function will drop the
+/// \p EstimatedLoopInvocationWeight parameter.
+LLVM_ABI bool setLoopEstimatedTripCount(
+    Loop *L, unsigned EstimatedTripCount,
+    std::optional<unsigned> EstimatedLoopInvocationWeight = std::nullopt);
+
+/// Based on branch weight metadata, return either:
+/// - An unknown probability if the implementation is unable to handle the loop
+///   form of \p L (e.g., \p L must have a latch block that controls the loop
+///   exit).
+/// - The probability \c P that, at the end of any iteration, the latch of \p L
+///   will start another iteration such that `1 - P` is the probability of
+///   exiting the loop.
+BranchProbability getLoopProbability(Loop *L);
+
+/// Set branch weight metadata for the latch of \p L to indicate that, at the
+/// end of any iteration, \p P and `1 - P` are the probabilities of starting
+/// another iteration and exiting the loop, respectively.  Return false if the
+/// implementation is unable to handle the loop form of \p L (e.g., \p L must
+/// have a latch block that controls the loop exit).  Otherwise, return true.
+bool setLoopProbability(Loop *L, BranchProbability P);
+
+/// Based on branch weight metadata, return either:
+/// - An unknown probability if the implementation cannot extract the
+///   probability (e.g., \p B must have exactly two target labels, so it must be
+///   a conditional branch).
+/// - The probability \c P that control flows from \p B to its first target
+///   label such that `1 - P` is the probability of control flowing to its
+///   second target label, or vice-versa if \p ForFirstTarget is false.
+BranchProbability getBranchProbability(BranchInst *B, bool ForFirstTarget);
+
+/// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
+/// the probabilities of control flowing to its first and second target labels,
+/// respectively, or vice-versa if \p ForFirstTarget is false.  Return false if
+/// the implementation cannot set the probability (e.g., \p B must have exactly
+/// two target labels, so it must be a conditional branch).  Otherwise, return
+/// true.
+bool setBranchProbability(BranchInst *B, BranchProbability P,
+                          bool ForFirstTarget);
 
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially
@@ -507,23 +566,6 @@ LLVM_ABI int rewriteLoopExitValues(Loop *L, LoopInfo *LI,
                                    SCEVExpander &Rewriter, DominatorTree *DT,
                                    ReplaceExitVal ReplaceExitValue,
                                    SmallVector<WeakTrackingVH, 16> &DeadInsts);
-
-/// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
-/// \p OrigLoop and the following distribution of \p OrigLoop iteration among \p
-/// UnrolledLoop and \p RemainderLoop. \p UnrolledLoop receives weights that
-/// reflect TC/UF iterations, and \p RemainderLoop receives weights that reflect
-/// the remaining TC%UF iterations.
-///
-/// Note that \p OrigLoop may be equal to either \p UnrolledLoop or \p
-/// RemainderLoop in which case weights for \p OrigLoop are updated accordingly.
-/// Note also behavior is undefined if \p UnrolledLoop and \p RemainderLoop are
-/// equal. \p UF must be greater than zero.
-/// If \p OrigLoop has no profile info associated nothing happens.
-///
-/// This utility may be useful for such optimizations as unroller and
-/// vectorizer as it's typical transformation for them.
-LLVM_ABI void setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
-                                           Loop *RemainderLoop, uint64_t UF);
 
 /// Utility that implements appending of loops onto a worklist given a range.
 /// We want to process loops in postorder, but the worklist is a LIFO data

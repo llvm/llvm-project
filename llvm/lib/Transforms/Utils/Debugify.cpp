@@ -19,6 +19,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -162,8 +163,8 @@ bool llvm::applyDebugifyMetadata(
   unsigned NextLine = 1;
   unsigned NextVar = 1;
   auto File = DIB.createFile(M.getName(), "/");
-  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File, "debugify",
-                                  /*isOptimized=*/true, "", 0);
+  auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C), File,
+                                  "debugify", /*isOptimized=*/true, "", 0);
 
   // Visit each instruction.
   for (Function &F : Functions) {

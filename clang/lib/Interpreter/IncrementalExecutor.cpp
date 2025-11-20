@@ -18,9 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
@@ -48,8 +46,7 @@
 
 // Force linking some of the runtimes that helps attaching to a debugger.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBWrapper
-               << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
+  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
 namespace clang {
@@ -172,7 +169,8 @@ createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
 IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
                                     bool UseSharedMemory,
-                                    unsigned SlabAllocateSize) {
+                                    unsigned SlabAllocateSize,
+                                    std::function<void()> CustomizeFork) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -214,6 +212,9 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
     // Close the parent ends of the pipes
     close(ToExecutor[WriteEnd]);
     close(FromExecutor[ReadEnd]);
+
+    if (CustomizeFork)
+      CustomizeFork();
 
     // Execute the child process.
     std::unique_ptr<char[]> ExecutorPath, FDSpecifier;

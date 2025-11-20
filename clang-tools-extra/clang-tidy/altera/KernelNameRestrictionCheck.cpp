@@ -1,4 +1,4 @@
-//===--- KernelNameRestrictionCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -77,7 +77,7 @@ void KernelNameRestrictionPPCallbacks::EndOfMainFile() {
 
   // Check main file for restricted names.
   OptionalFileEntryRef Entry = SM.getFileEntryRefForID(SM.getMainFileID());
-  StringRef FileName = llvm::sys::path::filename(Entry->getName());
+  const StringRef FileName = llvm::sys::path::filename(Entry->getName());
   if (fileNameIsRestricted(FileName))
     Check.diag(SM.getLocForStartOfFile(SM.getMainFileID()),
                "compiling '%0' may cause additional compilation errors due "
@@ -90,7 +90,7 @@ void KernelNameRestrictionPPCallbacks::EndOfMainFile() {
 
   // Check included files for restricted names.
   for (const IncludeDirective &ID : IncludeDirectives) {
-    StringRef FileName = llvm::sys::path::filename(ID.FileName);
+    const StringRef FileName = llvm::sys::path::filename(ID.FileName);
     if (fileNameIsRestricted(FileName))
       Check.diag(ID.Loc,
                  "including '%0' may cause additional compilation errors due "

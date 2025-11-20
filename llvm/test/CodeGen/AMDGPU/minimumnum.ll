@@ -271,8 +271,7 @@ define half @v_minimumnum_f16_1.0(half %x) {
 ; GFX7-GISEL:       ; %bb.0:
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
-; GFX7-GISEL-NEXT:    v_min_f32_e32 v0, v0, v1
+; GFX7-GISEL-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;

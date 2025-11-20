@@ -76,6 +76,9 @@ public:
   bool isSpilledToReg()                    const { return SpilledToReg; }
 };
 
+using SaveRestorePoints =
+    DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>>;
+
 /// The MachineFrameInfo class represents an abstract stack frame until
 /// prolog/epilog code is inserted.  This class is key to allowing stack frame
 /// representation optimizations, such as frame pointer elimination.  It also
@@ -333,9 +336,9 @@ private:
   bool HasTailCall = false;
 
   /// Not empty, if shrink-wrapping found a better place for the prologue.
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
+  SaveRestorePoints SavePoints;
   /// Not empty, if shrink-wrapping found a better place for the epilogue.
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
+  SaveRestorePoints RestorePoints;
 
   /// Size of the UnsafeStack Frame
   uint64_t UnsafeStackSize = 0;
@@ -494,7 +497,18 @@ public:
   /// Should this stack ID be considered in MaxAlignment.
   bool contributesToMaxAlignment(uint8_t StackID) {
     return StackID == TargetStackID::Default ||
-           StackID == TargetStackID::ScalableVector;
+           StackID == TargetStackID::ScalableVector ||
+           StackID == TargetStackID::ScalablePredicateVector;
+  }
+
+  bool hasScalableStackID(int ObjectIdx) const {
+    uint8_t StackID = getStackID(ObjectIdx);
+    return isScalableStackID(StackID);
+  }
+
+  bool isScalableStackID(uint8_t StackID) const {
+    return StackID == TargetStackID::ScalableVector ||
+           StackID == TargetStackID::ScalablePredicateVector;
   }
 
   /// setObjectAlignment - Change the alignment of the specified stack object.
@@ -825,16 +839,20 @@ public:
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  ArrayRef<MachineBasicBlock *> getSavePoints() const { return SavePoints; }
-  void setSavePoints(ArrayRef<MachineBasicBlock *> NewSavePoints) {
-    SavePoints.assign(NewSavePoints.begin(), NewSavePoints.end());
+  const SaveRestorePoints &getRestorePoints() const { return RestorePoints; }
+
+  const SaveRestorePoints &getSavePoints() const { return SavePoints; }
+
+  void setSavePoints(SaveRestorePoints NewSavePoints) {
+    SavePoints = std::move(NewSavePoints);
   }
-  ArrayRef<MachineBasicBlock *> getRestorePoints() const {
-    return RestorePoints;
+
+  void setRestorePoints(SaveRestorePoints NewRestorePoints) {
+    RestorePoints = std::move(NewRestorePoints);
   }
-  void setRestorePoints(ArrayRef<MachineBasicBlock *> NewRestorePoints) {
-    RestorePoints.assign(NewRestorePoints.begin(), NewRestorePoints.end());
-  }
+
+  void clearSavePoints() { SavePoints.clear(); }
+  void clearRestorePoints() { RestorePoints.clear(); }
 
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
   void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }

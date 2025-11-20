@@ -781,6 +781,9 @@ void RuntimeDyldELF::resolveLoongArch64Relocation(const SectionEntry &Section,
   default:
     report_fatal_error("Relocation type not implemented yet!");
     break;
+  case ELF::R_LARCH_MARK_LA:
+    // ignore
+    break;
   case ELF::R_LARCH_32:
     support::ulittle32_t::ref{TargetPtr} =
         static_cast<uint32_t>(Value + Addend);

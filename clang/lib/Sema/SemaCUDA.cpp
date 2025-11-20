@@ -143,6 +143,9 @@ CUDAFunctionTarget SemaCUDA::IdentifyTarget(const FunctionDecl *D,
   if (D->hasAttr<CUDAGlobalAttr>())
     return CUDAFunctionTarget::Global;
 
+  if (D->isConsteval())
+    return CUDAFunctionTarget::HostDevice;
+
   if (hasAttr<CUDADeviceAttr>(D, IgnoreImplicitHDAttr)) {
     if (hasAttr<CUDAHostAttr>(D, IgnoreImplicitHDAttr))
       return CUDAFunctionTarget::HostDevice;

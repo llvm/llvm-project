@@ -47,6 +47,24 @@ bool FunctionSamples::ProfileIsPreInlined = false;
 bool FunctionSamples::UseMD5 = false;
 bool FunctionSamples::HasUniqSuffix = true;
 bool FunctionSamples::ProfileIsFS = false;
+
+std::error_code
+serializeTypeMap(const TypeCountMap &Map,
+                 const MapVector<FunctionId, uint32_t> &NameTable,
+                 raw_ostream &OS) {
+  encodeULEB128(Map.size(), OS);
+  for (const auto &[TypeName, SampleCount] : Map) {
+    if (auto NameIndexIter = NameTable.find(TypeName);
+        NameIndexIter != NameTable.end()) {
+      encodeULEB128(NameIndexIter->second, OS);
+    } else {
+      // If the type is not in the name table, we cannot serialize it.
+      return sampleprof_error::truncated_name_table;
+    }
+    encodeULEB128(SampleCount, OS);
+  }
+  return sampleprof_error::success;
+}
 } // namespace sampleprof
 } // namespace llvm
 
@@ -178,6 +196,17 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
+static void printTypeCountMap(raw_ostream &OS, LineLocation Loc,
+                              const TypeCountMap &TypeCountMap) {
+  if (TypeCountMap.empty()) {
+    return;
+  }
+  OS << Loc << ": vtables: ";
+  for (const auto &[Type, Count] : TypeCountMap)
+    OS << Type << ":" << Count << " ";
+  OS << "\n";
+}
+
 /// Print the samples collected for a function on stream \p OS.
 void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   if (getFunctionHash())
@@ -192,7 +221,13 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
     for (const auto &SI : SortedBodySamples.get()) {
       OS.indent(Indent + 2);
+      const auto &Loc = SI->first;
       OS << SI->first << ": " << SI->second;
+      if (const TypeCountMap *TypeCountMap =
+              this->findCallsiteTypeSamplesAt(Loc)) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, *TypeCountMap);
+      }
     }
     OS.indent(Indent);
     OS << "}\n";
@@ -213,6 +248,11 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
         OS.indent(Indent + 2);
         OS << Loc << ": inlined callee: " << FuncSample.getFunction() << ": ";
         FuncSample.print(OS, Indent + 4);
+      }
+      auto TypeSamplesIter = VirtualCallsiteTypeCounts.find(Loc);
+      if (TypeSamplesIter != VirtualCallsiteTypeCounts.end()) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, TypeSamplesIter->second);
       }
     }
     OS.indent(Indent);

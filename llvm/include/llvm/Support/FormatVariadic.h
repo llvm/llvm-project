@@ -37,7 +37,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <array>
 #include <cstddef>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>

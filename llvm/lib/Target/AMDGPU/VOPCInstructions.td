@@ -1233,18 +1233,12 @@ defm V_CMPX_CLASS_F16 : VOPCX_CLASS_F16 <"v_cmpx_class_f16">;
 // We need to use COPY_TO_REGCLASS to w/a the problem when ReplaceAllUsesWith()
 // complaints it cannot replace i1 <-> i64/i32 if node was not morphed in place.
 multiclass ICMP_Pattern <PatFrags cond, Instruction inst, ValueType vt, dag dstInst = (inst $src0, $src1)> {
-  let WaveSizePredicate = isWave64 in
   def : GCNPat <
-    (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
-    (i64 (COPY_TO_REGCLASS dstInst, SReg_64))
+    (WaveSizeVT (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
+    dstInst
   >;
 
   let WaveSizePredicate = isWave32 in {
-    def : GCNPat <
-      (i32 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
-      (i32 (COPY_TO_REGCLASS dstInst, SReg_32))
-    >;
-
     // Support codegen of i64 setcc in wave32 mode.
     def : GCNPat <
       (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),

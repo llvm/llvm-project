@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
@@ -99,4 +99,90 @@ cir.func @ullfunc() -> !u64i {
 // CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !u64i
 // CHECK:   cir.return %[[VAL:.*]] : !u64i
 // CHECK: }
+
+cir.func coroutine @coro() {
+  cir.await(init, ready : {
+    %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, [""] {alignment = 1 : i64}
+    %1 = cir.load align(1) %0 : !cir.ptr<!cir.bool>, !cir.bool
+    cir.condition(%1)
+  }, suspend : {
+    cir.yield
+  }, resume : {
+    cir.yield
+  },)
+  cir.return
 }
+// CHECK: cir.func{{.*}} coroutine @coro()
+
+cir.func builtin @builtin() {
+  cir.return
+}
+// CHECK: cir.func{{.*}} builtin @builtin()
+
+cir.func @global_ctor_func() global_ctor {
+  cir.return
+}
+
+// CHECK: cir.func @global_ctor_func() global_ctor {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_ctor_with_priority() global_ctor(200) {
+  cir.return
+}
+
+// CHECK: cir.func @global_ctor_with_priority() global_ctor(200) {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_dtor_func() global_dtor {
+  cir.return
+}
+
+// CHECK: cir.func @global_dtor_func() global_dtor {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_dtor_with_priority() global_dtor(201) {
+  cir.return
+}
+
+// CHECK: cir.func @global_dtor_with_priority() global_dtor(201) {
+// CHECK:   cir.return
+// CHECK: }
+
+}
+
+!rec_Foo = !cir.record<struct "Foo" {!s32i}>
+
+cir.func @Foo_default() special_member<#cir.cxx_ctor<!rec_Foo, default>> {
+  cir.return
+}
+
+// CHECK: cir.func @Foo_default() special_member<#cir.cxx_ctor<!rec_Foo, default>> {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @Foo_trivial_copy() special_member<#cir.cxx_ctor<!rec_Foo, copy, trivial true>> {
+  cir.return
+}
+
+// CHECK: cir.func @Foo_trivial_copy() special_member<#cir.cxx_ctor<!rec_Foo, copy, trivial true>> {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @Foo_destructor() special_member<#cir.cxx_dtor<!rec_Foo>> {
+  cir.return
+}
+
+// CHECK: cir.func @Foo_destructor() special_member<#cir.cxx_dtor<!rec_Foo>> {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @Foo_move_assign() special_member<#cir.cxx_assign<!rec_Foo, move>> {
+  cir.return
+}
+
+// CHECK: cir.func @Foo_move_assign() special_member<#cir.cxx_assign<!rec_Foo, move>> {
+// CHECK:   cir.return
+// CHECK: }

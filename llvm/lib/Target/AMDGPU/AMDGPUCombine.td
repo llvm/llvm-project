@@ -71,6 +71,12 @@ def int_minmax_to_med3 : GICombineRule<
          [{ return matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
+let Predicates = [Predicate<"Subtarget->d16PreservesUnusedBits()">] in
+def d16_load : GICombineRule<
+  (defs root:$bitcast),
+  (combine (G_BITCAST $dst, $src):$bitcast,
+           [{ return combineD16Load(*${bitcast} ); }])>;
+
 def fp_minmax_to_med3 : GICombineRule<
   (defs root:$min_or_max, med3_matchdata:$matchinfo),
   (match (wip_match_opcode G_FMAXNUM,
@@ -170,6 +176,19 @@ def binop_s64_with_s32_mask_combines : GICombineGroup<[
   combine_or_s64_with_s32_mask, combine_and_s64_with_s32_mask
 ]>;
 
+// (or i64:x, (zext i32:y)) -> i64:(merge (or lo_32(x), i32:y), hi_32(x))
+// (or (zext i32:y), i64:x) -> i64:(merge (or lo_32(x), i32:y), hi_32(x))
+def or_s64_zext_s32_frag : GICombinePatFrag<(outs root:$dst), (ins $src_s64, $src_s32),
+  [(pattern (G_OR $dst, i64:$src_s64, i64:$zext_val), (G_ZEXT i64:$zext_val, i32:$src_s32)),
+   (pattern (G_OR $dst, i64:$zext_val, i64:$src_s64), (G_ZEXT i64:$zext_val, i32:$src_s32))]>;
+
+def combine_or_s64_s32 : GICombineRule<
+  (defs root:$dst),
+  (match (or_s64_zext_s32_frag $dst, i64:$x, i32:$y):$dst),
+  (apply (G_UNMERGE_VALUES $x_lo, $x_hi, $x),
+         (G_OR $or, $x_lo, $y),
+         (G_MERGE_VALUES $dst, $or, $x_hi))>;
+
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
 // saves one instruction compared to the promotion.
@@ -200,7 +219,7 @@ def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
   [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
    foldable_fneg, combine_shuffle_vector_to_build_vector,
-   binop_s64_with_s32_mask_combines]> {
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -209,7 +228,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16, sign_extension_in_reg, smulu64,
-   binop_s64_with_s32_mask_combines]> {
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -219,5 +238,6 @@ def AMDGPURegBankCombiner : GICombiner<
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
-   cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines]> {
+   cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
+   d16_load]> {
 }

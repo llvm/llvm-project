@@ -1,4 +1,4 @@
-//===--- MacroRepeatedSideEffectsCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -127,7 +127,7 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
         continue;
     }
 
-    IdentifierInfo *TII = T.getIdentifierInfo();
+    const IdentifierInfo *TII = T.getIdentifierInfo();
     // If not existent, skip it.
     if (TII == nullptr)
       continue;

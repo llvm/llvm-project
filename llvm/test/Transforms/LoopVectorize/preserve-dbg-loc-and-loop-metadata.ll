@@ -13,7 +13,7 @@ define void @_Z3fooPf(ptr %a) {
 ; CHECK-LABEL: define void @_Z3fooPf(
 ; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -27,24 +27,13 @@ define void @_Z3fooPf(ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[P:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[P]], 2.000000e+00
-; CHECK-NEXT:    store float [[MUL]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUGLOC-LABEL: define void @_Z3fooPf(
 ; DEBUGLOC-SAME: ptr [[A:%.*]]) !dbg [[DBG5:![0-9]+]] {
 ; DEBUGLOC-NEXT:  [[ENTRY:.*:]]
-; DEBUGLOC-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG18:![0-9]+]]
+; DEBUGLOC-NEXT:    br label %[[VECTOR_PH:.*]], !dbg [[DBG18:![0-9]+]]
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG18]]
 ; DEBUGLOC:       [[VECTOR_BODY]]:
@@ -58,25 +47,8 @@ define void @_Z3fooPf(ptr %a) {
 ; DEBUGLOC-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG24]], !llvm.loop [[LOOP25:![0-9]+]]
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:
 ; DEBUGLOC-NEXT:    br label %[[FOR_END:.*]], !dbg [[DBG24]]
-; DEBUGLOC:       [[SCALAR_PH]]:
-; DEBUGLOC-NEXT:    br label %[[FOR_BODY:.*]], !dbg [[DBG18]]
-; DEBUGLOC:       [[FOR_BODY]]:
-; DEBUGLOC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], !dbg [[DBG19]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[INDVARS_IV]], [[META9:![0-9]+]], !DIExpression(), [[DBG19]])
-; DEBUGLOC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]], !dbg [[DBG20]]
-; DEBUGLOC-NEXT:      #dbg_value(ptr [[ARRAYIDX]], [[META11:![0-9]+]], !DIExpression(), [[DBG20]])
-; DEBUGLOC-NEXT:    [[P:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !dbg [[DBG21]]
-; DEBUGLOC-NEXT:      #dbg_value(float [[P]], [[META12:![0-9]+]], !DIExpression(), [[DBG21]])
-; DEBUGLOC-NEXT:    [[MUL:%.*]] = fmul float [[P]], 2.000000e+00, !dbg [[DBG22]]
-; DEBUGLOC-NEXT:      #dbg_value(float [[MUL]], [[META14:![0-9]+]], !DIExpression(), [[DBG22]])
-; DEBUGLOC-NEXT:    store float [[MUL]], ptr [[ARRAYIDX]], align 4, !dbg [[DBG23]]
-; DEBUGLOC-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1, !dbg [[DBG28:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[INDVARS_IV_NEXT]], [[META15:![0-9]+]], !DIExpression(), [[DBG28]])
-; DEBUGLOC-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024, !dbg [[DBG29:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i1 [[EXITCOND]], [[META16:![0-9]+]], !DIExpression(), [[DBG29]])
-; DEBUGLOC-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !dbg [[DBG24]], !llvm.loop [[LOOP30:![0-9]+]]
 ; DEBUGLOC:       [[FOR_END]]:
-; DEBUGLOC-NEXT:    ret void, !dbg [[DBG31:![0-9]+]]
+; DEBUGLOC-NEXT:    ret void, !dbg [[DBG28:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -122,7 +94,7 @@ define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 32
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -134,54 +106,54 @@ define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds ptr, ptr [[IV]], i64 1
 ; CHECK-NEXT:    store ptr [[IV]], ptr [[IV]], align 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[IV_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUGLOC-LABEL: define void @widen_ptr_induction_dbg(
-; DEBUGLOC-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) !dbg [[DBG32:![0-9]+]] {
+; DEBUGLOC-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) !dbg [[DBG29:![0-9]+]] {
 ; DEBUGLOC-NEXT:  [[ENTRY:.*]]:
-; DEBUGLOC-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64, !dbg [[DBG37:![0-9]+]]
-; DEBUGLOC-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64, !dbg [[DBG37]]
-; DEBUGLOC-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8, !dbg [[DBG37]]
-; DEBUGLOC-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]], !dbg [[DBG37]]
-; DEBUGLOC-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3, !dbg [[DBG37]]
-; DEBUGLOC-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1, !dbg [[DBG37]]
-; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4, !dbg [[DBG37]]
-; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG37]]
+; DEBUGLOC-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64, !dbg [[DBG34:![0-9]+]]
+; DEBUGLOC-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64, !dbg [[DBG34]]
+; DEBUGLOC-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8, !dbg [[DBG34]]
+; DEBUGLOC-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]], !dbg [[DBG34]]
+; DEBUGLOC-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3, !dbg [[DBG34]]
+; DEBUGLOC-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1, !dbg [[DBG34]]
+; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4, !dbg [[DBG34]]
+; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG34]]
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; DEBUGLOC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; DEBUGLOC-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
 ; DEBUGLOC-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
-; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG37]]
+; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG34]]
 ; DEBUGLOC:       [[VECTOR_BODY]]:
 ; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; DEBUGLOC-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG38:![0-9]+]]
-; DEBUGLOC-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 8, i64 16, i64 24>, !dbg [[DBG38]]
-; DEBUGLOC-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0, !dbg [[DBG39:![0-9]+]]
-; DEBUGLOC-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP6]], align 1, !dbg [[DBG39]]
+; DEBUGLOC-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG35:![0-9]+]]
+; DEBUGLOC-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 8, i64 16, i64 24>, !dbg [[DBG35]]
+; DEBUGLOC-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
+; DEBUGLOC-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP6]], align 1, !dbg [[DBG36:![0-9]+]]
 ; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; DEBUGLOC-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 32, !dbg [[DBG38]]
-; DEBUGLOC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG40:![0-9]+]]
-; DEBUGLOC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG40]], !llvm.loop [[LOOP41:![0-9]+]]
+; DEBUGLOC-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 32, !dbg [[DBG35]]
+; DEBUGLOC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG37:![0-9]+]]
+; DEBUGLOC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG37]], !llvm.loop [[LOOP38:![0-9]+]]
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:
-; DEBUGLOC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]], !dbg [[DBG40]]
-; DEBUGLOC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG40]]
+; DEBUGLOC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]], !dbg [[DBG37]]
+; DEBUGLOC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG37]]
 ; DEBUGLOC:       [[SCALAR_PH]]:
-; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ], !dbg [[DBG38]]
-; DEBUGLOC-NEXT:    br label %[[LOOP:.*]], !dbg [[DBG37]]
+; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ], !dbg [[DBG35]]
+; DEBUGLOC-NEXT:    br label %[[LOOP:.*]], !dbg [[DBG34]]
 ; DEBUGLOC:       [[LOOP]]:
-; DEBUGLOC-NEXT:    [[IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ], !dbg [[DBG38]]
-; DEBUGLOC-NEXT:      #dbg_value(ptr [[IV]], [[META34:![0-9]+]], !DIExpression(), [[DBG38]])
-; DEBUGLOC-NEXT:    [[IV_NEXT]] = getelementptr inbounds ptr, ptr [[IV]], i64 1, !dbg [[DBG42:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(ptr [[IV_NEXT]], [[META35:![0-9]+]], !DIExpression(), [[DBG42]])
-; DEBUGLOC-NEXT:    store ptr [[IV]], ptr [[IV]], align 1, !dbg [[DBG39]]
-; DEBUGLOC-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[IV_NEXT]], [[END]], !dbg [[DBG43:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i1 [[CMP_NOT]], [[META36:![0-9]+]], !DIExpression(), [[DBG43]])
-; DEBUGLOC-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG40]], !llvm.loop [[LOOP44:![0-9]+]]
+; DEBUGLOC-NEXT:    [[IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ], !dbg [[DBG35]]
+; DEBUGLOC-NEXT:      #dbg_value(ptr [[IV]], [[META31:![0-9]+]], !DIExpression(), [[DBG35]])
+; DEBUGLOC-NEXT:    [[IV_NEXT]] = getelementptr inbounds ptr, ptr [[IV]], i64 1, !dbg [[DBG39:![0-9]+]]
+; DEBUGLOC-NEXT:      #dbg_value(ptr [[IV_NEXT]], [[META32:![0-9]+]], !DIExpression(), [[DBG39]])
+; DEBUGLOC-NEXT:    store ptr [[IV]], ptr [[IV]], align 1, !dbg [[DBG36]]
+; DEBUGLOC-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[IV_NEXT]], [[END]], !dbg [[DBG40:![0-9]+]]
+; DEBUGLOC-NEXT:      #dbg_value(i1 [[CMP_NOT]], [[META33:![0-9]+]], !DIExpression(), [[DBG40]])
+; DEBUGLOC-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG37]], !llvm.loop [[LOOP41:![0-9]+]]
 ; DEBUGLOC:       [[EXIT]]:
-; DEBUGLOC-NEXT:    ret void, !dbg [[DBG45:![0-9]+]]
+; DEBUGLOC-NEXT:    ret void, !dbg [[DBG42:![0-9]+]]
 ;
 entry:
   br label %loop
@@ -252,9 +224,9 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP21]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
@@ -274,96 +246,96 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; CHECK-NEXT:    store i64 [[D]], ptr [[IDX]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUGLOC-LABEL: define void @predicated_phi_dbg(
-; DEBUGLOC-SAME: i64 [[N:%.*]], ptr [[X:%.*]]) !dbg [[DBG46:![0-9]+]] {
+; DEBUGLOC-SAME: i64 [[N:%.*]], ptr [[X:%.*]]) !dbg [[DBG43:![0-9]+]] {
 ; DEBUGLOC-NEXT:  [[ENTRY:.*]]:
-; DEBUGLOC-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1), !dbg [[DBG55:![0-9]+]]
-; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4, !dbg [[DBG55]]
-; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1), !dbg [[DBG52:![0-9]+]]
+; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4, !dbg [[DBG52]]
+; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG52]]
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
 ; DEBUGLOC-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
-; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG52]]
 ; DEBUGLOC:       [[VECTOR_BODY]]:
-; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UDIV_CONTINUE6:.*]] ], !dbg [[DBG56:![0-9]+]]
-; DEBUGLOC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_UDIV_CONTINUE6]] ], !dbg [[DBG56]]
-; DEBUGLOC-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 5), !dbg [[DBG57:![0-9]+]]
-; DEBUGLOC-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0, !dbg [[DBG57]]
-; DEBUGLOC-NEXT:    br i1 [[TMP1]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UDIV_CONTINUE6:.*]] ], !dbg [[DBG53:![0-9]+]]
+; DEBUGLOC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_UDIV_CONTINUE6]] ], !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 5), !dbg [[DBG54:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0, !dbg [[DBG54]]
+; DEBUGLOC-NEXT:    br i1 [[TMP1]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_IF]]:
-; DEBUGLOC-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0, !dbg [[DBG56]]
-; DEBUGLOC-NEXT:    [[TMP3:%.*]] = udiv i64 [[N]], [[TMP2]], !dbg [[DBG58:![0-9]+]]
-; DEBUGLOC-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> poison, i64 [[TMP3]], i32 0, !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0, !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[TMP3:%.*]] = udiv i64 [[N]], [[TMP2]], !dbg [[DBG55:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> poison, i64 [[TMP3]], i32 0, !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_CONTINUE]]:
-; DEBUGLOC-NEXT:    [[TMP5:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[PRED_UDIV_IF]] ], !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1, !dbg [[DBG57]]
-; DEBUGLOC-NEXT:    br i1 [[TMP6]], label %[[PRED_UDIV_IF1:.*]], label %[[PRED_UDIV_CONTINUE2:.*]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:    [[TMP5:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[PRED_UDIV_IF]] ], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1, !dbg [[DBG54]]
+; DEBUGLOC-NEXT:    br i1 [[TMP6]], label %[[PRED_UDIV_IF1:.*]], label %[[PRED_UDIV_CONTINUE2:.*]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_IF1]]:
-; DEBUGLOC-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1, !dbg [[DBG56]]
-; DEBUGLOC-NEXT:    [[TMP8:%.*]] = udiv i64 [[N]], [[TMP7]], !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> [[TMP5]], i64 [[TMP8]], i32 1, !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE2]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1, !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[TMP8:%.*]] = udiv i64 [[N]], [[TMP7]], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> [[TMP5]], i64 [[TMP8]], i32 1, !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE2]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_CONTINUE2]]:
-; DEBUGLOC-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP5]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP9]], %[[PRED_UDIV_IF1]] ], !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2, !dbg [[DBG57]]
-; DEBUGLOC-NEXT:    br i1 [[TMP11]], label %[[PRED_UDIV_IF3:.*]], label %[[PRED_UDIV_CONTINUE4:.*]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP5]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP9]], %[[PRED_UDIV_IF1]] ], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2, !dbg [[DBG54]]
+; DEBUGLOC-NEXT:    br i1 [[TMP11]], label %[[PRED_UDIV_IF3:.*]], label %[[PRED_UDIV_CONTINUE4:.*]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_IF3]]:
-; DEBUGLOC-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 2, !dbg [[DBG56]]
-; DEBUGLOC-NEXT:    [[TMP13:%.*]] = udiv i64 [[N]], [[TMP12]], !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP10]], i64 [[TMP13]], i32 2, !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE4]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 2, !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[TMP13:%.*]] = udiv i64 [[N]], [[TMP12]], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP10]], i64 [[TMP13]], i32 2, !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE4]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_CONTINUE4]]:
-; DEBUGLOC-NEXT:    [[TMP15:%.*]] = phi <4 x i64> [ [[TMP10]], %[[PRED_UDIV_CONTINUE2]] ], [ [[TMP14]], %[[PRED_UDIV_IF3]] ], !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3, !dbg [[DBG57]]
-; DEBUGLOC-NEXT:    br i1 [[TMP16]], label %[[PRED_UDIV_IF5:.*]], label %[[PRED_UDIV_CONTINUE6]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:    [[TMP15:%.*]] = phi <4 x i64> [ [[TMP10]], %[[PRED_UDIV_CONTINUE2]] ], [ [[TMP14]], %[[PRED_UDIV_IF3]] ], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3, !dbg [[DBG54]]
+; DEBUGLOC-NEXT:    br i1 [[TMP16]], label %[[PRED_UDIV_IF5:.*]], label %[[PRED_UDIV_CONTINUE6]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_IF5]]:
-; DEBUGLOC-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 3, !dbg [[DBG56]]
-; DEBUGLOC-NEXT:    [[TMP18:%.*]] = udiv i64 [[N]], [[TMP17]], !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP18]], i32 3, !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE6]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 3, !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[TMP18:%.*]] = udiv i64 [[N]], [[TMP17]], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP18]], i32 3, !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE6]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_CONTINUE6]]:
-; DEBUGLOC-NEXT:    [[TMP20:%.*]] = phi <4 x i64> [ [[TMP15]], %[[PRED_UDIV_CONTINUE4]] ], [ [[TMP19]], %[[PRED_UDIV_IF5]] ], !dbg [[DBG58]]
-; DEBUGLOC-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP20]], <4 x i64> zeroinitializer, !dbg [[DBG59:![0-9]+]]
-; DEBUGLOC-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[X]], i64 [[INDEX]], !dbg [[DBG60:![0-9]+]]
-; DEBUGLOC-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP21]], align 8, !dbg [[DBG61:![0-9]+]]
-; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG56]]
-; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4), !dbg [[DBG56]]
-; DEBUGLOC-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG62:![0-9]+]]
-; DEBUGLOC-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG62]], !llvm.loop [[LOOP63:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP20:%.*]] = phi <4 x i64> [ [[TMP15]], %[[PRED_UDIV_CONTINUE4]] ], [ [[TMP19]], %[[PRED_UDIV_IF5]] ], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP20]], <4 x i64> zeroinitializer, !dbg [[DBG56:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[X]], i64 [[INDEX]], !dbg [[DBG57:![0-9]+]]
+; DEBUGLOC-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP21]], align 8, !dbg [[DBG58:![0-9]+]]
+; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4), !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG59:![0-9]+]]
+; DEBUGLOC-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG59]], !llvm.loop [[LOOP60:![0-9]+]]
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:
-; DEBUGLOC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]], !dbg [[DBG62]]
-; DEBUGLOC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]], !dbg [[DBG62]]
+; DEBUGLOC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]], !dbg [[DBG59]]
+; DEBUGLOC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]], !dbg [[DBG59]]
 ; DEBUGLOC:       [[SCALAR_PH]]:
-; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], !dbg [[DBG56]]
-; DEBUGLOC-NEXT:    br label %[[FOR_BODY:.*]], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    br label %[[FOR_BODY:.*]], !dbg [[DBG52]]
 ; DEBUGLOC:       [[FOR_BODY]]:
-; DEBUGLOC-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[FOR_INC:.*]] ], !dbg [[DBG56]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[I]], [[META48:![0-9]+]], !DIExpression(), [[DBG56]])
-; DEBUGLOC-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I]], 5, !dbg [[DBG57]]
-; DEBUGLOC-NEXT:      #dbg_value(i1 [[CMP]], [[META49:![0-9]+]], !DIExpression(), [[DBG57]])
-; DEBUGLOC-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[FOR_INC]], !dbg [[DBG64:![0-9]+]]
+; DEBUGLOC-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[FOR_INC:.*]] ], !dbg [[DBG53]]
+; DEBUGLOC-NEXT:      #dbg_value(i64 [[I]], [[META45:![0-9]+]], !DIExpression(), [[DBG53]])
+; DEBUGLOC-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I]], 5, !dbg [[DBG54]]
+; DEBUGLOC-NEXT:      #dbg_value(i1 [[CMP]], [[META46:![0-9]+]], !DIExpression(), [[DBG54]])
+; DEBUGLOC-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[FOR_INC]], !dbg [[DBG61:![0-9]+]]
 ; DEBUGLOC:       [[IF_THEN]]:
-; DEBUGLOC-NEXT:    [[TMP4:%.*]] = udiv i64 [[N]], [[I]], !dbg [[DBG58]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[TMP4]], [[META50:![0-9]+]], !DIExpression(), [[DBG58]])
-; DEBUGLOC-NEXT:    br label %[[FOR_INC]], !dbg [[DBG65:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP4:%.*]] = udiv i64 [[N]], [[I]], !dbg [[DBG55]]
+; DEBUGLOC-NEXT:      #dbg_value(i64 [[TMP4]], [[META47:![0-9]+]], !DIExpression(), [[DBG55]])
+; DEBUGLOC-NEXT:    br label %[[FOR_INC]], !dbg [[DBG62:![0-9]+]]
 ; DEBUGLOC:       [[FOR_INC]]:
-; DEBUGLOC-NEXT:    [[D:%.*]] = phi i64 [ 0, %[[FOR_BODY]] ], [ [[TMP4]], %[[IF_THEN]] ], !dbg [[DBG59]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[D]], [[META51:![0-9]+]], !DIExpression(), [[DBG59]])
-; DEBUGLOC-NEXT:    [[IDX:%.*]] = getelementptr i64, ptr [[X]], i64 [[I]], !dbg [[DBG60]]
-; DEBUGLOC-NEXT:      #dbg_value(ptr [[IDX]], [[META52:![0-9]+]], !DIExpression(), [[DBG60]])
-; DEBUGLOC-NEXT:    store i64 [[D]], ptr [[IDX]], align 8, !dbg [[DBG61]]
-; DEBUGLOC-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1, !dbg [[DBG66:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[I_NEXT]], [[META53:![0-9]+]], !DIExpression(), [[DBG66]])
-; DEBUGLOC-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]], !dbg [[DBG67:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i1 [[COND]], [[META54:![0-9]+]], !DIExpression(), [[DBG67]])
-; DEBUGLOC-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !dbg [[DBG62]], !llvm.loop [[LOOP68:![0-9]+]]
+; DEBUGLOC-NEXT:    [[D:%.*]] = phi i64 [ 0, %[[FOR_BODY]] ], [ [[TMP4]], %[[IF_THEN]] ], !dbg [[DBG56]]
+; DEBUGLOC-NEXT:      #dbg_value(i64 [[D]], [[META48:![0-9]+]], !DIExpression(), [[DBG56]])
+; DEBUGLOC-NEXT:    [[IDX:%.*]] = getelementptr i64, ptr [[X]], i64 [[I]], !dbg [[DBG57]]
+; DEBUGLOC-NEXT:      #dbg_value(ptr [[IDX]], [[META49:![0-9]+]], !DIExpression(), [[DBG57]])
+; DEBUGLOC-NEXT:    store i64 [[D]], ptr [[IDX]], align 8, !dbg [[DBG58]]
+; DEBUGLOC-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1, !dbg [[DBG63:![0-9]+]]
+; DEBUGLOC-NEXT:      #dbg_value(i64 [[I_NEXT]], [[META50:![0-9]+]], !DIExpression(), [[DBG63]])
+; DEBUGLOC-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]], !dbg [[DBG64:![0-9]+]]
+; DEBUGLOC-NEXT:      #dbg_value(i1 [[COND]], [[META51:![0-9]+]], !DIExpression(), [[DBG64]])
+; DEBUGLOC-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !dbg [[DBG59]], !llvm.loop [[LOOP65:![0-9]+]]
 ; DEBUGLOC:       [[FOR_END]]:
-; DEBUGLOC-NEXT:    ret void, !dbg [[DBG69:![0-9]+]]
+; DEBUGLOC-NEXT:    ret void, !dbg [[DBG66:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -413,9 +385,9 @@ define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP5]]
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[K]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -429,57 +401,57 @@ define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
 ; CHECK-NEXT:    store i32 [[TRUNC_IV]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[K]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUGLOC-LABEL: define void @scalar_cast_dbg(
-; DEBUGLOC-SAME: ptr captures(none) [[A:%.*]], i32 [[START:%.*]], i64 [[K:%.*]]) !dbg [[DBG70:![0-9]+]] {
+; DEBUGLOC-SAME: ptr captures(none) [[A:%.*]], i32 [[START:%.*]], i64 [[K:%.*]]) !dbg [[DBG67:![0-9]+]] {
 ; DEBUGLOC-NEXT:  [[ENTRY:.*]]:
-; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K]], 4, !dbg [[DBG77:![0-9]+]]
-; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]], !dbg [[DBG77]]
+; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K]], 4, !dbg [[DBG74:![0-9]+]]
+; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]], !dbg [[DBG74]]
 ; DEBUGLOC:       [[VECTOR_SCEVCHECK]]:
-; DEBUGLOC-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1, !dbg [[DBG77]]
-; DEBUGLOC-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32, !dbg [[DBG77]]
-; DEBUGLOC-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0, !dbg [[DBG77]]
-; DEBUGLOC-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP0]], 4294967295, !dbg [[DBG77]]
-; DEBUGLOC-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]], !dbg [[DBG77]]
-; DEBUGLOC-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]], !dbg [[DBG78:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1, !dbg [[DBG74]]
+; DEBUGLOC-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32, !dbg [[DBG74]]
+; DEBUGLOC-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0, !dbg [[DBG74]]
+; DEBUGLOC-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP0]], 4294967295, !dbg [[DBG74]]
+; DEBUGLOC-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]], !dbg [[DBG74]]
+; DEBUGLOC-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]], !dbg [[DBG75:![0-9]+]]
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[K]], 4
 ; DEBUGLOC-NEXT:    [[N_VEC:%.*]] = sub i64 [[K]], [[N_MOD_VF]]
-; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG78]]
+; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG75]]
 ; DEBUGLOC:       [[VECTOR_BODY]]:
-; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG78]]
-; DEBUGLOC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG79:![0-9]+]]
-; DEBUGLOC-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDEX]] to i32, !dbg [[DBG79]]
-; DEBUGLOC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP5]], !dbg [[DBG80:![0-9]+]]
-; DEBUGLOC-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP6]], align 4, !dbg [[DBG81:![0-9]+]]
-; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG78]]
-; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4), !dbg [[DBG79]]
-; DEBUGLOC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG82:![0-9]+]]
-; DEBUGLOC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG82]], !llvm.loop [[LOOP83:![0-9]+]]
+; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG75]]
+; DEBUGLOC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG76:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDEX]] to i32, !dbg [[DBG76]]
+; DEBUGLOC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP5]], !dbg [[DBG77:![0-9]+]]
+; DEBUGLOC-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP6]], align 4, !dbg [[DBG78:![0-9]+]]
+; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG75]]
+; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4), !dbg [[DBG76]]
+; DEBUGLOC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG79:![0-9]+]]
+; DEBUGLOC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG79]], !llvm.loop [[LOOP80:![0-9]+]]
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:
-; DEBUGLOC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[K]], [[N_VEC]], !dbg [[DBG82]]
-; DEBUGLOC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG82]]
+; DEBUGLOC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[K]], [[N_VEC]], !dbg [[DBG79]]
+; DEBUGLOC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG79]]
 ; DEBUGLOC:       [[SCALAR_PH]]:
-; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], !dbg [[DBG78]]
-; DEBUGLOC-NEXT:    br label %[[LOOP:.*]], !dbg [[DBG77]]
+; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], !dbg [[DBG75]]
+; DEBUGLOC-NEXT:    br label %[[LOOP:.*]], !dbg [[DBG74]]
 ; DEBUGLOC:       [[LOOP]]:
-; DEBUGLOC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ], !dbg [[DBG78]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[IV]], [[META72:![0-9]+]], !DIExpression(), [[DBG78]])
-; DEBUGLOC-NEXT:    [[TRUNC_IV:%.*]] = trunc i64 [[IV]] to i32, !dbg [[DBG79]]
-; DEBUGLOC-NEXT:      #dbg_value(i32 [[TRUNC_IV]], [[META73:![0-9]+]], !DIExpression(), [[DBG79]])
-; DEBUGLOC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TRUNC_IV]], !dbg [[DBG80]]
-; DEBUGLOC-NEXT:      #dbg_value(ptr [[ARRAYIDX]], [[META74:![0-9]+]], !DIExpression(), [[DBG80]])
-; DEBUGLOC-NEXT:    store i32 [[TRUNC_IV]], ptr [[ARRAYIDX]], align 4, !dbg [[DBG81]]
-; DEBUGLOC-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1, !dbg [[DBG84:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[IV_NEXT]], [[META75:![0-9]+]], !DIExpression(), [[DBG84]])
-; DEBUGLOC-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[K]], !dbg [[DBG85:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i1 [[EXITCOND]], [[META76:![0-9]+]], !DIExpression(), [[DBG85]])
-; DEBUGLOC-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG82]], !llvm.loop [[LOOP86:![0-9]+]]
+; DEBUGLOC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ], !dbg [[DBG75]]
+; DEBUGLOC-NEXT:      #dbg_value(i64 [[IV]], [[META69:![0-9]+]], !DIExpression(), [[DBG75]])
+; DEBUGLOC-NEXT:    [[TRUNC_IV:%.*]] = trunc i64 [[IV]] to i32, !dbg [[DBG76]]
+; DEBUGLOC-NEXT:      #dbg_value(i32 [[TRUNC_IV]], [[META70:![0-9]+]], !DIExpression(), [[DBG76]])
+; DEBUGLOC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TRUNC_IV]], !dbg [[DBG77]]
+; DEBUGLOC-NEXT:      #dbg_value(ptr [[ARRAYIDX]], [[META71:![0-9]+]], !DIExpression(), [[DBG77]])
+; DEBUGLOC-NEXT:    store i32 [[TRUNC_IV]], ptr [[ARRAYIDX]], align 4, !dbg [[DBG78]]
+; DEBUGLOC-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1, !dbg [[DBG81:![0-9]+]]
+; DEBUGLOC-NEXT:      #dbg_value(i64 [[IV_NEXT]], [[META72:![0-9]+]], !DIExpression(), [[DBG81]])
+; DEBUGLOC-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[K]], !dbg [[DBG82:![0-9]+]]
+; DEBUGLOC-NEXT:      #dbg_value(i1 [[EXITCOND]], [[META73:![0-9]+]], !DIExpression(), [[DBG82]])
+; DEBUGLOC-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG79]], !llvm.loop [[LOOP83:![0-9]+]]
 ; DEBUGLOC:       [[EXIT]]:
-; DEBUGLOC-NEXT:    ret void, !dbg [[DBG87:![0-9]+]]
+; DEBUGLOC-NEXT:    ret void, !dbg [[DBG84:![0-9]+]]
 ;
 entry:
   br label %loop
@@ -522,7 +494,7 @@ define void @widen_intrinsic_dbg(i64 %n, ptr %y, ptr %x) {
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -538,60 +510,60 @@ define void @widen_intrinsic_dbg(i64 %n, ptr %y, ptr %x) {
 ; CHECK-NEXT:    store float [[CALL]], ptr [[GEP_X]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUGLOC-LABEL: define void @widen_intrinsic_dbg(
-; DEBUGLOC-SAME: i64 [[N:%.*]], ptr [[Y:%.*]], ptr [[X:%.*]]) !dbg [[DBG88:![0-9]+]] {
+; DEBUGLOC-SAME: i64 [[N:%.*]], ptr [[Y:%.*]], ptr [[X:%.*]]) !dbg [[DBG85:![0-9]+]] {
 ; DEBUGLOC-NEXT:  [[ENTRY:.*]]:
-; DEBUGLOC-NEXT:    [[Y2:%.*]] = ptrtoint ptr [[Y]] to i64, !dbg [[DBG97:![0-9]+]]
-; DEBUGLOC-NEXT:    [[X1:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG97]]
-; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4, !dbg [[DBG97]]
-; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]], !dbg [[DBG97]]
+; DEBUGLOC-NEXT:    [[Y2:%.*]] = ptrtoint ptr [[Y]] to i64, !dbg [[DBG94:![0-9]+]]
+; DEBUGLOC-NEXT:    [[X1:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG94]]
+; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4, !dbg [[DBG94]]
+; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]], !dbg [[DBG94]]
 ; DEBUGLOC:       [[VECTOR_MEMCHECK]]:
-; DEBUGLOC-NEXT:    [[TMP0:%.*]] = sub i64 [[X1]], [[Y2]], !dbg [[DBG97]]
-; DEBUGLOC-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16, !dbg [[DBG97]]
-; DEBUGLOC-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]], !dbg [[DBG98:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP0:%.*]] = sub i64 [[X1]], [[Y2]], !dbg [[DBG94]]
+; DEBUGLOC-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16, !dbg [[DBG94]]
+; DEBUGLOC-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]], !dbg [[DBG95:![0-9]+]]
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; DEBUGLOC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG98]]
+; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG95]]
 ; DEBUGLOC:       [[VECTOR_BODY]]:
-; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG98]]
-; DEBUGLOC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[Y]], i64 [[INDEX]], !dbg [[DBG99:![0-9]+]]
-; DEBUGLOC-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4, !dbg [[DBG100:![0-9]+]]
-; DEBUGLOC-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[WIDE_LOAD]]), !dbg [[DBG101:![0-9]+]]
-; DEBUGLOC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]], !dbg [[DBG102:![0-9]+]]
-; DEBUGLOC-NEXT:    store <4 x float> [[TMP2]], ptr [[TMP3]], align 4, !dbg [[DBG103:![0-9]+]]
-; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG98]]
-; DEBUGLOC-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG104:![0-9]+]]
-; DEBUGLOC-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG104]], !llvm.loop [[LOOP105:![0-9]+]]
+; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG95]]
+; DEBUGLOC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[Y]], i64 [[INDEX]], !dbg [[DBG96:![0-9]+]]
+; DEBUGLOC-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4, !dbg [[DBG97:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[WIDE_LOAD]]), !dbg [[DBG98:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]], !dbg [[DBG99:![0-9]+]]
+; DEBUGLOC-NEXT:    store <4 x float> [[TMP2]], ptr [[TMP3]], align 4, !dbg [[DBG100:![0-9]+]]
+; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG95]]
+; DEBUGLOC-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG101:![0-9]+]]
+; DEBUGLOC-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG101]], !llvm.loop [[LOOP102:![0-9]+]]
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:
-; DEBUGLOC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]], !dbg [[DBG104]]
-; DEBUGLOC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG104]]
+; DEBUGLOC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]], !dbg [[DBG101]]
+; DEBUGLOC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG101]]
 ; DEBUGLOC:       [[SCALAR_PH]]:
-; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ], !dbg [[DBG98]]
-; DEBUGLOC-NEXT:    br label %[[LOOP:.*]], !dbg [[DBG97]]
+; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ], !dbg [[DBG95]]
+; DEBUGLOC-NEXT:    br label %[[LOOP:.*]], !dbg [[DBG94]]
 ; DEBUGLOC:       [[LOOP]]:
-; DEBUGLOC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ], !dbg [[DBG98]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[IV]], [[META90:![0-9]+]], !DIExpression(), [[DBG98]])
-; DEBUGLOC-NEXT:    [[GEP_Y:%.*]] = getelementptr inbounds float, ptr [[Y]], i64 [[IV]], !dbg [[DBG99]]
-; DEBUGLOC-NEXT:      #dbg_value(ptr [[GEP_Y]], [[META91:![0-9]+]], !DIExpression(), [[DBG99]])
-; DEBUGLOC-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP_Y]], align 4, !dbg [[DBG100]]
-; DEBUGLOC-NEXT:      #dbg_value(float [[LOAD]], [[META92:![0-9]+]], !DIExpression(), [[DBG100]])
-; DEBUGLOC-NEXT:    [[CALL:%.*]] = call float @llvm.sqrt.f32(float [[LOAD]]), !dbg [[DBG101]]
-; DEBUGLOC-NEXT:      #dbg_value(float [[CALL]], [[META93:![0-9]+]], !DIExpression(), [[DBG101]])
-; DEBUGLOC-NEXT:    [[GEP_X:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[IV]], !dbg [[DBG102]]
-; DEBUGLOC-NEXT:      #dbg_value(ptr [[GEP_X]], [[META94:![0-9]+]], !DIExpression(), [[DBG102]])
-; DEBUGLOC-NEXT:    store float [[CALL]], ptr [[GEP_X]], align 4, !dbg [[DBG103]]
-; DEBUGLOC-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1, !dbg [[DBG106:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i64 [[IV_NEXT]], [[META95:![0-9]+]], !DIExpression(), [[DBG106]])
-; DEBUGLOC-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]], !dbg [[DBG107:![0-9]+]]
-; DEBUGLOC-NEXT:      #dbg_value(i1 [[EXITCOND]], [[META96:![0-9]+]], !DIExpression(), [[DBG107]])
-; DEBUGLOC-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG104]], !llvm.loop [[LOOP108:![0-9]+]]
+; DEBUGLOC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ], !dbg [[DBG95]]
+; DEBUGLOC-NEXT:      #dbg_value(i64 [[IV]], [[META87:![0-9]+]], !DIExpression(), [[DBG95]])
+; DEBUGLOC-NEXT:    [[GEP_Y:%.*]] = getelementptr inbounds float, ptr [[Y]], i64 [[IV]], !dbg [[DBG96]]
+; DEBUGLOC-NEXT:      #dbg_value(ptr [[GEP_Y]], [[META88:![0-9]+]], !DIExpression(), [[DBG96]])
+; DEBUGLOC-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP_Y]], align 4, !dbg [[DBG97]]
+; DEBUGLOC-NEXT:      #dbg_value(float [[LOAD]], [[META89:![0-9]+]], !DIExpression(), [[DBG97]])
+; DEBUGLOC-NEXT:    [[CALL:%.*]] = call float @llvm.sqrt.f32(float [[LOAD]]), !dbg [[DBG98]]
+; DEBUGLOC-NEXT:      #dbg_value(float [[CALL]], [[META90:![0-9]+]], !DIExpression(), [[DBG98]])
+; DEBUGLOC-NEXT:    [[GEP_X:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[IV]], !dbg [[DBG99]]
+; DEBUGLOC-NEXT:      #dbg_value(ptr [[GEP_X]], [[META91:![0-9]+]], !DIExpression(), [[DBG99]])
+; DEBUGLOC-NEXT:    store float [[CALL]], ptr [[GEP_X]], align 4, !dbg [[DBG100]]
+; DEBUGLOC-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1, !dbg [[DBG103:![0-9]+]]
+; DEBUGLOC-NEXT:      #dbg_value(i64 [[IV_NEXT]], [[META92:![0-9]+]], !DIExpression(), [[DBG103]])
+; DEBUGLOC-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]], !dbg [[DBG104:![0-9]+]]
+; DEBUGLOC-NEXT:      #dbg_value(i1 [[EXITCOND]], [[META93:![0-9]+]], !DIExpression(), [[DBG104]])
+; DEBUGLOC-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG101]], !llvm.loop [[LOOP105:![0-9]+]]
 ; DEBUGLOC:       [[EXIT]]:
-; DEBUGLOC-NEXT:    ret void, !dbg [[DBG109:![0-9]+]]
+; DEBUGLOC-NEXT:    ret void, !dbg [[DBG106:![0-9]+]]
 ;
 entry:
   br label %loop
@@ -618,22 +590,21 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]], [[META1]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.
 ; DEBUGLOC: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 ; DEBUGLOC: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 ; DEBUGLOC: [[DBG5]] = distinct !DISubprogram(name: "_Z3fooPf", linkageName: "_Z3fooPf", scope: null, file: [[META1]], line: 1, type: [[META6:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META8:![0-9]+]])
 ; DEBUGLOC: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
 ; DEBUGLOC: [[META7]] = !{}
-; DEBUGLOC: [[META8]] = !{[[META9]], [[META11]], [[META12]], [[META14]], [[META15]], [[META16]]}
+; DEBUGLOC: [[META8]] = !{[[META9:![0-9]+]], [[META11:![0-9]+]], [[META12:![0-9]+]], [[META14:![0-9]+]], [[META15:![0-9]+]], [[META16:![0-9]+]]}
 ; DEBUGLOC: [[META9]] = !DILocalVariable(name: "1", scope: [[DBG5]], file: [[META1]], line: 2, type: [[META10:![0-9]+]])
 ; DEBUGLOC: [[META10]] = !DIBasicType(name: "ty64", size: 64, encoding: DW_ATE_unsigned)
 ; DEBUGLOC: [[META11]] = !DILocalVariable(name: "2", scope: [[DBG5]], file: [[META1]], line: 3, type: [[META10]])
@@ -653,86 +624,83 @@ exit:
 ; DEBUGLOC: [[LOOP25]] = distinct !{[[LOOP25]], [[META26:![0-9]+]], [[META27:![0-9]+]]}
 ; DEBUGLOC: [[META26]] = !{!"llvm.loop.isvectorized", i32 1}
 ; DEBUGLOC: [[META27]] = !{!"llvm.loop.unroll.runtime.disable"}
-; DEBUGLOC: [[DBG28]] = !DILocation(line: 7, column: 1, scope: [[DBG5]])
-; DEBUGLOC: [[DBG29]] = !DILocation(line: 8, column: 1, scope: [[DBG5]])
-; DEBUGLOC: [[LOOP30]] = distinct !{[[LOOP30]], [[META27]], [[META26]]}
-; DEBUGLOC: [[DBG31]] = !DILocation(line: 10, column: 1, scope: [[DBG5]])
-; DEBUGLOC: [[DBG32]] = distinct !DISubprogram(name: "widen_ptr_induction_dbg", linkageName: "widen_ptr_induction_dbg", scope: null, file: [[META1]], line: 11, type: [[META6]], scopeLine: 11, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META33:![0-9]+]])
-; DEBUGLOC: [[META33]] = !{[[META34]], [[META35]], [[META36]]}
-; DEBUGLOC: [[META34]] = !DILocalVariable(name: "7", scope: [[DBG32]], file: [[META1]], line: 12, type: [[META10]])
-; DEBUGLOC: [[META35]] = !DILocalVariable(name: "8", scope: [[DBG32]], file: [[META1]], line: 13, type: [[META10]])
-; DEBUGLOC: [[META36]] = !DILocalVariable(name: "9", scope: [[DBG32]], file: [[META1]], line: 15, type: [[META17]])
-; DEBUGLOC: [[DBG37]] = !DILocation(line: 11, column: 1, scope: [[DBG32]])
-; DEBUGLOC: [[DBG38]] = !DILocation(line: 12, column: 1, scope: [[DBG32]])
-; DEBUGLOC: [[DBG39]] = !DILocation(line: 14, column: 1, scope: [[DBG32]])
-; DEBUGLOC: [[DBG40]] = !DILocation(line: 16, column: 1, scope: [[DBG32]])
-; DEBUGLOC: [[LOOP41]] = distinct !{[[LOOP41]], [[META26]], [[META27]]}
-; DEBUGLOC: [[DBG42]] = !DILocation(line: 13, column: 1, scope: [[DBG32]])
-; DEBUGLOC: [[DBG43]] = !DILocation(line: 15, column: 1, scope: [[DBG32]])
-; DEBUGLOC: [[LOOP44]] = distinct !{[[LOOP44]], [[META27]], [[META26]]}
-; DEBUGLOC: [[DBG45]] = !DILocation(line: 17, column: 1, scope: [[DBG32]])
-; DEBUGLOC: [[DBG46]] = distinct !DISubprogram(name: "predicated_phi_dbg", linkageName: "predicated_phi_dbg", scope: null, file: [[META1]], line: 18, type: [[META6]], scopeLine: 18, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META47:![0-9]+]])
-; DEBUGLOC: [[META47]] = !{[[META48]], [[META49]], [[META50]], [[META51]], [[META52]], [[META53]], [[META54]]}
-; DEBUGLOC: [[META48]] = !DILocalVariable(name: "10", scope: [[DBG46]], file: [[META1]], line: 19, type: [[META10]])
-; DEBUGLOC: [[META49]] = !DILocalVariable(name: "11", scope: [[DBG46]], file: [[META1]], line: 20, type: [[META17]])
-; DEBUGLOC: [[META50]] = !DILocalVariable(name: "12", scope: [[DBG46]], file: [[META1]], line: 22, type: [[META10]])
-; DEBUGLOC: [[META51]] = !DILocalVariable(name: "13", scope: [[DBG46]], file: [[META1]], line: 24, type: [[META10]])
-; DEBUGLOC: [[META52]] = !DILocalVariable(name: "14", scope: [[DBG46]], file: [[META1]], line: 25, type: [[META10]])
-; DEBUGLOC: [[META53]] = !DILocalVariable(name: "15", scope: [[DBG46]], file: [[META1]], line: 27, type: [[META10]])
-; DEBUGLOC: [[META54]] = !DILocalVariable(name: "16", scope: [[DBG46]], file: [[META1]], line: 28, type: [[META17]])
-; DEBUGLOC: [[DBG55]] = !DILocation(line: 18, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG56]] = !DILocation(line: 19, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG57]] = !DILocation(line: 20, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG58]] = !DILocation(line: 22, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG59]] = !DILocation(line: 24, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG60]] = !DILocation(line: 25, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG61]] = !DILocation(line: 26, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG62]] = !DILocation(line: 29, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[LOOP63]] = distinct !{[[LOOP63]], [[META26]], [[META27]]}
-; DEBUGLOC: [[DBG64]] = !DILocation(line: 21, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG65]] = !DILocation(line: 23, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG66]] = !DILocation(line: 27, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG67]] = !DILocation(line: 28, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[LOOP68]] = distinct !{[[LOOP68]], [[META27]], [[META26]]}
-; DEBUGLOC: [[DBG69]] = !DILocation(line: 30, column: 1, scope: [[DBG46]])
-; DEBUGLOC: [[DBG70]] = distinct !DISubprogram(name: "scalar_cast_dbg", linkageName: "scalar_cast_dbg", scope: null, file: [[META1]], line: 31, type: [[META6]], scopeLine: 31, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META71:![0-9]+]])
-; DEBUGLOC: [[META71]] = !{[[META72]], [[META73]], [[META74]], [[META75]], [[META76]]}
-; DEBUGLOC: [[META72]] = !DILocalVariable(name: "17", scope: [[DBG70]], file: [[META1]], line: 32, type: [[META10]])
-; DEBUGLOC: [[META73]] = !DILocalVariable(name: "18", scope: [[DBG70]], file: [[META1]], line: 33, type: [[META13]])
-; DEBUGLOC: [[META74]] = !DILocalVariable(name: "19", scope: [[DBG70]], file: [[META1]], line: 34, type: [[META10]])
-; DEBUGLOC: [[META75]] = !DILocalVariable(name: "20", scope: [[DBG70]], file: [[META1]], line: 36, type: [[META10]])
-; DEBUGLOC: [[META76]] = !DILocalVariable(name: "21", scope: [[DBG70]], file: [[META1]], line: 37, type: [[META17]])
-; DEBUGLOC: [[DBG77]] = !DILocation(line: 31, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[DBG78]] = !DILocation(line: 32, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[DBG79]] = !DILocation(line: 33, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[DBG80]] = !DILocation(line: 34, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[DBG81]] = !DILocation(line: 35, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[DBG82]] = !DILocation(line: 38, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[LOOP83]] = distinct !{[[LOOP83]], [[META26]], [[META27]]}
-; DEBUGLOC: [[DBG84]] = !DILocation(line: 36, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[DBG85]] = !DILocation(line: 37, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[LOOP86]] = distinct !{[[LOOP86]], [[META26]]}
-; DEBUGLOC: [[DBG87]] = !DILocation(line: 39, column: 1, scope: [[DBG70]])
-; DEBUGLOC: [[DBG88]] = distinct !DISubprogram(name: "widen_intrinsic_dbg", linkageName: "widen_intrinsic_dbg", scope: null, file: [[META1]], line: 40, type: [[META6]], scopeLine: 40, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META89:![0-9]+]])
-; DEBUGLOC: [[META89]] = !{[[META90]], [[META91]], [[META92]], [[META93]], [[META94]], [[META95]], [[META96]]}
-; DEBUGLOC: [[META90]] = !DILocalVariable(name: "22", scope: [[DBG88]], file: [[META1]], line: 41, type: [[META10]])
-; DEBUGLOC: [[META91]] = !DILocalVariable(name: "23", scope: [[DBG88]], file: [[META1]], line: 42, type: [[META10]])
-; DEBUGLOC: [[META92]] = !DILocalVariable(name: "24", scope: [[DBG88]], file: [[META1]], line: 43, type: [[META13]])
-; DEBUGLOC: [[META93]] = !DILocalVariable(name: "25", scope: [[DBG88]], file: [[META1]], line: 44, type: [[META13]])
-; DEBUGLOC: [[META94]] = !DILocalVariable(name: "26", scope: [[DBG88]], file: [[META1]], line: 45, type: [[META10]])
-; DEBUGLOC: [[META95]] = !DILocalVariable(name: "27", scope: [[DBG88]], file: [[META1]], line: 47, type: [[META10]])
-; DEBUGLOC: [[META96]] = !DILocalVariable(name: "28", scope: [[DBG88]], file: [[META1]], line: 48, type: [[META17]])
-; DEBUGLOC: [[DBG97]] = !DILocation(line: 40, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[DBG98]] = !DILocation(line: 41, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[DBG99]] = !DILocation(line: 42, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[DBG100]] = !DILocation(line: 43, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[DBG101]] = !DILocation(line: 44, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[DBG102]] = !DILocation(line: 45, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[DBG103]] = !DILocation(line: 46, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[DBG104]] = !DILocation(line: 49, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[LOOP105]] = distinct !{[[LOOP105]], [[META26]], [[META27]]}
-; DEBUGLOC: [[DBG106]] = !DILocation(line: 47, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[DBG107]] = !DILocation(line: 48, column: 1, scope: [[DBG88]])
-; DEBUGLOC: [[LOOP108]] = distinct !{[[LOOP108]], [[META26]]}
-; DEBUGLOC: [[DBG109]] = !DILocation(line: 50, column: 1, scope: [[DBG88]])
+; DEBUGLOC: [[DBG28]] = !DILocation(line: 10, column: 1, scope: [[DBG5]])
+; DEBUGLOC: [[DBG29]] = distinct !DISubprogram(name: "widen_ptr_induction_dbg", linkageName: "widen_ptr_induction_dbg", scope: null, file: [[META1]], line: 11, type: [[META6]], scopeLine: 11, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META30:![0-9]+]])
+; DEBUGLOC: [[META30]] = !{[[META31]], [[META32]], [[META33]]}
+; DEBUGLOC: [[META31]] = !DILocalVariable(name: "7", scope: [[DBG29]], file: [[META1]], line: 12, type: [[META10]])
+; DEBUGLOC: [[META32]] = !DILocalVariable(name: "8", scope: [[DBG29]], file: [[META1]], line: 13, type: [[META10]])
+; DEBUGLOC: [[META33]] = !DILocalVariable(name: "9", scope: [[DBG29]], file: [[META1]], line: 15, type: [[META17]])
+; DEBUGLOC: [[DBG34]] = !DILocation(line: 11, column: 1, scope: [[DBG29]])
+; DEBUGLOC: [[DBG35]] = !DILocation(line: 12, column: 1, scope: [[DBG29]])
+; DEBUGLOC: [[DBG36]] = !DILocation(line: 14, column: 1, scope: [[DBG29]])
+; DEBUGLOC: [[DBG37]] = !DILocation(line: 16, column: 1, scope: [[DBG29]])
+; DEBUGLOC: [[LOOP38]] = distinct !{[[LOOP38]], [[META26]], [[META27]]}
+; DEBUGLOC: [[DBG39]] = !DILocation(line: 13, column: 1, scope: [[DBG29]])
+; DEBUGLOC: [[DBG40]] = !DILocation(line: 15, column: 1, scope: [[DBG29]])
+; DEBUGLOC: [[LOOP41]] = distinct !{[[LOOP41]], [[META27]], [[META26]]}
+; DEBUGLOC: [[DBG42]] = !DILocation(line: 17, column: 1, scope: [[DBG29]])
+; DEBUGLOC: [[DBG43]] = distinct !DISubprogram(name: "predicated_phi_dbg", linkageName: "predicated_phi_dbg", scope: null, file: [[META1]], line: 18, type: [[META6]], scopeLine: 18, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META44:![0-9]+]])
+; DEBUGLOC: [[META44]] = !{[[META45]], [[META46]], [[META47]], [[META48]], [[META49]], [[META50]], [[META51]]}
+; DEBUGLOC: [[META45]] = !DILocalVariable(name: "10", scope: [[DBG43]], file: [[META1]], line: 19, type: [[META10]])
+; DEBUGLOC: [[META46]] = !DILocalVariable(name: "11", scope: [[DBG43]], file: [[META1]], line: 20, type: [[META17]])
+; DEBUGLOC: [[META47]] = !DILocalVariable(name: "12", scope: [[DBG43]], file: [[META1]], line: 22, type: [[META10]])
+; DEBUGLOC: [[META48]] = !DILocalVariable(name: "13", scope: [[DBG43]], file: [[META1]], line: 24, type: [[META10]])
+; DEBUGLOC: [[META49]] = !DILocalVariable(name: "14", scope: [[DBG43]], file: [[META1]], line: 25, type: [[META10]])
+; DEBUGLOC: [[META50]] = !DILocalVariable(name: "15", scope: [[DBG43]], file: [[META1]], line: 27, type: [[META10]])
+; DEBUGLOC: [[META51]] = !DILocalVariable(name: "16", scope: [[DBG43]], file: [[META1]], line: 28, type: [[META17]])
+; DEBUGLOC: [[DBG52]] = !DILocation(line: 18, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG53]] = !DILocation(line: 19, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG54]] = !DILocation(line: 20, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG55]] = !DILocation(line: 22, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG56]] = !DILocation(line: 24, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG57]] = !DILocation(line: 25, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG58]] = !DILocation(line: 26, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG59]] = !DILocation(line: 29, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[LOOP60]] = distinct !{[[LOOP60]], [[META26]], [[META27]]}
+; DEBUGLOC: [[DBG61]] = !DILocation(line: 21, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG62]] = !DILocation(line: 23, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG63]] = !DILocation(line: 27, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG64]] = !DILocation(line: 28, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[LOOP65]] = distinct !{[[LOOP65]], [[META27]], [[META26]]}
+; DEBUGLOC: [[DBG66]] = !DILocation(line: 30, column: 1, scope: [[DBG43]])
+; DEBUGLOC: [[DBG67]] = distinct !DISubprogram(name: "scalar_cast_dbg", linkageName: "scalar_cast_dbg", scope: null, file: [[META1]], line: 31, type: [[META6]], scopeLine: 31, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META68:![0-9]+]])
+; DEBUGLOC: [[META68]] = !{[[META69]], [[META70]], [[META71]], [[META72]], [[META73]]}
+; DEBUGLOC: [[META69]] = !DILocalVariable(name: "17", scope: [[DBG67]], file: [[META1]], line: 32, type: [[META10]])
+; DEBUGLOC: [[META70]] = !DILocalVariable(name: "18", scope: [[DBG67]], file: [[META1]], line: 33, type: [[META13]])
+; DEBUGLOC: [[META71]] = !DILocalVariable(name: "19", scope: [[DBG67]], file: [[META1]], line: 34, type: [[META10]])
+; DEBUGLOC: [[META72]] = !DILocalVariable(name: "20", scope: [[DBG67]], file: [[META1]], line: 36, type: [[META10]])
+; DEBUGLOC: [[META73]] = !DILocalVariable(name: "21", scope: [[DBG67]], file: [[META1]], line: 37, type: [[META17]])
+; DEBUGLOC: [[DBG74]] = !DILocation(line: 31, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[DBG75]] = !DILocation(line: 32, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[DBG76]] = !DILocation(line: 33, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[DBG77]] = !DILocation(line: 34, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[DBG78]] = !DILocation(line: 35, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[DBG79]] = !DILocation(line: 38, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[LOOP80]] = distinct !{[[LOOP80]], [[META26]], [[META27]]}
+; DEBUGLOC: [[DBG81]] = !DILocation(line: 36, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[DBG82]] = !DILocation(line: 37, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[LOOP83]] = distinct !{[[LOOP83]], [[META26]]}
+; DEBUGLOC: [[DBG84]] = !DILocation(line: 39, column: 1, scope: [[DBG67]])
+; DEBUGLOC: [[DBG85]] = distinct !DISubprogram(name: "widen_intrinsic_dbg", linkageName: "widen_intrinsic_dbg", scope: null, file: [[META1]], line: 40, type: [[META6]], scopeLine: 40, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META86:![0-9]+]])
+; DEBUGLOC: [[META86]] = !{[[META87]], [[META88]], [[META89]], [[META90]], [[META91]], [[META92]], [[META93]]}
+; DEBUGLOC: [[META87]] = !DILocalVariable(name: "22", scope: [[DBG85]], file: [[META1]], line: 41, type: [[META10]])
+; DEBUGLOC: [[META88]] = !DILocalVariable(name: "23", scope: [[DBG85]], file: [[META1]], line: 42, type: [[META10]])
+; DEBUGLOC: [[META89]] = !DILocalVariable(name: "24", scope: [[DBG85]], file: [[META1]], line: 43, type: [[META13]])
+; DEBUGLOC: [[META90]] = !DILocalVariable(name: "25", scope: [[DBG85]], file: [[META1]], line: 44, type: [[META13]])
+; DEBUGLOC: [[META91]] = !DILocalVariable(name: "26", scope: [[DBG85]], file: [[META1]], line: 45, type: [[META10]])
+; DEBUGLOC: [[META92]] = !DILocalVariable(name: "27", scope: [[DBG85]], file: [[META1]], line: 47, type: [[META10]])
+; DEBUGLOC: [[META93]] = !DILocalVariable(name: "28", scope: [[DBG85]], file: [[META1]], line: 48, type: [[META17]])
+; DEBUGLOC: [[DBG94]] = !DILocation(line: 40, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[DBG95]] = !DILocation(line: 41, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[DBG96]] = !DILocation(line: 42, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[DBG97]] = !DILocation(line: 43, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[DBG98]] = !DILocation(line: 44, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[DBG99]] = !DILocation(line: 45, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[DBG100]] = !DILocation(line: 46, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[DBG101]] = !DILocation(line: 49, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[LOOP102]] = distinct !{[[LOOP102]], [[META26]], [[META27]]}
+; DEBUGLOC: [[DBG103]] = !DILocation(line: 47, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[DBG104]] = !DILocation(line: 48, column: 1, scope: [[DBG85]])
+; DEBUGLOC: [[LOOP105]] = distinct !{[[LOOP105]], [[META26]]}
+; DEBUGLOC: [[DBG106]] = !DILocation(line: 50, column: 1, scope: [[DBG85]])
 ;.

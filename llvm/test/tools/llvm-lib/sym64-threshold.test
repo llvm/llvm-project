@@ -1,0 +1,71 @@
+# RUN: yaml2obj --docnum=1 %s -o %t01234567890234567789.obj
+# RUN: yaml2obj --docnum=2 %s -o %t-ec.obj
+# RUN: env SYM64_THRESHOLD=100 llvm-lib -machine:amd64 -out:%t.lib %t01234567890234567789.obj
+# RUN: llvm-nm --print-armap %t.lib | FileCheck --check-prefix=ARMAP %s
+# ARMAP:      Archive map
+# ARMAP-NEXT: sym
+
+# RUN: env SYM64_THRESHOLD=100 not llvm-lib -machine:arm64x -out:%t-ec.lib %t-ec.obj %t01234567890234567789.obj 2>&1 | FileCheck %s
+# CHECK: Archive is too large: ARM64X does not support archives larger than 4GB
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - !Symbol
+    Name: sym
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION # (2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL # (2)
+...
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - !Symbol
+    Name: sym
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION # (2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL # (2)
+...

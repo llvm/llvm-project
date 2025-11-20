@@ -72,6 +72,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -105,6 +106,7 @@ STATISTIC(
 STATISTIC(NumShiftUntilZero,
           "Number of uncountable loops recognized as 'shift until zero' idiom");
 
+namespace llvm {
 bool DisableLIRP::All;
 static cl::opt<bool, true>
     DisableLIRPAll("disable-" DEBUG_TYPE "-all",
@@ -162,6 +164,10 @@ static cl::opt<bool> ForceMemsetPatternIntrinsic(
     "loop-idiom-force-memset-pattern-intrinsic",
     cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
     cl::Hidden);
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // namespace llvm
 
 namespace {
 
@@ -296,8 +302,6 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // pass.  Function analyses need to be preserved across loop transformations
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
-
-  std::optional<PolynomialInfo> HR;
 
   LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
@@ -1598,11 +1602,8 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   //   crc = (crc << 8) ^ tbl[(iv'th byte of data) ^ (top byte of crc)]
   {
     auto LoByte = [](IRBuilderBase &Builder, Value *Op, const Twine &Name) {
-      Type *OpTy = Op->getType();
-      unsigned OpBW = OpTy->getIntegerBitWidth();
-      return OpBW > 8
-                 ? Builder.CreateAnd(Op, ConstantInt::get(OpTy, 0XFF), Name)
-                 : Op;
+      return Builder.CreateZExtOrTrunc(
+          Op, IntegerType::getInt8Ty(Op->getContext()), Name);
     };
     auto HiIdx = [LoByte, CRCBW](IRBuilderBase &Builder, Value *Op,
                                  const Twine &Name) {
@@ -3202,7 +3203,21 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // The loop trip count check.
   auto *IVCheck = Builder.CreateICmpEQ(IVNext, LoopTripCount,
                                        CurLoop->getName() + ".ivcheck");
-  Builder.CreateCondBr(IVCheck, SuccessorBB, LoopHeaderBB);
+  SmallVector<uint32_t> BranchWeights;
+  const bool HasBranchWeights =
+      !ProfcheckDisableMetadataFixes &&
+      extractBranchWeights(*LoopHeaderBB->getTerminator(), BranchWeights);
+
+  auto *BI = Builder.CreateCondBr(IVCheck, SuccessorBB, LoopHeaderBB);
+  if (HasBranchWeights) {
+    if (SuccessorBB == LoopHeaderBB->getTerminator()->getSuccessor(1))
+      std::swap(BranchWeights[0], BranchWeights[1]);
+    // We're not changing the loop profile, so we can reuse the original loop's
+    // profile.
+    setBranchWeights(*BI, BranchWeights,
+                     /*IsExpected=*/false);
+  }
+
   LoopHeaderBB->getTerminator()->eraseFromParent();
 
   // Populate the IV PHI.
@@ -3371,10 +3386,10 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, ScalarEvolution *SE,
 ///     %start = <...>
 ///     %extraoffset = <...>
 ///     <...>
-///     br label %for.cond
+///     br label %loop
 ///
 ///   loop:
-///     %iv = phi i8 [ %start, %entry ], [ %iv.next, %for.cond ]
+///     %iv = phi i8 [ %start, %entry ], [ %iv.next, %loop ]
 ///     %nbits = add nsw i8 %iv, %extraoffset
 ///     %val.shifted = {{l,a}shr,shl} i8 %val, %nbits
 ///     %val.shifted.iszero = icmp eq i8 %val.shifted, 0
@@ -3536,7 +3551,19 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   // The loop terminator.
   Builder.SetInsertPoint(LoopHeaderBB->getTerminator());
-  Builder.CreateCondBr(CIVCheck, SuccessorBB, LoopHeaderBB);
+  SmallVector<uint32_t> BranchWeights;
+  const bool HasBranchWeights =
+      !ProfcheckDisableMetadataFixes &&
+      extractBranchWeights(*LoopHeaderBB->getTerminator(), BranchWeights);
+
+  auto *BI = Builder.CreateCondBr(CIVCheck, SuccessorBB, LoopHeaderBB);
+  if (HasBranchWeights) {
+    if (InvertedCond)
+      std::swap(BranchWeights[0], BranchWeights[1]);
+    // We're not changing the loop profile, so we can reuse the original loop's
+    // profile.
+    setBranchWeights(*BI, BranchWeights, /*IsExpected=*/false);
+  }
   LoopHeaderBB->getTerminator()->eraseFromParent();
 
   // Populate the IV PHI.

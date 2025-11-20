@@ -1,4 +1,4 @@
-//===--- AmbiguousSmartptrResetCallCheck.h - clang-tidy ---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// the pointee type also has a 'reset' method
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/ambiguous-smartptr-reset-call.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/ambiguous-smartptr-reset-call.html
 class AmbiguousSmartptrResetCallCheck : public ClangTidyCheck {
 public:
   AmbiguousSmartptrResetCallCheck(StringRef Name, ClangTidyContext *Context);

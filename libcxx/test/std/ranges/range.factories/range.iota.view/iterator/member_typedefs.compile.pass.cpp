@@ -109,7 +109,8 @@ void test() {
 #ifdef TEST_HAS_NO_INT128
     LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, long long>);
 #else
-    LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, __int128_t>);
+    LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type,
+                                      std::conditional_t<sizeof(long) == sizeof(long long), __int128, long long>>);
 #endif
   }
   {
@@ -125,7 +126,7 @@ void test() {
 #ifdef TEST_HAS_NO_INT128
     LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, long long>);
 #else
-    LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, __int128_t>);
+    LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, __int128>);
 #endif
   }
   {

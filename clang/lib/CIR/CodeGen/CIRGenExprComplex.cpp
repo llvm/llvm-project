@@ -128,9 +128,10 @@ public:
     return emitLoadOfLValue(me);
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitOpaqueValueExpr");
-    return {};
+    if (e->isGLValue())
+      return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
+                              e->getExprLoc());
+    return cgf.getOrCreateOpaqueRValueMapping(e).getComplexValue();
   }
 
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
@@ -192,13 +193,11 @@ public:
   mlir::Value VisitUnaryNot(const UnaryOperator *e);
   // LNot,Real,Imag never return complex.
   mlir::Value VisitUnaryExtension(const UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitUnaryExtension");
-    return {};
+    return Visit(e->getSubExpr());
   }
   mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
-    cgf.cgm.errorNYI(dae->getExprLoc(),
-                     "ComplexExprEmitter VisitCXXDefaultArgExpr");
-    return {};
+    CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
+    return Visit(dae->getExpr());
   }
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
@@ -316,8 +315,7 @@ public:
   mlir::Value VisitVAArgExpr(VAArgExpr *e);
 
   mlir::Value VisitAtomicExpr(AtomicExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitAtomicExpr");
-    return {};
+    return cgf.emitAtomicExpr(e).getComplexValue();
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
@@ -341,7 +339,7 @@ mlir::Value ComplexExprEmitter::emitLoadOfLValue(LValue lv,
     cgf.cgm.errorNYI(loc, "emitLoadOfLValue with Atomic LV");
 
   const Address srcAddr = lv.getAddress();
-  return builder.createLoad(cgf.getLoc(loc), srcAddr);
+  return builder.createLoad(cgf.getLoc(loc), srcAddr, lv.isVolatileQualified());
 }
 
 /// EmitStoreOfComplex - Store the specified real/imag parts into the
@@ -355,7 +353,7 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
   }
 
   const Address destAddr = lv.getAddress();
-  builder.createStore(loc, val, destAddr);
+  builder.createStore(loc, val, destAddr, lv.isVolatileQualified());
 }
 
 //===----------------------------------------------------------------------===//
@@ -392,7 +390,7 @@ ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *il) {
   }
 
   auto complexAttr = cir::ConstComplexAttr::get(realValueAttr, imagValueAttr);
-  return builder.create<cir::ConstantOp>(loc, complexAttr);
+  return cir::ConstantOp::create(builder, loc, complexAttr);
 }
 
 mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
@@ -603,7 +601,7 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return builder.create<cir::ComplexAddOp>(op.loc, op.lhs, op.rhs);
+    return cir::ComplexAddOp::create(builder, op.loc, op.lhs, op.rhs);
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
@@ -625,7 +623,7 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return builder.create<cir::ComplexSubOp>(op.loc, op.lhs, op.rhs);
+    return cir::ComplexSubOp::create(builder, op.loc, op.lhs, op.rhs);
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
@@ -666,7 +664,8 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return builder.create<cir::ComplexMulOp>(op.loc, op.lhs, op.rhs, rangeKind);
+    return cir::ComplexMulOp::create(builder, op.loc, op.lhs, op.rhs,
+                                     rangeKind);
   }
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
@@ -960,22 +959,32 @@ mlir::Value ComplexExprEmitter::VisitBinComma(const BinaryOperator *e) {
 
 mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *e) {
-  mlir::Value condValue = Visit(e->getCond());
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
 
-  return builder
-      .create<cir::TernaryOp>(
-          loc, condValue,
-          /*thenBuilder=*/
-          [&](mlir::OpBuilder &b, mlir::Location loc) {
-            mlir::Value trueValue = Visit(e->getTrueExpr());
-            b.create<cir::YieldOp>(loc, trueValue);
-          },
-          /*elseBuilder=*/
-          [&](mlir::OpBuilder &b, mlir::Location loc) {
-            mlir::Value falseValue = Visit(e->getFalseExpr());
-            b.create<cir::YieldOp>(loc, falseValue);
-          })
+  // Bind the common expression if necessary.
+  CIRGenFunction::OpaqueValueMapping binding(cgf, e);
+
+  CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+  Expr *cond = e->getCond()->IgnoreParens();
+  mlir::Value condValue = cgf.evaluateExprAsBool(cond);
+
+  return cir::TernaryOp::create(
+             builder, loc, condValue,
+             /*thenBuilder=*/
+             [&](mlir::OpBuilder &b, mlir::Location loc) {
+               eval.beginEvaluation();
+               mlir::Value trueValue = Visit(e->getTrueExpr());
+               cir::YieldOp::create(b, loc, trueValue);
+               eval.endEvaluation();
+             },
+             /*elseBuilder=*/
+             [&](mlir::OpBuilder &b, mlir::Location loc) {
+               eval.beginEvaluation();
+               mlir::Value falseValue = Visit(e->getFalseExpr());
+               cir::YieldOp::create(b, loc, falseValue);
+               eval.endEvaluation();
+             })
       .getResult();
 }
 

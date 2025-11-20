@@ -30,8 +30,10 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ValueBoundsOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
 
 // Include the attribute definitions.
 include "TestAttrDefs.td"
@@ -116,6 +118,13 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
   let summary =  "operation which defines a new symbol";
   let arguments = (ins StrAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility);
+}
+
+def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
+  let summary = "invalid symbol operation that produces an SSA result";
+  let arguments = (ins StrAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+  let results = (outs AnyType:$result);
 }
 
 def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
@@ -552,9 +561,10 @@ def OneRegionWithOperandsOp : TEST_Op<"one_region_with_operands_op", []> {
 
 def IsolatedOneRegionOp : TEST_Op<"isolated_one_region_op", [IsolatedFromAbove]> {
   let arguments = (ins Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$my_region);
   let assemblyFormat = [{
-    attr-dict-with-keyword $operands $my_region `:` type($operands)
+    attr-dict-with-keyword $operands $my_region `:` type($operands) `->` type($results)
   }];
 }
 
@@ -912,11 +922,95 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
 }
 
-def OpWithResultShapePerDimInterfaceOp :
-    TEST_Op<"op_with_result_shape_per_dim_interface",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+def ReifyShapedTypeUsingReifyResultShapesOp :
+    TEST_Op<"reify_shaped_type_using_reify_result_shapes",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that doesnt implement `reifyShapeOfResult` nor implements `reifyDimOfResult`
+    calls into the implementation of `reifyResultShapes` to get the required value.
+    The op semantics is that the first result has the same shape as the second operand
+    and the second result has the same shape as the first operand.
+  }];
   let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def ReifyShapedTypeUsingReifyShapeOfResultOp :
+    TEST_Op<"reify_shaped_type_using_reify_shape_of_result",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes", "reifyShapeOfResult"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that doesnt implement `reifyDimOfResult` but implements `reifyShapeOfResult`, which
+    is used to get the required value. `reifyResultShapes` is implemented as a failure
+    (which is also the default implementation) to ensure it is not called.
+    The op semantics is that the first result has the same shape as the second operand
+    and the second result has the same shape as the first operand.
+  }];
+  let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
+  let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def ReifyShapedTypeUsingReifyDimOfResultOp :
+    TEST_Op<"reify_shaped_type_using_reify_dim_of_result",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that implements `reifyDimOfResult`, which is used to get the required value.
+    `reifyResultShapes` and `reifyShapeOfResult` are implemented as failures
+    to ensure they are not called. The op semantics is that the first result has
+    the same shape as the second operand and the second result has the same shape
+    as the first operand.
+  }];
+  let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
+  let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def UnreifiableResultShapesOp : TEST_Op<"unreifiable_result_shapes",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyResultShapes` is implemented.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
+}
+
+def UnreifiableResultShapeOp : TEST_Op<"unreifiable_result_shape",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes", "reifyShapeOfResult"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyShapeOfResult` is implemented,
+    but not `reifyDimOfResult` with `reifyResultShapes` implemented as a failure.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
+}
+
+def UnreifiableDimOfResultShapeOp : TEST_Op<"unreifiable_dim_of_result_shape",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyDimOfResult` is implemented,
+    and `reifyDimOfResult` with `reifyResultShapes` are implemented as a failure.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
 }
 
 def IsNotScalar : Constraint<CPred<"$0.getType().getRank() != 0">>;
@@ -1105,6 +1199,12 @@ def TestLocationDstNoResOp : TEST_Op<"loc_dst_no_res"> {
   let results = (outs);
 }
 
+def TestLocationAttrOp : TEST_Op<"op_with_loc_attr"> {
+  let arguments = (ins LocationAttr:$loc_attr);
+  let results = (outs );
+  let assemblyFormat = "$loc_attr attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Patterns
 //===----------------------------------------------------------------------===//
@@ -1168,6 +1268,11 @@ def OpP : TEST_Op<"op_p"> {
   let results = (outs I32);
 }
 
+def OpQ : TEST_Op<"op_q"> {
+  let arguments = (ins AnyType, AnyType);
+  let results = (outs AnyType);
+}
+
 // Test constant-folding a pattern that maps `(F32) -> SI32`.
 def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$operand);
@@ -1205,6 +1310,14 @@ def TestNestedSameOpAndSameArgEqualityPattern :
 // Test multiple equal arguments check enforced.
 def TestMultipleEqualArgsPattern :
   Pat<(OpP $a, $b, $a, $a, $b, $c), (OpN $c, $b)>;
+
+// Test equal arguments checks are applied before user provided constraints.
+def AssertBinOpEqualArgsAndReturnTrue : Constraint<
+  CPred<"assertBinOpEqualArgsAndReturnTrue($0)">>;
+def TestEqualArgsCheckBeforeUserConstraintsPattern :
+  Pat<(OpQ:$op $x, $x),
+      (replaceWithValue $x),
+      [(AssertBinOpEqualArgsAndReturnTrue $op)]>;
 
 // Test for memrefs normalization of an op with normalizable memrefs.
 def OpNorm : TEST_Op<"op_norm", [MemRefsNormalizable]> {
@@ -2321,7 +2434,7 @@ def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
 }
 
 //===----------------------------------------------------------------------===//
-// Copy Operation Test 
+// Copy Operation Test
 //===----------------------------------------------------------------------===//
 
 def CopyOp : TEST_Op<"copy", []> {
@@ -2566,7 +2679,7 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
 
 def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
     NoTerminator,
-    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorRegions"]>
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>
   ]> {
   let arguments = (ins Index:$arg, DenseI64ArrayAttr:$cases);
   let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
@@ -2870,6 +2983,20 @@ def TestLinalgFillOp :
       return getOutputsMutable();
     }
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test TilingInterface.
+//===----------------------------------------------------------------------===//
+
+def Test_TilingNoDpsOp : TEST_Op<"tiling_no_dps_op",
+    [Pure, DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
+  let arguments = (ins AnyRankedTensor:$lhs, AnyRankedTensor:$rhs);
+  let results = (outs AnyRankedTensor:$result);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3662,10 +3789,10 @@ def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
         ["bufferize", "bufferizesToMemoryRead",
          "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
   let arguments = (ins
-    Arg<TestTensorType>:$input
+    Arg<Bufferization_TensorLikeTypeInterface>:$input
   );
   let results = (outs
-    Arg<TestTensorType>:$output
+    Arg<Bufferization_TensorLikeTypeInterface>:$output
   );
 
   let extraClassDefinition = [{
@@ -3687,10 +3814,10 @@ def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
 
 def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   let arguments = (ins
-    Arg<TestMemrefType>:$input
+    Arg<Bufferization_BufferLikeTypeInterface>:$input
   );
   let results = (outs
-    Arg<TestMemrefType>:$output
+    Arg<Bufferization_BufferLikeTypeInterface>:$output
   );
 }
 
@@ -3700,7 +3827,7 @@ def TestCreateTensorOp : TEST_Op<"create_tensor_op",
          "bufferizesToMemoryWrite", "getAliasingValues",
          "bufferizesToAllocation"]>]> {
   let arguments = (ins);
-  let results = (outs Arg<TestTensorType>:$output);
+  let results = (outs Arg<Bufferization_TensorLikeTypeInterface>:$output);
   let extraClassDefinition = [{
     bool test::TestCreateTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
@@ -3724,7 +3851,7 @@ def TestCreateTensorOp : TEST_Op<"create_tensor_op",
 
 def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
   let arguments = (ins);
-  let results = (outs Arg<TestMemrefType>:$output);
+  let results = (outs Arg<Bufferization_BufferLikeTypeInterface>:$output);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3744,5 +3871,48 @@ def TestOpWithSuccessorRef : TEST_Op<"dummy_op_with_successor_ref"> {
     $successor attr-dict custom<DummySuccessorRef>(ref($successor))
   }];
 }
+
+def CallWithSegmentsOp : TEST_Op<"call_with_segments",
+    [AttrSizedOperandSegments,
+  DeclareOpInterfaceMethods<CallOpInterface>]> {
+  let summary = "test call op with segmented args";
+  let arguments = (ins
+    FlatSymbolRefAttr:$callee,
+    Variadic<AnyType>:$prefix,   // non-arg segment (e.g., 'in')
+    Variadic<AnyType>:$args,     // <-- the call *arguments* segment
+    Variadic<AnyType>:$suffix    // non-arg segment (e.g., 'out')
+  );
+  let results = (outs);
+  let assemblyFormat = [{
+    $callee `(` $prefix `:` type($prefix) `)`
+            `(` $args `:` type($args) `)`
+            `(` $suffix `:` type($suffix) `)` attr-dict
+  }];
+
+  // Provide stub implementations for the ArgAndResultAttrsOpInterface.
+  let extraClassDeclaration = [{
+    ::mlir::ArrayAttr getArgAttrsAttr() { return {}; }
+    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
+    void setArgAttrsAttr(::mlir::ArrayAttr) {}
+    void setResAttrsAttr(::mlir::ArrayAttr) {}
+    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
+    ::mlir::Attribute removeResAttrsAttr() { return {}; }
+  }];
+
+  let extraClassDefinition = [{
+    ::mlir::CallInterfaceCallable $cppClass::getCallableForCallee() {
+      if (auto sym = (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee"))
+        return ::mlir::CallInterfaceCallable(sym);
+      return ::mlir::CallInterfaceCallable();
+    }
+    void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      if (auto sym = callee.dyn_cast<::mlir::SymbolRefAttr>())
+        (*this)->setAttr("callee", sym);
+      else
+        (*this)->removeAttr("callee");
+    }
+  }];
+}
+
 
 #endif // TEST_OPS

@@ -50,7 +50,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-LLVM_ATTRIBUTE_UNUSED std::string nodeToString(const DynTypedNode &N) {
+[[maybe_unused]] std::string nodeToString(const DynTypedNode &N) {
   std::string S = std::string(N.getNodeKind().asStringRef());
   {
     llvm::raw_string_ostream OS(S);
@@ -366,7 +366,7 @@ public:
       Visitor(TargetFinder &Outer, RelSet Flags) : Outer(Outer), Flags(Flags) {}
 
       void VisitTagType(const TagType *TT) {
-        Outer.add(cast<TagType>(TT)->getOriginalDecl(), Flags);
+        Outer.add(cast<TagType>(TT)->getDecl(), Flags);
       }
 
       void VisitUsingType(const UsingType *ET) {
@@ -402,15 +402,6 @@ public:
         if (Outer.Resolver) {
           for (const NamedDecl *ND :
                Outer.Resolver->resolveDependentNameType(DNT)) {
-            Outer.add(ND, Flags);
-          }
-        }
-      }
-      void VisitDependentTemplateSpecializationType(
-          const DependentTemplateSpecializationType *DTST) {
-        if (Outer.Resolver) {
-          for (const NamedDecl *ND :
-               Outer.Resolver->resolveTemplateSpecializationType(DTST)) {
             Outer.add(ND, Flags);
           }
         }
@@ -455,11 +446,13 @@ public:
         // class template specializations have a (specialized) CXXRecordDecl.
         else if (const CXXRecordDecl *RD = TST->getAsCXXRecordDecl())
           Outer.add(RD, Flags); // add(Decl) will despecialize if needed.
-        else {
+        else if (auto *TD = TST->getTemplateName().getAsTemplateDecl())
           // fallback: the (un-specialized) declaration from primary template.
-          if (auto *TD = TST->getTemplateName().getAsTemplateDecl())
-            Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
-        }
+          Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
+        else if (Outer.Resolver)
+          for (const NamedDecl *ND :
+               Outer.Resolver->resolveTemplateSpecializationType(TST))
+            Outer.add(ND, Flags);
       }
       void
       VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *STTPT) {
@@ -868,7 +861,7 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
       Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
                                   L.getNameLoc(),
                                   /*IsDecl=*/false,
-                                  {L.getOriginalDecl()}});
+                                  {L.getDecl()}});
     }
 
     void VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc L) {
@@ -898,15 +891,6 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
           L.getQualifierLoc(), L.getNameLoc(), /*IsDecl=*/false,
           explicitReferenceTargets(DynTypedNode::create(L.getType()),
                                    DeclRelation::Alias, Resolver)});
-    }
-
-    void VisitDependentTemplateSpecializationTypeLoc(
-        DependentTemplateSpecializationTypeLoc L) {
-      Refs.push_back(
-          ReferenceLoc{L.getQualifierLoc(), L.getTemplateNameLoc(),
-                       /*IsDecl=*/false,
-                       explicitReferenceTargets(
-                           DynTypedNode::create(L.getType()), {}, Resolver)});
     }
 
     void VisitDependentNameTypeLoc(DependentNameTypeLoc L) {
@@ -1056,16 +1040,11 @@ private:
     if (auto *S = N.get<Stmt>())
       return refInStmt(S, Resolver);
     if (auto *NNSL = N.get<NestedNameSpecifierLoc>()) {
+      if (TypeLoc TL = NNSL->getAsTypeLoc())
+        return refInTypeLoc(TL, Resolver);
       // (!) 'DeclRelation::Alias' ensures we do not lose namespace aliases.
-      NestedNameSpecifierLoc Qualifier;
-      SourceLocation NameLoc;
-      if (auto TL = NNSL->getAsTypeLoc()) {
-        Qualifier = TL.getPrefix();
-        NameLoc = TL.getNonPrefixBeginLoc();
-      } else {
-        Qualifier = NNSL->getAsNamespaceAndPrefix().Prefix;
-        NameLoc = NNSL->getLocalBeginLoc();
-      }
+      NestedNameSpecifierLoc Qualifier = NNSL->getAsNamespaceAndPrefix().Prefix;
+      SourceLocation NameLoc = NNSL->getLocalBeginLoc();
       return {
           ReferenceLoc{Qualifier, NameLoc, false,
                        explicitReferenceTargets(

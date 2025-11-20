@@ -3034,14 +3034,6 @@ func.func @invalid_allocate_align_2(%arg0 : memref<i32>) -> () {
 }
 
 // -----
-func.func @invalid_allocate_allocator(%arg0 : memref<i32>) -> () {
-  // expected-error @below {{invalid clause value}}
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(omp_small_cap_mem_alloc)
-
-  return
-}
-
-// -----
 func.func @invalid_workdistribute_empty_region() -> () {
   omp.teams {
     // expected-error @below {{region cannot be empty}}

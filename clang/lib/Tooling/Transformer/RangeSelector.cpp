@@ -205,8 +205,12 @@ RangeSelector transformer::name(std::string ID) {
       // `foo<int>` for which this range will be too short.  Doing so will
       // require subcasing `NamedDecl`, because it doesn't provide virtual
       // access to the \c DeclarationNameInfo.
-      if (tooling::getText(R, *Result.Context) != D->getName())
-        return CharSourceRange();
+      StringRef Text = tooling::getText(R, *Result.Context);
+      if (Text != D->getName())
+        return llvm::make_error<StringError>(
+            llvm::errc::not_supported,
+            "range selected by name(node id=" + ID + "): '" + Text +
+                "' is different from decl name '" + D->getName() + "'");
       return R;
     }
     if (const auto *E = Node.get<DeclRefExpr>()) {
