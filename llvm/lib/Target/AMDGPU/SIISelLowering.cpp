@@ -43,6 +43,7 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
@@ -187,6 +188,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v32i16, &AMDGPU::SGPR_512RegClass);
     addRegisterClass(MVT::v32f16, &AMDGPU::SGPR_512RegClass);
     addRegisterClass(MVT::v32bf16, &AMDGPU::SGPR_512RegClass);
+
+    // We don't want the default expansion of 16-bit ABS since we can
+    // sign-extend and use the 32-bit ABS operation for 16-bit ABS with SGPRs
+    setOperationAction(ISD::ABS, {MVT::i8,MVT::i16}, Custom);
+    setOperationAction(ISD::SUB, {MVT::i8}, Custom);
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -985,7 +991,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
-  setTargetDAGCombine({ISD::ADD,
+  setTargetDAGCombine({ISD::ABS,
+                       ISD::ADD,
                        ISD::PTRADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -6756,6 +6763,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
     return AMDGPUTargetLowering::LowerOperation(Op, DAG);
+  case ISD::ABS:
+    return lowerABSi16(Op, DAG);
   case ISD::BRCOND:
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
@@ -6819,7 +6828,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerTRAP(Op, DAG);
   case ISD::DEBUGTRAP:
     return lowerDEBUGTRAP(Op, DAG);
-  case ISD::ABS:
   case ISD::FABS:
   case ISD::FNEG:
   case ISD::FCANONICALIZE:
@@ -6842,11 +6850,22 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return LowerFP_TO_INT(Op, DAG);
+  case ISD::SUB:
+    if (Op.getValueType() == MVT::i8)
+      if (isNullConstant(Op.getOperand(0)) &&
+          Op.getOperand(1).getOpcode() == ISD::ABS)
+        return DAG.getNode(
+            ISD::TRUNCATE, SDLoc(Op), MVT::i8,
+            DAG.getNode(ISD::SUB, SDLoc(Op), MVT::i32,
+                        DAG.getConstant(0, SDLoc(Op), MVT::i32),
+                        lowerABSi16(Op.getOperand(1), DAG).getOperand(0)));
+      else
+        break;
+    LLVM_FALLTHROUGH;
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
   case ISD::ADD:
-  case ISD::SUB:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -7318,7 +7337,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,
                                           SelectionDAG &DAG) const {
-  switch (N->getOpcode()) {
+  switch (N->getOpcode()) {    
   case ISD::INSERT_VECTOR_ELT: {
     if (SDValue Res = lowerINSERT_VECTOR_ELT(SDValue(N, 0), DAG))
       Results.push_back(Res);
@@ -8183,6 +8202,25 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
       static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap);
   SDValue Ops[] = {Chain, DAG.getTargetConstant(TrapID, SL, MVT::i16)};
   return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
+}
+
+// sign-extend and use the 32-bit ABS operation for 16-bit ABS with SGPRs
+SDValue SITargetLowering::lowerABSi16(SDValue Op, SelectionDAG &DAG) const {
+  assert(Op.getOpcode() == ISD::ABS &&
+         "Tried to select abs with non-abs opcode.");
+  assert((Op.getValueType() == MVT::i16 || Op.getValueType() == MVT::i8) &&
+         "Tried to select abs i16 lowering with non-i16 type.");
+
+  // divergent means will not end up using SGPRs
+  if (Op->isDivergent())
+    return SDValue();
+
+  //(abs i16 (i16 op1)) -> (trunc i16 (abs i32 (sext i32 (i16 op1))))
+  SDValue Src = Op.getOperand(0);
+  SDLoc DL(Src);
+  SDValue SExtSrc = DAG.getSExtOrTrunc(Src, DL, MVT::i32);
+  SDValue ExtAbs = DAG.getNode(ISD::ABS, DL, MVT::i32, SExtSrc);
+  return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), ExtAbs);
 }
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
@@ -16256,12 +16294,19 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
       return Folded;
   }
 
-  if (VT != MVT::i32)
-    return SDValue();
-
   SDLoc SL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+
+  if (VT == MVT::i8)
+    if (isNullConstant(LHS) && RHS->getOpcode() == ISD::ABS)
+      return DAG.getNode(ISD::TRUNCATE, SL, MVT::i8,
+                         DAG.getNode(ISD::SUB, SL, MVT::i32,
+                                     DAG.getConstant(0, SL, MVT::i32),
+                                     lowerABSi16(RHS, DAG).getOperand(0)));
+
+  if (VT != MVT::i32)
+    return SDValue();
 
   // sub x, zext (setcc) => usubo_carry x, 0, setcc
   // sub x, sext (setcc) => uaddo_carry x, 0, setcc
@@ -16901,6 +16946,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return SDValue();
 
   switch (N->getOpcode()) {
+  case ISD::ABS:
+    if (N->getValueType(0) == MVT::i16 || N->getValueType(0) == MVT::i8)
+      return lowerABSi16(SDValue(N,0), DCI.DAG);
+    break;
   case ISD::ADD:
     return performAddCombine(N, DCI);
   case ISD::PTRADD:
