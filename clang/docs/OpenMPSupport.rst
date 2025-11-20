@@ -13,7 +13,9 @@
 .. contents::
    :local:
 
+==============
 OpenMP Support
+==============
 
 Clang fully supports OpenMP 4.5, almost all of 5.0 and most of 5.1/2.
 Clang supports offloading to X86_64, AArch64, PPC64[LE], NVIDIA GPUs (all models) and AMD GPUs (all models).
@@ -26,6 +28,7 @@ For the list of supported features from OpenMP 5.0 and 5.1
 see `OpenMP implementation details`_ and `OpenMP 51 implementation details`_.
 
 General improvements
+====================
 - New collapse clause scheme to avoid expensive remainder operations.
   Compute loop index variables after collapsing a loop nest via the
   collapse clause by replacing the expensive remainder operation with
@@ -40,6 +43,7 @@ General improvements
 
 
 GPU devices support
+===================
 
 Data-sharing modes
 ------------------
@@ -74,6 +78,7 @@ Features not supported or with limited support for Cuda devices
 .. _OpenMP implementation details:
 
 OpenMP 5.0 Implementation Details
+=================================
 
 The following table provides a quick overview over various OpenMP 5.0 features
 and their implementation status. Please post on the
@@ -223,6 +228,7 @@ implementation.
 .. _OpenMP 51 implementation details:
 
 OpenMP 5.1 Implementation Details
+=================================
 
 The following table provides a quick overview over various OpenMP 5.1 features
 and their implementation status.
@@ -260,7 +266,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | has_device_addr clause on target construct                   | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device                       | iterators in map clause or motion clauses                    | :none:`unclaimed`        |                                                                       |
+| device                       | iterators in map clause or motion clauses                    | :none:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | indirect clause on declare target directive                  | :part:`In Progress`      |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -345,6 +351,7 @@ implementation.
 .. _OpenMP 5.2 implementation details:
 
 OpenMP 5.2 Implementation Details
+=================================
 
 The following table provides a quick overview of various OpenMP 5.2 features
 and their implementation status. Please post on the
@@ -405,6 +412,7 @@ implementation.
 .. _OpenMP 5.2 Deprecations:
 
 OpenMP 5.2 Deprecations
+=======================
 
 
 
@@ -439,6 +447,7 @@ OpenMP 5.2 Deprecations
 .. _OpenMP 6.0 implementation details:
 
 OpenMP 6.0 Implementation Details
+=================================
 
 The following table provides a quick overview of various OpenMP 6.0 features
 and their implementation status. Please post on the
@@ -598,6 +607,7 @@ implementation.
 .. _OpenMP 6.1 implementation details:
 
 OpenMP 6.1 Implementation Details (Experimental)
+================================================
 
 The following table provides a quick overview over various OpenMP 6.1 features
 and their implementation status. Since OpenMP 6.1 has not yet been released, the
@@ -624,6 +634,7 @@ implementation.
 
 
 OpenMP Extensions
+=================
 
 The following table provides a quick overview over various OpenMP
 extensions and their implementation status.  These extensions are not
