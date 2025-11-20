@@ -21,22 +21,28 @@ using namespace clang::tidy;
 
 namespace clang::tidy::misc {
 
-static bool hasSameParameters(const FunctionDecl *Func1,
-                              const FunctionDecl *Func2) {
+template <typename R> static auto makeCannonicalTypesRange(R &&r) {
+  return llvm::map_range(r, [](const ParmVarDecl *Param) {
+    return Param->getType().getCanonicalType();
+  });
+}
+
+static bool hasSameSignature(const FunctionDecl *Func1,
+                             const FunctionDecl *Func2) {
   if (Func1->param_size() != Func2->param_size())
     return false;
 
-  return llvm::all_of_zip(
-      Func1->parameters(), Func2->parameters(),
-      [](const ParmVarDecl *Param1, const ParmVarDecl *Param2) {
-        return Param1->getType().getCanonicalType() ==
-               Param2->getType().getCanonicalType();
-      });
+  if (Func1->getReturnType().getCanonicalType() !=
+      Func2->getReturnType().getCanonicalType())
+    return false;
+
+  return llvm::equal(makeCannonicalTypesRange(Func1->parameters()),
+                     makeCannonicalTypesRange(Func2->parameters()));
 }
 
 static std::pair<const FunctionDecl *, const NamespaceDecl *>
 findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
-                        const std::string &GlobalFuncName,
+                        StringRef GlobalFuncName,
                         llvm::SmallPtrSet<const FunctionDecl *, 16> &All) {
 
   if (NS->isAnonymousNamespace())
@@ -62,10 +68,8 @@ findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
           Func->isThisDeclarationADefinition())
         continue;
 
-      if (Func->getNameAsString() == GlobalFuncName && !Func->isVariadic() &&
-          hasSameParameters(Func, GlobalFunc) &&
-          Func->getReturnType().getCanonicalType() ==
-              GlobalFunc->getReturnType().getCanonicalType()) {
+      if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
+          hasSameSignature(Func, GlobalFunc)) {
         All.insert(Func);
         if (!ShadowedFunc)
           std::tie(ShadowedFunc, ShadowedNamespace) = std::tie(Func, NS);
@@ -89,7 +93,7 @@ void ShadowedNamespaceFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
-  const std::string FuncName = Func->getNameAsString();
+  const StringRef FuncName = Func->getName();
   if (FuncName.empty())
     return;
 
@@ -117,16 +121,15 @@ void ShadowedNamespaceFunctionCheck::check(
     return;
 
   const bool Ambiguous = AllShadowedFuncs.size() > 1;
-  const std::string NamespaceName =
-      ShadowedNamespace->getQualifiedNameAsString();
+  std::string NamespaceName = ShadowedNamespace->getQualifiedNameAsString();
   auto Diag = diag(Func->getLocation(),
                    "free function %0 shadows %select{|at least }1'%2::%3'")
-              << Func->getDeclName() << Ambiguous << NamespaceName
+              << Func << Ambiguous << NamespaceName
               << ShadowedFunc->getDeclName().getAsString();
 
   const SourceLocation NameLoc = Func->getLocation();
   if (NameLoc.isValid() && !Func->getPreviousDecl() && !Ambiguous) {
-    const std::string Fix = NamespaceName + "::";
+    const std::string Fix = std::move(NamespaceName) + "::";
     Diag << FixItHint::CreateInsertion(NameLoc, Fix);
   }
 
