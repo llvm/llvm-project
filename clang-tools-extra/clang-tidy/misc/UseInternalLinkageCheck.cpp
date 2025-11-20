@@ -43,12 +43,6 @@ struct OptionEnumMapping<misc::UseInternalLinkageCheck::FixModeKind> {
 
 namespace clang::tidy::misc {
 
-namespace {
-
-AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
-
-AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
-
 static bool isInMainFile(SourceLocation L, SourceManager &SM,
                          const FileExtensionsSet &HeaderFileExtensions) {
   for (;;) {
@@ -64,6 +58,12 @@ static bool isInMainFile(SourceLocation L, SourceManager &SM,
     return false;
   }
 }
+
+namespace {
+
+AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
+
+AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
 
 AST_MATCHER_P(Decl, isAllRedeclsInMainFile, FileExtensionsSet,
               HeaderFileExtensions) {
@@ -142,7 +142,8 @@ static constexpr StringRef Message =
 
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
-    DiagnosticBuilder DB = diag(FD->getLocation(), Message) << "function" << FD;
+    const DiagnosticBuilder DB = diag(FD->getLocation(), Message)
+                                 << "function" << FD;
     const SourceLocation FixLoc = FD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
@@ -157,7 +158,8 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
     if (getLangOpts().CPlusPlus && VD->getType().isConstQualified())
       return;
 
-    DiagnosticBuilder DB = diag(VD->getLocation(), Message) << "variable" << VD;
+    const DiagnosticBuilder DB = diag(VD->getLocation(), Message)
+                                 << "variable" << VD;
     const SourceLocation FixLoc = VD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;

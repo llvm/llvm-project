@@ -518,14 +518,14 @@ class ASTInfoCollector : public ASTReaderListener {
   LangOptions &LangOpts;
   CodeGenOptions &CodeGenOpts;
   TargetOptions &TargetOpts;
-  unsigned &Counter;
+  uint32_t &Counter;
 
 public:
   ASTInfoCollector(HeaderSearchOptions &HSOpts,
                    std::string &SpecificModuleCachePath,
                    PreprocessorOptions &PPOpts, LangOptions &LangOpts,
                    CodeGenOptions &CodeGenOpts, TargetOptions &TargetOpts,
-                   unsigned &Counter)
+                   uint32_t &Counter)
       : HSOpts(HSOpts), SpecificModuleCachePath(SpecificModuleCachePath),
         PPOpts(PPOpts), LangOpts(LangOpts), CodeGenOpts(CodeGenOpts),
         TargetOpts(TargetOpts), Counter(Counter) {}
@@ -577,7 +577,7 @@ public:
   }
 
   void ReadCounter(const serialization::ModuleFile &M,
-                   unsigned NewCounter) override {
+                   uint32_t NewCounter) override {
     Counter = NewCounter;
   }
 };

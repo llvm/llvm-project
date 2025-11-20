@@ -194,6 +194,22 @@ class XX3Form_XTAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31} = XT{5};
 }
 
+class XForm_RBS5<bits<6> opCode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                 InstrItinClass itin, list<dag> pattern>
+    : I<opCode, OOL, IOL, asmstr, itin> {
+
+  bits<5> RB;
+  bits<5> RS;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = RS;
+  let Inst{11...15} = 0;
+  let Inst{16...20} = RB;
+  let Inst{21...30} = xo;
+  let Inst{31} = 0;
+}
+
 class XX3Form_XTAB6_S<bits<5> xo, dag OOL, dag IOL, string asmstr,
                        list<dag> pattern>
     : I<59, OOL, IOL, asmstr, NoItinerary> {
@@ -317,12 +333,16 @@ let Predicates = [IsISAFuture] in {
   def TLBIEIO
       : XForm_RSB5_UIMM2<31, 18, (outs), (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC),
                          "tlbieio $RB, $RS, $RIC", []>;
+  def MTLPL : XForm_RBS5<31, 275, (outs), (ins gprc:$RB, gprc:$RS),
+                         "mtlpl $RB, $RS", IIC_SprMTSPR, []>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     def TLBIEP8
         : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),
                                   (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC,
                                       u1imm:$PRS, u1imm:$R),
                                   "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
+    def MTLPL8 : XForm_RBS5<31, 275, (outs), (ins g8rc:$RB, g8rc:$RS),
+                            "mtlpl $RB, $RS", IIC_SprMTSPR, []>, isPPC64;
   }
 }
 
@@ -340,6 +360,10 @@ let Predicates = [HasVSX, IsISAFuture] in {
     def LXVPRLL : XForm_XTp5_RAB5<31, 621, (outs vsrprc:$XTp),
                                   (ins (memr $RA):$addr, g8rc:$RB),
                                   "lxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
+    def LXVPB32X
+        : XForm_XTp5_RAB5<31, 877, (outs vsrprc:$XTp),
+                          (ins (memr $RA):$addr, g8rc:$RB),
+                          "lxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   let mayStore = 1 in {
@@ -356,6 +380,10 @@ let Predicates = [HasVSX, IsISAFuture] in {
         : XForm_XTp5_RAB5<31, 749, (outs),
                           (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
                           "stxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
+    def STXVPB32X
+        : XForm_XTp5_RAB5<31, 1005, (outs),
+                          (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
+                          "stxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   def VUPKHSNTOB : VXForm_VRTB5<387, 0, (outs vrrc:$VRT), (ins vrrc:$VRB),
@@ -391,6 +419,11 @@ let Predicates = [HasVSX, IsISAFuture] in {
   def VUCMPRLH
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                       "vucmprlh $VRT, $VRA, $VRB", []>;
+
+  def XVRLW : XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                            "xvrlw $XT, $XA, $XB",
+                            [(set v4i32:$XT, (int_ppc_vsx_xvrlw v4i32:$XA,
+                                                 v4i32:$XB))]>;
 
   // AES Acceleration Instructions
   def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
@@ -519,6 +552,10 @@ def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRL $XTp,
                                                                     $RA, $RB)>;
 def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
                                                                      $RA, $RB)>;
+let Predicates = [HasVSX, IsISAFuture] in {
+  def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
+                                                     v4i32:$vB))>;
+}
 
 //---------------------------- Instruction aliases ---------------------------//
 // Predicate combinations available:

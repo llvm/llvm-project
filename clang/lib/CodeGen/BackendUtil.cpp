@@ -313,7 +313,7 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
                            .Case("kernel", llvm::CodeModel::Kernel)
                            .Case("medium", llvm::CodeModel::Medium)
                            .Case("large", llvm::CodeModel::Large)
-                           .Cases("default", "", ~1u)
+                           .Cases({"default", ""}, ~1u)
                            .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
   if (CodeModel == ~1u)
@@ -481,6 +481,36 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
 
+  switch (CodeGenOpts.getVecLib()) {
+  case llvm::driver::VectorLibrary::NoLibrary:
+    Options.VecLib = llvm::VectorLibrary::NoLibrary;
+    break;
+  case llvm::driver::VectorLibrary::Accelerate:
+    Options.VecLib = llvm::VectorLibrary::Accelerate;
+    break;
+  case llvm::driver::VectorLibrary::Darwin_libsystem_m:
+    Options.VecLib = llvm::VectorLibrary::DarwinLibSystemM;
+    break;
+  case llvm::driver::VectorLibrary::LIBMVEC:
+    Options.VecLib = llvm::VectorLibrary::LIBMVEC;
+    break;
+  case llvm::driver::VectorLibrary::MASSV:
+    Options.VecLib = llvm::VectorLibrary::MASSV;
+    break;
+  case llvm::driver::VectorLibrary::SVML:
+    Options.VecLib = llvm::VectorLibrary::SVML;
+    break;
+  case llvm::driver::VectorLibrary::SLEEF:
+    Options.VecLib = llvm::VectorLibrary::SLEEFGNUABI;
+    break;
+  case llvm::driver::VectorLibrary::ArmPL:
+    Options.VecLib = llvm::VectorLibrary::ArmPL;
+    break;
+  case llvm::driver::VectorLibrary::AMDLIBM:
+    Options.VecLib = llvm::VectorLibrary::AMDLIBM;
+    break;
+  }
+
   switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
   case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:
     Options.SwiftAsyncFramePointer =
@@ -584,6 +614,7 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts,
     BackendArgs.push_back("-limit-float-precision");
     BackendArgs.push_back(CodeGenOpts.LimitFloatPrecision.c_str());
   }
+
   // Check for the default "clang" invocation that won't set any cl::opt values.
   // Skip trying to parse the command line invocation to avoid the issues
   // described below.
@@ -800,16 +831,6 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles,
                                         PB.getVirtualFileSystemPtr()));
     }
-
-    if (LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
-      if (Level == OptimizationLevel::O0) {
-        // The default pass builder only infers libcall function attrs when
-        // optimizing, so we insert it here because we need it for accurate
-        // memory allocation function detection.
-        MPM.addPass(InferFunctionAttrsPass());
-      }
-      MPM.addPass(AllocTokenPass(getAllocTokenOptions(LangOpts, CodeGenOpts)));
-    }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
     PB.registerOptimizerEarlyEPCallback(
@@ -850,6 +871,23 @@ static void addSanitizers(const Triple &TargetTriple,
               createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
         });
   }
+}
+
+static void addAllocTokenPass(const Triple &TargetTriple,
+                              const CodeGenOptions &CodeGenOpts,
+                              const LangOptions &LangOpts, PassBuilder &PB) {
+  PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
+                                         OptimizationLevel Level,
+                                         ThinOrFullLTOPhase) {
+    if (Level == OptimizationLevel::O0 &&
+        LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
+      // The default pass builder only infers libcall function attrs when
+      // optimizing, so we insert it here because we need it for accurate
+      // memory allocation function detection with -fsanitize=alloc-token.
+      MPM.addPass(InferFunctionAttrsPass());
+    }
+    MPM.addPass(AllocTokenPass(getAllocTokenOptions(LangOpts, CodeGenOpts)));
+  });
 }
 
 void EmitAssemblyHelper::RunOptimizationPipeline(
@@ -1106,6 +1144,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!IsThinLTOPostLink) {
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
+      addAllocTokenPass(TargetTriple, CodeGenOpts, LangOpts, PB);
     }
 
     if (std::optional<GCOVOptions> Options =

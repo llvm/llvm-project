@@ -71,6 +71,8 @@ __cpp_lib_constexpr_charconv                            202207L <charconv>
 __cpp_lib_constexpr_cmath                               202202L <cmath> <cstdlib>
 __cpp_lib_constexpr_complex                             201711L <complex>
 __cpp_lib_constexpr_dynamic_alloc                       201907L <memory>
+__cpp_lib_constexpr_flat_map                            202502L <flat_map>
+__cpp_lib_constexpr_flat_set                            202502L <flat_set>
 __cpp_lib_constexpr_forward_list                        202502L <forward_list>
 __cpp_lib_constexpr_functional                          201907L <functional>
 __cpp_lib_constexpr_iterator                            201811L <iterator>
@@ -185,7 +187,8 @@ __cpp_lib_nonmember_container_access                    201411L <array> <deque> 
 __cpp_lib_not_fn                                        202306L <functional>
                                                         201603L // C++17
 __cpp_lib_null_iterators                                201304L <iterator>
-__cpp_lib_optional                                      202110L <optional>
+__cpp_lib_optional                                      202506L <optional>
+                                                        202110L // C++23
                                                         202106L // C++20
                                                         201606L // C++17
 __cpp_lib_optional_range_support                        202406L <optional>
@@ -552,6 +555,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_bitset                               202306L
 # undef  __cpp_lib_constexpr_algorithms
 # define __cpp_lib_constexpr_algorithms                 202306L
+# define __cpp_lib_constexpr_flat_map                   202502L
+# define __cpp_lib_constexpr_flat_set                   202502L
 # define __cpp_lib_constexpr_forward_list               202502L
 # define __cpp_lib_constexpr_list                       202502L
 # if !defined(_LIBCPP_ABI_VCRUNTIME)
@@ -582,12 +587,16 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # if __has_builtin(__builtin_is_virtual_base_of)
 #   define __cpp_lib_is_virtual_base_of                 202406L
 # endif
-// # define __cpp_lib_is_within_lifetime                   202306L
+# if __has_builtin(__builtin_is_within_lifetime)
+#   define __cpp_lib_is_within_lifetime                 202306L
+# endif
 // # define __cpp_lib_linalg                               202311L
 # undef  __cpp_lib_mdspan
 # define __cpp_lib_mdspan                               202406L
 # undef  __cpp_lib_not_fn
 # define __cpp_lib_not_fn                               202306L
+# undef  __cpp_lib_optional
+# define __cpp_lib_optional                             202506L
 # define __cpp_lib_optional_range_support               202406L
 # undef  __cpp_lib_out_ptr
 # define __cpp_lib_out_ptr                              202311L

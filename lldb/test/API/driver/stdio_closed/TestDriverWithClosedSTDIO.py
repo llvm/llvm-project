@@ -8,7 +8,9 @@ import lldb
 import os
 import sys
 import socket
-import fcntl
+
+if os.name != "nt":
+    import fcntl
 
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
@@ -22,7 +24,7 @@ class TestDriverWithClosedSTDIO(TestBase):
 
     # Windows doesn't have the fcntl module, so we can't run this
     # test there.
-    @skipIf(oslist=["windows"])
+    @skipIf(hostoslist=["windows"])
     def test_run_lldb_and_wait(self):
         """This test forks, closes the stdio channels and exec's lldb.
         Then it waits for it to exit and asserts it did that successfully"""
