@@ -22,15 +22,6 @@
 template <typename T>
 concept HasSize = requires(const T t) { t.size(); };
 
-struct CheckForSize {
-  template <class IntegerLikeT>
-  constexpr void operator()() {
-    types::for_each(types::integer_types{}, []<typename BoundT>() {
-      static_assert(HasSize<std::ranges::iota_view<IntegerLikeT, BoundT>>);
-    });
-  }
-};
-
 constexpr bool test() {
   // Both are integer like and both are less than zero.
   {
@@ -114,7 +105,11 @@ constexpr bool test() {
 
   // LWG3610: `iota_view::size` sometimes rejects integer-class types
   {
-    types::for_each(types::integer_types{}, CheckForSize{});
+    types::for_each(types::integer_types{}, []<typename IntegerLikeT>() {
+      types::for_each(types::integer_types{}, []<typename BoundT>() {
+        static_assert(HasSize<std::ranges::iota_view<IntegerLikeT, BoundT>>);
+      });
+    });
   }
 
   return true;
