@@ -355,7 +355,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires(same_as<_Start, _BoundSentinel> && __advanceable<_Start>) ||
-            (integral<_Start> && integral<_BoundSentinel>) || sized_sentinel_for<_BoundSentinel, _Start>
+            (__integer_like<_Start> && __integer_like<_BoundSentinel>) || sized_sentinel_for<_BoundSentinel, _Start>
   {
     if constexpr (__integer_like<_Start> && __integer_like<_BoundSentinel>) {
       return (__value_ < 0)
