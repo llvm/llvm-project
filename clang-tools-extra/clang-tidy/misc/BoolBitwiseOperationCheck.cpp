@@ -63,7 +63,8 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
   if (!BinOp)
     return false;
 
-  if (!llvm::is_contained(llvm::make_first_range(OperatorsTransformation), BinOp->getOpcodeStr()))
+  if (!llvm::is_contained(llvm::make_first_range(OperatorsTransformation),
+                          BinOp->getOpcodeStr()))
     return false;
 
   bool IsBooleanLHS = BinOp->getLHS()
@@ -91,16 +92,14 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
   }
 
   std::optional<bool> DummyFlag = false;
-  IsBooleanLHS =
-      IsBooleanLHS ||
-      isBooleanBitwise(
-          dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()),
-          AC, DummyFlag);
-  IsBooleanRHS =
-      IsBooleanRHS ||
-      isBooleanBitwise(
-          dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()),
-          AC, DummyFlag);
+  IsBooleanLHS = IsBooleanLHS ||
+                 isBooleanBitwise(dyn_cast<BinaryOperator>(
+                                      BinOp->getLHS()->IgnoreParenImpCasts()),
+                                  AC, DummyFlag);
+  IsBooleanRHS = IsBooleanRHS ||
+                 isBooleanBitwise(dyn_cast<BinaryOperator>(
+                                      BinOp->getRHS()->IgnoreParenImpCasts()),
+                                  AC, DummyFlag);
 
   if (IsBooleanLHS && IsBooleanRHS) {
     RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
