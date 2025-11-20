@@ -2174,8 +2174,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
 
     const MCInstrDesc &Mov64Desc = get(AMDGPU::V_MOV_B64_e32);
-    const TargetRegisterClass *Mov64RC =
-        getRegClass(Mov64Desc, /*OpNum=*/0);
+    const TargetRegisterClass *Mov64RC = getRegClass(Mov64Desc, /*OpNum=*/0);
 
     const MachineOperand &SrcOp = MI.getOperand(1);
     // FIXME: Will this work for 64-bit floating point immediates?
@@ -2191,8 +2190,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
       const MCInstrDesc &PkMovDesc = get(AMDGPU::V_PK_MOV_B32);
-      const TargetRegisterClass *PkMovRC =
-          getRegClass(PkMovDesc, /*OpNum=*/0);
+      const TargetRegisterClass *PkMovRC = getRegClass(PkMovDesc, /*OpNum=*/0);
 
       if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo) &&
           PkMovRC->contains(Dst)) {
