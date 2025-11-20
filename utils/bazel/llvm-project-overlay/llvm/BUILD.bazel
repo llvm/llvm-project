@@ -785,6 +785,14 @@ cc_binary(
 )
 
 gentbl_cc_library(
+    name = "target_library_info_gen",
+    tbl_outs = {"include/llvm/Analysis/TargetLibraryInfo.inc": ["-gen-target-library-info"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "include/llvm/Analysis/TargetLibraryInfo.td",
+    deps = [":CommonTargetTdFiles"],
+)
+
+gentbl_cc_library(
     name = "intrinsic_enums_gen",
     tbl_outs = {"include/llvm/IR/IntrinsicEnums.inc": ["-gen-intrinsic-enums"]},
     tblgen = ":llvm-min-tblgen",
@@ -1260,6 +1268,7 @@ cc_library(
         ":Support",
         ":TargetParser",
         ":config",
+        ":target_library_info_gen",
     ],
 )
 
@@ -1293,6 +1302,7 @@ cc_library(
         ":Support",
         ":TargetParser",
         ":config",
+        ":target_library_info_gen",
     ],
 )
 
@@ -1352,6 +1362,7 @@ cc_library(
 filegroup(
     name = "common_target_td_sources",
     srcs = glob([
+        "include/llvm/Analysis/*.td",
         "include/llvm/CodeGen/*.td",
         "include/llvm/Frontend/Directive/*.td",
         "include/llvm/IR/Intrinsics*.td",
@@ -2360,6 +2371,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenCallingConv.inc",
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/ARM/ARMGenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/ARM/ARMGenSubtargetInfo.inc",
             ),
@@ -2869,6 +2884,10 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-subtarget"],
                 "lib/Target/NVPTX/NVPTXGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/NVPTX/NVPTXGenSDNodeInfo.inc",
             ),
         ],
     },
@@ -4550,7 +4569,7 @@ cc_binary(
             "-Wl,--export-dynamic-symbol=__gxx_personality_v0",
             "-Wl,--export-dynamic-symbol=__cxa_allocate_exception",
             "-Wl,--export-dynamic-symbol=__cxa_throw",
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
             "-Wl,--export-dynamic-symbol=llvm_orc_registerEHFrameSectionWrapper",
             "-Wl,--export-dynamic-symbol=llvm_orc_deregisterEHFrameSectionWrapper",
         ],
@@ -5100,7 +5119,7 @@ cc_binary(
             "-Wl,--export-dynamic-symbol=__gxx_personality_v0",
             "-Wl,--export-dynamic-symbol=__cxa_allocate_exception",
             "-Wl,--export-dynamic-symbol=__cxa_throw",
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
         ],
     }),
     stamp = 0,
