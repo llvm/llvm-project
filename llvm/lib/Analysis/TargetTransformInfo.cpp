@@ -306,6 +306,11 @@ bool llvm::TargetTransformInfo::isAlwaysUniform(const Value *V) const {
   return TTIImpl->isAlwaysUniform(V);
 }
 
+InstructionUniformity
+llvm::TargetTransformInfo::getInstructionUniformity(const Value *V) const {
+  return TTIImpl->getInstructionUniformity(V);
+}
+
 bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
                                                      unsigned ToAS) const {
   return TTIImpl->isValidAddrSpaceCast(FromAS, ToAS);
