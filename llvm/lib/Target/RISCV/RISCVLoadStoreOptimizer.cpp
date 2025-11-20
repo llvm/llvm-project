@@ -481,25 +481,25 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
     // X13 = LW X10, 4
     // X10 = LW killed X10, 0
     if (FirstReg == BaseReg) {
-    MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-               .addReg(SecondReg,
-                       RegState::Define | getDeadRegState(SecondOp.isDead()))
-               .addReg(BaseReg);
-    MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-               .addReg(FirstReg,
-                       RegState::Define | getDeadRegState(FirstOp.isDead()))
-               .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+      MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+                 .addReg(SecondReg,
+                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addReg(BaseReg);
+      MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+                 .addReg(FirstReg,
+                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
 
     } else {
-    MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-               .addReg(FirstReg,
-                       RegState::Define | getDeadRegState(FirstOp.isDead()))
-               .addReg(BaseReg);
+      MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+                 .addReg(FirstReg,
+                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addReg(BaseReg);
 
-    MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-               .addReg(SecondReg,
-                       RegState::Define | getDeadRegState(SecondOp.isDead()))
-               .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+      MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+                 .addReg(SecondReg,
+                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
     }
 
     ++NumLD2LW;
