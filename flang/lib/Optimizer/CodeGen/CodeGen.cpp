@@ -4356,7 +4356,7 @@ public:
     target.addLegalDialect<mlir::gpu::GPUDialect>();
 
     // required NOPs for applying a full conversion
-    target.addLegalOp<mlir::ModuleOp>();
+    target.addLegalOp<mlir::ModuleOp, mlir::UnrealizedConversionCastOp>();
 
     // If we're on Windows, we might need to rename some libm calls.
     bool isMSVC = fir::getTargetTriple(mod).isOSMSVCRT();
@@ -4376,9 +4376,12 @@ public:
           });
     }
 
+    mlir::ConversionConfig config;
+    config.buildMaterializations = false;
+
     // apply the patterns
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,
-                                               std::move(pattern)))) {
+                                               std::move(pattern), config))) {
       signalPassFailure();
     }
 
