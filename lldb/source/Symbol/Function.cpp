@@ -302,7 +302,7 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
 
 llvm::Expected<std::pair<SupportFileSP, Function::SourceRange>>
 Function::GetSourceInfo() {
-  SupportFileSP source_file_sp;
+  SupportFileSP source_file_sp = std::make_shared<SupportFile>();
   uint32_t start_line;
   GetStartLineSourceInfo(source_file_sp, start_line);
   LineTable *line_table = m_comp_unit->GetLineTable();

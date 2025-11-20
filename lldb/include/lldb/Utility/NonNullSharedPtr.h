@@ -17,8 +17,7 @@ namespace lldb_private {
 /// A non-nullable shared pointer that always holds a valid object.
 ///
 /// NonNullSharedPtr is a smart pointer wrapper around std::shared_ptr that
-/// guarantees the pointer is never null. If default-constructed, it creates
-/// a default-constructed instance of T.
+/// guarantees the pointer is never null.
 ///
 /// This class is used for enforcing invariants at the type level and
 /// eliminating entire classes of null pointer bugs.
@@ -28,8 +27,6 @@ template <typename T> class NonNullSharedPtr : private std::shared_ptr<T> {
   using Base = std::shared_ptr<T>;
 
 public:
-  NonNullSharedPtr() : Base(std::make_shared<T>()) {}
-
   NonNullSharedPtr(const std::shared_ptr<T> &t)
       : Base(t ? t : std::make_shared<T>()) {
     assert(t && "NonNullSharedPtr initialized from NULL shared_ptr");
@@ -42,15 +39,14 @@ public:
 
   NonNullSharedPtr(const NonNullSharedPtr &other) : Base(other) {}
 
-  NonNullSharedPtr(NonNullSharedPtr &&other) noexcept
-      : Base(std::move(other)) {}
+  NonNullSharedPtr(NonNullSharedPtr &&other) : Base(std::move(other)) {}
 
   NonNullSharedPtr &operator=(const NonNullSharedPtr &other) {
     Base::operator=(other);
     return *this;
   }
 
-  NonNullSharedPtr &operator=(NonNullSharedPtr &&other) noexcept {
+  NonNullSharedPtr &operator=(NonNullSharedPtr &&other) {
     Base::operator=(std::move(other));
     return *this;
   }
@@ -62,7 +58,7 @@ public:
   using Base::use_count;
   using Base::operator bool;
 
-  void swap(NonNullSharedPtr &other) noexcept { Base::swap(other); }
+  void swap(NonNullSharedPtr &other) { Base::swap(other); }
 
   /// Explicitly deleted operations that could introduce nullptr.
   /// @{
@@ -77,7 +73,7 @@ public:
 /// lookup (ADL) and efficient swapping.
 template <typename T>
 void swap(lldb_private::NonNullSharedPtr<T> &lhs,
-          lldb_private::NonNullSharedPtr<T> &rhs) noexcept {
+          lldb_private::NonNullSharedPtr<T> &rhs) {
   lhs.swap(rhs);
 }
 

@@ -216,7 +216,7 @@ const FileSpec &SupportFileList::GetFileSpecAtIndex(size_t idx) const {
 SupportFileSP SupportFileList::GetSupportFileAtIndex(size_t idx) const {
   if (idx < m_files.size())
     return m_files[idx];
-  return {};
+  return std::make_shared<SupportFile>();
 }
 
 // Return the size in bytes that this object takes in memory. This returns the
