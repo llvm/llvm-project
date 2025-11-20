@@ -69,6 +69,13 @@ Potentially Breaking Changes
   - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
+  
+- Modified the custom message format of :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` by assigning a special meaning
+  to the character ``>`` at the start of the value of the option
+  ``CustomFunctions``. If the option value starts with ``>``, then the
+  replacement suggestion part of the message (which would be included by
+  default) is omitted. (This does not change the warning locations.)
 
 - :program:`clang-tidy` now displays warnings from all non-system headers by
   default. Previously, users had to explicitly opt-in to header warnings using
@@ -283,9 +290,19 @@ New check aliases
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-msc30-c <clang-tidy/checks/cert/msc30-c>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-msc32-c <clang-tidy/checks/cert/msc32-c>` to
   :doc:`bugprone-random-generator-seed
   <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc50-cpp <clang-tidy/checks/cert/msc50-cpp>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-msc51-cpp <clang-tidy/checks/cert/msc51-cpp>` to
@@ -316,7 +333,7 @@ Changes in existing checks
   exceptions from captures are now diagnosed, exceptions in the bodies of
   lambdas that aren't actually invoked are not. Additionally, fixed an issue
   where the check wouldn't diagnose throws in arguments to functions or
-  constructors. Added fine-grained configuration via options 
+  constructors. Added fine-grained configuration via options
   `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
   `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
@@ -377,6 +394,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
+  
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by hiding the default
+  suffix when the reason starts with the character `>` in the `CustomFunctions`
+  option.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -404,7 +426,7 @@ Changes in existing checks
 
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
-  notes for downcasts.
+  notes for downcasts and casts to void pointer.
 
 - Improved :doc:`google-readability-todo
   <clang-tidy/checks/google/readability-todo>` check to accept the new TODO
@@ -504,6 +526,11 @@ Changes in existing checks
   generating fix-it hints when size method is called from implicit ``this``,
   ignoring default constructors with user provided arguments and adding
   detection in container's method except ``empty``.
+
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by adding
+  the ``IgnoredFilesList`` option (semicolon-separated list of regexes or
+  filenames) to allow intentional duplicates.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring

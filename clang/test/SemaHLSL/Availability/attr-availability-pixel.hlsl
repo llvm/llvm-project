@@ -36,7 +36,7 @@ __attribute__((availability(shadermodel, introduced = 5.0, environment = compute
 __attribute__((availability(shadermodel, introduced = 6.0, environment = mesh)))
 unsigned f8();
 
-int main() {
+int main() : A {
     // expected-error@#f1_call {{'f1' is only available on Shader Model 6.0 or newer}}
     // expected-note@#f1 {{'f1' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
     unsigned A = f1(); // #f1_call

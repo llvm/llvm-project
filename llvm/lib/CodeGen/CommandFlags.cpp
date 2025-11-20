@@ -107,6 +107,7 @@ CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(bool, SeparateNamedSections)
 CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
+CGOPT(VectorLibrary, VectorLibrary)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EnableCallGraphSection)
@@ -451,6 +452,28 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(DebuggerKind::SCE, "sce", "SCE targets (e.g. PS4)")));
   CGBINDOPT(DebuggerTuningOpt);
 
+  static cl::opt<VectorLibrary> VectorLibrary(
+      "vector-library", cl::Hidden, cl::desc("Vector functions library"),
+      cl::init(VectorLibrary::NoLibrary),
+      cl::values(
+          clEnumValN(VectorLibrary::NoLibrary, "none",
+                     "No vector functions library"),
+          clEnumValN(VectorLibrary::Accelerate, "Accelerate",
+                     "Accelerate framework"),
+          clEnumValN(VectorLibrary::DarwinLibSystemM, "Darwin_libsystem_m",
+                     "Darwin libsystem_m"),
+          clEnumValN(VectorLibrary::LIBMVEC, "LIBMVEC",
+                     "GLIBC Vector Math library"),
+          clEnumValN(VectorLibrary::MASSV, "MASSV", "IBM MASS vector library"),
+          clEnumValN(VectorLibrary::SVML, "SVML", "Intel SVML library"),
+          clEnumValN(VectorLibrary::SLEEFGNUABI, "sleefgnuabi",
+                     "SIMD Library for Evaluating Elementary Functions"),
+          clEnumValN(VectorLibrary::ArmPL, "ArmPL",
+                     "Arm Performance Libraries"),
+          clEnumValN(VectorLibrary::AMDLIBM, "AMDLIBM",
+                     "AMD vector math library")));
+  CGBINDOPT(VectorLibrary);
+
   static cl::opt<bool> EnableStackSizeSection(
       "stack-size-section",
       cl::desc("Emit a section containing stack size metadata"),
@@ -609,6 +632,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.EnableTLSDESC =
       getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
   Options.ExceptionModel = getExceptionModel();
+  Options.VecLib = getVectorLibrary();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();

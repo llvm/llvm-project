@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_RDFREGISTERS_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -91,45 +92,45 @@ private:
   static constexpr RegisterId UnitFlag = 1u << 31;
 
 public:
-  RegisterId Reg = 0;
+  RegisterId Id = 0;
   LaneBitmask Mask = LaneBitmask::getNone(); // Only for registers.
 
   constexpr RegisterRef() = default;
   constexpr explicit RegisterRef(RegisterId R,
                                  LaneBitmask M = LaneBitmask::getAll())
-      : Reg(R), Mask(isRegId(R) && R != 0 ? M : LaneBitmask::getNone()) {}
+      : Id(R), Mask(isRegId(R) && R != 0 ? M : LaneBitmask::getNone()) {}
 
   // Classify null register as a "register".
-  constexpr bool isReg() const { return Reg == 0 || isRegId(Reg); }
-  constexpr bool isUnit() const { return isUnitId(Reg); }
-  constexpr bool isMask() const { return isMaskId(Reg); }
+  constexpr bool isReg() const { return Id == 0 || isRegId(Id); }
+  constexpr bool isUnit() const { return isUnitId(Id); }
+  constexpr bool isMask() const { return isMaskId(Id); }
 
   constexpr MCRegister asMCReg() const {
     assert(isReg());
-    return Reg;
+    return Id;
   }
 
   constexpr MCRegUnit asMCRegUnit() const {
     assert(isUnit());
-    return Reg & ~UnitFlag;
+    return static_cast<MCRegUnit>(Id & ~UnitFlag);
   }
 
   constexpr unsigned asMaskIdx() const {
     assert(isMask());
-    return Reg & ~MaskFlag;
+    return Id & ~MaskFlag;
   }
 
-  constexpr operator bool() const {
-    return !isReg() || (Reg != 0 && Mask.any());
+  explicit constexpr operator bool() const {
+    return !isReg() || (Id != 0 && Mask.any());
   }
 
   size_t hash() const {
-    return std::hash<RegisterId>{}(Reg) ^
+    return std::hash<RegisterId>{}(Id) ^
            std::hash<LaneBitmask::Type>{}(Mask.getAsInteger());
   }
 
   static constexpr bool isRegId(RegisterId Id) {
-    return !(Id & UnitFlag) && !(Id & MaskFlag);
+    return Id != 0 && !(Id & UnitFlag) && !(Id & MaskFlag);
   }
   static constexpr bool isUnitId(RegisterId Id) { return Id & UnitFlag; }
   static constexpr bool isMaskId(RegisterId Id) { return Id & MaskFlag; }
@@ -151,26 +152,26 @@ struct PhysicalRegisterInfo {
     return RegisterRef::toMaskId(RegMasks.find(RM));
   }
 
-  const uint32_t *getRegMaskBits(RegisterId R) const {
-    return RegMasks.get(RegisterRef(R).asMaskIdx());
+  const uint32_t *getRegMaskBits(RegisterRef RR) const {
+    return RegMasks.get(RR.asMaskIdx());
   }
 
   bool alias(RegisterRef RA, RegisterRef RB) const;
 
   // Returns the set of aliased physical registers.
-  std::set<RegisterId> getAliasSet(RegisterId Reg) const;
+  std::set<RegisterId> getAliasSet(RegisterRef RR) const;
 
-  RegisterRef getRefForUnit(uint32_t U) const {
+  RegisterRef getRefForUnit(MCRegUnit U) const {
     return RegisterRef(UnitInfos[U].Reg, UnitInfos[U].Mask);
   }
 
-  const BitVector &getMaskUnits(RegisterId MaskId) const {
-    return MaskInfos[RegisterRef(MaskId).asMaskIdx()].Units;
+  const BitVector &getMaskUnits(RegisterRef RR) const {
+    return MaskInfos[RR.asMaskIdx()].Units;
   }
 
   std::set<RegisterId> getUnits(RegisterRef RR) const;
 
-  const BitVector &getUnitAliases(uint32_t U) const {
+  const BitVector &getUnitAliases(MCRegUnit U) const {
     return AliasInfos[U].Regs;
   }
 
@@ -201,9 +202,9 @@ private:
   const TargetRegisterInfo &TRI;
   IndexedSet<const uint32_t *> RegMasks;
   std::vector<RegInfo> RegInfos;
-  std::vector<UnitInfo> UnitInfos;
+  IndexedMap<UnitInfo, MCRegUnitToIndex> UnitInfos;
   std::vector<MaskInfo> MaskInfos;
-  std::vector<AliasInfo> AliasInfos;
+  IndexedMap<AliasInfo, MCRegUnitToIndex> AliasInfos;
 };
 
 struct RegisterRefEqualTo {

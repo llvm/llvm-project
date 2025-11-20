@@ -16,11 +16,11 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PerfectShuffle.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -387,7 +387,7 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
 
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                              const AArch64Subtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM, STI), Subtarget(&STI) {
   // AArch64 doesn't have comparisons which set GPRs or setcc instructions, so
   // we have to make something up. Arbitrarily, choose ZeroOrOne.
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -1427,12 +1427,24 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::v2i16, Custom);
     setOperationAction(ISD::BITCAST, MVT::v4i8, Custom);
 
-    setLoadExtAction(ISD::EXTLOAD,  MVT::v4i16, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2i32, MVT::v2i8, Custom);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v2i32, MVT::v2i8, Custom);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i32, MVT::v2i8, Custom);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i8, Custom);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v2i64, MVT::v2i8, Custom);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i64, MVT::v2i8, Custom);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
     setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
-    setLoadExtAction(ISD::EXTLOAD,  MVT::v4i32, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
     setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2i32, MVT::v2i16, Custom);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v2i32, MVT::v2i16, Custom);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i32, MVT::v2i16, Custom);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i16, Custom);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v2i64, MVT::v2i16, Custom);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i64, MVT::v2i16, Custom);
 
     // ADDP custom lowering
     for (MVT VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 })
@@ -3874,22 +3886,30 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
 /// \param MustBeFirst  Set to true if this subtree needs to be negated and we
 ///                     cannot do the negation naturally. We are required to
 ///                     emit the subtree first in this case.
+/// \param PreferFirst  Set to true if processing this subtree first may
+///                     result in more efficient code.
 /// \param WillNegate   Is true if are called when the result of this
 ///                     subexpression must be negated. This happens when the
 ///                     outer expression is an OR. We can use this fact to know
 ///                     that we have a double negation (or (or ...) ...) that
 ///                     can be implemented for free.
-static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
-                               bool &MustBeFirst, bool WillNegate,
+static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
+                               bool &CanNegate, bool &MustBeFirst,
+                               bool &PreferFirst, bool WillNegate,
                                unsigned Depth = 0) {
   if (!Val.hasOneUse())
     return false;
   unsigned Opcode = Val->getOpcode();
   if (Opcode == ISD::SETCC) {
-    if (Val->getOperand(0).getValueType() == MVT::f128)
+    EVT VT = Val->getOperand(0).getValueType();
+    if (VT == MVT::f128)
       return false;
     CanNegate = true;
     MustBeFirst = false;
+    // Designate this operation as a preferred first operation if the result
+    // of a SUB operation can be reused.
+    PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
+                                    {Val->getOperand(0), Val->getOperand(1)});
     return true;
   }
   // Protect against exponential runtime and stack overflow.
@@ -3901,11 +3921,15 @@ static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
     SDValue O1 = Val->getOperand(1);
     bool CanNegateL;
     bool MustBeFirstL;
-    if (!canEmitConjunction(O0, CanNegateL, MustBeFirstL, IsOR, Depth+1))
+    bool PreferFirstL;
+    if (!canEmitConjunction(DAG, O0, CanNegateL, MustBeFirstL, PreferFirstL,
+                            IsOR, Depth + 1))
       return false;
     bool CanNegateR;
     bool MustBeFirstR;
-    if (!canEmitConjunction(O1, CanNegateR, MustBeFirstR, IsOR, Depth+1))
+    bool PreferFirstR;
+    if (!canEmitConjunction(DAG, O1, CanNegateR, MustBeFirstR, PreferFirstR,
+                            IsOR, Depth + 1))
       return false;
 
     if (MustBeFirstL && MustBeFirstR)
@@ -3928,6 +3952,7 @@ static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
       CanNegate = false;
       MustBeFirst = MustBeFirstL || MustBeFirstR;
     }
+    PreferFirst = PreferFirstL || PreferFirstR;
     return true;
   }
   return false;
@@ -3989,19 +4014,25 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
   SDValue LHS = Val->getOperand(0);
   bool CanNegateL;
   bool MustBeFirstL;
-  bool ValidL = canEmitConjunction(LHS, CanNegateL, MustBeFirstL, IsOR);
+  bool PreferFirstL;
+  bool ValidL = canEmitConjunction(DAG, LHS, CanNegateL, MustBeFirstL,
+                                   PreferFirstL, IsOR);
   assert(ValidL && "Valid conjunction/disjunction tree");
   (void)ValidL;
 
   SDValue RHS = Val->getOperand(1);
   bool CanNegateR;
   bool MustBeFirstR;
-  bool ValidR = canEmitConjunction(RHS, CanNegateR, MustBeFirstR, IsOR);
+  bool PreferFirstR;
+  bool ValidR = canEmitConjunction(DAG, RHS, CanNegateR, MustBeFirstR,
+                                   PreferFirstR, IsOR);
   assert(ValidR && "Valid conjunction/disjunction tree");
   (void)ValidR;
 
-  // Swap sub-tree that must come first to the right side.
-  if (MustBeFirstL) {
+  bool ShouldFirstL = PreferFirstL && !PreferFirstR && !MustBeFirstR;
+
+  // Swap sub-tree that must or should come first to the right side.
+  if (MustBeFirstL || ShouldFirstL) {
     assert(!MustBeFirstR && "Valid conjunction/disjunction tree");
     std::swap(LHS, RHS);
     std::swap(CanNegateL, CanNegateR);
@@ -4057,7 +4088,9 @@ static SDValue emitConjunction(SelectionDAG &DAG, SDValue Val,
                                AArch64CC::CondCode &OutCC) {
   bool DummyCanNegate;
   bool DummyMustBeFirst;
-  if (!canEmitConjunction(Val, DummyCanNegate, DummyMustBeFirst, false))
+  bool DummyPreferFirst;
+  if (!canEmitConjunction(DAG, Val, DummyCanNegate, DummyMustBeFirst,
+                          DummyPreferFirst, false))
     return SDValue();
 
   return emitConjunctionRec(DAG, Val, OutCC, false, SDValue(), AArch64CC::AL);
@@ -6728,8 +6761,34 @@ bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(SDValue Extend,
   return DataVT.isFixedLengthVector() || DataVT.getVectorMinNumElements() > 2;
 }
 
+/// Helper function to check if a small vector load can be optimized.
+static bool isEligibleForSmallVectorLoadOpt(LoadSDNode *LD,
+                                            const AArch64Subtarget &Subtarget) {
+  if (!Subtarget.isNeonAvailable())
+    return false;
+  if (LD->isVolatile())
+    return false;
+
+  EVT MemVT = LD->getMemoryVT();
+  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8 && MemVT != MVT::v2i16)
+    return false;
+
+  Align Alignment = LD->getAlign();
+  Align RequiredAlignment = Align(MemVT.getStoreSize().getFixedValue());
+  if (Subtarget.requiresStrictAlign() && Alignment < RequiredAlignment)
+    return false;
+
+  return true;
+}
+
 bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT ExtVT = ExtVal.getValueType();
+  // Small, illegal vectors can be extended inreg.
+  if (auto *Load = dyn_cast<LoadSDNode>(ExtVal.getOperand(0))) {
+    if (ExtVT.isFixedLengthVector() && ExtVT.getStoreSizeInBits() <= 128 &&
+        isEligibleForSmallVectorLoadOpt(Load, *Subtarget))
+      return true;
+  }
   if (!ExtVT.isScalableVector() && !Subtarget->useSVEForFixedLengthVectors())
     return false;
 
@@ -7188,11 +7247,85 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
   return Result;
 }
 
+/// Helper function to optimize loads of extended small vectors.
+/// These patterns would otherwise get scalarized into inefficient sequences.
+static SDValue tryLowerSmallVectorExtLoad(LoadSDNode *Load, SelectionDAG &DAG) {
+  const AArch64Subtarget &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  if (!isEligibleForSmallVectorLoadOpt(Load, Subtarget))
+    return SDValue();
+
+  EVT MemVT = Load->getMemoryVT();
+  EVT ResVT = Load->getValueType(0);
+  unsigned NumElts = ResVT.getVectorNumElements();
+  unsigned DstEltBits = ResVT.getScalarSizeInBits();
+  unsigned SrcEltBits = MemVT.getScalarSizeInBits();
+
+  unsigned ExtOpcode;
+  switch (Load->getExtensionType()) {
+  case ISD::EXTLOAD:
+  case ISD::ZEXTLOAD:
+    ExtOpcode = ISD::ZERO_EXTEND;
+    break;
+  case ISD::SEXTLOAD:
+    ExtOpcode = ISD::SIGN_EXTEND;
+    break;
+  case ISD::NON_EXTLOAD:
+    return SDValue();
+  }
+
+  SDLoc DL(Load);
+  SDValue Chain = Load->getChain();
+  SDValue BasePtr = Load->getBasePtr();
+  const MachinePointerInfo &PtrInfo = Load->getPointerInfo();
+  Align Alignment = Load->getAlign();
+
+  // Load the data as an FP scalar to avoid issues with integer loads.
+  unsigned LoadBits = MemVT.getStoreSizeInBits();
+  MVT ScalarLoadType = MVT::getFloatingPointVT(LoadBits);
+  SDValue ScalarLoad =
+      DAG.getLoad(ScalarLoadType, DL, Chain, BasePtr, PtrInfo, Alignment);
+
+  MVT ScalarToVecTy = MVT::getVectorVT(ScalarLoadType, 128 / LoadBits);
+  SDValue ScalarToVec =
+      DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ScalarToVecTy, ScalarLoad);
+  MVT BitcastTy =
+      MVT::getVectorVT(MVT::getIntegerVT(SrcEltBits), 128 / SrcEltBits);
+  SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, BitcastTy, ScalarToVec);
+
+  SDValue Res = Bitcast;
+  unsigned CurrentEltBits = Res.getValueType().getScalarSizeInBits();
+  unsigned CurrentNumElts = Res.getValueType().getVectorNumElements();
+  while (CurrentEltBits < DstEltBits) {
+    if (Res.getValueSizeInBits() >= 128) {
+      CurrentNumElts = CurrentNumElts / 2;
+      MVT ExtractVT =
+          MVT::getVectorVT(MVT::getIntegerVT(CurrentEltBits), CurrentNumElts);
+      Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtractVT, Res,
+                        DAG.getConstant(0, DL, MVT::i64));
+    }
+    CurrentEltBits = CurrentEltBits * 2;
+    MVT ExtVT =
+        MVT::getVectorVT(MVT::getIntegerVT(CurrentEltBits), CurrentNumElts);
+    Res = DAG.getNode(ExtOpcode, DL, ExtVT, Res);
+  }
+
+  if (CurrentNumElts != NumElts) {
+    MVT FinalVT = MVT::getVectorVT(MVT::getIntegerVT(CurrentEltBits), NumElts);
+    Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, FinalVT, Res,
+                      DAG.getConstant(0, DL, MVT::i64));
+  }
+
+  return DAG.getMergeValues({Res, ScalarLoad.getValue(1)}, DL);
+}
+
 SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
                                          SelectionDAG &DAG) const {
   SDLoc DL(Op);
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
+
+  if (SDValue Result = tryLowerSmallVectorExtLoad(LoadNode, DAG))
+    return Result;
 
   if (LoadNode->getMemoryVT() == MVT::i64x8) {
     SmallVector<SDValue, 8> Ops;
@@ -7212,37 +7345,7 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
     return DAG.getMergeValues({Loaded, Chain}, DL);
   }
 
-  // Custom lowering for extending v4i8 vector loads.
-  EVT VT = Op->getValueType(0);
-  assert((VT == MVT::v4i16 || VT == MVT::v4i32) && "Expected v4i16 or v4i32");
-
-  if (LoadNode->getMemoryVT() != MVT::v4i8)
-    return SDValue();
-
-  // Avoid generating unaligned loads.
-  if (Subtarget->requiresStrictAlign() && LoadNode->getAlign() < Align(4))
-    return SDValue();
-
-  unsigned ExtType;
-  if (LoadNode->getExtensionType() == ISD::SEXTLOAD)
-    ExtType = ISD::SIGN_EXTEND;
-  else if (LoadNode->getExtensionType() == ISD::ZEXTLOAD ||
-           LoadNode->getExtensionType() == ISD::EXTLOAD)
-    ExtType = ISD::ZERO_EXTEND;
-  else
-    return SDValue();
-
-  SDValue Load = DAG.getLoad(MVT::f32, DL, LoadNode->getChain(),
-                             LoadNode->getBasePtr(), MachinePointerInfo());
-  SDValue Chain = Load.getValue(1);
-  SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f32, Load);
-  SDValue BC = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Vec);
-  SDValue Ext = DAG.getNode(ExtType, DL, MVT::v8i16, BC);
-  Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i16, Ext,
-                    DAG.getConstant(0, DL, MVT::i64));
-  if (VT == MVT::v4i32)
-    Ext = DAG.getNode(ExtType, DL, MVT::v4i32, Ext);
-  return DAG.getMergeValues({Ext, Chain}, DL);
+  return SDValue();
 }
 
 SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
@@ -18769,6 +18872,15 @@ bool AArch64TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   return (Index == 0 || Index == ResVT.getVectorMinNumElements());
 }
 
+bool AArch64TargetLowering::shouldOptimizeMulOverflowWithZeroHighBits(
+    LLVMContext &Context, EVT VT) const {
+  if (getTypeAction(Context, VT) != TypeExpandInteger)
+    return false;
+
+  EVT LegalTy = EVT::getIntegerVT(Context, VT.getSizeInBits() / 2);
+  return getTypeAction(Context, LegalTy) == TargetLowering::TypeLegal;
+}
+
 /// Turn vector tests of the signbit in the form of:
 ///   xor (sra X, elt_size(X)-1), -1
 /// into:
@@ -21640,9 +21752,8 @@ static SDValue performBuildVectorCombine(SDNode *N,
       SDValue LowLanesSrcVec = Elt0->getOperand(0)->getOperand(0);
       if (LowLanesSrcVec.getValueType() == MVT::v2f64) {
         SDValue HighLanes;
-        if (Elt2->getOpcode() == ISD::UNDEF &&
-            Elt3->getOpcode() == ISD::UNDEF) {
-          HighLanes = DAG.getUNDEF(MVT::v2f32);
+        if (Elt2->isUndef() && Elt3->isUndef()) {
+          HighLanes = DAG.getPOISON(MVT::v2f32);
         } else if (Elt2->getOpcode() == ISD::FP_ROUND &&
                    Elt3->getOpcode() == ISD::FP_ROUND &&
                    isa<ConstantSDNode>(Elt2->getOperand(1)) &&
@@ -23977,7 +24088,7 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // uzp1(x, undef) -> concat(truncate(x), undef)
-  if (Op1.getOpcode() == ISD::UNDEF) {
+  if (Op1.isUndef()) {
     EVT BCVT = MVT::Other, HalfVT = MVT::Other;
     switch (ResVT.getSimpleVT().SimpleTy) {
     default:
@@ -26423,8 +26534,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     SDValue L1 = LHS->getOperand(1);
     SDValue L2 = LHS->getOperand(2);
 
-    if (L0.getOpcode() == ISD::UNDEF && isNullConstant(L2) &&
-        isSignExtInReg(L1)) {
+    if (L0.isUndef() && isNullConstant(L2) && isSignExtInReg(L1)) {
       SDLoc DL(N);
       SDValue Shl = L1.getOperand(0);
       SDValue NewLHS = DAG.getNode(ISD::INSERT_SUBVECTOR, DL,
