@@ -2656,8 +2656,8 @@ defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   PosFlag<SetTrue>,
   NegFlag<SetFalse>>,
   Group<f_clang_Group>;
-defm sanitize_handler_preserve_all_regs_experimental
-    : BoolOption<"f", "sanitize-handler-preserve-all-regs-experimental",
+defm sanitize_handler_preserve_all_regs
+    : BoolOption<"f", "sanitize-handler-preserve-all-regs",
                  CodeGenOpts<"SanitizeHandlerPreserveAllRegs">, DefaultFalse,
                  PosFlag<SetTrue>, NegFlag<SetFalse>>,
       Group<f_clang_Group>;
