@@ -24,23 +24,23 @@ void test_const_lvalue_cast_request_non_const_lvalue()
     const std::any a;
     // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
     // expected-error@any:* {{drops 'const' qualifier}}
-    std::any_cast<TestType &>(a); // expected-note {{requested here}}
+    (void)std::any_cast<TestType &>(a); // expected-note {{requested here}}
 
     const std::any a2(42);
     // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
     // expected-error@any:* {{drops 'const' qualifier}}
-    std::any_cast<int&>(a2); // expected-note {{requested here}}
+    (void)std::any_cast<int&>(a2); // expected-note {{requested here}}
 }
 
 void test_lvalue_any_cast_request_rvalue()
 {
     std::any a;
     // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an lvalue reference or a CopyConstructible type}}
-    std::any_cast<TestType &&>(a); // expected-note {{requested here}}
+    (void)std::any_cast<TestType &&>(a); // expected-note {{requested here}}
 
     std::any a2(42);
     // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an lvalue reference or a CopyConstructible type}}
-    std::any_cast<int&&>(a2); // expected-note {{requested here}}
+    (void)std::any_cast<int&&>(a2); // expected-note {{requested here}}
 }
 
 void test_rvalue_any_cast_request_lvalue()
@@ -48,18 +48,9 @@ void test_rvalue_any_cast_request_lvalue()
     std::any a;
     // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an rvalue reference or a CopyConstructible type}}
     // expected-error@any:* {{non-const lvalue reference to type 'TestType' cannot bind to a temporary}}
-    std::any_cast<TestType &>(std::move(a)); // expected-note {{requested here}}
+    (void)std::any_cast<TestType &>(std::move(a)); // expected-note {{requested here}}
 
     // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an rvalue reference or a CopyConstructible type}}
     // expected-error@any:* {{non-const lvalue reference to type 'int' cannot bind to a temporary}}
-    std::any_cast<int&>(42);
-}
-
-int main(int, char**)
-{
-    test_const_lvalue_cast_request_non_const_lvalue();
-    test_lvalue_any_cast_request_rvalue();
-    test_rvalue_any_cast_request_lvalue();
-
-  return 0;
+    (void)std::any_cast<int&>(42);
 }
