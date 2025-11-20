@@ -527,8 +527,7 @@ inline MachineInstrBuilder BuildMIAfter(MachineBasicBlock &BB,
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insertAfter(I, MI);
   return MachineInstrBuilder(MF, MI)
-      .setPCSections(MIMD.getPCSections())
-      .setMMRAMetadata(MIMD.getMMRAMetadata());
+      .copyMIMetadata(MIMD);
 }
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
