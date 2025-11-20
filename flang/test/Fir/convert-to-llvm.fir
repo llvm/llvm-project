@@ -1541,6 +1541,42 @@ func.func @select_case_logical(%arg0: !fir.ref<!fir.logical<4>>) {
 
 // -----
 
+// Test `fir.select_case` operation conversion with memref type.
+
+func.func @select_case_memref(%arg0: i32, %arg1: memref<f32>, %arg2: memref<f32>) -> memref<f32> {
+  %c0_i32 = arith.constant 0 : i32
+  fir.select_case %arg0 : i32 [#fir.point, %c0_i32, ^bb1(%arg1 : memref<f32>), unit, ^bb2(%arg2 : memref<f32>)]
+^bb1(%0: memref<f32>):  // pred: ^bb0
+  cf.br ^bb2(%0 : memref<f32>)
+^bb2(%1: memref<f32>):  // 2 preds: ^bb0, ^bb1
+  return %1 : memref<f32>
+}
+
+// CHECK-LABEL:   llvm.func @select_case_memref(
+// CHECK-SAME:      %[[ARG0:.*]]: i32,
+// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr, %[[ARG3:.*]]: i64,
+// CHECK-SAME:      %[[ARG4:.*]]: !llvm.ptr, %[[ARG5:.*]]: !llvm.ptr, %[[ARG6:.*]]: i64) -> !llvm.struct<(ptr, ptr, i64)> {
+// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[INSERTVALUE_0:.*]] = llvm.insertvalue %[[ARG4]], %[[MLIR_0]][0] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[INSERTVALUE_1:.*]] = llvm.insertvalue %[[ARG5]], %[[INSERTVALUE_0]][1] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[INSERTVALUE_2:.*]] = llvm.insertvalue %[[ARG6]], %[[INSERTVALUE_1]][2] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[MLIR_1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[INSERTVALUE_3:.*]] = llvm.insertvalue %[[ARG1]], %[[MLIR_1]][0] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[INSERTVALUE_4:.*]] = llvm.insertvalue %[[ARG2]], %[[INSERTVALUE_3]][1] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[INSERTVALUE_5:.*]] = llvm.insertvalue %[[ARG3]], %[[INSERTVALUE_4]][2] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:           %[[ICMP_0:.*]] = llvm.icmp "eq" %[[ARG0]], %[[MLIR_2]] : i32
+// CHECK:           llvm.cond_br %[[ICMP_0]], ^bb2(%[[INSERTVALUE_5]] : !llvm.struct<(ptr, ptr, i64)>), ^bb1
+// CHECK:         ^bb1:
+// CHECK:           llvm.br ^bb3(%[[INSERTVALUE_2]] : !llvm.struct<(ptr, ptr, i64)>)
+// CHECK:         ^bb2(%[[VAL_0:.*]]: !llvm.struct<(ptr, ptr, i64)>):
+// CHECK:           llvm.br ^bb3(%[[VAL_0]] : !llvm.struct<(ptr, ptr, i64)>)
+// CHECK:         ^bb3(%[[VAL_1:.*]]: !llvm.struct<(ptr, ptr, i64)>):
+// CHECK:           llvm.return %[[VAL_1]] : !llvm.struct<(ptr, ptr, i64)>
+// CHECK:         }
+
+// -----
+
 // Test `fir.is_present`
 
 func.func @test_is_present_i64(%arg0: !fir.ref<i64>) -> () {
