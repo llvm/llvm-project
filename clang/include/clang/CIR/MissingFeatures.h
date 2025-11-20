@@ -29,7 +29,6 @@ struct MissingFeatures {
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
-  static bool opGlobalConstant() { return false; }
   static bool opGlobalWeakRef() { return false; }
   static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalSection() { return false; }
@@ -259,6 +258,7 @@ struct MissingFeatures {
   static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
+  static bool emitConstrainedFPCall() { return false; }
   static bool emitLifetimeMarkers() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
@@ -266,6 +266,7 @@ struct MissingFeatures {
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
   static bool fastMathFlags() { return false; }
+
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
   static bool globalViewIndices() { return false; }

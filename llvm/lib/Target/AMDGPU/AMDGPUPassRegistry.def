@@ -29,6 +29,7 @@ MODULE_PASS("amdgpu-perf-hint",
 MODULE_PASS("amdgpu-preload-kernel-arguments", AMDGPUPreloadKernelArgumentsPass(*this))
 MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
 MODULE_PASS("amdgpu-remove-incompatible-functions", AMDGPURemoveIncompatibleFunctionsPass(*this))
+MODULE_PASS("amdgpu-lower-exec-sync", AMDGPULowerExecSyncPass())
 MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
 #undef MODULE_PASS
 

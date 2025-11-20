@@ -1334,8 +1334,18 @@ def ProcessorFeatures {
     !listremove(ARLSFeatures, [FeatureWIDEKL]);
 
   // Novalake
+  list<SubtargetFeature> NVLAdditionalFeatures = [FeatureAVX10_2,
+                                                  FeatureMOVRS,
+                                                  FeatureEGPR,
+                                                  FeaturePush2Pop2,
+                                                  FeaturePPX,
+                                                  FeatureNF,
+                                                  FeatureNDD,
+                                                  FeatureZU,
+                                                  FeatureCCMP,
+                                                  FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
-      !listconcat(PTLFeatures, [FeaturePREFETCHI]);
+      !listconcat(PTLFeatures, NVLAdditionalFeatures);
 
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,

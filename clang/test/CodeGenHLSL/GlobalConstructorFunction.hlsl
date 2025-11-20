@@ -37,9 +37,8 @@ void main(unsigned GI : SV_GroupIndex) {}
 // INLINE-NEXT:   alloca
 // INLINE-NEXT:   store i32 12
 // INLINE-NEXT:   store i32 13
-// INLINE-NEXT:   %[[HANDLE:.*]] = call target("dx.CBuffer", target("dx.Layout", %"__cblayout_$Globals", 4, 0))
-// INLINE-NEXT-SAME: @"llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_$Globalss_4_0tt"(i32 0, i32 0, i32 1, i32 0, i1 false)
-// INLINE-NEXT:   store target("dx.CBuffer", target("dx.Layout", %"__cblayout_$Globals", 4, 0)) %[[HANDLE]], ptr @"$Globals.cb", align 4
+// INLINE-NEXT:   %[[HANDLE:.*]] = call target("dx.CBuffer", %"__cblayout_$Globals") @"llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_s___cblayout_$Globalsst"(i32 0, i32 0, i32 1, i32 0, ptr @"$Globals.str")
+// INLINE-NEXT:   store target("dx.CBuffer", %"__cblayout_$Globals") %[[HANDLE]], ptr @"$Globals.cb", align 4
 // INLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
 // INLINE-NEXT:   store i32 %
 // INLINE-NEXT:   store i32 0

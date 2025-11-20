@@ -67,6 +67,33 @@ struct MockProcess : Process {
   }
 };
 
+/// A Process whose `ReadMemory` override queries a DenseMap.
+struct MockProcessWithMemRead : Process {
+  using addr_t = lldb::addr_t;
+
+  llvm::DenseMap<addr_t, addr_t> memory_map;
+
+  MockProcessWithMemRead(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+                         llvm::DenseMap<addr_t, addr_t> &&memory_map)
+      : Process(target_sp, listener_sp), memory_map(memory_map) {}
+  size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
+                      Status &error) override {
+    assert(memory_map.contains(vm_addr));
+    assert(size == sizeof(addr_t));
+    *reinterpret_cast<addr_t *>(buf) = memory_map[vm_addr];
+    return sizeof(addr_t);
+  }
+  size_t ReadMemory(addr_t addr, void *buf, size_t size,
+                    Status &status) override {
+    return DoReadMemory(addr, buf, size, status);
+  }
+  bool CanDebug(lldb::TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return Status(); }
+  llvm::StringRef GetPluginName() override { return ""; }
+  void RefreshStateAfterStop() override {}
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+};
+
 class MockThread : public Thread {
 public:
   MockThread(Process &process) : Thread(process, /*tid=*/1), m_reg_ctx_sp() {}
@@ -175,24 +202,55 @@ public:
   }
 };
 
-struct PlatformTargetDebugger {
+struct TestContext {
   lldb::PlatformSP platform_sp;
   lldb::TargetSP target_sp;
   lldb::DebuggerSP debugger_sp;
+  lldb::ProcessSP process_sp;
+  lldb::ThreadSP thread_sp;
+  lldb::RegisterContextSP reg_ctx_sp;
 };
 
-/// A helper function to create <Platform, Target, Debugger> objects with the
-/// "aarch64-pc-linux" ArchSpec.
-static PlatformTargetDebugger CreateTarget() {
-  ArchSpec arch("aarch64-pc-linux");
+/// A helper function to create TestContext objects with the
+/// given triple, memory, and register contents.
+static bool CreateTestContext(
+    TestContext *ctx, llvm::StringRef triple,
+    std::optional<RegisterValue> reg_value = {},
+    std::optional<llvm::DenseMap<lldb::addr_t, lldb::addr_t>> memory = {}) {
+  ArchSpec arch(triple);
   Platform::SetHostPlatform(
       platform_linux::PlatformLinux::CreateInstance(true, &arch));
   lldb::PlatformSP platform_sp;
   lldb::TargetSP target_sp;
   lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  debugger_sp->GetTargetList().CreateTarget(
+  Status status = debugger_sp->GetTargetList().CreateTarget(
       *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
-  return PlatformTargetDebugger{platform_sp, target_sp, debugger_sp};
+
+  EXPECT_TRUE(status.Success());
+  if (!status.Success())
+    return false;
+
+  lldb::ProcessSP process_sp;
+  if (memory)
+    process_sp = std::make_shared<MockProcessWithMemRead>(
+        target_sp, Listener::MakeListener("dummy"), std::move(*memory));
+  else
+    process_sp = std::make_shared<MockProcess>(target_sp,
+                                               Listener::MakeListener("dummy"));
+
+  auto thread_sp = std::make_shared<MockThread>(*process_sp);
+
+  process_sp->GetThreadList().AddThread(thread_sp);
+
+  lldb::RegisterContextSP reg_ctx_sp;
+  if (reg_value) {
+    reg_ctx_sp = std::make_shared<MockRegisterContext>(*thread_sp, *reg_value);
+    thread_sp->SetRegisterContext(reg_ctx_sp);
+  }
+
+  *ctx = TestContext{platform_sp, target_sp, debugger_sp,
+                     process_sp,  thread_sp, reg_ctx_sp};
+  return true;
 }
 
 // NB: This class doesn't use the override keyword to avoid
@@ -486,24 +544,10 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
 
   // Set up a mock process.
-  ArchSpec arch("i386-pc-linux");
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
-  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-  lldb::TargetSP target_sp;
-  lldb::PlatformSP platform_sp;
-  debugger_sp->GetTargetList().CreateTarget(
-      *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
-  ASSERT_TRUE(target_sp);
-  ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
-  ASSERT_TRUE(platform_sp);
-  lldb::ListenerSP listener_sp(Listener::MakeListener("dummy"));
-  lldb::ProcessSP process_sp =
-      std::make_shared<MockProcess>(target_sp, listener_sp);
-  ASSERT_TRUE(process_sp);
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux"));
 
-  ExecutionContext exe_ctx(process_sp);
+  ExecutionContext exe_ctx(test_ctx.process_sp);
   // Implicit location: *0x4.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value}, {}, {}, &exe_ctx),
@@ -518,20 +562,10 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
 
 TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   // Set up a wasm target
-  ArchSpec arch("wasm32-unknown-unknown-wasm");
-  lldb::PlatformSP host_platform_sp =
-      platform_linux::PlatformLinux::CreateInstance(true, &arch);
-  ASSERT_TRUE(host_platform_sp);
-  Platform::SetHostPlatform(host_platform_sp);
-  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-  lldb::TargetSP target_sp;
-  lldb::PlatformSP platform_sp;
-  debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
-                                            lldb_private::eLoadDependentsNo,
-                                            platform_sp, target_sp);
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "wasm32-unknown-unknown-wasm"));
 
-  ExecutionContext exe_ctx(target_sp, false);
+  ExecutionContext exe_ctx(test_ctx.target_sp, false);
   // DW_OP_addr takes a single operand of address size width:
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_addr, 0x40, 0x0, 0x0, 0x0}, {}, {}, &exe_ctx),
@@ -587,20 +621,9 @@ DWARF:
   dwarf_cu->ExtractDIEsIfNeeded();
 
   // Set up a wasm target
-  ArchSpec arch("wasm32-unknown-unknown-wasm");
-  lldb::PlatformSP host_platform_sp =
-      platform_linux::PlatformLinux::CreateInstance(true, &arch);
-  ASSERT_TRUE(host_platform_sp);
-  Platform::SetHostPlatform(host_platform_sp);
-  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-  lldb::TargetSP target_sp;
-  lldb::PlatformSP platform_sp;
-  debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
-                                            lldb_private::eLoadDependentsNo,
-                                            platform_sp, target_sp);
-
-  ExecutionContext exe_ctx(target_sp, false);
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "wasm32-unknown-unknown-wasm"));
+  ExecutionContext exe_ctx(test_ctx.target_sp, false);
 
   auto evaluate = [&](DWARFExpression &expr) -> llvm::Expected<Value> {
     DataExtractor extractor;
@@ -823,28 +846,10 @@ Sections:
       subsystems;
 
   // Set up a wasm target.
-  ArchSpec arch("wasm32-unknown-unknown-wasm");
-  lldb::PlatformSP host_platform_sp =
-      platform_linux::PlatformLinux::CreateInstance(true, &arch);
-  ASSERT_TRUE(host_platform_sp);
-  Platform::SetHostPlatform(host_platform_sp);
-  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-  lldb::TargetSP target_sp;
-  lldb::PlatformSP platform_sp;
-  debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
-                                            lldb_private::eLoadDependentsNo,
-                                            platform_sp, target_sp);
-  // Set up a mock process and thread.
-  lldb::ListenerSP listener_sp(Listener::MakeListener("dummy"));
-  lldb::ProcessSP process_sp =
-      std::make_shared<MockProcess>(target_sp, listener_sp);
-  ASSERT_TRUE(process_sp);
-  MockThread thread(*process_sp);
+  TestContext test_ctx;
   const uint32_t kExpectedValue = 42;
-  lldb::RegisterContextSP reg_ctx_sp = std::make_shared<MockRegisterContext>(
-      thread, RegisterValue(kExpectedValue));
-  thread.SetRegisterContext(reg_ctx_sp);
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "wasm32-unknown-unknown-wasm",
+                                RegisterValue(kExpectedValue)));
 
   llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
   EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
@@ -853,7 +858,8 @@ Sections:
   SymbolFileWasm sym_file_wasm(obj_file_sp, nullptr);
   auto *dwarf_unit = sym_file_wasm.DebugInfo().GetUnitAtIndex(0);
 
-  testExpressionVendorExtensions(module_sp, *dwarf_unit, reg_ctx_sp.get());
+  testExpressionVendorExtensions(module_sp, *dwarf_unit,
+                                 test_ctx.reg_ctx_sp.get());
 }
 
 TEST(DWARFExpression, ExtensionsSplitSymbols) {
@@ -1022,28 +1028,10 @@ Sections:
       subsystems;
 
   // Set up a wasm target.
-  ArchSpec arch("wasm32-unknown-unknown-wasm");
-  lldb::PlatformSP host_platform_sp =
-      platform_linux::PlatformLinux::CreateInstance(true, &arch);
-  ASSERT_TRUE(host_platform_sp);
-  Platform::SetHostPlatform(host_platform_sp);
-  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-  lldb::TargetSP target_sp;
-  lldb::PlatformSP platform_sp;
-  debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
-                                            lldb_private::eLoadDependentsNo,
-                                            platform_sp, target_sp);
-  // Set up a mock process and thread.
-  lldb::ListenerSP listener_sp(Listener::MakeListener("dummy"));
-  lldb::ProcessSP process_sp =
-      std::make_shared<MockProcess>(target_sp, listener_sp);
-  ASSERT_TRUE(process_sp);
-  MockThread thread(*process_sp);
+  TestContext test_ctx;
   const uint32_t kExpectedValue = 42;
-  lldb::RegisterContextSP reg_ctx_sp = std::make_shared<MockRegisterContext>(
-      thread, RegisterValue(kExpectedValue));
-  thread.SetRegisterContext(reg_ctx_sp);
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "wasm32-unknown-unknown-wasm",
+                                RegisterValue(kExpectedValue)));
 
   llvm::Expected<TestFile> skeleton_file =
       TestFile::fromYaml(skeleton_yamldata);
@@ -1059,7 +1047,8 @@ Sections:
   SymbolFileWasm sym_file_wasm(obj_file_sp, nullptr);
   auto *dwarf_unit = sym_file_wasm.DebugInfo().GetUnitAtIndex(0);
 
-  testExpressionVendorExtensions(sym_module_sp, *dwarf_unit, reg_ctx_sp.get());
+  testExpressionVendorExtensions(sym_module_sp, *dwarf_unit,
+                                 test_ctx.reg_ctx_sp.get());
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
@@ -1092,33 +1081,6 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
                        ExpectHostAddress({0x11, 0x22}));
 }
 
-/// A Process whose `ReadMemory` override queries a DenseMap.
-struct MockProcessWithMemRead : Process {
-  using addr_t = lldb::addr_t;
-
-  llvm::DenseMap<addr_t, addr_t> memory_map;
-
-  MockProcessWithMemRead(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                         llvm::DenseMap<addr_t, addr_t> &&memory_map)
-      : Process(target_sp, listener_sp), memory_map(memory_map) {}
-  size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
-    assert(memory_map.contains(vm_addr));
-    assert(size == sizeof(addr_t));
-    *reinterpret_cast<addr_t *>(buf) = memory_map[vm_addr];
-    return sizeof(addr_t);
-  }
-  size_t ReadMemory(addr_t addr, void *buf, size_t size,
-                    Status &status) override {
-    return DoReadMemory(addr, buf, size, status);
-  }
-  bool CanDebug(lldb::TargetSP, bool) override { return true; }
-  Status DoDestroy() override { return Status(); }
-  llvm::StringRef GetPluginName() override { return ""; }
-  void RefreshStateAfterStop() override {}
-  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
-};
-
 class DWARFExpressionMockProcessTestWithAArch
     : public DWARFExpressionMockProcessTest {
 public:
@@ -1149,18 +1111,13 @@ TEST_F(DWARFExpressionMockProcessTestWithAArch, DW_op_deref_no_ptr_fixing) {
   constexpr lldb::addr_t addr = 42;
   memory[addr] = expected_value;
 
-  PlatformTargetDebugger test_setup = CreateTarget();
-  lldb::ProcessSP process_sp = std::make_shared<MockProcessWithMemRead>(
-      test_setup.target_sp, Listener::MakeListener("dummy"), std::move(memory));
-  auto thread = std::make_shared<MockThread>(*process_sp);
-  lldb::RegisterContextSP reg_ctx_sp =
-      std::make_shared<MockRegisterContext>(*thread, RegisterValue(addr));
-  thread->SetRegisterContext(reg_ctx_sp);
-  process_sp->GetThreadList().AddThread(thread);
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "aarch64-pc-linux",
+                                RegisterValue(addr), std::move(memory)));
 
   auto evaluate_expr = [&](auto &expr_data) {
-    ExecutionContext exe_ctx(process_sp);
-    return Evaluate(expr_data, {}, {}, &exe_ctx, reg_ctx_sp.get());
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, {}, &exe_ctx, test_ctx.reg_ctx_sp.get());
   };
 
   uint8_t expr_reg[] = {DW_OP_breg22, 0};
