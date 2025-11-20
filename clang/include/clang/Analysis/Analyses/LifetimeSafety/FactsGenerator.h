@@ -51,6 +51,7 @@ public:
 
 private:
   void handleDestructor(const CFGAutomaticObjDtor &DtorOpt);
+  void handleTrivialDestructors(const CFGLifetimeEnds &LifetimeEnds);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 

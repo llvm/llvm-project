@@ -66,6 +66,9 @@ void FactsGenerator::run() {
       else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
                    Element.getAs<CFGAutomaticObjDtor>())
         handleDestructor(*DtorOpt);
+      else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
+                   Element.getAs<CFGLifetimeEnds>())
+        handleTrivialDestructors(*LifetimeEnds);
     }
     CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
                              EscapesInCurrentBlock.end());
@@ -230,11 +233,7 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
 }
 
 void FactsGenerator::handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
-  /// TODO: Also handle trivial destructors (e.g., for `int`
-  /// variables) which will never have a CFGAutomaticObjDtor node.
   /// TODO: Handle loans to temporaries.
-  /// TODO: Consider using clang::CFG::BuildOptions::AddLifetime to reuse the
-  /// lifetime ends.
   const VarDecl *DestructedVD = DtorOpt.getVarDecl();
   if (!DestructedVD)
     return;
@@ -248,6 +247,17 @@ void FactsGenerator::handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
     if (LoanPath.D == DestructedVD)
       CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
           L.ID, DtorOpt.getTriggerStmt()->getEndLoc()));
+  }
+}
+
+void FactsGenerator::handleTrivialDestructors(
+    const CFGLifetimeEnds &LifetimeEnds) {
+  for (const auto &Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (Loan.Path.D == LifetimeEnds.getVarDecl()) {
+      CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+          Loan.ID, LifetimeEnds.getTriggerStmt()->getEndLoc()));
+      break;
+    }
   }
 }
 

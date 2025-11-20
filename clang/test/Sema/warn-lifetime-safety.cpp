@@ -12,6 +12,10 @@ struct [[gsl::Pointer()]] View {
   void use() const;
 };
 
+class S {
+  View a, b;
+};
+
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Free (-W...permissive)
 // These are cases where the pointer is guaranteed to be dangling at the use site.
@@ -396,6 +400,24 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
   }             // expected-note {{destroyed here}}
 }
 
+void trivial_uaf(){
+  int * a;
+    {
+        int b = 1;
+        a = &b; // expected-warning {{object whose reference is captured does not live long enough}}
+    }           // expected-note {{destroyed here}}
+    (void)*a;   // expected-note {{later used here}}
+}
+
+void trivial_class_uaf() {
+  S* ptr;
+  {
+      S s;
+      ptr = &s; // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note {{destroyed here}}
+  (void)ptr;    // expected-note {{later used here}}
+}
+
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Return (Return-Stack-Address) (-W...permissive)
 // These are cases where the pointer is guaranteed to be dangling at the use site.
@@ -491,6 +513,20 @@ MyObj& reference_return_of_local() {
   MyObj stack;      
   return stack;     // expected-warning {{address of stack memory is returned later}}
                     // expected-note@-1 {{returned here}}
+}
+
+int* trivial_uar() {
+  int *a;
+  int b = 1;
+  a = &b;          // expected-warning {{address of stack memory is returned later}}
+  return a;        // expected-note {{returned here}}
+}
+
+S* trivial_class_uar () {
+  S *ptr;
+  S s;
+  ptr = &s;       // expected-warning {{address of stack memory is returned later}}
+  return ptr;     // expected-note {{returned here}}
 }
 
 //===----------------------------------------------------------------------===//
@@ -696,10 +732,10 @@ void lifetimebound_return_reference() {
   {
     MyObj obj;
     View temp_v = obj;
-    const MyObj& ref = GetObject(temp_v);
-    ptr = &ref;
-  }
-  (void)*ptr;
+    const MyObj& ref = GetObject(temp_v);   
+    ptr = &ref;           // expected-warning {{object whose reference is captured does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*ptr;             // expected-note {{later used here}}
 }
 
 // FIXME: No warning for non gsl::Pointer types. Origin tracking is only supported for pointer types.
