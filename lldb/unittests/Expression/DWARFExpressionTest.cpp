@@ -40,34 +40,6 @@ using namespace lldb_private;
 using namespace llvm::dwarf;
 
 namespace {
-struct MockProcess : Process {
-  MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
-      : Process(target_sp, listener_sp) {}
-
-  llvm::StringRef GetPluginName() override { return "mock process"; }
-
-  bool CanDebug(lldb::TargetSP target, bool plugin_specified_by_name) override {
-    return false;
-  };
-
-  Status DoDestroy() override { return {}; }
-
-  void RefreshStateAfterStop() override {}
-
-  bool DoUpdateThreadList(ThreadList &old_thread_list,
-                          ThreadList &new_thread_list) override {
-    return false;
-  };
-
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
-    for (size_t i = 0; i < size; ++i)
-      ((char *)buf)[i] = (vm_addr + i) & 0xff;
-    error.Clear();
-    return size;
-  }
-};
-
 /// Mock memory implementation for testing.
 /// Stores predefined memory contents indexed by {address, size} pairs.
 class MockMemory {
@@ -93,6 +65,7 @@ public:
   };
 
   typedef std::unordered_map<Request, std::vector<uint8_t>, Request::Hash> Map;
+  MockMemory() = default;
   MockMemory(Map memory) : m_memory(std::move(memory)) {
     // Make sure the requested memory size matches the returned value.
     for (auto &kv : m_memory) {
@@ -118,13 +91,13 @@ private:
 };
 
 /// A Process whose `ReadMemory` override queries MockMemory.
-struct MockProcessWithMemRead : Process {
+struct MockProcess : Process {
   using addr_t = lldb::addr_t;
 
   MockMemory m_memory;
 
-  MockProcessWithMemRead(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                         MockMemory memory)
+  MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+              MockMemory memory)
       : Process(target_sp, listener_sp), m_memory(std::move(memory)) {}
   size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
@@ -320,12 +293,10 @@ static bool CreateTestContext(TestContext *ctx, llvm::StringRef triple,
     return false;
 
   lldb::ProcessSP process_sp;
-  if (process_memory)
-    process_sp = std::make_shared<MockProcessWithMemRead>(
-        target_sp, Listener::MakeListener("dummy"), std::move(*process_memory));
-  else
-    process_sp = std::make_shared<MockProcess>(target_sp,
-                                               Listener::MakeListener("dummy"));
+  if (!process_memory)
+    process_memory = MockMemory();
+  process_sp = std::make_shared<MockProcess>(
+      target_sp, Listener::MakeListener("dummy"), std::move(*process_memory));
 
   auto thread_sp = std::make_shared<MockThread>(*process_sp);
 
@@ -604,8 +575,12 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
 
   // Set up a mock process.
+  MockMemory::Map memory = {
+      {{0x4, 4}, {0x4, 0x5, 0x6, 0x7}},
+  };
   TestContext test_ctx;
-  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux"));
+  ASSERT_TRUE(
+      CreateTestContext(&test_ctx, "i386-pc-linux", {}, std::move(memory)));
 
   ExecutionContext exe_ctx(test_ctx.process_sp);
   // Implicit location: *0x4.
