@@ -5480,11 +5480,15 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
     return std::numeric_limits<uint32_t>::min();
   case AMDGPU::S_MAX_I32:
     return std::numeric_limits<int32_t>::min();
+  case AMDGPU::V_SUB_F32_e64: // +0.0
+    return __builtin_bit_cast(uint32_t, +0.0f);
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32:
   case AMDGPU::S_OR_B32:
   case AMDGPU::S_XOR_B32:
     return std::numeric_limits<uint32_t>::min();
+  case AMDGPU::V_ADD_F32_e64: // -0.0
+    return __builtin_bit_cast(uint32_t, -0.0f);
   case AMDGPU::S_AND_B32:
     return std::numeric_limits<uint32_t>::max();
   case AMDGPU::V_MIN_F32_e64:
@@ -5525,11 +5529,13 @@ static bool is32bitWaveReduceOperation(unsigned Opc) {
          Opc == AMDGPU::S_ADD_I32 || Opc == AMDGPU::S_SUB_I32 ||
          Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_OR_B32 ||
          Opc == AMDGPU::S_XOR_B32 || Opc == AMDGPU::V_MIN_F32_e64 ||
-         Opc == AMDGPU::V_MAX_F32_e64;
+         Opc == AMDGPU::V_MAX_F32_e64 || Opc == AMDGPU::V_ADD_F32_e64 ||
+         Opc == AMDGPU::V_SUB_F32_e64;
 }
 
 static bool isFloatingPointWaveReduceOperation(unsigned Opc) {
-  return Opc == AMDGPU::V_MIN_F32_e64 || Opc == AMDGPU::V_MAX_F32_e64;
+  return Opc == AMDGPU::V_MIN_F32_e64 || Opc == AMDGPU::V_MAX_F32_e64 ||
+         Opc == AMDGPU::V_ADD_F32_e64 || Opc == AMDGPU::V_SUB_F32_e64;
 }
 
 static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
@@ -5576,8 +5582,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     case AMDGPU::S_XOR_B64:
     case AMDGPU::S_ADD_I32:
     case AMDGPU::S_ADD_U64_PSEUDO:
+    case AMDGPU::V_ADD_F32_e64:
     case AMDGPU::S_SUB_I32:
-    case AMDGPU::S_SUB_U64_PSEUDO: {
+    case AMDGPU::S_SUB_U64_PSEUDO:
+    case AMDGPU::V_SUB_F32_e64: {
       const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
       const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
       Register ExecMask = MRI.createVirtualRegister(WaveMaskRegClass);
@@ -5731,6 +5739,30 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             .addReg(DestSub1)
             .addImm(AMDGPU::sub1);
         break;
+      }
+      case AMDGPU::V_ADD_F32_e64:
+      case AMDGPU::V_SUB_F32_e64: {
+        Register ActiveLanesVreg =
+            MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+        Register DstVreg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+        // Get number of active lanes as a float val.
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::V_CVT_F32_I32_e64),
+                ActiveLanesVreg)
+            .addReg(NewAccumulator->getOperand(0).getReg())
+            .addImm(0)  // clamp
+            .addImm(0); // output-modifier
+
+        // Take negation of input for SUB reduction
+        unsigned srcMod = Opc == AMDGPU::V_SUB_F32_e64 ? 1 : 0;
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::V_MUL_F32_e64), DstVreg)
+            .addImm(srcMod) // src0 modifier
+            .addReg(SrcReg)
+            .addImm(0) // src1 modifier
+            .addReg(ActiveLanesVreg)
+            .addImm(0)  // clamp
+            .addImm(0); // output-mod
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+            .addReg(DstVreg);
       }
       }
       RetBB = &BB;
@@ -5979,10 +6011,14 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
   case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_U64:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_U64_PSEUDO);
+  case AMDGPU::WAVE_REDUCE_FADD_PSEUDO_F32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_ADD_F32_e64);
   case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
   case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_U64:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_U64_PSEUDO);
+  case AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_SUB_F32_e64);
   case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_AND_B32);
   case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B64:
