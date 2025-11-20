@@ -129,7 +129,7 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
     assert(var.map.getNumDims() == 0 && "expected only symbols");
     SmallVector<AffineExpr> symReplacements;
     for (auto valueDim : var.mapOperands) {
-      auto it = llvm::find(this->mapOperands, valueDim);
+      auto *it = llvm::find(this->mapOperands, valueDim);
       if (it != this->mapOperands.end()) {
         // There is already a symbol for this operand.
         symReplacements.push_back(b.getAffineSymbolExpr(
