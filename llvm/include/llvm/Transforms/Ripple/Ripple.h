@@ -17,6 +17,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -31,6 +32,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -42,8 +44,11 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -55,7 +60,6 @@
 namespace llvm {
 
 class Argument;
-class Constant;
 class DataLayout;
 class IntegerType;
 class IntrinsicInst;
@@ -64,6 +68,7 @@ class MemoryLocation;
 class TargetMachine;
 class Value;
 class raw_ostream;
+class Type;
 
 /// @brief Tensor shape (shape w/ fixed number of dimensions)
 /// @tparam SizeTy The type used to store dimension sizes
@@ -285,6 +290,217 @@ inline raw_ostream &operator<<(raw_ostream &OS, const TensorShape &tshape) {
   tshape.print(OS);
   return OS;
 }
+
+// _____________________________________________________________________________
+
+/// @brief In one dimension, an affine series f is defined as f(x) = ax + b,
+///  where
+///  - b, an integer Value, is called the _base_;
+///  - a, an integer value as well, is called the _slope_;
+///  - x is a vector of size s representing the sequence [0, 1, ..., s - 1].
+///
+/// For instance, {base = 42, slope = 1, shape = [8]} represents
+//// the vector [42, 43, 44, 45, 46, 47, 48, 49] of size 8 .
+///
+/// Affine series here are extended to a multi-dimensional version, in which
+///  - the base b can be a rank-r tensor (of integer Values)
+///  - the slope a can be a r-dimensional vector (of integer Values);
+///  - x is a set of r [0, 1, ... , s_{r-1}] sequences.
+///
+/// The weighted sum of all r sequences in x with a as weights
+/// forms a r-dimensional tensor L defined by:
+/// L(I) = sum_{k=1 to r}(a_k.x_k(I)),
+/// for any r-dimensional vector I in [0, s_0)x[0, s1)x...x[0, s_{r-1}).
+///
+/// And the affine series T is then defined by T(I) = L(I) + b(I).
+///
+/// We need to keep L pure, because we use it to determine
+/// memory access strides (in particular element-size strides)
+/// to reveal coalesced loads and stores.
+///
+/// For that reason, we enforce an invariant that prevents all the nice and
+/// regular information in L from intermixing too much with b.
+/// We want any tensor dimension in T to be contributed
+/// exclusively by either L or b.
+/// Let's call trivial dimensions of a tensor the dimensions along which
+/// the shape size is 1,
+/// and non-trivial dimensions the ones where it's greater than 1.
+/// The invariant ("orthogonality") we enforce is that
+/// the set of non-trivial dimension of the base b
+/// and the set of non-trivial dimensions of L don't intersect.
+///
+/// A linear series forms a tensor T of rank r is then defined as
+/// T(I) = L(I_L) + b(I_b)
+/// Where I_L and I_b correspond to the non-trivial indices for (resp.) L and b
+///
+/// Here are a few more examples
+///
+/// 1- {base = [x, y], L = {slope = [1, 0], shape = [2, 1]}}
+/// can be instantiated as the following matrix:
+/// [x    , y]
+/// [x + 1, y + 1]
+/// [x + 2, y + 2]
+/// This could represent (for example) the addresses of
+/// the 3 first elements of columns x and y in a matrix.
+/// Note that base is a 1x2 tensor here.
+///
+/// 2- Let A be an address.
+/// {base = A, L = {slope = {1, 1024}, shape = [1024, 32]}}.
+/// represents the series of contiguous addresses from A to A + 32767.
+/// Feed these addresses to a load and you get a large contiguous/coalesced
+/// load.
+///
+/// We use the shapes associated with the slope and the base to determine:
+/// - which dimensions of the whole Affine Series are contributed
+///   by the slope or the base
+/// - the number of elements in the slope (which is a bounded linear series).
+///
+/// This class is implemented using a TensorShape for the base and the
+/// slope, which (as we know) are orthogonal to each other.
+/// Hence, we store a scalar
+/// slope for each dimension of the slope's shape that is not empty (size > 1)
+/// and zero for the others.
+// TODO: rename AffineSeries
+class LinearSeries : public RefCountedBase<LinearSeries> {
+public:
+  /// @brief LinearSeries constructor
+  /// @param v The base value
+  /// @param vShape the base shape
+  /// @param s the slope (one for each dimension of the slope shape)
+  /// @param sShape the slope shape
+  template <typename It>
+  LinearSeries(Value *v, const TensorShape &bShape, It s,
+               const TensorShape &sShape)
+      : Base(v), baseShape(bShape), SlopeValues(s.begin(), s.end()),
+        slopeShape(sShape) {
+    assert(SlopeValues.size() == slopeShape.rank());
+    computeLSShape();
+  }
+  /// @brief Linear series constructor w/ TensorShape move semantics
+  template <typename It>
+  LinearSeries(Value *v, TensorShape &&vShape, It s, TensorShape &&sShape)
+      : Base(v), baseShape(std::move(vShape)), SlopeValues(s.begin(), s.end()),
+        slopeShape(std::move(sShape)) {
+    assert(SlopeValues.size() == slopeShape.rank());
+    computeLSShape();
+  }
+
+  /// @brief Prints this linear series to the given stream
+  void print(raw_ostream &O) const;
+
+  /// @brief Returns the shape of the base
+  const TensorShape &getBaseShape() const { return baseShape; }
+
+  /// @brief Returns the shape of the slope
+  const TensorShape &getSlopeShape() const { return slopeShape; }
+
+  /// @brief Returns the shape of the linear series
+  const TensorShape &getShape() const { return LSShape; }
+
+  /// @brief shape along dimension i
+  TensorShape::DimSize getShape(unsigned i) const {
+    assert(i < rank() && "Index overflow in shape()");
+    auto b = baseShape[i];
+    auto s = slopeShape[i];
+    assert(b > 0 && s > 0);
+    assert((b == 1 || s == 1) && "Incompatible base and slope shapes");
+    return b > s ? b : s;
+  }
+
+  /// @brief Returns the base value of this LinearSeries
+  Value *getBase() const { return Base; }
+
+  /// @brief Returns the i-th slope of this LinearSeries
+  /// @param DimIndex the dimension index
+  Value *getSlope(size_t DimIndex) const { return SlopeValues[DimIndex]; };
+
+  /// @brief Returns a range of modifiable slopes of this LinearSeries
+  auto slopes() { return make_range(SlopeValues.begin(), SlopeValues.end()); }
+
+  /// @brief Returns a range of all the slopes of this LinearSeries
+  auto slopes() const {
+    return make_range(SlopeValues.begin(), SlopeValues.end());
+  }
+
+  /// @brief the rank of the tensor underlying this linear series
+  unsigned rank() const { return getSlopeShape().rank(); }
+
+  /// @brief Dimensions along which slopes effectively represent a broadcast.
+  /// Basically dimensions for which slopes have a non-1 shape and are 0.
+  BitVector getSplatDims() const {
+    int r = slopeShape.rank();
+    BitVector splats(r);
+    for (int i = 0; i < r; ++i) {
+      if (Constant *constSlope = dyn_cast<Constant>(getSlope(i))) {
+        if (slopeShape[i] > 1 && constSlope->isZeroValue()) {
+          splats.set(i);
+        }
+      }
+    }
+    return splats;
+  }
+
+  /// @brief Checks if the linear series is equal to its base
+  bool hasSlope() const { return !slopeShape.isScalar(); }
+
+  /// @brief Whether this affine series is a scalar (base and slope are scalars)
+  bool isScalar() const {
+    return slopeShape.isScalar() && baseShape.isScalar();
+  }
+
+  /// @brief Returns true if all the slopes are zero or the slope shape is
+  /// scalar
+  bool hasZeroSlopes() const;
+
+  /// @brief Whether this affine series is a scalar or a splat of a scalar
+  bool isScalarOrSplat() const;
+
+  static IntegerType *getSlopeTypeFor(const DataLayout &DL, Type *BaseType);
+
+  /// @brief Sets the i-th slope of this linear series to V
+  void setSlope(size_t i, Value *V) { SlopeValues[i] = V; };
+
+  /// @brief Set the base to V
+  void setBase(Value *V) { Base = V; };
+
+  /// @brief returns a new linear series from this one,
+  /// where the slope shape is collapsed (to 1) along dimensions specified by
+  /// @p trivialDims. The other attributes are shared with this one.
+  LinearSeries removeSlopes(BitVector &trivialDims) const {
+    TensorShape NewSlopeShape(getSlopeShape());
+    NewSlopeShape.reduceDimensions(trivialDims);
+    return LinearSeries(Base, baseShape, SlopeValues, NewSlopeShape);
+  }
+
+  /// @brief Constructs a constant linear series of slope 1 and starting value
+  /// zero: [0, 1, ..., size - 1]
+  ///
+  /// @param intTy the type of the linear series's scalar element
+  /// @param size the size of the linear series
+  static Constant *constructLinearSeriesVector(IntegerType *intTy,
+                                               uint64_t size);
+
+private:
+  /// @brief The base value
+  TrackingVH<Value> Base;
+  /// @brief The shape of the base
+  TensorShape baseShape;
+  /// @brief Slopes (always at least 1 element to store the type)
+  SmallVector<TrackingVH<Value>, 3> SlopeValues;
+  /// @brief The shape that is contributed by this linear series
+  TensorShape slopeShape;
+  /// @brief the LS shape
+  TensorShape LSShape;
+
+  void computeLSShape() {
+    LSShape = baseShape;
+    // This should't happen by construction
+    Error e = LSShape.combineShapeBcast(slopeShape);
+    if (e) {
+      llvm_unreachable("Base and slope shapes are incompatible");
+    }
+  }
+};
 
 class Ripple {
   TargetMachine *TM;
@@ -775,6 +991,11 @@ private:
   /// arguments.
   bool rippleVectorizeCall(const CallInst &CI) const;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS, const LinearSeries &LS) {
+  LS.print(OS);
+  return OS;
+}
 
 /**
  * @brief Returns `true` iff BranchingBB has exactly size two (immediate)

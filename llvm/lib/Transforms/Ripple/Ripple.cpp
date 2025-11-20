@@ -1049,6 +1049,30 @@ DenseSet<BasicBlock *> Ripple::allBasicBlocksFromTo(BasicBlock *from,
   return visited;
 }
 
+Constant *LinearSeries::constructLinearSeriesVector(IntegerType *intTy,
+                                                    uint64_t size) {
+  std::vector<Constant *> cstVectorVals;
+  for (uint64_t i = 0; i < size; ++i) {
+    cstVectorVals.push_back(ConstantInt::get(
+        intTy->getScalarType(), APInt(intTy->getBitWidth(), i, false)));
+  }
+  return ConstantVector::get(cstVectorVals);
+}
+
+IntegerType *LinearSeries::getSlopeTypeFor(const DataLayout &DL,
+                                           Type *BaseType) {
+  Type *BaseScalarType = BaseType->getScalarType();
+  IntegerType *SlopeType = nullptr;
+  if (IntegerType *IntTy = dyn_cast<IntegerType>(BaseScalarType))
+    SlopeType = IntTy;
+  else if (PointerType *PTy = dyn_cast<PointerType>(BaseScalarType)) {
+    SlopeType =
+        IntegerType::get(BaseType->getContext(),
+                         DL.getPointerSizeInBits(PTy->getAddressSpace()));
+  }
+  return SlopeType;
+}
+
 iterator_range<User::const_op_iterator>
 Ripple::vectorizableOperands(const Instruction *I) {
   auto Begin = I->op_begin();
@@ -1303,6 +1327,21 @@ Ripple::inferShapeFromOperands(const Instruction *I, bool AllowPartialPhi,
   return InstructionShape;
 }
 
+void LinearSeries::print(raw_ostream &O) const {
+  O << "LinearSeries[";
+  O << "\n  Shape[" << getShape() << "]";
+  O << "\n  Base[" << *Base << "]";
+  O << "\n  BaseShape[" << baseShape << "]";
+  O << "\n  Slopes[";
+  for (unsigned i = slopeShape.rank() - 1; i < slopeShape.rank(); --i) {
+    if (i < slopeShape.rank() - 1)
+      O << ", ";
+    O << *SlopeValues[i];
+  }
+  O << "]";
+  O << "\n  SlopeShape[" << slopeShape << "]\n]";
+}
+
 bool Ripple::setRippleShape(const Value *V, const TensorShape &Shape) {
   return setRippleShape(dyn_cast_if_present<Instruction>(V), Shape);
 }
@@ -1357,6 +1396,19 @@ bool Ripple::allInstructionsHaveRippleShapes() const {
            "Mapping to instructions not part of the function");
   }
   return true;
+}
+
+bool LinearSeries::hasZeroSlopes() const {
+  return getSlopeShape().isScalar() || all_of(slopes(), [](Value *V) {
+           if (Constant *C = dyn_cast<Constant>(V))
+             return C->isZeroValue();
+           return false;
+         });
+}
+
+bool LinearSeries::isScalarOrSplat() const {
+  // Splat only requires that all slopes be zero
+  return getBaseShape().isScalar() && hasZeroSlopes();
 }
 
 bool Ripple::hasNoVectorDimension() const {
