@@ -89,6 +89,17 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
   }
 }
 
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_preserve,
+                             const char *kind, uintptr_t caller,
+                             const uintptr_t *address)
+[[clang::preserve_all]] {
+  // Additional indirecton so the user can override this with their own
+  // preserve_all function. This would allow, e.g., a function that reports the
+  // first error only, so for all subsequent calls we can skip the register save
+  // / restore.
+  __ubsan_report_error(kind, caller, address);
+}
+
 SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
                              uintptr_t caller, const uintptr_t *address) {
   // Use another handlers, in case it's already overriden.
@@ -130,6 +141,10 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 #define HANDLER_RECOVER(name, kind)                                            \
   INTERFACE void __ubsan_handle_##name##_minimal() {                           \
     __ubsan_report_error(kind, GET_CALLER_PC(), nullptr);                      \
+  }                                                                            \
+  INTERFACE void __ubsan_handle_##name##_minimal_preserve()                    \
+      [[clang::preserve_all]] {                                                \
+    __ubsan_report_error_preserve(kind, GET_CALLER_PC(), nullptr);             \
   }
 
 #define HANDLER_NORECOVER(name, kind)                                          \
@@ -146,6 +161,10 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 #define HANDLER_RECOVER_PTR(name, kind)                                        \
   INTERFACE void __ubsan_handle_##name##_minimal(const uintptr_t address) {    \
     __ubsan_report_error(kind, GET_CALLER_PC(), &address);                     \
+  }                                                                            \
+  INTERFACE void __ubsan_handle_##name##_minimal_preserve(                     \
+      const uintptr_t address) [[clang::preserve_all]] {                       \
+    __ubsan_report_error_preserve(kind, GET_CALLER_PC(), &address);            \
   }
 
 #define HANDLER_NORECOVER_PTR(name, kind)                                      \
