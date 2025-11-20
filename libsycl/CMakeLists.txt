@@ -127,10 +127,11 @@ if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   endif()
 endif()
 
-add_subdirectory(src)
-
 set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME})
 add_custom_target(libsycl-runtime-libraries
   DEPENDS ${LIBSYCL_RT_LIBS}
 )
+
+add_subdirectory(src)
+
 add_subdirectory(tools)
