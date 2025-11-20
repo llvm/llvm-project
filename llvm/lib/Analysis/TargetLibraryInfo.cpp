@@ -13,6 +13,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
@@ -20,11 +21,8 @@
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
-    {
-#define TLI_DEFINE_STRING
-#include "llvm/Analysis/TargetLibraryInfo.def"
-};
+#define GET_TARGET_LIBRARY_INFO_STRING_TABLE
+#include "llvm/Analysis/TargetLibraryInfo.inc"
 
 std::string VecDesc::getVectorFunctionABIVariantString() const {
   assert(!VectorFnName.empty() && "Vector function name must not be empty.");
@@ -34,39 +32,8 @@ std::string VecDesc::getVectorFunctionABIVariantString() const {
   return std::string(Out.str());
 }
 
-// Recognized types of library function arguments and return types.
-enum FuncArgTypeID : char {
-  Void = 0, // Must be zero.
-  Bool,     // 8 bits on all targets
-  Int16,
-  Int32,
-  Int,
-  IntPlus, // Int or bigger.
-  Long,    // Either 32 or 64 bits.
-  IntX,    // Any integer type.
-  Int64,
-  LLong,    // 64 bits on all targets.
-  SizeT,    // size_t.
-  SSizeT,   // POSIX ssize_t.
-  Flt,      // IEEE float.
-  Dbl,      // IEEE double.
-  LDbl,     // Any floating type (TODO: tighten this up).
-  Floating, // Any floating type.
-  Ptr,      // Any pointer type.
-  Struct,   // Any struct type.
-  Ellip,    // The ellipsis (...).
-  Same,     // Same argument type as the previous one.
-};
-
-typedef std::array<FuncArgTypeID, 8> FuncProtoTy;
-
-static const FuncProtoTy Signatures[] = {
-#define TLI_DEFINE_SIG
-#include "llvm/Analysis/TargetLibraryInfo.def"
-};
-
-static_assert(sizeof Signatures / sizeof *Signatures == LibFunc::NumLibFuncs,
-              "Missing library function signatures");
+#define GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE
+#include "llvm/Analysis/TargetLibraryInfo.inc"
 
 static bool hasSinCosPiStret(const Triple &T) {
   // Only Darwin variants have _stret versions of combined trig functions.
@@ -160,7 +127,7 @@ static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
-                               ArrayRef<StringLiteral> StandardNames,
+                               const llvm::StringTable &StandardNames,
                                VectorLibrary VecLib) {
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
@@ -932,7 +899,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<StringLiteral> StandardNames,
+                       const llvm::StringTable &StandardNames,
                        VectorLibrary VecLib) {
   initializeBase(TLI, T);
   initializeLibCalls(TLI, T, StandardNames, VecLib);
@@ -943,7 +910,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
   // Default to everything being available.
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
-  initialize(*this, T, StandardNames, VecLib);
+  initialize(*this, T, StandardNamesStrTable, VecLib);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
@@ -1005,7 +972,7 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
 }
 
 static DenseMap<StringRef, LibFunc>
-buildIndexMap(ArrayRef<StringLiteral> StandardNames) {
+buildIndexMap(const llvm::StringTable &StandardNames) {
   DenseMap<StringRef, LibFunc> Indices;
   unsigned Idx = 0;
   Indices.reserve(LibFunc::NumLibFuncs);
@@ -1020,7 +987,7 @@ bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName, LibFunc &F) const {
     return false;
 
   static const DenseMap<StringRef, LibFunc> Indices =
-      buildIndexMap(StandardNames);
+      buildIndexMap(StandardNamesStrTable);
 
   if (auto Loc = Indices.find(funcName); Loc != Indices.end()) {
     F = Loc->second;
@@ -1190,18 +1157,18 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   // against the function's type FTy, starting with its return type.
   // Return true if both match in number and kind, inclduing the ellipsis.
   Type *Ty = FTy.getReturnType(), *LastTy = Ty;
-  const auto &ProtoTypes = Signatures[F];
-  for (auto TyID : ProtoTypes) {
-    if (Idx && TyID == Void)
-      // Except in the first position where it designates the function's
-      // return type Void ends the argument list.
+  const auto *ProtoTypes = &SignatureTable[SignatureOffset[F]];
+  for (auto TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
+       TyID = ProtoTypes[++Idx]) {
+    if (TyID == NoFuncArgType)
       break;
 
     if (TyID == Ellip) {
       // The ellipsis ends the protoype list but is not a part of FTy's
       // argument list.  Except when it's last it must be followed by
-      // Void.
-      assert(Idx == ProtoTypes.size() - 1 || ProtoTypes[Idx + 1] == Void);
+      // NoFuncArgType.
+      assert(ProtoTypes[Idx] == NoFuncArgType ||
+             ProtoTypes[Idx + 1] == NoFuncArgType);
       return FTy.isFunctionVarArg();
     }
 
@@ -1219,11 +1186,10 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
       // There's at least one and at most two more type ids than there are
       // arguments in FTy's argument list.
       Ty = nullptr;
-      ++Idx;
       continue;
     }
 
-    Ty = FTy.getParamType(Idx++);
+    Ty = FTy.getParamType(Idx);
   }
 
   // Return success only if all entries on both lists have been processed
