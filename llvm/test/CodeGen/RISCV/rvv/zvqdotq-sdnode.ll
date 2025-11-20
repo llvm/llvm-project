@@ -510,13 +510,11 @@ define <vscale x 1 x i32> @partial_reduce_nf2(<vscale x 4 x i8> %a, <vscale x 4 
 ; NODOT-NEXT:    srli a0, a0, 3
 ; NODOT-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; NODOT-NEXT:    vslidedown.vx v10, v9, a0
-; NODOT-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; NODOT-NEXT:    vadd.vv v10, v10, v8
-; NODOT-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; NODOT-NEXT:    vslidedown.vx v8, v8, a0
+; NODOT-NEXT:    vslidedown.vx v11, v8, a0
 ; NODOT-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; NODOT-NEXT:    vadd.vv v8, v8, v9
-; NODOT-NEXT:    vadd.vv v8, v8, v10
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    vadd.vv v9, v11, v9
+; NODOT-NEXT:    vadd.vv v8, v9, v8
 ; NODOT-NEXT:    ret
 ;
 ; DOT-LABEL: partial_reduce_nf2:
@@ -594,16 +592,16 @@ define <vscale x 8 x i32> @partial_reduce_m4(<vscale x 32 x i8> %a, <vscale x 32
 ; NODOT-LABEL: partial_reduce_m4:
 ; NODOT:       # %bb.0: # %entry
 ; NODOT-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; NODOT-NEXT:    vsext.vf2 v16, v8
-; NODOT-NEXT:    vsext.vf2 v24, v10
-; NODOT-NEXT:    vsext.vf2 v20, v12
-; NODOT-NEXT:    vsext.vf2 v28, v14
+; NODOT-NEXT:    vsext.vf2 v24, v8
+; NODOT-NEXT:    vsext.vf2 v16, v10
+; NODOT-NEXT:    vsext.vf2 v28, v12
+; NODOT-NEXT:    vsext.vf2 v20, v14
 ; NODOT-NEXT:    vwmul.vv v8, v16, v20
 ; NODOT-NEXT:    vwmul.vv v16, v24, v28
 ; NODOT-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vadd.vv v16, v20, v16
 ; NODOT-NEXT:    vadd.vv v8, v12, v8
-; NODOT-NEXT:    vadd.vv v12, v20, v16
-; NODOT-NEXT:    vadd.vv v8, v12, v8
+; NODOT-NEXT:    vadd.vv v8, v8, v16
 ; NODOT-NEXT:    ret
 ;
 ; DOT-LABEL: partial_reduce_m4:
@@ -635,11 +633,11 @@ define <vscale x 16 x i32> @partial_reduce_m8(<vscale x 64 x i8> %a, <vscale x 6
 ; NODOT-NEXT:    addi a0, sp, 16
 ; NODOT-NEXT:    vs4r.v v24, (a0) # vscale x 32-byte Folded Spill
 ; NODOT-NEXT:    vsext.vf2 v0, v8
-; NODOT-NEXT:    vsext.vf2 v8, v16
-; NODOT-NEXT:    vsext.vf2 v4, v18
-; NODOT-NEXT:    vwmul.vv v24, v0, v8
-; NODOT-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    vwmacc.vv v24, v8, v4
+; NODOT-NEXT:    vsext.vf2 v8, v18
+; NODOT-NEXT:    vsext.vf2 v4, v16
+; NODOT-NEXT:    vwmul.vv v24, v0, v4
+; NODOT-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
+; NODOT-NEXT:    vwmacc.vv v24, v16, v8
 ; NODOT-NEXT:    vsext.vf2 v8, v12
 ; NODOT-NEXT:    vsext.vf2 v16, v20
 ; NODOT-NEXT:    vwmacc.vv v24, v8, v16
@@ -678,230 +676,78 @@ define <vscale x 32 x i32> @partial_reduce_m16(<vscale x 128 x i8> %a, <vscale x
 ; NODOT-NEXT:    csrr a1, vlenb
 ; NODOT-NEXT:    slli a1, a1, 2
 ; NODOT-NEXT:    mv a2, a1
-; NODOT-NEXT:    slli a1, a1, 3
+; NODOT-NEXT:    slli a1, a1, 1
 ; NODOT-NEXT:    add a1, a1, a2
 ; NODOT-NEXT:    sub sp, sp, a1
-; NODOT-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x24, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 36 * vlenb
-; NODOT-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
-; NODOT-NEXT:    vsext.vf2 v24, v16
-; NODOT-NEXT:    csrr a1, vlenb
-; NODOT-NEXT:    slli a1, a1, 3
-; NODOT-NEXT:    add a1, sp, a1
-; NODOT-NEXT:    addi a1, a1, 16
-; NODOT-NEXT:    vs4r.v v24, (a1) # vscale x 32-byte Folded Spill
+; NODOT-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x0c, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 12 * vlenb
 ; NODOT-NEXT:    csrr a1, vlenb
 ; NODOT-NEXT:    slli a1, a1, 2
-; NODOT-NEXT:    mv a2, a1
-; NODOT-NEXT:    slli a1, a1, 1
-; NODOT-NEXT:    add a2, a2, a1
-; NODOT-NEXT:    slli a1, a1, 1
-; NODOT-NEXT:    add a1, a1, a2
-; NODOT-NEXT:    add a1, sp, a1
-; NODOT-NEXT:    addi a1, a1, 16
-; NODOT-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
-; NODOT-NEXT:    vsext.vf2 v24, v8
-; NODOT-NEXT:    csrr a1, vlenb
-; NODOT-NEXT:    slli a1, a1, 2
-; NODOT-NEXT:    mv a2, a1
-; NODOT-NEXT:    slli a1, a1, 1
-; NODOT-NEXT:    add a1, a1, a2
 ; NODOT-NEXT:    add a1, sp, a1
 ; NODOT-NEXT:    addi a1, a1, 16
 ; NODOT-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; NODOT-NEXT:    vl8r.v v8, (a0)
+; NODOT-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; NODOT-NEXT:    vsext.vf2 v0, v16
 ; NODOT-NEXT:    csrr a1, vlenb
-; NODOT-NEXT:    vsext.vf2 v28, v8
-; NODOT-NEXT:    csrr a2, vlenb
-; NODOT-NEXT:    slli a2, a2, 2
-; NODOT-NEXT:    mv a3, a2
-; NODOT-NEXT:    slli a2, a2, 2
-; NODOT-NEXT:    add a2, a2, a3
-; NODOT-NEXT:    add a2, sp, a2
-; NODOT-NEXT:    addi a2, a2, 16
-; NODOT-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; NODOT-NEXT:    slli a1, a1, 3
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    vl8r.v v8, (a0)
-; NODOT-NEXT:    vsext.vf2 v20, v8
-; NODOT-NEXT:    vwmul.vv v0, v24, v28
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 3
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    vwmul.vv v24, v16, v20
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; NODOT-NEXT:    vsext.vf2 v20, v18
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 3
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vs4r.v v20, (a0) # vscale x 32-byte Folded Spill
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a1, a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; NODOT-NEXT:    vsext.vf2 v20, v18
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vs4r.v v20, (a0) # vscale x 32-byte Folded Spill
+; NODOT-NEXT:    add a1, a0, a1
+; NODOT-NEXT:    vl8r.v v8, (a1)
+; NODOT-NEXT:    vsext.vf2 v4, v8
+; NODOT-NEXT:    vwmul.vv v24, v0, v4
+; NODOT-NEXT:    vsext.vf2 v4, v18
 ; NODOT-NEXT:    vsext.vf2 v16, v10
-; NODOT-NEXT:    addi a0, sp, 16
-; NODOT-NEXT:    vs4r.v v16, (a0) # vscale x 32-byte Folded Spill
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; NODOT-NEXT:    vsext.vf2 v8, v18
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    addi a0, sp, 16
-; NODOT-NEXT:    vl4r.v v20, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    vwmacc.vv v24, v16, v20
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 3
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    vwmacc.vv v0, v16, v8
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; NODOT-NEXT:    vwmacc.vv v24, v4, v16
 ; NODOT-NEXT:    vsext.vf2 v8, v20
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 3
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
+; NODOT-NEXT:    vsext.vf2 v16, v12
+; NODOT-NEXT:    vwmacc.vv v24, v8, v16
+; NODOT-NEXT:    vsext.vf2 v8, v22
+; NODOT-NEXT:    csrr a1, vlenb
+; NODOT-NEXT:    slli a1, a1, 2
+; NODOT-NEXT:    add a1, sp, a1
+; NODOT-NEXT:    addi a1, a1, 16
+; NODOT-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; NODOT-NEXT:    vsext.vf2 v20, v16
+; NODOT-NEXT:    addi a1, sp, 16
+; NODOT-NEXT:    vs4r.v v20, (a1) # vscale x 32-byte Folded Spill
+; NODOT-NEXT:    vsext.vf2 v16, v14
+; NODOT-NEXT:    vwmacc.vv v24, v8, v16
+; NODOT-NEXT:    vl8r.v v0, (a0)
+; NODOT-NEXT:    vsext.vf2 v8, v0
+; NODOT-NEXT:    addi a0, sp, 16
+; NODOT-NEXT:    vl4r.v v12, (a0) # vscale x 32-byte Folded Reload
+; NODOT-NEXT:    vwmul.vv v16, v12, v8
 ; NODOT-NEXT:    csrr a0, vlenb
 ; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a1, a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a0, a0, a1
 ; NODOT-NEXT:    add a0, sp, a0
 ; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; NODOT-NEXT:    vsext.vf2 v8, v20
+; NODOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; NODOT-NEXT:    vsext.vf2 v12, v10
+; NODOT-NEXT:    addi a0, sp, 16
+; NODOT-NEXT:    vs4r.v v12, (a0) # vscale x 32-byte Folded Spill
+; NODOT-NEXT:    vsext.vf2 v12, v2
+; NODOT-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
+; NODOT-NEXT:    vwmacc.vv v16, v8, v12
 ; NODOT-NEXT:    csrr a0, vlenb
 ; NODOT-NEXT:    slli a0, a0, 2
 ; NODOT-NEXT:    add a0, sp, a0
 ; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
+; NODOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; NODOT-NEXT:    vsext.vf2 v8, v12
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; NODOT-NEXT:    vsext.vf2 v16, v20
+; NODOT-NEXT:    vsext.vf2 v12, v4
+; NODOT-NEXT:    vwmacc.vv v16, v8, v12
 ; NODOT-NEXT:    csrr a0, vlenb
 ; NODOT-NEXT:    slli a0, a0, 2
 ; NODOT-NEXT:    add a0, sp, a0
 ; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl4r.v v20, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    vwmacc.vv v24, v20, v8
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 3
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    vwmacc.vv v0, v8, v16
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; NODOT-NEXT:    vsext.vf2 v8, v22
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 3
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a1, a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; NODOT-NEXT:    vsext.vf2 v8, v22
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
+; NODOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; NODOT-NEXT:    vsext.vf2 v8, v14
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; NODOT-NEXT:    vsext.vf2 v12, v22
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 2
-; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 1
-; NODOT-NEXT:    add a0, a0, a1
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    vwmacc.vv v24, v16, v8
-; NODOT-NEXT:    csrr a0, vlenb
-; NODOT-NEXT:    slli a0, a0, 3
-; NODOT-NEXT:    add a0, sp, a0
-; NODOT-NEXT:    addi a0, a0, 16
-; NODOT-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
-; NODOT-NEXT:    vwmacc.vv v0, v8, v12
-; NODOT-NEXT:    vmv8r.v v8, v0
+; NODOT-NEXT:    vsext.vf2 v12, v6
+; NODOT-NEXT:    vwmacc.vv v16, v8, v12
+; NODOT-NEXT:    vmv8r.v v8, v16
 ; NODOT-NEXT:    vmv8r.v v16, v24
 ; NODOT-NEXT:    csrr a0, vlenb
 ; NODOT-NEXT:    slli a0, a0, 2
 ; NODOT-NEXT:    mv a1, a0
-; NODOT-NEXT:    slli a0, a0, 3
+; NODOT-NEXT:    slli a0, a0, 1
 ; NODOT-NEXT:    add a0, a0, a1
 ; NODOT-NEXT:    add sp, sp, a0
 ; NODOT-NEXT:    .cfi_def_cfa sp, 16
@@ -1004,13 +850,11 @@ define <vscale x 1 x i32> @partial_reduce_vqdotu(<vscale x 4 x i8> %a, <vscale x
 ; NODOT-NEXT:    srli a0, a0, 3
 ; NODOT-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; NODOT-NEXT:    vslidedown.vx v10, v9, a0
-; NODOT-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; NODOT-NEXT:    vadd.vv v10, v10, v8
-; NODOT-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; NODOT-NEXT:    vslidedown.vx v8, v8, a0
+; NODOT-NEXT:    vslidedown.vx v11, v8, a0
 ; NODOT-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; NODOT-NEXT:    vadd.vv v8, v8, v9
-; NODOT-NEXT:    vadd.vv v8, v8, v10
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    vadd.vv v9, v11, v9
+; NODOT-NEXT:    vadd.vv v8, v9, v8
 ; NODOT-NEXT:    ret
 ;
 ; DOT-LABEL: partial_reduce_vqdotu:
@@ -1039,13 +883,11 @@ define <vscale x 1 x i32> @partial_reduce_vqdotsu(<vscale x 4 x i8> %a, <vscale 
 ; NODOT-NEXT:    srli a0, a0, 3
 ; NODOT-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; NODOT-NEXT:    vslidedown.vx v10, v9, a0
-; NODOT-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; NODOT-NEXT:    vadd.vv v10, v10, v8
-; NODOT-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; NODOT-NEXT:    vslidedown.vx v8, v8, a0
+; NODOT-NEXT:    vslidedown.vx v11, v8, a0
 ; NODOT-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; NODOT-NEXT:    vadd.vv v8, v8, v9
-; NODOT-NEXT:    vadd.vv v8, v8, v10
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    vadd.vv v9, v11, v9
+; NODOT-NEXT:    vadd.vv v8, v9, v8
 ; NODOT-NEXT:    ret
 ;
 ; DOT-LABEL: partial_reduce_vqdotsu:
@@ -1115,6 +957,41 @@ entry:
   %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %a.ext)
   ret <vscale x 4 x i32> %res
 }
+
+define <vscale x 2 x i32> @partial_reduce_select(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b, <vscale x 8 x i1> %m) {
+; NODOT-LABEL: partial_reduce_select:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vmv.v.i v12, 0
+; NODOT-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; NODOT-NEXT:    vsext.vf2 v10, v8
+; NODOT-NEXT:    vsext.vf2 v16, v9
+; NODOT-NEXT:    vwmul.vv v12, v10, v16, v0.t
+; NODOT-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v15, v12
+; NODOT-NEXT:    vadd.vv v9, v13, v14
+; NODOT-NEXT:    vadd.vv v8, v9, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_reduce_select:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v10, 0
+; DOT-NEXT:    vmerge.vvm v10, v10, v9, v0
+; DOT-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v9, 0
+; DOT-NEXT:    vqdot.vv v9, v8, v10
+; DOT-NEXT:    vmv.v.v v8, v9
+; DOT-NEXT:    ret
+entry:
+  %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i32>
+  %b.sext = sext <vscale x 8 x i8> %b to <vscale x 8 x i32>
+  %mul = mul <vscale x 8 x i32> %a.sext, %b.sext
+  %sel = select <vscale x 8 x i1> %m, <vscale x 8 x i32> %mul, <vscale x 8 x i32> zeroinitializer
+  %res = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add(<vscale x 2 x i32> zeroinitializer, <vscale x 8 x i32> %sel)
+  ret <vscale x 2 x i32> %res
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT32: {{.*}}
 ; DOT64: {{.*}}

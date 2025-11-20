@@ -8,10 +8,10 @@ define i32 @pr134424(i64 %input_value, i32 %base_value, i1 %cond_flag1, i1 %cond
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
 ; CHECK-NEXT:    vmv.v.i v0, 14
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    andi a5, a2, 1
 ; CHECK-NEXT:    andi a3, a3, 1
 ; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    bnez a5, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %for.body.us.preheader.i
 ; CHECK-NEXT:    li a2, 1

@@ -25,24 +25,24 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV32-NEXT:    li a6, 0
 ; RV32-NEXT:  .LBB0_4: # %vector.body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    slli t0, a7, 2
-; RV32-NEXT:    add t0, a1, t0
+; RV32-NEXT:    mv t0, a7
+; RV32-NEXT:    slli a7, a7, 2
+; RV32-NEXT:    add a7, a1, a7
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle32.v v8, (t0)
+; RV32-NEXT:    vle32.v v8, (a7)
 ; RV32-NEXT:    vmslt.vx v12, v8, a2
-; RV32-NEXT:    addi t0, a7, 8
 ; RV32-NEXT:    vcompress.vm v10, v8, v12
-; RV32-NEXT:    sltu a7, t0, a7
+; RV32-NEXT:    addi a7, t0, 8
 ; RV32-NEXT:    vcpop.m t1, v12
-; RV32-NEXT:    add a6, a6, a7
-; RV32-NEXT:    xor a7, t0, a5
+; RV32-NEXT:    sltu t0, a7, t0
+; RV32-NEXT:    add a6, a6, t0
+; RV32-NEXT:    xor t0, a7, a5
 ; RV32-NEXT:    slli t2, t1, 2
-; RV32-NEXT:    or t3, a7, a6
+; RV32-NEXT:    or t0, t0, a6
 ; RV32-NEXT:    vsetvli zero, t1, e32, m2, ta, ma
 ; RV32-NEXT:    vse32.v v10, (a0)
 ; RV32-NEXT:    add a0, a0, t2
-; RV32-NEXT:    mv a7, t0
-; RV32-NEXT:    bnez t3, .LBB0_4
+; RV32-NEXT:    bnez t0, .LBB0_4
 ; RV32-NEXT:  # %bb.5: # %middle.block
 ; RV32-NEXT:    bne a5, a3, .LBB0_9
 ; RV32-NEXT:  .LBB0_6: # %for.cond.cleanup
@@ -96,8 +96,8 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV64-NEXT:    vle32.v v8, (a6)
 ; RV64-NEXT:    addi a6, a6, 32
 ; RV64-NEXT:    vmslt.vx v12, v8, a2
-; RV64-NEXT:    vcpop.m a7, v12
 ; RV64-NEXT:    vcompress.vm v10, v8, v12
+; RV64-NEXT:    vcpop.m a7, v12
 ; RV64-NEXT:    slli t0, a7, 2
 ; RV64-NEXT:    vsetvli zero, a7, e32, m2, ta, ma
 ; RV64-NEXT:    vse32.v v10, (a0)

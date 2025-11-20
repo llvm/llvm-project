@@ -626,9 +626,9 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8_masked(<vscale x 64 x i8> %sr
 ; CHECK-LABEL: test_vp_reverse_nxv64i8_masked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    addi a2, a1, -1
-; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    addi a2, a1, -1
 ; CHECK-NEXT:    vrsub.vx v24, v16, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v23, v8, v24
@@ -638,8 +638,8 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8_masked(<vscale x 64 x i8> %sr
 ; CHECK-NEXT:    vrgatherei16.vv v19, v12, v24
 ; CHECK-NEXT:    vrgatherei16.vv v18, v13, v24
 ; CHECK-NEXT:    vrgatherei16.vv v17, v14, v24
-; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    vrgatherei16.vv v16, v15, v24
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub a1, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v16, a1, v0.t
@@ -652,9 +652,9 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8(<vscale x 64 x i8> %src, i32 
 ; CHECK-LABEL: test_vp_reverse_nxv64i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    addi a2, a1, -1
-; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    addi a2, a1, -1
 ; CHECK-NEXT:    vrsub.vx v24, v16, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v23, v8, v24
@@ -664,8 +664,8 @@ define <vscale x 64 x i8> @test_vp_reverse_nxv64i8(<vscale x 64 x i8> %src, i32 
 ; CHECK-NEXT:    vrgatherei16.vv v19, v12, v24
 ; CHECK-NEXT:    vrgatherei16.vv v18, v13, v24
 ; CHECK-NEXT:    vrgatherei16.vv v17, v14, v24
-; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    vrgatherei16.vv v16, v15, v24
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub a1, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v16, a1

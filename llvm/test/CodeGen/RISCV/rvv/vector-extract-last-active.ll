@@ -87,13 +87,13 @@ define i64 @extract_last_i64(<2 x i64> %data, <2 x i64> %mask, i64 %passthru) {
 ; RV32-NEXT:    vredmaxu.vs v9, v9, v9
 ; RV32-NEXT:    vmv.x.s a0, v9
 ; RV32-NEXT:    zext.b a0, a0
-; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vx v8, v8, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vx v9, v8, a1
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    vmv.x.s a1, v9
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:  .LBB3_2:
 ; RV32-NEXT:    ret
 ;
@@ -247,13 +247,13 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 ; RV32-NEXT:    vredmaxu.vs v10, v10, v10
 ; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    zext.b a0, a0
-; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v8, v8, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; RV32-NEXT:    vsrl.vx v10, v8, a1
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    vmv.x.s a1, v10
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:  .LBB9_2:
 ; RV32-NEXT:    ret
 ;

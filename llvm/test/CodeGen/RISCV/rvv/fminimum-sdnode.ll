@@ -22,14 +22,16 @@ define <vscale x 1 x bfloat> @vfmin_nxv1bf16_vv(<vscale x 1 x bfloat> %a, <vscal
 ; CHECK-LABEL: vfmin_nxv1bf16_vv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v9
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmfeq.vv v0, v9, v9
-; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
 ; CHECK-NEXT:    vmfeq.vv v0, v10, v10
-; CHECK-NEXT:    vmerge.vvm v9, v10, v9, v0
-; CHECK-NEXT:    vfmin.vv v9, v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v9, v10, v8, v0
+; CHECK-NEXT:    vmfeq.vv v0, v8, v8
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    vfmin.vv v9, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9
 ; CHECK-NEXT:    ret
@@ -269,14 +271,16 @@ define <vscale x 1 x half> @vfmin_nxv1f16_vv(<vscale x 1 x half> %a, <vscale x 1
 ; ZVFHMIN-LABEL: vfmin_nxv1f16_vv:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v0, v9, v9
-; ZVFHMIN-NEXT:    vmerge.vvm v8, v9, v10, v0
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v10, v10
-; ZVFHMIN-NEXT:    vmerge.vvm v9, v10, v9, v0
-; ZVFHMIN-NEXT:    vfmin.vv v9, v9, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v9
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vmerge.vvm v9, v10, v8, v0
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
+; ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v10, v0
+; ZVFHMIN-NEXT:    vfmin.vv v9, v8, v9
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret

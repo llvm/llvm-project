@@ -7,9 +7,9 @@ define <vscale x 32 x i32> @callee_scalable_vector_split_indirect(<vscale x 32 x
 ; CHECK-LABEL: callee_scalable_vector_split_indirect:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v24
+; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl8re32.v v24, (a0)

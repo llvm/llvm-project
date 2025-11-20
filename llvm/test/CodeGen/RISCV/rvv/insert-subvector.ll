@@ -432,10 +432,12 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_0(<vscale x 4 x i1> %v, <vscale x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
@@ -453,10 +455,12 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3

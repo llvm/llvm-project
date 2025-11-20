@@ -1520,6 +1520,17 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
   }
   ChildBF.getSymbols().clear();
 
+  // Reset function mapping for local symbols.
+  for (uint64_t RelOffset : ChildBF.getInternalRefDataRelocations()) {
+    const Relocation *Rel = getRelocationAt(RelOffset);
+    if (!Rel || !Rel->Symbol)
+      continue;
+
+    WriteSymbolMapLock.lock();
+    SymbolToFunctionMap[Rel->Symbol] = nullptr;
+    WriteSymbolMapLock.unlock();
+  }
+
   // Move other names the child function is known under.
   llvm::move(ChildBF.Aliases, std::back_inserter(ParentBF.Aliases));
   ChildBF.Aliases.clear();

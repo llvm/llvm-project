@@ -11,8 +11,8 @@ define <8 x i7> @vsadd_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroe
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vadd.vv v9, v9, v9
-; CHECK-NEXT:    vsra.vi v9, v9, 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vsra.vi v9, v9, 1
 ; CHECK-NEXT:    vsra.vi v8, v8, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
@@ -1363,9 +1363,9 @@ declare <32 x i64> @llvm.vp.sadd.sat.v32i64(<32 x i64>, <32 x i64>, <32 x i1>, i
 define <32 x i64> @vsadd_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsadd_vx_v32i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB108_2
 ; CHECK-NEXT:  # %bb.1:

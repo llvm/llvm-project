@@ -407,9 +407,10 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
         continue;
       Value *Ptr = getLoadStorePointerOperand(&Inst);
       const Loop *L = LI.getLoopFor(Inst.getParent());
+      const Loop *OutermostLoop = L ? L->getOutermostLoop() : nullptr;
       const SCEV *PtrSCEV = SE.getSCEVAtScope(Ptr, L);
       const SCEV *AccessFn = SE.removePointerBase(PtrSCEV);
-      SCEVMonotonicity Mon = Checker.checkMonotonicity(AccessFn, L);
+      SCEVMonotonicity Mon = Checker.checkMonotonicity(AccessFn, OutermostLoop);
       OS.indent(2) << "Inst: " << Inst << "\n";
       OS.indent(4) << "Expr: " << *AccessFn << "\n";
       Mon.print(OS, 4);
@@ -945,6 +946,8 @@ SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
 SCEVMonotonicity
 SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
                                            const Loop *OutermostLoop) {
+  assert((!OutermostLoop || OutermostLoop->isOutermost()) &&
+         "OutermostLoop must be outermost");
   assert(Expr->getType()->isIntegerTy() && "Expr must be integer type");
   this->OutermostLoop = OutermostLoop;
   return visit(Expr);
@@ -3908,12 +3911,13 @@ bool DependenceInfo::tryDelinearizeFixedSize(
            "expected src and dst scev unknowns to be equal");
   });
 
-  SmallVector<int, 4> SrcSizes;
-  SmallVector<int, 4> DstSizes;
-  if (!tryDelinearizeFixedSizeImpl(SE, Src, SrcAccessFn, SrcSubscripts,
-                                   SrcSizes) ||
-      !tryDelinearizeFixedSizeImpl(SE, Dst, DstAccessFn, DstSubscripts,
-                                   DstSizes))
+  const SCEV *ElemSize = SE->getElementSize(Src);
+  assert(ElemSize == SE->getElementSize(Dst) && "Different element sizes");
+  SmallVector<const SCEV *, 4> SrcSizes, DstSizes;
+  if (!delinearizeFixedSizeArray(*SE, SE->removePointerBase(SrcAccessFn),
+                                 SrcSubscripts, SrcSizes, ElemSize) ||
+      !delinearizeFixedSizeArray(*SE, SE->removePointerBase(DstAccessFn),
+                                 DstSubscripts, DstSizes, ElemSize))
     return false;
 
   // Check that the two size arrays are non-empty and equal in length and
@@ -3939,7 +3943,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // iff the subscripts are positive and are less than the range of the
   // dimension.
   if (!DisableDelinearizationChecks) {
-    auto AllIndicesInRange = [&](SmallVector<int, 4> &DimensionSizes,
+    auto AllIndicesInRange = [&](ArrayRef<const SCEV *> DimensionSizes,
                                  SmallVectorImpl<const SCEV *> &Subscripts,
                                  Value *Ptr) {
       size_t SSize = Subscripts.size();
@@ -3952,17 +3956,14 @@ bool DependenceInfo::tryDelinearizeFixedSize(
           });
           return false;
         }
-        if (auto *SType = dyn_cast<IntegerType>(S->getType())) {
-          const SCEV *Range = SE->getConstant(
-              ConstantInt::get(SType, DimensionSizes[I - 1], false));
-          if (!isKnownLessThan(S, Range)) {
-            LLVM_DEBUG({
-              dbgs() << "Check failed: !isKnownLessThan(S, Range)\n";
-              dbgs() << "  S: " << *S << "\n"
-                     << "  Range: " << *Range << "\n";
-            });
-            return false;
-          }
+        const SCEV *Range = DimensionSizes[I - 1];
+        if (!isKnownLessThan(S, Range)) {
+          LLVM_DEBUG({
+            dbgs() << "Check failed: !isKnownLessThan(S, Range)\n";
+            dbgs() << "  S: " << *S << "\n"
+                   << "  Range: " << *Range << "\n";
+          });
+          return false;
         }
       }
       return true;

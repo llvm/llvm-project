@@ -483,14 +483,14 @@ define <8 x i16> @shuffle_v8i16_as_i64_16(<8 x i16> %v) {
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    li a0, 48
 ; RV32-NEXT:    vwsubu.vx v10, v9, a0
-; RV32-NEXT:    li a1, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32-NEXT:    vand.vx v9, v10, a1
-; RV32-NEXT:    vsrl.vv v9, v8, v9
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vand.vx v10, v10, a1
-; RV32-NEXT:    vsll.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
+; RV32-NEXT:    vmv.v.x v9, a0
+; RV32-NEXT:    li a0, 63
+; RV32-NEXT:    vand.vx v10, v10, a0
+; RV32-NEXT:    vand.vx v9, v9, a0
+; RV32-NEXT:    vsrl.vv v10, v8, v10
+; RV32-NEXT:    vsll.vv v8, v8, v9
+; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: shuffle_v8i16_as_i64_16:
@@ -528,14 +528,14 @@ define <8 x i16> @shuffle_v8i16_as_i64_32(<8 x i16> %v) {
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vwsubu.vx v10, v9, a0
-; RV32-NEXT:    li a1, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32-NEXT:    vand.vx v9, v10, a1
-; RV32-NEXT:    vsrl.vv v9, v8, v9
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vand.vx v10, v10, a1
-; RV32-NEXT:    vsll.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
+; RV32-NEXT:    vmv.v.x v9, a0
+; RV32-NEXT:    li a0, 63
+; RV32-NEXT:    vand.vx v10, v10, a0
+; RV32-NEXT:    vand.vx v9, v9, a0
+; RV32-NEXT:    vsrl.vv v10, v8, v10
+; RV32-NEXT:    vsll.vv v8, v8, v9
+; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: shuffle_v8i16_as_i64_32:
@@ -573,14 +573,14 @@ define <8 x i16> @shuffle_v8i16_as_i64_48(<8 x i16> %v) {
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    li a0, 16
 ; RV32-NEXT:    vwsubu.vx v10, v9, a0
-; RV32-NEXT:    li a1, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32-NEXT:    vand.vx v9, v10, a1
-; RV32-NEXT:    vsrl.vv v9, v8, v9
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vand.vx v10, v10, a1
-; RV32-NEXT:    vsll.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
+; RV32-NEXT:    vmv.v.x v9, a0
+; RV32-NEXT:    li a0, 63
+; RV32-NEXT:    vand.vx v10, v10, a0
+; RV32-NEXT:    vand.vx v9, v9, a0
+; RV32-NEXT:    vsrl.vv v10, v8, v10
+; RV32-NEXT:    vsll.vv v8, v8, v9
+; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: shuffle_v8i16_as_i64_48:
@@ -687,14 +687,14 @@ define <8 x half> @shuffle_v8f16_as_i64_16(<8 x half> %v) {
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    li a0, 48
 ; RV32-NEXT:    vwsubu.vx v10, v9, a0
-; RV32-NEXT:    li a1, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32-NEXT:    vand.vx v9, v10, a1
-; RV32-NEXT:    vsrl.vv v9, v8, v9
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vand.vx v10, v10, a1
-; RV32-NEXT:    vsll.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
+; RV32-NEXT:    vmv.v.x v9, a0
+; RV32-NEXT:    li a0, 63
+; RV32-NEXT:    vand.vx v10, v10, a0
+; RV32-NEXT:    vand.vx v9, v9, a0
+; RV32-NEXT:    vsrl.vv v10, v8, v10
+; RV32-NEXT:    vsll.vv v8, v8, v9
+; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: shuffle_v8f16_as_i64_16:
@@ -732,14 +732,14 @@ define <8 x half> @shuffle_v8f16_as_i64_32(<8 x half> %v) {
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vwsubu.vx v10, v9, a0
-; RV32-NEXT:    li a1, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32-NEXT:    vand.vx v9, v10, a1
-; RV32-NEXT:    vsrl.vv v9, v8, v9
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vand.vx v10, v10, a1
-; RV32-NEXT:    vsll.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
+; RV32-NEXT:    vmv.v.x v9, a0
+; RV32-NEXT:    li a0, 63
+; RV32-NEXT:    vand.vx v10, v10, a0
+; RV32-NEXT:    vand.vx v9, v9, a0
+; RV32-NEXT:    vsrl.vv v10, v8, v10
+; RV32-NEXT:    vsll.vv v8, v8, v9
+; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: shuffle_v8f16_as_i64_32:
@@ -777,14 +777,14 @@ define <8 x half> @shuffle_v8f16_as_i64_48(<8 x half> %v) {
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    li a0, 16
 ; RV32-NEXT:    vwsubu.vx v10, v9, a0
-; RV32-NEXT:    li a1, 63
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32-NEXT:    vand.vx v9, v10, a1
-; RV32-NEXT:    vsrl.vv v9, v8, v9
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vand.vx v10, v10, a1
-; RV32-NEXT:    vsll.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
+; RV32-NEXT:    vmv.v.x v9, a0
+; RV32-NEXT:    li a0, 63
+; RV32-NEXT:    vand.vx v10, v10, a0
+; RV32-NEXT:    vand.vx v9, v9, a0
+; RV32-NEXT:    vsrl.vv v10, v8, v10
+; RV32-NEXT:    vsll.vv v8, v8, v9
+; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: shuffle_v8f16_as_i64_48:
@@ -895,8 +895,8 @@ define <8 x float> @shuffle_v8f32_as_i64_exact(<8 x float> %v) vscale_range(2,2)
 ; ZVKB-ZVE32X-LABEL: shuffle_v8f32_as_i64_exact:
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; ZVKB-ZVE32X-NEXT:    vmv.v.i v0, 10
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v11, v9, 1
+; ZVKB-ZVE32X-NEXT:    vmv.v.i v0, 10
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v11, v9, 1, v0.t
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 1
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 1, v0.t
@@ -1370,33 +1370,33 @@ define <8 x i64> @shuffle_v8i64_as_i256_zvl256b(<8 x i64> %v) vscale_range(4,0) 
 ; RV32ZVKB-ZVE32X-NEXT:    lw a5, 28(a1)
 ; RV32ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m2, ta, ma
 ; RV32ZVKB-ZVE32X-NEXT:    vmv.v.x v8, a2
-; RV32ZVKB-ZVE32X-NEXT:    lw a2, 8(a1)
-; RV32ZVKB-ZVE32X-NEXT:    lw a6, 12(a1)
-; RV32ZVKB-ZVE32X-NEXT:    lw a7, 0(a1)
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
+; RV32ZVKB-ZVE32X-NEXT:    lw a2, 8(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a3, 12(a1)
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
+; RV32ZVKB-ZVE32X-NEXT:    lw a2, 0(a1)
 ; RV32ZVKB-ZVE32X-NEXT:    lw a3, 4(a1)
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
-; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a6
-; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a7
-; RV32ZVKB-ZVE32X-NEXT:    lw a2, 48(a1)
-; RV32ZVKB-ZVE32X-NEXT:    lw a6, 52(a1)
-; RV32ZVKB-ZVE32X-NEXT:    lw a7, 56(a1)
-; RV32ZVKB-ZVE32X-NEXT:    lw t0, 60(a1)
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a4
-; RV32ZVKB-ZVE32X-NEXT:    lw a3, 40(a1)
-; RV32ZVKB-ZVE32X-NEXT:    lw a4, 44(a1)
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a5
+; RV32ZVKB-ZVE32X-NEXT:    lw a2, 48(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a3, 52(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a4, 56(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a5, 60(a1)
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
+; RV32ZVKB-ZVE32X-NEXT:    lw a2, 40(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a3, 44(a1)
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32ZVKB-ZVE32X-NEXT:    lw a2, 32(a1)
 ; RV32ZVKB-ZVE32X-NEXT:    lw a1, 36(a1)
-; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a6
-; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
-; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a4
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a1
-; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a7
-; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t0
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a4
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a5
 ; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
 ; RV32ZVKB-ZVE32X-NEXT:    ret
 ;
@@ -1406,35 +1406,35 @@ define <8 x i64> @shuffle_v8i64_as_i256_zvl256b(<8 x i64> %v) vscale_range(4,0) 
 ; RV64ZVKB-ZVE32X-NEXT:    ld a3, 24(a1)
 ; RV64ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m2, ta, ma
 ; RV64ZVKB-ZVE32X-NEXT:    vmv.v.x v8, a2
-; RV64ZVKB-ZVE32X-NEXT:    ld a4, 8(a1)
-; RV64ZVKB-ZVE32X-NEXT:    ld a5, 0(a1)
 ; RV64ZVKB-ZVE32X-NEXT:    srli a2, a2, 32
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVKB-ZVE32X-NEXT:    srli a2, a4, 32
-; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a4
+; RV64ZVKB-ZVE32X-NEXT:    ld a2, 8(a1)
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVKB-ZVE32X-NEXT:    srli a2, a5, 32
-; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a5
-; RV64ZVKB-ZVE32X-NEXT:    ld a4, 48(a1)
+; RV64ZVKB-ZVE32X-NEXT:    srli a2, a2, 32
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVKB-ZVE32X-NEXT:    srli a2, a3, 32
+; RV64ZVKB-ZVE32X-NEXT:    ld a2, 0(a1)
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVKB-ZVE32X-NEXT:    srli a2, a2, 32
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
-; RV64ZVKB-ZVE32X-NEXT:    ld a3, 32(a1)
-; RV64ZVKB-ZVE32X-NEXT:    ld a5, 40(a1)
-; RV64ZVKB-ZVE32X-NEXT:    ld a1, 56(a1)
-; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVKB-ZVE32X-NEXT:    srli a2, a4, 32
-; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a4
-; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVKB-ZVE32X-NEXT:    srli a2, a5, 32
-; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a5
-; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVKB-ZVE32X-NEXT:    srli a2, a3, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli a3, a3, 32
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
+; RV64ZVKB-ZVE32X-NEXT:    ld a2, 48(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a3, 56(a1)
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
-; RV64ZVKB-ZVE32X-NEXT:    srli a2, a1, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli a2, a2, 32
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVKB-ZVE32X-NEXT:    ld a2, 40(a1)
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVKB-ZVE32X-NEXT:    srli a2, a2, 32
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVKB-ZVE32X-NEXT:    ld a1, 32(a1)
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a1
-; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVKB-ZVE32X-NEXT:    srli a1, a1, 32
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a1
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
+; RV64ZVKB-ZVE32X-NEXT:    srli a3, a3, 32
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
 ; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
 ; RV64ZVKB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x i64> %v, <8 x i64> poison, <8 x i32> <i32 2, i32 1, i32 0, i32 3, i32 6, i32 5, i32 4, i32 7>

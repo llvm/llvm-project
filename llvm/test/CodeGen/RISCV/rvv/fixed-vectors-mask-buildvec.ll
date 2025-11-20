@@ -280,14 +280,14 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v9, v8, a3
-; CHECK-NEXT:    vslide1down.vx v9, v9, zero
-; CHECK-NEXT:    vslide1down.vx v9, v9, a2
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    vslide1down.vx v9, v9, zero
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v9, v9, a2
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v9, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -297,14 +297,14 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vmv.v.x v8, a0
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v9, v8, a3
-; ZVE32F-NEXT:    vslide1down.vx v9, v9, zero
-; ZVE32F-NEXT:    vslide1down.vx v9, v9, a2
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
 ; ZVE32F-NEXT:    li a0, 1
+; ZVE32F-NEXT:    vslide1down.vx v9, v9, zero
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vslide1down.vx v9, v9, a2
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v9, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -325,14 +325,14 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v9, v8, a3
-; CHECK-NEXT:    vslide1down.vx v9, v9, zero
-; CHECK-NEXT:    vslide1down.vx v9, v9, a2
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    vslide1down.vx v9, v9, zero
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v9, v9, a2
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v9, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -342,14 +342,14 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vmv.v.x v8, a0
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v9, v8, a3
-; ZVE32F-NEXT:    vslide1down.vx v9, v9, zero
-; ZVE32F-NEXT:    vslide1down.vx v9, v9, a2
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
 ; ZVE32F-NEXT:    li a0, 1
+; ZVE32F-NEXT:    vslide1down.vx v9, v9, zero
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vslide1down.vx v9, v9, a2
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v9, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -370,13 +370,13 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v9, v8, a1
-; CHECK-NEXT:    vslide1down.vx v9, v9, a1
-; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v9, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -386,13 +386,13 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vmv.v.x v8, a0
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v9, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
-; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v9, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0

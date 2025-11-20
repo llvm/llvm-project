@@ -552,11 +552,11 @@ define <vscale x 8 x i1> @icmp_eq_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x
 define <vscale x 8 x i1> @icmp_eq_vx_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 127
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vand.vx v9, v9, a2
+; CHECK-NEXT:    li a0, 127
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vmseq.vv v0, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
@@ -568,11 +568,11 @@ define <vscale x 8 x i1> @icmp_eq_vx_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscal
 define <vscale x 8 x i1> @icmp_eq_vx_swap_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_swap_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 127
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vand.vx v9, v9, a2
+; CHECK-NEXT:    li a0, 127
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vmseq.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
@@ -2199,17 +2199,17 @@ define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v7, v0
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a4, a1, 3
-; CHECK-NEXT:    slli a3, a1, 1
-; CHECK-NEXT:    add a4, a0, a4
-; CHECK-NEXT:    sub a5, a2, a3
-; CHECK-NEXT:    vl8re32.v v24, (a4)
-; CHECK-NEXT:    sltu a4, a2, a5
-; CHECK-NEXT:    srli a1, a1, 2
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a4, a4, a5
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    srli a1, a4, 2
+; CHECK-NEXT:    slli a3, a4, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a1
+; CHECK-NEXT:    sub a5, a2, a3
+; CHECK-NEXT:    slli a4, a4, 3
+; CHECK-NEXT:    sltu a6, a2, a5
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    addi a6, a6, -1
+; CHECK-NEXT:    vl8re32.v v24, (a4)
+; CHECK-NEXT:    and a4, a6, a5
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v16, v24, v0.t
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
@@ -2233,13 +2233,13 @@ define <vscale x 32 x i1> @icmp_eq_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    srli a2, a3, 2
+; CHECK-NEXT:    slli a3, a3, 1
+; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a4, a1, a3
 ; CHECK-NEXT:    sltu a5, a1, a4
-; CHECK-NEXT:    srli a2, a2, 2
 ; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    and a4, a5, a4
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v25, v16, a0, v0.t
@@ -2265,13 +2265,13 @@ define <vscale x 32 x i1> @icmp_eq_vx_swap_nxv32i32(<vscale x 32 x i32> %va, i32
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    srli a2, a3, 2
+; CHECK-NEXT:    slli a3, a3, 1
+; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a4, a1, a3
 ; CHECK-NEXT:    sltu a5, a1, a4
-; CHECK-NEXT:    srli a2, a2, 2
 ; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    and a4, a5, a4
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v25, v16, a0, v0.t

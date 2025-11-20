@@ -1219,18 +1219,18 @@ declare <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x pt
 define void @mgather_nxv16i64(<vscale x 8 x ptr> %ptrs0, <vscale x 8 x ptr> %ptrs1, <vscale x 16 x i1> %m, <vscale x 8 x i64> %passthru0, <vscale x 8 x i64> %passthru1, ptr %out) {
 ; RV32-LABEL: mgather_nxv16i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vl8re64.v v24, (a0)
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    vsetvli a2, zero, e64, m8, ta, mu
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    srli a3, a2, 3
+; RV32-NEXT:    vsetvli a4, zero, e64, m8, ta, mu
 ; RV32-NEXT:    vluxei32.v v16, (zero), v8, v0.t
-; RV32-NEXT:    srli a2, a0, 3
-; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vx v0, v0, a2
-; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    vsetvli a2, zero, e64, m8, ta, mu
+; RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v0, a3
+; RV32-NEXT:    vl8re64.v v24, (a0)
+; RV32-NEXT:    slli a2, a2, 3
+; RV32-NEXT:    add a2, a1, a2
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; RV32-NEXT:    vluxei32.v v24, (zero), v12, v0.t
-; RV32-NEXT:    vs8r.v v24, (a0)
+; RV32-NEXT:    vs8r.v v24, (a2)
 ; RV32-NEXT:    vs8r.v v16, (a1)
 ; RV32-NEXT:    ret
 ;
@@ -2492,8 +2492,8 @@ define <4 x i32> @reassociate(ptr %base, i32 %index, <4 x i32> %vecidx) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vsll.vi v8, v8, 10
-; RV32-NEXT:    vadd.vx v8, v8, a0
 ; RV32-NEXT:    vmv.v.x v9, a1
+; RV32-NEXT:    vadd.vx v8, v8, a0
 ; RV32-NEXT:    vsll.vi v9, v9, 2
 ; RV32-NEXT:    vadd.vv v8, v8, v9
 ; RV32-NEXT:    vluxei32.v v8, (zero), v8
@@ -2519,8 +2519,8 @@ define <4 x i32> @reassociate_with_splat(ptr %base, i32 %index, <4 x i32> %vecid
 ; RV32-LABEL: reassociate_with_splat:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v9, a1
 ; RV32-NEXT:    vsll.vi v8, v8, 10
+; RV32-NEXT:    vmv.v.x v9, a1
 ; RV32-NEXT:    vadd.vx v8, v8, a0
 ; RV32-NEXT:    vsll.vi v9, v9, 2
 ; RV32-NEXT:    vadd.vv v8, v8, v9

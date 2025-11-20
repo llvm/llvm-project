@@ -8,6 +8,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_python//python:defs.bzl", "py_binary")
 load("//llvm:targets.bzl", "llvm_targets")
 load(
     ":build_defs.bzl",
@@ -354,6 +355,34 @@ cc_library(
     deps = [
         ":IR",
         ":RelayoutOpInterfaceIncGen",
+    ],
+)
+
+td_library(
+    name = "AlignmentAttrInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/AlignmentAttrInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "AlignmentAttrInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/AlignmentAttrInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Interfaces/AlignmentAttrInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/AlignmentAttrInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+cc_library(
+    name = "AlignmentAttrInterface",
+    hdrs = ["include/mlir/Interfaces/AlignmentAttrInterface.h"],
+    deps = [
+        ":AlignmentAttrInterfaceIncGen",
+        ":IR",
+        "//llvm:Support",
     ],
 )
 
@@ -3816,6 +3845,17 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "XeGPUTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "XeGPUTransformOpsIncGen",
     tbl_outs = {
@@ -3826,6 +3866,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.td",
     deps = [
         ":TransformDialectTdFiles",
+        ":XeGPUTransformOpsTdFiles",
     ],
 )
 
@@ -3840,13 +3881,16 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
         ":SCFDialect",
+        ":SCFUtils",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":XeGPUDialect",
         ":XeGPUTransformOpsIncGen",
         ":XeGPUUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -4191,6 +4235,7 @@ cc_library(
         ":AMDGPUToROCDL",
         ":AffineToStandard",
         ":ArithToAMDGPU",
+        ":ArithToAPFloat",
         ":ArithToArmSME",
         ":ArithToEmitC",
         ":ArithToLLVM",
@@ -4877,6 +4922,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AlignmentAttrInterface",
         ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
@@ -6836,6 +6882,7 @@ td_library(
     srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterfaceTdFiles",
         ":BuiltinDialectTdFiles",
         ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
@@ -6950,6 +6997,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterface",
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":CommonFolders",
@@ -8369,6 +8417,25 @@ cc_library(
 )
 
 cc_library(
+    name = "ArithToAPFloat",
+    srcs = glob(["lib/Conversion/ArithToAPFloat/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithToAPFloat/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ArithTransforms",
+        ":ArithUtils",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":FuncUtils",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
     name = "ArithToArmSME",
     srcs = glob([
         "lib/Conversion/ArithToArmSME/*.cpp",
@@ -9727,6 +9794,29 @@ cc_binary(
     deps = [":mlir_float16_utils"],
 )
 
+cc_library(
+    name = "_mlir_apfloat_utils",
+    srcs = ["lib/ExecutionEngine/APFloatWrappers.cpp"],
+    defines = ["mlir_apfloat_wrappers_EXPORTS"],
+    includes = ["include"],
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+# Indirection to avoid 'libmlir_apfloat_utils.so' filename clash.
+alias(
+    name = "mlir_apfloat_utils",
+    actual = "_mlir_apfloat_utils",
+)
+
+cc_binary(
+    name = "libmlir_apfloat_utils.so",
+    linkshared = True,
+    linkstatic = False,
+    deps = [":mlir_apfloat_utils"],
+)
+
 # Unlike mlir_float16_utils, mlir_c_runner_utils, etc, we do *not* make
 # this a shared library: because on the CMake side, doing so causes issues
 # when building on Windows.  In particular, various functions take/return
@@ -9770,6 +9860,7 @@ cc_library(
     deps = [
         ":SparseTensorEnums",
         ":SparseTensorRuntime",
+        ":mlir_apfloat_utils",
         ":mlir_float16_utils",
         "//llvm:Support",
     ],
@@ -10227,6 +10318,8 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":FunctionInterfaces",
+        ":IR",
         ":OpenACCDialect",
         ":OpenACCOpsIncGen",
         ":OpenACCPassIncGen",
@@ -10234,6 +10327,7 @@ cc_library(
         ":Support",
         ":ViewLikeInterface",
         "//llvm:Support",
+        "//llvm:ir_headers",
     ],
 )
 
@@ -11327,6 +11421,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterfaceTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
         ":IndexingMapOpInterfaceTdFiles",
@@ -12907,6 +13002,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterfaceTdFiles",
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
@@ -12988,6 +13084,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterface",
         ":AllocationOpInterface",
         ":ArithDialect",
         ":ArithUtils",
@@ -13011,6 +13108,7 @@ cc_library(
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -14381,4 +14479,9 @@ cc_library(
         ":XeVMDialect",
         "//llvm:Support",
     ],
+)
+
+py_binary(
+    name = "generate-test-checks",
+    srcs = ["utils/generate-test-checks.py"],
 )

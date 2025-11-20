@@ -107,13 +107,13 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vmv4r.v v28, v16
 ; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v8, v16, v6
+; CHECK-NEXT:    vrgatherei16.vv v16, v24, v6
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vs8r.v v8, (a1)
-; CHECK-NEXT:    vrgatherei16.vv v8, v24, v6
-; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i64> @llvm.vector.interleave2.nxv16i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b)
   store <vscale x 16 x i64> %res, ptr %p

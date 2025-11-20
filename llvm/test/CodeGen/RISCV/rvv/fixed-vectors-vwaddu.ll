@@ -248,18 +248,31 @@ define <16 x i64> @vwaddu_v16i64(ptr %x, ptr %y) {
 define <128 x i16> @vwaddu_v128i16(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: vwaddu_v128i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v16, (a0)
 ; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vle8.v v24, (a1)
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vwaddu.vv v8, v16, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v16, a0
-; CHECK-NEXT:    vslidedown.vx v24, v24, a0
+; CHECK-NEXT:    vslidedown.vx v8, v16, a0
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vle8.v v0, (a1)
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v0, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vwaddu.vv v8, v16, v0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vwaddu.vv v16, v0, v24
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = load <128 x i8>, ptr %y
@@ -272,18 +285,31 @@ define <128 x i16> @vwaddu_v128i16(ptr %x, ptr %y) nounwind {
 define <64 x i32> @vwaddu_v64i32(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: vwaddu_v64i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vle16.v v24, (a1)
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vwaddu.vv v8, v16, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v16, a0
-; CHECK-NEXT:    vslidedown.vx v24, v24, a0
+; CHECK-NEXT:    vslidedown.vx v8, v16, a0
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v0, (a1)
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v0, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vwaddu.vv v8, v16, v0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vwaddu.vv v16, v0, v24
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %a = load <64 x i16>, ptr %x
   %b = load <64 x i16>, ptr %y
@@ -296,17 +322,29 @@ define <64 x i32> @vwaddu_v64i32(ptr %x, ptr %y) nounwind {
 define <32 x i64> @vwaddu_v32i64(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: vwaddu_v32i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v16, (a0)
-; CHECK-NEXT:    vle32.v v24, (a1)
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vwaddu.vv v8, v16, v24
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v16, 16
-; CHECK-NEXT:    vslidedown.vi v24, v24, 16
+; CHECK-NEXT:    vslidedown.vi v8, v16, 16
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v0, (a1)
+; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vi v24, v0, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vwaddu.vv v8, v16, v0
+; CHECK-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vwaddu.vv v16, v0, v24
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %a = load <32 x i32>, ptr %x
   %b = load <32 x i32>, ptr %y

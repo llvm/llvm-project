@@ -1363,8 +1363,8 @@ define <vscale x 1 x i8> @fshr_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, 
 ; CHECK-NEXT:    vand.vi v10, v10, 15, v0.t
 ; CHECK-NEXT:    vand.vi v9, v9, 15, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 4, v0.t
-; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vremu.vx v9, v10, a0, v0.t
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
@@ -1385,8 +1385,8 @@ define <vscale x 1 x i8> @fshl_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, 
 ; CHECK-NEXT:    vand.vi v10, v10, 15, v0.t
 ; CHECK-NEXT:    vand.vi v9, v9, 15, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 4, v0.t
-; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vremu.vx v9, v10, a0, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t

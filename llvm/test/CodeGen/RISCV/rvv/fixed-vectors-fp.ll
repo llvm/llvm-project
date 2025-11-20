@@ -1162,16 +1162,16 @@ define void @copysign_neg_v2f64(ptr %x, ptr %y) {
 define void @copysign_neg_trunc_v4bf16_v4f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: copysign_neg_trunc_v4bf16_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    addi a3, a2, -1
-; CHECK-NEXT:    vand.vx v8, v8, a3
-; CHECK-NEXT:    vle32.v v9, (a1)
-; CHECK-NEXT:    vfncvtbf16.f.f.w v10, v9
-; CHECK-NEXT:    vxor.vx v9, v10, a2
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    lui a1, 8
+; CHECK-NEXT:    vfncvtbf16.f.f.w v9, v8
+; CHECK-NEXT:    vxor.vx v8, v9, a1
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    addi a2, a1, -1
 ; CHECK-NEXT:    vand.vx v9, v9, a2
-; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vand.vx v8, v8, a1
+; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x bfloat>, ptr %x
@@ -1186,16 +1186,16 @@ define void @copysign_neg_trunc_v4bf16_v4f32(ptr %x, ptr %y) {
 define void @copysign_neg_trunc_v3bf16_v3f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: copysign_neg_trunc_v3bf16_v3f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 8
 ; CHECK-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    addi a3, a2, -1
-; CHECK-NEXT:    vand.vx v8, v8, a3
-; CHECK-NEXT:    vle32.v v9, (a1)
-; CHECK-NEXT:    vfncvtbf16.f.f.w v10, v9
-; CHECK-NEXT:    vxor.vx v9, v10, a2
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    lui a1, 8
+; CHECK-NEXT:    vfncvtbf16.f.f.w v9, v8
+; CHECK-NEXT:    vxor.vx v8, v9, a1
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    addi a2, a1, -1
 ; CHECK-NEXT:    vand.vx v9, v9, a2
-; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vand.vx v8, v8, a1
+; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <3 x bfloat>, ptr %x
@@ -1220,16 +1220,16 @@ define void @copysign_neg_trunc_v4f16_v4f32(ptr %x, ptr %y) {
 ;
 ; ZVFHMIN-LABEL: copysign_neg_trunc_v4f16_v4f32:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a2, 8
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vle16.v v8, (a0)
-; ZVFHMIN-NEXT:    addi a3, a2, -1
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a3
-; ZVFHMIN-NEXT:    vle32.v v9, (a1)
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v9
-; ZVFHMIN-NEXT:    vxor.vx v9, v10, a2
+; ZVFHMIN-NEXT:    vle32.v v8, (a1)
+; ZVFHMIN-NEXT:    lui a1, 8
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v8
+; ZVFHMIN-NEXT:    vxor.vx v8, v9, a1
+; ZVFHMIN-NEXT:    vle16.v v9, (a0)
+; ZVFHMIN-NEXT:    addi a2, a1, -1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a2
-; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
+; ZVFHMIN-NEXT:    vor.vv v8, v9, v8
 ; ZVFHMIN-NEXT:    vse16.v v8, (a0)
 ; ZVFHMIN-NEXT:    ret
   %a = load <4 x half>, ptr %x
@@ -1254,16 +1254,16 @@ define void @copysign_neg_trunc_v3f16_v3f32(ptr %x, ptr %y) {
 ;
 ; ZVFHMIN-LABEL: copysign_neg_trunc_v3f16_v3f32:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a2, 8
 ; ZVFHMIN-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vle16.v v8, (a0)
-; ZVFHMIN-NEXT:    addi a3, a2, -1
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a3
-; ZVFHMIN-NEXT:    vle32.v v9, (a1)
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v9
-; ZVFHMIN-NEXT:    vxor.vx v9, v10, a2
+; ZVFHMIN-NEXT:    vle32.v v8, (a1)
+; ZVFHMIN-NEXT:    lui a1, 8
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v8
+; ZVFHMIN-NEXT:    vxor.vx v8, v9, a1
+; ZVFHMIN-NEXT:    vle16.v v9, (a0)
+; ZVFHMIN-NEXT:    addi a2, a1, -1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a2
-; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
+; ZVFHMIN-NEXT:    vor.vv v8, v9, v8
 ; ZVFHMIN-NEXT:    vse16.v v8, (a0)
 ; ZVFHMIN-NEXT:    ret
   %a = load <3 x half>, ptr %x

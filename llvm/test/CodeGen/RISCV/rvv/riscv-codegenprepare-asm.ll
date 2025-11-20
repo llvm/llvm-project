@@ -7,9 +7,9 @@ declare float @llvm.vector.reduce.fadd.nxv4f32(float, <vscale x 4 x float>)
 define float @reduce_fadd(ptr %f) {
 ; CHECK-LABEL: reduce_fadd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    srli a1, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    li a3, 1024

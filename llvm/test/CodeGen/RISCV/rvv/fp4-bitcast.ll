@@ -9,14 +9,14 @@ define <2 x i8> @fp4(<4 x i4> %0) nounwind {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    andi a0, a0, 15
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    andi a1, a1, 15
 ; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    andi a2, a2, 15
 ; CHECK-NEXT:    vmv.x.s a3, v8
+; CHECK-NEXT:    andi a0, a0, 15
+; CHECK-NEXT:    andi a1, a1, 15
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    andi a2, a2, 15
 ; CHECK-NEXT:    slli a2, a2, 8
 ; CHECK-NEXT:    slli a3, a3, 12
 ; CHECK-NEXT:    or a0, a0, a1

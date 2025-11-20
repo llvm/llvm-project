@@ -24,8 +24,12 @@ namespace llvm {
 class LoongArchSubtarget;
 
 class LoongArchInstrInfo : public LoongArchGenInstrInfo {
+  const LoongArchRegisterInfo RegInfo;
+
 public:
   explicit LoongArchInstrInfo(const LoongArchSubtarget &STI);
+
+  const LoongArchRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   MCInst getNop() const override;
 
@@ -36,13 +40,11 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Materializes the given integer Val into DstReg.
@@ -63,6 +65,9 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
+
+  bool isSafeToMove(const MachineInstr &MI, const MachineBasicBlock *MBB,
+                    const MachineFunction &MF) const override;
 
   bool isSchedulingBoundary(const MachineInstr &MI,
                             const MachineBasicBlock *MBB,

@@ -20,33 +20,33 @@ define <2 x i16> @vwmul_v2i16_multiple_users(ptr %x, ptr %y, ptr %z) {
 ; NO_FOLDING1:       # %bb.0:
 ; NO_FOLDING1-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; NO_FOLDING1-NEXT:    vle8.v v8, (a0)
-; NO_FOLDING1-NEXT:    vsext.vf2 v9, v8
-; NO_FOLDING1-NEXT:    vle8.v v8, (a1)
+; NO_FOLDING1-NEXT:    vle8.v v9, (a1)
 ; NO_FOLDING1-NEXT:    vsext.vf2 v10, v8
-; NO_FOLDING1-NEXT:    vmul.vv v8, v9, v10
-; NO_FOLDING1-NEXT:    vle8.v v10, (a2)
-; NO_FOLDING1-NEXT:    vsext.vf2 v11, v10
-; NO_FOLDING1-NEXT:    vadd.vv v10, v9, v11
-; NO_FOLDING1-NEXT:    vsub.vv v9, v9, v11
-; NO_FOLDING1-NEXT:    vor.vv v8, v8, v10
+; NO_FOLDING1-NEXT:    vsext.vf2 v8, v9
+; NO_FOLDING1-NEXT:    vle8.v v9, (a2)
+; NO_FOLDING1-NEXT:    vsext.vf2 v11, v9
+; NO_FOLDING1-NEXT:    vmul.vv v8, v10, v8
+; NO_FOLDING1-NEXT:    vadd.vv v9, v10, v11
+; NO_FOLDING1-NEXT:    vsub.vv v10, v10, v11
 ; NO_FOLDING1-NEXT:    vor.vv v8, v8, v9
+; NO_FOLDING1-NEXT:    vor.vv v8, v8, v10
 ; NO_FOLDING1-NEXT:    ret
 ;
 ; NO_FOLDING2-LABEL: vwmul_v2i16_multiple_users:
 ; NO_FOLDING2:       # %bb.0:
 ; NO_FOLDING2-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; NO_FOLDING2-NEXT:    vle8.v v8, (a0)
-; NO_FOLDING2-NEXT:    vsext.vf2 v9, v8
-; NO_FOLDING2-NEXT:    vle8.v v8, (a1)
+; NO_FOLDING2-NEXT:    vle8.v v9, (a1)
 ; NO_FOLDING2-NEXT:    vsext.vf2 v10, v8
-; NO_FOLDING2-NEXT:    vmul.vv v8, v9, v10
-; NO_FOLDING2-NEXT:    vle8.v v10, (a2)
+; NO_FOLDING2-NEXT:    vsext.vf2 v8, v9
+; NO_FOLDING2-NEXT:    vmul.vv v8, v10, v8
+; NO_FOLDING2-NEXT:    vle8.v v9, (a2)
 ; NO_FOLDING2-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; NO_FOLDING2-NEXT:    vwadd.wv v11, v9, v10
-; NO_FOLDING2-NEXT:    vwsub.wv v9, v9, v10
+; NO_FOLDING2-NEXT:    vwadd.wv v11, v10, v9
+; NO_FOLDING2-NEXT:    vwsub.wv v10, v10, v9
 ; NO_FOLDING2-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; NO_FOLDING2-NEXT:    vor.vv v8, v8, v11
-; NO_FOLDING2-NEXT:    vor.vv v8, v8, v9
+; NO_FOLDING2-NEXT:    vor.vv v8, v8, v10
 ; NO_FOLDING2-NEXT:    ret
 ;
 ; FOLDING-LABEL: vwmul_v2i16_multiple_users:

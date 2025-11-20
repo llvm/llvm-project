@@ -11,87 +11,189 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfhmin,+zvfhmin,+zvfbfmin,+v \
 ; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=CHECK,ZVFHMIN
+; RUN: llc -mtriple=riscv32 -mattr=+d,+zfhmin,+zvfhmin,+experimental-zvfbfa,+v \
+; RUN:     -target-abi=ilp32d -verify-machineinstrs < %s | FileCheck %s \
+; RUN:     --check-prefixes=CHECK,ZVFBFA
+; RUN: llc -mtriple=riscv64 -mattr=+d,+zfhmin,+zvfhmin,+experimental-zvfbfa,+v \
+; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
+; RUN:     --check-prefixes=CHECK,ZVFBFA
 
 define <vscale x 1 x bfloat> @nxv1bf16(<vscale x 1 x bfloat> %vm, <vscale x 1 x bfloat> %vs) {
-; CHECK-LABEL: nxv1bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v9, v9, a0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vor.vv v8, v8, v9
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv1bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFH-NEXT:    vand.vx v9, v9, a0
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    vor.vv v8, v8, v9
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv1bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv1bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
+; ZVFBFA-NEXT:    vfsgnj.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 1 x bfloat> @llvm.copysign.nxv1bf16(<vscale x 1 x bfloat> %vm, <vscale x 1 x bfloat> %vs)
   ret <vscale x 1 x bfloat> %r
 }
 
 define <vscale x 2 x bfloat> @nxv2bf16(<vscale x 2 x bfloat> %vm, <vscale x 2 x bfloat> %vs) {
-; CHECK-LABEL: nxv2bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v9, v9, a0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vor.vv v8, v8, v9
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv2bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFH-NEXT:    vand.vx v9, v9, a0
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    vor.vv v8, v8, v9
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv2bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv2bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf2, ta, ma
+; ZVFBFA-NEXT:    vfsgnj.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 2 x bfloat> @llvm.copysign.nxv2bf16(<vscale x 2 x bfloat> %vm, <vscale x 2 x bfloat> %vs)
   ret <vscale x 2 x bfloat> %r
 }
 
 define <vscale x 4 x bfloat> @nxv4bf16(<vscale x 4 x bfloat> %vm, <vscale x 4 x bfloat> %vs) {
-; CHECK-LABEL: nxv4bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vand.vx v9, v9, a0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vor.vv v8, v8, v9
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv4bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFH-NEXT:    vand.vx v9, v9, a0
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    vor.vv v8, v8, v9
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv4bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv4bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
+; ZVFBFA-NEXT:    vfsgnj.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 4 x bfloat> @llvm.copysign.nxv4bf16(<vscale x 4 x bfloat> %vm, <vscale x 4 x bfloat> %vs)
   ret <vscale x 4 x bfloat> %r
 }
 
 define <vscale x 8 x bfloat> @nxv8bf16(<vscale x 8 x bfloat> %vm, <vscale x 8 x bfloat> %vs) {
-; CHECK-LABEL: nxv8bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vand.vx v10, v10, a0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vor.vv v8, v8, v10
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv8bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFH-NEXT:    vand.vx v10, v10, a0
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    vor.vv v8, v8, v10
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv8bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v10, v10, a0
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    vor.vv v8, v8, v10
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vfsgnj.vv v8, v8, v10
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 8 x bfloat> @llvm.copysign.nxv8bf16(<vscale x 8 x bfloat> %vm, <vscale x 8 x bfloat> %vs)
   ret <vscale x 8 x bfloat> %r
 }
 
 define <vscale x 16 x bfloat> @nxv16bf16(<vscale x 16 x bfloat> %vm, <vscale x 16 x bfloat> %vs) {
-; CHECK-LABEL: nxv16bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vand.vx v12, v12, a0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vor.vv v8, v8, v12
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv16bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFH-NEXT:    vand.vx v12, v12, a0
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    vor.vv v8, v8, v12
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv16bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v12, v12, a0
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    vor.vv v8, v8, v12
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv16bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m4, ta, ma
+; ZVFBFA-NEXT:    vfsgnj.vv v8, v8, v12
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 16 x bfloat> @llvm.copysign.nxv16bf16(<vscale x 16 x bfloat> %vm, <vscale x 16 x bfloat> %vs)
   ret <vscale x 16 x bfloat> %r
 }
 
 define <vscale x 32 x bfloat> @nxv32bf32(<vscale x 32 x bfloat> %vm, <vscale x 32 x bfloat> %vs) {
-; CHECK-LABEL: nxv32bf32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vand.vx v16, v16, a0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vor.vv v8, v8, v16
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv32bf32:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFH-NEXT:    vand.vx v16, v16, a0
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    vor.vv v8, v8, v16
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv32bf32:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v16, v16, a0
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    vor.vv v8, v8, v16
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv32bf32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m8, ta, ma
+; ZVFBFA-NEXT:    vfsgnj.vv v8, v8, v16
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 32 x bfloat> @llvm.copysign.nxv32bf32(<vscale x 32 x bfloat> %vm, <vscale x 32 x bfloat> %vs)
   ret <vscale x 32 x bfloat> %r
 }
@@ -114,6 +216,16 @@ define <vscale x 1 x half> @vfcopysign_vv_nxv1f16(<vscale x 1 x half> %vm, <vsca
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vv_nxv1f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %vs)
   ret <vscale x 1 x half> %r
 }
@@ -136,6 +248,18 @@ define <vscale x 1 x half> @vfcopysign_vf_nxv1f16(<vscale x 1 x half> %vm, half 
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vf_nxv1f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v9, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %splat)
@@ -159,6 +283,17 @@ define <vscale x 1 x half> @vfcopynsign_vv_nxv1f16(<vscale x 1 x half> %vm, <vsc
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vv_nxv1f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v9, v9, a0
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 1 x half> %vs
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %n)
   ret <vscale x 1 x half> %r
@@ -183,6 +318,19 @@ define <vscale x 1 x half> @vfcopynsign_vf_nxv1f16(<vscale x 1 x half> %vm, half
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vf_nxv1f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v9, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vxor.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x half> %splat
@@ -208,6 +356,17 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vv_nxv1f16_nxv1f32(<vscale x 1 x
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_exttrunc_vv_nxv1f16_nxv1f32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v10, v9
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vand.vx v9, v10, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %e = fptrunc <vscale x 1 x float> %vs to <vscale x 1 x half>
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %e)
   ret <vscale x 1 x half> %r
@@ -226,16 +385,28 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 x
 ; ZVFHMIN-LABEL: vfcopysign_exttrunc_vf_nxv1f16_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 8
-; ZVFHMIN-NEXT:    addi a1, a0, -1
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.v.f v9, fa0
+; ZVFHMIN-NEXT:    addi a1, a0, -1
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v9
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFHMIN-NEXT:    vand.vx v9, v10, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_exttrunc_vf_nxv1f16_nxv1f32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v9, fa0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v10, v9
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v10, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
   %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 1 x float> %splat to <vscale x 1 x half>
@@ -254,14 +425,26 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vv_nxv1f16_nxv1f32(<vscale x 1 
 ; ZVFHMIN-LABEL: vfcopynsign_exttrunc_vv_nxv1f16_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 8
-; ZVFHMIN-NEXT:    addi a1, a0, -1
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v9
 ; ZVFHMIN-NEXT:    vxor.vx v9, v10, a0
+; ZVFHMIN-NEXT:    addi a1, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_exttrunc_vv_nxv1f16_nxv1f32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v10, v9
+; ZVFBFA-NEXT:    vxor.vx v9, v10, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 1 x float> %vs
   %eneg = fptrunc <vscale x 1 x float> %n to <vscale x 1 x half>
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %eneg)
@@ -280,18 +463,31 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 
 ;
 ; ZVFHMIN-LABEL: vfcopynsign_exttrunc_vf_nxv1f16_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a0, 8
-; ZVFHMIN-NEXT:    addi a1, a0, -1
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.v.f v9, fa0
+; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v9
 ; ZVFHMIN-NEXT:    vxor.vx v9, v10, a0
+; ZVFHMIN-NEXT:    addi a1, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_exttrunc_vf_nxv1f16_nxv1f32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v9, fa0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v10, v9
+; ZVFBFA-NEXT:    vxor.vx v9, v10, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
   %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x float> %splat
@@ -313,16 +509,28 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vv_nxv1f16_nxv1f64(<vscale x 1 x
 ; ZVFHMIN-LABEL: vfcopysign_exttrunc_vv_nxv1f16_nxv1f64:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 8
-; ZVFHMIN-NEXT:    addi a1, a0, -1
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.rod.f.f.w v10, v9
+; ZVFHMIN-NEXT:    addi a1, a0, -1
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v10
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_exttrunc_vv_nxv1f16_nxv1f64:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.rod.f.f.w v10, v9
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v9, v10
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %e = fptrunc <vscale x 1 x double> %vs to <vscale x 1 x half>
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %e)
   ret <vscale x 1 x half> %r
@@ -342,19 +550,33 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 x
 ;
 ; ZVFHMIN-LABEL: vfcopysign_exttrunc_vf_nxv1f16_nxv1f64:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a0, 8
-; ZVFHMIN-NEXT:    addi a1, a0, -1
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.v.f v9, fa0
+; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.rod.f.f.w v10, v9
+; ZVFHMIN-NEXT:    addi a1, a0, -1
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v10
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_exttrunc_vf_nxv1f16_nxv1f64:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v9, fa0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.rod.f.f.w v10, v9
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v9, v10
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
   %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 1 x double> %splat to <vscale x 1 x half>
@@ -374,18 +596,31 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vv_nxv1f16_nxv1f64(<vscale x 1 
 ;
 ; ZVFHMIN-LABEL: vfcopynsign_exttrunc_vv_nxv1f16_nxv1f64:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a0, 8
-; ZVFHMIN-NEXT:    addi a1, a0, -1
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.rod.f.f.w v10, v9
+; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v10
 ; ZVFHMIN-NEXT:    vxor.vx v9, v9, a0
+; ZVFHMIN-NEXT:    addi a1, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_exttrunc_vv_nxv1f16_nxv1f64:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.rod.f.f.w v10, v9
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v9, v10
+; ZVFBFA-NEXT:    vxor.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 1 x double> %vs
   %eneg = fptrunc <vscale x 1 x double> %n to <vscale x 1 x half>
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %eneg)
@@ -406,20 +641,35 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 
 ;
 ; ZVFHMIN-LABEL: vfcopynsign_exttrunc_vf_nxv1f16_nxv1f64:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a0, 8
-; ZVFHMIN-NEXT:    addi a1, a0, -1
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.v.f v9, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.rod.f.f.w v10, v9
+; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v10
 ; ZVFHMIN-NEXT:    vxor.vx v9, v9, a0
+; ZVFHMIN-NEXT:    addi a1, a0, -1
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_exttrunc_vf_nxv1f16_nxv1f64:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v9, fa0
+; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.rod.f.f.w v10, v9
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v9, v10
+; ZVFBFA-NEXT:    vxor.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
   %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x double> %splat
@@ -446,6 +696,16 @@ define <vscale x 2 x half> @vfcopysign_vv_nxv2f16(<vscale x 2 x half> %vm, <vsca
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vv_nxv2f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %vs)
   ret <vscale x 2 x half> %r
 }
@@ -468,6 +728,18 @@ define <vscale x 2 x half> @vfcopysign_vf_nxv2f16(<vscale x 2 x half> %vm, half 
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vf_nxv2f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v9, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   %r = call <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %splat)
@@ -491,6 +763,17 @@ define <vscale x 2 x half> @vfcopynsign_vv_nxv2f16(<vscale x 2 x half> %vm, <vsc
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vv_nxv2f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v9, v9, a0
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 2 x half> %vs
   %r = call <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %n)
   ret <vscale x 2 x half> %r
@@ -515,6 +798,19 @@ define <vscale x 2 x half> @vfcopynsign_vf_nxv2f16(<vscale x 2 x half> %vm, half
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vf_nxv2f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v9, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vxor.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   %n = fneg <vscale x 2 x half> %splat
@@ -540,6 +836,16 @@ define <vscale x 4 x half> @vfcopysign_vv_nxv4f16(<vscale x 4 x half> %vm, <vsca
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vv_nxv4f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %vs)
   ret <vscale x 4 x half> %r
 }
@@ -562,6 +868,18 @@ define <vscale x 4 x half> @vfcopysign_vf_nxv4f16(<vscale x 4 x half> %vm, half 
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vf_nxv4f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v9, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   %r = call <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %splat)
@@ -585,6 +903,17 @@ define <vscale x 4 x half> @vfcopynsign_vv_nxv4f16(<vscale x 4 x half> %vm, <vsc
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vv_nxv4f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v9, v9, a0
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 4 x half> %vs
   %r = call <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %n)
   ret <vscale x 4 x half> %r
@@ -609,6 +938,19 @@ define <vscale x 4 x half> @vfcopynsign_vf_nxv4f16(<vscale x 4 x half> %vm, half
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vf_nxv4f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v9, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vxor.vx v9, v9, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v9, v9, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v9
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   %n = fneg <vscale x 4 x half> %splat
@@ -634,6 +976,16 @@ define <vscale x 8 x half> @vfcopysign_vv_nxv8f16(<vscale x 8 x half> %vm, <vsca
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v10
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vv_nxv8f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v10, v10, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v10
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %vs)
   ret <vscale x 8 x half> %r
 }
@@ -656,6 +1008,18 @@ define <vscale x 8 x half> @vfcopysign_vf_nxv8f16(<vscale x 8 x half> %vm, half 
 ; ZVFHMIN-NEXT:    vand.vx v10, v10, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v10
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vf_nxv8f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v10, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v10, v10, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v10
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %splat)
@@ -679,6 +1043,17 @@ define <vscale x 8 x half> @vfcopynsign_vv_nxv8f16(<vscale x 8 x half> %vm, <vsc
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v10
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vv_nxv8f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v10, v10, a0
+; ZVFBFA-NEXT:    vand.vx v10, v10, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v10
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 8 x half> %vs
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %n)
   ret <vscale x 8 x half> %r
@@ -703,6 +1078,19 @@ define <vscale x 8 x half> @vfcopynsign_vf_nxv8f16(<vscale x 8 x half> %vm, half
 ; ZVFHMIN-NEXT:    vand.vx v10, v10, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v10
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vf_nxv8f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v10, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vxor.vx v10, v10, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v10, v10, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v10
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x half> %splat
@@ -728,6 +1116,17 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vv_nxv8f16_nxv8f32(<vscale x 8 x
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v10
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_exttrunc_vv_nxv8f16_nxv8f32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v10, v12
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vand.vx v10, v10, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v10
+; ZVFBFA-NEXT:    ret
   %e = fptrunc <vscale x 8 x float> %vs to <vscale x 8 x half>
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %e)
   ret <vscale x 8 x half> %r
@@ -756,6 +1155,20 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 x
 ; ZVFHMIN-NEXT:    vand.vx v8, v14, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v12, v8
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_exttrunc_vf_nxv8f16_nxv8f32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v12, v8, a1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v14, v8
+; ZVFBFA-NEXT:    vand.vx v8, v14, a0
+; ZVFBFA-NEXT:    vor.vv v8, v12, v8
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 8 x float> %splat to <vscale x 8 x half>
@@ -782,6 +1195,18 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f32(<vscale x 8 
 ; ZVFHMIN-NEXT:    vand.vx v10, v10, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v10
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_exttrunc_vv_nxv8f16_nxv8f32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vfncvt.f.f.w v10, v12
+; ZVFBFA-NEXT:    vxor.vx v10, v10, a0
+; ZVFBFA-NEXT:    vand.vx v10, v10, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v10
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 8 x float> %vs
   %eneg = fptrunc <vscale x 8 x float> %n to <vscale x 8 x half>
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %eneg)
@@ -812,6 +1237,21 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v12, v8
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_exttrunc_vf_nxv8f16_nxv8f32:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v12, v8, a1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v14, v8
+; ZVFBFA-NEXT:    vxor.vx v8, v14, a0
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v12, v8
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x float> %splat
@@ -843,6 +1283,20 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 x
 ; ZVFHMIN-NEXT:    vand.vx v8, v14, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v12, v8
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_exttrunc_vv_nxv8f16_nxv8f64:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v12, v8, a1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.rod.f.f.w v8, v16
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v14, v8
+; ZVFBFA-NEXT:    vand.vx v8, v14, a0
+; ZVFBFA-NEXT:    vor.vv v8, v12, v8
+; ZVFBFA-NEXT:    ret
   %e = fptrunc <vscale x 8 x double> %vs to <vscale x 8 x half>
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %e)
   ret <vscale x 8 x half> %r
@@ -875,6 +1329,22 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 x
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v20, v8
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_exttrunc_vf_nxv8f16_nxv8f64:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v20, v8, a1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.rod.f.f.w v16, v8
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v20, v8
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 8 x double> %splat to <vscale x 8 x half>
@@ -906,6 +1376,21 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v12, v8
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_exttrunc_vv_nxv8f16_nxv8f64:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v12, v8, a1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.rod.f.f.w v8, v16
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v14, v8
+; ZVFBFA-NEXT:    vxor.vx v8, v14, a0
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v12, v8
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 8 x double> %vs
   %eneg = fptrunc <vscale x 8 x double> %n to <vscale x 8 x half>
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %eneg)
@@ -940,6 +1425,23 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v20, v8
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_exttrunc_vf_nxv8f16_nxv8f64:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v20, v8, a1
+; ZVFBFA-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFA-NEXT:    vfncvt.rod.f.f.w v16, v8
+; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v20, v8
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x double> %splat
@@ -966,6 +1468,16 @@ define <vscale x 16 x half> @vfcopysign_vv_nxv16f16(<vscale x 16 x half> %vm, <v
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v12
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vv_nxv16f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFBFA-NEXT:    vand.vx v12, v12, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v12
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 16 x half> @llvm.copysign.nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %vs)
   ret <vscale x 16 x half> %r
 }
@@ -988,6 +1500,18 @@ define <vscale x 16 x half> @vfcopysign_vf_nxv16f16(<vscale x 16 x half> %vm, ha
 ; ZVFHMIN-NEXT:    vand.vx v12, v12, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v12
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vf_nxv16f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v12, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v12, v12, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v12
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 16 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> poison, <vscale x 16 x i32> zeroinitializer
   %r = call <vscale x 16 x half> @llvm.copysign.nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %splat)
@@ -1011,6 +1535,17 @@ define <vscale x 16 x half> @vfcopynsign_vv_nxv16f16(<vscale x 16 x half> %vm, <
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v12
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vv_nxv16f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v12, v12, a0
+; ZVFBFA-NEXT:    vand.vx v12, v12, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v12
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 16 x half> %vs
   %r = call <vscale x 16 x half> @llvm.copysign.nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %n)
   ret <vscale x 16 x half> %r
@@ -1035,6 +1570,19 @@ define <vscale x 16 x half> @vfcopynsign_vf_nxv16f16(<vscale x 16 x half> %vm, h
 ; ZVFHMIN-NEXT:    vand.vx v12, v12, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v12
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vf_nxv16f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v12, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vxor.vx v12, v12, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v12, v12, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v12
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 16 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> poison, <vscale x 16 x i32> zeroinitializer
   %n = fneg <vscale x 16 x half> %splat
@@ -1060,6 +1608,16 @@ define <vscale x 32 x half> @vfcopysign_vv_nxv32f16(<vscale x 32 x half> %vm, <v
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v16
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vv_nxv32f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vand.vx v16, v16, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v16
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %vs)
   ret <vscale x 32 x half> %r
 }
@@ -1082,6 +1640,18 @@ define <vscale x 32 x half> @vfcopysign_vf_nxv32f16(<vscale x 32 x half> %vm, ha
 ; ZVFHMIN-NEXT:    vand.vx v16, v16, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v16
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopysign_vf_nxv32f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v16, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v16, v16, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v16
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 32 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> poison, <vscale x 32 x i32> zeroinitializer
   %r = call <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %splat)
@@ -1105,6 +1675,17 @@ define <vscale x 32 x half> @vfcopynsign_vv_nxv32f16(<vscale x 32 x half> %vm, <
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v16
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vv_nxv32f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v16, v16, a0
+; ZVFBFA-NEXT:    vand.vx v16, v16, a0
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v16
+; ZVFBFA-NEXT:    ret
   %n = fneg <vscale x 32 x half> %vs
   %r = call <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %n)
   ret <vscale x 32 x half> %r
@@ -1129,6 +1710,19 @@ define <vscale x 32 x half> @vfcopynsign_vf_nxv32f16(<vscale x 32 x half> %vm, h
 ; ZVFHMIN-NEXT:    vand.vx v16, v16, a0
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v16
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfcopynsign_vf_nxv32f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v16, a0
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vxor.vx v16, v16, a0
+; ZVFBFA-NEXT:    addi a1, a0, -1
+; ZVFBFA-NEXT:    vand.vx v8, v8, a1
+; ZVFBFA-NEXT:    vand.vx v16, v16, a0
+; ZVFBFA-NEXT:    vor.vv v8, v8, v16
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 32 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> poison, <vscale x 32 x i32> zeroinitializer
   %n = fneg <vscale x 32 x half> %splat

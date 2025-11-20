@@ -1283,8 +1283,8 @@ define <32 x double> @vp_roundeven_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; RV32ZVFH:       # %bb.0:
 ; RV32ZVFH-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32ZVFH-NEXT:    vmv1r.v v6, v0
-; RV32ZVFH-NEXT:    li a2, 16
 ; RV32ZVFH-NEXT:    vslidedown.vi v7, v0, 2
+; RV32ZVFH-NEXT:    li a2, 16
 ; RV32ZVFH-NEXT:    mv a1, a0
 ; RV32ZVFH-NEXT:    bltu a0, a2, .LBB26_2
 ; RV32ZVFH-NEXT:  # %bb.1:
@@ -1328,8 +1328,8 @@ define <32 x double> @vp_roundeven_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; RV64ZVFH:       # %bb.0:
 ; RV64ZVFH-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64ZVFH-NEXT:    vmv1r.v v6, v0
-; RV64ZVFH-NEXT:    li a2, 16
 ; RV64ZVFH-NEXT:    vslidedown.vi v7, v0, 2
+; RV64ZVFH-NEXT:    li a2, 16
 ; RV64ZVFH-NEXT:    mv a1, a0
 ; RV64ZVFH-NEXT:    bltu a0, a2, .LBB26_2
 ; RV64ZVFH-NEXT:  # %bb.1:
@@ -1374,8 +1374,8 @@ define <32 x double> @vp_roundeven_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32ZVFHMIN-NEXT:    vmv1r.v v6, v0
-; RV32ZVFHMIN-NEXT:    li a2, 16
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v7, v0, 2
+; RV32ZVFHMIN-NEXT:    li a2, 16
 ; RV32ZVFHMIN-NEXT:    mv a1, a0
 ; RV32ZVFHMIN-NEXT:    bltu a0, a2, .LBB26_2
 ; RV32ZVFHMIN-NEXT:  # %bb.1:
@@ -1419,8 +1419,8 @@ define <32 x double> @vp_roundeven_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64ZVFHMIN-NEXT:    vmv1r.v v6, v0
-; RV64ZVFHMIN-NEXT:    li a2, 16
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v7, v0, 2
+; RV64ZVFHMIN-NEXT:    li a2, 16
 ; RV64ZVFHMIN-NEXT:    mv a1, a0
 ; RV64ZVFHMIN-NEXT:    bltu a0, a2, .LBB26_2
 ; RV64ZVFHMIN-NEXT:  # %bb.1:

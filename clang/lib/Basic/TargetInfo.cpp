@@ -59,6 +59,7 @@ static const LangASMap FakeAddrSpaceMap = {
 TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // Set defaults.  Defaults are set for a 32-bit RISC platform, like PPC or
   // SPARC.  These should be overridden by concrete targets as needed.
+  HasMustTail = true;
   BigEndian = !T.isLittleEndian();
   TLSSupported = true;
   VLASupported = true;
@@ -629,6 +630,13 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
 
 bool TargetInfo::callGlobalDeleteInDeletingDtor(
     const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
+}
+
+bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
       LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
     return true;

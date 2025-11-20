@@ -234,6 +234,127 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
 }
 
+static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
+                                            Address destPtr,
+                                            const CXXRecordDecl *base) {
+  if (base->isEmpty())
+    return;
+
+  const ASTRecordLayout &layout = cgf.getContext().getASTRecordLayout(base);
+  CharUnits nvSize = layout.getNonVirtualSize();
+
+  // We cannot simply zero-initialize the entire base sub-object if vbptrs are
+  // present, they are initialized by the most derived class before calling the
+  // constructor.
+  SmallVector<std::pair<CharUnits, CharUnits>, 1> stores;
+  stores.emplace_back(CharUnits::Zero(), nvSize);
+
+  // Each store is split by the existence of a vbptr.
+  // TODO(cir): This only needs handling for the MS CXXABI.
+  assert(!cir::MissingFeatures::msabi());
+
+  // If the type contains a pointer to data member we can't memset it to zero.
+  // Instead, create a null constant and copy it to the destination.
+  // TODO: there are other patterns besides zero that we can usefully memset,
+  // like -1, which happens to be the pattern used by member-pointers.
+  // TODO: isZeroInitializable can be over-conservative in the case where a
+  // virtual base contains a member pointer.
+  mlir::TypedAttr nullConstantForBase = cgf.cgm.emitNullConstantForBase(base);
+  if (!cgf.getBuilder().isNullValue(nullConstantForBase)) {
+    cgf.cgm.errorNYI(
+        base->getSourceRange(),
+        "emitNullBaseClassInitialization: base constant is not null");
+  } else {
+    // Otherwise, just memset the whole thing to zero.  This is legal
+    // because in LLVM, all default initializers (other than the ones we just
+    // handled above) are guaranteed to have a bit pattern of all zeros.
+    // TODO(cir): When the MS CXXABI is supported, we will need to iterate over
+    // `stores` and create a separate memset for each one. For now, we know that
+    // there will only be one store and it will begin at offset zero, so that
+    // simplifies this code considerably.
+    assert(stores.size() == 1 && "Expected only one store");
+    assert(stores[0].first == CharUnits::Zero() &&
+           "Expected store to begin at offset zero");
+    CIRGenBuilderTy builder = cgf.getBuilder();
+    mlir::Location loc = cgf.getLoc(base->getBeginLoc());
+    builder.createStore(loc, builder.getConstant(loc, nullConstantForBase),
+                        destPtr);
+  }
+}
+
+void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
+                                          AggValueSlot dest) {
+  assert(!dest.isIgnored() && "Must have a destination!");
+  const CXXConstructorDecl *cd = e->getConstructor();
+
+  // If we require zero initialization before (or instead of) calling the
+  // constructor, as can be the case with a non-user-provided default
+  // constructor, emit the zero initialization now, unless destination is
+  // already zeroed.
+  if (e->requiresZeroInitialization() && !dest.isZeroed()) {
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Delegating:
+    case CXXConstructionKind::Complete:
+      emitNullInitialization(getLoc(e->getSourceRange()), dest.getAddress(),
+                             e->getType());
+      break;
+    case CXXConstructionKind::VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
+      emitNullBaseClassInitialization(*this, dest.getAddress(),
+                                      cd->getParent());
+      break;
+    }
+  }
+
+  // If this is a call to a trivial default constructor, do nothing.
+  if (cd->isTrivial() && cd->isDefaultConstructor())
+    return;
+
+  // Elide the constructor if we're constructing from a temporary
+  if (getLangOpts().ElideConstructors && e->isElidable()) {
+    // FIXME: This only handles the simplest case, where the source object is
+    //        passed directly as the first argument to the constructor. This
+    //        should also handle stepping through implicit casts and conversion
+    //        sequences which involve two steps, with a conversion operator
+    //        follwed by a converting constructor.
+    const Expr *srcObj = e->getArg(0);
+    assert(srcObj->isTemporaryObject(getContext(), cd->getParent()));
+    assert(
+        getContext().hasSameUnqualifiedType(e->getType(), srcObj->getType()));
+    emitAggExpr(srcObj, dest);
+    return;
+  }
+
+  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
+    assert(!cir::MissingFeatures::sanitizers());
+    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
+  } else {
+
+    clang::CXXCtorType type = Ctor_Complete;
+    bool forVirtualBase = false;
+    bool delegating = false;
+
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Complete:
+      type = Ctor_Complete;
+      break;
+    case CXXConstructionKind::Delegating:
+      // We should be emitting a constructor; GlobalDecl will assert this
+      type = curGD.getCtorType();
+      delegating = true;
+      break;
+    case CXXConstructionKind::VirtualBase:
+      forVirtualBase = true;
+      [[fallthrough]];
+    case CXXConstructionKind::NonVirtualBase:
+      type = Ctor_Base;
+      break;
+    }
+
+    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
+  }
+}
+
 static CharUnits calculateCookiePadding(CIRGenFunction &cgf,
                                         const CXXNewExpr *e) {
   if (!e->isArray())
@@ -305,7 +426,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     const llvm::APInt &count =
         mlir::cast<cir::IntAttr>(constNumElements).getValue();
 
-    unsigned numElementsWidth = count.getBitWidth();
+    [[maybe_unused]] unsigned numElementsWidth = count.getBitWidth();
     bool hasAnyOverflow = false;
 
     // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
@@ -624,6 +745,13 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // We might be deleting a pointer to array.
   deleteTy = getContext().getBaseElementType(deleteTy);
   ptr = ptr.withElementType(builder, convertTypeForMem(deleteTy));
+
+  if (e->isArrayForm() &&
+      cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
+          cgm.getASTContext().getLangOpts())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXDeleteExpr: emitVectorDeletingDtors");
+  }
 
   if (e->isArrayForm()) {
     assert(!cir::MissingFeatures::deleteArray());

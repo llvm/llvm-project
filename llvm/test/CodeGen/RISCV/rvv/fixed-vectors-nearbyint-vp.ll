@@ -757,8 +757,8 @@ define <32 x double> @vp_nearbyint_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv1r.v v6, v0
-; RV32-NEXT:    li a2, 16
 ; RV32-NEXT:    vslidedown.vi v7, v0, 2
+; RV32-NEXT:    li a2, 16
 ; RV32-NEXT:    mv a1, a0
 ; RV32-NEXT:    bltu a0, a2, .LBB26_2
 ; RV32-NEXT:  # %bb.1:
@@ -802,8 +802,8 @@ define <32 x double> @vp_nearbyint_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv1r.v v6, v0
-; RV64-NEXT:    li a2, 16
 ; RV64-NEXT:    vslidedown.vi v7, v0, 2
+; RV64-NEXT:    li a2, 16
 ; RV64-NEXT:    mv a1, a0
 ; RV64-NEXT:    bltu a0, a2, .LBB26_2
 ; RV64-NEXT:  # %bb.1:

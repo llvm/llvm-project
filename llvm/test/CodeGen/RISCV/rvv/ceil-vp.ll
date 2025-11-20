@@ -291,16 +291,16 @@ define <vscale x 32 x bfloat> @vp_ceil_vv_nxv32bf16(<vscale x 32 x bfloat> %va, 
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a1, a2, 1
-; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    lui a4, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a4
-; CHECK-NEXT:    sltu a4, a0, a3
-; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    srli a2, a2, 2
-; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    sub a3, a0, a1
 ; CHECK-NEXT:    vslidedown.vx v6, v0, a2
+; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    lui a4, 307200
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    fmv.w.x fa5, a4
+; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vmv1r.v v0, v6
-; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v24, v0.t
@@ -351,19 +351,19 @@ define <vscale x 32 x bfloat> @vp_ceil_vv_nxv32bf16_unmasked(<vscale x 32 x bflo
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a1, a2, 1
-; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    lui a4, 307200
-; CHECK-NEXT:    sltu a5, a0, a3
-; CHECK-NEXT:    fmv.w.x fa5, a4
-; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    srli a2, a2, 2
-; CHECK-NEXT:    vsetvli a4, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vsetvli a3, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmset.m v16
-; CHECK-NEXT:    and a3, a5, a3
+; CHECK-NEXT:    sub a3, a0, a1
 ; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v7, v16, a2
+; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    lui a4, 307200
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    fmv.w.x fa5, a4
+; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v24, v0.t
@@ -875,16 +875,16 @@ define <vscale x 32 x half> @vp_ceil_vv_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    vmv1r.v v7, v0
 ; ZVFHMIN-NEXT:    csrr a2, vlenb
 ; ZVFHMIN-NEXT:    slli a1, a2, 1
-; ZVFHMIN-NEXT:    sub a3, a0, a1
-; ZVFHMIN-NEXT:    lui a4, 307200
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a4
-; ZVFHMIN-NEXT:    sltu a4, a0, a3
-; ZVFHMIN-NEXT:    addi a4, a4, -1
 ; ZVFHMIN-NEXT:    srli a2, a2, 2
-; ZVFHMIN-NEXT:    and a3, a4, a3
+; ZVFHMIN-NEXT:    sub a3, a0, a1
 ; ZVFHMIN-NEXT:    vslidedown.vx v6, v0, a2
+; ZVFHMIN-NEXT:    sltu a2, a0, a3
+; ZVFHMIN-NEXT:    lui a4, 307200
+; ZVFHMIN-NEXT:    addi a2, a2, -1
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a4
+; ZVFHMIN-NEXT:    and a2, a2, a3
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v6
-; ZVFHMIN-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v16, v24, v0.t
@@ -951,19 +951,19 @@ define <vscale x 32 x half> @vp_ceil_vv_nxv32f16_unmasked(<vscale x 32 x half> %
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    csrr a2, vlenb
 ; ZVFHMIN-NEXT:    slli a1, a2, 1
-; ZVFHMIN-NEXT:    sub a3, a0, a1
-; ZVFHMIN-NEXT:    lui a4, 307200
-; ZVFHMIN-NEXT:    sltu a5, a0, a3
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a4
-; ZVFHMIN-NEXT:    addi a5, a5, -1
 ; ZVFHMIN-NEXT:    srli a2, a2, 2
-; ZVFHMIN-NEXT:    vsetvli a4, zero, e8, m4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a3, zero, e8, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmset.m v16
-; ZVFHMIN-NEXT:    and a3, a5, a3
+; ZVFHMIN-NEXT:    sub a3, a0, a1
 ; ZVFHMIN-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v7, v16, a2
+; ZVFHMIN-NEXT:    sltu a2, a0, a3
+; ZVFHMIN-NEXT:    lui a4, 307200
+; ZVFHMIN-NEXT:    addi a2, a2, -1
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a4
+; ZVFHMIN-NEXT:    and a2, a2, a3
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v7
-; ZVFHMIN-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v16, v24, v0.t
@@ -1624,14 +1624,14 @@ define <vscale x 16 x double> @vp_ceil_vv_nxv16f64(<vscale x 16 x double> %va, <
 ; RV32ZFH-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; RV32ZFH-NEXT:    vmv1r.v v7, v0
 ; RV32ZFH-NEXT:    csrr a1, vlenb
+; RV32ZFH-NEXT:    srli a2, a1, 3
+; RV32ZFH-NEXT:    vslidedown.vx v6, v0, a2
 ; RV32ZFH-NEXT:    sub a2, a0, a1
 ; RV32ZFH-NEXT:    lui a3, %hi(.LCPI44_0)
-; RV32ZFH-NEXT:    sltu a4, a0, a2
 ; RV32ZFH-NEXT:    fld fa5, %lo(.LCPI44_0)(a3)
-; RV32ZFH-NEXT:    srli a3, a1, 3
-; RV32ZFH-NEXT:    addi a4, a4, -1
-; RV32ZFH-NEXT:    vslidedown.vx v6, v0, a3
-; RV32ZFH-NEXT:    and a2, a4, a2
+; RV32ZFH-NEXT:    sltu a3, a0, a2
+; RV32ZFH-NEXT:    addi a3, a3, -1
+; RV32ZFH-NEXT:    and a2, a3, a2
 ; RV32ZFH-NEXT:    vmv1r.v v0, v6
 ; RV32ZFH-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32ZFH-NEXT:    vfabs.v v24, v16, v0.t
@@ -1669,17 +1669,17 @@ define <vscale x 16 x double> @vp_ceil_vv_nxv16f64(<vscale x 16 x double> %va, <
 ; RV64ZFH-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; RV64ZFH-NEXT:    vmv1r.v v7, v0
 ; RV64ZFH-NEXT:    csrr a1, vlenb
-; RV64ZFH-NEXT:    li a2, 1075
-; RV64ZFH-NEXT:    sub a3, a0, a1
-; RV64ZFH-NEXT:    slli a2, a2, 52
-; RV64ZFH-NEXT:    sltu a4, a0, a3
-; RV64ZFH-NEXT:    fmv.d.x fa5, a2
 ; RV64ZFH-NEXT:    srli a2, a1, 3
-; RV64ZFH-NEXT:    addi a4, a4, -1
+; RV64ZFH-NEXT:    li a3, 1075
 ; RV64ZFH-NEXT:    vslidedown.vx v6, v0, a2
-; RV64ZFH-NEXT:    and a3, a4, a3
+; RV64ZFH-NEXT:    sub a2, a0, a1
+; RV64ZFH-NEXT:    slli a3, a3, 52
+; RV64ZFH-NEXT:    fmv.d.x fa5, a3
+; RV64ZFH-NEXT:    sltu a3, a0, a2
+; RV64ZFH-NEXT:    addi a3, a3, -1
+; RV64ZFH-NEXT:    and a2, a3, a2
 ; RV64ZFH-NEXT:    vmv1r.v v0, v6
-; RV64ZFH-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV64ZFH-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV64ZFH-NEXT:    vfabs.v v24, v16, v0.t
 ; RV64ZFH-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; RV64ZFH-NEXT:    vmflt.vf v6, v24, fa5, v0.t

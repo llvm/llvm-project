@@ -51,18 +51,23 @@ define void @test_store_mask_not_all_one(<vscale x 2 x float> %val, <vscale x 2 
 define void @test_different_evl(<vscale x 2 x float> %val, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl1, i32 zeroext %evl2) {
 ; CHECK-LABEL: test_different_evl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vid.v v10
 ; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    vrsub.vx v9, v9, a1
+; CHECK-NEXT:    vrsub.vx v10, v10, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
-; CHECK-NEXT:    vrgatherei16.vv v11, v10, v9
-; CHECK-NEXT:    vmsne.vi v0, v11, 0
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vx v9, v9, a1
+; CHECK-NEXT:    vid.v v11
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v12, v9, v10
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vx v9, v11, a1
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vmsne.vi v0, v12, 0
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vv v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v10, (a0), v0.t

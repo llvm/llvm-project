@@ -54,10 +54,10 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-LABEL: gather_masked:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a2, 983765
-; CHECK-NEXT:    addi a3, a2, 873
-; CHECK-NEXT:    addi a2, a0, 1024
+; CHECK-NEXT:    addi a2, a2, 873
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a3
+; CHECK-NEXT:    vmv.s.x v0, a2
+; CHECK-NEXT:    addi a2, a0, 1024
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    li a4, 5
 ; CHECK-NEXT:  .LBB1_1: # %vector.body
@@ -335,12 +335,12 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, <32 x i8> %maskedoff) {
 ; CHECK-LABEL: scatter_masked:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a2, a1, 1024
-; CHECK-NEXT:    lui a4, 983765
-; CHECK-NEXT:    li a3, 32
-; CHECK-NEXT:    addi a4, a4, 873
+; CHECK-NEXT:    lui a2, 983765
+; CHECK-NEXT:    addi a2, a2, 873
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a4
+; CHECK-NEXT:    vmv.s.x v0, a2
+; CHECK-NEXT:    addi a2, a1, 1024
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    li a4, 5
 ; CHECK-NEXT:  .LBB7_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -491,15 +491,15 @@ define void @struct_gather(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi a4, a1, -128
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    addi a5, a0, 32
 ; CHECK-NEXT:    vlse32.v v9, (a4), a3
+; CHECK-NEXT:    vlse32.v v10, (a1), a3
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    addi a4, a0, 32
-; CHECK-NEXT:    vlse32.v v9, (a1), a3
-; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    vadd.vv v9, v10, v9
+; CHECK-NEXT:    vle32.v v9, (a5)
+; CHECK-NEXT:    vadd.vv v9, v9, v10
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 64
-; CHECK-NEXT:    vse32.v v9, (a4)
+; CHECK-NEXT:    vse32.v v9, (a5)
 ; CHECK-NEXT:    addi a1, a1, 256
 ; CHECK-NEXT:    bne a0, a2, .LBB10_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup

@@ -378,11 +378,11 @@ define <32 x i64> @select_v32i64(<32 x i1> %a, <32 x i64> %b, <32 x i64> %c, i32
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; CHECK-NEXT:    addi a0, a2, -16
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
@@ -404,12 +404,11 @@ define <32 x i64> @select_evl_v32i64(<32 x i1> %a, <32 x i64> %b, <32 x i64> %c)
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v24, v16, v0
 ; CHECK-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.select.v32i64(<32 x i1> %a, <32 x i64> %b, <32 x i64> %c, i32 17)
@@ -538,11 +537,11 @@ define <64 x float> @select_v64f32(<64 x i1> %a, <64 x float> %b, <64 x float> %
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; CHECK-NEXT:    addi a0, a2, -32
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 4
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v0, 4
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma

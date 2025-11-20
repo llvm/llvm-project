@@ -562,16 +562,16 @@ define void @strided_store_nxv16f64(<vscale x 16 x double> %v, ptr %ptr, i32 sig
 ; CHECK-NEXT:    mv a4, a3
 ; CHECK-NEXT:  .LBB46_2:
 ; CHECK-NEXT:    mul a5, a4, a1
-; CHECK-NEXT:    sub a6, a2, a3
-; CHECK-NEXT:    sltu a2, a2, a6
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    srli a4, a3, 3
+; CHECK-NEXT:    sub a3, a2, a3
+; CHECK-NEXT:    vsetvli a6, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a4
+; CHECK-NEXT:    sltu a2, a2, a3
 ; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a2, a2, a6
-; CHECK-NEXT:    srli a3, a3, 3
+; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    add a0, a0, a5
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -624,21 +624,21 @@ define void @strided_store_nxv17f64(<vscale x 17 x double> %v, ptr %ptr, i32 sig
 ; CHECK-NEXT:    mv a7, a4
 ; CHECK-NEXT:  .LBB48_4:
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    mul t0, a7, a2
-; CHECK-NEXT:    sub t1, a5, a4
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
-; CHECK-NEXT:    sltu a0, a5, t1
+; CHECK-NEXT:    mul a0, a7, a2
 ; CHECK-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v8, (a1), a2, v0.t
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    sub a6, a3, a6
-; CHECK-NEXT:    and a7, a0, t1
-; CHECK-NEXT:    srli a0, a4, 3
-; CHECK-NEXT:    sltu a3, a3, a6
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    add t0, a1, t0
+; CHECK-NEXT:    srli a7, a4, 3
+; CHECK-NEXT:    sub t0, a5, a4
 ; CHECK-NEXT:    vsetvli t1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v7, a0
+; CHECK-NEXT:    vslidedown.vx v0, v7, a7
+; CHECK-NEXT:    sltu a7, a5, t0
+; CHECK-NEXT:    sub a6, a3, a6
+; CHECK-NEXT:    addi a7, a7, -1
+; CHECK-NEXT:    sltu a3, a3, a6
+; CHECK-NEXT:    and a7, a7, t0
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    add t0, a1, a0
 ; CHECK-NEXT:    and a0, a3, a6
 ; CHECK-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (t0), a2, v0.t
@@ -648,9 +648,9 @@ define void @strided_store_nxv17f64(<vscale x 17 x double> %v, ptr %ptr, i32 sig
 ; CHECK-NEXT:  .LBB48_6:
 ; CHECK-NEXT:    mul a3, a5, a2
 ; CHECK-NEXT:    srli a4, a4, 2
-; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v7, a4
+; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v24, (a1), a2, v0.t
 ; CHECK-NEXT:    ret

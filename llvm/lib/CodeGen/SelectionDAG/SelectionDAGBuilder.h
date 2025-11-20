@@ -232,6 +232,7 @@ public:
   BatchAAResults *BatchAA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const TargetTransformInfo *TTI = nullptr;
 
   class SDAGSwitchLowering : public SwitchCG::SwitchLowering {
   public:
@@ -285,7 +286,7 @@ public:
         FuncInfo(funcinfo), SwiftError(swifterror) {}
 
   void init(GCFunctionInfo *gfi, BatchAAResults *BatchAA, AssumptionCache *AC,
-            const TargetLibraryInfo *li);
+            const TargetLibraryInfo *li, const TargetTransformInfo &TTI);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
   /// this SelectionDAGBuilder object to be used for a new block. This doesn't
@@ -428,6 +429,10 @@ public:
   // floor power of two.
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
                                  SDValue Op);
+
+  // Lower nofpclass attributes to AssertNoFPClass
+  SDValue lowerNoFPClassToAssertNoFPClass(SelectionDAG &DAG,
+                                          const Instruction &I, SDValue Op);
 
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
                                 const CallBase *Call, unsigned ArgIdx,

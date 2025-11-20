@@ -89,19 +89,19 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV32-NEXT:    andi a1, a0, 1
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.x v8, a1
-; RV32-NEXT:    slli a1, a0, 27
-; RV32-NEXT:    slli a2, a0, 28
-; RV32-NEXT:    slli a3, a0, 30
-; RV32-NEXT:    slli a4, a0, 29
-; RV32-NEXT:    srli a3, a3, 31
-; RV32-NEXT:    srli a4, a4, 31
-; RV32-NEXT:    vslide1down.vx v8, v8, a3
-; RV32-NEXT:    srli a2, a2, 31
-; RV32-NEXT:    vslide1down.vx v8, v8, a4
+; RV32-NEXT:    slli a1, a0, 30
 ; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    vslide1down.vx v8, v8, a2
-; RV32-NEXT:    srli a0, a0, 5
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    slli a1, a0, 29
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    slli a1, a0, 28
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    slli a1, a0, 27
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    srli a0, a0, 5
 ; RV32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32-NEXT:    vand.vi v8, v8, 1
@@ -114,19 +114,19 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV64-NEXT:    andi a1, a0, 1
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a1
-; RV64-NEXT:    slli a1, a0, 59
-; RV64-NEXT:    slli a2, a0, 60
-; RV64-NEXT:    slli a3, a0, 62
-; RV64-NEXT:    slli a4, a0, 61
-; RV64-NEXT:    srli a3, a3, 63
-; RV64-NEXT:    srli a4, a4, 63
-; RV64-NEXT:    vslide1down.vx v8, v8, a3
-; RV64-NEXT:    srli a2, a2, 63
-; RV64-NEXT:    vslide1down.vx v8, v8, a4
+; RV64-NEXT:    slli a1, a0, 62
 ; RV64-NEXT:    srli a1, a1, 63
-; RV64-NEXT:    vslide1down.vx v8, v8, a2
-; RV64-NEXT:    srli a0, a0, 5
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    slli a1, a0, 61
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    slli a1, a0, 60
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    slli a1, a0, 59
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    srli a0, a0, 5
 ; RV64-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vand.vi v8, v8, 1

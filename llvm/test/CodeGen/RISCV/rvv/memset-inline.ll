@@ -709,9 +709,9 @@ define void @aligned_memset_zero_96(ptr %a) nounwind {
 ; RV32-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV32-BOTH-NEXT:    addi a1, a0, 80
-; RV32-BOTH-NEXT:    addi a0, a0, 64
 ; RV32-BOTH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-BOTH-NEXT:    vse64.v v12, (a1)
+; RV32-BOTH-NEXT:    addi a0, a0, 64
 ; RV32-BOTH-NEXT:    vse64.v v12, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -724,9 +724,9 @@ define void @aligned_memset_zero_96(ptr %a) nounwind {
 ; RV64-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV64-BOTH-NEXT:    addi a1, a0, 80
-; RV64-BOTH-NEXT:    addi a0, a0, 64
 ; RV64-BOTH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-BOTH-NEXT:    vse64.v v12, (a1)
+; RV64-BOTH-NEXT:    addi a0, a0, 64
 ; RV64-BOTH-NEXT:    vse64.v v12, (a0)
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr align 64 %a, i8 0, i64 96, i1 0)

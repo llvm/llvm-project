@@ -15,6 +15,7 @@
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
 #include "LoongArchRegisterInfo.h"
+#include "LoongArchSelectionDAGInfo.h"
 #include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
@@ -76,7 +77,7 @@ static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
 
 LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                                                  const LoongArchSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
 
   MVT GRLenVT = Subtarget.getGRLenVT();
 
@@ -1712,7 +1713,7 @@ lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 
   // Return vshuf4i.d
   if (VT == MVT::v2f64 || VT == MVT::v2i64)
-    return DAG.getNode(LoongArchISD::VSHUF4I, DL, VT, V1, V2,
+    return DAG.getNode(LoongArchISD::VSHUF4I_D, DL, VT, V1, V2,
                        DAG.getConstant(Imm, DL, GRLenVT));
 
   return DAG.getNode(LoongArchISD::VSHUF4I, DL, VT, V1,
@@ -4459,7 +4460,7 @@ SDValue LoongArchTargetLowering::lowerShiftRightParts(SDValue Op,
 
 // Returns the opcode of the target-specific SDNode that implements the 32-bit
 // form of the given Opcode.
-static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
+static unsigned getLoongArchWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
@@ -4495,7 +4496,7 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
 static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
                                    unsigned ExtOpc = ISD::ANY_EXTEND) {
   SDLoc DL(N);
-  LoongArchISD::NodeType WOpcode = getLoongArchWOpcode(N->getOpcode());
+  unsigned WOpcode = getLoongArchWOpcode(N->getOpcode());
   SDValue NewOp0, NewRes;
 
   switch (NumOp) {
@@ -7481,123 +7482,6 @@ bool LoongArchTargetLowering::allowsMisalignedMemoryAccesses(
   if (Fast)
     *Fast = 1;
   return true;
-}
-
-const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((LoongArchISD::NodeType)Opcode) {
-  case LoongArchISD::FIRST_NUMBER:
-    break;
-
-#define NODE_NAME_CASE(node)                                                   \
-  case LoongArchISD::node:                                                     \
-    return "LoongArchISD::" #node;
-
-    // TODO: Add more target-dependent nodes later.
-    NODE_NAME_CASE(CALL)
-    NODE_NAME_CASE(CALL_MEDIUM)
-    NODE_NAME_CASE(CALL_LARGE)
-    NODE_NAME_CASE(RET)
-    NODE_NAME_CASE(TAIL)
-    NODE_NAME_CASE(TAIL_MEDIUM)
-    NODE_NAME_CASE(TAIL_LARGE)
-    NODE_NAME_CASE(SELECT_CC)
-    NODE_NAME_CASE(BR_CC)
-    NODE_NAME_CASE(BRCOND)
-    NODE_NAME_CASE(SLL_W)
-    NODE_NAME_CASE(SRA_W)
-    NODE_NAME_CASE(SRL_W)
-    NODE_NAME_CASE(BSTRINS)
-    NODE_NAME_CASE(BSTRPICK)
-    NODE_NAME_CASE(MOVGR2FR_W)
-    NODE_NAME_CASE(MOVGR2FR_W_LA64)
-    NODE_NAME_CASE(MOVGR2FR_D)
-    NODE_NAME_CASE(MOVGR2FR_D_LO_HI)
-    NODE_NAME_CASE(MOVFR2GR_S_LA64)
-    NODE_NAME_CASE(FTINT)
-    NODE_NAME_CASE(BUILD_PAIR_F64)
-    NODE_NAME_CASE(SPLIT_PAIR_F64)
-    NODE_NAME_CASE(REVB_2H)
-    NODE_NAME_CASE(REVB_2W)
-    NODE_NAME_CASE(BITREV_4B)
-    NODE_NAME_CASE(BITREV_8B)
-    NODE_NAME_CASE(BITREV_W)
-    NODE_NAME_CASE(ROTR_W)
-    NODE_NAME_CASE(ROTL_W)
-    NODE_NAME_CASE(DIV_W)
-    NODE_NAME_CASE(DIV_WU)
-    NODE_NAME_CASE(MOD_W)
-    NODE_NAME_CASE(MOD_WU)
-    NODE_NAME_CASE(CLZ_W)
-    NODE_NAME_CASE(CTZ_W)
-    NODE_NAME_CASE(DBAR)
-    NODE_NAME_CASE(IBAR)
-    NODE_NAME_CASE(BREAK)
-    NODE_NAME_CASE(SYSCALL)
-    NODE_NAME_CASE(CRC_W_B_W)
-    NODE_NAME_CASE(CRC_W_H_W)
-    NODE_NAME_CASE(CRC_W_W_W)
-    NODE_NAME_CASE(CRC_W_D_W)
-    NODE_NAME_CASE(CRCC_W_B_W)
-    NODE_NAME_CASE(CRCC_W_H_W)
-    NODE_NAME_CASE(CRCC_W_W_W)
-    NODE_NAME_CASE(CRCC_W_D_W)
-    NODE_NAME_CASE(CSRRD)
-    NODE_NAME_CASE(CSRWR)
-    NODE_NAME_CASE(CSRXCHG)
-    NODE_NAME_CASE(IOCSRRD_B)
-    NODE_NAME_CASE(IOCSRRD_H)
-    NODE_NAME_CASE(IOCSRRD_W)
-    NODE_NAME_CASE(IOCSRRD_D)
-    NODE_NAME_CASE(IOCSRWR_B)
-    NODE_NAME_CASE(IOCSRWR_H)
-    NODE_NAME_CASE(IOCSRWR_W)
-    NODE_NAME_CASE(IOCSRWR_D)
-    NODE_NAME_CASE(CPUCFG)
-    NODE_NAME_CASE(MOVGR2FCSR)
-    NODE_NAME_CASE(MOVFCSR2GR)
-    NODE_NAME_CASE(CACOP_D)
-    NODE_NAME_CASE(CACOP_W)
-    NODE_NAME_CASE(VSHUF)
-    NODE_NAME_CASE(VPICKEV)
-    NODE_NAME_CASE(VPICKOD)
-    NODE_NAME_CASE(VPACKEV)
-    NODE_NAME_CASE(VPACKOD)
-    NODE_NAME_CASE(VILVL)
-    NODE_NAME_CASE(VILVH)
-    NODE_NAME_CASE(VSHUF4I)
-    NODE_NAME_CASE(VREPLVEI)
-    NODE_NAME_CASE(VREPLGR2VR)
-    NODE_NAME_CASE(XVPERMI)
-    NODE_NAME_CASE(XVPERM)
-    NODE_NAME_CASE(XVREPLVE0)
-    NODE_NAME_CASE(XVREPLVE0Q)
-    NODE_NAME_CASE(XVINSVE0)
-    NODE_NAME_CASE(VPICK_SEXT_ELT)
-    NODE_NAME_CASE(VPICK_ZEXT_ELT)
-    NODE_NAME_CASE(VREPLVE)
-    NODE_NAME_CASE(VALL_ZERO)
-    NODE_NAME_CASE(VANY_ZERO)
-    NODE_NAME_CASE(VALL_NONZERO)
-    NODE_NAME_CASE(VANY_NONZERO)
-    NODE_NAME_CASE(FRECIPE)
-    NODE_NAME_CASE(FRSQRTE)
-    NODE_NAME_CASE(VSLLI)
-    NODE_NAME_CASE(VSRLI)
-    NODE_NAME_CASE(VBSLL)
-    NODE_NAME_CASE(VBSRL)
-    NODE_NAME_CASE(VLDREPL)
-    NODE_NAME_CASE(VMSKLTZ)
-    NODE_NAME_CASE(VMSKGEZ)
-    NODE_NAME_CASE(VMSKEQZ)
-    NODE_NAME_CASE(VMSKNEZ)
-    NODE_NAME_CASE(XVMSKLTZ)
-    NODE_NAME_CASE(XVMSKGEZ)
-    NODE_NAME_CASE(XVMSKEQZ)
-    NODE_NAME_CASE(XVMSKNEZ)
-    NODE_NAME_CASE(VHADDW)
-  }
-#undef NODE_NAME_CASE
-  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

@@ -71,23 +71,22 @@ define fastcc <vscale x 64 x i32> @ret_split_nxv64i32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a3, a2, 3
-; CHECK-NEXT:    slli a4, a2, 5
 ; CHECK-NEXT:    slli a2, a2, 4
-; CHECK-NEXT:    sub a4, a4, a3
+; CHECK-NEXT:    add a4, a2, a3
 ; CHECK-NEXT:    add a5, a1, a3
-; CHECK-NEXT:    vl8re32.v v16, (a5)
-; CHECK-NEXT:    add a5, a1, a4
 ; CHECK-NEXT:    vl8re32.v v8, (a5)
 ; CHECK-NEXT:    add a5, a1, a2
+; CHECK-NEXT:    vl8re32.v v16, (a5)
+; CHECK-NEXT:    add a5, a1, a4
 ; CHECK-NEXT:    vl8re32.v v24, (a5)
 ; CHECK-NEXT:    vl8re32.v v0, (a1)
 ; CHECK-NEXT:    vs8r.v v0, (a0)
 ; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    vs8r.v v24, (a2)
+; CHECK-NEXT:    vs8r.v v16, (a2)
 ; CHECK-NEXT:    add a3, a0, a3
-; CHECK-NEXT:    vs8r.v v16, (a3)
+; CHECK-NEXT:    vs8r.v v8, (a3)
 ; CHECK-NEXT:    add a0, a0, a4
-; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v24, (a0)
 ; CHECK-NEXT:    ret
   %v = load <vscale x 64 x i32>, ptr %x
   ret <vscale x 64 x i32> %v
@@ -105,11 +104,10 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(ptr %x) {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 32 * vlenb
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a3, a2, 3
-; CHECK-NEXT:    slli a4, a2, 5
-; CHECK-NEXT:    slli a5, a2, 4
-; CHECK-NEXT:    slli a2, a2, 6
-; CHECK-NEXT:    sub a6, a4, a3
-; CHECK-NEXT:    add a7, a4, a3
+; CHECK-NEXT:    slli a4, a2, 4
+; CHECK-NEXT:    slli a5, a2, 5
+; CHECK-NEXT:    add a6, a4, a3
+; CHECK-NEXT:    add a7, a5, a3
 ; CHECK-NEXT:    add t0, a1, a6
 ; CHECK-NEXT:    add t1, a1, a7
 ; CHECK-NEXT:    vl8re32.v v8, (t0)
@@ -125,7 +123,8 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(ptr %x) {
 ; CHECK-NEXT:    add t0, sp, t0
 ; CHECK-NEXT:    addi t0, t0, 16
 ; CHECK-NEXT:    vs8r.v v8, (t0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    sub t0, a2, a5
+; CHECK-NEXT:    add t0, a5, a4
+; CHECK-NEXT:    slli a2, a2, 6
 ; CHECK-NEXT:    add t1, a1, t0
 ; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vl8re32.v v8, (t1)
@@ -139,17 +138,17 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(ptr %x) {
 ; CHECK-NEXT:    addi t1, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (t1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    add t1, a1, a3
-; CHECK-NEXT:    add t2, a1, a5
+; CHECK-NEXT:    add t2, a1, a4
 ; CHECK-NEXT:    vl8re32.v v24, (t1)
-; CHECK-NEXT:    add t1, a1, a4
+; CHECK-NEXT:    add t1, a1, a5
 ; CHECK-NEXT:    vl8re32.v v16, (t2)
 ; CHECK-NEXT:    vl8re32.v v8, (t1)
 ; CHECK-NEXT:    vl8re32.v v0, (a1)
 ; CHECK-NEXT:    vs8r.v v0, (a0)
-; CHECK-NEXT:    add a4, a0, a4
-; CHECK-NEXT:    vs8r.v v8, (a4)
 ; CHECK-NEXT:    add a5, a0, a5
-; CHECK-NEXT:    vs8r.v v16, (a5)
+; CHECK-NEXT:    vs8r.v v8, (a5)
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vs8r.v v16, (a4)
 ; CHECK-NEXT:    add a3, a0, a3
 ; CHECK-NEXT:    vs8r.v v24, (a3)
 ; CHECK-NEXT:    add a2, a0, a2
@@ -232,14 +231,14 @@ define fastcc <vscale x 32 x i1> @ret_nxv32i1_param_nxv32i1_nxv32i1(<vscale x 32
 define fastcc <vscale x 32 x i32> @ret_nxv32i32_param_nxv32i32_nxv32i32_nxv32i32_i32(<vscale x 32 x i32> %x, <vscale x 32 x i32> %y, <vscale x 32 x i32> %z, i32 %w) {
 ; CHECK-LABEL: ret_nxv32i32_param_nxv32i32_nxv32i32_nxv32i32_i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8re32.v v24, (a0)
+; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v24
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a3, a0, a1
-; CHECK-NEXT:    vl8re32.v v24, (a3)
-; CHECK-NEXT:    vsetvli a3, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vadd.vv v16, v16, v24
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    vadd.vv v8, v8, v24
+; CHECK-NEXT:    vadd.vv v16, v16, v24
 ; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    vl8re32.v v24, (a1)
 ; CHECK-NEXT:    vadd.vv v16, v16, v24
@@ -500,9 +499,9 @@ define fastcc <vscale x 32 x i32> @vector_arg_indirect_stack(i32 %0, i32 %1, i32
 ; CHECK-LABEL: vector_arg_indirect_stack:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re32.v v24, (t5)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v24
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, t5, a0
 ; CHECK-NEXT:    vl8re32.v v24, (a0)

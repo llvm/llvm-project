@@ -571,7 +571,6 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                          /*structured=*/true, /*implicit=*/true,
                                          accSupport.getVariableName(var));
     } else {
-      SmallVector<Value> bounds;
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
                                 /*structured=*/true, /*implicit=*/true,

@@ -791,6 +791,12 @@ TYPE_PARSER(construct<OmpDirectiveNameModifier>(OmpDirectiveNameParser{}))
 TYPE_PARSER(construct<OmpExpectation>( //
     "PRESENT" >> pure(OmpExpectation::Value::Present)))
 
+TYPE_PARSER(construct<OmpFallbackModifier>("FALLBACK"_tok >>
+    parenthesized( //
+        "ABORT" >> pure(OmpFallbackModifier::Value::Abort) ||
+        "DEFAULT_MEM" >> pure(OmpFallbackModifier::Value::Default_Mem) ||
+        "NULL" >> pure(OmpFallbackModifier::Value::Null))))
+
 TYPE_PARSER(construct<OmpInteropRuntimeIdentifier>(
     construct<OmpInteropRuntimeIdentifier>(charLiteralConstant) ||
     construct<OmpInteropRuntimeIdentifier>(scalarIntConstantExpr)))
@@ -857,8 +863,7 @@ TYPE_PARSER(construct<OmpOrderingModifier>(
     "SIMD" >> pure(OmpOrderingModifier::Value::Simd)))
 
 TYPE_PARSER(construct<OmpPrescriptiveness>(
-    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict) ||
-    "FALLBACK" >> pure(OmpPrescriptiveness::Value::Fallback)))
+    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict)))
 
 TYPE_PARSER(construct<OmpPresentModifier>( //
     "PRESENT" >> pure(OmpPresentModifier::Value::Present)))
@@ -925,7 +930,7 @@ TYPE_PARSER( //
     sourced(construct<OmpDynGroupprivateClause::Modifier>(
         Parser<OmpAccessGroup>{})) ||
     sourced(construct<OmpDynGroupprivateClause::Modifier>(
-        Parser<OmpPrescriptiveness>{})))
+        Parser<OmpFallbackModifier>{})))
 
 TYPE_PARSER(
     sourced(construct<OmpDeviceClause::Modifier>(Parser<OmpDeviceModifier>{})))

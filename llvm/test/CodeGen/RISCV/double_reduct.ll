@@ -8,9 +8,9 @@ define float @add_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: add_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfredusum.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
@@ -24,15 +24,15 @@ define float @fmul_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vslidedown.vi v11, v9, 2
 ; CHECK-NEXT:    vfmul.vv v8, v8, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 2
-; CHECK-NEXT:    vfmul.vv v9, v9, v10
 ; CHECK-NEXT:    vrgather.vi v10, v8, 1
+; CHECK-NEXT:    vfmul.vv v9, v9, v11
+; CHECK-NEXT:    vrgather.vi v11, v9, 1
 ; CHECK-NEXT:    vfmul.vv v8, v8, v10
-; CHECK-NEXT:    vrgather.vi v10, v9, 1
-; CHECK-NEXT:    vfmul.vv v9, v9, v10
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vfmv.f.s fa4, v9
+; CHECK-NEXT:    vfmul.vv v8, v9, v11
+; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fmul.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
@@ -130,10 +130,10 @@ define i32 @mul_i32(<4 x i32> %a, <4 x i32> %b) {
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v10, v8, 2
 ; RV32-NEXT:    vmul.vv v8, v8, v10
-; RV32-NEXT:    vrgather.vi v10, v8, 1
-; RV32-NEXT:    vmul.vv v8, v8, v10
 ; RV32-NEXT:    vslidedown.vi v10, v9, 2
 ; RV32-NEXT:    vmul.vv v9, v9, v10
+; RV32-NEXT:    vrgather.vi v10, v8, 1
+; RV32-NEXT:    vmul.vv v8, v8, v10
 ; RV32-NEXT:    vrgather.vi v10, v9, 1
 ; RV32-NEXT:    vmul.vv v9, v9, v10
 ; RV32-NEXT:    vmv.x.s a0, v8
@@ -146,10 +146,10 @@ define i32 @mul_i32(<4 x i32> %a, <4 x i32> %b) {
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v10, v8, 2
 ; RV64-NEXT:    vmul.vv v8, v8, v10
-; RV64-NEXT:    vrgather.vi v10, v8, 1
-; RV64-NEXT:    vmul.vv v8, v8, v10
 ; RV64-NEXT:    vslidedown.vi v10, v9, 2
 ; RV64-NEXT:    vmul.vv v9, v9, v10
+; RV64-NEXT:    vrgather.vi v10, v8, 1
+; RV64-NEXT:    vmul.vv v8, v8, v10
 ; RV64-NEXT:    vrgather.vi v10, v9, 1
 ; RV64-NEXT:    vmul.vv v9, v9, v10
 ; RV64-NEXT:    vmv.x.s a0, v8

@@ -468,10 +468,12 @@ define void @insert_v8i1_v4i1_0(ptr %vp, ptr %svp) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
@@ -492,10 +494,12 @@ define void @insert_v8i1_v4i1_4(ptr %vp, ptr %svp) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma

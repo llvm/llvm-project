@@ -892,12 +892,12 @@ define <vscale x 2 x i32> @vpselect_trunc(<vscale x 2 x i32> %passthru, <vscale 
 define void @test_dag_loop() {
 ; CHECK-LABEL: test_dag_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 0, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    vmv4r.v v20, v16
+; CHECK-NEXT:    vmv.v.i v20, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
 ; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma

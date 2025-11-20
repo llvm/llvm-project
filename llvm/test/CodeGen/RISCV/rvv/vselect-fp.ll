@@ -528,8 +528,8 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    ret
   %cond = and <vscale x 16 x i1> %ma, %mb

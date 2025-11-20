@@ -1352,6 +1352,7 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 sign
 ; NOREMOVAL-LABEL: sextw_sh2add:
 ; NOREMOVAL:       # %bb.0:
 ; NOREMOVAL-NEXT:    sh2add a2, a2, a3
+; NOREMOVAL-NEXT:    mv a2, a2
 ; NOREMOVAL-NEXT:    beqz a0, .LBB22_2
 ; NOREMOVAL-NEXT:  # %bb.1:
 ; NOREMOVAL-NEXT:    sw a2, 0(a1)
@@ -1446,14 +1447,14 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s s1, v8
+; CHECK-NEXT:    vmv.x.s s0, v8
+; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:  .LBB24_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call bar
-; CHECK-NEXT:    sllw s1, s1, s0
+; CHECK-NEXT:    sllw s0, s0, s1
 ; CHECK-NEXT:    bnez a0, .LBB24_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -1468,9 +1469,9 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    mv s0, a0
 ; NOREMOVAL-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; NOREMOVAL-NEXT:    vmv.x.s s1, v8
+; NOREMOVAL-NEXT:    mv s0, a0
 ; NOREMOVAL-NEXT:  .LBB24_1: # %bb2
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NOREMOVAL-NEXT:    sext.w a0, s1
