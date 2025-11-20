@@ -458,7 +458,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   APInt OffsetQuot;
   APInt::sdivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
   Value *Offset = VarOffset.first;
-  if (Rem != 0 || OffsetQuot.isZero()) {
+  if (Rem != 0) {
     unsigned ElemSizeShift = Log2_64(VecElemSize);
     SimplifyQuery SQ(DL);
     SQ.CxtI = GEP;
