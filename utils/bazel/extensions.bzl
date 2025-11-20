@@ -36,7 +36,7 @@ def _llvm_repos_extension_impl(module_ctx):
         ],
     )
 
-    vulkan_sdk_setup(name = "vulkan_sdk_setup")
+    vulkan_sdk_setup(name = "vulkan_sdk")
 
     http_archive(
         name = "gmp",

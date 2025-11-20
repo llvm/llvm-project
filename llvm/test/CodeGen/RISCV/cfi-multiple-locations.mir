@@ -1,7 +1,8 @@
-# RUN: llc %s -mtriple=riscv64 \
+# RUN: not --crash llc %s -mtriple=riscv64 \
 # RUN: -run-pass=cfi-instr-inserter \
-# RUN: -riscv-enable-cfi-instr-inserter=true
-# UNSUPPORTED: target={{.*}}
+# RUN: -riscv-enable-cfi-instr-inserter=true 2>&1 | FileCheck %s
+
+# CHECK: LLVM ERROR: Different saved locations for the same CSR
 
 # Technically, it is possible that a callee-saved register is saved in multiple different locations.
 # CFIInstrInserter should handle this, but currently it does not.
