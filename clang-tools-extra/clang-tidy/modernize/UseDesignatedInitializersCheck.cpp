@@ -1,4 +1,4 @@
-//===--- UseDesignatedInitializersCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,6 +40,12 @@ static constexpr char StrictCppStandardComplianceName[] =
     "StrictCppStandardCompliance";
 static constexpr bool StrictCppStandardComplianceDefault = true;
 
+static unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
+  return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
+    return isa<DesignatedInitExpr>(InitExpr);
+  });
+}
+
 namespace {
 
 struct Designators {
@@ -73,12 +79,6 @@ private:
                                    utils::getUnwrittenDesignators(InitList));
   }
 };
-
-unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
-  return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
-    return isa<DesignatedInitExpr>(InitExpr);
-  });
-}
 
 AST_MATCHER(CXXRecordDecl, isAggregate) {
   return Node.hasDefinition() && Node.isAggregate();
@@ -152,7 +152,7 @@ void UseDesignatedInitializersCheck::check(
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
       return;
     {
-      DiagnosticBuilder Diag =
+      const DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(),
                "use designated initializer list to initialize %0");
       Diag << InitList->getType() << InitList->getSourceRange();

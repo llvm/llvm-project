@@ -31,8 +31,6 @@ using namespace llvm;
 // Support Code for the Semantic Actions.
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-
 RecordsEntry::RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
 RecordsEntry::RecordsEntry(std::unique_ptr<ForeachLoop> Loop)
     : Loop(std::move(Loop)) {}
@@ -41,6 +39,7 @@ RecordsEntry::RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
 RecordsEntry::RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump)
     : Dump(std::move(Dump)) {}
 
+namespace llvm {
 struct SubClassReference {
   SMRange RefRange;
   const Record *Rec = nullptr;
@@ -61,6 +60,7 @@ struct SubMultiClassReference {
   bool isInvalid() const { return MC == nullptr; }
   void dump() const;
 };
+} // end namespace llvm
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SubMultiClassReference::dump() const {
@@ -73,8 +73,6 @@ LLVM_DUMP_METHOD void SubMultiClassReference::dump() const {
     TA->dump();
 }
 #endif
-
-} // end namespace llvm
 
 static bool checkBitsConcrete(Record &R, const RecordVal &RV) {
   const auto *BV = cast<BitsInit>(RV.getValue());

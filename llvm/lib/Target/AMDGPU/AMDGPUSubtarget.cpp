@@ -38,6 +38,10 @@ bool AMDGPUSubtarget::useRealTrue16Insts() const {
   return hasTrue16BitInsts() && EnableRealTrue16Insts;
 }
 
+bool AMDGPUSubtarget::hasD16Writes32BitVgpr() const {
+  return EnableD16Writes32BitVgpr;
+}
+
 // Returns the maximum per-workgroup LDS allocation size (in bytes) that still
 // allows the given function to achieve an occupancy of NWaves waves per
 // SIMD / EU, taking into account only the function's *maximum* workgroup size.
@@ -278,7 +282,7 @@ bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
 }
 
 bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
-  Function *Kernel = I->getParent()->getParent();
+  Function *Kernel = I->getFunction();
   unsigned MinSize = 0;
   unsigned MaxSize = getFlatWorkGroupSizes(*Kernel).second;
   bool IdQuery = false;

@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -48,30 +49,29 @@ using namespace llvm;
 namespace {
 
 class CodeEmitterGen {
-  const RecordKeeper &Records;
+  const RecordKeeper &RK;
+  CodeGenTarget Target;
+  const CodeGenHwModes &CGH;
 
 public:
-  CodeEmitterGen(const RecordKeeper &R) : Records(R) {}
+  explicit CodeEmitterGen(const RecordKeeper &RK);
 
   void run(raw_ostream &O);
 
 private:
   int getVariableBit(const std::string &VarName, const BitsInit *BI, int Bit);
-  std::pair<std::string, std::string>
-  getInstructionCases(const Record *R, const CodeGenTarget &Target);
+  std::pair<std::string, std::string> getInstructionCases(const Record *R);
   void addInstructionCasesForEncoding(const Record *R,
                                       const Record *EncodingDef,
-                                      const CodeGenTarget &Target,
                                       std::string &Case,
                                       std::string &BitOffsetCase);
   bool addCodeToMergeInOperand(const Record *R, const BitsInit *BI,
                                const std::string &VarName, std::string &Case,
-                               std::string &BitOffsetCase,
-                               const CodeGenTarget &Target);
+                               std::string &BitOffsetCase);
 
   void emitInstructionBaseValues(
       raw_ostream &O, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
-      const CodeGenTarget &Target, unsigned HwMode = DefaultMode);
+      unsigned HwMode = DefaultMode);
   void
   emitCaseMap(raw_ostream &O,
               const std::map<std::string, std::vector<std::string>> &CaseMap);
@@ -102,8 +102,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
                                              const BitsInit *BI,
                                              const std::string &VarName,
                                              std::string &Case,
-                                             std::string &BitOffsetCase,
-                                             const CodeGenTarget &Target) {
+                                             std::string &BitOffsetCase) {
   CodeGenInstruction &CGI = Target.getInstruction(R);
 
   // Determine if VarName actually contributes to the Inst encoding.
@@ -141,58 +140,28 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   StringRef EncoderMethodName =
       CGI.Operands[SO.first].EncoderMethodNames[SO.second];
 
+  raw_string_ostream OS(Case);
+  indent Indent(6);
+
+  OS << Indent << "// op: " << VarName << '\n';
+
   if (UseAPInt)
-    Case += "      op.clearAllBits();\n";
+    OS << Indent << "op.clearAllBits();\n";
 
-  Case += "      // op: " + VarName + "\n";
-
-  // If the source operand has a custom encoder, use it.
   if (!EncoderMethodName.empty()) {
-    raw_string_ostream CaseOS(Case);
-    CaseOS << indent(6);
     if (UseAPInt)
-      CaseOS << EncoderMethodName << "(MI, " << OpIdx << ", op";
+      OS << Indent << EncoderMethodName << "(MI, " << OpIdx
+         << ", op, Fixups, STI);\n";
     else
-      CaseOS << "op = " << EncoderMethodName << "(MI, " << OpIdx;
-    CaseOS << ", Fixups, STI);\n";
+      OS << Indent << "op = " << EncoderMethodName << "(MI, " << OpIdx
+         << ", Fixups, STI);\n";
   } else {
-    if (UseAPInt) {
-      Case +=
-          "      getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
-      Case += ", op, Fixups, STI";
-    } else {
-      Case += "      op = getMachineOpValue(MI, MI.getOperand(" +
-              utostr(OpIdx) + ")";
-      Case += ", Fixups, STI";
-    }
-    Case += ");\n";
-  }
-
-  // Precalculate the number of lits this variable contributes to in the
-  // operand. If there is a single lit (consecutive range of bits) we can use a
-  // destructive sequence on APInt that reduces memory allocations.
-  int NumOperandLits = 0;
-  for (int TmpBit = Bit; TmpBit >= 0;) {
-    int VarBit = getVariableBit(VarName, BI, TmpBit);
-
-    // If this bit isn't from a variable, skip it.
-    if (VarBit == -1) {
-      --TmpBit;
-      continue;
-    }
-
-    // Figure out the consecutive range of bits covered by this operand, in
-    // order to generate better encoding code.
-    int BeginVarBit = VarBit;
-    int N = 1;
-    for (--TmpBit; TmpBit >= 0;) {
-      VarBit = getVariableBit(VarName, BI, TmpBit);
-      if (VarBit == -1 || VarBit != (BeginVarBit - N))
-        break;
-      ++N;
-      --TmpBit;
-    }
-    ++NumOperandLits;
+    if (UseAPInt)
+      OS << Indent << "getMachineOpValue(MI, MI.getOperand(" << OpIdx
+         << "), op, Fixups, STI);\n";
+    else
+      OS << Indent << "op = getMachineOpValue(MI, MI.getOperand(" << OpIdx
+         << "), Fixups, STI);\n";
   }
 
   unsigned BitOffset = -1;
@@ -218,52 +187,25 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
       --Bit;
     }
 
-    std::string MaskStr;
-    int OpShift;
-
     unsigned LoBit = BeginVarBit - N + 1;
-    unsigned HiBit = LoBit + N;
     unsigned LoInstBit = BeginInstBit - N + 1;
     BitOffset = LoInstBit;
     if (UseAPInt) {
-      std::string ExtractStr;
-      if (N >= 64) {
-        ExtractStr = "op.extractBits(" + itostr(HiBit - LoBit) + ", " +
-                     itostr(LoBit) + ")";
-        Case += "      Value.insertBits(" + ExtractStr + ", " +
-                itostr(LoInstBit) + ");\n";
-      } else {
-        ExtractStr = "op.extractBitsAsZExtValue(" + itostr(HiBit - LoBit) +
-                     ", " + itostr(LoBit) + ")";
-        Case += "      Value.insertBits(" + ExtractStr + ", " +
-                itostr(LoInstBit) + ", " + itostr(HiBit - LoBit) + ");\n";
-      }
+      if (N > 64)
+        OS << Indent << "Value.insertBits(op.extractBits(" << N << ", " << LoBit
+           << "), " << LoInstBit << ");\n";
+      else
+        OS << Indent << "Value.insertBits(op.extractBitsAsZExtValue(" << N
+           << ", " << LoBit << "), " << LoInstBit << ", " << N << ");\n";
     } else {
-      uint64_t OpMask = ~(uint64_t)0 >> (64 - N);
-      OpShift = BeginVarBit - N + 1;
-      OpMask <<= OpShift;
-      MaskStr = "UINT64_C(" + utostr(OpMask) + ")";
-      OpShift = BeginInstBit - BeginVarBit;
-
-      if (NumOperandLits == 1) {
-        Case += "      op &= " + MaskStr + ";\n";
-        if (OpShift > 0) {
-          Case += "      op <<= " + itostr(OpShift) + ";\n";
-        } else if (OpShift < 0) {
-          Case += "      op >>= " + itostr(-OpShift) + ";\n";
-        }
-        Case += "      Value |= op;\n";
-      } else {
-        if (OpShift > 0) {
-          Case += "      Value |= (op & " + MaskStr + ") << " +
-                  itostr(OpShift) + ";\n";
-        } else if (OpShift < 0) {
-          Case += "      Value |= (op & " + MaskStr + ") >> " +
-                  itostr(-OpShift) + ";\n";
-        } else {
-          Case += "      Value |= (op & " + MaskStr + ");\n";
-        }
-      }
+      uint64_t OpMask = maskTrailingOnes<uint64_t>(N) << LoBit;
+      OS << Indent << "Value |= (op & " << format_hex(OpMask, 0) << ')';
+      int OpShift = BeginInstBit - BeginVarBit;
+      if (OpShift > 0)
+        OS << " << " << OpShift;
+      else if (OpShift < 0)
+        OS << " >> " << -OpShift;
+      OS << ";\n";
     }
   }
 
@@ -277,8 +219,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
 }
 
 std::pair<std::string, std::string>
-CodeEmitterGen::getInstructionCases(const Record *R,
-                                    const CodeGenTarget &Target) {
+CodeEmitterGen::getInstructionCases(const Record *R) {
   std::string Case, BitOffsetCase;
 
   auto Append = [&](const std::string &S) {
@@ -287,8 +228,7 @@ CodeEmitterGen::getInstructionCases(const Record *R,
   };
 
   if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
-    const CodeGenHwModes &HWM = Target.getHwModes();
-    EncodingInfoByHwMode EBM(RV, HWM);
+    EncodingInfoByHwMode EBM(RV, CGH);
 
     // Invoke the interface to obtain the HwMode ID controlling the
     // EncodingInfo for the current subtarget. This interface will
@@ -304,7 +244,7 @@ CodeEmitterGen::getInstructionCases(const Record *R,
             "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
       } else {
         Case += "      case " + itostr(ModeId) + ": InstBitsByHw = InstBits_" +
-                HWM.getMode(ModeId).Name.str();
+                CGH.getMode(ModeId).Name.str();
       }
       Case += "; break;\n";
     }
@@ -326,20 +266,20 @@ CodeEmitterGen::getInstructionCases(const Record *R,
     Append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
     for (auto &[ModeId, Encoding] : EBM) {
       Append("      case " + itostr(ModeId) + ": {\n");
-      addInstructionCasesForEncoding(R, Encoding, Target, Case, BitOffsetCase);
+      addInstructionCasesForEncoding(R, Encoding, Case, BitOffsetCase);
       Append("      break;\n");
       Append("      }\n");
     }
     Append("      }\n");
     return {std::move(Case), std::move(BitOffsetCase)};
   }
-  addInstructionCasesForEncoding(R, R, Target, Case, BitOffsetCase);
+  addInstructionCasesForEncoding(R, R, Case, BitOffsetCase);
   return {std::move(Case), std::move(BitOffsetCase)};
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(
-    const Record *R, const Record *EncodingDef, const CodeGenTarget &Target,
-    std::string &Case, std::string &BitOffsetCase) {
+    const Record *R, const Record *EncodingDef, std::string &Case,
+    std::string &BitOffsetCase) {
   const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
 
   // Loop over all of the fields in the instruction, determining which are the
@@ -354,8 +294,8 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
     if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
       continue;
 
-    Success &= addCodeToMergeInOperand(R, BI, RV.getName().str(), Case,
-                                       BitOffsetCase, Target);
+    Success &=
+        addCodeToMergeInOperand(R, BI, RV.getName().str(), Case, BitOffsetCase);
   }
   // Avoid empty switches.
   if (BitOffsetCase.size() == BitOffsetCaseSizeBeforeLoop)
@@ -389,19 +329,18 @@ static void emitInstBits(raw_ostream &OS, const APInt &Bits) {
 
 void CodeEmitterGen::emitInstructionBaseValues(
     raw_ostream &O, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
-    const CodeGenTarget &Target, unsigned HwMode) {
-  const CodeGenHwModes &HWM = Target.getHwModes();
+    unsigned HwMode) {
   if (HwMode == DefaultMode)
     O << "  static const uint64_t InstBits[] = {\n";
   else
-    O << "  static const uint64_t InstBits_"
-      << HWM.getModeName(HwMode, /*IncludeDefault=*/true) << "[] = {\n";
+    O << "  static const uint64_t InstBits_" << CGH.getModeName(HwMode)
+      << "[] = {\n";
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
     const Record *R = CGI->TheDef;
     const Record *EncodingDef = R;
     if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
-      EncodingInfoByHwMode EBM(RV, HWM);
+      EncodingInfoByHwMode EBM(RV, CGH);
       if (EBM.hasMode(HwMode)) {
         EncodingDef = EBM.get(HwMode);
       } else {
@@ -447,29 +386,29 @@ void CodeEmitterGen::emitCaseMap(
   }
 }
 
+CodeEmitterGen::CodeEmitterGen(const RecordKeeper &RK)
+    : RK(RK), Target(RK), CGH(Target.getHwModes()) {
+  // For little-endian instruction bit encodings, reverse the bit order.
+  Target.reverseBitsForLittleEndianEncoding();
+}
+
 void CodeEmitterGen::run(raw_ostream &O) {
   emitSourceFileHeader("Machine Code Emitter", O);
-
-  CodeGenTarget Target(Records);
-
-  // For little-endian instruction bit encodings, reverse the bit order
-  Target.reverseBitsForLittleEndianEncoding();
 
   ArrayRef<const CodeGenInstruction *> EncodedInstructions =
       Target.getTargetNonPseudoInstructions();
 
   if (Target.hasVariableLengthEncodings()) {
-    emitVarLenCodeEmitter(Records, O);
+    emitVarLenCodeEmitter(RK, O);
     return;
   }
-  const CodeGenHwModes &HWM = Target.getHwModes();
   // The set of HwModes used by instruction encodings.
   std::set<unsigned> HwModes;
   BitWidth = 0;
   for (const CodeGenInstruction *CGI : EncodedInstructions) {
     const Record *R = CGI->TheDef;
     if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
-      EncodingInfoByHwMode EBM(RV, HWM);
+      EncodingInfoByHwMode EBM(RV, CGH);
       for (const auto &[Key, Value] : EBM) {
         const BitsInit *BI = Value->getValueAsBitsInit("Inst");
         BitWidth = std::max(BitWidth, BI->getNumBits());
@@ -498,13 +437,13 @@ void CodeEmitterGen::run(raw_ostream &O) {
   }
 
   // Emit instruction base values
-  emitInstructionBaseValues(O, EncodedInstructions, Target, DefaultMode);
+  emitInstructionBaseValues(O, EncodedInstructions, DefaultMode);
   if (!HwModes.empty()) {
     // Emit table for instrs whose encodings are controlled by HwModes.
     for (unsigned HwMode : HwModes) {
       if (HwMode == DefaultMode)
         continue;
-      emitInstructionBaseValues(O, EncodedInstructions, Target, HwMode);
+      emitInstructionBaseValues(O, EncodedInstructions, HwMode);
     }
 
     // This pointer will be assigned to the HwMode table later.
@@ -521,7 +460,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
     std::string InstName =
         (R->getValueAsString("Namespace") + "::" + R->getName()).str();
     std::string Case, BitOffsetCase;
-    std::tie(Case, BitOffsetCase) = getInstructionCases(R, Target);
+    std::tie(Case, BitOffsetCase) = getInstructionCases(R);
 
     CaseMap[Case].push_back(InstName);
     BitOffsetCaseMap[BitOffsetCase].push_back(std::move(InstName));
@@ -532,12 +471,8 @@ void CodeEmitterGen::run(raw_ostream &O) {
     << ";\n";
   O << R"(
   const unsigned opcode = MI.getOpcode();
-  if (opcode < FirstSupportedOpcode) {
-    std::string msg;
-    raw_string_ostream Msg(msg);
-    Msg << "Unsupported instruction: " << MI;
-    report_fatal_error(Msg.str().c_str());
-  }
+  if (opcode < FirstSupportedOpcode)
+    reportUnsupportedInst(MI);
   unsigned TableIndex = opcode - FirstSupportedOpcode;
 )";
 
@@ -563,10 +498,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
 
   // Default case: unhandled opcode.
   O << "  default:\n"
-    << "    std::string msg;\n"
-    << "    raw_string_ostream Msg(msg);\n"
-    << "    Msg << \"Not supported instr: \" << MI;\n"
-    << "    report_fatal_error(Msg.str().c_str());\n"
+    << "    reportUnsupportedInst(MI);\n"
     << "  }\n";
   if (UseAPInt)
     O << "  Inst = Value;\n";
@@ -582,12 +514,10 @@ void CodeEmitterGen::run(raw_ostream &O) {
     << "    const MCSubtargetInfo &STI) const {\n"
     << "  switch (MI.getOpcode()) {\n";
   emitCaseMap(O, BitOffsetCaseMap);
-  O << "  }\n"
-    << "  std::string msg;\n"
-    << "  raw_string_ostream Msg(msg);\n"
-    << "  Msg << \"Not supported instr[opcode]: \" << MI << \"[\" << OpNum "
-       "<< \"]\";\n"
-    << "  report_fatal_error(Msg.str().c_str());\n"
+  O << "  default:\n"
+    << "    reportUnsupportedInst(MI);\n"
+    << "  }\n"
+    << "  reportUnsupportedOperand(MI, OpNum);\n"
     << "}\n\n"
     << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
 }

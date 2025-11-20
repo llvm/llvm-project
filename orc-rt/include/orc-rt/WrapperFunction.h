@@ -14,8 +14,11 @@
 #define ORC_RT_WRAPPERFUNCTION_H
 
 #include "orc-rt-c/WrapperFunction.h"
+#include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Error.h"
+#include "orc-rt/ExecutorAddress.h"
 #include "orc-rt/bind.h"
+#include "orc-rt/move_only_function.h"
 
 #include <utility>
 
@@ -105,61 +108,59 @@ private:
 
 namespace detail {
 
+template <typename RetT, typename ReturnT, typename... ArgTs>
+struct WFHandlerTraitsImpl {
+  static_assert(std::is_void_v<RetT>,
+                "Async wrapper function handler must return void");
+  typedef ReturnT YieldType;
+  typedef std::tuple<std::decay_t<ArgTs>...> ArgTupleType;
+
+  // Forwards arguments based on the parameter types of the handler.
+  template <typename FnT> class ForwardArgsAsRequested {
+  public:
+    ForwardArgsAsRequested(FnT &&Fn) : Fn(std::move(Fn)) {}
+    void operator()(ArgTs &...Args) { Fn(std::forward<ArgTs>(Args)...); }
+
+  private:
+    FnT Fn;
+  };
+
+  template <typename FnT>
+  static ForwardArgsAsRequested<std::decay_t<FnT>>
+  forwardArgsAsRequested(FnT &&Fn) {
+    return ForwardArgsAsRequested<std::decay_t<FnT>>(std::forward<FnT>(Fn));
+  }
+};
+
 template <typename C>
-struct WFCallableTraits
-    : public WFCallableTraits<
-          decltype(&std::remove_cv_t<std::remove_reference_t<C>>::operator())> {
-};
-
-template <typename RetT> struct WFCallableTraits<RetT()> {
-  typedef void HeadArgType;
-};
-
-template <typename RetT, typename ArgT, typename... ArgTs>
-struct WFCallableTraits<RetT(ArgT, ArgTs...)> {
-  typedef ArgT HeadArgType;
-  typedef std::tuple<ArgTs...> TailArgTuple;
-};
-
-template <typename RetT, typename... ArgTs>
-struct WFCallableTraits<RetT (*)(ArgTs...)>
-    : public WFCallableTraits<RetT(ArgTs...)> {};
-
-template <typename RetT, typename... ArgTs>
-struct WFCallableTraits<RetT (&)(ArgTs...)>
-    : public WFCallableTraits<RetT(ArgTs...)> {};
-
-template <typename ClassT, typename RetT, typename... ArgTs>
-struct WFCallableTraits<RetT (ClassT::*)(ArgTs...)>
-    : public WFCallableTraits<RetT(ArgTs...)> {};
-
-template <typename ClassT, typename RetT, typename... ArgTs>
-struct WFCallableTraits<RetT (ClassT::*)(ArgTs...) const>
-    : public WFCallableTraits<RetT(ArgTs...)> {};
+using WFHandlerTraits = CallableTraitsHelper<WFHandlerTraitsImpl, C>;
 
 template <typename Serializer> class StructuredYieldBase {
 public:
-  StructuredYieldBase(orc_rt_SessionRef Session, void *CallCtx,
+  StructuredYieldBase(orc_rt_SessionRef Session, uint64_t CallId,
                       orc_rt_WrapperFunctionReturn Return, Serializer &&S)
-      : Session(Session), CallCtx(CallCtx), Return(Return),
+      : Session(Session), CallId(CallId), Return(Return),
         S(std::forward<Serializer>(S)) {}
 
 protected:
   orc_rt_SessionRef Session;
-  void *CallCtx;
+  uint64_t CallId;
   orc_rt_WrapperFunctionReturn Return;
   std::decay_t<Serializer> S;
 };
 
+template <typename RetT, typename Serializer> class StructuredYield;
+
 template <typename RetT, typename Serializer>
-class StructuredYield : public StructuredYieldBase<Serializer> {
+class StructuredYield<std::tuple<RetT>, Serializer>
+    : public StructuredYieldBase<Serializer> {
 public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
   void operator()(RetT &&R) {
-    if (auto ResultBytes = this->S.resultSerializer()(std::forward<RetT>(R)))
-      this->Return(this->Session, this->CallCtx, ResultBytes->release());
+    if (auto ResultBytes = this->S.result().serialize(std::forward<RetT>(R)))
+      this->Return(this->Session, this->CallId, ResultBytes->release());
     else
-      this->Return(this->Session, this->CallCtx,
+      this->Return(this->Session, this->CallId,
                    WrapperFunctionBuffer::createOutOfBandError(
                        "Could not serialize wrapper function result data")
                        .release());
@@ -167,12 +168,12 @@ public:
 };
 
 template <typename Serializer>
-class StructuredYield<void, Serializer>
+class StructuredYield<std::tuple<>, Serializer>
     : public StructuredYieldBase<Serializer> {
 public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
   void operator()() {
-    this->Return(this->Session, this->CallCtx,
+    this->Return(this->Session, this->CallId,
                  WrapperFunctionBuffer().release());
   }
 };
@@ -180,18 +181,20 @@ public:
 template <typename T, typename Serializer> struct ResultDeserializer;
 
 template <typename T, typename Serializer>
-struct ResultDeserializer<Expected<T>, Serializer> {
+struct ResultDeserializer<std::tuple<Expected<T>>, Serializer> {
   static Expected<T> deserialize(WrapperFunctionBuffer ResultBytes,
                                  Serializer &S) {
-    T Val;
-    if (S.resultDeserializer()(ResultBytes, Val))
-      return std::move(Val);
+    if (auto Val = S.result().template deserialize<std::tuple<T>>(
+            std::move(ResultBytes)))
+      return Expected<T>(std::move(std::get<0>(*Val)),
+                         ForceExpectedSuccessValue());
     else
       return make_error<StringError>("Could not deserialize result");
   }
 };
 
-template <typename Serializer> struct ResultDeserializer<Error, Serializer> {
+template <typename Serializer>
+struct ResultDeserializer<std::tuple<Error>, Serializer> {
   static Error deserialize(WrapperFunctionBuffer ResultBytes, Serializer &S) {
     assert(ResultBytes.empty());
     return Error::success();
@@ -204,6 +207,128 @@ template <typename Serializer> struct ResultDeserializer<Error, Serializer> {
 /// wrapper functions in C++.
 struct WrapperFunction {
 
+  /// Wraps an asynchronous method (a method returning void, and taking a
+  /// return callback as its first argument) for use with
+  /// WrapperFunction::handle.
+  ///
+  /// AsyncMethod's call operator takes an ExecutorAddr as its second argument,
+  /// casts it to a ClassT*, and then calls the wrapped method on that pointer,
+  /// forwarding the return callback and any subsequent arguments (after the
+  /// second argument representing the object address).
+  ///
+  /// This utility removes some of the boilerplate from writing wrappers for
+  /// method calls.
+  template <typename ClassT, typename ReturnT, typename... ArgTs>
+  struct AsyncMethod {
+    AsyncMethod(void (ClassT::*M)(ReturnT, ArgTs...)) : M(M) {}
+    void operator()(ReturnT &&Return, ExecutorAddr Obj, ArgTs &&...Args) {
+      (Obj.toPtr<ClassT *>()->*M)(std::forward<ReturnT>(Return),
+                                  std::forward<ArgTs>(Args)...);
+    }
+
+  private:
+    void (ClassT::*M)(ReturnT, ArgTs...);
+  };
+
+  /// Create an AsyncMethod wrapper for the given method pointer. The given
+  /// method should be asynchronous: returning void, and taking a return
+  /// callback as its first argument.
+  ///
+  /// The handWithAsyncMethod function can be used to remove some of the
+  /// boilerplate from writing wrappers for method calls:
+  ///
+  ///   @code{.cpp}
+  ///   class MyClass {
+  ///   public:
+  ///     void myMethod(move_only_function<void(std::string)> Return,
+  //                    uint32_t X, bool Y) { ... }
+  ///   };
+  ///
+  ///   // SPS Method signature -- note MyClass object address as first
+  ///   // argument.
+  ///   using SPSMyMethodWrapperSignature =
+  ///     SPSString(SPSExecutorAddr, uint32_t, bool);
+  ///
+  ///
+  ///   static void adder_add_async_sps_wrapper(
+  ///       orc_rt_SessionRef Session, uint64_t CallId,
+  ///       orc_rt_WrapperFunctionReturn Return,
+  ///       orc_rt_WrapperFunctionBuffer ArgBytes) {
+  ///     using SPSSig = SPSString(SPSExecutorAddr, int32_t, bool);
+  ///     SPSWrapperFunction<SPSSig>::handle(
+  ///         Session, CallId, Return, ArgBytes,
+  ///         WrapperFunction::handleWithAsyncMethod(&MyClass::myMethod));
+  ///   }
+  ///   @endcode
+  ///
+  template <typename ClassT, typename ReturnT, typename... ArgTs>
+  static AsyncMethod<ClassT, ReturnT, ArgTs...>
+  handleWithAsyncMethod(void (ClassT::*M)(ReturnT, ArgTs...)) {
+    return AsyncMethod<ClassT, ReturnT, ArgTs...>(M);
+  }
+
+  /// Wraps a synchronous method (an ordinary method that returns its result,
+  /// as opposed to an asynchronous method, see AsyncMethod) for use with
+  /// WrapperFunction::handle.
+  ///
+  /// SyncMethod's call operator takes a return callback as its first argument
+  /// and an ExecutorAddr as its second argument. The ExecutorAddr argument is
+  /// cast to a ClassT*, and then called passing the subsequent arguments
+  /// (after the second argument representing the object address). The Return
+  /// callback is then called on the value returned from the method.
+  ///
+  /// This utility removes some of the boilerplate from writing wrappers for
+  /// method calls.
+  template <typename ClassT, typename RetT, typename... ArgTs>
+  class SyncMethod {
+  public:
+    SyncMethod(RetT (ClassT::*M)(ArgTs...)) : M(M) {}
+
+    void operator()(move_only_function<void(RetT)> Return, ExecutorAddr Obj,
+                    ArgTs &&...Args) {
+      Return((Obj.toPtr<ClassT *>()->*M)(std::forward<ArgTs>(Args)...));
+    }
+
+  private:
+    RetT (ClassT::*M)(ArgTs...);
+  };
+
+  /// Create an SyncMethod wrapper for the given method pointer. The given
+  /// method should be synchronous, i.e. returning its result (as opposed to
+  /// asynchronous, see AsyncMethod).
+  ///
+  /// The handWithAsyncMethod function can be used to remove some of the
+  /// boilerplate from writing wrappers for method calls:
+  ///
+  ///   @code{.cpp}
+  ///   class MyClass {
+  ///   public:
+  ///     std::string myMethod(uint32_t X, bool Y) { ... }
+  ///   };
+  ///
+  ///   // SPS Method signature -- note MyClass object address as first
+  ///   // argument.
+  ///   using SPSMyMethodWrapperSignature =
+  ///     SPSString(SPSExecutorAddr, uint32_t, bool);
+  ///
+  ///
+  ///   static void adder_add_sync_sps_wrapper(
+  ///       orc_rt_SessionRef Session, uint64_t CallId,
+  ///       orc_rt_WrapperFunctionReturn Return,
+  ///       orc_rt_WrapperFunctionBuffer ArgBytes) {
+  ///     using SPSSig = SPSString(SPSExecutorAddr, int32_t, bool);
+  ///     SPSWrapperFunction<SPSSig>::handle(
+  ///         Session, CallId, Return, ArgBytes,
+  ///         WrapperFunction::handleWithSyncMethod(&Adder::addSync));
+  ///   }
+  ///   @endcode
+  ///
+  template <typename ClassT, typename RetT, typename... ArgTs>
+  static SyncMethod<ClassT, RetT, ArgTs...>
+  handleWithSyncMethod(RetT (ClassT::*M)(ArgTs...)) {
+    return SyncMethod<ClassT, RetT, ArgTs...>(M);
+  }
+
   /// Make a call to a wrapper function.
   ///
   /// This utility serializes and deserializes arguments and return values
@@ -213,13 +338,15 @@ struct WrapperFunction {
             typename... ArgTs>
   static void call(Caller &&C, Serializer &&S, ResultHandler &&RH,
                    ArgTs &&...Args) {
-    typedef detail::WFCallableTraits<ResultHandler> ResultHandlerTraits;
+    typedef CallableArgInfo<ResultHandler> ResultHandlerTraits;
+    static_assert(std::is_void_v<typename ResultHandlerTraits::return_type>,
+                  "Result handler should return void");
     static_assert(
-        std::tuple_size_v<typename ResultHandlerTraits::TailArgTuple> == 0,
-        "Expected one argument to result-handler");
-    typedef typename ResultHandlerTraits::HeadArgType ResultType;
+        std::tuple_size_v<typename ResultHandlerTraits::args_tuple_type> == 1,
+        "Result-handler should have exactly one argument");
+    typedef typename ResultHandlerTraits::args_tuple_type ResultTupleType;
 
-    if (auto ArgBytes = S.argumentSerializer()(std::forward<ArgTs>(Args)...)) {
+    if (auto ArgBytes = S.arguments().serialize(std::forward<ArgTs>(Args)...)) {
       C(
           [RH = std::move(RH),
            S = std::move(S)](orc_rt_SessionRef Session,
@@ -227,9 +354,8 @@ struct WrapperFunction {
             if (const char *ErrMsg = ResultBytes.getOutOfBandError())
               RH(make_error<StringError>(ErrMsg));
             else
-              RH(detail::ResultDeserializer<
-                  ResultType, Serializer>::deserialize(std::move(ResultBytes),
-                                                       S));
+              RH(detail::ResultDeserializer<ResultTupleType, Serializer>::
+                     deserialize(std::move(ResultBytes), S));
           },
           std::move(*ArgBytes));
     } else
@@ -242,27 +368,28 @@ struct WrapperFunction {
   /// This utility deserializes and serializes arguments and return values
   /// (using the given Serializer), and calls the given handler.
   template <typename Serializer, typename Handler>
-  static void handle(orc_rt_SessionRef Session, void *CallCtx,
+  static void handle(orc_rt_SessionRef Session, uint64_t CallId,
                      orc_rt_WrapperFunctionReturn Return,
                      WrapperFunctionBuffer ArgBytes, Serializer &&S,
                      Handler &&H) {
-    typedef detail::WFCallableTraits<Handler> HandlerTraits;
-    typedef typename HandlerTraits::HeadArgType Yield;
-    typedef typename HandlerTraits::TailArgTuple ArgTuple;
-    typedef typename detail::WFCallableTraits<Yield>::HeadArgType RetType;
+    typedef detail::WFHandlerTraits<Handler> HandlerTraits;
+    typedef typename HandlerTraits::ArgTupleType ArgTuple;
+    typedef typename HandlerTraits::YieldType Yield;
+    static_assert(std::is_void_v<typename CallableArgInfo<Yield>::return_type>,
+                  "Return callback must return void");
+    typedef typename CallableArgInfo<Yield>::args_tuple_type RetTupleType;
 
     if (ArgBytes.getOutOfBandError())
-      return Return(Session, CallCtx, ArgBytes.release());
+      return Return(Session, CallId, ArgBytes.release());
 
-    ArgTuple Args;
-    if (std::apply(bind_front(S.argumentDeserializer(), std::move(ArgBytes)),
-                   Args))
-      std::apply(bind_front(std::forward<Handler>(H),
-                            detail::StructuredYield<RetType, Serializer>(
-                                Session, CallCtx, Return, std::move(S))),
-                 std::move(Args));
+    if (auto Args = S.arguments().template deserialize<ArgTuple>(ArgBytes))
+      std::apply(HandlerTraits::forwardArgsAsRequested(bind_front(
+                     std::forward<Handler>(H),
+                     detail::StructuredYield<RetTupleType, Serializer>(
+                         Session, CallId, Return, std::move(S)))),
+                 *Args);
     else
-      Return(Session, CallCtx,
+      Return(Session, CallId,
              WrapperFunctionBuffer::createOutOfBandError(
                  "Could not deserialize wrapper function arg data")
                  .release());

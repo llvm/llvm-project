@@ -418,12 +418,21 @@ public:
     Unpredictable = 1 << 13,
     // Compare instructions which may carry the samesign flag.
     SameSign = 1 << 14,
+    // ISD::PTRADD operations that remain in bounds, i.e., the left operand is
+    // an address in a memory object in which the result of the operation also
+    // lies. WARNING: Since SDAG generally uses integers instead of pointer
+    // types, a PTRADD's pointer operand is effectively the result of an
+    // implicit inttoptr cast. Therefore, when an inbounds PTRADD uses a
+    // pointer P, transformations cannot assume that P has the provenance
+    // implied by its producer as, e.g, operations between producer and PTRADD
+    // that affect the provenance may have been optimized away.
+    InBounds = 1 << 15,
 
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
-                            NonNeg | NoNaNs | NoInfs | SameSign,
+                            NonNeg | NoNaNs | NoInfs | SameSign | InBounds,
     FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
                     AllowContract | ApproximateFuncs | AllowReassociation,
   };
@@ -458,6 +467,7 @@ public:
   void setAllowReassociation(bool b) { setFlag<AllowReassociation>(b); }
   void setNoFPExcept(bool b) { setFlag<NoFPExcept>(b); }
   void setUnpredictable(bool b) { setFlag<Unpredictable>(b); }
+  void setInBounds(bool b) { setFlag<InBounds>(b); }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return Flags & NoUnsignedWrap; }
@@ -475,6 +485,7 @@ public:
   bool hasAllowReassociation() const { return Flags & AllowReassociation; }
   bool hasNoFPExcept() const { return Flags & NoFPExcept; }
   bool hasUnpredictable() const { return Flags & Unpredictable; }
+  bool hasInBounds() const { return Flags & InBounds; }
 
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
@@ -484,7 +495,7 @@ public:
 };
 
 LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None),
-                             SDNodeFlags::SameSign);
+                             SDNodeFlags::InBounds);
 
 inline SDNodeFlags operator|(SDNodeFlags LHS, SDNodeFlags RHS) {
   LHS |= RHS;
@@ -1885,6 +1896,12 @@ LLVM_ABI SDValue peekThroughOneUseBitcasts(SDValue V);
 /// If \p V is not an extracted subvector, it is returned as-is.
 LLVM_ABI SDValue peekThroughExtractSubvectors(SDValue V);
 
+/// Recursively peek through INSERT_VECTOR_ELT nodes, returning the source
+/// vector operand of \p V, as long as \p V is an INSERT_VECTOR_ELT operation
+/// that do not insert into any of the demanded vector elts.
+LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
+                                            const APInt &DemandedElts);
+
 /// Return the non-truncated source operand of \p V if it exists.
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
@@ -1932,6 +1949,10 @@ LLVM_ABI bool isNullOrNullSplat(SDValue V, bool AllowUndefs = false);
 /// be zero.
 LLVM_ABI bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 
+/// Return true if the value is a constant floating-point value, or a splatted
+/// vector of a constant floating-point value, of 1.0 (with no undefs).
+LLVM_ABI bool isOneOrOneSplatFP(SDValue V, bool AllowUndefs = false);
+
 /// Return true if the value is a constant -1 integer or a splatted vector of a
 /// constant -1 integer (with no undefs).
 /// Does not permit build vector implicit truncation.
@@ -1944,8 +1965,12 @@ LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
 
 /// Return true if the value is a constant 0 integer or a splatted vector of a
 /// constant 0 integer (with no undefs).
-/// Does not permit build vector implicit truncation.
+/// Build vector implicit truncation is allowed.
 LLVM_ABI bool isZeroOrZeroSplat(SDValue N, bool AllowUndefs = false);
+
+/// Return true if the value is a constant (+/-)0.0 floating-point value or a
+/// splatted vector thereof (with no undefs).
+LLVM_ABI bool isZeroOrZeroSplatFP(SDValue N, bool AllowUndefs = false);
 
 /// Return true if \p V is either a integer or FP constant.
 inline bool isIntOrFPConstant(SDValue V) {

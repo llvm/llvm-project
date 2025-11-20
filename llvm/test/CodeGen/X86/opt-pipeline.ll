@@ -195,7 +195,7 @@
 ; CHECK-NEXT:       Insert fentry calls
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
-; CHECK-NEXT:       ReachingDefAnalysis
+; CHECK-NEXT:       Reaching Definitions Analysis
 ; CHECK-NEXT:       X86 Execution Dependency Fix
 ; CHECK-NEXT:       BreakFalseDeps
 ; CHECK-NEXT:       X86 Indirect Branch Tracking
@@ -208,8 +208,6 @@
 ; CHECK-NEXT:       X86 Fixup Inst Tuning
 ; CHECK-NEXT:       X86 Fixup Vector Constants
 ; CHECK-NEXT:       Compressing EVEX instrs when possible
-; CHECK-NEXT:       X86 Discriminate Memory Operands
-; CHECK-NEXT:       X86 Insert Cache Prefetches
 ; CHECK-NEXT:       X86 insert wait instruction
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       Remove Loads Into Fake Uses

@@ -1,9 +1,20 @@
-; RUN: opt < %s -S -passes=loop-unroll -unroll-count=2 | FileCheck %s -check-prefixes=COUNT,COMMON
-; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
-; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
+; Check that followup attributes are applied after LoopUnroll.
 ;
-; Check that followup-attributes are applied after LoopUnroll.
-;
+; We choose -unroll-count=3 because it produces partial unrolling of remainder
+; loops.  Complete unrolling would leave no remainder loop to which to copy
+; followup attributes.
+
+; DEFINE: %{unroll} = opt < %s -S -passes=loop-unroll -unroll-count=3
+; DEFINE: %{epilog} = %{unroll} -unroll-runtime -unroll-runtime-epilog=true
+; DEFINE: %{prolog} = %{unroll} -unroll-runtime -unroll-runtime-epilog=false
+; DEFINE: %{fc} = FileCheck %s -check-prefixes
+
+; RUN: %{unroll} | %{fc} COMMON,COUNT
+; RUN: %{epilog} | %{fc} COMMON,EPILOG,EPILOG-NO-UNROLL
+; RUN: %{prolog} | %{fc} COMMON,PROLOG,PROLOG-NO-UNROLL
+; RUN: %{epilog} -unroll-remainder | %{fc} COMMON,EPILOG,EPILOG-UNROLL
+; RUN: %{prolog} -unroll-remainder | %{fc} COMMON,PROLOG,PROLOG-UNROLL
+
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 define i32 @test(ptr nocapture %a, i32 %n) nounwind uwtable readonly {
@@ -36,15 +47,17 @@ for.end:                                          ; preds = %for.body, %entry
 ; COMMON-LABEL: @test(
 
 
-; COUNT: br i1 %exitcond.1, label %for.end.loopexit, label %for.body, !llvm.loop ![[LOOP:[0-9]+]]
+; COUNT: br i1 %exitcond.2, label %for.end.loopexit, label %for.body, !llvm.loop ![[LOOP:[0-9]+]]
 
 ; COUNT: ![[FOLLOWUP_ALL:[0-9]+]] = !{!"FollowupAll"}
 ; COUNT: ![[FOLLOWUP_UNROLLED:[0-9]+]] = !{!"FollowupUnrolled"}
 ; COUNT: ![[LOOP]] = distinct !{![[LOOP]], ![[FOLLOWUP_ALL]], ![[FOLLOWUP_UNROLLED]]}
 
 
-; EPILOG: br i1 %niter.ncmp.7, label %for.end.loopexit.unr-lcssa.loopexit, label %for.body, !llvm.loop ![[LOOP_0:[0-9]+]]
-; EPILOG: br i1 %epil.iter.cmp, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !llvm.loop ![[LOOP_2:[0-9]+]]
+; EPILOG: br i1 %niter.ncmp.2, label %for.end.loopexit.unr-lcssa, label %for.body, !llvm.loop ![[LOOP_0:[0-9]+]]
+; EPILOG-NO-UNROLL: br i1 %epil.iter.cmp, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !llvm.loop ![[LOOP_2:[0-9]+]]
+; EPILOG-UNROLL: br i1 %epil.iter.cmp, label %for.body.epil.1, label %for.end.loopexit.epilog-lcssa
+; EPILOG-UNROLL: br i1 %epil.iter.cmp.1, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !llvm.loop ![[LOOP_2:[0-9]+]]
 
 ; EPILOG: ![[LOOP_0]] = distinct !{![[LOOP_0]], ![[FOLLOWUP_ALL:[0-9]+]], ![[FOLLOWUP_UNROLLED:[0-9]+]]}
 ; EPILOG: ![[FOLLOWUP_ALL]] = !{!"FollowupAll"}
@@ -53,8 +66,10 @@ for.end:                                          ; preds = %for.body, %entry
 ; EPILOG: ![[FOLLOWUP_REMAINDER]] = !{!"FollowupRemainder"}
 
 
-; PROLOG:  br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit.unr-lcssa, !llvm.loop ![[LOOP_0:[0-9]+]]
-; PROLOG:  br i1 %exitcond.7, label %for.end.loopexit.unr-lcssa, label %for.body, !llvm.loop ![[LOOP_2:[0-9]+]]
+; PROLOG-UNROLL:  br i1 %prol.iter.cmp, label %for.body.prol.1, label %for.body.prol.loopexit.unr-lcssa
+; PROLOG-UNROLL:  br i1 %prol.iter.cmp.1, label %for.body.prol, label %for.body.prol.loopexit.unr-lcssa, !llvm.loop ![[LOOP_0:[0-9]+]]
+; PROLOG-NO-UNROLL:  br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit.unr-lcssa, !llvm.loop ![[LOOP_0:[0-9]+]]
+; PROLOG:  br i1 %exitcond.2, label %for.end.loopexit.unr-lcssa, label %for.body, !llvm.loop ![[LOOP_2:[0-9]+]]
 
 ; PROLOG: ![[LOOP_0]] = distinct !{![[LOOP_0]], ![[FOLLOWUP_ALL:[0-9]+]], ![[FOLLOWUP_REMAINDER:[0-9]+]]}
 ; PROLOG: ![[FOLLOWUP_ALL]] = !{!"FollowupAll"}

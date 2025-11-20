@@ -8,6 +8,7 @@
 
 #include "SIFrameLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
@@ -305,7 +306,8 @@ class PrologEpilogSGPRSpillBuilder {
 
       buildEpilogRestore(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MI, DL,
                          TmpVGPR, FI, FrameReg, DwordOff);
-      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
+      assert(SubReg.isPhysical());
+
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), SubReg)
           .addReg(TmpVGPR, RegState::Kill);
       DwordOff += 4;
@@ -923,6 +925,7 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::SGPRSpill:
     return true;
   case TargetStackID::ScalableVector:
+  case TargetStackID::ScalablePredicateVector:
   case TargetStackID::WasmLocal:
     return false;
   }
@@ -984,6 +987,7 @@ void SIFrameLowering::emitCSRSpillStores(
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
 
   // Spill Whole-Wave Mode VGPRs. Save only the inactive lanes of the scratch
   // registers. However, save all lanes of callee-saved VGPRs. Due to this, we
@@ -1015,8 +1019,7 @@ void SIFrameLowering::emitCSRSpillStores(
   StoreWWMRegisters(WWMScratchRegs);
 
   auto EnableAllLanes = [&]() {
-    unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    BuildMI(MBB, MBBI, DL, TII->get(MovOpc), TRI.getExec()).addImm(-1);
+    BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg).addImm(-1);
   };
 
   if (!WWMCalleeSavedRegs.empty()) {
@@ -1031,20 +1034,16 @@ void SIFrameLowering::emitCSRSpillStores(
 
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
-    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose, so we can remove
-    // it now. If we have already saved some WWM CSR registers, then the EXEC is
-    // already -1 and we don't need to do anything else. Otherwise, set EXEC to
-    // -1 here.
+    // If we have already saved some WWM CSR registers, then the EXEC is already
+    // -1 and we don't need to do anything else. Otherwise, set EXEC to -1 here.
     if (!ScratchExecCopy)
       buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
                            /*EnableInactiveLanes*/ true);
     else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
-    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
   } else if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
-    unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), TRI.getExec())
+    BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg)
         .addReg(ScratchExecCopy, RegState::Kill);
     LiveUnits.addReg(ScratchExecCopy);
   }
@@ -1092,6 +1091,7 @@ void SIFrameLowering::emitCSRSpillRestores(
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
   Register FramePtrReg = FuncInfo->getFrameOffsetReg();
 
   for (const auto &Spill : FuncInfo->getPrologEpilogSGPRSpills()) {
@@ -1147,16 +1147,14 @@ void SIFrameLowering::emitCSRSpillRestores(
     Register OrigExec = Return.getOperand(0).getReg();
 
     if (!WWMScratchRegs.empty()) {
-      unsigned XorOpc = ST.isWave32() ? AMDGPU::S_XOR_B32 : AMDGPU::S_XOR_B64;
-      BuildMI(MBB, MBBI, DL, TII->get(XorOpc), TRI.getExec())
+      BuildMI(MBB, MBBI, DL, TII->get(LMC.XorOpc), LMC.ExecReg)
           .addReg(OrigExec)
           .addImm(-1);
       RestoreWWMRegisters(WWMScratchRegs);
     }
 
     // Restore original EXEC.
-    unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    BuildMI(MBB, MBBI, DL, TII->get(MovOpc), TRI.getExec()).addReg(OrigExec);
+    BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg).addReg(OrigExec);
 
     // Drop the first operand and update the opcode.
     Return.removeOperand(0);
@@ -1173,8 +1171,7 @@ void SIFrameLowering::emitCSRSpillRestores(
   RestoreWWMRegisters(WWMScratchRegs);
   if (!WWMCalleeSavedRegs.empty()) {
     if (ScratchExecCopy) {
-      unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-      BuildMI(MBB, MBBI, DL, TII->get(MovOpc), TRI.getExec()).addImm(-1);
+      BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg).addImm(-1);
     } else {
       ScratchExecCopy = buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL,
                                              /*IsProlog*/ false,
@@ -1185,8 +1182,7 @@ void SIFrameLowering::emitCSRSpillRestores(
   RestoreWWMRegisters(WWMCalleeSavedRegs);
   if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
-    unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), TRI.getExec())
+    BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg)
         .addReg(ScratchExecCopy, RegState::Kill);
   }
 }
@@ -1341,6 +1337,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
          "Needed to save BP but didn't save it anywhere");
 
   assert((HasBP || !BPSaved) && "Saved BP but didn't need it");
+
+  if (FuncInfo->isWholeWaveFunction()) {
+    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose.
+    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
+  }
 }
 
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -2169,7 +2170,9 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
+  return (frameTriviallyRequiresSP(MFI) &&
+          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
+         MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
          mayReserveScratchForCWSR(MF) ||

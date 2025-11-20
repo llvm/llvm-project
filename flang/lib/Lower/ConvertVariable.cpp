@@ -511,6 +511,9 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       Fortran::semantics::IsProcedurePointer(sym))
     TODO(loc, "procedure pointer globals");
 
+  const auto *oeDetails =
+      sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
   // Fortran arrays of integer, real, complex, or logical. The tensor
@@ -520,12 +523,10 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getElementType();
     if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
                   fir::LogicalType>(eleTy)) {
-      const auto *details =
-          sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-      if (details->init()) {
+      if (oeDetails && oeDetails->init()) {
         global = Fortran::lower::tryCreatingDenseGlobal(
             builder, loc, symTy, globalName, linkage, isConst,
-            details->init().value(), dataAttr);
+            oeDetails->init().value(), dataAttr);
         if (global) {
           global.setVisibility(mlir::SymbolTable::Visibility::Public);
           return global;
@@ -539,10 +540,8 @@ fir::GlobalOp Fortran::lower::defineGlobal(
                              isConst, var.isTarget(), dataAttr);
   if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
       !Fortran::semantics::IsProcedure(sym)) {
-    const auto *details =
-        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-    if (details && details->init()) {
-      auto expr = *details->init();
+    if (oeDetails && oeDetails->init()) {
+      auto expr = *oeDetails->init();
       createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
         mlir::Value box =
             Fortran::lower::genInitialDataTarget(converter, loc, symTy, expr);
@@ -558,15 +557,14 @@ fir::GlobalOp Fortran::lower::defineGlobal(
         fir::HasValueOp::create(b, loc, box);
       });
     }
-  } else if (const auto *details =
-                 sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-    if (details->init()) {
+  } else if (oeDetails) {
+    if (oeDetails->init()) {
       createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
             Fortran::lower::StatementContext stmtCtx(
                 /*cleanupProhibited=*/true);
             fir::ExtendedValue initVal = genInitializerExprValue(
-                converter, loc, details->init().value(), stmtCtx);
+                converter, loc, oeDetails->init().value(), stmtCtx);
             mlir::Value castTo =
                 builder.createConvert(loc, symTy, fir::getBase(initVal));
             fir::HasValueOp::create(builder, loc, castTo);
@@ -615,28 +613,32 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     TODO(loc, "global"); // Something else
   }
   // Creates zero initializer for globals without initializers, this is a common
-  // and expected behavior (although not required by the standard)
+  // and expected behavior (although not required by the standard).
+  // Exception: CDEFINED globals are treated as "extern" in C and don't need
+  // initializer.
   if (!globalIsInitialized(global)) {
-    // Fortran does not provide means to specify that a BIND(C) module
-    // uninitialized variables will be defined in C.
-    // Add the common linkage to those to allow some level of support
-    // for this use case. Note that this use case will not work if the Fortran
-    // module code is placed in a shared library since, at least for the ELF
-    // format, common symbols are assigned a section in shared libraries.
-    // The best is still to declare C defined variables in a Fortran module file
-    // with no other definitions, and to never link the resulting module object
-    // file.
-    if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
-      global.setLinkName(builder.createCommonLinkage());
-    createGlobalInitialization(
-        builder, global, [&](fir::FirOpBuilder &builder) {
-          mlir::Value initValue;
-          if (converter.getLoweringOptions().getInitGlobalZero())
-            initValue = fir::ZeroOp::create(builder, loc, symTy);
-          else
-            initValue = fir::UndefOp::create(builder, loc, symTy);
-          fir::HasValueOp::create(builder, loc, initValue);
-        });
+    if (!oeDetails || !oeDetails->isCDefined()) {
+      // Fortran does not provide means to specify that a BIND(C) module
+      // uninitialized variables will be defined in C.
+      // Add the common linkage to those to allow some level of support
+      // for this use case. Note that this use case will not work if the Fortran
+      // module code is placed in a shared library since, at least for the ELF
+      // format, common symbols are assigned a section in shared libraries. The
+      // best is still to declare C defined variables in a Fortran module file
+      // with no other definitions, and to never link the resulting module
+      // object file.
+      if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
+        global.setLinkName(builder.createCommonLinkage());
+      createGlobalInitialization(
+          builder, global, [&](fir::FirOpBuilder &builder) {
+            mlir::Value initValue;
+            if (converter.getLoweringOptions().getInitGlobalZero())
+              initValue = fir::ZeroOp::create(builder, loc, symTy);
+            else
+              initValue = fir::UndefOp::create(builder, loc, symTy);
+            fir::HasValueOp::create(builder, loc, initValue);
+          });
+    }
   }
   // Set public visibility to prevent global definition to be optimized out
   // even if they have no initializer and are unused in this compilation unit.
@@ -1709,7 +1711,7 @@ static void lowerExplicitLowerBounds(
 /// CFI_desc_t requirements in 18.5.3 point 5.).
 static mlir::Value getAssumedSizeExtent(mlir::Location loc,
                                         fir::FirOpBuilder &builder) {
-  return builder.createMinusOneInteger(loc, builder.getIndexType());
+  return fir::AssumedSizeExtentOp::create(builder, loc);
 }
 
 /// Lower explicit extents into \p result if this is an explicit-shape or
@@ -1944,12 +1946,15 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       return;
     }
     mlir::Value dummyScope;
-    if (converter.isRegisteredDummySymbol(sym))
+    unsigned argNo = 0;
+    if (converter.isRegisteredDummySymbol(sym)) {
       dummyScope = converter.dummyArgsScopeValue();
+      argNo = converter.getDummyArgPosition(sym);
+    }
     auto [storage, storageOffset] = converter.getSymbolStorage(sym);
     auto newBase = hlfir::DeclareOp::create(
         builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
-        storageOffset, attributes, dataAttr);
+        storageOffset, attributes, dataAttr, argNo);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -2002,15 +2007,17 @@ void Fortran::lower::genDeclareSymbol(
                                                         sym.GetUltimate());
     auto name = converter.mangleName(sym);
     mlir::Value dummyScope;
+    unsigned argNo = 0;
     fir::ExtendedValue base = exv;
     if (converter.isRegisteredDummySymbol(sym)) {
       base = genPackArray(converter, sym, exv);
       dummyScope = converter.dummyArgsScopeValue();
+      argNo = converter.getDummyArgPosition(sym);
     }
     auto [storage, storageOffset] = converter.getSymbolStorage(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, base, name, attributes, dummyScope,
-                          storage, storageOffset, dataAttr);
+                          storage, storageOffset, dataAttr, argNo);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
@@ -2439,6 +2446,11 @@ void Fortran::lower::mapSymbolAttributes(
 
   // Compute array extents and lower bounds.
   if (ba.isArray()) {
+    // Handle unused entry dummy arrays with BaseBoxType before processing shape
+    if (isUnusedEntryDummy &&
+        llvm::isa<fir::BaseBoxType>(converter.genType(var)))
+      if (genUnusedEntryPointBox())
+        return;
     if (ba.isStaticArray()) {
       if (ba.lboundIsAllOnes()) {
         for (std::int64_t extent :

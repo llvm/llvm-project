@@ -17,6 +17,7 @@
 #include "PPCCallingConv.h"
 #include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCSubtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
@@ -1707,7 +1708,8 @@ bool PPCFastISel::SelectRet(const Instruction *I) {
 
     // Special case for returning a constant integer of any size - materialize
     // the constant as an i64 and copy it to the return register.
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(RV)) {
+    if (isa<ConstantInt>(RV) && RV->getType()->isIntegerTy()) {
+      const ConstantInt *CI = cast<ConstantInt>(RV);
       CCValAssign &VA = ValLocs[0];
 
       Register RetReg = VA.getLocReg();

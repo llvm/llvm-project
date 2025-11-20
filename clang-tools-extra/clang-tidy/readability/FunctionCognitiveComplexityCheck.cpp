@@ -1,4 +1,4 @@
-//===--- FunctionCognitiveComplexityCheck.cpp - clang-tidy ------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,7 @@ struct CognitiveComplexity final {
   // For details you can look at the Specification at
   // https://www.sonarsource.com/docs/CognitiveComplexity.pdf
   // or user-facing docs at
-  // http://clang.llvm.org/extra/clang-tidy/checks/readability/function-cognitive-complexity.html
+  // https://clang.llvm.org/extra/clang-tidy/checks/readability/function-cognitive-complexity.html
   // Here are all the possible reasons:
   enum Criteria : uint8_t {
     None = 0U,
@@ -229,14 +229,14 @@ public:
 
   bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
     ++CurrentNestingLevel;
-    bool ShouldContinue = Base::TraverseStmt(Node);
+    const bool ShouldContinue = Base::TraverseStmt(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
 
   bool traverseDeclWithIncreasedNestingLevel(Decl *Node) {
     ++CurrentNestingLevel;
-    bool ShouldContinue = Base::TraverseDecl(Node);
+    const bool ShouldContinue = Base::TraverseDecl(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
@@ -336,7 +336,7 @@ public:
 
     // Record the operator that we are currently processing and traverse it.
     CurrentBinaryOperator = Op->getOpcode();
-    bool ShouldContinue = Base::TraverseBinaryOperator(Op);
+    const bool ShouldContinue = Base::TraverseBinaryOperator(Op);
 
     // And restore the previous binary operator, which might be nonexistent.
     CurrentBinaryOperator = BinOpCopy;
@@ -354,7 +354,7 @@ public:
 
     // Else, do add [uninitialized] frame to the stack, and traverse call.
     BinaryOperatorsStack.emplace();
-    bool ShouldContinue = Base::TraverseCallExpr(Node);
+    const bool ShouldContinue = Base::TraverseCallExpr(Node);
     // And remove the top frame.
     BinaryOperatorsStack.pop();
 

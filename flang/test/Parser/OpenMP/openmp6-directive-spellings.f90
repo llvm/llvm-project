@@ -51,13 +51,13 @@ end
 !UNPARSE:  TYPE :: t
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP DECLARE MAPPER (t::v) MAP(v%x)
+!UNPARSE: !$OMP DECLARE_MAPPER(t::v) MAP(v%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpMapperSpecifier
-!PARSE-TREE: | | string = 't.omp.default.mapper'
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare mapper
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
+!PARSE-TREE: | | string = 't_omp_default_mapper'
 !PARSE-TREE: | | TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
 !PARSE-TREE: | | Name = 'v'
@@ -66,6 +66,7 @@ end
 !PARSE-TREE: | | | DataRef -> Name = 'v'
 !PARSE-TREE: | | | Name = 'x'
 !PARSE-TREE: | | bool = 'true'
+!PARSE-TREE: | Flags = None
 
 subroutine f02
   type :: t
@@ -78,56 +79,61 @@ end
 !UNPARSE:  TYPE :: t
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP DECLARE REDUCTION (+:t: omp_out%x=omp_out%x+omp_in%x
-!UNPARSE: )
+!UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x = omp_out%x + omp_in%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpReductionSpecifier
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%x=omp_out%x+omp_in%x'
-!PARSE-TREE: | | | Variable = 'omp_out%x'
-!PARSE-TREE: | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | Name = 'x'
-!PARSE-TREE: | | | Expr = 'omp_out%x+omp_in%x'
-!PARSE-TREE: | | | | Add
-!PARSE-TREE: | | | | | Expr = 'omp_out%x'
-!PARSE-TREE: | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | | | Name = 'x'
-!PARSE-TREE: | | | | | Expr = 'omp_in%x'
-!PARSE-TREE: | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_in'
-!PARSE-TREE: | | | | | | | Name = 'x'
+!PARSE-TREE: | | OmpCombinerExpression -> OmpStylizedInstance
+!PARSE-TREE: | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | Instance -> AssignmentStmt = 'omp_out%x=omp_out%x+omp_in%x'
+!PARSE-TREE: | | | | Variable = 'omp_out%x'
+!PARSE-TREE: | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | Name = 'x'
+!PARSE-TREE: | | | | Expr = 'omp_out%x+omp_in%x'
+!PARSE-TREE: | | | | | Add
+!PARSE-TREE: | | | | | | Expr = 'omp_out%x'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | Expr = 'omp_in%x'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_in'
+!PARSE-TREE: | | | | | | | | Name = 'x'
 !PARSE-TREE: | OmpClauseList ->
+!PARSE-TREE: | Flags = None
 
 subroutine f03
   !$omp declare_simd
 end
 
 !UNPARSE: SUBROUTINE f03
-!UNPARSE: !$OMP DECLARE SIMD
+!UNPARSE: !$OMP DECLARE_SIMD
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct
-!PARSE-TREE: | Verbatim
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | OmpClauseList ->
+!PARSE-TREE: | Flags = None
 
 subroutine f04
   !$omp declare_target
 end
 
 !UNPARSE: SUBROUTINE f04
-!UNPARSE: !$OMP DECLARE TARGET
+!UNPARSE: !$OMP DECLARE_TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList ->
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
+!PARSE-TREE: | OmpClauseList ->
+!PARSE-TREE: | Flags = None
 
 subroutine f05
   implicit none
@@ -144,12 +150,12 @@ end
 !UNPARSE:   SUBROUTINE g05
 !UNPARSE:   END SUBROUTINE
 !UNPARSE:  END INTERFACE
-!UNPARSE: !$OMP DECLARE VARIANT (g05) MATCH(USER={CONDITION(.true._4)})
+!UNPARSE: !$OMP DECLARE_VARIANT(g05) MATCH(USER={CONDITION(.true._4)})
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | Name = 'g05'
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'g05'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = User
 !PARSE-TREE: | | OmpTraitSelector
@@ -158,6 +164,7 @@ end
 !PARSE-TREE: | | | | OmpTraitProperty -> Scalar -> Expr = '.true._4'
 !PARSE-TREE: | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | bool = 'true'
+!PARSE-TREE: | Flags = None
 
 subroutine f06
   implicit none

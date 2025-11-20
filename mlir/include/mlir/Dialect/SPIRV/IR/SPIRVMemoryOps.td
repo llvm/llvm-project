@@ -15,6 +15,8 @@
 #define MLIR_DIALECT_SPIRV_IR_MEMORY_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/Interfaces/AlignmentAttrInterface.td"
+
 
 // -----
 
@@ -79,7 +81,7 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
 
 // -----
 
-def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
+def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = [{
     Copy from the memory pointed to by Source to the memory pointed to by
     Target. Both operands must be non-void pointers and having the same <id>
@@ -121,9 +123,9 @@ def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
     SPIRV_AnyPtr:$target,
     SPIRV_AnyPtr:$source,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
-    OptionalAttr<I32Attr>:$alignment,
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$source_memory_access,
-    OptionalAttr<I32Attr>:$source_alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$source_alignment
   );
 
   let results = (outs);
@@ -182,7 +184,7 @@ def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [Pure]> 
 
 // -----
 
-def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
+def SPIRV_LoadOp : SPIRV_Op<"Load", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "Load through a pointer.";
 
   let description = [{
@@ -310,7 +312,7 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [Pure]> {
 
 // -----
 
-def SPIRV_StoreOp : SPIRV_Op<"Store", []> {
+def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "Store through a pointer.";
 
   let description = [{

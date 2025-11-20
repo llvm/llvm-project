@@ -118,7 +118,7 @@ private:
 
   // AsmPrinterHandler overrides.
 public:
-  virtual ~DebugHandlerBase() override;
+  ~DebugHandlerBase() override;
 
   void beginModule(Module *M) override;
 
@@ -144,6 +144,8 @@ public:
   static bool isUnsignedDIType(const DIType *Ty);
 
   const InstructionOrdering &getInstOrdering() const { return InstOrdering; }
+
+  const LexicalScopes &getLexicalScopes() const { return LScopes; }
 };
 
 } // namespace llvm

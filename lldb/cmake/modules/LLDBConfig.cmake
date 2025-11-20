@@ -180,13 +180,38 @@ if (LLDB_ENABLE_PYTHON)
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
 
-  if (SWIG_VERSION VERSION_GREATER_EQUAL "4.2" AND NOT LLDB_EMBED_PYTHON_HOME)
+  # Enable targeting the Python Limited C API.
+  set(PYTHON_LIMITED_API_MIN_SWIG_VERSION "4.2")
+  if (SWIG_VERSION VERSION_GREATER_EQUAL PYTHON_LIMITED_API_MIN_SWIG_VERSION
+      AND NOT LLDB_EMBED_PYTHON_HOME)
     set(default_enable_python_limited_api ON)
   else()
     set(default_enable_python_limited_api OFF)
   endif()
   option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
     ${default_enable_python_limited_api})
+
+  # Diagnose unsupported configurations.
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND LLDB_EMBED_PYTHON_HOME)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with LLDB_EMBED_PYTHON_HOME")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND SWIG_VERSION VERSION_LESS PYTHON_LIMITED_API_MIN_SWIG_VERSION)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG ${SWIG_VERSION} (requires SWIG ${PYTHON_LIMITED_API_MIN_SWIG_VERSION})")
+  endif()
+
+else()
+  # Even if Python scripting is disabled, we still need a Python interpreter to
+  # build, for example to generate SBLanguages.h.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+  # Remove lldb-python-scripts from distribution components.
+  # LLVM_DISTRIBUTION_COMPONENTS is set in a cache where LLDB_ENABLE_PYTHON does
+  # not yet have a value. We have to touch up LLVM_DISTRIBUTION_COMPONENTS after
+  # the fact.
+  if(LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS lldb-python-scripts)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
+  endif()
 endif()
 
 if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)

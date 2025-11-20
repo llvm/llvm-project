@@ -52,12 +52,14 @@ public:
     K_Decl = 3,
     K_Elem = 5,
     K_RVO = 6,
-    K_InitList = 7
+    K_InitList = 7,
+    K_DIE = 8,
   };
 
   static InitLink This() { return InitLink{K_This}; }
   static InitLink InitList() { return InitLink{K_InitList}; }
   static InitLink RVO() { return InitLink{K_RVO}; }
+  static InitLink DIE() { return InitLink{K_DIE}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
     IL.Offset = Offset;
@@ -251,7 +253,8 @@ protected:
   bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
-  bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
+  bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                          bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -303,7 +306,8 @@ protected:
   /// intact.
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
-  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false,
+  VarCreationState visitVarDecl(const VarDecl *VD, const Expr *Init,
+                                bool Toplevel = false,
                                 bool IsConstexprUnknown = false);
   VarCreationState visitDecl(const VarDecl *VD,
                              bool IsConstexprUnknown = false);
@@ -325,6 +329,7 @@ protected:
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
+                                  bool IsVolatile = false,
                                   const ValueDecl *ExtendingDecl = nullptr,
                                   ScopeKind SC = ScopeKind::Block,
                                   bool IsConstexprUnknown = false);
@@ -622,14 +627,6 @@ public:
   UnsignedOrNone Idx = std::nullopt;
 };
 
-/// Scope for storage declared in a compound statement.
-// FIXME: Remove?
-template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
-public:
-  BlockScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
-      : LocalScope<Emitter>(Ctx, Kind) {}
-};
-
 template <class Emitter> class ArrayIndexScope final {
 public:
   ArrayIndexScope(Compiler<Emitter> *Ctx, uint64_t Index) : Ctx(Ctx) {
@@ -673,22 +670,29 @@ public:
 
   ~InitLinkScope() { this->Ctx->InitStack.pop_back(); }
 
-private:
+public:
   Compiler<Emitter> *Ctx;
 };
 
 template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
-      : Ctx(Ctx), OldValue(Ctx->InitStackActive) {
+      : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
     Ctx->InitStackActive = Active;
+    if (Active)
+      Ctx->InitStack.push_back(InitLink::DIE());
   }
 
-  ~InitStackScope() { this->Ctx->InitStackActive = OldValue; }
+  ~InitStackScope() {
+    this->Ctx->InitStackActive = OldValue;
+    if (Active)
+      Ctx->InitStack.pop_back();
+  }
 
 private:
   Compiler<Emitter> *Ctx;
   bool OldValue;
+  bool Active;
 };
 
 } // namespace interp

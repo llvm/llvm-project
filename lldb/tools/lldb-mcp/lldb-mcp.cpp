@@ -8,12 +8,16 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Protocol/MCP/Server.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
 #include "lldb/lldb-forward.h"
@@ -24,8 +28,10 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
+#include <chrono>
 #include <cstdlib>
 #include <memory>
+#include <thread>
 
 #if defined(_WIN32)
 #include <fcntl.h>
@@ -35,12 +41,24 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_protocol::mcp;
 
+using lldb_private::Environment;
 using lldb_private::File;
+using lldb_private::FileSpec;
+using lldb_private::FileSystem;
+using lldb_private::Host;
 using lldb_private::MainLoop;
 using lldb_private::MainLoopBase;
 using lldb_private::NativeFile;
 
 namespace {
+
+#if defined(_WIN32)
+constexpr StringLiteral kDriverName = "lldb.exe";
+#else
+constexpr StringLiteral kDriverName = "lldb";
+#endif
+
+constexpr size_t kForwardIOBufferSize = 1024;
 
 inline void exitWithError(llvm::Error Err, StringRef Prefix = "") {
   handleAllErrors(std::move(Err), [&](ErrorInfoBase &Info) {
@@ -49,10 +67,69 @@ inline void exitWithError(llvm::Error Err, StringRef Prefix = "") {
   std::exit(EXIT_FAILURE);
 }
 
-constexpr size_t kForwardIOBufferSize = 1024;
+FileSpec driverPath() {
+  Environment host_env = Host::GetEnvironment();
 
-void forwardIO(lldb_private::MainLoopBase &loop, lldb::IOObjectSP &from,
-               lldb::IOObjectSP &to) {
+  // Check if an override for which lldb we're using exists, otherwise look next
+  // to the current binary.
+  std::string lldb_exe_path = host_env.lookup("LLDB_EXE_PATH");
+  auto &fs = FileSystem::Instance();
+  if (fs.Exists(lldb_exe_path))
+    return FileSpec(lldb_exe_path);
+
+  FileSpec lldb_exec_spec = lldb_private::HostInfo::GetProgramFileSpec();
+  lldb_exec_spec.SetFilename(kDriverName);
+  return lldb_exec_spec;
+}
+
+llvm::Error launch() {
+  FileSpec lldb_exec = driverPath();
+  lldb_private::ProcessLaunchInfo info;
+  info.SetMonitorProcessCallback(
+      &lldb_private::ProcessLaunchInfo::NoOpMonitorCallback);
+  info.SetExecutableFile(lldb_exec,
+                         /*add_exe_file_as_first_arg=*/true);
+  info.GetArguments().AppendArgument("-O");
+  info.GetArguments().AppendArgument("protocol start MCP");
+  return Host::LaunchProcess(info).takeError();
+}
+
+Expected<ServerInfo> loadOrStart(
+    // FIXME: This should become a CLI arg.
+    lldb_private::Timeout<std::micro> timeout = std::chrono::seconds(30)) {
+  using namespace std::chrono;
+  bool started = false;
+
+  const auto deadline = steady_clock::now() + *timeout;
+  while (steady_clock::now() < deadline) {
+    Expected<std::vector<ServerInfo>> servers = ServerInfo::Load();
+    if (!servers)
+      return servers.takeError();
+
+    if (servers->empty()) {
+      if (!started) {
+        started = true;
+        if (llvm::Error err = launch())
+          return std::move(err);
+      }
+
+      // FIXME: Can we use MainLoop to watch the directory?
+      std::this_thread::sleep_for(microseconds(250));
+      continue;
+    }
+
+    // FIXME: Support selecting / multiplexing a specific lldb instance.
+    if (servers->size() > 1)
+      return createStringError("too many MCP servers running, picking a "
+                               "specific one is not yet implemented");
+
+    return servers->front();
+  }
+
+  return createStringError("timed out waiting for MCP server to start");
+}
+
+void forwardIO(MainLoopBase &loop, IOObjectSP &from, IOObjectSP &to) {
   char buf[kForwardIOBufferSize];
   size_t num_bytes = sizeof(buf);
 
@@ -67,21 +144,24 @@ void forwardIO(lldb_private::MainLoopBase &loop, lldb::IOObjectSP &from,
     exitWithError(std::move(err));
 }
 
-void connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
-                         IOObjectSP &input_sp, IOObjectSP &output_sp) {
+llvm::Error connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
+                                IOObjectSP &input_sp, IOObjectSP &output_sp) {
   auto uri = lldb_private::URI::Parse(info.connection_uri);
   if (!uri)
-    exitWithError(createStringError("invalid connection_uri"));
+    return createStringError("invalid connection_uri");
 
   std::optional<lldb_private::Socket::ProtocolModePair> protocol_and_mode =
       lldb_private::Socket::GetProtocolAndMode(uri->scheme);
+
+  if (!protocol_and_mode)
+    return createStringError("unknown protocol scheme");
 
   lldb_private::Status status;
   std::unique_ptr<lldb_private::Socket> sock =
       lldb_private::Socket::Create(protocol_and_mode->first, status);
 
   if (status.Fail())
-    exitWithError(status.takeError());
+    return status.takeError();
 
   if (uri->port && !uri->hostname.empty())
     status = sock->Connect(
@@ -89,24 +169,22 @@ void connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
   else
     status = sock->Connect(uri->path);
   if (status.Fail())
-    exitWithError(status.takeError());
+    return status.takeError();
 
   IOObjectSP sock_sp = std::move(sock);
   auto input_handle = loop.RegisterReadObject(
       input_sp, std::bind(forwardIO, std::placeholders::_1, input_sp, sock_sp),
       status);
   if (status.Fail())
-    exitWithError(status.takeError());
+    return status.takeError();
 
   auto socket_handle = loop.RegisterReadObject(
       sock_sp, std::bind(forwardIO, std::placeholders::_1, sock_sp, output_sp),
       status);
   if (status.Fail())
-    exitWithError(status.takeError());
+    return status.takeError();
 
-  status = loop.Run();
-  if (status.Fail())
-    exitWithError(status.takeError());
+  return loop.Run().takeError();
 }
 
 llvm::ManagedStatic<lldb_private::SystemLifetimeManager> g_debugger_lifetime;
@@ -147,30 +225,19 @@ int main(int argc, char *argv[]) {
   IOObjectSP output_sp = std::make_shared<NativeFile>(
       fileno(stdout), File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
-  static MainLoop loop;
+  Expected<ServerInfo> server_info = loadOrStart();
+  if (!server_info)
+    exitWithError(server_info.takeError());
 
+  static MainLoop loop;
   sys::SetInterruptFunction([]() {
     loop.AddPendingCallback(
         [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
 
-  auto existing_servers = ServerInfo::Load();
-
-  if (!existing_servers)
-    exitWithError(existing_servers.takeError());
-
-  // FIXME: Launch `lldb -o 'protocol start MCP'`.
-  if (existing_servers->empty())
-    exitWithError(createStringError("No MCP servers running"));
-
-  // FIXME: Support selecting a specific server.
-  if (existing_servers->size() != 1)
-    exitWithError(
-        createStringError("To many MCP servers running, picking a specific "
-                          "one is not yet implemented."));
-
-  ServerInfo &info = existing_servers->front();
-  connectAndForwardIO(loop, info, input_sp, output_sp);
+  if (llvm::Error error =
+          connectAndForwardIO(loop, *server_info, input_sp, output_sp))
+    exitWithError(std::move(error));
 
   return EXIT_SUCCESS;
 }

@@ -2724,16 +2724,6 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
   return InitExpr;
 }
 
-const Expr *StripOffBounds(const Expr *VarExpr) {
-  while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
-    if (const auto *AS = dyn_cast<ArraySectionExpr>(VarExpr))
-      VarExpr = AS->getBase()->IgnoreParenImpCasts();
-    else if (const auto *Sub = dyn_cast<ArraySubscriptExpr>(VarExpr))
-      VarExpr = Sub->getBase()->IgnoreParenImpCasts();
-  }
-  return VarExpr;
-}
-
 VarDecl *CreateAllocaDecl(ASTContext &Ctx, DeclContext *DC,
                           SourceLocation BeginLoc, IdentifierInfo *VarName,
                           QualType VarTy) {
@@ -2758,16 +2748,18 @@ ExprResult FinishValueInit(Sema &S, InitializedEntity &Entity,
 } // namespace
 
 OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
-  VarExpr = StripOffBounds(VarExpr);
-
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCPrivateRecipe::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2780,21 +2772,30 @@ OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
   InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
   ExprResult Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
 
-  return OpenACCPrivateRecipe(AllocaDecl, Init.get());
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+
+  return OpenACCPrivateRecipe(AllocaDecl);
 }
 
 OpenACCFirstPrivateRecipe
 SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
-  VarExpr = StripOffBounds(VarExpr);
-
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCFirstPrivateRecipe::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2818,7 +2819,14 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
   if (!ArrTy) {
     ExprResult Init = FinishValueInit(
         SemaRef.SemaRef, Entity, VarExpr->getBeginLoc(), VarTy, TemporaryDRE);
-    return OpenACCFirstPrivateRecipe(AllocaDecl, Init.get(), Temporary);
+
+    // For 'no bounds' version, we can use this as a shortcut, so set the init
+    // anyway.
+    if (Init.isUsable()) {
+      AllocaDecl->setInit(Init.get());
+      AllocaDecl->setInitStyle(VarDecl::CallInit);
+    }
+    return OpenACCFirstPrivateRecipe(AllocaDecl, Temporary);
   }
 
   // Arrays need to have each individual element initialized as there
@@ -2865,20 +2873,39 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
   ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,
                                     VarExpr->getBeginLoc(), VarTy, InitExpr);
 
-  return OpenACCFirstPrivateRecipe(AllocaDecl, Init.get(), Temporary);
-}
-OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
-    OpenACCReductionOperator ReductionOperator, const Expr *VarExpr) {
-  VarExpr = StripOffBounds(VarExpr);
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
 
+  return OpenACCFirstPrivateRecipe(AllocaDecl, Temporary);
+}
+
+OpenACCReductionRecipeWithStorage SemaOpenACC::CreateReductionInitRecipe(
+    OpenACCReductionOperator ReductionOperator, const Expr *VarExpr) {
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
-    return OpenACCReductionRecipe::Empty();
+    return OpenACCReductionRecipeWithStorage::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ASE->getElementType();
+
+  llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe, 1> CombinerRecipes;
+
+  // We use the 'set-ness' of the alloca-decl to determine whether the combiner
+  // is 'set' or not, so we can skip any attempts at it if we're going to fail
+  // at any of the combiners.
+  if (CreateReductionCombinerRecipe(VarExpr->getBeginLoc(), ReductionOperator,
+                                    VarTy, CombinerRecipes))
+    return OpenACCReductionRecipeWithStorage::Empty();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2921,5 +2948,251 @@ OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
 
   ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,
                                     VarExpr->getBeginLoc(), VarTy, InitExpr);
-  return OpenACCReductionRecipe(AllocaDecl, Init.get());
+
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+
+  return OpenACCReductionRecipeWithStorage(AllocaDecl, CombinerRecipes);
+}
+
+bool SemaOpenACC::CreateReductionCombinerRecipe(
+    SourceLocation Loc, OpenACCReductionOperator ReductionOperator,
+    QualType VarTy,
+    llvm::SmallVectorImpl<OpenACCReductionRecipe::CombinerRecipe>
+        &CombinerRecipes) {
+  // Now we can try to generate the 'combiner' recipe. This is a little
+  // complicated in that if the 'VarTy' is an array type, we want to take its
+  // element type so we can generate that.  Additionally, if this is a struct,
+  // we have two options: If there is overloaded operators, we want to take
+  // THOSE, else we want to do the individual elements.
+
+  BinaryOperatorKind BinOp;
+  switch (ReductionOperator) {
+  case OpenACCReductionOperator::Invalid:
+    // This can only happen when there is an error, and since these inits
+    // are used for code generation, we can just ignore/not bother doing any
+    // initialization here.
+    CombinerRecipes.push_back({nullptr, nullptr, nullptr});
+    return false;
+  case OpenACCReductionOperator::Addition:
+    BinOp = BinaryOperatorKind::BO_AddAssign;
+    break;
+  case OpenACCReductionOperator::Multiplication:
+    BinOp = BinaryOperatorKind::BO_MulAssign;
+    break;
+  case OpenACCReductionOperator::BitwiseAnd:
+    BinOp = BinaryOperatorKind::BO_AndAssign;
+    break;
+  case OpenACCReductionOperator::BitwiseOr:
+    BinOp = BinaryOperatorKind::BO_OrAssign;
+    break;
+  case OpenACCReductionOperator::BitwiseXOr:
+    BinOp = BinaryOperatorKind::BO_XorAssign;
+    break;
+
+  case OpenACCReductionOperator::Max:
+  case OpenACCReductionOperator::Min:
+    BinOp = BinaryOperatorKind::BO_LT;
+    break;
+  case OpenACCReductionOperator::And:
+    BinOp = BinaryOperatorKind::BO_LAnd;
+    break;
+  case OpenACCReductionOperator::Or:
+    BinOp = BinaryOperatorKind::BO_LOr;
+    break;
+  }
+
+  // If VarTy is an array type, at the top level only, we want to do our
+  // compares/decomp/etc at the element level.
+  if (auto *AT = getASTContext().getAsArrayType(VarTy))
+    VarTy = AT->getElementType();
+
+  assert(!VarTy->isArrayType() && "Only 1 level of array allowed");
+
+  enum class CombinerFailureKind {
+    None = 0,
+    BinOp = 1,
+    Conditional = 2,
+    Assignment = 3,
+  };
+
+  auto genCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE)
+      -> std::pair<ExprResult, CombinerFailureKind> {
+    ExprResult BinOpRes =
+        SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc, BinOp, LHSDRE, RHSDRE,
+                           /*ForFoldExpr=*/false);
+    switch (ReductionOperator) {
+    case OpenACCReductionOperator::Addition:
+    case OpenACCReductionOperator::Multiplication:
+    case OpenACCReductionOperator::BitwiseAnd:
+    case OpenACCReductionOperator::BitwiseOr:
+    case OpenACCReductionOperator::BitwiseXOr:
+      // These 5 are simple and are being done  as compound operators, so we can
+      // immediately quit here.
+      return {BinOpRes, BinOpRes.isUsable() ? CombinerFailureKind::None
+                                            : CombinerFailureKind::BinOp};
+    case OpenACCReductionOperator::Max:
+    case OpenACCReductionOperator::Min: {
+      // These are done as:
+      // LHS = (LHS < RHS) ? LHS : RHS; and LHS = (LHS < RHS) ? RHS : LHS;
+      //
+      // The BinOpRes should have been created with the less-than, so we just
+      // have to build the conditional and assignment.
+      if (!BinOpRes.isUsable())
+        return {BinOpRes, CombinerFailureKind::BinOp};
+
+      // Create the correct conditional operator, swapping the results
+      // (true/false value) depending on min/max.
+      ExprResult CondRes;
+      if (ReductionOperator == OpenACCReductionOperator::Min)
+        CondRes = SemaRef.ActOnConditionalOp(Loc, Loc, BinOpRes.get(), LHSDRE,
+                                             RHSDRE);
+      else
+        CondRes = SemaRef.ActOnConditionalOp(Loc, Loc, BinOpRes.get(), RHSDRE,
+                                             LHSDRE);
+
+      if (!CondRes.isUsable())
+        return {CondRes, CombinerFailureKind::Conditional};
+
+      // Build assignment.
+      ExprResult Assignment = SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc,
+                                                 BinaryOperatorKind::BO_Assign,
+                                                 LHSDRE, CondRes.get(),
+                                                 /*ForFoldExpr=*/false);
+      return {Assignment, Assignment.isUsable()
+                              ? CombinerFailureKind::None
+                              : CombinerFailureKind::Assignment};
+    }
+    case OpenACCReductionOperator::And:
+    case OpenACCReductionOperator::Or: {
+      // These are done as LHS = LHS && RHS (or LHS = LHS || RHS). So after the
+      // binop, all we have to do is the assignment.
+      if (!BinOpRes.isUsable())
+        return {BinOpRes, CombinerFailureKind::BinOp};
+
+      // Build assignment.
+      ExprResult Assignment = SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc,
+                                                 BinaryOperatorKind::BO_Assign,
+                                                 LHSDRE, BinOpRes.get(),
+                                                 /*ForFoldExpr=*/false);
+      return {Assignment, Assignment.isUsable()
+                              ? CombinerFailureKind::None
+                              : CombinerFailureKind::Assignment};
+    }
+    case OpenACCReductionOperator::Invalid:
+      llvm_unreachable("Invalid should have been caught above");
+    }
+    llvm_unreachable("Unhandled case");
+  };
+
+  auto tryCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE,
+                               bool IncludeTrap) {
+    if (IncludeTrap) {
+      // Trap all of the errors here, we'll emit our own at the end.
+      Sema::TentativeAnalysisScope Trap{SemaRef};
+      return genCombiner(LHSDRE, RHSDRE);
+    }
+    return genCombiner(LHSDRE, RHSDRE);
+  };
+
+  struct CombinerAttemptTy {
+    CombinerFailureKind FailKind;
+    VarDecl *LHS;
+    DeclRefExpr *LHSDRE;
+    VarDecl *RHS;
+    DeclRefExpr *RHSDRE;
+    Expr *Op;
+  };
+
+  auto formCombiner = [&, this](QualType Ty) -> CombinerAttemptTy {
+    VarDecl *LHSDecl = CreateAllocaDecl(
+        getASTContext(), SemaRef.getCurContext(), Loc,
+        &getASTContext().Idents.get("openacc.reduction.combiner.lhs"), Ty);
+    auto *LHSDRE = DeclRefExpr::Create(
+        getASTContext(), NestedNameSpecifierLoc{}, SourceLocation{}, LHSDecl,
+        /*ReferstoEnclosingVariableOrCapture=*/false,
+        DeclarationNameInfo{DeclarationName{LHSDecl->getDeclName()},
+                            LHSDecl->getBeginLoc()},
+        Ty, clang::VK_LValue, LHSDecl, nullptr, NOUR_None);
+    VarDecl *RHSDecl = CreateAllocaDecl(
+        getASTContext(), SemaRef.getCurContext(), Loc,
+        &getASTContext().Idents.get("openacc.reduction.combiner.lhs"), Ty);
+    auto *RHSDRE = DeclRefExpr::Create(
+        getASTContext(), NestedNameSpecifierLoc{}, SourceLocation{}, RHSDecl,
+        /*ReferstoEnclosingVariableOrCapture=*/false,
+        DeclarationNameInfo{DeclarationName{RHSDecl->getDeclName()},
+                            RHSDecl->getBeginLoc()},
+        Ty, clang::VK_LValue, RHSDecl, nullptr, NOUR_None);
+
+    std::pair<ExprResult, CombinerFailureKind> BinOpResult =
+        tryCombiner(LHSDRE, RHSDRE, /*IncludeTrap=*/true);
+
+    return {BinOpResult.second,     LHSDecl, LHSDRE, RHSDecl, RHSDRE,
+            BinOpResult.first.get()};
+  };
+
+  CombinerAttemptTy TopLevelCombinerInfo = formCombiner(VarTy);
+
+  if (TopLevelCombinerInfo.Op) {
+    if (!TopLevelCombinerInfo.Op->containsErrors() &&
+        TopLevelCombinerInfo.Op->isInstantiationDependent()) {
+      // If this is instantiation dependent, we're just going to 'give up' here
+      // and count on us to get it right during instantaition.
+      CombinerRecipes.push_back({nullptr, nullptr, nullptr});
+      return false;
+    } else if (!TopLevelCombinerInfo.Op->containsErrors()) {
+      // Else, we succeeded, we can just return this combiner.
+      CombinerRecipes.push_back({TopLevelCombinerInfo.LHS,
+                                 TopLevelCombinerInfo.RHS,
+                                 TopLevelCombinerInfo.Op});
+      return false;
+    }
+  }
+
+  auto EmitFailureNote = [&](CombinerFailureKind CFK) {
+    if (CFK == CombinerFailureKind::BinOp)
+      return Diag(Loc, diag::note_acc_reduction_combiner_forming)
+             << CFK << BinaryOperator::getOpcodeStr(BinOp);
+    return Diag(Loc, diag::note_acc_reduction_combiner_forming) << CFK;
+  };
+
+  // Since the 'root' level didn't fail, the only thing that could be successful
+  // is a struct that we decompose on its individual fields.
+
+  RecordDecl *RD = VarTy->getAsRecordDecl();
+  if (!RD) {
+    Diag(Loc, diag::err_acc_reduction_recipe_no_op) << VarTy;
+    EmitFailureNote(TopLevelCombinerInfo.FailKind);
+    tryCombiner(TopLevelCombinerInfo.LHSDRE, TopLevelCombinerInfo.RHSDRE,
+                /*IncludeTrap=*/false);
+    return true;
+  }
+
+  for (const FieldDecl *FD : RD->fields()) {
+    CombinerAttemptTy FieldCombinerInfo = formCombiner(FD->getType());
+
+    if (!FieldCombinerInfo.Op || FieldCombinerInfo.Op->containsErrors()) {
+      Diag(Loc, diag::err_acc_reduction_recipe_no_op) << FD->getType();
+      Diag(FD->getBeginLoc(), diag::note_acc_reduction_recipe_noop_field) << RD;
+      EmitFailureNote(FieldCombinerInfo.FailKind);
+      tryCombiner(FieldCombinerInfo.LHSDRE, FieldCombinerInfo.RHSDRE,
+                  /*IncludeTrap=*/false);
+      return true;
+    }
+
+    if (FieldCombinerInfo.Op->isInstantiationDependent()) {
+      // If this is instantiation dependent, we're just going to 'give up' here
+      // and count on us to get it right during instantaition.
+      CombinerRecipes.push_back({nullptr, nullptr, nullptr});
+    } else {
+      CombinerRecipes.push_back(
+          {FieldCombinerInfo.LHS, FieldCombinerInfo.RHS, FieldCombinerInfo.Op});
+    }
+  }
+
+  return false;
 }

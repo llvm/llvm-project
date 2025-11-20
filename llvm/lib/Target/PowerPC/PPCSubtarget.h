@@ -23,7 +23,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/TargetParser/Triple.h"
-#include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "PPCGenSubtargetInfo.inc"
@@ -93,7 +92,6 @@ protected:
   /// Which cpu directive was used.
   unsigned CPUDirective;
 
-  bool IsPPC64;
   bool IsLittleEndian;
 
   POPCNTDKind HasPOPCNTD;
@@ -167,10 +165,6 @@ private:
   void initSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
 public:
-  /// isPPC64 - Return true if we are generating code for 64-bit pointer mode.
-  ///
-  bool isPPC64() const;
-
   // useSoftFloat - Return true if soft-float option is turned on.
   bool useSoftFloat() const {
     if (isAIXABI() && !HasHardFloat)

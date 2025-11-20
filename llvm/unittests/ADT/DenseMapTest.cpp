@@ -70,6 +70,16 @@ public:
 
   int getValue() const { return Value; }
   bool operator==(const CtorTester &RHS) const { return Value == RHS.Value; }
+
+  // Return the number of live CtorTester objects, excluding the empty and
+  // tombstone keys.
+  static size_t getNumConstructed() {
+    return std::count_if(Constructed.begin(), Constructed.end(),
+                         [](const CtorTester *Obj) {
+                           int V = Obj->getValue();
+                           return V != -1 && V != -2;
+                         });
+  }
 };
 
 std::set<CtorTester *> CtorTester::Constructed;
@@ -119,18 +129,17 @@ typename T::mapped_type *const DenseMapTest<T>::dummy_value_ptr = nullptr;
 
 // Register these types for testing.
 // clang-format off
-typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
-                         DenseMap<uint32_t *, uint32_t *>,
-                         DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
-                         DenseMap<EnumClass, uint32_t>,
-                         DenseMap<std::optional<uint32_t>, uint32_t>,
-                         SmallDenseMap<uint32_t, uint32_t>,
-                         SmallDenseMap<uint32_t *, uint32_t *>,
-                         SmallDenseMap<CtorTester, CtorTester, 4,
-                                       CtorTesterMapInfo>,
-                         SmallDenseMap<EnumClass, uint32_t>,
-                         SmallDenseMap<std::optional<uint32_t>, uint32_t>
-                         > DenseMapTestTypes;
+using DenseMapTestTypes = ::testing::Types<
+    DenseMap<uint32_t, uint32_t>,
+    DenseMap<uint32_t *, uint32_t *>,
+    DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
+    DenseMap<EnumClass, uint32_t>,
+    DenseMap<std::optional<uint32_t>, uint32_t>,
+    SmallDenseMap<uint32_t, uint32_t>,
+    SmallDenseMap<uint32_t *, uint32_t *>,
+    SmallDenseMap<CtorTester, CtorTester, 4, CtorTesterMapInfo>,
+    SmallDenseMap<EnumClass, uint32_t>,
+    SmallDenseMap<std::optional<uint32_t>, uint32_t>>;
 // clang-format on
 
 TYPED_TEST_SUITE(DenseMapTest, DenseMapTestTypes, );
@@ -960,6 +969,135 @@ TEST(DenseMapCustomTest, VariantSupport) {
 TEST(DenseMapCustomTest, PairPrinting) {
   DenseMap<int, StringRef> Map = {{1, "one"}, {2, "two"}};
   EXPECT_EQ(R"({ (1, "one"), (2, "two") })", ::testing::PrintToString(Map));
+}
+
+TEST(DenseMapCustomTest, InitSize) {
+  constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+
+  {
+    DenseMap<int *, int> Map;
+    EXPECT_EQ(ElemSize * 0U, Map.getMemorySize());
+  }
+  {
+    DenseMap<int *, int> Map(0);
+    EXPECT_EQ(ElemSize * 0U, Map.getMemorySize());
+  }
+  {
+    DenseMap<int *, int> Map(1);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    DenseMap<int *, int> Map(2);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    DenseMap<int *, int> Map(3);
+    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+  }
+  {
+    int A, B;
+    DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    int A, B, C;
+    DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
+    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+  }
+}
+
+TEST(SmallDenseMapCustomTest, InitSize) {
+  constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+  {
+    SmallDenseMap<int *, int> Map;
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    SmallDenseMap<int *, int> Map(0);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    SmallDenseMap<int *, int> Map(1);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    SmallDenseMap<int *, int> Map(2);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    SmallDenseMap<int *, int> Map(3);
+    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+  }
+  {
+    int A, B;
+    SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    int A, B, C;
+    SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
+    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+  }
+}
+
+TEST(DenseMapCustomTest, KeyDtor) {
+  // This test relies on CtorTester being non-trivially destructible.
+  static_assert(!std::is_trivially_destructible_v<CtorTester>,
+                "CtorTester must not be trivially destructible");
+
+  // Test that keys are destructed on scope exit.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<CtorTester, int, CtorTesterMapInfo> Map;
+    Map.try_emplace(CtorTester(0), 1);
+    Map.try_emplace(CtorTester(1), 2);
+    EXPECT_EQ(2u, CtorTester::getNumConstructed());
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+
+  // Test that keys are destructed on erase and shrink_and_clear.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<CtorTester, int, CtorTesterMapInfo> Map;
+    Map.try_emplace(CtorTester(0), 1);
+    Map.try_emplace(CtorTester(1), 2);
+    EXPECT_EQ(2u, CtorTester::getNumConstructed());
+    Map.erase(CtorTester(1));
+    EXPECT_EQ(1u, CtorTester::getNumConstructed());
+    Map.shrink_and_clear();
+    EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+}
+
+TEST(DenseMapCustomTest, ValueDtor) {
+  // This test relies on CtorTester being non-trivially destructible.
+  static_assert(!std::is_trivially_destructible_v<CtorTester>,
+                "CtorTester must not be trivially destructible");
+
+  // Test that values are destructed on scope exit.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<int, CtorTester> Map;
+    Map.try_emplace(0, CtorTester(1));
+    Map.try_emplace(1, CtorTester(2));
+    EXPECT_EQ(2u, CtorTester::getNumConstructed());
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+
+  // Test that values are destructed on erase and shrink_and_clear.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<int, CtorTester> Map;
+    Map.try_emplace(0, CtorTester(1));
+    Map.try_emplace(1, CtorTester(2));
+    EXPECT_EQ(2u, CtorTester::getNumConstructed());
+    Map.erase(1);
+    EXPECT_EQ(1u, CtorTester::getNumConstructed());
+    Map.shrink_and_clear();
+    EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
 }
 
 } // namespace

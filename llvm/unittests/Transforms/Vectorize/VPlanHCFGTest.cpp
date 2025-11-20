@@ -139,12 +139,12 @@ compound=true
       "vector.body:\l" +
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ne ir\<%indvars.iv.next\>, ir\<%N\>\l" +
       "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
       "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
       "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
@@ -203,7 +203,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
           VPInstruction::BranchOnCond,
           {Plan->getOrAddLiveIn(ConstantInt::getTrue(F->getContext()))}));
   VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-      Plan, [](PHINode *P) { return nullptr; }, TLI);
+      *Plan, [](PHINode *P) { return nullptr; }, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_EQ(0u, Entry->getNumPredecessors());
@@ -305,9 +305,9 @@ compound=true
       "vector.body:\l" +
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%iv\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%c\> = icmp ir\<%l1\>, ir\<0\>\l" +
+      "  EMIT ir\<%c\> = icmp eq ir\<%l1\>, ir\<0\>\l" +
       "Successor(s): loop.latch\l"
     ]
     N4 -> N6 [ label=""]
@@ -316,7 +316,7 @@ compound=true
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%iv.next\> = add ir\<%iv\>, ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%iv.next\>, ir\<%N\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ne ir\<%iv.next\>, ir\<%N\>\l" +
       "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
       "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
       "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +

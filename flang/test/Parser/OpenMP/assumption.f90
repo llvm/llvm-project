@@ -141,9 +141,11 @@ program p
 end program p
 
 !UNPARSE: PROGRAM p
-!UNPARSE: !$OMP ASSUMES  NO_OPENMP
+!UNPARSE: !$OMP ASSUMES NO_OPENMP
 !UNPARSE: END PROGRAM p
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclarativeAssumes
-!PARSE-TREE: | Verbatim
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclarativeAssumes -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = assumes
 !PARSE-TREE: | OmpClauseList -> OmpClause -> NoOpenmp
+!PARSE-TREE: | Flags = None
+!PARSE-TREE: ImplicitPart ->

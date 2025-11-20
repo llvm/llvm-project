@@ -1078,13 +1078,101 @@ TEST(ProtocolTypesTest, InvalidatedEventBody) {
   InvalidatedEventBody body;
   body.areas = {InvalidatedEventBody::eAreaStacks,
                 InvalidatedEventBody::eAreaThreads};
-  body.frameId = 1;
+  body.stackFrameId = 1;
+  body.threadId = 20;
+  Expected<json::Value> expected = json::parse(R"({
+    "areas": [
+      "stacks",
+      "threads"
+    ],
+    "stackFrameId": 1,
+    "threadId": 20
+    })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(body));
+}
+
+TEST(ProtocolTypesTest, MemoryEventBody) {
+  MemoryEventBody body;
+  body.memoryReference = 12345;
+  body.offset = 0;
+  body.count = 4;
   StringRef json = R"({
-  "areas": [
-    "stacks",
-    "threads"
-  ],
-  "frameId": 1
+  "count": 4,
+  "memoryReference": "0x3039",
+  "offset": 0
 })";
   EXPECT_EQ(json, pp(body));
+}
+
+TEST(ProtocolTypesTest, DataBreakpointInfoArguments) {
+  llvm::Expected<DataBreakpointInfoArguments> expected =
+      parse<DataBreakpointInfoArguments>(R"({
+    "name": "data",
+    "variablesReference": 8,
+    "frameId": 9,
+    "bytes": 10,
+    "asAddress": false,
+    "mode": "source"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->name, "data");
+  EXPECT_EQ(expected->variablesReference, 8);
+  EXPECT_EQ(expected->frameId, 9u);
+  EXPECT_EQ(expected->bytes, 10);
+  EXPECT_EQ(expected->asAddress, false);
+  EXPECT_EQ(expected->mode, "source");
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<DataBreakpointInfoArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).name"));
+  EXPECT_THAT_EXPECTED(parse<DataBreakpointInfoArguments>(R"({"name":"data"})"),
+                       llvm::Succeeded());
+}
+
+TEST(ProtocolTypesTest, ExceptionBreakMode) {
+  const std::vector<std::pair<ExceptionBreakMode, llvm::StringRef>> test_cases =
+      {{ExceptionBreakMode::eExceptionBreakModeAlways, "always"},
+       {ExceptionBreakMode::eExceptionBreakModeNever, "never"},
+       {ExceptionBreakMode::eExceptionBreakModeUnhandled, "unhandled"},
+       {ExceptionBreakMode::eExceptionBreakModeUserUnhandled, "userUnhandled"}};
+
+  for (const auto [value, expected] : test_cases) {
+    json::Value const serialized = toJSON(value);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), expected);
+  }
+}
+
+TEST(ProtocolTypesTest, ExceptionDetails) {
+  ExceptionDetails details;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(details));
+
+  // Check optional keys.
+  details.message = "SIGABRT exception";
+  details.typeName = "signal";
+  details.fullTypeName = "SIGABRT";
+  details.evaluateName = "process handle SIGABRT";
+  details.stackTrace = "some stacktrace";
+  ExceptionDetails inner_details;
+  inner_details.message = "inner message";
+  details.innerException = {std::move(inner_details)};
+
+  Expected<json::Value> expected_opt = parse(R"({
+    "message": "SIGABRT exception",
+    "typeName": "signal",
+    "fullTypeName": "SIGABRT",
+    "evaluateName": "process handle SIGABRT",
+    "stackTrace": "some stacktrace",
+    "innerException": [{
+      "message": "inner message"
+    }]
+    })");
+
+  ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_opt), pp(details));
 }

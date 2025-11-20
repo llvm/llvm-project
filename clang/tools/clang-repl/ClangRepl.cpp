@@ -85,6 +85,8 @@ static llvm::cl::list<std::string>
               llvm::cl::CommaSeparated);
 static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
+static llvm::cl::opt<bool> OptHostJitTriple("host-jit-triple",
+                                            llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
@@ -279,6 +281,11 @@ int main(int argc, const char **argv) {
       llvm::outs() << "false\n";
     }
     return 0;
+  } else if (OptHostJitTriple) {
+    auto J = ExitOnErr(llvm::orc::LLJITBuilder().create());
+    auto T = J->getTargetTriple();
+    llvm::outs() << T.normalize() << '\n';
+    return 0;
   }
 
   clang::IncrementalCompilerBuilder CB;
@@ -302,6 +309,7 @@ int main(int argc, const char **argv) {
   clang::Interpreter::JITConfig Config;
   Config.IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   Config.OOPExecutor = OOPExecutor;
+  Config.OrcRuntimePath = OrcRuntimePath;
   auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
   if (!SizeOrErr) {
     llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");

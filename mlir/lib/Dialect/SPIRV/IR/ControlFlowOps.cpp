@@ -151,22 +151,26 @@ LogicalResult BranchConditionalOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult FunctionCallOp::verify() {
+  if (getNumResults() > 1) {
+    return emitOpError(
+               "expected callee function to have 0 or 1 result, but provided ")
+           << getNumResults();
+  }
+  return success();
+}
+
+LogicalResult
+FunctionCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   auto fnName = getCalleeAttr();
 
-  auto funcOp = dyn_cast_or_null<spirv::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom((*this)->getParentOp(), fnName));
+  auto funcOp =
+      symbolTable.lookupNearestSymbolFrom<spirv::FuncOp>(*this, fnName);
   if (!funcOp) {
     return emitOpError("callee function '")
            << fnName.getValue() << "' not found in nearest symbol table";
   }
 
   auto functionType = funcOp.getFunctionType();
-
-  if (getNumResults() > 1) {
-    return emitOpError(
-               "expected callee function to have 0 or 1 result, but provided ")
-           << getNumResults();
-  }
 
   if (functionType.getNumInputs() != getNumOperands()) {
     return emitOpError("has incorrect number of operands for callee: expected ")
@@ -213,6 +217,89 @@ Operation::operand_range FunctionCallOp::getArgOperands() {
 
 MutableOperandRange FunctionCallOp::getArgOperandsMutable() {
   return getArgumentsMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.Switch
+//===----------------------------------------------------------------------===//
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     DenseIntElementsAttr literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  build(builder, result, selector, defaultOperands, targetOperands, literals,
+        defaultTarget, targets);
+}
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     ArrayRef<APInt> literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  DenseIntElementsAttr literalsAttr;
+  if (!literals.empty()) {
+    ShapedType literalType = VectorType::get(
+        static_cast<int64_t>(literals.size()), selector.getType());
+    literalsAttr = DenseIntElementsAttr::get(literalType, literals);
+  }
+  build(builder, result, selector, defaultTarget, defaultOperands, literalsAttr,
+        targets, targetOperands);
+}
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     ArrayRef<int32_t> literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  DenseIntElementsAttr literalsAttr;
+  if (!literals.empty()) {
+    ShapedType literalType = VectorType::get(
+        static_cast<int64_t>(literals.size()), selector.getType());
+    literalsAttr = DenseIntElementsAttr::get(literalType, literals);
+  }
+  build(builder, result, selector, defaultTarget, defaultOperands, literalsAttr,
+        targets, targetOperands);
+}
+
+LogicalResult SwitchOp::verify() {
+  std::optional<DenseIntElementsAttr> literals = getLiterals();
+  BlockRange targets = getTargets();
+
+  if (!literals && targets.empty())
+    return success();
+
+  Type selectorType = getSelector().getType();
+  Type literalType = literals->getType().getElementType();
+  if (literalType != selectorType)
+    return emitOpError() << "'selector' type (" << selectorType
+                         << ") should match literals type (" << literalType
+                         << ")";
+
+  if (literals && literals->size() != static_cast<int64_t>(targets.size()))
+    return emitOpError() << "number of literals (" << literals->size()
+                         << ") should match number of targets ("
+                         << targets.size() << ")";
+  return success();
+}
+
+SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDefaultOperandsMutable()
+                                      : getTargetOperandsMutable(index - 1));
+}
+
+Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  std::optional<DenseIntElementsAttr> literals = getLiterals();
+
+  if (!literals)
+    return getDefaultTarget();
+
+  SuccessorRange targets = getTargets();
+  if (auto value = dyn_cast_or_null<IntegerAttr>(operands.front())) {
+    for (auto [index, literal] : llvm::enumerate(literals->getValues<APInt>()))
+      if (literal == value.getValue())
+        return targets[index];
+    return getDefaultTarget();
+  }
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

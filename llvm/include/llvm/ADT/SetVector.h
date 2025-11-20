@@ -28,7 +28,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
-#include <iterator>
 
 namespace llvm {
 
@@ -87,72 +86,54 @@ public:
   SetVector(llvm::from_range_t, Range &&R)
       : SetVector(adl_begin(R), adl_end(R)) {}
 
-  ArrayRef<value_type> getArrayRef() const { return vector_; }
+  [[nodiscard]] ArrayRef<value_type> getArrayRef() const { return vector_; }
 
   /// Clear the SetVector and return the underlying vector.
-  Vector takeVector() {
+  [[nodiscard]] Vector takeVector() {
     set_.clear();
     return std::move(vector_);
   }
 
   /// Determine if the SetVector is empty or not.
-  bool empty() const {
-    return vector_.empty();
-  }
+  [[nodiscard]] bool empty() const { return vector_.empty(); }
 
   /// Determine the number of elements in the SetVector.
-  size_type size() const {
-    return vector_.size();
-  }
+  [[nodiscard]] size_type size() const { return vector_.size(); }
 
   /// Get an iterator to the beginning of the SetVector.
-  iterator begin() {
-    return vector_.begin();
-  }
+  [[nodiscard]] iterator begin() { return vector_.begin(); }
 
   /// Get a const_iterator to the beginning of the SetVector.
-  const_iterator begin() const {
-    return vector_.begin();
-  }
+  [[nodiscard]] const_iterator begin() const { return vector_.begin(); }
 
   /// Get an iterator to the end of the SetVector.
-  iterator end() {
-    return vector_.end();
-  }
+  [[nodiscard]] iterator end() { return vector_.end(); }
 
   /// Get a const_iterator to the end of the SetVector.
-  const_iterator end() const {
-    return vector_.end();
-  }
+  [[nodiscard]] const_iterator end() const { return vector_.end(); }
 
   /// Get an reverse_iterator to the end of the SetVector.
-  reverse_iterator rbegin() {
-    return vector_.rbegin();
-  }
+  [[nodiscard]] reverse_iterator rbegin() { return vector_.rbegin(); }
 
   /// Get a const_reverse_iterator to the end of the SetVector.
-  const_reverse_iterator rbegin() const {
+  [[nodiscard]] const_reverse_iterator rbegin() const {
     return vector_.rbegin();
   }
 
   /// Get a reverse_iterator to the beginning of the SetVector.
-  reverse_iterator rend() {
-    return vector_.rend();
-  }
+  [[nodiscard]] reverse_iterator rend() { return vector_.rend(); }
 
   /// Get a const_reverse_iterator to the beginning of the SetVector.
-  const_reverse_iterator rend() const {
-    return vector_.rend();
-  }
+  [[nodiscard]] const_reverse_iterator rend() const { return vector_.rend(); }
 
   /// Return the first element of the SetVector.
-  const value_type &front() const {
+  [[nodiscard]] const value_type &front() const {
     assert(!empty() && "Cannot call front() on empty SetVector!");
     return vector_.front();
   }
 
   /// Return the last element of the SetVector.
-  const value_type &back() const {
+  [[nodiscard]] const value_type &back() const {
     assert(!empty() && "Cannot call back() on empty SetVector!");
     return vector_.back();
   }
@@ -299,11 +280,11 @@ public:
     return Ret;
   }
 
-  bool operator==(const SetVector &that) const {
+  [[nodiscard]] bool operator==(const SetVector &that) const {
     return vector_ == that.vector_;
   }
 
-  bool operator!=(const SetVector &that) const {
+  [[nodiscard]] bool operator!=(const SetVector &that) const {
     return vector_ != that.vector_;
   }
 

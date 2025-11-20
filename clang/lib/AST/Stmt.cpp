@@ -252,7 +252,7 @@ namespace {
   template <class T> good implements_children(children_t T::*) {
     return good();
   }
-  LLVM_ATTRIBUTE_UNUSED
+  [[maybe_unused]]
   static bad implements_children(children_t Stmt::*) {
     return bad();
   }
@@ -261,15 +261,19 @@ namespace {
   template <class T> good implements_getBeginLoc(getBeginLoc_t T::*) {
     return good();
   }
-  LLVM_ATTRIBUTE_UNUSED
-  static bad implements_getBeginLoc(getBeginLoc_t Stmt::*) { return bad(); }
+  [[maybe_unused]]
+  static bad implements_getBeginLoc(getBeginLoc_t Stmt::*) {
+    return bad();
+  }
 
   typedef SourceLocation getLocEnd_t() const;
   template <class T> good implements_getEndLoc(getLocEnd_t T::*) {
     return good();
   }
-  LLVM_ATTRIBUTE_UNUSED
-  static bad implements_getEndLoc(getLocEnd_t Stmt::*) { return bad(); }
+  [[maybe_unused]]
+  static bad implements_getEndLoc(getLocEnd_t Stmt::*) {
+    return bad();
+  }
 
 #define ASSERT_IMPLEMENTS_children(type) \
   (void) is_good(implements_children(&type::children))
@@ -282,7 +286,7 @@ namespace {
 
 /// Check whether the various Stmt classes implement their member
 /// functions.
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static inline void check_implementations() {
 #define ABSTRACT_STMT(type)
 #define STMT(type, base)                                                       \

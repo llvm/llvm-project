@@ -1,4 +1,4 @@
-//===--- TypeTraitsCheck.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -286,7 +286,7 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *TL = Result.Nodes.getNodeAs<TypedefTypeLoc>(Bind)) {
     const NestedNameSpecifierLoc QualLoc = TL->getQualifierLoc();
-    NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
+    const NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
             NNS.getAsRecordDecl())) {
       if (isNamedDeclInStdTraitsSet(CTSD, TypeTraits))
@@ -304,7 +304,7 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *DNTL = Result.Nodes.getNodeAs<DependentNameTypeLoc>(Bind)) {
-    NestedNameSpecifierLoc QualLoc = DNTL->getQualifierLoc();
+    const NestedNameSpecifierLoc QualLoc = DNTL->getQualifierLoc();
     if (checkTemplatedDecl(QualLoc.getNestedNameSpecifier(), TypeTraits))
       EmitTypeWarning(QualLoc, DNTL->getEndLoc(),
                       DNTL->getElaboratedKeywordLoc());

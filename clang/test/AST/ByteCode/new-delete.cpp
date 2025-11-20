@@ -1091,6 +1091,29 @@ namespace NewNegSizeNothrow {
   static_assert(test_nothrow_neg_size(), "expected nullptr");
 } // namespace NewNegSizeNothrow
 
+#if __SIZEOF_SIZE_T == 8
+/// We can't allocate the array here as it is too big.
+/// Make sure we're not crashing by assuming an non-null
+/// Descriptor.
+namespace HugeAllocation {
+  void *p;
+  void foo ()
+  {
+    p = new char [256][256][256][256][256];
+  }
+}
+#endif
+
+namespace ZeroSizeArray {
+  constexpr int foo() {
+    int *A = new int[0];
+    int diff = A - (&A[0]);
+    delete[] A;
+    return diff;
+  }
+  static_assert(foo() == 0);
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

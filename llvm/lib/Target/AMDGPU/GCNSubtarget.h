@@ -60,7 +60,6 @@ private:
 
 protected:
   // Basic subtarget description.
-  Triple TargetTriple;
   AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
   unsigned Gen = INVALID;
   InstrItineraryData InstrItins;
@@ -99,6 +98,7 @@ protected:
   bool EnableDS128 = false;
   bool EnablePRTStrictNull = false;
   bool DumpCode = false;
+  bool AssemblerPermissiveWavesize = false;
 
   // Subtarget statically properties set by tablegen
   bool FP64 = false;
@@ -166,6 +166,13 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasCubeInsts = false;
+  bool HasLerpInst = false;
+  bool HasSadInsts = false;
+  bool HasQsadInsts = false;
+  bool HasCvtNormInsts = false;
+  bool HasCvtPkNormVOP2Insts = false;
+  bool HasCvtPkNormVOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -277,6 +284,8 @@ protected:
   bool HasLshlAddU64Inst = false;
   bool HasAddSubU64Insts = false;
   bool HasMadU32Inst = false;
+  bool HasAddMinMaxInsts = false;
+  bool HasPkAddMinMaxInsts = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -284,6 +293,11 @@ protected:
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
   bool HasGloballyAddressableScratch = false;
+
+  bool Has45BitNumRecordsBufferResource = false;
+
+  bool HasClusters = false;
+  bool RequiresWaitsBeforeSystemScopeStores = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -885,6 +899,20 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
+  bool hasCubeInsts() const { return HasCubeInsts; }
+
+  bool hasLerpInst() const { return HasLerpInst; }
+
+  bool hasSadInsts() const { return HasSadInsts; }
+
+  bool hasQsadInsts() const { return HasQsadInsts; }
+
+  bool hasCvtNormInsts() const { return HasCvtNormInsts; }
+
+  bool hasCvtPkNormVOP2Insts() const { return HasCvtPkNormVOP2Insts; }
+
+  bool hasCvtPkNormVOP3Insts() const { return HasCvtPkNormVOP3Insts; }
+
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
   bool hasPkFmacF16Inst() const {
@@ -1413,6 +1441,13 @@ public:
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
 
+  /// \returns true if the target has packed f32 instructions that only read 32
+  /// bits from a scalar operand (SGPR or literal) and replicates the bits to
+  /// both channels.
+  bool hasPKF32InstsReplicatingLower32BitsOfScalarInput() const {
+    return getGeneration() == GFX12 && GFX1250Insts;
+  }
+
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
@@ -1563,10 +1598,10 @@ public:
   bool hasIntMinMax64() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-  bool hasAddMinMaxInsts() const { return GFX1250Insts; }
+  bool hasAddMinMaxInsts() const { return HasAddMinMaxInsts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
-  bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }
+  bool hasPkAddMinMaxInsts() const { return HasPkAddMinMaxInsts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX1250Insts; }
@@ -1834,11 +1869,31 @@ public:
   }
 
   /// \returns true if the subtarget supports clusters of workgroups.
-  bool hasClusters() const { return GFX1250Insts; }
+  bool hasClusters() const { return HasClusters; }
 
   /// \returns true if the subtarget requires a wait for xcnt before atomic
   /// flat/global stores & rmw.
   bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts; }
+
+  /// \returns the number of significant bits in the immediate field of the
+  /// S_NOP instruction.
+  unsigned getSNopBits() const {
+    if (getGeneration() >= AMDGPUSubtarget::GFX12)
+      return 7;
+    if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return 4;
+    return 3;
+  }
+
+  /// \returns true if the sub-target supports buffer resource (V#) with 45-bit
+  /// num_records.
+  bool has45BitNumRecordsBufferResource() const {
+    return Has45BitNumRecordsBufferResource;
+  }
+
+  bool requiresWaitsBeforeSystemScopeStores() const {
+    return RequiresWaitsBeforeSystemScopeStores;
+  }
 };
 
 class GCNUserSGPRUsageInfo {

@@ -54,6 +54,25 @@ int main(int, char**)
         constexpr optional<Z> opt(Z{});
         static_assert(opt->test() == 1, "");
     }
+#if TEST_STD_VER >= 26
+    {
+      X x{};
+      const std::optional<X&> opt(x);
+      ASSERT_SAME_TYPE(decltype(opt.operator->()), X*);
+      ASSERT_NOEXCEPT(opt.operator->());
+    }
+    {
+      X x{};
+      const std::optional<const X&> opt(x);
+      ASSERT_SAME_TYPE(decltype(opt.operator->()), const X*);
+      ASSERT_NOEXCEPT(opt.operator->());
+    }
+    {
+      static constexpr Z z{};
+      constexpr optional<const Z&> opt(z);
+      static_assert(opt->test() == 1);
+    }
+#endif
 
     return 0;
 }

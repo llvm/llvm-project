@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- run-clang-tidy.py - Parallel clang-tidy runner --------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -31,7 +31,7 @@ Example invocations.
                       -header-filter=extra/clang-tidy
 
 Compilation database setup:
-http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 """
 
 import argparse

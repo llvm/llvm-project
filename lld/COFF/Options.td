@@ -90,6 +90,8 @@ def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
 def nodefaultlib : P<"nodefaultlib", "Remove a default library">;
+def nodbgdirmerge : F<"nodbgdirmerge">,
+                      HelpText<"Emit the debug directory in a separate section">;
 def opt     : P<"opt", "Control optimizations">;
 def order   : P<"order", "Put functions in order">;
 def out     : P<"out", "Path to file to write output">;
@@ -287,10 +289,13 @@ def thinlto_distributor : P<"thinlto-distributor",
   "backend compilations will be distributed">;
 def thinlto_distributor_arg : P<"thinlto-distributor-arg",
   "Arguments to pass to the ThinLTO distributor">;
-def thinlto_compiler : P<"thinlto-remote-compiler",
+def thinlto_remote_compiler : P<"thinlto-remote-compiler",
   "Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
-def thinlto_compiler_arg : P<"thinlto-remote-compiler-arg",
+def thinlto_remote_compiler_prepend_arg : P<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
+def thinlto_remote_compiler_arg : P<"thinlto-remote-compiler-arg",
   "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
 def lto_obj_path : P<

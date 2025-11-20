@@ -73,16 +73,26 @@ void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xffffffff);
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    MAI.printExpr(O, *Op.getExpr());
+    return;
+  }
+
+  O << formatHex(Op.getImm() & 0xffffffff);
 }
 
 void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   // KIMM64
-  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-  uint64_t Imm = MI->getOperand(OpNo).getImm();
-  printLiteral64(Desc, Imm, STI, O, /*IsFP=*/true);
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    MAI.printExpr(O, *Op.getExpr());
+    return;
+  }
+
+  printLiteral64(Op.getImm(), O, /*IsFP=*/true);
 }
 
 void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
@@ -326,21 +336,29 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
 
 // \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v1023] or
 // \p Reg itself otherwise.
-static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+static MCRegister getRegForPrinting(MCRegister Reg, const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   if (Idx < 0x100)
     return Reg;
 
+  unsigned RegNo = Idx % 0x100;
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
-  return RC->getRegister(Idx % 0x100);
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    RegNo *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++RegNo;
+  }
+
+  return RC->getRegister(RegNo);
 }
 
 // Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.
-static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
-                               const MCInstrDesc &Desc,
-                               const MCRegisterInfo &MRI,
-                               const AMDGPUMCInstrAnalysis &MIA) {
+static MCRegister getRegFromMIA(MCRegister Reg, unsigned OpNo,
+                                const MCInstrDesc &Desc,
+                                const MCRegisterInfo &MRI,
+                                const AMDGPUMCInstrAnalysis &MIA) {
   unsigned VgprMSBs = MIA.getVgprMSBs();
   if (!VgprMSBs)
     return Reg;
@@ -385,10 +403,10 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
   }
 #endif
 
-  unsigned PrintReg = getRegForPrinting(Reg, MRI);
+  MCRegister PrintReg = getRegForPrinting(Reg, MRI);
   O << getRegisterName(PrintReg);
 
-  if (PrintReg != Reg.id())
+  if (PrintReg != Reg)
     O << " /*" << getRegisterName(Reg) << "*/";
 }
 
@@ -652,7 +670,7 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
   O << formatHex(static_cast<uint64_t>(Imm));
 }
 
-void AMDGPUInstPrinter::printImmediate64(const MCInstrDesc &Desc, uint64_t Imm,
+void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O, bool IsFP) {
   int64_t SImm = static_cast<int64_t>(Imm);
@@ -683,27 +701,15 @@ void AMDGPUInstPrinter::printImmediate64(const MCInstrDesc &Desc, uint64_t Imm,
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
   else
-    printLiteral64(Desc, Imm, STI, O, IsFP);
+    printLiteral64(Imm, O, IsFP);
 }
 
-void AMDGPUInstPrinter::printLiteral64(const MCInstrDesc &Desc, uint64_t Imm,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O, bool IsFP) {
-  // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
-  bool CanUse64BitLiterals =
-      STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-      !(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P));
-  if (IsFP) {
-    if (CanUse64BitLiterals && Lo_32(Imm))
-      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
-    else
-      O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
-  } else {
-    if (CanUse64BitLiterals && (!isInt<32>(Imm) || !isUInt<32>(Imm)))
-      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
-    else
-      O << formatHex(static_cast<uint64_t>(Imm));
-  }
+void AMDGPUInstPrinter::printLiteral64(uint64_t Imm, raw_ostream &O,
+                                       bool IsFP) {
+  if (IsFP && Lo_32(Imm) == 0)
+    O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
+  else
+    O << formatHex(Imm);
 }
 
 void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,
@@ -788,13 +794,25 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Check if operand register class contains register used.
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
-    int RCID = Desc.operands()[OpNo].RegClass;
-    if (RCID != -1) {
-      const MCRegisterClass RC = MRI.getRegClass(RCID);
+    const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
+    if (OpInfo.RegClass != -1) {
+      int16_t RCID = MII.getOpRegClassID(
+          OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+      const MCRegisterClass &RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
       if (!RC.contains(Reg) && !isInlineValue(Reg)) {
-        O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
-          << "\' register class*/";
+        bool IsWaveSizeOp = OpInfo.isLookupRegClassByHwMode() &&
+                            (OpInfo.RegClass == AMDGPU::SReg_1 ||
+                             OpInfo.RegClass == AMDGPU::SReg_1_XEXEC);
+        // Suppress this comment for a mismatched wavesize. Some users expect to
+        // be able to assemble and disassemble modules with mixed wavesizes, but
+        // we do not know the subtarget in different functions in MC.
+        //
+        // TODO: Should probably print it anyway, maybe a more specific version.
+        if (!IsWaveSizeOp) {
+          O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
+            << "\' register class*/";
+        }
       }
     }
   } else if (Op.isImm()) {
@@ -814,12 +832,12 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-      printImmediate64(Desc, Op.getImm(), STI, O, false);
+      printImmediate64(Op.getImm(), STI, O, false);
       break;
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-      printImmediate64(Desc, Op.getImm(), STI, O, true);
+      printImmediate64(Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -1025,7 +1043,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) &&
-      AMDGPU::isDPALU_DPP(Desc, STI)) {
+      AMDGPU::isDPALU_DPP(Desc, MII, STI)) {
     O << " /* DP ALU dpp only supports "
       << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
     return;
@@ -1278,6 +1296,17 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, SrcMod);
     Ops[NumOps++] =
         (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
+  }
+
+  // Some instructions, e.g. v_interp_p2_f16 in GFX9, have src0, src2, but no
+  // src1.
+  if (NumOps == 1 && AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src2) &&
+      !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1)) {
+    Ops[NumOps++] = DefaultValue; // Set src1_modifiers to default.
+    int Mod2Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
+    assert(Mod2Idx != -1);
+    Ops[NumOps++] = MI->getOperand(Mod2Idx).getImm();
   }
 
   const bool HasDst =

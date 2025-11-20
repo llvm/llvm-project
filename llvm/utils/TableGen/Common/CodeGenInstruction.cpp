@@ -118,7 +118,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
         VariadicOuts = true;
       isVariadic = true;
       continue;
-    } else if (Rec->isSubClassOf("RegisterClass")) {
+    } else if (Rec->isSubClassOf("RegisterClassLike")) {
       OperandType = "OPERAND_REGISTER";
     } else if (!Rec->isSubClassOf("PointerLikeRegClass") &&
                !Rec->isSubClassOf("unknown_class")) {

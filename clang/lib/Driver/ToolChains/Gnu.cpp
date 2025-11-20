@@ -20,9 +20,9 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/MultilibBuilder.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/ArgList.h"
@@ -1750,11 +1750,11 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
   for (auto Element : RISCVMultilibSet) {
     addMultilibFlag(MArch == Element.march,
-                    Twine("-march=", Element.march).str().c_str(), Flags);
+                    Twine("-march=", Element.march).str(), Flags);
     if (!Added_ABIs.count(Element.mabi)) {
       Added_ABIs.insert(Element.mabi);
       addMultilibFlag(ABIName == Element.mabi,
-                      Twine("-mabi=", Element.mabi).str().c_str(), Flags);
+                      Twine("-mabi=", Element.mabi).str(), Flags);
     }
   }
 
@@ -2058,7 +2058,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
 
 static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
                                           llvm::StringRef SysRoot) {
-  const Arg *A = Args.getLastArg(clang::driver::options::OPT_gcc_toolchain);
+  const Arg *A = Args.getLastArg(options::OPT_gcc_toolchain);
   if (A)
     return A->getValue();
 
@@ -2111,8 +2111,7 @@ void Generic_GCC::GCCInstallationDetector::init(
                            CandidateBiarchTripleAliases);
 
   // If --gcc-install-dir= is specified, skip filesystem detection.
-  if (const Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_gcc_install_dir_EQ);
+  if (const Arg *A = Args.getLastArg(options::OPT_gcc_install_dir_EQ);
       A && A->getValue()[0]) {
     StringRef InstallDir = A->getValue();
     if (!ScanGCCForMultilibs(TargetTriple, Args, InstallDir, false)) {
@@ -2135,8 +2134,7 @@ void Generic_GCC::GCCInstallationDetector::init(
 
   // If --gcc-triple is specified use this instead of trying to
   // auto-detect a triple.
-  if (const Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_gcc_triple_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_gcc_triple_EQ)) {
     StringRef GCCTriple = A->getValue();
     CandidateTripleAliases.clear();
     CandidateTripleAliases.push_back(GCCTriple);
@@ -2529,6 +2527,14 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
   if (TargetTriple.isOSHurd()) {
     switch (TargetTriple.getArch()) {
+    case llvm::Triple::aarch64:
+      LibDirs.append(begin(AArch64LibDirs), end(AArch64LibDirs));
+      TripleAliases.push_back("aarch64-gnu");
+      break;
+    case llvm::Triple::riscv64:
+      LibDirs.append(begin(RISCV64LibDirs), end(RISCV64LibDirs));
+      TripleAliases.push_back("riscv64-gnu");
+      break;
     case llvm::Triple::x86_64:
       LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
       TripleAliases.push_back("x86_64-gnu");

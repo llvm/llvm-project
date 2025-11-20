@@ -87,7 +87,9 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 #### LoopVectorize
 
 Florian Hahn \
-flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
+flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub) \
+David Sherwood \
+david.sherwood@arm.com (email), [david-arm](https://github.com/david-arm) (GitHub)
 
 #### MemorySSA
 
@@ -120,6 +122,13 @@ a.bataev@outlook.com (email), [alexey-bataev](https://github.com/alexey-bataev) 
 
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+
+#### DFAJumpThreading
+
+Hongyu Chen \
+xxs\_chy@outlook.com (email), [XChy](https://github.com/XChy) (Github) \
+Usman Nadeem \
+mnadeem@quicinc.com (email), [UsmanNadeem](https://github.com/UsmanNadeem) (Github)
 
 ### Instrumentation and sanitizers
 
@@ -188,7 +197,7 @@ david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub
 Amara Emerson (esp. AArch64 GlobalISel) \
 amara@apple.com (email), [aemerson](https://github.com/aemerson) (GitHub) \
 Eli Friedman (esp. ARM64EC) \
-efriedma@quicinc.com (email), [efriedma-quic](https://github.com/efriedma-quic) (GitHub) \
+efriedma@qti.qualcomm.com (email), [efriedma-quic](https://github.com/efriedma-quic) (GitHub) \
 Sjoerd Meijer \
 smeijer@nvidia.com (email), [sjoerdmeijer](https://github.com/sjoerdmeijer) (GitHub) \
 Nashe Mncube \
@@ -237,7 +246,7 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 #### Hexagon backend
 
 Sundeep Kushwaha \
-sundeepk@quicinc.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
+sundeepk@qti.qualcomm.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
 
 #### Lanai backend
 

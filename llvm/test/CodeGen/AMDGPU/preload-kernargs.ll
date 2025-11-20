@@ -346,10 +346,10 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) inreg %out, ptr ad
 ;
 ; GFX1250-LABEL: byref_preload_arg:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x100
+; GFX1250-NEXT:    s_load_b64 s[4:5], s[0:1], 0x100
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v2, s[2:3] scope:SCOPE_SYS
@@ -404,10 +404,10 @@ define amdgpu_kernel void @byref_staggered_preload_arg(ptr addrspace(1) inreg %o
 ;
 ; GFX1250-LABEL: byref_staggered_preload_arg:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x100
+; GFX1250-NEXT:    s_load_b64 s[4:5], s[0:1], 0x100
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v2, s[2:3] scope:SCOPE_SYS

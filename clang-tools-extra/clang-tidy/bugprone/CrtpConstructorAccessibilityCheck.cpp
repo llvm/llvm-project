@@ -1,4 +1,4 @@
-//===--- CrtpConstructorAccessibilityCheck.cpp - clang-tidy ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -116,9 +116,10 @@ void CrtpConstructorAccessibilityCheck::check(
   assert(DerivedTemplateParameter &&
          "No template parameter corresponds to the derived class of the CRTP.");
 
-  bool NeedsFriend = !isDerivedParameterBefriended(CRTPDeclaration,
-                                                   DerivedTemplateParameter) &&
-                     !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord);
+  const bool NeedsFriend =
+      !isDerivedParameterBefriended(CRTPDeclaration,
+                                    DerivedTemplateParameter) &&
+      !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord);
 
   const FixItHint HintFriend = FixItHint::CreateInsertion(
       CRTPDeclaration->getBraceRange().getEnd(),
