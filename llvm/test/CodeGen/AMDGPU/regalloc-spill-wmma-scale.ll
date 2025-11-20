@@ -1,9 +1,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck %s
 
-; FIXME: Scale operands of WMMA are limited to low 256 VGPRs
-;        currently we are spilling it because all low VGPRs are occupied even though our budget is higher.
+; Scale operands of WMMA are limited to low 256 VGPRs
 ; Make sure we do not spill scale operands because of the low 256 restriction.
-; CHECK: ; ScratchSize: 12
+; CHECK: ; ScratchSize: 0
 ; CHECK: ; Occupancy: 1
 
 define amdgpu_kernel void @spill_scale_test(float %arg, float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, <16 x i32> %arg8, float %arg9, <16 x i32> %arg10, float %arg11, <16 x i8> %arg12) #0 {
