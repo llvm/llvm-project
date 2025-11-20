@@ -148,7 +148,7 @@ def create_release(repo, release, tag=None, name=None, message=None):
 ## LLVM {release} Release
 
 {download_links}
-Download links for common platforms will appear above, if they are available. Check the full list of release packages at the bottom of this release page if you do not find a link above.
+Download links for common platforms will appear above once builds have completed, if they are available. Check the full list of release packages at the bottom of this release page if you do not find a link above.
 
 If you do not find a release package for your platform, you may be able to find a community built package on the LLVM Discourse forum thread for this release. Remember that these are built by volunteers and may not always be available. If you rely on a platform or configuration that is not one of the defaults, we suggest you use the binaries that your platform provides, or build your own release packages.
 
