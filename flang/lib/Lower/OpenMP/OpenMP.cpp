@@ -3641,6 +3641,20 @@ processReductionCombiner(lower::AbstractConverter &converter,
   return genCombinerCB;
 }
 
+// Checks that the reduction type is either a trivial type or a derived type
+// of trivial types.
+static bool isSimpleReductionType(mlir::Type reductionType) {
+  if (fir::isa_trivial(reductionType))
+    return true;
+  if (auto recordTy = mlir::dyn_cast<fir::RecordType>(reductionType)) {
+    for (auto [_, fieldType] : recordTy.getTypeList()) {
+      if (!fir::isa_trivial(fieldType))
+        return false;
+    }
+  }
+  return true;
+}
+
 // Getting the type from a symbol compared to a DeclSpec is simpler since we do
 // not need to consider derived vs intrinsic types. Semantics is guaranteed to
 // generate these symbols.
@@ -3658,6 +3672,11 @@ getReductionType(lower::AbstractConverter &converter,
   const auto &name = std::get<parser::ObjectName>(decl.var.t);
   const auto &symbol = semantics::SymbolRef(*name.symbol);
   mlir::Type reductionType = converter.genType(symbol);
+
+  if (!isSimpleReductionType(reductionType))
+    TODO(converter.getCurrentLocation(),
+         "declare reduction using currently only supports trival types or "
+         "derived types containing trivial types");
   return reductionType;
 }
 
