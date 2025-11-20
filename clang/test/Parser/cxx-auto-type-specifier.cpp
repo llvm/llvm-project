@@ -20,3 +20,11 @@ void h() {
   auto z = 'c';
 }
 
+template <typename Ty>
+void g() {
+  auto Ty x;     // expected-error {{'auto' cannot be combined with a type specifier}}
+}
+
+void test() {
+  g<float>();
+}

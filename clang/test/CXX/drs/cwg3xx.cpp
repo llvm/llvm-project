@@ -1739,8 +1739,8 @@ namespace cwg396 { // cwg396: 3.0
     int (i); // #cwg396-i
     auto int (i);
     // since-cxx11-error@-1 {{'auto' cannot be combined with a type specifier}}
-    // expected-error@-2 {{redefinition of 'i'}}
-    //   expected-note@#cwg396-i {{previous definition is here}}
+    // cxx98-error@-2 {{redefinition of 'i'}}
+    //   cxx98-note@#cwg396-i {{previous definition is here}}
   }
 } // namespace cwg396
 

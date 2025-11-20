@@ -61,8 +61,10 @@ void foo(auto int ap, register int rp) {
   auto void abf();
 #if __cplusplus >= 201103L // C++11 or later
 // expected-error@-2 {{'auto' cannot be combined with a type specifier}}
+// expected-warning@-3 {{empty parentheses interpreted as a function declaration}}
+// expected-note@-4 {{replace parentheses with an initializer to declare a variable}}
 #else
-// expected-error@-4 {{illegal storage class on function}}
+// expected-error@-6 {{illegal storage class on function}}
 #endif
 
   register int rbo;
