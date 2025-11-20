@@ -381,7 +381,7 @@ bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
 
   return K == TargetTransformInfo::RGK_ScalableVector &&
          ST->isSVEorStreamingSVEAvailable() &&
-         ST->shouldMaximizeScalableVectorBandwidth();
+         !ST->disableMaximizeScalableBandwidth();
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper

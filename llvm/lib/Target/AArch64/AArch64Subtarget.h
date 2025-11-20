@@ -57,7 +57,6 @@ protected:
 #include "AArch64GenSubtargetInfo.inc"
 
   unsigned EpilogueVectorizationMinVF = 16;
-  bool ShouldMaximizeScalableVectorBandwidth = true;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
@@ -251,9 +250,6 @@ public:
 
   unsigned getEpilogueVectorizationMinVF() const {
     return EpilogueVectorizationMinVF;
-  }
-  bool shouldMaximizeScalableVectorBandwidth() const {
-    return ShouldMaximizeScalableVectorBandwidth;
   }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
