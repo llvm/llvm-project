@@ -2533,7 +2533,9 @@ def CIR_FuncOp : CIR_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        CIR_OptionalPriorityAttr:$global_ctor_priority,
-                       CIR_OptionalPriorityAttr:$global_dtor_priority);
+                       CIR_OptionalPriorityAttr:$global_dtor_priority,
+                       OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+   );
 
   let regions = (region AnyRegion:$body);
 
@@ -2572,7 +2574,32 @@ def CIR_FuncOp : CIR_Op<"func", [
     //===------------------------------------------------------------------===//
 
     bool isDeclaration();
-  }];
+
+    //===------------------------------------------------------------------===//
+    // C++ Special Member Functions
+    //===------------------------------------------------------------------===//
+
+    /// Returns true if this function is a C++ special member function.
+    bool isCXXSpecialMemberFunction();
+
+    bool isCxxConstructor();
+    bool isCxxDestructor();
+
+    /// Returns true if this function is a copy or move assignment operator.
+    bool isCxxSpecialAssignment();
+
+    /// Returns the kind of constructor this function represents, if any.
+    std::optional<CtorKind> getCxxConstructorKind();
+
+    /// Returns the kind of assignment operator (move, copy) this function
+    /// represents, if any.
+    std::optional<AssignKind> getCxxSpecialAssignKind();
+
+    /// Returns true if the function is a trivial C++ member functions such as
+    /// trivial default constructor, copy/move constructor, copy/move assignment,
+    /// or destructor.
+    bool isCxxTrivialMemberFunction();
+}];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -4113,6 +4140,72 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// FPClass Test Flags
+//===----------------------------------------------------------------------===//
+
+def FPClassTestEnum : CIR_I32EnumAttr<"FPClassTest", "floating-point class test flags", [
+  // Basic flags
+  I32EnumAttrCase<"SignalingNaN", 1, "fcSNan">,
+  I32EnumAttrCase<"QuietNaN", 2, "fcQNan">,
+  I32EnumAttrCase<"NegativeInfinity", 4, "fcNegInf">,
+  I32EnumAttrCase<"NegativeNormal", 8, "fcNegNormal">,
+  I32EnumAttrCase<"NegativeSubnormal", 16, "fcNegSubnormal">,
+  I32EnumAttrCase<"NegativeZero", 32, "fcNegZero">,
+  I32EnumAttrCase<"PositiveZero", 64, "fcPosZero">,
+  I32EnumAttrCase<"PositiveSubnormal", 128, "fcPosSubnormal">,
+  I32EnumAttrCase<"PositiveNormal", 256, "fcPosNormal">,
+  I32EnumAttrCase<"PositiveInfinity", 512, "fcPosInf">,
+
+  // Composite flags
+  I32EnumAttrCase<"Nan", 3, "fcNan">,                   // fcSNan | fcQNan
+  I32EnumAttrCase<"Infinity", 516, "fcInf">,            // fcPosInf | fcNegInf
+  I32EnumAttrCase<"Normal", 264, "fcNormal">,           // fcPosNormal | fcNegNormal
+  I32EnumAttrCase<"Subnormal", 144, "fcSubnormal">,     // fcPosSubnormal | fcNegSubnormal
+  I32EnumAttrCase<"Zero", 96, "fcZero">,                // fcPosZero | fcNegZero
+  I32EnumAttrCase<"PositiveFinite", 448, "fcPosFinite">,// fcPosNormal | fcPosSubnormal | fcPosZero
+  I32EnumAttrCase<"NegativeFinite", 56, "fcNegFinite">, // fcNegNormal | fcNegSubnormal | fcNegZero
+  I32EnumAttrCase<"Finite", 504, "fcFinite">,           // fcPosFinite | fcNegFinite
+  I32EnumAttrCase<"Positive", 960, "fcPositive">,       // fcPosFinite | fcPosInf
+  I32EnumAttrCase<"Negative", 60, "fcNegative">,        // fcNegFinite | fcNegInf
+  I32EnumAttrCase<"All", 1023, "fcAllFlags">,           // fcNan | fcInf | fcFinite
+]> {
+  let cppNamespace = "::cir";
+}
+
+def CIR_IsFPClassOp : CIR_Op<"is_fp_class"> {
+  let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
+
+  let description = [{
+    The `cir.is_fp_class` operation takes a floating-point value as its first
+    argument and a bitfield of flags as its second argument. The operation
+    returns a boolean value indicating whether the floating-point value
+    satisfies the given flags.
+
+    The flags must be a compile time constant and the values are:
+
+    | Bit # | floating-point class |
+    | ----- | -------------------- |
+    |  0    | Signaling NaN        |
+    |  1    | Quiet NaN            |
+    |  2    | Negative infinity    |
+    |  3    | Negative normal      |
+    |  4    | Negative subnormal   |
+    |  5    | Negative zero        |
+    |  6    | Positive zero        |
+    |  7    | Positive subnormal   |
+    |  8    | Positive normal      |
+    |  9    | Positive infinity    |
+  }];
+
+  let arguments = (ins CIR_AnyFloatType:$src,
+                       FPClassTestEnum:$flags);
+  let results = (outs CIR_BoolType:$result);
+  let assemblyFormat = [{
+    $src `,` $flags `:` functional-type($src, $result) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
@@ -4296,7 +4389,7 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
     When the `min` attribute is present, the operation returns the minimum
     guaranteed accessible size. When absent (max mode), it returns the maximum
     possible object size. Corresponds to `llvm.objectsize`'s `min` argument.
-    
+
     The `dynamic` attribute determines if the value should be evaluated at
     runtime. Corresponds to `llvm.objectsize`'s `dynamic` argument.
 

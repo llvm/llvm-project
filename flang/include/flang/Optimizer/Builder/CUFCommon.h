@@ -39,6 +39,10 @@ int computeElementByteSize(mlir::Location loc, mlir::Type type,
                            fir::KindMapping &kindMap,
                            bool emitErrorOnFailure = true);
 
+mlir::Value computeElementCount(mlir::PatternRewriter &rewriter,
+                                mlir::Location loc, mlir::Value shapeOperand,
+                                mlir::Type seqType, mlir::Type targetType);
+
 } // namespace cuf
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_CUFCOMMON_H_

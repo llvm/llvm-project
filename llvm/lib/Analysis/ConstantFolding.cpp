@@ -4313,6 +4313,22 @@ static Constant *ConstantFoldScalableVectorCall(
       return ConstantVector::getNullValue(SVTy);
     break;
   }
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_interleave3:
+  case Intrinsic::vector_interleave4:
+  case Intrinsic::vector_interleave5:
+  case Intrinsic::vector_interleave6:
+  case Intrinsic::vector_interleave7:
+  case Intrinsic::vector_interleave8: {
+    Constant *SplatVal = Operands[0]->getSplatValue();
+    if (!SplatVal)
+      return nullptr;
+
+    if (!llvm::all_equal(Operands))
+      return nullptr;
+
+    return ConstantVector::getSplat(SVTy->getElementCount(), SplatVal);
+  }
   default:
     break;
   }

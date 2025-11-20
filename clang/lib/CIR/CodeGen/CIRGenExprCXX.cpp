@@ -426,7 +426,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     const llvm::APInt &count =
         mlir::cast<cir::IntAttr>(constNumElements).getValue();
 
-    unsigned numElementsWidth = count.getBitWidth();
+    [[maybe_unused]] unsigned numElementsWidth = count.getBitWidth();
     bool hasAnyOverflow = false;
 
     // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
