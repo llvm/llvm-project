@@ -55,8 +55,13 @@ def TestFuseConsumerUsingSliceOp : Op<Transform_Dialect, "test.fuse_consumer_usi
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Fuses the consumer of the operation pointed to by the target handle
-    using the options provided as attributes.
+    For the `insert_slice`-like operations (that are typically generated through tiling),
+    within the loop nests passed in as `loops` (that are typically generated through tiling),
+    find the consumer that these slices map to (have to be the same consumer) and fuse
+    the consumer into the loop.
+
+    Returns a handle to the original consumer operation and the consumer operation after
+    fusion.
   }];
 
   let arguments = (ins 
@@ -78,8 +83,12 @@ def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Fuses the consumer of the operation pointed to by the target handle
-    using the options provided as attributes.
+    For the `consumer` that uses the result of the outer-most loop of a loop nest passed in 
+    as `loops` (that are typically generated through tiling), fuse the consumer into the
+    loop.
+
+    Returns a handle to the consumer operation after fusion and the loops that might be
+    modified.
   }];
 
   let arguments = (ins 

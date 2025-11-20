@@ -170,20 +170,18 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
 // TestFuseConsumerOp
 //===----------------------------------------------------------------------===//
 
-/// Apply fusing of consumer transformation to all payload ops and store both
-/// the original consumer operation as well as the fused consumer operation.
+/// Fuse the consumer and store both the original consumer operation as well as
+/// the fused consumer operation.
 static LogicalResult
 applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
                   Operation *consumer,
                   MutableArrayRef<LoopLikeOpInterface> loops,
                   TransformResults &transformResults) {
   SmallVector<Operation *> fusedConsumerOps;
-
   rewriter.setInsertionPoint(consumer);
 
   FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResults =
       scf::tileAndFuseConsumer(rewriter, consumer, loops);
-
   if (failed(fuseConsumerResults))
     return consumer->emitOpError("failed to fuse consumer of slice");
 
@@ -192,7 +190,6 @@ applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
        fuseConsumerResults->tiledAndFusedConsumerOperands) {
     fusedConsumerOps.push_back(tiledAndFusedConsumerOperand->getOwner());
   }
-
   transformResults.set(transformOp->getOpResult(0), fusedConsumerOps);
   for (auto [index, loop] : llvm::enumerate(loops)) {
     transformResults.set(transformOp->getOpResult(index + 1), {loop});

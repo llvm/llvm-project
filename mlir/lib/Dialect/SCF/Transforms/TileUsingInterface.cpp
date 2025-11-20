@@ -2427,21 +2427,17 @@ mlir::scf::tileAndFuseConsumerOfSlices(
 
   // Get the consumer of scf.for for the result yielded by
   // tensor.insert_slice/parallel_insert_slice.
-  SmallVector<OpOperand *> consumerOpOperands;
-  Operation *consumerOp;
-  {
-    FailureOr<SmallVector<OpOperand *>> maybeConsumerOpOperand =
-        getUntiledConsumerOperandsFromSlices(rewriter, candidateSlices, loops);
-    if (failed(maybeConsumerOpOperand)) {
-      return rewriter.notifyMatchFailure(candidateSlices.front(),
-                                         "could not fetch consumer to fuse");
-    }
-    std::swap(consumerOpOperands, maybeConsumerOpOperand.value());
-    consumerOp = consumerOpOperands.front()->getOwner();
+  FailureOr<SmallVector<OpOperand *>> maybeConsumerOpOperands =
+      getUntiledConsumerOperandsFromSlices(rewriter, candidateSlices, loops);
+  if (failed(maybeConsumerOpOperands)) {
+    return rewriter.notifyMatchFailure(candidateSlices.front(),
+                                       "could not fetch consumer to fuse");
   }
+  Operation *consumerOp = maybeConsumerOpOperands->front()->getOwner();
 
-  return tileAndFuseConsumerOfSlicesImpl(
-      rewriter, consumerOp, consumerOpOperands, candidateSlices, loops);
+  return tileAndFuseConsumerOfSlicesImpl(rewriter, consumerOp,
+                                         maybeConsumerOpOperands.value(),
+                                         candidateSlices, loops);
 }
 
 /// For a given `result` of a `forallOp` return the
@@ -2455,21 +2451,19 @@ getProducingParallelInsertSlice(scf::ForallOp forallOp, OpResult result) {
   SmallVector<Operation *> combiningOps = forallOp.getCombiningOps(bbArg);
   // If the number of combining ops is not 1, then this is unexpected. Return
   // nullopt.
-  if (combiningOps.size() != 1) {
+  if (combiningOps.size() != 1)
     return std::nullopt;
-  }
   return combiningOps[0];
 }
 
 /// For a given result of the loop nest that is a tiled loop nest, return the
 /// insert slice-like op that is used for consumer fusion
-std::optional<Operation *>
+static std::optional<Operation *>
 getProducingInsertSliceLikeOp(OpResult result,
                               ArrayRef<LoopLikeOpInterface> loops) {
   assert(!loops.empty() && "Expected loops to be not empty");
-  LoopLikeOpInterface outermostLoop = loops.front();
-
-  if (auto forallOp = dyn_cast<scf::ForallOp>(outermostLoop.getOperation())) {
+  LoopLikeOpInterface outerMostLoop = loops.front();
+  if (auto forallOp = dyn_cast<scf::ForallOp>(outerMostLoop.getOperation())) {
     assert(loops.size() == 1 &&
            "expected only a single loop when tiling using scf.forall");
     return getProducingParallelInsertSlice(forallOp, result);
@@ -2485,7 +2479,7 @@ getProducingInsertSliceLikeOp(OpResult result,
     if (!forOp)
       return std::nullopt;
     auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
-    OpResult innerForResult =
+    auto innerForResult =
         dyn_cast<OpResult>(yieldOp.getOperand(result.getResultNumber()));
     if (!innerForResult)
       return std::nullopt;
@@ -2507,27 +2501,26 @@ getProducingInsertSliceLikeOp(OpResult result,
 }
 
 FailureOr<scf::SCFFuseConsumerOfSliceResult>
-mlir::scf::tileAndFuseConsumer(RewriterBase &rewriter, Operation *user,
+mlir::scf::tileAndFuseConsumer(RewriterBase &rewriter, Operation *consumer,
                                MutableArrayRef<LoopLikeOpInterface> loops) {
-  // Only handle users that implement the `TilingInterface`.
-  if (!isa<TilingInterface>(user)) {
+  if (!isa<TilingInterface>(consumer)) {
     return rewriter.notifyMatchFailure(
-        user, "unhandled user that does not implement TilingInterface");
+        consumer, "unhandled consumer that does not implement TilingInterface");
   }
 
   // Return if `loops` is empty, return an error for now. Caller is expected
   // to handle this case.
   if (loops.empty()) {
     return rewriter.notifyMatchFailure(
-        user, "cannot call tile and fuse consumer with an empty loop nest");
+        consumer, "cannot call tile and fuse consumer with an empty loop nest");
   }
 
   LoopLikeOpInterface outermostLoop = loops.front();
 
-  // Collect the operands of the user that come from the outermost loop of the
-  // loop nest.
+  // Collect the operands of the consumer that come from the outermost loop of
+  // the loop nest.
   SmallVector<OpOperand *> consumerFusableOperands;
-  for (OpOperand &opOperand : user->getOpOperands()) {
+  for (OpOperand &opOperand : consumer->getOpOperands()) {
     if (opOperand.get().getDefiningOp() == outermostLoop) {
       consumerFusableOperands.push_back(&opOperand);
     }
@@ -2549,13 +2542,13 @@ mlir::scf::tileAndFuseConsumer(RewriterBase &rewriter, Operation *user,
         getProducingInsertSliceLikeOp(cast<OpResult>(opOperand->get()), loops);
     if (!slice) {
       return rewriter.notifyMatchFailure(
-          user,
+          consumer,
           "couldnt find producing insert-slice like operation for operand");
     }
     candidateSlices.push_back(slice.value());
   }
   return tileAndFuseConsumerOfSlicesImpl(
-      rewriter, user, consumerFusableOperands, candidateSlices, loops);
+      rewriter, consumer, consumerFusableOperands, candidateSlices, loops);
 }
 
 //===----------------------------------------------------------------------===//
