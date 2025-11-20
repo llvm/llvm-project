@@ -9,7 +9,7 @@ template <typename Char>
 void test_string() {
   // Make a test string.
   std::basic_string<Char> s;
-  LIBCPP_ASSERT(s.size() == 0);
+  assert(s.size() == 0);
 
   // Append enough chars to it that we must have switched over from a short
   // string stored internally to a long one pointing to a dynamic buffer,
@@ -17,12 +17,12 @@ void test_string() {
   unsigned n = sizeof(s) / sizeof(Char) + 1;
   for (unsigned i = 0; i < n; i++) {
     s.push_back(Char::from_integer(i));
-    LIBCPP_ASSERT(s.size() == i + 1);
+    assert(s.size() == i + 1);
   }
 
   // Check that all the chars were correctly copied during the realloc.
   for (unsigned i = 0; i < n; i++) {
-    LIBCPP_ASSERT(s[i] == Char::from_integer(i));
+    assert(s[i] == Char::from_integer(i));
   }
 }
 
