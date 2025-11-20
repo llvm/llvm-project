@@ -320,7 +320,8 @@ public:
   QualType getPromotionType(FPOptionsOverride Features, QualType Ty,
                             bool IsComplexDivisor) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
-      QualType ElementType = CT->getElementType();
+      QualType ElementType =
+          CT->getElementType().getDesugaredType(CGF.getContext());
       bool IsFloatingType = ElementType->isFloatingType();
       bool IsComplexRangePromoted = CGF.getLangOpts().getComplexRange() ==
                                     LangOptions::ComplexRangeKind::CX_Promoted;
