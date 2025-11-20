@@ -1,4 +1,4 @@
-@echo off
+echo off
 
 REM Filter out tests that are known to fail.
 set "LIT_FILTER_OUT=gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest"
@@ -318,7 +318,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build_%arch%
 cd build_%arch%
 call :do_generate_profile || exit /b 1
-cmake -GNinja %cmake_flags% ^
+cmake --trace-expand -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   %common_lldb_flags% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
