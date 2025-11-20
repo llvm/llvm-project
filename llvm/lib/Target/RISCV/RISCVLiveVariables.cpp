@@ -128,6 +128,9 @@ private:
   /// Compute global liveness information (LiveIn and LiveOut sets)
   void computeGlobalLiveness(MachineFunction &MF);
 
+  /// Update MBB live-in sets based on computed liveness information
+  void updateMBBLiveIns(MachineFunction &MF);
+
   /// Process a single instruction to extract def/use information
   void processInstruction(const MachineInstr &MI, LivenessInfo &Info,
                           const TargetRegisterInfo *TRI);
@@ -345,6 +348,59 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
   }
 }
 
+void RISCVLiveVariables::updateMBBLiveIns(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "Updating MBB live-in sets\n");
+
+  // Update each MBB's live-in set based on computed liveness
+  // Only update physical register live-ins, as MBB live-in sets
+  // track physical registers entering a block
+  for (MachineBasicBlock &MBB : MF) {
+    auto It = BlockLiveness.find(&MBB);
+    if (It == BlockLiveness.end())
+      continue;
+
+    const LivenessInfo &Info = It->second;
+
+    // Clear existing live-ins
+    MBB.clearLiveIns();
+
+    // Add computed live-in physical registers to the MBB
+    // Skip sub-registers - only add top-level registers
+    // Also skip reserved registers (stack pointer, zero register, etc.)
+    for (Register Reg : Info.LiveIn) {
+      if (Reg.isPhysical()) {
+        MCRegister MCReg = Reg.asMCReg();
+
+        // Skip reserved registers - they're implicitly always live
+        if (MRI->isReserved(Reg))
+          continue;
+
+        // Only add if this is not a sub-register of another register
+        // We want top-level registers only (e.g., $x10, not $x10_w)
+        bool IsSubReg = false;
+        for (MCSuperRegIterator SR(MCReg, TRI, /*IncludeSelf=*/false);
+             SR.isValid(); ++SR) {
+          if (Info.LiveIn.count(Register(*SR))) {
+            IsSubReg = true;
+            break;
+          }
+        }
+
+        if (!IsSubReg) {
+          MBB.addLiveIn(MCReg);
+          LLVM_DEBUG(dbgs() << "  Adding live-in " << printReg(Reg, TRI)
+                            << " to block " << MBB.getName() << "\n");
+        }
+      }
+    }
+
+    // Sort and unique the live-ins for efficient lookup
+    MBB.sortUniqueLiveIns();
+  }
+
+  LLVM_DEBUG(dbgs() << "MBB live-in sets updated\n");
+}
+
 bool RISCVLiveVariables::isLiveAt(Register Reg, const MachineInstr &MI) const {
   const MachineBasicBlock *MBB = MI.getParent();
   auto It = BlockLiveness.find(MBB);
@@ -481,10 +537,11 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
   // Step 2: Compute global liveness (LiveIn and LiveOut sets)
   computeGlobalLiveness(MF);
 
-  // TODO: Update live-in/live-out sets of MBBs
+  // Step 3: Update live-in sets of MBBs based on computed liveness
+  updateMBBLiveIns(MF);
 
   bool Changed = false;
-  // Step 3: Mark kill flags on operands
+  // Step 4: Mark kill flags on operands
   if (UpdateKills && MaxVRegs >= RegCounter)
     Changed = markKills(MF);
 
