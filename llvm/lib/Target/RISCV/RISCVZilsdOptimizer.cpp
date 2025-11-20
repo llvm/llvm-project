@@ -72,6 +72,10 @@ public:
     return "RISC-V pre-allocation Zilsd load/store optimization";
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
@@ -198,18 +202,13 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *MI0,
   if (Offset1 - Offset0 != 4)
     return false;
 
-  // We need to guarantee the alignment(base + offset) is legal,
-  // e.g. if required alignment is 8,
-  //    Valid: global(align 8) + offset(0)
-  //    Valid: global(align 4) + offset(4)
-  //    Invalid: global(align 8) + offset(4)
+  // We need to guarantee the alignment(base + offset) is legal.
   const MachineMemOperand *MMO = *MI0->memoperands_begin();
-  unsigned Alignment = MMO->getBaseAlign().value() + Offset0;
-  if (Alignment < RequiredAlign.value() ||
-      (Alignment % RequiredAlign.value()) != 0)
+  if (MMO->getAlign() < RequiredAlign)
     return false;
 
-  // Check that the two destination registers are different
+  // Check that the two destination/source registers are different for
+  // load/store respectively.
   Register FirstReg = MI0->getOperand(0).getReg();
   Register SecondReg = MI1->getOperand(0).getReg();
   if (FirstReg == SecondReg)
@@ -272,8 +271,7 @@ bool RISCVPreAllocZilsdOpt::isSafeToMove(MachineInstr *MI, MachineInstr *Target,
     }
 
     // Check for memory operation interference
-    if (MI->mayLoadOrStore() && It->mayLoadOrStore() &&
-        It->mayAlias(AA, *MI, /*UseTBAA*/ false)) {
+    if (It->mayLoadOrStore() && It->mayAlias(AA, *MI, /*UseTBAA*/ false)) {
       LLVM_DEBUG(dbgs() << "Memory operation interference detected\n");
       return false;
     }

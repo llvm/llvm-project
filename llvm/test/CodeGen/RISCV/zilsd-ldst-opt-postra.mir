@@ -51,6 +51,10 @@
   define i32 @expand_pseudold_invalid_symbolic() {
     ret i32 0
   }
+
+  define i32 @overlapped_first_reg_base_reg() {
+    ret i32 0
+  }
 ...
 ---
 # Valid consecutive even/odd register pair - should expand to LD_RV32
@@ -64,10 +68,10 @@ body: |
     ; CHECK-LABEL: name: expand_pseudold_valid
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x12_x13 = LD_RV32 $x10, 0
+    ; CHECK-NEXT: $x12_x13 = LD_RV32 killed $x10, 0
     ; CHECK-NEXT: $x10 = ADD killed $x12, killed $x13
     ; CHECK-NEXT: PseudoRET implicit $x10
-    $x12, $x13 = PseudoLD_RV32_OPT $x10, 0
+    $x12, $x13 = PseudoLD_RV32_OPT killed $x10, 0
     $x10 = ADD killed $x12, killed $x13
     PseudoRET implicit $x10
 
@@ -84,9 +88,9 @@ body: |
     ; CHECK-LABEL: name: expand_pseudosd_valid
     ; CHECK: liveins: $x10, $x12, $x13
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: SD_RV32 $x12_x13, $x10, 0
+    ; CHECK-NEXT: SD_RV32 killed $x12_x13, killed $x10, 0
     ; CHECK-NEXT: PseudoRET
-    PseudoSD_RV32_OPT $x12, $x13, $x10, 0
+    PseudoSD_RV32_OPT killed $x12, killed $x13, killed $x10, 0
     PseudoRET
 
 ...
@@ -104,10 +108,10 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x11 = LW $x10, 0
-    ; CHECK-NEXT: $x13 = LW $x10, 4
+    ; CHECK-NEXT: $x13 = LW killed $x10, 4
     ; CHECK-NEXT: $x10 = ADD killed $x11, killed $x13
     ; CHECK-NEXT: PseudoRET implicit $x10
-    $x11, $x13 = PseudoLD_RV32_OPT $x10, 0
+    $x11, $x13 = PseudoLD_RV32_OPT killed $x10, 0
     $x10 = ADD killed $x11, killed $x13
     PseudoRET implicit $x10
 
@@ -125,10 +129,10 @@ body: |
     ; CHECK-LABEL: name: expand_pseudosd_invalid_pair
     ; CHECK: liveins: $x10, $x11, $x14
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: SW $x11, $x10, 0
-    ; CHECK-NEXT: SW $x14, $x10, 4
+    ; CHECK-NEXT: SW killed $x11, $x10, 0
+    ; CHECK-NEXT: SW killed $x14, killed $x10, 4
     ; CHECK-NEXT: PseudoRET
-    PseudoSD_RV32_OPT $x11, $x14, $x10, 0
+    PseudoSD_RV32_OPT killed $x11, killed $x14, killed $x10, 0
     PseudoRET
 
 ...
@@ -142,9 +146,9 @@ body: |
     ; CHECK-LABEL: name: store_zero_combine_valid
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: SD_RV32 $x0_pair, $x10, 0
+    ; CHECK-NEXT: SD_RV32 $x0_pair, killed $x10, 0
     ; CHECK-NEXT: PseudoRET
-    PseudoSD_RV32_OPT $x0, $x0, $x10, 0
+    PseudoSD_RV32_OPT $x0, $x0, killed $x10, 0
     PseudoRET
 
 ...
@@ -159,10 +163,10 @@ body: |
     ; CHECK-LABEL: name: store_zero_combine_invalid
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: SW $x0, $x10, 0
-    ; CHECK-NEXT: SW $x1, $x10, 4
+    ; CHECK-NEXT: SW killed $x0, $x10, 0
+    ; CHECK-NEXT: SW killed $x1, killed $x10, 4
     ; CHECK-NEXT: PseudoRET
-    PseudoSD_RV32_OPT $x0, $x1, $x10, 0
+    PseudoSD_RV32_OPT killed $x0, killed $x1, killed $x10, 0
     PseudoRET
 
 ...
@@ -180,10 +184,32 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x11 = LW $x10, target-flags(riscv-lo) @global_array
-    ; CHECK-NEXT: $x14 = LW $x10, target-flags(riscv-lo) @global_array + 4
+    ; CHECK-NEXT: $x14 = LW killed $x10, target-flags(riscv-lo) @global_array + 4
     ; CHECK-NEXT: $x10 = ADD killed $x11, killed $x14
     ; CHECK-NEXT: PseudoRET implicit $x10
-    $x11, $x14 = PseudoLD_RV32_OPT $x10, target-flags(riscv-lo) @global_array
+    $x11, $x14 = PseudoLD_RV32_OPT killed $x10, target-flags(riscv-lo) @global_array
+    $x10 = ADD killed $x11, killed $x14
+    PseudoRET implicit $x10
+
+...
+---
+# Test overlapped first reg and base reg - should split back to LW
+name: overlapped_first_reg_base_reg
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; PseudoLD_RV32_OPT with symbolic operand and non-consecutive registers (x11, x14)
+    ; Should decompose back to two LW instructions preserving symbolic references
+    ; CHECK-LABEL: name: overlapped_first_reg_base_reg
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x14 = LW $x11, 4
+    ; CHECK-NEXT: $x11 = LW killed $x11, 0
+    ; CHECK-NEXT: $x10 = ADD killed $x11, killed $x14
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    $x11, $x14 = PseudoLD_RV32_OPT killed $x11, 0
     $x10 = ADD killed $x11, killed $x14
     PseudoRET implicit $x10
 

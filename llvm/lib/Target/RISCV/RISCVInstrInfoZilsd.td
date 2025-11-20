@@ -54,7 +54,6 @@ def PseudoLD_RV32_OPT :
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
-  let Constraints = "@earlyclobber $rd1";
 }
 
 def PseudoSD_RV32_OPT :

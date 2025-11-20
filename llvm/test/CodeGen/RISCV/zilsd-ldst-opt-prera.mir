@@ -663,21 +663,26 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 16 :: (load (s32))
-    ; CHECK-NEXT: early-clobber %2:gpr, %3:gpr = PseudoLD_RV32_OPT [[COPY]], 20 :: (load (s32))
-    ; CHECK-NEXT: early-clobber %4:gpr, %5:gpr = PseudoLD_RV32_OPT [[COPY]], 28 :: (load (s32))
-    ; CHECK-NEXT: early-clobber %6:gpr, %7:gpr = PseudoLD_RV32_OPT [[COPY]], 36 :: (load (s32))
-    ; CHECK-NEXT: early-clobber %8:gpr, %9:gpr = PseudoLD_RV32_OPT [[COPY]], 44 :: (load (s32))
-    ; CHECK-NEXT: early-clobber %10:gpr, %11:gpr = PseudoLD_RV32_OPT [[COPY]], 52 :: (load (s32))
-    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 60 :: (load (s32))
-    ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-NEXT: [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], %2
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD %3, %4
-    ; CHECK-NEXT: [[ADD2:%[0-9]+]]:gpr = ADD %5, %6
-    ; CHECK-NEXT: [[ADD3:%[0-9]+]]:gpr = ADD %7, %8
-    ; CHECK-NEXT: [[ADD4:%[0-9]+]]:gpr = ADD %9, %10
-    ; CHECK-NEXT: [[ADD5:%[0-9]+]]:gpr = ADD %11, [[LW1]]
-    ; CHECK-NEXT: [[ADD6:%[0-9]+]]:gpr = ADD [[LW2]], [[LW3]]
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 20 :: (load (s32))
+    ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 24 :: (load (s32))
+    ; CHECK-NEXT: [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 28 :: (load (s32))
+    ; CHECK-NEXT: [[LW4:%[0-9]+]]:gpr = LW [[COPY]], 32 :: (load (s32))
+    ; CHECK-NEXT: [[LW5:%[0-9]+]]:gpr = LW [[COPY]], 36 :: (load (s32))
+    ; CHECK-NEXT: [[LW6:%[0-9]+]]:gpr = LW [[COPY]], 40 :: (load (s32))
+    ; CHECK-NEXT: [[LW7:%[0-9]+]]:gpr = LW [[COPY]], 44 :: (load (s32))
+    ; CHECK-NEXT: [[LW8:%[0-9]+]]:gpr = LW [[COPY]], 48 :: (load (s32))
+    ; CHECK-NEXT: [[LW9:%[0-9]+]]:gpr = LW [[COPY]], 52 :: (load (s32))
+    ; CHECK-NEXT: [[LW10:%[0-9]+]]:gpr = LW [[COPY]], 56 :: (load (s32))
+    ; CHECK-NEXT: [[LW11:%[0-9]+]]:gpr = LW [[COPY]], 60 :: (load (s32))
+    ; CHECK-NEXT: [[LW12:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-NEXT: [[LW13:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[LW2]], [[LW3]]
+    ; CHECK-NEXT: [[ADD2:%[0-9]+]]:gpr = ADD [[LW4]], [[LW5]]
+    ; CHECK-NEXT: [[ADD3:%[0-9]+]]:gpr = ADD [[LW6]], [[LW7]]
+    ; CHECK-NEXT: [[ADD4:%[0-9]+]]:gpr = ADD [[LW8]], [[LW9]]
+    ; CHECK-NEXT: [[ADD5:%[0-9]+]]:gpr = ADD [[LW10]], [[LW11]]
+    ; CHECK-NEXT: [[ADD6:%[0-9]+]]:gpr = ADD [[LW12]], [[LW13]]
     ; CHECK-NEXT: [[ADD7:%[0-9]+]]:gpr = ADD [[ADD]], [[ADD1]]
     ; CHECK-NEXT: [[ADD8:%[0-9]+]]:gpr = ADD [[ADD2]], [[ADD3]]
     ; CHECK-NEXT: [[ADD9:%[0-9]+]]:gpr = ADD [[ADD4]], [[ADD5]]
@@ -799,8 +804,9 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: early-clobber %1:gpr, %2:gpr = PseudoLD_RV32_OPT [[COPY]], 100 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD %1, %2
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 100 :: (load (s32))
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 104 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
     ; CHECK-NEXT: PseudoRET
     ;
     ; CHECK-4BYTE-LABEL: name: offset_calculation
@@ -985,9 +991,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-NEXT: early-clobber %2:gpr, %3:gpr = PseudoLD_RV32_OPT [[COPY]], 4 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], %2
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[ADD]], %3
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
+    ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[ADD]], [[LW2]]
     ; CHECK-NEXT: PseudoRET
     ;
     ; CHECK-4BYTE-LABEL: name: three_loads
