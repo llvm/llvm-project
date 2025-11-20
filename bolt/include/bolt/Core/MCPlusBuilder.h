@@ -1389,6 +1389,8 @@ public:
     return isCall(Inst) && getEHInfo(Inst);
   }
 
+  virtual bool isTOCRestoreAfterCall(const MCInst &Inst) const { return false; }
+
   /// Return true if \p Inst is an instruction that potentially traps when
   /// working with addresses not aligned to the size of the operand.
   virtual bool requiresAlignedAddress(const MCInst &Inst) const {
@@ -2461,6 +2463,11 @@ MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *,
                                         const MCInstrInfo *,
                                         const MCRegisterInfo *,
                                         const MCSubtargetInfo *);
+
+MCPlusBuilder *createPowerPCMCPlusBuilder(const MCInstrAnalysis *,
+                                          const MCInstrInfo *,
+                                          const MCRegisterInfo *,
+                                          const MCSubtargetInfo *);
 
 } // namespace bolt
 } // namespace llvm
