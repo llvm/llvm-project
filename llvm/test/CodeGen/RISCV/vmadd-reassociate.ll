@@ -10,8 +10,8 @@ define i32 @madd_scalar(i32 %m00, i32 %m01, i32 %m10, i32 %m11) nounwind {
 ; CHECK-NEXT:    addiw a0, a0, 32
 ; CHECK-NEXT:    ret
 entry:
-  %mul0 = mul nsw i32 %m00, %m01
-  %mul1 = mul nsw i32 %m10, %m11
+  %mul0 = mul i32 %m00, %m01
+  %mul1 = mul i32 %m10, %m11
   %add0 = add i32 %mul0, 32
   %add1 = add i32 %add0, %mul1
   ret i32 %add1
@@ -25,8 +25,8 @@ define <8 x i32> @vmadd_non_constant(<8 x i32> %m00, <8 x i32> %m01, <8 x i32> %
 ; CHECK-NEXT:    vmacc.vv v8, v14, v12
 ; CHECK-NEXT:    ret
 entry:
-  %mul0 = mul nsw <8 x i32> %m00, %m01
-  %mul1 = mul nsw <8 x i32> %m10, %m11
+  %mul0 = mul <8 x i32> %m00, %m01
+  %mul1 = mul <8 x i32> %m10, %m11
   %add0 = add <8 x i32> %mul0, %addend
   %add1 = add <8 x i32> %add0, %mul1
   ret <8 x i32> %add1
@@ -41,7 +41,7 @@ define <vscale x 1 x i32> @vmadd_vscale_no_chain(<vscale x 1 x i32> %m00, <vscal
 ; CHECK-NEXT:    vmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
-  %mul = mul nsw <vscale x 1 x i32> %m00, %m01
+  %mul = mul <vscale x 1 x i32> %m00, %m01
   %add = add <vscale x 1 x i32> %mul, splat (i32 32)
   ret <vscale x 1 x i32> %add
 }
@@ -55,7 +55,7 @@ define <8 x i32> @vmadd_fixed_no_chain(<8 x i32> %m00, <8 x i32> %m01) {
 ; CHECK-NEXT:    vmadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
 entry:
-  %mul = mul nsw <8 x i32> %m00, %m01
+  %mul = mul <8 x i32> %m00, %m01
   %add = add <8 x i32> %mul, splat (i32 32)
   ret <8 x i32> %add
 }
@@ -70,8 +70,8 @@ define <vscale x 1 x i32> @vmadd_vscale(<vscale x 1 x i32> %m00, <vscale x 1 x i
 ; CHECK-NEXT:    vmacc.vv v8, v11, v10
 ; CHECK-NEXT:    ret
 entry:
-  %mul0 = mul nsw <vscale x 1 x i32> %m00, %m01
-  %mul1 = mul nsw <vscale x 1 x i32> %m10, %m11
+  %mul0 = mul <vscale x 1 x i32> %m00, %m01
+  %mul1 = mul <vscale x 1 x i32> %m10, %m11
   %add0 = add <vscale x 1 x i32> %mul0, splat (i32 32)
   %add1 = add <vscale x 1 x i32> %add0, %mul1
   ret <vscale x 1 x i32> %add1
@@ -87,8 +87,8 @@ define <8 x i32> @vmadd_fixed(<8 x i32> %m00, <8 x i32> %m01, <8 x i32> %m10, <8
 ; CHECK-NEXT:    vmacc.vv v8, v14, v12
 ; CHECK-NEXT:    ret
 entry:
-  %mul0 = mul nsw <8 x i32> %m00, %m01
-  %mul1 = mul nsw <8 x i32> %m10, %m11
+  %mul0 = mul <8 x i32> %m00, %m01
+  %mul1 = mul <8 x i32> %m10, %m11
   %add0 = add <8 x i32> %mul0, splat (i32 32)
   %add1 = add <8 x i32> %add0, %mul1
   ret <8 x i32> %add1
@@ -107,10 +107,10 @@ define <vscale x 1 x i32> @vmadd_vscale_long(<vscale x 1 x i32> %m00, <vscale x 
 ; CHECK-NEXT:    ret
                                              <vscale x 1 x i32> %m20, <vscale x 1 x i32> %m21, <vscale x 1 x i32> %m30, <vscale x 1 x i32> %m31) {
 entry:
-  %mul0 = mul nsw <vscale x 1 x i32> %m00, %m01
-  %mul1 = mul nsw <vscale x 1 x i32> %m10, %m11
-  %mul2 = mul nsw <vscale x 1 x i32> %m20, %m21
-  %mul3 = mul nsw <vscale x 1 x i32> %m30, %m31
+  %mul0 = mul <vscale x 1 x i32> %m00, %m01
+  %mul1 = mul <vscale x 1 x i32> %m10, %m11
+  %mul2 = mul <vscale x 1 x i32> %m20, %m21
+  %mul3 = mul <vscale x 1 x i32> %m30, %m31
   %add0 = add <vscale x 1 x i32> %mul0, splat (i32 32)
   %add1 = add <vscale x 1 x i32> %add0, %mul1
   %add2 = add <vscale x 1 x i32> %add1, %mul2
@@ -131,10 +131,10 @@ define <8 x i32> @vmadd_fixed_long(<8 x i32> %m00, <8 x i32> %m01, <8 x i32> %m1
 ; CHECK-NEXT:    ret
                                    <8 x i32> %m20, <8 x i32> %m21, <8 x i32> %m30, <8 x i32> %m31) {
 entry:
-  %mul0 = mul nsw <8 x i32> %m00, %m01
-  %mul1 = mul nsw <8 x i32> %m10, %m11
-  %mul2 = mul nsw <8 x i32> %m20, %m21
-  %mul3 = mul nsw <8 x i32> %m30, %m31
+  %mul0 = mul <8 x i32> %m00, %m01
+  %mul1 = mul <8 x i32> %m10, %m11
+  %mul2 = mul <8 x i32> %m20, %m21
+  %mul3 = mul <8 x i32> %m30, %m31
   %add0 = add <8 x i32> %mul0, splat (i32 32)
   %add1 = add <8 x i32> %add0, %mul1
   %add2 = add <8 x i32> %add1, %mul2
