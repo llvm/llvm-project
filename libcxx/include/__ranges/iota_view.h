@@ -58,17 +58,11 @@ struct __get_wider_signed {
       return type_identity<int>{};
     else if constexpr (sizeof(_Int) < sizeof(long))
       return type_identity<long>{};
-    else if constexpr (sizeof(_Int) < sizeof(long long))
-      return type_identity<long long>{};
     else
-#  if _LIBCPP_HAS_INT128
-      return type_identity<__int128_t>{};
-#  else
       return type_identity<long long>{};
 
     static_assert(
         sizeof(_Int) <= sizeof(long long), "Found integer-like type that is bigger than largest integer like type.");
-#  endif
   }
 
   using type = typename decltype(__call())::type;
@@ -355,7 +349,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires(same_as<_Start, _BoundSentinel> && __advanceable<_Start>) ||
-            (__integer_like<_Start> && __integer_like<_BoundSentinel>) || sized_sentinel_for<_BoundSentinel, _Start>
+            (integral<_Start> && integral<_BoundSentinel>) || sized_sentinel_for<_BoundSentinel, _Start>
   {
     if constexpr (__integer_like<_Start> && __integer_like<_BoundSentinel>) {
       return (__value_ < 0)
