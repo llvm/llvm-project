@@ -6321,12 +6321,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
                                        StringRef OrigBoundArch, bool AtTopLevel,
                                        bool MultipleArchs,
                                        StringRef OffloadingPrefix) const {
-  std::string BoundArch = OrigBoundArch.str();
-  if (is_style_windows(llvm::sys::path::Style::native)) {
-    // BoundArch may contains ':', which is invalid in file names on Windows,
-    // therefore replace it with '%'.
-    llvm::replace(BoundArch, ':', '@');
-  }
+  std::string BoundArch = sanitizeTargetIDInFileName(OrigBoundArch);
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
   // Output to a user requested destination?
