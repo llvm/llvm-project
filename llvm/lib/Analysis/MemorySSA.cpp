@@ -279,26 +279,13 @@ static bool areLoadsReorderable(const LoadInst *Use,
 
 bool writeToSameTargetMemLoc(const CallBase *CallFirst,
                              const CallBase *CallSecond) {
+
   MemoryEffects ME1 = CallFirst->getMemoryEffects();
   MemoryEffects ME2 = CallSecond->getMemoryEffects();
-
-  auto writes = [](ModRefInfo m) {
-    return m != ModRefInfo::NoModRef && m != ModRefInfo::Ref;
-  };
-
-  for (unsigned ILoc = static_cast<unsigned>(IRMemLocation::FirstTarget);
-       ILoc <= static_cast<unsigned>(IRMemLocation::Last); ++ILoc) {
-    const auto Loc = static_cast<IRMemLocation>(ILoc);
-
-    if (!writes(ME1.getModRef(Loc)))
-      continue;
-    if (!writes(ME2.getModRef(Loc)))
-      continue;
-
-    // Both have write capability to the same location.
-    return true;
-  }
-  return false;
+  if (CallFirst->onlyAccessesTargetMemory() ||
+      CallSecond->onlyAccessesTargetMemory())
+    return !(ME1 & ME2 & MemoryEffects::writeOnly()).onlyReadsMemory();
+  return true;
 }
 
 template <typename AliasAnalysisType>
@@ -336,10 +323,8 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
 
   if (auto *CB = dyn_cast_or_null<CallBase>(UseInst)) {
     if (auto *CU = dyn_cast_or_null<CallBase>(DefInst))
-      if (CU->onlyAccessesTargetMemory() || CB->onlyAccessesTargetMemory()) {
-        if (!writeToSameTargetMemLoc(CB, CU))
-          return false;
-      }
+      if (!writeToSameTargetMemLoc(CB, CU))
+        return false;
     ModRefInfo I = AA.getModRefInfo(DefInst, CB);
     return isModSet(I);
   }
