@@ -25,6 +25,8 @@ namespace llvm {
 
 class AArch64SelectionDAGTest : public testing::Test {
 protected:
+  const TargetSubtargetInfo *STI;
+
   static void SetUpTestCase() {
     LLVMInitializeAArch64TargetInfo();
     LLVMInitializeAArch64Target();
@@ -55,8 +57,8 @@ protected:
 
     MachineModuleInfo MMI(TM.get());
 
-    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
+    STI = TM->getSubtargetImpl(*F);
+    MF = std::make_unique<MachineFunction>(*F, *TM, *STI, MMI.getContext(), 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
@@ -337,7 +339,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ADDC) {
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -356,7 +358,7 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsNEON) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
@@ -382,7 +384,7 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsNEON) {
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsSVE) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
@@ -784,7 +786,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VSHL) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -804,7 +806,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_ADD_of_BUILD_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -828,7 +830,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_ADD_of_BUILD_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -844,7 +846,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -864,7 +866,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_BUILD_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -880,7 +882,7 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_BUILD_VECTOR) {
 
 TEST_F(AArch64SelectionDAGTest,
        getSplatSourceVector_Fixed_ADD_of_BUILD_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -898,7 +900,7 @@ TEST_F(AArch64SelectionDAGTest,
 }
 
 TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_SPLAT_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -914,7 +916,7 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_SPLAT_VECTOR) {
 
 TEST_F(AArch64SelectionDAGTest,
        getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -932,7 +934,7 @@ TEST_F(AArch64SelectionDAGTest,
 }
 
 TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   unsigned NumElts = 16;
