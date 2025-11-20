@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP declare reduction Directive, with initialization
 ! via a subroutine. This functionality is currently not implemented.
 
-! RUN: not flang -fc1 -emit-fir -fopenmp %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -emit-fir -fopenmp %s 2>&1 | FileCheck %s
 
 !CHECK: not yet implemented: OpenMPDeclareReductionConstruct
 subroutine initme(x,n)

@@ -47,7 +47,7 @@ STATISTIC(NumTailCalls, "Number of tail calls");
 
 M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
                                        const M68kSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI), TM(TM) {
+    : TargetLowering(TM, STI), Subtarget(STI), TM(TM) {
 
   MVT PtrVT = MVT::i32;
 

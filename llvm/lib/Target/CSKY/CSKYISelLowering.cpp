@@ -35,7 +35,7 @@ static const MCPhysReg GPRArgRegs[] = {CSKY::R0, CSKY::R1, CSKY::R2, CSKY::R3};
 
 CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
                                        const CSKYSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   // Register Class
   addRegisterClass(MVT::i32, &CSKY::GPRRegClass);
 
