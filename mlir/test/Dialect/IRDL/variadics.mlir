@@ -161,6 +161,18 @@ func.func @testMultOperands(%x: i16, %y: i32, %z: i64) {
   // CHECK-NEXT: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}) {operand_segment_sizes = array<i32: 0, 1, 1>} : (i32, i64) -> ()
   return
 }
+// -----
+
+// Check that attribute 'operandSegmentSizes' can work well as 'operand_segment_sizes'
+func.func @testMultOperands(%x: i16, %y: i32, %z: i64) {
+  "testvar.var_and_opt_operand"(%x, %x, %z) {operandSegmentSizes = array<i32: 2, 0, 1>} : (i16, i16, i64) -> ()
+  // CHECK: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}, %{{.*}}) {operandSegmentSizes = array<i32: 2, 0, 1>} : (i16, i16, i64) -> ()
+  "testvar.var_and_opt_operand"(%x, %x, %y, %z) {operandSegmentSizes = array<i32: 2, 1, 1>} : (i16, i16, i32, i64) -> ()
+  // CHECK-NEXT: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {operandSegmentSizes = array<i32: 2, 1, 1>} : (i16, i16, i32, i64) -> ()
+  "testvar.var_and_opt_operand"(%y, %z) {operandSegmentSizes = array<i32: 0, 1, 1>} : (i32, i64) -> ()
+  // CHECK-NEXT: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}) {operandSegmentSizes = array<i32: 0, 1, 1>} : (i32, i64) -> ()
+  return
+}
 
 // -----
 
@@ -360,6 +372,19 @@ func.func @testMultResults() {
   // CHECK-NEXT: "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 2, 1, 1>} : () -> (i16, i16, i32, i64)
   "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 0, 1, 1>} : () -> (i32, i64)
   // CHECK-NEXT: "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 0, 1, 1>} : () -> (i32, i64)
+  return
+}
+
+// -----
+
+// Check that attribute 'resultSegmentSizes' can work well as 'result_segment_sizes'
+func.func @testMultResults() {
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, 0, 1>} : () -> (i16, i16, i64)
+  // CHECK: "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, 0, 1>} : () -> (i16, i16, i64)
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, 1, 1>} : () -> (i16, i16, i32, i64)
+  // CHECK-NEXT: "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, 1, 1>} : () -> (i16, i16, i32, i64)
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 0, 1, 1>} : () -> (i32, i64)
+  // CHECK-NEXT: "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 0, 1, 1>} : () -> (i32, i64)
   return
 }
 
