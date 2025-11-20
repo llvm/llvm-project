@@ -3844,6 +3844,13 @@ void EmitClangAttrHasAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
         Pragma.emplace_back(R, SI);
       else if (Variety == "HLSLAnnotation")
         HLSLAnnotation.emplace_back(R, SI);
+      else if (Variety == "AS_Annotation") {
+        // We should not be code gening anything with a C++26
+        // annotation syntax.
+        PrintError(R->getLoc(),
+                   "Invalid syntax 'Annotation' used on the node '" +
+                       R->getName() + "'");
+      }
     }
   }
 
@@ -3887,6 +3894,10 @@ void EmitClangAttrHasAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "case AttributeCommonInfo::Syntax::AS_Implicit:\n";
   OS << "  llvm_unreachable (\"hasAttribute not supported for "
         "AS_Implicit\");\n";
+  OS << "  return 0;\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_Annotation:\n";
+  OS << "  llvm_unreachable (\"hasAttribute not supported for "
+        "AS_Annotation\");\n";
   OS << "  return 0;\n";
 
   OS << "}\n";
