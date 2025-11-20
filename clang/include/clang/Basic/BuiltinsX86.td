@@ -2378,12 +2378,6 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<128>
   def vcvttss2si32 : X86Builtin<"int(_Vector<4, float>, _Constant int)">;
   def vcvttss2usi32 : X86Builtin<"unsigned int(_Vector<4, float>, _Constant int)">;
 }
-let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
-  def vpermilpd512 : X86Builtin<"_Vector<8, double>(_Vector<8, double>, _Constant int)">;
-  def vpermilps512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Constant int)">;
-  def vpermilvarpd512 : X86Builtin<"_Vector<8, double>(_Vector<8, double>, _Vector<8, long long int>)">;
-  def vpermilvarps512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Vector<16, int>)">;
-}
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def rndscalesd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int, _Constant int)">;
@@ -2476,6 +2470,10 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def shufpd512 : X86Builtin<"_Vector<8, double>(_Vector<8, double>, _Vector<8, double>, _Constant int)">;
   def shufps512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Vector<16, float>, _Constant int)">;
+  def vpermilpd512 : X86Builtin<"_Vector<8, double>(_Vector<8, double>, _Constant int)">;
+  def vpermilps512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Constant int)">;
+  def vpermilvarpd512 : X86Builtin<"_Vector<8, double>(_Vector<8, double>, _Vector<8, long long int>)">;
+  def vpermilvarps512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Vector<16, int>)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
