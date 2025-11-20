@@ -228,6 +228,8 @@ def XLenVecI8VT : ValueTypeByHwMode<[RV32, RV64],
                                     [v4i8, v8i8]>;
 def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
                                      [v2i16, v4i16]>;
+def XLenVecI32VT : ValueTypeByHwMode<[RV64],
+                                     [v2i32]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -246,7 +248,7 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
 class GPRRegisterClass<dag regList>
     : RISCVRegisterClass<[XLenVT, XLenFVT,
                           // P extension packed vector types:
-                          XLenVecI8VT, XLenVecI16VT, v2i32], 32, regList> {
+                          XLenVecI8VT, XLenVecI16VT, XLenVecI32VT], 32, regList> {
   let RegInfos = XLenRI;
 }
 
