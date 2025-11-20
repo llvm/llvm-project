@@ -90,7 +90,7 @@ RUN powershell -Command \
 RUN git config --system core.longpaths true & \
     git config --global core.autocrlf false
 
-ARG RUNNER_VERSION=2.329.0
+ARG RUNNER_VERSION=2.330.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \
