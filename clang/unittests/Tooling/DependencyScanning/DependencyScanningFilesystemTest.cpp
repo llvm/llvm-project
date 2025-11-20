@@ -21,8 +21,13 @@ TEST(DependencyScanningFilesystem, OpenFileAndGetBufferRepeatedly) {
   InMemoryFS->setCurrentWorkingDirectory("/");
   InMemoryFS->addFile("/foo", 0, llvm::MemoryBuffer::getMemBuffer("content"));
 
-  DependencyScanningFilesystemSharedCache SharedCache;
-  DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS);
+  DependencyScanningService Service(
+      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
+      clang::CASOptions(), nullptr, nullptr,
+      ScanningOptimizations::Default, /*EagerLoadModules=*/false,
+      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*CacheNegativeStats=*/true);
+  DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
   auto FileOrErr1 = DepFS.openFileForRead("foo");
   auto FileOrErr2 = DepFS.openFileForRead("foo");
