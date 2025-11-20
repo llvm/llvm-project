@@ -1068,7 +1068,7 @@ body: |
     %1:gpr = COPY $x11
     %2:gpr = LW %0, 0 :: (load (s32))
     ; Insert 11 instructions between the two loads
-    ; This makes the distance > MaxRescheduleDistance (10)
+    ; This makes the distance greater than the configured MaxRescheduleDistance
     %3:gpr = ADD %2, %1
     %4:gpr = ADD %3, %1
     %5:gpr = ADD %4, %1
