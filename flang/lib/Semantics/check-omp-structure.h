@@ -394,7 +394,6 @@ private:
   std::vector<LoopConstruct> loopStack_;
   // Scopes for scoping units.
   std::vector<const Scope *> scopeStack_;
-  bool invalidState_{false}; // Set during visiting OpenMPMisplacedEndDirective
 
   enum class PartKind : int {
     // There are also other "parts", such as internal-subprogram-part, etc,
