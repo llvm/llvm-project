@@ -1412,6 +1412,11 @@ public:
     return InLoopReductions.contains(Phi);
   }
 
+  /// Returns the set of in-loop reduction PHIs.
+  const SmallPtrSetImpl<PHINode *> &getInLoopReductions() const {
+    return InLoopReductions;
+  }
+
   /// Returns true if the predicated reduction select should be used to set the
   /// incoming value for the reduction phi.
   bool usePredicatedReductionSelect() const {
@@ -7627,62 +7632,6 @@ VPWidenMemoryRecipe *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                 Consecutive, Reverse, *VPI, VPI->getDebugLoc());
 }
 
-/// Creates a VPWidenIntOrFpInductionRecipe for \p PhiR. If needed, it will
-/// also insert a recipe to expand the step for the induction recipe.
-static VPWidenIntOrFpInductionRecipe *
-createWidenInductionRecipes(VPInstruction *PhiR,
-                            const InductionDescriptor &IndDesc, VPlan &Plan,
-                            ScalarEvolution &SE, Loop &OrigLoop) {
-  assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
-         "step must be loop invariant");
-
-  VPValue *Start = PhiR->getOperand(0);
-  assert(Plan.getLiveIn(IndDesc.getStartValue()) == Start &&
-         "Start VPValue must match IndDesc's start value");
-
-  // It is always safe to copy over the NoWrap and FastMath flags. In
-  // particular, when folding tail by masking, the masked-off lanes are never
-  // used, so it is safe.
-  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
-  VPValue *Step =
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
-
-  // Update wide induction increments to use the same step as the corresponding
-  // wide induction. This enables detecting induction increments directly in
-  // VPlan and removes redundant splats.
-  using namespace llvm::VPlanPatternMatch;
-  if (match(PhiR->getOperand(1), m_Add(m_Specific(PhiR), m_VPValue())))
-    PhiR->getOperand(1)->getDefiningRecipe()->setOperand(1, Step);
-
-  PHINode *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Flags, PhiR->getDebugLoc());
-}
-
-VPHeaderPHIRecipe *
-VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI, VFRange &Range) {
-  auto *Phi = cast<PHINode>(VPI->getUnderlyingInstr());
-
-  // Check if this is an integer or fp induction. If so, build the recipe that
-  // produces its scalar and vector values.
-  if (auto *II = Legal->getIntOrFpInductionDescriptor(Phi))
-    return createWidenInductionRecipes(VPI, *II, Plan, *PSE.getSE(), *OrigLoop);
-
-  // Check if this is pointer induction. If so, build the recipe for it.
-  if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
-    VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
-    return new VPWidenPointerInductionRecipe(
-        Phi, VPI->getOperand(0), Step, &Plan.getVFxUF(), *II,
-        LoopVectorizationPlanner::getDecisionAndClampRange(
-            [&](ElementCount VF) {
-              return CM.isScalarAfterVectorization(Phi, VF);
-            },
-            Range),
-        VPI->getDebugLoc());
-  }
-  return nullptr;
-}
-
 VPWidenIntOrFpInductionRecipe *
 VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
                                                 VFRange &Range) {
@@ -8191,45 +8140,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   // First, check for specific widening recipes that deal with inductions, Phi
   // nodes, calls and memory operations.
   VPRecipeBase *Recipe;
-  if (auto *PhiR = dyn_cast<VPPhi>(R)) {
-    VPBasicBlock *Parent = PhiR->getParent();
-    [[maybe_unused]] VPRegionBlock *LoopRegionOf =
-        Parent->getEnclosingLoopRegion();
-    assert(LoopRegionOf && LoopRegionOf->getEntry() == Parent &&
-           "Non-header phis should have been handled during predication");
-    auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
-    assert(R->getNumOperands() == 2 && "Must have 2 operands for header phis");
-    if ((Recipe = tryToOptimizeInductionPHI(PhiR, Range)))
-      return Recipe;
-
-    VPHeaderPHIRecipe *PhiRecipe = nullptr;
-    assert((Legal->isReductionVariable(Phi) ||
-            Legal->isFixedOrderRecurrence(Phi)) &&
-           "can only widen reductions and fixed-order recurrences here");
-    VPValue *StartV = R->getOperand(0);
-    if (Legal->isReductionVariable(Phi)) {
-      const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
-      assert(RdxDesc.getRecurrenceStartValue() ==
-             Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
-
-      // If the PHI is used by a partial reduction, set the scale factor.
-      unsigned ScaleFactor =
-          getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
-      PhiRecipe = new VPReductionPHIRecipe(
-          Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
-          CM.useOrderedReductions(RdxDesc), ScaleFactor);
-    } else {
-      // TODO: Currently fixed-order recurrences are modeled as chains of
-      // first-order recurrences. If there are no users of the intermediate
-      // recurrences in the chain, the fixed order recurrence should be modeled
-      // directly, enabling more efficient codegen.
-      PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
-    }
-    // Add backedge value.
-    PhiRecipe->addOperand(R->getOperand(1));
-    return PhiRecipe;
-  }
-  assert(!R->isPhi() && "only VPPhi nodes expected at this point");
+  assert(!R->isPhi() && "phis must be handled earlier");
 
   auto *VPI = cast<VPInstruction>(R);
   Instruction *Instr = R->getUnderlyingInstr();
@@ -8289,6 +8200,9 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
   if (isa<VPReductionPHIRecipe>(BinOp) || isa<VPPartialReductionRecipe>(BinOp))
     std::swap(BinOp, Accumulator);
 
+  if (auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(Accumulator))
+    RedPhiR->setVFScaleFactor(ScaleFactor);
+
   assert(ScaleFactor ==
              vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
          "all accumulators in chain must have same scale factor");
@@ -8335,6 +8249,12 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   auto VPlan0 = VPlanTransforms::buildVPlan0(
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
+
+  // Create recipes for header phis.
+  VPlanTransforms::createHeaderPhiRecipes(
+      *VPlan0, *PSE.getSE(), *OrigLoop, Legal->getInductionVars(),
+      Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
+      CM.getInLoopReductions(), Hints.allowReordering());
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -8456,25 +8376,27 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Mapping from VPValues in the initial plan to their widened VPValues. Needed
   // temporarily to update created block masks.
   DenseMap<VPValue *, VPValue *> Old2New;
+
+  // Collect blocks that need predication for in-loop reduction recipes.
+  DenseSet<BasicBlock *> BlocksNeedingPredication;
+  for (BasicBlock *BB : OrigLoop->blocks())
+    if (CM.blockNeedsPredicationForAnyReason(BB))
+      BlocksNeedingPredication.insert(BB);
+
+  VPlanTransforms::createVPReductionRecipesForInLoopReductions(
+      *Plan, BlockMaskCache, BlocksNeedingPredication, Range.Start);
+
+  // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Convert input VPInstructions to widened recipes.
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *SingleDef = cast<VPSingleDefRecipe>(&R);
-      auto *UnderlyingValue = SingleDef->getUnderlyingValue();
-      // Skip recipes that do not need transforming, including canonical IV,
-      // wide canonical IV and VPInstructions without underlying values. The
-      // latter are added above for masking.
-      // FIXME: Migrate code relying on the underlying instruction from VPlan0
-      // to construct recipes below to not use the underlying instruction.
-      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe, VPBlendRecipe>(
-              &R) ||
-          (isa<VPInstruction>(&R) && !UnderlyingValue))
+      auto *SingleDef = dyn_cast<VPInstruction>(&R);
+      if (!SingleDef || !SingleDef->getUnderlyingValue())
         continue;
-      assert(isa<VPInstruction>(&R) && UnderlyingValue && "unsupported recipe");
 
       // TODO: Gradually replace uses of underlying instruction by analyses on
       // VPlan.
-      Instruction *Instr = cast<Instruction>(UnderlyingValue);
+      Instruction *Instr = cast<Instruction>(SingleDef->getUnderlyingValue());
       Builder.setInsertPoint(SingleDef);
 
       // The stores with invariant address inside the loop will be deleted, and
@@ -8544,8 +8466,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // bring the VPlan to its final state.
   // ---------------------------------------------------------------------------
 
-  // Adjust the recipes for any inloop reductions.
-  adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+  introduceReductionResultComputation(Plan, RecipeBuilder, Range.Start);
 
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
@@ -8657,177 +8578,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   return Plan;
 }
 
-// Adjust the recipes for reductions. For in-loop reductions the chain of
-// instructions leading from the loop exit instr to the phi need to be converted
-// to reductions, with one operand being vector and the other being the scalar
-// reduction chain. For other reductions, a select is introduced between the phi
-// and users outside the vector region when folding the tail.
-//
-// A ComputeReductionResult recipe is added to the middle block, also for
-// in-loop reductions which compute their result in-loop, because generating
-// the subsequent bc.merge.rdx phi is driven by ComputeReductionResult recipes.
-//
-// Adjust AnyOf reductions; replace the reduction phi for the selected value
-// with a boolean reduction phi node to check if the condition is true in any
-// iteration. The final value is selected by the final ComputeReductionResult.
-void LoopVectorizationPlanner::adjustRecipesForReductions(
+void LoopVectorizationPlanner::introduceReductionResultComputation(
     VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
-  VPTypeAnalysis TypeInfo(*Plan);
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
-  VPBasicBlock *Header = VectorLoopRegion->getEntryBasicBlock();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
   SmallVector<VPRecipeBase *> ToDelete;
 
-  for (VPRecipeBase &R : Header->phis()) {
-    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!PhiR || !PhiR->isInLoop() || (MinVF.isScalar() && !PhiR->isOrdered()))
-      continue;
-
-    RecurKind Kind = PhiR->getRecurrenceKind();
-    assert(
-        !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-        !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
-        "AnyOf and FindIV reductions are not allowed for in-loop reductions");
-
-    bool IsFPRecurrence =
-        RecurrenceDescriptor::isFloatingPointRecurrenceKind(Kind);
-    FastMathFlags FMFs =
-        IsFPRecurrence ? FastMathFlags::getFast() : FastMathFlags();
-
-    // Collect the chain of "link" recipes for the reduction starting at PhiR.
-    SetVector<VPSingleDefRecipe *> Worklist;
-    Worklist.insert(PhiR);
-    for (unsigned I = 0; I != Worklist.size(); ++I) {
-      VPSingleDefRecipe *Cur = Worklist[I];
-      for (VPUser *U : Cur->users()) {
-        auto *UserRecipe = cast<VPSingleDefRecipe>(U);
-        if (!UserRecipe->getParent()->getEnclosingLoopRegion()) {
-          assert((UserRecipe->getParent() == MiddleVPBB ||
-                  UserRecipe->getParent() == Plan->getScalarPreheader()) &&
-                 "U must be either in the loop region, the middle block or the "
-                 "scalar preheader.");
-          continue;
-        }
-        Worklist.insert(UserRecipe);
-      }
-    }
-
-    // Visit operation "Links" along the reduction chain top-down starting from
-    // the phi until LoopExitValue. We keep track of the previous item
-    // (PreviousLink) to tell which of the two operands of a Link will remain
-    // scalar and which will be reduced. For minmax by select(cmp), Link will be
-    // the select instructions. Blend recipes of in-loop reduction phi's  will
-    // get folded to their non-phi operand, as the reduction recipe handles the
-    // condition directly.
-    VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
-    for (VPSingleDefRecipe *CurrentLink : drop_begin(Worklist)) {
-      if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
-        assert(Blend->getNumIncomingValues() == 2 &&
-               "Blend must have 2 incoming values");
-        if (Blend->getIncomingValue(0) == PhiR) {
-          Blend->replaceAllUsesWith(Blend->getIncomingValue(1));
-        } else {
-          assert(Blend->getIncomingValue(1) == PhiR &&
-                 "PhiR must be an operand of the blend");
-          Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
-        }
-        continue;
-      }
-
-      if (IsFPRecurrence) {
-        FastMathFlags CurFMF =
-            cast<VPRecipeWithIRFlags>(CurrentLink)->getFastMathFlags();
-        if (match(CurrentLink, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
-          CurFMF |= cast<VPRecipeWithIRFlags>(CurrentLink->getOperand(0))
-                        ->getFastMathFlags();
-        FMFs &= CurFMF;
-      }
-
-      Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
-
-      // Index of the first operand which holds a non-mask vector operand.
-      unsigned IndexOfFirstOperand;
-      // Recognize a call to the llvm.fmuladd intrinsic.
-      bool IsFMulAdd = (Kind == RecurKind::FMulAdd);
-      VPValue *VecOp;
-      VPBasicBlock *LinkVPBB = CurrentLink->getParent();
-      if (IsFMulAdd) {
-        assert(
-            RecurrenceDescriptor::isFMulAddIntrinsic(CurrentLinkI) &&
-            "Expected instruction to be a call to the llvm.fmuladd intrinsic");
-        assert(((MinVF.isScalar() && isa<VPReplicateRecipe>(CurrentLink)) ||
-                isa<VPWidenIntrinsicRecipe>(CurrentLink)) &&
-               CurrentLink->getOperand(2) == PreviousLink &&
-               "expected a call where the previous link is the added operand");
-
-        // If the instruction is a call to the llvm.fmuladd intrinsic then we
-        // need to create an fmul recipe (multiplying the first two operands of
-        // the fmuladd together) to use as the vector operand for the fadd
-        // reduction.
-        VPInstruction *FMulRecipe = new VPInstruction(
-            Instruction::FMul,
-            {CurrentLink->getOperand(0), CurrentLink->getOperand(1)},
-            CurrentLinkI->getFastMathFlags());
-        LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
-        VecOp = FMulRecipe;
-      } else if (PhiR->isInLoop() && Kind == RecurKind::AddChainWithSubs &&
-                 match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
-        Type *PhiTy = TypeInfo.inferScalarType(PhiR);
-        auto *Zero = Plan->getConstantInt(PhiTy, 0);
-        VPWidenRecipe *Sub = new VPWidenRecipe(
-            Instruction::Sub, {Zero, CurrentLink->getOperand(1)}, {},
-            VPIRMetadata(), CurrentLinkI->getDebugLoc());
-        Sub->setUnderlyingValue(CurrentLinkI);
-        LinkVPBB->insert(Sub, CurrentLink->getIterator());
-        VecOp = Sub;
-      } else {
-        if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
-          if (match(CurrentLink, m_Cmp(m_VPValue(), m_VPValue())))
-            continue;
-          assert(isa<VPWidenSelectRecipe>(CurrentLink) &&
-                 "must be a select recipe");
-          IndexOfFirstOperand = 1;
-        } else {
-          assert((MinVF.isScalar() || isa<VPWidenRecipe>(CurrentLink)) &&
-                 "Expected to replace a VPWidenSC");
-          IndexOfFirstOperand = 0;
-        }
-        // Note that for non-commutable operands (cmp-selects), the semantics of
-        // the cmp-select are captured in the recurrence kind.
-        unsigned VecOpId =
-            CurrentLink->getOperand(IndexOfFirstOperand) == PreviousLink
-                ? IndexOfFirstOperand + 1
-                : IndexOfFirstOperand;
-        VecOp = CurrentLink->getOperand(VecOpId);
-        assert(VecOp != PreviousLink &&
-               CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
-                                       (VecOpId - IndexOfFirstOperand)) ==
-                   PreviousLink &&
-               "PreviousLink must be the operand other than VecOp");
-      }
-
-      VPValue *CondOp = nullptr;
-      if (CM.blockNeedsPredicationForAnyReason(CurrentLinkI->getParent()))
-        CondOp = RecipeBuilder.getBlockInMask(CurrentLink->getParent());
-
-      auto *RedRecipe = new VPReductionRecipe(
-          Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
-          PhiR->isOrdered(), CurrentLinkI->getDebugLoc());
-      // Append the recipe to the end of the VPBasicBlock because we need to
-      // ensure that it comes after all of it's inputs, including CondOp.
-      // Delete CurrentLink as it will be invalid if its operand is replaced
-      // with a reduction defined at the bottom of the block in the next link.
-      if (LinkVPBB->getNumSuccessors() == 0)
-        RedRecipe->insertBefore(&*std::prev(std::prev(LinkVPBB->end())));
-      else
-        LinkVPBB->appendRecipe(RedRecipe);
-
-      CurrentLink->replaceAllUsesWith(RedRecipe);
-      ToDelete.push_back(CurrentLink);
-      PreviousLink = RedRecipe;
-    }
-  }
+  VPTypeAnalysis TypeInfo(*Plan);
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
   Builder.setInsertPoint(&*std::prev(std::prev(LatchVPBB->end())));
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
