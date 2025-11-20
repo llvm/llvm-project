@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
       argv[0], "2", "3", "4", "2", "3", "4", "2", "3", "4",
       "2",     "3", "4", "2", "3", "4", "2", "3", "4", NULL,
   };
-  const char *env[] = {
+  char *env[] = {
       "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B",
       "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", NULL,
   };
