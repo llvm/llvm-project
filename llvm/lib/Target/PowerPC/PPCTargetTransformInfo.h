@@ -153,6 +153,18 @@ public:
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override;
 
+  bool hasActiveVectorLength() const override;
+
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace) const override;
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace) const override;
+
+  InstructionCost
+  getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy, Align Alignment,
+                        unsigned AddressSpace,
+                        TTI::TargetCostKind CostKind) const override;
+
 private:
   // The following constant is used for estimating costs on power9.
   static const InstructionCost::CostType P9PipelineFlushEstimate = 80;

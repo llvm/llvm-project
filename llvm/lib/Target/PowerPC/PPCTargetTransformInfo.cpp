@@ -24,6 +24,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
 
+static cl::opt<bool> PPCEVL("ppc-evl",
+                            cl::desc("Allow EVL type vp.load/vp.store"),
+                            cl::init(false), cl::Hidden);
+
 static cl::opt<bool> Pwr9EVL("ppc-pwr9-evl",
                              cl::desc("Allow vp.load and vp.store for pwr9"),
                              cl::init(false), cl::Hidden);
@@ -1077,4 +1081,63 @@ PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     return DefaultLegalization;
 
   return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
+}
+
+bool PPCTTIImpl::hasActiveVectorLength() const {
+  unsigned CPU =  ST->getCPUDirective();
+  if (!PPCEVL)
+    return false;
+  if (CPU == PPC::DIR_PWR10 || CPU == PPC::DIR_PWR_FUTURE ||
+      (Pwr9EVL && CPU == PPC::DIR_PWR9))
+    return true;
+  return false;
+}
+
+static inline bool isLegalLoadWithLengthType(EVT VT) {
+  if (VT != MVT::i64 && VT != MVT::i32 && VT != MVT::i16 &&
+      VT != MVT::i8)
+    return false;
+  return true;
+}
+
+bool PPCTTIImpl::isLegalMaskedLoad(Type *DataType, Align Alignment,
+                                   unsigned AddressSpace) const {
+  if (!hasActiveVectorLength())
+    return false;
+  if (!isLegalLoadWithLengthType(TLI->getValueType(DL, DataType, true)))
+    return false;
+  return true;
+}
+
+bool PPCTTIImpl::isLegalMaskedStore(Type *DataType, Align Alignment,
+                                    unsigned AddressSpace) const {
+  return isLegalMaskedLoad(DataType, Alignment, AddressSpace);
+}
+
+InstructionCost
+PPCTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy,
+                                  Align Alignment,
+                                  unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind) const {
+  InstructionCost BaseCost =
+      BaseT::getMaskedMemoryOpCost(Opcode, DataTy, Alignment, AddressSpace,
+                                   CostKind);
+
+  if (Opcode != Instruction::Load && Opcode != Instruction::Store)
+    return BaseCost;
+  auto VecTy = dyn_cast<FixedVectorType>(DataTy);
+  if (!VecTy)
+    return BaseCost;
+  if (!isLegalMaskedLoad(VecTy->getScalarType(), Alignment, AddressSpace))
+    return BaseCost;
+  if (VecTy->getPrimitiveSizeInBits() > 128)
+    return BaseCost;
+
+  // Is scalar compare + select + maybe shift + vector load
+  InstructionCost Adj = vectorCostAdjustmentFactor(Opcode, DataTy, nullptr);
+  InstructionCost Cost = 2 + Adj;
+  if (ST->getCPUDirective() != PPC::DIR_PWR_FUTURE ||
+      VecTy->getScalarSizeInBits() != 8)
+    Cost += 1; // need shift
+  return Cost;
 }
