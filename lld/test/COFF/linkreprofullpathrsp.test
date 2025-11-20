@@ -16,6 +16,9 @@ Test link.exe-style /linkreprofullpathrsp: flag.
 # RUN:  /wholearchive:%t.archive.lib /out:%t.exe %t.pdb
 # RUN: FileCheck %s --check-prefix=RSP -DT=%t -DP=%p < %t.rsp
 
+# RUN: lld-link @%t.rsp /out:%t2.exe /entry:main@0
+# RUN: diff %t.exe %t2.exe
+
 # RSP: "[[T]].obj"
 # RSP-NEXT: "[[P]]{{[/\\]}}Inputs{{[/\\]}}std32.lib"
 # RSP-NEXT: "[[P]]{{[/\\]}}Inputs{{[/\\]}}ret42.lib"
