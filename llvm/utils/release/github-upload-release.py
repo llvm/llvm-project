@@ -207,25 +207,30 @@ def uncomment_download_links(repo, release_version):
     for line in release.body.splitlines():
         # All hidden download links are of the form:
         # <!-- <some unique tag> <markdown content> -->
-        if line.startswith("<!--"):
-            for section in release_links:
-                for comment_tag, _, *files in section:
-                    if comment_tag in line:
-                        print(f'Found link line "{comment_tag}":')
-                        files = set([f.format(release=release_version) for f in files])
-                        print("  Files required:", files)
-                        if files.issubset(release_assets):
-                            print("  All files present, revealing link line.")
-                            line.replace("<!--", "").replace(comment_tag, "").replace(
-                                "-->", ""
-                            ).strip()
-                            modified = True
-                        else:
-                            print(
-                                "  These files are not present:",
-                                files.difference(release_assets),
-                            )
-                            print("  Link line will remain hidden.")
+        if not line.startswith("<!--"):
+            new_message.append(line)
+            continue
+
+        for section in release_links:
+            for comment_tag, _, *files in section:
+                if not comment_tag in line:
+                    continue
+
+                print(f'Found link line "{comment_tag}":')
+                files = set([f.format(release=release_version) for f in files])
+                print("  Files required:", files)
+                if files.issubset(release_assets):
+                    print("  All files present, revealing link line.")
+                    line.replace("<!--", "").replace(comment_tag, "").replace(
+                        "-->", ""
+                    ).strip()
+                    modified = True
+                else:
+                    print(
+                        "  These files are not present:",
+                        files.difference(release_assets),
+                    )
+                    print("  Link line will remain hidden.")
 
         new_message.append(line)
 
