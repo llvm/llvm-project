@@ -67,6 +67,7 @@ void test(void) {
 
 //--- script-expectations.txt
 CHECK: CLANG:-clang-executable
+CHECK: "-o" "reproducer.cache/reproducer.o"
 CHECK: -fmodule-file=Test=reproducer.cache/explicitly-built-modules/Test-{{.*}}.pcm
 Verify the reproducer VFS overlay is added before the existing overlay provided on a command line.
 CHECK: -ivfsoverlay "reproducer.cache/vfs/vfs.yaml"

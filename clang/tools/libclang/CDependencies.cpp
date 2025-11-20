@@ -835,7 +835,8 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
   std::string ReproExecutable = "\"${CLANG:-" + Opts.BuildArgs.front() + "}\"";
   auto PrintArguments = [&ReproExecutable, &FileCacheName,
                          &ClangOpts](llvm::raw_fd_ostream &OS,
-                                     ArrayRef<std::string> Arguments) {
+                                     ArrayRef<std::string> Arguments,
+                                     bool RedirectOutput) {
     std::vector<const char *> CharArgs(Arguments.size());
     for (const std::string &Arg : Arguments)
       CharArgs.push_back(Arg.c_str());
@@ -853,11 +854,19 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
           DidAddVFSOverlay = true;
         }
       }
+      bool IsOutputArg = Arg->getOption().matches(options::OPT_o);
       llvm::opt::ArgStringList OutArgs;
       Arg->render(ParsedArgs, OutArgs);
+      bool IsArgValue = false;
       for (const auto &OutArg : OutArgs) {
         OS << ' ';
-        llvm::sys::printArg(OS, OutArg, /*Quote=*/true);
+        if (RedirectOutput && IsOutputArg && IsArgValue) {
+          StringRef OutputFileName = llvm::sys::path::filename(OutArg);
+          OS << " \"" << FileCacheName << '/' << OutputFileName << '"';
+        } else {
+          llvm::sys::printArg(OS, OutArg, /*Quote=*/true);
+        }
+        IsArgValue = true;
       }
     }
     if (!DidAddVFSOverlay) {
@@ -866,11 +875,13 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
     }
     OS << '\n';
   };
+  // Redirect the output to keep reproducers relocatable. But don't redirect
+  // modules as they are already in the appropriate place (see `LookupOutput`).
   for (ModuleDeps &Dep : TU.ModuleGraph)
-    PrintArguments(ScriptOS, Dep.getBuildArguments());
+    PrintArguments(ScriptOS, Dep.getBuildArguments(), /*RedirectOutput=*/false);
   ScriptOS << "\n# Translation unit:\n";
   for (const Command &BuildCommand : TU.Commands)
-    PrintArguments(ScriptOS, BuildCommand.Arguments);
+    PrintArguments(ScriptOS, BuildCommand.Arguments, /*RedirectOutput=*/true);
 
   auto RealFS = llvm::vfs::getRealFileSystem();
   RealFS->setCurrentWorkingDirectory(*Opts.WorkingDirectory);
