@@ -1001,3 +1001,66 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   MiddleTerm->setOperand(0, NewCond);
   return true;
 }
+
+void VPlanTransforms::convertFindLastRecurrences(
+    VPlan &Plan, VPRecipeBuilder &RecipeBuilder) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  // We want to create the following nodes:
+  // vec.body:
+  //   mask.phi = phi <VF x i1> [ all.false, vec.ph ], [ new.mask, vec.body ]
+  //   ...data.phi already exists, but needs updating...
+  //   data.phi = phi <VF x Ty> [ default.val, vec.ph ], [ new.data, vec.body ]
+  //
+  //   ...'data' and 'compare' created by existing nodes...
+  //
+  //   any_active = i1 any_of_reduction(compare)
+  //   new.mask = select any_active, compare, mask.phi
+  //   new.data = select any_active, data, data.phi
+  //
+  // middle.block:
+  //   result = extract-last-active new.data, new.mask, default.val
+
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
+                     PhiR->getRecurrenceKind()))
+      continue;
+
+    // Find the condition for the select
+    auto *SR = cast<VPWidenSelectRecipe>(&PhiR->getBackedgeRecipe());
+    VPValue *Cond = SR->getCond();
+
+    // Add mask phi
+    VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+    VPValue *False = Plan.getOrAddLiveIn(
+        ConstantInt::getFalse(PhiR->getUnderlyingValue()->getContext()));
+    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, False, DebugLoc());
+    Builder.insert(MaskPHI);
+
+    // Add select for mask
+    Builder.setInsertPoint(SR);
+    VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+    VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
+    MaskPHI->addOperand(MaskSelect);
+
+    // Replace select for data
+    VPValue *DataSelect = Builder.createSelect(
+        AnyOf, SR->getOperand(1), SR->getOperand(2), SR->getDebugLoc());
+    SR->replaceAllUsesWith(DataSelect);
+    SR->eraseFromParent();
+
+    // Find final reduction computation and replace it with an
+    // extract.last.active intrinsic.
+    VPInstruction *RdxResult = findComputeReductionResult(PhiR);
+    assert(RdxResult && "Unable to find Reduction Result Recipe");
+    Builder.setInsertPoint(RdxResult);
+    auto *ExtractLastActive =
+        Builder.createNaryOp(VPInstruction::ExtractLastActive,
+                             {DataSelect, MaskSelect, PhiR->getStartValue()},
+                             RdxResult->getDebugLoc());
+    RdxResult->replaceAllUsesWith(ExtractLastActive);
+    RdxResult->eraseFromParent();
+  }
+}
