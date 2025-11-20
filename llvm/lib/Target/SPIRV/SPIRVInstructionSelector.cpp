@@ -514,7 +514,7 @@ static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
 }
 
 // TODO(168736): We should make this either a flag in tabelgen
-// or reduce our dependence on the global registery, so we can remove this
+// or reduce our dependence on the global registry, so we can remove this
 // function. It can easily be missed when new intrinsics are added.
 static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   switch (ID) {
@@ -580,7 +580,7 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
 }
 
 // TODO(168736): We should make this either a flag in tabelgen
-// or reduce our dependence on the global registery, so we can remove this
+// or reduce our dependence on the global registry, so we can remove this
 // function. It can easily be missed when new intrinsics are added.
 static bool isOpcodeWithNoSideEffects(unsigned Opcode) {
   switch (Opcode) {
@@ -679,7 +679,7 @@ bool isDead(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
 }
 
 void SPIRVInstructionSelector::removeOpNamesForDeadMI(MachineInstr &MI) const {
-  // Delete the OpName that uses the result of there is one.
+  // Delete the OpName that uses the result if there is one.
   for (const auto &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
     if (Reg.isPhysical())
