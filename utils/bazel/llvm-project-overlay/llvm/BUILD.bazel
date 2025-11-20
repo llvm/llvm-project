@@ -785,6 +785,14 @@ cc_binary(
 )
 
 gentbl_cc_library(
+    name = "target_library_info_gen",
+    tbl_outs = {"include/llvm/Analysis/TargetLibraryInfo.inc": ["-gen-target-library-info"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "include/llvm/Analysis/TargetLibraryInfo.td",
+    deps = [":CommonTargetTdFiles"],
+)
+
+gentbl_cc_library(
     name = "intrinsic_enums_gen",
     tbl_outs = {"include/llvm/IR/IntrinsicEnums.inc": ["-gen-intrinsic-enums"]},
     tblgen = ":llvm-min-tblgen",
@@ -1260,6 +1268,7 @@ cc_library(
         ":Support",
         ":TargetParser",
         ":config",
+        ":target_library_info_gen",
     ],
 )
 
@@ -1293,6 +1302,7 @@ cc_library(
         ":Support",
         ":TargetParser",
         ":config",
+        ":target_library_info_gen",
     ],
 )
 
@@ -1352,6 +1362,7 @@ cc_library(
 filegroup(
     name = "common_target_td_sources",
     srcs = glob([
+        "include/llvm/Analysis/*.td",
         "include/llvm/CodeGen/*.td",
         "include/llvm/Frontend/Directive/*.td",
         "include/llvm/IR/Intrinsics*.td",
