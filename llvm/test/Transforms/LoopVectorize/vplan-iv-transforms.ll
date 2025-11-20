@@ -21,7 +21,7 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[STEPS:%.+]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep>, ir<0>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%iv>
 ; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VEC_TC]]>
@@ -77,10 +77,10 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION  ir<0>, ir<1>, vp<%0>
 ; CHECK-NEXT:     vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%q> = getelementptr ir<%p>, vp<%4>
-; CHECK-NEXT:     vp<%5> = vector-pointer ir<%q>
+; CHECK-NEXT:     vp<%5> = vector-pointer ir<%q>, ir<0>
 ; CHECK-NEXT:     WIDEN ir<%x> = load vp<%5>
 ; CHECK-NEXT:     WIDEN ir<%y> = add ir<%x>, ir<%iv>
-; CHECK-NEXT:     vp<%6> = vector-pointer ir<%q>
+; CHECK-NEXT:     vp<%6> = vector-pointer ir<%q>, ir<0>
 ; CHECK-NEXT:     WIDEN store vp<%6>, ir<%y>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%3>, vp<%1>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%2>
@@ -110,9 +110,10 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[INDUCTION]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:   CLONE ir<%q> = getelementptr ir<%p>, vp<[[SCALAR_PHI]]>
-; CHECK-NEXT:   WIDEN ir<%x> = load ir<%q>
+; CHECK-NEXT:   vp<%8> = vector-pointer ir<%q>, ir<0>
+; CHECK-NEXT:   WIDEN ir<%x> = load vp<%8>
 ; CHECK-NEXT:   WIDEN ir<%y> = add ir<%x>, ir<%iv>
-; CHECK-NEXT:   WIDEN store ir<%q>, ir<%y>
+; CHECK-NEXT:   WIDEN store vp<%8>, ir<%y>
 ; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<[[SCALAR_PHI]]>, ir<8>
 ; CHECK-NEXT:   EMIT vp<%vec.ind.next> = add ir<%iv>, vp<[[BROADCAST_INC]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, vp<%n.vec>
