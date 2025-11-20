@@ -18,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Argument.h"
@@ -29,11 +30,14 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsRipple.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CFGUpdate.h"
@@ -41,7 +45,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
 #include <array>
 #include <bitset>
@@ -55,6 +61,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "ripple"
 
@@ -625,6 +632,25 @@ const TensorShape &Ripple::getRippleShape(const Instruction *I) const {
   }
 }
 
+Error Ripple::replaceRippleGetSize() {
+  Error AllErrors = Error::success();
+  for (auto &I : make_early_inc_range(instructions(F))) {
+    if (IntrinsicInst *BlockGetSize =
+            intrinsicWithId(&I, {Intrinsic::ripple_block_getsize})) {
+      if (Error E = checkRippleBlockIntrinsics(BlockGetSize)) {
+        AllErrors = joinErrors(std::move(AllErrors), std::move(E));
+        continue;
+      }
+      auto DimSize = getRippleGetSizeValue(BlockGetSize);
+      Constant *C = ConstantInt::get(BlockGetSize->getType(), DimSize);
+      auto BlockIterator = BlockGetSize->getIterator();
+      invalidateRippleDataFor(BlockGetSize);
+      ReplaceInstWithValue(BlockIterator, C);
+    }
+  }
+  return AllErrors;
+}
+
 Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
   LLVM_DEBUG(dbgs() << "Propagating shapes in function:\n"; F.print(dbgs()));
 
@@ -731,6 +757,40 @@ Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
   assert(allInstructionsHaveRippleShapes() &&
          "Some instruction has no Ripple shape");
 
+  // Now that all shapes have settled, create linear series
+  for (auto *BB : getFuncRPOT()) {
+    for (auto &I : *BB) {
+      WorkQueue.push(&I);
+    }
+  }
+  while (!WorkQueue.empty()) {
+    Instruction *I = WorkQueue.front();
+    WorkQueue.pop();
+    LLVM_DEBUG(dbgs() << "Linear series processing of: " << *I << "\n");
+    auto CSBefore = getCachedSeries(I);
+    auto CSAfter = getLinearSeriesFor(I);
+    LLVM_DEBUG(dbgs() << "Linear series is: " << CSAfter << "\n");
+
+    if (CSBefore.getState() != CSAfter.getState())
+      revisitUserInstructions(I);
+  }
+
+  // Remove non-valid series
+  clearPotentialSeries();
+
+  // Simplify and cleanup slopes
+  simplifySlopes();
+
+  // Replace ripple_get_size by their values before simplification
+  if (Error E = replaceRippleGetSize())
+    return E;
+
+  // Iterate while simplification occurs
+  while (simplifyFunction())
+    ;
+
+  assert(allInstructionsHaveRippleShapes() &&
+         "Some instruction has no Ripple shape");
   return Error::success();
 }
 
@@ -987,6 +1047,12 @@ Error Ripple::validate() const {
   return Error::success();
 }
 
+void Ripple::printValidSeries(raw_ostream &OSS) const {
+  for (auto &[_, LS] : LsCache.Valid) {
+    OSS << *LS << "\n";
+  }
+}
+
 void Ripple::printTensorInstructions(raw_ostream &oss) const {
   auto dimTypeStr = [&](DimType type) {
     switch (type) {
@@ -1072,6 +1138,701 @@ IntegerType *LinearSeries::getSlopeTypeFor(const DataLayout &DL,
   }
   return SlopeType;
 }
+
+bool Ripple::canConstructSplatSeries(Value *V, const TensorShape &FromShape,
+                                     const TensorShape &ToShape) {
+  return (isa<PointerType>(V->getType()->getScalarType()) ||
+          isa<IntegerType>(V->getType()->getScalarType())) &&
+         !FromShape.isBroadcastError(ToShape);
+}
+
+Ripple::ConstructedSeries
+Ripple::getLinearSeriesFor(Constant *C, const TensorShape &FromShape,
+                           const TensorShape &ToShape) {
+  return getSplatSeries(C, FromShape, ToShape);
+}
+
+Ripple::ConstructedSeries
+Ripple::getLinearSeriesFor(Argument *A, const TensorShape &FromShape,
+                           const TensorShape &ToShape) {
+  return getSplatSeries(A, FromShape, ToShape);
+}
+
+Ripple::ConstructedSeries Ripple::getSplatSeries(Value *V,
+                                                 const TensorShape &FromShape,
+                                                 const TensorShape &ToShape) {
+  if (!canConstructSplatSeries(V, FromShape, ToShape))
+    return {};
+
+  // We can generate integer or pointer linear series (through GEP)
+  Type *SlopeType =
+      LinearSeries::getSlopeTypeFor(DL, V->getType()->getScalarType());
+
+  if (!SlopeType)
+    return {};
+
+  assert(!(FromShape.isScalar() && V->getType()->isVectorTy()));
+
+  const auto ConstantSlopeOf = [&](uint64_t val) {
+    return ConstantInt::get(SlopeType, val,
+                            /*signed*/ false);
+  };
+
+  // The slope shape is composed of the dimensions of ToShape - FromShape
+  TensorShape SlopeShape = ToShape;
+  SlopeShape.reduceDimensions(FromShape.nonEmptyDims());
+  SmallVector<Value *, 4> NewSlopes;
+
+  NewSlopes.append(ToShape.rank(), ConstantSlopeOf(0));
+  LinearSeries *LS = new LinearSeries(V, FromShape, NewSlopes, SlopeShape);
+  return {LS, CSState::ValidLinearSeries};
+}
+
+Ripple::ConstructedSeries Ripple::tryToPromoteLinearSeries(LinearSeries *LS) {
+  Value *Base = LS->getBase();
+  const TensorShape &ExpectedBaseShape = LS->getBaseShape();
+  if (PHINode *Phi = dyn_cast<PHINode>(Base)) {
+    LLVM_DEBUG(dbgs() << "Trying to promote " << *LS << "\n");
+    // Process the incoming values that were not inserted yet
+    for (unsigned IncomingIdx = 0; IncomingIdx < Phi->getNumIncomingValues();
+         ++IncomingIdx) {
+      Value *IncomingValue = Phi->getIncomingValue(IncomingIdx);
+      BasicBlock *IncomingBlock = Phi->getIncomingBlock(IncomingIdx);
+      // Add if it's missing from our slopes
+      if (cast<PHINode>(LS->getSlope(0))->getBasicBlockIndex(IncomingBlock) ==
+          -1) {
+        // The potentially missing incoming values are instructions
+        LLVM_DEBUG(dbgs() << "Missing incoming from: "
+                          << IncomingBlock->getName() << " value "
+                          << *IncomingValue << " from " << *LS->getSlope(0)
+                          << "\n");
+        Instruction *IncomingInstruction = cast<Instruction>(IncomingValue);
+        auto OperandCS = getCachedSeries(IncomingInstruction);
+        if (OperandCS.isNotASeries()) {
+          LLVM_DEBUG(dbgs() << "Incoming is not a series!\n");
+          return {};
+        }
+        if (OperandCS.LS->getBaseShape() != ExpectedBaseShape) {
+          LLVM_DEBUG(dbgs() << "Operand base shape differs: expected "
+                            << ExpectedBaseShape << " and operand has "
+                            << OperandCS.LS->getBaseShape() << "\n");
+          return {};
+        }
+        LLVM_DEBUG(dbgs() << "Valid or potential linear series: "
+                          << *OperandCS.LS << "\n");
+        for (unsigned SlopeIdx = 0; SlopeIdx < LS->getSlopeShape().rank();
+             ++SlopeIdx) {
+          PHINode *SlopePhi = cast<PHINode>(LS->getSlope(SlopeIdx));
+          assert(SlopePhi->getBasicBlockIndex(IncomingBlock) == -1);
+          SlopePhi->addIncoming(OperandCS.LS->getSlope(SlopeIdx),
+                                IncomingBlock);
+        }
+      }
+    }
+    // We must check that the roots of values flowing into the PHI are valid
+    // linear series before promoting
+    if (!hasValidLinearSeriesRoots(LS)) {
+      LLVM_DEBUG(
+          dbgs() << *LS
+                 << " has non linear series root and cannot be promoted!\n");
+      return {};
+    }
+    LLVM_DEBUG(dbgs() << *LS << " has been promoted!\n");
+    for ([[maybe_unused]] auto &Slope : LS->slopes()) {
+      assert(cast<PHINode>(&*Slope)->isComplete());
+    }
+    // All incoming values have a matching base, we can promote the PHI
+    LsCache.Potential.erase(Phi);
+    LsCache.Valid.insert({Phi, LS});
+    return {LS, CSState::ValidLinearSeries};
+  } else if (Instruction *I = dyn_cast<Instruction>(Base)) {
+    for (auto &Operand : I->operands()) {
+      if (Instruction *OperandInstr = dyn_cast<Instruction>(Operand)) {
+        auto OperandCS = getCachedSeries(OperandInstr);
+        if (OperandCS.LS->getBaseShape() != ExpectedBaseShape) {
+          LLVM_DEBUG(dbgs() << "This base shape " << ExpectedBaseShape
+                            << " differs from other base shape "
+                            << OperandCS.LS->getBaseShape());
+          return {};
+        }
+        if (!OperandCS.isValid())
+          return {};
+      }
+    }
+    LLVM_DEBUG(dbgs() << *LS << " has been promoted!\n");
+    LsCache.Potential.erase(I);
+    LsCache.Valid.insert({I, LS});
+    return {LS, CSState::ValidLinearSeries};
+  } else {
+    // Only Instructions should become Potential Series
+    report_fatal_error("A linear series base which is not an Instruction can "
+                       "not be a potential series");
+  }
+}
+
+Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
+  if (!I)
+    return {};
+
+  // TODO: Remove when llvm has entirely transitioned to record instead of
+  // intrinsics for debug info!
+  if (isa<DbgInfoIntrinsic>(I))
+    return {};
+
+  const TensorShape &ToShape = getRippleShape(I);
+
+  auto isASlope = [&](Instruction *I) -> bool {
+    return I && SlopeInstructions.contains(I);
+  };
+
+  IntegerType *SlopeType = LinearSeries::getSlopeTypeFor(DL, I->getType());
+  // We can generate integer or pointer linear series (through GEP)
+  if (!SlopeType)
+    return {};
+
+  // Use already constructed series if possible
+  auto CachedCS = getCachedSeries(I);
+  if (CachedCS.isValid())
+    return CachedCS;
+
+  if (CachedCS.hasPotential()) {
+    assert(I == CachedCS.LS->getBase());
+    if (auto PromotedCS = tryToPromoteLinearSeries(CachedCS.LS))
+      return PromotedCS;
+    else
+      return CachedCS;
+  }
+
+  if (isASlope(I)) {
+    LLVM_DEBUG(dbgs() << "We avoid creating LS for slope: " << *I << "\n");
+    return {};
+  }
+
+  const auto ConstantSlopeOf = [SlopeType](uint64_t val) {
+    return ConstantInt::get(SlopeType, val, /*signed*/ false);
+  };
+
+  auto getOperandSeries = [&](Value *Operand) -> ConstructedSeries {
+    if (Constant *C = dyn_cast<Constant>(Operand)) {
+      if (!C->getType()->isVectorTy())
+        return getLinearSeriesFor(C, getRippleShape(C), ToShape);
+    } else if (Argument *A = dyn_cast<Argument>(Operand)) {
+      if (!A->getType()->isVectorTy())
+        return getLinearSeriesFor(A, getRippleShape(A), ToShape);
+    } else if (Instruction *I = dyn_cast<Instruction>(Operand))
+      return getCachedSeries(I);
+    return {};
+  };
+
+  // Get the linear series of the operands
+  std::vector<ConstructedSeries> OperandSeries;
+  for (unsigned OperandIdx = 0; OperandIdx < I->getNumOperands();
+       ++OperandIdx) {
+    Value *Operand = I->getOperand(OperandIdx);
+    OperandSeries.push_back(getOperandSeries(Operand));
+  }
+
+  SmallVector<Value *, 3> NewSlopes;
+
+  auto processRippleBlockIndex =
+      [&](IntrinsicInst *RippleIndexInst) -> ConstructedSeries {
+    // For Ripple Index, the base is zero and the shape is carried by the slope
+    for (unsigned i = 0; i < ToShape.rank(); ++i)
+      NewSlopes.push_back(ToShape[i] > 1 ? ConstantSlopeOf(1)
+                                         : ConstantSlopeOf(0));
+    LinearSeries *LS =
+        new LinearSeries(ConstantSlopeOf(0), ScalarShape, NewSlopes, ToShape);
+    return {LS, CSState::ValidLinearSeries};
+  };
+
+  auto processRippleGetSize =
+      [&](IntrinsicInst *RippleGetSizeInst) -> ConstructedSeries {
+    for (unsigned i = 0; i < ToShape.rank(); ++i)
+      NewSlopes.push_back(ConstantSlopeOf(0));
+    LinearSeries *LS = new LinearSeries(
+        ConstantSlopeOf(getRippleGetSizeValue(RippleGetSizeInst)), ScalarShape,
+        NewSlopes, ToShape);
+    return {LS, CSState::ValidLinearSeries};
+  };
+
+  auto processBinOp = [&](BinaryOperator *BinOp) -> ConstructedSeries {
+    auto &LhsSeries = OperandSeries[0];
+    auto &RhsSeries = OperandSeries[1];
+    if (LhsSeries.isNotASeries() || RhsSeries.isNotASeries())
+      return {};
+
+    CSState NewState =
+        combineStatesBinaryOp(LhsSeries.getState(), RhsSeries.getState());
+
+    const TensorShape &LhsBaseShape = LhsSeries.LS->getBaseShape();
+    const TensorShape &LhsSlopeShape = LhsSeries.LS->getSlopeShape();
+    const TensorShape &RhsBaseShape = RhsSeries.LS->getBaseShape();
+    const TensorShape &RhsSlopeShape = RhsSeries.LS->getSlopeShape();
+
+    // TODO: there is an optimization opportunity when the bases have different
+    // shapes: we can broadcast the base if the corresponding broadcast slope
+    // dimension is empty (1) or if the slope is zero and the dimension size are
+    // equal. E.g. LHS[BaseShape([1, 15]) SlopeShape[5, 1] Slope(0, 0)]
+    // RHS[BaseShape([5, 15]), SlopeShape([1, 1])] the LHS base can be
+    // broadcasted to match RHS base shape and continue propagating a valid
+    // series.
+    const TensorShape &NewBaseShape = LhsBaseShape;
+
+    TensorShape NewSlopeShape = ToShape;
+    NewSlopeShape.reduceDimensions(NewBaseShape.nonEmptyDims());
+
+    // We have to expand when:
+    // 1) the bases have different shapes
+    // 2) we cannot combine the slopes w/ a broadcast
+    // 3) if the rhs base dimension overlaps with lhs slope dimensions
+    // 4) if the lhs base dimension overlaps with rhs slope dimensions
+    // Cannot combine the bases; we have to expand
+    if (LhsBaseShape != RhsBaseShape ||
+        RhsBaseShape.bothNonEmptyDims(LhsSlopeShape).any() ||
+        LhsBaseShape.bothNonEmptyDims(RhsSlopeShape).any())
+      return {};
+
+    std::function<Value *(unsigned)> LeftSlopeOp, RightSlopeOp;
+    std::function<Value *(Value *, Value *)> IRBFun;
+
+    // Handle common signed integer truncation pattern (unsigned -> signed):
+    // R2 = shl R1, P; where P = (sizeof_bit(R1) - sizeof_bit(trunc int type))
+    // R3 = ashr exact R2, P
+    ConstantInt *SrAmount;
+    ConstantInt *SlAmount;
+    Value *SlVal;
+    // AShr(Shl(Any, SlAmount), SrAmount)
+    if (match(BinOp, m_AShr(m_Shl(m_Value(SlVal), m_ConstantInt(SlAmount)),
+                            m_ConstantInt(SrAmount))) &&
+        cast<AShrOperator>(BinOp)->isExact() && SrAmount == SlAmount) {
+      // We allow this transformation only if the following ops undefine
+      // behavior on overflow
+      if (!all_of(BinOp->users(), [](User *U) {
+            if (auto *OverflowBinop = dyn_cast<OverflowingBinaryOperator>(U))
+              return OverflowBinop->hasNoSignedWrap() ||
+                     OverflowBinop->hasNoUnsignedWrap();
+            return false;
+          }))
+        return {};
+      // The slopes are the one from the LHS of LhsShift; don't
+      // compute them using right shift or we may truncate the slopes!
+      auto SlOperandOpSeries = getOperandSeries(SlVal);
+      if (SlOperandOpSeries.isValid() || SlOperandOpSeries.hasPotential()) {
+        IRBFun = [&](Value *Lhs, Value *) { return Lhs; };
+        LeftSlopeOp = [SlOperandOpSeries](unsigned idx) {
+          return SlOperandOpSeries.LS->getSlope(idx);
+        };
+        RightSlopeOp = [](unsigned idx) { /* Not used */ return nullptr; };
+      } else {
+        return {};
+      }
+    } else if (ShlOperator *ShlOp = dyn_cast<ShlOperator>(BinOp)) {
+      IRBFun = [&, ShlOp](Value *Lhs, Value *Rhs) {
+        Value *NewShl = irBuilder.CreateShl(Lhs, Rhs, "ripple.LS.slope.shl",
+                                            ShlOp->hasNoUnsignedWrap(),
+                                            ShlOp->hasNoSignedWrap());
+        return NewShl;
+      };
+
+      if (RhsSeries.LS->isScalarOrSplat()) {
+        // (ax + b) << s => (a << s)x + (b << s); (<< s) <=> (* 2^x)
+        LeftSlopeOp = [&](unsigned idx) { return LhsSeries.LS->getSlope(idx); };
+        RightSlopeOp = [&](unsigned idx) { return RhsSeries.LS->getBase(); };
+      } else {
+        return {};
+      }
+    } else if (MulOperator *MulOp = dyn_cast<MulOperator>(BinOp)) {
+      IRBFun = [&, MulOp](Value *Lhs, Value *Rhs) {
+        return irBuilder.CreateMul(Lhs, Rhs, "ripple.LS.slope.mul",
+                                   MulOp->hasNoUnsignedWrap(),
+                                   MulOp->hasNoSignedWrap());
+      };
+
+      // We only allow multiplication by a scalar
+      if (LhsSeries.LS->isScalarOrSplat()) {
+        // s * (ax + b) => (s * a)x + (s * b)
+        LeftSlopeOp = [&](unsigned idx) { return LhsSeries.LS->getBase(); };
+        RightSlopeOp = [&](unsigned idx) {
+          return RhsSeries.LS->getSlope(idx);
+        };
+      } else if (RhsSeries.LS->isScalarOrSplat()) {
+        // (ax + b) * s => (a * s)x + (b * s)
+        LeftSlopeOp = [&](unsigned idx) { return LhsSeries.LS->getSlope(idx); };
+        RightSlopeOp = [&](unsigned idx) { return RhsSeries.LS->getBase(); };
+      } else {
+        return {};
+      }
+    } else if (SubOperator *SubOp = dyn_cast<SubOperator>(BinOp)) {
+      // (ax + b) - (cx + d) => (a - c)x + (b - d)
+      IRBFun = [&, SubOp](Value *Lhs, Value *Rhs) {
+        return irBuilder.CreateSub(Lhs, Rhs, "ripple.LS.slope.sub",
+                                   SubOp->hasNoUnsignedWrap(),
+                                   SubOp->hasNoSignedWrap());
+      };
+
+      LeftSlopeOp = [&](unsigned idx) { return LhsSeries.LS->getSlope(idx); };
+      RightSlopeOp = [&](unsigned idx) { return RhsSeries.LS->getSlope(idx); };
+    } else if (AddOperator *AddOp = dyn_cast<AddOperator>(BinOp)) {
+      IRBFun = [&, AddOp](Value *Lhs, Value *Rhs) {
+        return irBuilder.CreateAdd(Lhs, Rhs, "ripple.LS.slope.add",
+                                   AddOp->hasNoUnsignedWrap(),
+                                   AddOp->hasNoSignedWrap());
+      };
+
+      // (ax + b) + (cx + d) => (a + c)x + (b + d)
+      LeftSlopeOp = [&](unsigned idx) { return LhsSeries.LS->getSlope(idx); };
+      RightSlopeOp = [&](unsigned idx) { return RhsSeries.LS->getSlope(idx); };
+    } else {
+      // Cannot pass through a LinearSeries
+      return {};
+    }
+
+    assert(ToShape.rank() == NewSlopeShape.rank());
+    // Construct the new slopes
+    for (unsigned i = 0; i < ToShape.rank(); ++i) {
+      Value *NewSlope = IRBFun(LeftSlopeOp(i), RightSlopeOp(i));
+      NewSlopes.push_back(NewSlope);
+      SlopeInstructions.insert(dyn_cast<Instruction>(NewSlope));
+      setRippleShape(NewSlope, ScalarShape);
+    }
+    auto *LS = new LinearSeries(BinOp, NewBaseShape, NewSlopes, NewSlopeShape);
+    return {LS, NewState};
+  };
+
+  auto processCast = [&](CastInst *CastI) -> ConstructedSeries {
+    auto &CastOpSeries = OperandSeries[0];
+    if (CastOpSeries.isNotASeries())
+      return {};
+    auto &SlopeShape = CastOpSeries.LS->getSlopeShape();
+    for (unsigned i = 0; i < SlopeShape.rank(); ++i) {
+      Value *CastOp =
+          irBuilder.CreateCast(CastI->getOpcode(), CastOpSeries.LS->getSlope(i),
+                               CastI->getType(), "ripple.LS.slope.cast");
+      setRippleShape(CastOp, ScalarShape);
+      SlopeInstructions.insert(dyn_cast<Instruction>(CastOp));
+      NewSlopes.push_back(CastOp);
+    }
+    auto *LS = new LinearSeries(CastI, CastOpSeries.LS->getBaseShape(),
+                                NewSlopes, SlopeShape);
+    return {LS, CastOpSeries.getState()};
+  };
+
+  auto processUnaryOp = [&](UnaryOperator *UnOp) -> ConstructedSeries {
+    auto &InSeries = OperandSeries[0];
+    if (InSeries.isNotASeries())
+      return {};
+
+    // Cast first because it may affect the slope type
+    if (CastInst *CastI = dyn_cast<CastInst>(UnOp))
+      return processCast(CastI);
+
+    // Scalar bypass
+    if (InSeries.LS->isScalar()) {
+      auto *LS =
+          new LinearSeries(UnOp, InSeries.LS->getBaseShape(),
+                           InSeries.LS->slopes(), InSeries.LS->getSlopeShape());
+      return {LS, InSeries.getState()};
+    }
+
+    return {};
+  };
+
+  auto processGEP = [&](GetElementPtrInst *GEP) -> ConstructedSeries {
+    auto &PointerSeries = OperandSeries[0];
+    if (PointerSeries.isNotASeries())
+      return {};
+    const TensorShape &NewBaseShape = PointerSeries.LS->getBaseShape();
+    CSState NewState = PointerSeries.getState();
+    for (unsigned Idx = 0; Idx < GEP->getNumIndices(); ++Idx) {
+      auto &IdxSeries =
+          OperandSeries[Idx + (GEP->idx_begin() - GEP->op_begin())];
+      if (IdxSeries.isNotASeries() ||
+          IdxSeries.LS->getBaseShape() != NewBaseShape)
+        return {};
+      NewState = combineStatesBinaryOp(NewState, IdxSeries.getState());
+    }
+    TensorShape NewSlopeShape = ToShape;
+    NewSlopeShape.reduceDimensions(NewBaseShape.nonEmptyDims());
+
+    // Start w/ the pointer slope
+    for (unsigned i = 0; i < NewSlopeShape.rank(); ++i) {
+      Value *PtrSlope = PointerSeries.LS->getSlope(i);
+      assert(PtrSlope->getType() == SlopeType);
+      NewSlopes.push_back(PtrSlope);
+    }
+    SmallVector<Value *, 4> IndicesProcessed;
+    for (unsigned Idx = 0; Idx < GEP->getNumIndices(); ++Idx) {
+      LinearSeries *IdxSeries =
+          OperandSeries[Idx + (GEP->idx_begin() - GEP->op_begin())].LS;
+      Value *GEPIndexVal = *(GEP->idx_begin() + Idx);
+      // Get the type we are indexing
+      IndicesProcessed.push_back(GEPIndexVal);
+      Type *IndexedType = GetElementPtrInst::getIndexedType(
+          GEP->getSourceElementType(), IndicesProcessed);
+      LLVM_DEBUG(dbgs() << "\tProcessing GEP index " << *GEPIndexVal
+                        << " affecting type " << *IndexedType << "\n");
+      // This should not happen by LLVM IR construction, but better guard
+      // against it
+      bool IndexingStructField =
+          Idx > 0 && GetElementPtrInst::getIndexedType(
+                         GEP->getSourceElementType(),
+                         ArrayRef(IndicesProcessed).drop_back())
+                         ->isStructTy();
+      if (IndexingStructField && IdxSeries->hasSlope())
+        llvm_unreachable(
+            "Ripple vector access to a structure field is undefined");
+      // For pointers, the base is GEP() and the integer slope indexes a bytes
+      // array.
+      uint64_t IndexByteSize = DL.getTypeAllocSize(IndexedType);
+      ConstantInt *IndexMultiple =
+          ConstantInt::get(SlopeType, IndexByteSize, /*signed*/ false);
+      for (unsigned SlopeIdx = 0; SlopeIdx < NewSlopeShape.rank(); ++SlopeIdx) {
+        Value *IndexSlope = IdxSeries->getSlope(SlopeIdx);
+        if (IndexSlope->getType() != SlopeType) {
+          IndexSlope = irBuilder.CreateIntCast(IndexSlope, SlopeType,
+                                               /*signed*/ false,
+                                               "ripple.slope.gep.typefix");
+          setRippleShape(IndexSlope, ScalarShape);
+          SlopeInstructions.insert(dyn_cast<Instruction>(IndexSlope));
+        }
+        Value *SlopeInBytes = irBuilder.CreateMul(IndexSlope, IndexMultiple,
+                                                  "ripple.slope.gep.inbytes");
+        setRippleShape(SlopeInBytes, ScalarShape);
+        SlopeInstructions.insert(dyn_cast<Instruction>(SlopeInBytes));
+        NewSlopes[SlopeIdx] = irBuilder.CreateAdd(
+            NewSlopes[SlopeIdx], SlopeInBytes, "ripple.LS.slope.gep.index");
+        setRippleShape(NewSlopes[SlopeIdx], ScalarShape);
+        SlopeInstructions.insert(dyn_cast<Instruction>(NewSlopes[SlopeIdx]));
+      }
+    }
+    auto *LS = new LinearSeries(GEP, NewBaseShape, NewSlopes, NewSlopeShape);
+
+    return {LS, NewState};
+  };
+
+  auto processPHINode = [&](PHINode *PHI) -> ConstructedSeries {
+    LLVM_DEBUG(dbgs() << "Processing PHI for LS: " << *PHI << "\n");
+
+    CSState NewState = CSState::ValidLinearSeries;
+    // Get the base shape from any of the operands
+    TensorShape NewBaseShape;
+    assert(PHI->getNumIncomingValues() > 0);
+    for (unsigned IncomingIdx = 0; IncomingIdx < PHI->getNumIncomingValues();
+         ++IncomingIdx) {
+      auto &OperandLS = OperandSeries[IncomingIdx];
+      if (!OperandLS.isNotASeries()) {
+        NewBaseShape = OperandLS.LS->getBaseShape();
+      }
+    }
+
+    for (unsigned IncomingIdx = 0; IncomingIdx < PHI->getNumIncomingValues();
+         ++IncomingIdx) {
+      auto &OperandLS = OperandSeries[IncomingIdx];
+      // When an operand is not a series, still try to potentially build the
+      // PHI later
+      if (OperandLS.isNotASeries()) {
+        NewState =
+            combineStatesBinaryOp(NewState, CSState::PotentialLinearSeries);
+        continue;
+      }
+      // Valid keeps the state, any potential will demote
+      NewState = combineStatesBinaryOp(NewState, OperandLS.getState());
+      if (OperandLS.LS->getBaseShape() != NewBaseShape)
+        return {};
+    }
+    if (NewState == CSState::NotASeries)
+      return {};
+    // We are creating a PHI for each Slope
+    for (unsigned SlopeIdx = 0, EndIdx = ToShape.rank(); SlopeIdx < EndIdx;
+         ++SlopeIdx) {
+      PHINode *SlopePhi =
+          irBuilder.CreatePHI(SlopeType, PHI->getNumIncomingValues(),
+                              Twine(PHI->getName()) + ".ripple.slope.phi" +
+                                  std::to_string(SlopeIdx));
+      NewSlopes.push_back(SlopePhi);
+      setRippleShape(SlopePhi, ScalarShape);
+      SlopeInstructions.insert(SlopePhi);
+      // Pre-populate for known LS
+      for (unsigned IncomingIdx = 0; IncomingIdx < PHI->getNumIncomingValues();
+           ++IncomingIdx) {
+        auto &OperandLS = OperandSeries[IncomingIdx];
+        // We can pre-populate the potential and valid LS
+        if (!OperandLS.isNotASeries()) {
+          SlopePhi->addIncoming(OperandLS.LS->getSlope(SlopeIdx),
+                                PHI->getIncomingBlock(IncomingIdx));
+        }
+      }
+    }
+
+    // When the PHI is at the merge point of a vector branch, it will be
+    // transformed into a series of select instruction. Don't create a linear
+    // series when the mask cannot be applied to the base.
+    if (auto *ImmDom = domTree.getNode(PHI->getParent())->getIDom())
+      // PHIs always have an immediate dominator!
+      if (Instruction *Terminator = ImmDom->getBlock()->getTerminator()) {
+        auto &MaskShape = getRippleShape(Terminator);
+        if (NewBaseShape.requiredSplat(MaskShape).any())
+          return {};
+      }
+
+    TensorShape NewSlopeShape = ToShape;
+    NewSlopeShape.reduceDimensions(NewBaseShape.nonEmptyDims());
+    auto *LS = new LinearSeries(PHI, NewBaseShape, NewSlopes, NewSlopeShape);
+    return {LS, NewState};
+  };
+
+  auto processRippleBroadcast =
+      [&](IntrinsicInst *BcastOp) -> ConstructedSeries {
+    // A broadcast can always be representat as a LS!
+
+    auto &InSeries = OperandSeries[2];
+
+    Value *BcastedVal = BcastOp->getOperand(2);
+
+    // Constants are broadcasted to a splat-series, that's what we want!
+    if (!InSeries.isNotASeries() && isa<Constant>(BcastedVal))
+      return InSeries;
+
+    // Let Arguments be re-processed (for specialization)
+    if (!InSeries.isNotASeries() && isa<Argument>(BcastedVal))
+      InSeries = {};
+
+    if (!InSeries.isNotASeries())
+      for (unsigned i = 0; i < ToShape.rank(); ++i)
+        NewSlopes.push_back(InSeries.LS->getSlope(i));
+    else
+      for (unsigned i = 0; i < ToShape.rank(); ++i)
+        NewSlopes.push_back(ConstantSlopeOf(0));
+
+    Value *NewBase =
+        InSeries.isNotASeries() ? BcastedVal : InSeries.LS->getBase();
+    const TensorShape &NewBaseShape = InSeries.isNotASeries()
+                                          ? getRippleShape(NewBase)
+                                          : InSeries.LS->getBaseShape();
+
+    auto BroadcastDimSet = InSeries.isNotASeries()
+                               ? NewBaseShape.requiredSplat(ToShape)
+                               : InSeries.LS->getShape().requiredSplat(ToShape);
+
+    TensorShape NewSlopesShape = ToShape;
+    NewSlopesShape.keepDimensions(BroadcastDimSet);
+    LinearSeries *LS =
+        new LinearSeries(NewBase, NewBaseShape, NewSlopes, NewSlopesShape);
+
+    CSState NewState = InSeries.isNotASeries() ? CSState::ValidLinearSeries
+                                               : InSeries.getState();
+    return {LS, NewState};
+  };
+
+  auto IP = irBuilder.saveIP();
+  irBuilder.SetInsertPoint(I);
+
+  ConstructedSeries CS;
+  if (IntrinsicInst *RippleIndexInst = intrinsicWithId(
+          dyn_cast<Instruction>(I), {Intrinsic::ripple_block_index})) {
+    CS = processRippleBlockIndex(RippleIndexInst);
+  } else if (IntrinsicInst *RippleGetSizeInst = intrinsicWithId(
+                 dyn_cast<Instruction>(I), {Intrinsic::ripple_block_getsize})) {
+    CS = processRippleGetSize(RippleGetSizeInst);
+
+  } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    CS = processGEP(GEP);
+
+  } else if (PHINode *PHI = dyn_cast<PHINode>(I)) {
+    CS = processPHINode(PHI);
+
+  } else if (UnaryOperator *UnOp = dyn_cast<UnaryOperator>(I)) {
+    CS = processUnaryOp(UnOp);
+
+  } else if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(I)) {
+    CS = processBinOp(BinOp);
+
+  } else if (IntrinsicInst *RippleBroadcast = rippleBroadcastIntrinsic(I)) {
+    CS = processRippleBroadcast(RippleBroadcast);
+  }
+
+  // We can always restart a new series with a vector base since the type is
+  // integral
+  if (CS.isNotASeries()) {
+    NewSlopes.clear();
+    for (unsigned i = 0; i < ToShape.rank(); ++i)
+      NewSlopes.push_back(ConstantSlopeOf(0));
+    auto *LS = new LinearSeries(I, ToShape, NewSlopes, ScalarShape);
+    CS = {LS, CSState::ValidLinearSeries};
+  }
+
+  irBuilder.restoreIP(IP);
+
+  if (!CS.isNotASeries()) {
+    assert(!LsCache.Valid.contains(I) && !LsCache.Potential.contains(I) &&
+           "Inserting a value already in the cache");
+    switch (CS.getState()) {
+    case CSState::ValidLinearSeries:
+      LsCache.Valid.insert({I, CS.LS});
+      CS.LS->Retain();
+      break;
+    case CSState::PotentialLinearSeries:
+      LsCache.Potential.insert({I, CS.LS});
+      CS.LS->Retain();
+      break;
+    default:
+      llvm_unreachable("State should either be Valid or Potential");
+    }
+  }
+  return CS;
+}
+
+Ripple::CSState Ripple::combineStatesBinaryOp(CSState S1, CSState S2) {
+  switch (S1) {
+  case CSState::NotASeries:
+  case CSState::PotentialLinearSeries:
+    if (S2 == CSState::NotASeries)
+      return CSState::NotASeries;
+    else
+      return S1;
+  default:
+    return S2;
+  }
+}
+
+Ripple::ConstructedSeries Ripple::getCachedSeries(const Instruction *I) const {
+  if (!I)
+    return {};
+  LinearSeries *LS = nullptr;
+  LS = LsCache.Valid.lookup(I);
+  if (LS)
+    return {LS, CSState::ValidLinearSeries};
+  LS = LsCache.Potential.lookup(I);
+  if (LS)
+    return {LS, CSState::PotentialLinearSeries};
+  return {};
+}
+
+void Ripple::simplifySlopes() {
+  DenseSet<Instruction *> InstructionsToSimplify;
+  for (auto &[_, Ls] : LsCache.Valid) {
+    const TensorShape &SlopeShape = Ls->getSlopeShape();
+    for (unsigned SlopeIdx = 0; SlopeIdx < SlopeShape.rank(); SlopeIdx++) {
+      if (SlopeShape[SlopeIdx] < 2) {
+        Value *CurrentSlope = Ls->getSlope(SlopeIdx);
+        Constant *Replacement = ConstantInt::get(CurrentSlope->getType(), 0);
+        Ls->setSlope(SlopeIdx, Replacement);
+        if (Instruction *SlopeInst = dyn_cast<Instruction>(CurrentSlope)) {
+          LLVM_DEBUG(dbgs() << "Replacing slope " << *CurrentSlope << " by "
+                            << *Replacement << "\n");
+          InstructionsToSimplify.insert(SlopeInst);
+        }
+      }
+    }
+  }
+  for (auto *I : InstructionsToSimplify) {
+    Constant *Replacement = ConstantInt::get(I->getType(), 0);
+    auto Iterator = I->getIterator();
+    invalidateRippleDataFor(I);
+    ReplaceInstWithValue(Iterator, Replacement);
+  }
+}
+
 
 iterator_range<User::const_op_iterator>
 Ripple::vectorizableOperands(const Instruction *I) {
@@ -1342,6 +2103,76 @@ void LinearSeries::print(raw_ostream &O) const {
   O << "\n  SlopeShape[" << slopeShape << "]\n]";
 }
 
+bool Ripple::hasValidLinearSeriesRoots(LinearSeries *LS) const {
+  LLVM_DEBUG(dbgs() << "Checking Validity of " << *LS << "\n");
+  SmallPtrSet<Instruction *, 32> AlreadyProcessed;
+  std::queue<Instruction *> WorkList;
+  // Constant and Argument linear series are valid, only check instructions
+  if (Instruction *BaseInst = dyn_cast<Instruction>(LS->getBase())) {
+    WorkList.push(BaseInst);
+  }
+  while (!WorkList.empty()) {
+    Instruction *ToProcess = WorkList.front();
+    WorkList.pop();
+    if (AlreadyProcessed.contains(ToProcess))
+      continue;
+    AlreadyProcessed.insert(ToProcess);
+    LLVM_DEBUG(dbgs() << "  Checking root " << *ToProcess << "\n");
+    auto CS = getCachedSeries(ToProcess);
+    if (CS.isNotASeries()) {
+      LLVM_DEBUG(dbgs() << "Found non-series parent: " << *ToProcess << "\n");
+      return false;
+    }
+    for (auto &Operand : ToProcess->operands()) {
+      if (Instruction *OperandInst = dyn_cast<Instruction>(Operand)) {
+        WorkList.push(OperandInst);
+      }
+    }
+  }
+  return true;
+}
+
+void Ripple::clearValidSerie(const Instruction *I) {
+  if (!I)
+    return;
+  auto It = LsCache.Valid.find(I);
+  if (It != LsCache.Valid.end()) {
+    It->getSecond()->Release();
+    LsCache.Valid.erase(It);
+  }
+}
+
+void Ripple::clearPotentialSeries() {
+  DenseSet<Instruction *> ToPoison;
+  for (auto &[_, LS] : LsCache.Potential) {
+    // Remove introduced slopes for unused LS
+    for (auto &Slope : LS->slopes()) {
+      if (Instruction *I = dyn_cast<Instruction>(&*Slope)) {
+        invalidateRippleDataFor(I);
+        ToPoison.insert(I);
+      }
+    }
+    assert(LS->UseCount() == 1);
+    LS->Release();
+  }
+  LsCache.Potential.clear();
+  for (auto *I : ToPoison) {
+    auto IBBit = I->getIterator();
+    ReplaceInstWithValue(IBBit, PoisonValue::get(I->getType()));
+  }
+}
+
+void Ripple::clearLinearSeriesCache() {
+  clearPotentialSeries();
+  for (auto &[_, LS] : LsCache.Valid) {
+    assert(LS->UseCount() == 1);
+    LS->Release();
+  }
+  LsCache.Valid.clear();
+  LsCache.GeneratedSeries.clear();
+}
+
+
 bool Ripple::setRippleShape(const Value *V, const TensorShape &Shape) {
   return setRippleShape(dyn_cast_if_present<Instruction>(V), Shape);
 }
@@ -1360,6 +2191,21 @@ bool Ripple::setRippleShape(const Instruction *I, const TensorShape &Shape) {
   }
   assert(inserted.first->second.rank() == tensorRank());
   return inserted.second;
+}
+
+void Ripple::invalidateRippleDataFor(const Value *V) {
+  auto *I = const_cast<Instruction *>(dyn_cast_if_present<Instruction>(V));
+  if (!I)
+    return;
+  InstructionRippleShapes.erase(I);
+  // Linear series
+  SlopeInstructions.erase(I);
+  clearValidSerie(I);
+
+  if (auto *Call = dyn_cast<CallInst>(I))
+    MaskedCalls.erase(Call);
+  else if (auto *Alloca = dyn_cast<AllocaInst>(I))
+    PromotableAlloca.erase(Alloca);
 }
 
 bool Ripple::isRippleIntrinsics(const Instruction *I) {
@@ -1396,6 +2242,27 @@ bool Ripple::allInstructionsHaveRippleShapes() const {
            "Mapping to instructions not part of the function");
   }
   return true;
+}
+
+bool Ripple::simplifyFunction() {
+  bool SimplifiedAny = false;
+  for (auto &I : make_early_inc_range(instructions(F))) {
+    Instruction *TryToSimplify = &I;
+    // This process does not produce new instruction, it will fold instruction
+    // and return a simpler form if possible or nullptr if it cannot
+    Value *Simplified = simplifyInstruction(TryToSimplify, SQ);
+    if (Simplified != nullptr) {
+      LLVM_DEBUG(dbgs() << "Simplified " << *TryToSimplify << " with "
+                        << *Simplified << "\n");
+
+      // Replace TryToSimplify by Simplified
+      invalidateRippleDataFor(TryToSimplify);
+      auto TryToSimplifyIt = TryToSimplify->getIterator();
+      ReplaceInstWithValue(TryToSimplifyIt, Simplified);
+      SimplifiedAny = true;
+    }
+  }
+  return SimplifiedAny;
 }
 
 bool LinearSeries::hasZeroSlopes() const {
@@ -2130,6 +2997,21 @@ IntrinsicInst *Ripple::getBlockShapeIntrinsic(const Use &RippleBlockShapePtr) {
     return nullptr;
   };
   return getBlockShapeIntrinsicHelper(RippleBlockShapePtr);
+}
+
+TensorShape::DimSize
+Ripple::getRippleGetSizeValue(const IntrinsicInst *RippleGetSize) {
+  assert(RippleGetSize->getIntrinsicID() == Intrinsic::ripple_block_getsize);
+  auto *ShapeII = getBlockShapeIntrinsic(RippleGetSize->getArgOperandUse(0));
+  // Checked by checkBlockShapeUsage
+  assert(ShapeII);
+  PEIdentifier ProcElem = *getConstantOperandValue(ShapeII, 0);
+  auto Dimension = *getConstantOperandValue(RippleGetSize, 1);
+  if (Dimension < PERank(ProcElem)) {
+    const auto &BlockShape = setShapeToTensorShape(ShapeII);
+    return BlockShape[rippleToTensor({ProcElem, Dimension})];
+  } else
+    return 1;
 }
 
 TensorShape

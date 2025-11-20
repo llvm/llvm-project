@@ -47,15 +47,18 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <numeric>
 #include <utility>
+#include <variant>
 
 namespace llvm {
 
@@ -67,7 +70,7 @@ class MDNode;
 class MemoryLocation;
 class TargetMachine;
 class Value;
-class raw_ostream;
+class DbgRecord;
 class Type;
 
 /// @brief Tensor shape (shape w/ fixed number of dimensions)
@@ -555,7 +558,10 @@ public:
     }
   }
 
-  ~Ripple() { delete FuncRPOT; }
+  ~Ripple() {
+    clearLinearSeriesCache();
+    delete FuncRPOT;
+  }
 
   /// @brief Validate that Ripple intrinsics throughout the function are
   /// consistent with the specification.
@@ -572,6 +578,11 @@ public:
   /// @brief Initializes \ref Ripple::FuncRPOT
   void initFuncRPOT();
 
+  /// @brief Replace ripple.get.size by their values
+  /// Checks ripple.get.block.size semantics, returning an error when detecting
+  /// one
+  Error replaceRippleGetSize();
+
   /// @brief Propagate shapes throughout the function
   Error propagateShapes(bool &WaitingForSpecialization);
 
@@ -583,6 +594,10 @@ public:
   /// their shape and types
   /// @param os the output stream
   void printTensorInstructions(raw_ostream &os) const;
+
+  /// @brief Prints scalar instruction's that were promoted to Linear Series
+  /// @param os the output stream
+  void printValidSeries(raw_ostream &oss) const;
 
   /// @brief Convenience function to query the shape of Instruction, Constants
   /// or Arguments.
@@ -602,6 +617,91 @@ public:
   getInstructionToRippleShape() const;
 
 private:
+  /// @brief Datatype returned when constructing linear series
+  /// This also make sure that linear series are deleted when no more in use,
+  /// allowing the creation of linear series for constants for example
+  using ConstructedSeries = struct ConstructedSeries {
+    /// @brief State of a ConstructedSeries
+    enum CSState {
+      /// @brief It's not a series!
+      NotASeries = 0,
+      /// @brief This is a finalized, valid, linear series
+      ValidLinearSeries,
+      /// @brief This is a temporary, non-useable, linear series
+      PotentialLinearSeries,
+    };
+    // The LinearSeries itself
+    LinearSeries *LS = nullptr;
+    // The validity of this series
+    CSState St = NotASeries;
+
+    CSState getState() const { return St; }
+    /// @brief Checks if this result is not a series
+    bool isNotASeries() const { return getState() == NotASeries; }
+    /// @brief Checks if this result is a useable series
+    bool isValid() const { return getState() == ValidLinearSeries; }
+    /// @brief Checks if this result is temporary and could yield a valid series
+    /// later
+    bool hasPotential() const { return getState() == PotentialLinearSeries; }
+    /// @brief Checks if this result is a valid series
+    operator bool() const { return isValid(); }
+
+    ConstructedSeries() = default;
+    ConstructedSeries(LinearSeries *LS, CSState St) : LS(LS), St(St) {
+      if (LS)
+        LS->Retain();
+    }
+    ConstructedSeries(
+        std::initializer_list<std::variant<LinearSeries *, CSState>> List) {
+      assert(List.size() == 0 || List.size() == 2);
+      if (List.size() != 2)
+        return;
+      auto ListIt = List.begin();
+      LS = std::get<LinearSeries *>(*ListIt);
+      if (LS)
+        LS->Retain();
+      ++ListIt;
+      St = std::get<CSState>(*ListIt);
+    }
+    ConstructedSeries(const ConstructedSeries &Other)
+        : LS(Other.LS), St(Other.getState()) {
+      if (LS)
+        LS->Retain();
+    }
+    ConstructedSeries(ConstructedSeries &&Other)
+        : LS(std::move(Other.LS)), St(std::move(Other.St)) {
+      Other.LS = nullptr;
+      Other.St = NotASeries;
+    }
+    ConstructedSeries &operator=(const ConstructedSeries &other) {
+      if (LS)
+        LS->Release();
+      LS = other.LS;
+      if (LS)
+        LS->Retain();
+      St = other.getState();
+      return *this;
+    }
+    ~ConstructedSeries() {
+      if (LS)
+        LS->Release();
+    }
+  };
+  using CSState = ConstructedSeries::CSState;
+  friend raw_ostream &operator<<(raw_ostream &OS, const Ripple::CSState &State);
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const Ripple::ConstructedSeries &CS);
+
+  /// @brief A cache structure used to cache constructed series
+  using LSCache = struct {
+    /// Fully valid LinearSeries
+    DenseMap<AssertingVH<const Instruction>, LinearSeries *> Valid;
+    /// Potential Series (due to PHI nodes)
+    DenseMap<AssertingVH<const Instruction>, LinearSeries *> Potential;
+    /// Linear Series that have been instantiated
+    DenseMap<const LinearSeries *, AssertingVH<Value>> GeneratedSeries;
+  };
+
   /// @brief The function we are working on
   Function &F;
 
@@ -660,6 +760,12 @@ private:
   /// the nice property to be the neutral shape for broadcasting!
   const TensorShape &ShapeIgnoredByRipple = ScalarShape;
 
+  /// @brief A cache of constructed linear series
+  LSCache LsCache;
+
+  /// @brief A cache of constructed slope instructions
+  DenseSet<AssertingVH<Instruction>> SlopeInstructions;
+
   DenseSet<AssertingVH<AllocaInst>> PromotableAlloca;
   DenseSet<AssertingVH<AllocaInst>> NonPromotableAlloca;
 
@@ -670,6 +776,9 @@ private:
   /// @brief The pending and available specialization sets
   DenseSet<AssertingVH<Function>> &SpecializationsPending,
       &SpecializationsAvailable;
+
+  /// @brief Combines two states for a binary operator
+  static CSState combineStatesBinaryOp(CSState S, CSState S2);
 
   /// @brief Initializes *idRanks* with data extracted from ripple intrinsics in
   /// the function
@@ -729,6 +838,12 @@ private:
   /// @brief Sets a tensor shape for instruction I
   /// @return true if the shape of v was modified
   bool setRippleShape(const Instruction *I, const TensorShape &Shape);
+
+  /// @brief Invalidates a tensor shape
+  /// This is usually useful when deleting instructions
+  void invalidateRippleDataFor(const Value *V);
+  // Helper function to support DbgRecord and llvm.dbg intrinsics
+  void invalidateRippleDataFor(const DbgRecord *Dbg) {}
 
   /// @brief Returns the tensor shape of I.
   /// The shape of an instruction is the result of propagating tensor shapes
@@ -852,6 +967,10 @@ private:
   /// @return true if all instructions have a ripple shape, false otherwise
   bool allInstructionsHaveRippleShapes() const;
 
+  /// @brief Simplifies the instructions in the function. This never creates new
+  /// instructions (only constants). Returns true if simplifications were made.
+  bool simplifyFunction();
+
   /// @brief Returns the set of basic blocks ]from, to] by doing a depth-first
   /// search starting at @p from and stopping when encountering @p to. @p to
   /// must post-dominate @p from.
@@ -874,6 +993,53 @@ private:
   Expected<TensorShape>
   inferShapeFromOperands(const Instruction *I, bool AllowPartialPhi,
                          bool &RequiresWaitingForSpecialization);
+
+  /// @brief Returns true if the value has a valid type and shape for a linear
+  /// series, i.e., integer or pointers and FromShape can be broadcasted to
+  /// ToShape
+  static bool canConstructSplatSeries(Value *V, const TensorShape &FromShape,
+                                      const TensorShape &ToShape);
+
+  /// @brief Common constructor to construct a series that splats V
+  ConstructedSeries getSplatSeries(Value *V, const TensorShape &FromShape,
+                                   const TensorShape &ToShape);
+
+  /// @brief Constructs a linear series for a constant
+  ConstructedSeries getLinearSeriesFor(Constant *C,
+                                       const TensorShape &FromShape,
+                                       const TensorShape &ToShape);
+
+  /// @brief Constructs a linear series for an argument
+  ConstructedSeries getLinearSeriesFor(Argument *A,
+                                       const TensorShape &FromShape,
+                                       const TensorShape &ToShape);
+
+  /// @brief Constructs a linear series for an instruction
+  ConstructedSeries getLinearSeriesFor(Instruction *I);
+
+  /// @brief Try to promote a linear series. Returns a valid series if it could
+  /// be promoted or a non-series otherwise.
+  ConstructedSeries tryToPromoteLinearSeries(LinearSeries *LS);
+
+  /// @brief Returns a caches LinearSeries for the instruction I
+  ConstructedSeries getCachedSeries(const Instruction *I) const;
+
+  /// @brief Simplify slopes which are empty with the value zero.
+  /// @param Cache the cache of linear series
+  void simplifySlopes();
+
+  /// Clears a specified Instruction's valid linear series
+  void clearValidSerie(const Instruction *I);
+
+  /// @brief Clears potential linear series
+  void clearPotentialSeries();
+
+  /// @brief Checks that the parents of given linear series are valid linear
+  /// series
+  bool hasValidLinearSeriesRoots(LinearSeries *LS) const;
+
+  /// @brief Clear all linear series caches
+  void clearLinearSeriesCache();
 
   /// @brief Returns true if there are no vector dimensions, false otherwise
   bool hasNoVectorDimension() const;
@@ -982,6 +1148,11 @@ private:
   /// @brief Returns the tensor shape of RippleSetShape
   TensorShape setShapeToTensorShape(const IntrinsicInst *RippleSetShape) const;
 
+  /// @brief Returns the size of the dimension requested by a the
+  /// ripple.get.size intrinsic
+  TensorShape::DimSize
+  getRippleGetSizeValue(const IntrinsicInst *RippleGetSize);
+
   /// @brief Checks that all the ripple instrinsics in this function that rely
   /// on a block size can find them and returns an error otherwise.
   Error checkBlockShapeUsage(const Function &F);
@@ -992,8 +1163,31 @@ private:
   bool rippleVectorizeCall(const CallInst &CI) const;
 };
 
+inline raw_ostream &operator<<(raw_ostream &OS, const Ripple::CSState &State) {
+  switch (State) {
+  case Ripple::CSState::NotASeries:
+    OS << "Not a series";
+    break;
+  case Ripple::CSState::PotentialLinearSeries:
+    OS << "Potential series";
+    break;
+  case Ripple::CSState::ValidLinearSeries:
+    OS << "Valid series";
+    break;
+  }
+  return OS;
+}
+
 inline raw_ostream &operator<<(raw_ostream &OS, const LinearSeries &LS) {
   LS.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const Ripple::ConstructedSeries &CS) {
+  OS << "(" << CS.getState() << ")";
+  if (!CS.isNotASeries())
+    OS << *CS.LS;
   return OS;
 }
 
