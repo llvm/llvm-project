@@ -621,7 +621,7 @@ foreach mx = SchedMxList in {
 // Strided loads and stores operate at one element per cycles.
 // We uses the SEW to compute the number of elements for throughput.
 // The latency for loads is (4+VLSU_MEM_LATENCY+(DLEN/EEW)).
-// The throughput for loads and stores is (VLEN/SEW)
+// The throughput for loads and stores is VL.
 foreach mx = SchedMxList in {
   defvar Cycles = Andes45GetCyclesOnePerElement<mx, 8>.c;
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
