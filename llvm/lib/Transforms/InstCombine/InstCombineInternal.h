@@ -181,7 +181,8 @@ public:
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
   Instruction *visitVAEndInst(VAEndInst &I);
-  Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
+  Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI,
+                                                  bool PushThruPhis = false);
   bool freezeOtherUses(FreezeInst &FI);
   Instruction *foldFreezeIntoRecurrence(FreezeInst &I, PHINode *PN);
   Instruction *visitFreeze(FreezeInst &I);
