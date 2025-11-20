@@ -114,21 +114,21 @@ private:
 } // namespace orc_rt
 
 ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_SessionRef Session, uint64_t CallId,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
 ORC_RT_SPS_INTERFACE void
 orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_SessionRef Session, uint64_t CallId,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
 ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_SessionRef Session, uint64_t CallId,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
 ORC_RT_SPS_INTERFACE void
 orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_SessionRef Session, uint64_t CallId,
     orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
 #endif // ORC_RT_SIMPLENATIVEMEMORYMAP_H

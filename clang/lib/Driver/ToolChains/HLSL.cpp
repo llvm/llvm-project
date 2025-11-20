@@ -498,6 +498,15 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       continue;
     }
 
+    if (A->getOption().getID() == options::OPT_enable_16bit_types) {
+      // Translate -enable-16bit-types into -fnative-half-type and
+      // -fnative-int16-type
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_half_type));
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_int16_type));
+      A->claim();
+      continue;
+    }
+
     DAL->append(A);
   }
 
@@ -557,4 +566,8 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
   // No translation, validation, or objcopy are required, so this action must
   // output to the result file.
   return true;
+}
+
+void HLSLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wconversion");
 }

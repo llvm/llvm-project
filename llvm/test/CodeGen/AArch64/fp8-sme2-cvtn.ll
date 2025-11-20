@@ -8,7 +8,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @cvtn_f16_tuple(i64 %stride, p
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z11, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z10, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -23,7 +23,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @cvtn_f16_tuple(i64 %stride, p
 ; CHECK-NEXT:    fcvtn z1.b, { z10.h, z11.h }
 ; CHECK-NEXT:    ldr z11, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -49,7 +49,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @cvtnt_f32_tuple(i64 %stride, 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z11, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z10, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -65,7 +65,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @cvtnt_f32_tuple(i64 %stride, 
 ; CHECK-NEXT:    fcvtnt z1.b, { z10.s, z11.s }
 ; CHECK-NEXT:    ldr z11, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

@@ -232,10 +232,9 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 
   // 2. Compute the permutation vector to shuffle packed shape into the shape
   // before any outer or inner permutations have been applied.
-  PackingMetadata packingMetadata = computePackingMetadata(
-      packedTensorType.getRank(), packOp.getInnerDimsPos());
+  PackingMetadata packingMetadata;
   SmallVector<int64_t> packedToStripMinedShapePerm =
-      getPackInverseDestPerm(packOp);
+      getPackInverseDestPerm(packOp, packingMetadata);
 
   // 3. Compute the stripMinedShape: this is the packed shape before any outer
   // or inner permutations have been applied.
@@ -495,13 +494,14 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     if (failed(maybePackedDimForEachOperand))
       return failure();
     packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
-    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
 
     LDBG() << "++++ After pack size #" << i << ": " << packedSizes[i];
     LDBG() << "maps: " << llvm::interleaved(indexingMaps);
     LDBG() << "iterators: " << llvm::interleaved(iteratorTypes);
     LDBG() << "packedDimForEachOperand: "
            << llvm::interleaved(packedOperandsDims.packedDimForEachOperand);
+
+    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
   }
 
   // Step 2. Propagate packing to all LinalgOp operands.
