@@ -400,8 +400,7 @@ public:
   /// stack to RequiredVK. Nop if Res.VK is RequiredVK.
   OpResult convertValueKind(const OpResult &Res, ValueKind RequiredVK);
 
-  void readToValue(Type *Ty);
-  void readToValue(Node *OpNode);
+  void readToValue(const OpResult &R);
 
   using ChildrenT = ArrayRef<std::unique_ptr<Node>>;
 

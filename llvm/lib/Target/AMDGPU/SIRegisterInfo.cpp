@@ -1944,6 +1944,22 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB.addImm(0); // swz
     MIB.addMemOperand(NewMMO);
 
+<<<<<<< HEAD
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+=======
+    if (FinalValueReg != ValueReg) {
+      // Extract 16-bit from the loaded 32-bit value.
+      ValueReg = getSubReg(ValueReg, AMDGPU::lo16);
+      MIB = BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_MOV_B16_t16_e64))
+                .addReg(FinalValueReg, getDefRegState(true))
+                .addImm(0)
+                .addReg(ValueReg, getKillRegState(true))
+                .addImm(0);
+      ValueReg = FinalValueReg;
+    }
+
+>>>>>>> amd-debug
     if (IsStore && NeedsCFI) {
       if (TII->isBlockLoadStore(LoadStoreOp)) {
         assert(RegOffset == 0 &&
@@ -1956,6 +1972,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       }
     }
 
+<<<<<<< HEAD
     if (FinalValueReg != ValueReg) {
       // Extract 16-bit from the loaded 32-bit value.
       ValueReg = getSubReg(ValueReg, AMDGPU::lo16);
@@ -1967,6 +1984,23 @@ void SIRegisterInfo::buildSpillLoadStore(
       ValueReg = FinalValueReg;
     }
 
+||||||| merged common ancestors
+||||||||| db8cad0c8d00
+=========
+    if (FinalValueReg != ValueReg) {
+      // Extract 16-bit from the loaded 32-bit value.
+      ValueReg = getSubReg(ValueReg, AMDGPU::lo16);
+      MIB = BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_MOV_B16_t16_e64))
+                .addReg(FinalValueReg, getDefRegState(true))
+                .addImm(0)
+                .addReg(ValueReg, getKillRegState(true))
+                .addImm(0);
+      ValueReg = FinalValueReg;
+    }
+
+>>>>>>>>> Temporary merge branch 2
+=======
+>>>>>>> amd-debug
     if (!IsAGPR && NeedSuperRegDef)
       MIB.addReg(ValueReg, RegState::ImplicitDefine);
 
@@ -2575,8 +2609,33 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV64_CFI_SAVE:
     case AMDGPU::SI_SPILL_AV32_CFI_SAVE:
       NeedsCFI = true;
+<<<<<<< HEAD
       LLVM_FALLTHROUGH;
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+||||||| merged common ancestors
+      LLVM_FALLTHROUGH;
+    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+||||||||| db8cad0c8d00
+    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE: {
+      // Put mask into M0.
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
+              AMDGPU::M0)
+          .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
+      LLVM_FALLTHROUGH;
+    }
+=========
+    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE: {
+      // Put mask into M0.
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
+              AMDGPU::M0)
+          .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
+      [[fallthrough]];
+    }
+>>>>>>>>> Temporary merge branch 2
+=======
+      [[fallthrough]];
+    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+>>>>>>> amd-debug
     case AMDGPU::SI_SPILL_V1024_SAVE:
     case AMDGPU::SI_SPILL_V512_SAVE:
     case AMDGPU::SI_SPILL_V384_SAVE:

@@ -5598,7 +5598,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclareForHeterogeneousDwarf(
   } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
     // all union fields.
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
       llvm::DIExprBuilder UnionExprBuilder{ExprBuilder};
       llvm::DIExpression *UnionDIExpression = UnionExprBuilder.intoExpression();
@@ -6161,8 +6161,27 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
+<<<<<<< HEAD
         GVE = CollectAnonRecordDecls(RT->getDecl()->getDefinitionOrSelf(), Unit,
                      LineNo, LinkageName, MS, Var, DContext);
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+        GVE = CollectAnonRecordDecls(
+            RT->getOriginalDecl()->getDefinitionOrSelf(), Unit, LineNo,
+            LinkageName, MS, Var, DContext);
+||||||||| db8cad0c8d00
+        GVE =
+            CollectAnonRecordDecls(RT->getOriginalDecl()->getDefinitionOrSelf(),
+                                   Unit, LineNo, LinkageName, Var, DContext);
+=========
+        GVE = CollectAnonRecordDecls(RT->getDecl()->getDefinitionOrSelf(), Unit,
+                                     LineNo, LinkageName, Var, DContext);
+>>>>>>>>> Temporary merge branch 2
+=======
+        GVE = CollectAnonRecordDecls(
+            RT->getDecl()->getDefinitionOrSelf(), Unit, LineNo,
+            LinkageName, MS, Var, DContext);
+>>>>>>> amd-debug
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.
@@ -6191,7 +6210,7 @@ CGDebugInfo::CollectAnonRecordDeclsForHeterogeneousDwarf(
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
         GVE = CollectAnonRecordDeclsForHeterogeneousDwarf(
-            RT->getOriginalDecl()->getDefinitionOrSelf(), Unit, LineNo,
+            RT->getDecl()->getDefinitionOrSelf(), Unit, LineNo,
             LinkageName, MS, Var, DContext);
       continue;
     }
@@ -6547,7 +6566,7 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
   llvm::dwarf::MemorySpace MS = getDWARFMemorySpace(D);
   if (T->isUnionType() && DeclName.empty()) {
     const RecordDecl *RD =
-        T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+        T->castAs<RecordType>()->getDecl()->getDefinitionOrSelf();
     assert(RD->isAnonymousStructOrUnion() &&
            "unnamed non-anonymous struct or union?");
     // FIXME(KZHURAVL): No tests for this path.

@@ -4990,10 +4990,38 @@ define amdgpu_gfx void @test_call_external_void_func_v4i8_ret() #0 {
 ; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, 0xff, v2.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v1.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+<<<<<<< HEAD
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
+; GFX11-TRUE16-NEXT:    v_or_b16 v2.h, v1.h, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+||||||||| db8cad0c8d00
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_or_b16 v2.h, v1.h, v0.h
+=========
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+=======
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+>>>>>>> amd-debug
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v1.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
+<<<<<<< HEAD
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
+||||||||| db8cad0c8d00
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
+=========
+>>>>>>>>> Temporary merge branch 2
+=======
+>>>>>>> amd-debug
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s32, s33
 ; GFX11-TRUE16-NEXT:    global_store_b32 v[40:41], v0, off
@@ -5249,7 +5277,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5i8_ret() #0 {
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 4
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v1.h, v0.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_store_b8 v[2:3], v4, off
@@ -5536,14 +5564,28 @@ define amdgpu_gfx void @test_call_external_void_func_v8i8_ret() #0 {
 ; GFX11-TRUE16-NEXT:    v_or_b16 v4.h, v1.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v3.h, v2.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v3.h, v2.l, v3.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
 ; GFX11-TRUE16-NEXT:    v_or_b16 v3.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    global_store_b64 v[40:41], v[3:4], off
+<<<<<<< HEAD
 ; GFX11-TRUE16-NEXT:    s_clause 0x1 ; 8-byte Folded Reload
+||||||| merged common ancestors
+>>>>>>>>> Temporary merge branch 2
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+=======
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+>>>>>>> amd-debug
 ; GFX11-TRUE16-NEXT:    scratch_load_b32 v41, off, s33
 ; GFX11-TRUE16-NEXT:    scratch_load_b32 v40, off, s33 offset:4
+<<<<<<< HEAD
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s31, v42, 1
+||||||| merged common ancestors
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s31, v42, 1
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
+=======
+; GFX11-TRUE16-NEXT:    v_readlane_b32 s31, v42, 1
+>>>>>>> amd-debug
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s32, s33
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s0, v42, 2
 ; GFX11-TRUE16-NEXT:    s_or_saveexec_b32 s1, -1

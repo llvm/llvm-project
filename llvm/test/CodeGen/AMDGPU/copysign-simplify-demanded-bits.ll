@@ -432,7 +432,9 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
+; GFX9-NEXT:    v_readlane_b32 s30, v43, 12
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
+<<<<<<< HEAD
 ; GFX9-NEXT:    v_readlane_b32 s30, v43, 12
 ; GFX9-NEXT:    v_readlane_b32 s31, v43, 13
 ; GFX9-NEXT:    v_readlane_b32 s53, v43, 11
@@ -447,6 +449,36 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    v_readlane_b32 s36, v43, 2
 ; GFX9-NEXT:    v_readlane_b32 s35, v43, 1
 ; GFX9-NEXT:    v_readlane_b32 s34, v43, 0
+||||||| merged common ancestors
+; GFX9-NEXT:    v_readlane_b32 s53, v43, 13
+; GFX9-NEXT:    v_readlane_b32 s52, v43, 12
+; GFX9-NEXT:    v_readlane_b32 s51, v43, 11
+; GFX9-NEXT:    v_readlane_b32 s50, v43, 10
+; GFX9-NEXT:    v_readlane_b32 s49, v43, 9
+; GFX9-NEXT:    v_readlane_b32 s48, v43, 8
+; GFX9-NEXT:    v_readlane_b32 s39, v43, 7
+; GFX9-NEXT:    v_readlane_b32 s38, v43, 6
+; GFX9-NEXT:    v_readlane_b32 s37, v43, 5
+; GFX9-NEXT:    v_readlane_b32 s36, v43, 4
+; GFX9-NEXT:    v_readlane_b32 s35, v43, 3
+; GFX9-NEXT:    v_readlane_b32 s34, v43, 2
+; GFX9-NEXT:    v_readlane_b32 s31, v43, 1
+; GFX9-NEXT:    v_readlane_b32 s30, v43, 0
+=======
+; GFX9-NEXT:    v_readlane_b32 s31, v43, 13
+; GFX9-NEXT:    v_readlane_b32 s53, v43, 11
+; GFX9-NEXT:    v_readlane_b32 s52, v43, 10
+; GFX9-NEXT:    v_readlane_b32 s51, v43, 9
+; GFX9-NEXT:    v_readlane_b32 s50, v43, 8
+; GFX9-NEXT:    v_readlane_b32 s49, v43, 7
+; GFX9-NEXT:    v_readlane_b32 s48, v43, 6
+; GFX9-NEXT:    v_readlane_b32 s39, v43, 5
+; GFX9-NEXT:    v_readlane_b32 s38, v43, 4
+; GFX9-NEXT:    v_readlane_b32 s37, v43, 3
+; GFX9-NEXT:    v_readlane_b32 s36, v43, 2
+; GFX9-NEXT:    v_readlane_b32 s35, v43, 1
+; GFX9-NEXT:    v_readlane_b32 s34, v43, 0
+>>>>>>> amd-debug
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v43, 14
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1

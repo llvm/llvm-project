@@ -953,7 +953,7 @@ NewOpResult DwarfExpression::convertValueKind(const NewOpResult &Res,
   }
 
   if (Res.VK == ValueKind::LocationDesc && ReqVK == ValueKind::Value) {
-    readToValue(Res.Ty);
+    readToValue(Res);
     return {Res.Ty, ValueKind::Value, Res.DivergentAddrSpace};
   }
 
@@ -973,11 +973,12 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     // address spaces, e.g. LDS. Generate a 'DW_OP_constu' with a dummy
     // constant value (0) for now.
     unsigned AMDGPUGlobalAddrSpace = 1;
+    unsigned AMDGPUConstantAddrSpace = 4;
     if ((AP.TM.getTargetTriple().getArch() == Triple::amdgcn) &&
-        (GV->getAddressSpace() != AMDGPUGlobalAddrSpace)) {
+        (GV->getAddressSpace() != AMDGPUGlobalAddrSpace &&
+         GV->getAddressSpace() != AMDGPUConstantAddrSpace)) {
       emitConstu(0);
-      emitOp(dwarf::DW_OP_stack_value);
-      return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+      return NewOpResult{Arg.getResultType(), ValueKind::Value};
     }
 
     // TODO: We only support PIC reloc-model and non-TLS globals so far, see
@@ -989,8 +990,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
 
     CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, AP.getSymbol(GV)));
     emitOpAddress(GV);
-    emitOp(dwarf::DW_OP_stack_value);
-    return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+    return NewOpResult{Arg.getResultType(), ValueKind::Value};
   }
 
   if (Entry.isLocation()) {
@@ -1152,7 +1152,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Convert Convert,
   // If we're not dealing with the divergent address space case, Convert
   // requires a value operand.
   if (Child->VK == ValueKind::LocationDesc)
-    readToValue(Child->Ty);
+    readToValue(*Child);
 
   uint64_t ToBits = DestTy->getPrimitiveSizeInBits().getFixedValue();
   uint64_t FromBits = Child->Ty->getPrimitiveSizeInBits().getFixedValue();
@@ -1189,7 +1189,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::SExt SExt,
 
 std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
                                                      ChildrenT Children) {
-  auto Child = traverse(Children[0].get(), ValueKind::LocationDesc,
+  auto Child = traverse(Children[0].get(), ValueKind::Value,
                         /*PermitDivergentAddrSpace=*/true);
   if (!Child)
     return std::nullopt;
@@ -1204,11 +1204,6 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
   unsigned PointerLLVMAddrSpace = Child->DivergentAddrSpace
                                       ? *Child->DivergentAddrSpace
                                       : PointerResultType->getAddressSpace();
-  uint64_t PointerSizeInBits =
-      AP.getDataLayout().getPointerSizeInBits(PointerLLVMAddrSpace);
-  assert(PointerSizeInBits % 8 == 0 && "Expected multiple of 8");
-
-  uint64_t PointerSizeInBytes = PointerSizeInBits / 8;
   auto PointerDWARFAddrSpace = AP.TM.mapToDWARFAddrSpace(PointerLLVMAddrSpace);
   if (!PointerDWARFAddrSpace) {
     LLVM_DEBUG(dbgs() << "Failed to lower DIOpDeref of pointer to addrspace("
@@ -1217,8 +1212,6 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
     return std::nullopt;
   }
 
-  emitOp(dwarf::DW_OP_deref_size);
-  emitData1(PointerSizeInBytes);
   emitConstu(*PointerDWARFAddrSpace);
   emitUserOp(dwarf::DW_OP_LLVM_form_aspace_address);
 
@@ -1236,13 +1229,13 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Read Read,
   auto Child = traverse(Children[0].get(), ValueKind::LocationDesc);
   if (!Child)
     return std::nullopt;
-  readToValue(Children[0].get());
+  readToValue(*Child);
   return NewOpResult{Child->Ty, ValueKind::Value};
 }
 
 std::optional<NewOpResult>
 DwarfExpression::traverse(DIOp::Reinterpret Reinterpret, ChildrenT Children) {
-  auto Child = traverse(Children[0].get(), ValueKind::LocationDesc,
+  auto Child = traverse(Children[0].get(), /*ReqVK=*/std::nullopt,
                         /*PermitDivergentAddrSpace=*/true);
   if (!Child)
     return Child;
@@ -1325,26 +1318,21 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Fragment Fragment,
   return std::nullopt;
 }
 
-void DwarfExpression::readToValue(Type *Ty) {
-  uint64_t PrimitiveSizeInBits = Ty->getPrimitiveSizeInBits();
-  assert(PrimitiveSizeInBits != 0 && "Expected primitive type");
-
-  uint64_t ByteAlignedPrimitiveSizeInBits = alignTo<8>(PrimitiveSizeInBits);
-  uint64_t PrimitiveSizeInBytes = ByteAlignedPrimitiveSizeInBits / 8;
-  bool NeedsMask = ByteAlignedPrimitiveSizeInBits != PrimitiveSizeInBits;
+void DwarfExpression::readToValue(const OpResult &R) {
+  const DataLayout &DL = AP.getDataLayout();
+  uint64_t SizeInBits = R.Ty->isPointerTy() && R.DivergentAddrSpace
+                            ? DL.getPointerSizeInBits(*R.DivergentAddrSpace)
+                            : DL.getTypeSizeInBits(R.Ty).getFixedValue();
+  uint64_t ByteAlignedSizeInBits = alignTo<8>(SizeInBits);
+  uint64_t SizeInBytes = ByteAlignedSizeInBits / 8;
+  bool NeedsMask = ByteAlignedSizeInBits != SizeInBits;
 
   emitOp(dwarf::DW_OP_deref_size);
-  emitData1(PrimitiveSizeInBytes);
+  emitData1(SizeInBytes);
 
   if (NeedsMask) {
-    uint64_t Mask = (1ULL << PrimitiveSizeInBits) - 1ULL;
+    uint64_t Mask = (1ULL << SizeInBits) - 1ULL;
     emitConstu(Mask);
     emitOp(dwarf::DW_OP_and);
   }
-}
-
-void DwarfExpression::readToValue(DwarfExpression::Node *OpNode) {
-  assert(OpNode->isLowered() && "Expected lowered node");
-  assert(OpNode->getResultType() && "Expected non-null result type");
-  readToValue(OpNode->getResultType());
 }

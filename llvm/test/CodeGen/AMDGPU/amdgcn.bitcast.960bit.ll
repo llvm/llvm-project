@@ -4211,7 +4211,9 @@ define inreg <60 x i16> @bitcast_v30i32_to_v60i16_scalar(<30 x i32> inreg %a, i3
 ; SI-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x74, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
+; SI-NEXT:    v_readlane_b32 s30, v20, 15
 ; SI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+<<<<<<< HEAD
 ; SI-NEXT:    v_readlane_b32 s30, v20, 15
 ; SI-NEXT:    v_readlane_b32 s31, v20, 16
 ; SI-NEXT:    v_readlane_b32 s64, v20, 14
@@ -4229,6 +4231,42 @@ define inreg <60 x i16> @bitcast_v30i32_to_v60i16_scalar(<30 x i32> inreg %a, i3
 ; SI-NEXT:    v_readlane_b32 s36, v20, 2
 ; SI-NEXT:    v_readlane_b32 s35, v20, 1
 ; SI-NEXT:    v_readlane_b32 s34, v20, 0
+||||||| merged common ancestors
+; SI-NEXT:    v_readlane_b32 s64, v20, 16
+; SI-NEXT:    v_readlane_b32 s55, v20, 15
+; SI-NEXT:    v_readlane_b32 s54, v20, 14
+; SI-NEXT:    v_readlane_b32 s53, v20, 13
+; SI-NEXT:    v_readlane_b32 s52, v20, 12
+; SI-NEXT:    v_readlane_b32 s51, v20, 11
+; SI-NEXT:    v_readlane_b32 s50, v20, 10
+; SI-NEXT:    v_readlane_b32 s49, v20, 9
+; SI-NEXT:    v_readlane_b32 s48, v20, 8
+; SI-NEXT:    v_readlane_b32 s39, v20, 7
+; SI-NEXT:    v_readlane_b32 s38, v20, 6
+; SI-NEXT:    v_readlane_b32 s37, v20, 5
+; SI-NEXT:    v_readlane_b32 s36, v20, 4
+; SI-NEXT:    v_readlane_b32 s35, v20, 3
+; SI-NEXT:    v_readlane_b32 s34, v20, 2
+; SI-NEXT:    v_readlane_b32 s31, v20, 1
+; SI-NEXT:    v_readlane_b32 s30, v20, 0
+=======
+; SI-NEXT:    v_readlane_b32 s31, v20, 16
+; SI-NEXT:    v_readlane_b32 s64, v20, 14
+; SI-NEXT:    v_readlane_b32 s55, v20, 13
+; SI-NEXT:    v_readlane_b32 s54, v20, 12
+; SI-NEXT:    v_readlane_b32 s53, v20, 11
+; SI-NEXT:    v_readlane_b32 s52, v20, 10
+; SI-NEXT:    v_readlane_b32 s51, v20, 9
+; SI-NEXT:    v_readlane_b32 s50, v20, 8
+; SI-NEXT:    v_readlane_b32 s49, v20, 7
+; SI-NEXT:    v_readlane_b32 s48, v20, 6
+; SI-NEXT:    v_readlane_b32 s39, v20, 5
+; SI-NEXT:    v_readlane_b32 s38, v20, 4
+; SI-NEXT:    v_readlane_b32 s37, v20, 3
+; SI-NEXT:    v_readlane_b32 s36, v20, 2
+; SI-NEXT:    v_readlane_b32 s35, v20, 1
+; SI-NEXT:    v_readlane_b32 s34, v20, 0
+>>>>>>> amd-debug
 ; SI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; SI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -4512,6 +4550,12 @@ define inreg <60 x i16> @bitcast_v30i32_to_v60i16_scalar(<30 x i32> inreg %a, i3
 ; VI-NEXT:    s_or_b32 s8, s8, s29
 ; VI-NEXT:    s_or_b32 s6, s6, s28
 ; VI-NEXT:    s_or_b32 s7, s7, s27
+<<<<<<< HEAD
+||||||| merged common ancestors
+>>>>>>>>> Temporary merge branch 2
+=======
+; VI-NEXT:    v_readlane_b32 s30, v30, 6
+>>>>>>> amd-debug
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    v_mov_b32_e32 v2, s46
@@ -10052,6 +10096,12 @@ define inreg <60 x half> @bitcast_v30i32_to_v60f16_scalar(<30 x i32> inreg %a, i
 ; VI-NEXT:    s_or_b32 s8, s8, s29
 ; VI-NEXT:    s_or_b32 s6, s6, s28
 ; VI-NEXT:    s_or_b32 s7, s7, s27
+<<<<<<< HEAD
+||||||| merged common ancestors
+>>>>>>>>> Temporary merge branch 2
+=======
+; VI-NEXT:    v_readlane_b32 s30, v30, 6
+>>>>>>> amd-debug
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    v_mov_b32_e32 v2, s46
@@ -29076,7 +29126,9 @@ define inreg <60 x i16> @bitcast_v15i64_to_v60i16_scalar(<15 x i64> inreg %a, i3
 ; SI-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x74, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
+; SI-NEXT:    v_readlane_b32 s30, v20, 15
 ; SI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+<<<<<<< HEAD
 ; SI-NEXT:    v_readlane_b32 s30, v20, 15
 ; SI-NEXT:    v_readlane_b32 s31, v20, 16
 ; SI-NEXT:    v_readlane_b32 s64, v20, 14
@@ -29094,6 +29146,42 @@ define inreg <60 x i16> @bitcast_v15i64_to_v60i16_scalar(<15 x i64> inreg %a, i3
 ; SI-NEXT:    v_readlane_b32 s36, v20, 2
 ; SI-NEXT:    v_readlane_b32 s35, v20, 1
 ; SI-NEXT:    v_readlane_b32 s34, v20, 0
+||||||| merged common ancestors
+; SI-NEXT:    v_readlane_b32 s64, v20, 16
+; SI-NEXT:    v_readlane_b32 s55, v20, 15
+; SI-NEXT:    v_readlane_b32 s54, v20, 14
+; SI-NEXT:    v_readlane_b32 s53, v20, 13
+; SI-NEXT:    v_readlane_b32 s52, v20, 12
+; SI-NEXT:    v_readlane_b32 s51, v20, 11
+; SI-NEXT:    v_readlane_b32 s50, v20, 10
+; SI-NEXT:    v_readlane_b32 s49, v20, 9
+; SI-NEXT:    v_readlane_b32 s48, v20, 8
+; SI-NEXT:    v_readlane_b32 s39, v20, 7
+; SI-NEXT:    v_readlane_b32 s38, v20, 6
+; SI-NEXT:    v_readlane_b32 s37, v20, 5
+; SI-NEXT:    v_readlane_b32 s36, v20, 4
+; SI-NEXT:    v_readlane_b32 s35, v20, 3
+; SI-NEXT:    v_readlane_b32 s34, v20, 2
+; SI-NEXT:    v_readlane_b32 s31, v20, 1
+; SI-NEXT:    v_readlane_b32 s30, v20, 0
+=======
+; SI-NEXT:    v_readlane_b32 s31, v20, 16
+; SI-NEXT:    v_readlane_b32 s64, v20, 14
+; SI-NEXT:    v_readlane_b32 s55, v20, 13
+; SI-NEXT:    v_readlane_b32 s54, v20, 12
+; SI-NEXT:    v_readlane_b32 s53, v20, 11
+; SI-NEXT:    v_readlane_b32 s52, v20, 10
+; SI-NEXT:    v_readlane_b32 s51, v20, 9
+; SI-NEXT:    v_readlane_b32 s50, v20, 8
+; SI-NEXT:    v_readlane_b32 s49, v20, 7
+; SI-NEXT:    v_readlane_b32 s48, v20, 6
+; SI-NEXT:    v_readlane_b32 s39, v20, 5
+; SI-NEXT:    v_readlane_b32 s38, v20, 4
+; SI-NEXT:    v_readlane_b32 s37, v20, 3
+; SI-NEXT:    v_readlane_b32 s36, v20, 2
+; SI-NEXT:    v_readlane_b32 s35, v20, 1
+; SI-NEXT:    v_readlane_b32 s34, v20, 0
+>>>>>>> amd-debug
 ; SI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; SI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -29377,6 +29465,12 @@ define inreg <60 x i16> @bitcast_v15i64_to_v60i16_scalar(<15 x i64> inreg %a, i3
 ; VI-NEXT:    s_or_b32 s8, s8, s29
 ; VI-NEXT:    s_or_b32 s6, s6, s28
 ; VI-NEXT:    s_or_b32 s7, s7, s27
+<<<<<<< HEAD
+||||||| merged common ancestors
+>>>>>>>>> Temporary merge branch 2
+=======
+; VI-NEXT:    v_readlane_b32 s30, v30, 6
+>>>>>>> amd-debug
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    v_mov_b32_e32 v2, s46
@@ -34934,6 +35028,12 @@ define inreg <60 x half> @bitcast_v15i64_to_v60f16_scalar(<15 x i64> inreg %a, i
 ; VI-NEXT:    s_or_b32 s8, s8, s29
 ; VI-NEXT:    s_or_b32 s6, s6, s28
 ; VI-NEXT:    s_or_b32 s7, s7, s27
+<<<<<<< HEAD
+||||||| merged common ancestors
+>>>>>>>>> Temporary merge branch 2
+=======
+; VI-NEXT:    v_readlane_b32 s30, v30, 6
+>>>>>>> amd-debug
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    v_mov_b32_e32 v2, s46

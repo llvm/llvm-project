@@ -4,6 +4,68 @@
 @lds = addrspace(3) global [512 x float] poison, align 4
 
 define amdgpu_kernel void @simple_write2_one_val_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
+<<<<<<< HEAD
+||||||| merged common ancestors
+; CHECK-LABEL: simple_write2_one_val_f32:
+; CHECK:       .Lfunc_begin0:
+; CHECK-NEXT:    .cfi_sections .debug_frame
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    .file 1 "/" "<stdin>"
+; CHECK-NEXT:    .loc 1 1 1 prologue_end ; <stdin>:1:1
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:1 <- $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:5 <- [DW_OP_plus_uconst 8, DW_OP_stack_value] $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:3 <- undef
+; CHECK-NEXT:    .loc 1 2 1 ; <stdin>:2:1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:4 <- $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:2 <- undef
+; CHECK-NEXT:    .loc 1 3 1 ; <stdin>:3:1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dword v1, v0, s[0:1]
+; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:6 <- [DW_OP_plus_uconst 32, DW_OP_stack_value] $vgpr0
+; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 ; <stdin>:0
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    ds_write2_b32 v0, v1, v1 offset1:8
+; CHECK-NEXT:    .loc 1 9 1 is_stmt 1 ; <stdin>:9:1
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .Ltmp3:
+=======
+; CHECK-LABEL: simple_write2_one_val_f32:
+; CHECK:       .Lfunc_begin0:
+; CHECK-NEXT:    .cfi_sections .debug_frame
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ;
+; CHECK-NEXT:    .cfi_undefined 16
+; CHECK-NEXT:    .file 1 "/" "<stdin>"
+; CHECK-NEXT:    .loc 1 1 1 prologue_end ; <stdin>:1:1
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:1 <- $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:5 <- [DW_OP_plus_uconst 8, DW_OP_stack_value] $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:3 <- undef
+; CHECK-NEXT:    .loc 1 2 1 ; <stdin>:2:1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:4 <- $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:2 <- undef
+; CHECK-NEXT:    .loc 1 3 1 ; <stdin>:3:1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dword v1, v0, s[0:1]
+; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_write2_one_val_f32:6 <- [DW_OP_plus_uconst 32, DW_OP_stack_value] $vgpr0
+; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 ; <stdin>:0
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    ds_write2_b32 v0, v1, v1 offset1:8
+; CHECK-NEXT:    .loc 1 9 1 is_stmt 1 ; <stdin>:9:1
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .Ltmp3:
+>>>>>>> amd-debug
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr float, ptr addrspace(1) %in, i32 %x.i
   %val = load float, ptr addrspace(1) %in.gep, align 4
@@ -16,6 +78,71 @@ define amdgpu_kernel void @simple_write2_one_val_f32(ptr addrspace(1) %C, ptr ad
 }
 
 define amdgpu_kernel void @simple_read2_f32(ptr addrspace(1) %out) #0 {
+<<<<<<< HEAD
+||||||| merged common ancestors
+; CHECK-LABEL: simple_read2_f32:
+; CHECK:       .Lfunc_begin1:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    .loc 1 11 1 prologue_end ; <stdin>:11:1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:8 <- $vgpr2
+; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 ; <stdin>:0
+; CHECK-NEXT:    ds_read2_b32 v[0:1], v2 offset1:8
+; CHECK-NEXT:  .Ltmp5:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:9 <- undef
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:11 <- [DW_OP_plus_uconst 32, DW_OP_stack_value] $vgpr2
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:12 <- undef
+; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; <stdin>:10:1
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-NEXT:  .Ltmp6:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:7 <- undef
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:10 <- [DW_OP_plus_uconst 8, DW_OP_stack_value] undef
+; CHECK-NEXT:    .loc 1 16 1 ; <stdin>:16:1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_f32_e32 v0, v0, v1
+; CHECK-NEXT:  .Ltmp7:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:13 <- $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:14 <- undef
+; CHECK-NEXT:    .loc 1 18 1 ; <stdin>:18:1
+; CHECK-NEXT:    global_store_dword v2, v0, s[0:1]
+; CHECK-NEXT:    .loc 1 19 1 ; <stdin>:19:1
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .Ltmp8:
+=======
+; CHECK-LABEL: simple_read2_f32:
+; CHECK:       .Lfunc_begin1:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ;
+; CHECK-NEXT:    .cfi_undefined 16
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:7 <- $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:10 <- [DW_OP_plus_uconst 8, DW_OP_stack_value] $vgpr0
+; CHECK-NEXT:    .loc 1 11 1 prologue_end ; <stdin>:11:1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:8 <- $vgpr2
+; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 ; <stdin>:0
+; CHECK-NEXT:    ds_read2_b32 v[0:1], v2 offset1:8
+; CHECK-NEXT:  .Ltmp5:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:9 <- undef
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:11 <- [DW_OP_plus_uconst 32, DW_OP_stack_value] $vgpr2
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:12 <- undef
+; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; <stdin>:10:1
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-NEXT:    .loc 1 16 1 ; <stdin>:16:1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_f32_e32 v0, v0, v1
+; CHECK-NEXT:  .Ltmp6:
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:13 <- $vgpr0
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:14 <- undef
+; CHECK-NEXT:    .loc 1 18 1 ; <stdin>:18:1
+; CHECK-NEXT:    global_store_dword v2, v0, s[0:1]
+; CHECK-NEXT:    .loc 1 19 1 ; <stdin>:19:1
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .Ltmp7:
+>>>>>>> amd-debug
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 4

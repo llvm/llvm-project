@@ -6,21 +6,21 @@
 
 ; DWARF: DW_TAG_variable
 ; DWARF: DW_AT_name [DW_FORM_strx1] (indexed ([[#%x,]]) string = "glob")
-; DWARF: DW_AT_location [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
+; DWARF: DW_AT_location [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
 
 ; DWARF: DW_TAG_variable
 ; DWARF: DW_AT_name [DW_FORM_strx1] (indexed ([[#%x,]]) string = "glob_fragmented")
-; DWARF: DW_AT_location [DW_FORM_exprloc] (DW_OP_addrx 0x1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_piece 0x2, DW_OP_addrx 0x2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_piece 0x2)
+; DWARF: DW_AT_location [DW_FORM_exprloc] (DW_OP_addrx 0x1, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_piece 0x2, DW_OP_addrx 0x2, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_piece 0x2)
 
 ; DWARF: DW_TAG_variable
 ; DWARF: DW_AT_location [DW_FORM_loclistx] (indexed (0x[[#%x,]]) loclist = 0x[[#%x,]]:
-; DWARF:    [0x[[#%x,]], 0x[[#%x,]]) ".text": DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_consts -4, DW_OP_plus, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+; DWARF:    [0x[[#%x,]], 0x[[#%x,]]) ".text": DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_consts -4, DW_OP_plus, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 ; DWARF: DW_AT_name [DW_FORM_strx1] (indexed ([[#%x,]]) string = "var")
 
 ; DWARF: DW_TAG_variable
 ; DWARF: DW_AT_location [DW_FORM_loclistx] (indexed (0x[[#%x,]]) loclist = 0x[[#%x,]]:
-; DWARF:    [0x[[#%x,]], 0x[[#%x,]]) ".text": DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_consts -8, DW_OP_plus, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
-; DWARF:    [0x[[#%x,]], 0x[[#%x,]]) ".text": DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_consts -8, DW_OP_plus, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_piece 0x2, DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_consts -6, DW_OP_plus, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_piece 0x2)
+; DWARF:    [0x[[#%x,]], 0x[[#%x,]]) ".text": DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_consts -8, DW_OP_plus, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+; DWARF:    [0x[[#%x,]], 0x[[#%x,]]) ".text": DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_consts -8, DW_OP_plus, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_piece 0x2, DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_consts -6, DW_OP_plus, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_piece 0x2)
 ; DWARF: DW_AT_name [DW_FORM_strx1] (indexed ([[#%x,]]) string = "var_fragmented")
 
 ; ModuleID = '<stdin>'

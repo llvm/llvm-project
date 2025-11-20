@@ -31,6 +31,7 @@ static cl::opt<bool> EnableSpillVGPRToAGPR(
   cl::init(true));
 
 static constexpr unsigned SGPRBitSize = 32;
+static constexpr unsigned SGPRByteSize = SGPRBitSize / 8;
 static constexpr unsigned VGPRLaneBitSize = 32;
 
 // Find a register matching \p RC from \p LiveUnits which is unused and
@@ -73,23 +74,25 @@ createScaledCFAInPrivateWave(const GCNSubtarget &ST,
                              MCRegister DwarfStackPtrReg) {
   assert(ST.enableFlatScratch());
 
-  // When flat scratch is used, the cfa is expressed in terms of private_lane
-  // (address space 5), but the debugger only accepts addresses in terms of
-  // private_wave (6). Override the cfa value using the expression
-  // (wave_size*cfa_reg), which is equivalent to (cfa_reg << wave_size_log2)
+  // When flat scratch is enabled, the stack pointer is an address in the
+  // private_lane DWARF address space (i.e. swizzled), but in order to
+  // accurately and efficiently describe things like masked spills of vector
+  // registers we want to define the CFA to be an address in the private_wave
+  // DWARF address space (i.e. unswizzled). To achieve this we scale the stack
+  // pointer by the wavefront size, implemented as (SP << wave_size_log2).
   const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
   assert(WavefrontSizeLog2 < 32);
 
   SmallString<20> Block;
   raw_svector_ostream OSBlock(Block);
   encodeDwarfRegisterLocation(DwarfStackPtrReg, OSBlock);
-  OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(4)
+  OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(SGPRByteSize)
           << uint8_t(dwarf::DW_OP_lit0 + WavefrontSizeLog2)
           << uint8_t(dwarf::DW_OP_shl)
           << uint8_t(dwarf::DW_OP_lit0 +
-                     dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-            << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
+                     dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave)
+          << uint8_t(dwarf::DW_OP_LLVM_user)
+          << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
 
   SmallString<20> CFIInst;
   raw_svector_ostream OSCFIInst(CFIInst);
@@ -1141,7 +1144,9 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
   };
 
   // Emit CFI rules for caller saved Arch VGPRs which are clobbered
-  for_each(AMDGPU::VGPR_32RegClass.getRegisters(), ProcessReg);
+  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+  for_each(AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs),
+           ProcessReg);
 
   // Emit CFI rules for caller saved Accum VGPRs which are clobbered
   if (ST.hasMAIInsts()) {

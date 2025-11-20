@@ -107,6 +107,20 @@ static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
                            LiveIntervals *LIS) {
   const TargetFrameLowering *TFI = ST.getFrameLowering();
   const SIRegisterInfo *RI = ST.getRegisterInfo();
+<<<<<<< HEAD
+||||||| merged common ancestors
+
+=========
+  MachineFunction &MF = *SaveBlock.getParent();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *RI = ST.getRegisterInfo();
+
+>>>>>>>>> Temporary merge branch 2
+=======
+
+>>>>>>> amd-debug
   MachineBasicBlock::iterator I = SaveBlock.begin();
   MachineInstrSpan MIS(I, &SaveBlock);
   bool Success = TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, RI);

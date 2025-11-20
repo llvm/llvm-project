@@ -3,7 +3,7 @@
 
 ; CHECK: ; ModuleID = 'debuginfo.c'
 ; CHECK-NEXT: source_filename = "debuginfo.c"
-
+ 
 ; CHECK:      define i64 @foo(i64 %0, i64 %1, <10 x i64> %2) !dbg !45 {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:     #dbg_declare(i64 0, !50, !DIExpression(), !59)

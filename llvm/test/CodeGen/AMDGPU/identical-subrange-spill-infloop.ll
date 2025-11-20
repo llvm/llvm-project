@@ -42,11 +42,28 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x130
 ; CHECK-NEXT:    ; implicit-def: $vgpr7 : SGPR spill to VGPR lane
+<<<<<<< HEAD
+||||||| merged common ancestors
+; CHECK-NEXT:    v_writelane_b32 v6, s70, 20
+; CHECK-NEXT:    v_writelane_b32 v6, s71, 21
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+>>>>>>>>> Temporary merge branch 2
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+=======
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+>>>>>>> amd-debug
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+<<<<<<< HEAD
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
 ; CHECK-NEXT:    s_load_dwordx16 s[36:51], s[68:69], 0x2f0
 ; CHECK-NEXT:    s_mov_b32 s70, s68
+||||||| merged common ancestors
+=======
+; CHECK-NEXT:    s_load_dwordx16 s[36:51], s[68:69], 0x2f0
+; CHECK-NEXT:    s_mov_b32 s70, s68
+>>>>>>> amd-debug
 ; CHECK-NEXT:    v_writelane_b32 v7, s8, 0
 ; CHECK-NEXT:    v_writelane_b32 v7, s9, 1
 ; CHECK-NEXT:    v_writelane_b32 v7, s10, 2
@@ -78,6 +95,18 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v7, s64, 28
 ; CHECK-NEXT:    v_writelane_b32 v7, s65, 29
 ; CHECK-NEXT:    v_writelane_b32 v7, s66, 30
+<<<<<<< HEAD
+||||||| merged common ancestors
+; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x1f0
+; CHECK-NEXT:    s_load_dwordx16 s[36:51], s[68:69], 0x2f0
+; CHECK-NEXT:    s_mov_b32 s69, s68
+; CHECK-NEXT:    s_mov_b32 s70, s68
+; CHECK-NEXT:    s_mov_b32 s71, s68
+=======
+; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x1f0
+; CHECK-NEXT:    s_mov_b32 s69, s68
+; CHECK-NEXT:    s_mov_b32 s71, s68
+>>>>>>> amd-debug
 ; CHECK-NEXT:    v_writelane_b32 v7, s67, 31
 ; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x1f0
 ; CHECK-NEXT:    s_mov_b32 s69, s68

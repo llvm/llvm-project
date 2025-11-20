@@ -4601,10 +4601,18 @@ define void @test_call(bfloat %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1250-NEXT:    scratch_store_b16 v1, v0, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+<<<<<<< HEAD
 ; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v4, 1
+||||||| merged common ancestors
+; GFX1250-NEXT:    v_readlane_b32 s31, v4, 1
+; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
+=======
+; GFX1250-NEXT:    v_readlane_b32 s31, v4, 1
+>>>>>>> amd-debug
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -4859,10 +4867,18 @@ define void @test_call_v2bf16(<2 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1250-NEXT:    scratch_store_b32 v1, v0, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+<<<<<<< HEAD
 ; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v4, 1
+||||||| merged common ancestors
+; GFX1250-NEXT:    v_readlane_b32 s31, v4, 1
+; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
+=======
+; GFX1250-NEXT:    v_readlane_b32 s31, v4, 1
+>>>>>>> amd-debug
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -5134,12 +5150,20 @@ define void @test_call_v3bf16(<3 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    scratch_store_b16 v4, v1, off offset:4 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 v4, v0, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+<<<<<<< HEAD
 ; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+||||||| merged common ancestors
+; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
+=======
+; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+>>>>>>> amd-debug
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -5423,10 +5447,18 @@ define void @test_call_v4bf16(<4 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    scratch_store_b64 v4, v[0:1], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+<<<<<<< HEAD
 ; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+||||||| merged common ancestors
+; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
+=======
+; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+>>>>>>> amd-debug
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -5762,10 +5794,18 @@ define void @test_call_v8bf16(<8 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    scratch_store_b128 v4, v[0:3], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+<<<<<<< HEAD
 ; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+||||||| merged common ancestors
+; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
+=======
+; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
+>>>>>>> amd-debug
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -6213,12 +6253,20 @@ define void @test_call_v16bf16(<16 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v9, 0
 ; GFX1250-NEXT:    scratch_store_b128 v8, v[4:7], off offset:16 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    scratch_store_b128 v8, v[0:3], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+<<<<<<< HEAD
 ; GFX1250-NEXT:    v_readlane_b32 s30, v9, 0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v9, 1
+||||||| merged common ancestors
+; GFX1250-NEXT:    v_readlane_b32 s31, v9, 1
+; GFX1250-NEXT:    v_readlane_b32 s30, v9, 0
+=======
+; GFX1250-NEXT:    v_readlane_b32 s31, v9, 1
+>>>>>>> amd-debug
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
