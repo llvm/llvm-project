@@ -1226,6 +1226,8 @@ def executeScriptInternal(
     results = []
     timeoutInfo = None
     shenv = ShellEnvironment(cwd, test.config.environment)
+    shenv.env["LIT_CURRENT_TESTCASE"] = test.getFullName()
+
     exitCode, timeoutInfo = executeShCmd(
         cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
     )
@@ -1425,11 +1427,13 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
             # run on clang with no real loss.
             command = litConfig.valgrindArgs + command
 
+    env = dict(test.config.environment)
+    env["LIT_CURRENT_TESTCASE"] = test.getFullName()
     try:
         out, err, exitCode = lit.util.executeCommand(
             command,
             cwd=cwd,
-            env=test.config.environment,
+            env=env,
             timeout=litConfig.maxIndividualTestTime,
         )
         return (out, err, exitCode, None)

@@ -121,13 +121,26 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     return emitIntrinsicCallOp(*this, expr, "x86.sse.sfence", voidTy);
   case X86::BI_mm_prefetch:
   case X86::BI__rdtsc:
-  case X86::BI__builtin_ia32_rdtscp:
+  case X86::BI__builtin_ia32_rdtscp: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
+  }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
-  case X86::BI__builtin_ia32_lzcnt_u64:
+  case X86::BI__builtin_ia32_lzcnt_u64: {
+    mlir::Value isZeroPoison = builder.getFalse(getLoc(expr->getExprLoc()));
+    return emitIntrinsicCallOp(*this, expr, "ctlz", ops[0].getType(),
+                               mlir::ValueRange{ops[0], isZeroPoison});
+  }
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
-  case X86::BI__builtin_ia32_tzcnt_u64:
+  case X86::BI__builtin_ia32_tzcnt_u64: {
+    mlir::Value isZeroPoison = builder.getFalse(getLoc(expr->getExprLoc()));
+    return emitIntrinsicCallOp(*this, expr, "cttz", ops[0].getType(),
+                               mlir::ValueRange{ops[0], isZeroPoison});
+  }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
@@ -169,23 +182,23 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
-    cgm.errorNYI(e->getSourceRange(),
+    cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return {};
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    Address tmp = createMemTemp(e->getArg(0)->getType(), loc);
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address tmp = createMemTemp(expr->getArg(0)->getType(), loc);
     builder.createStore(loc, ops[0], tmp);
-    return emitIntrinsicCallOp(*this, e, "x86.sse.ldmxcsr", builder.getVoidTy(),
-                               tmp.getPointer());
+    return emitIntrinsicCallOp(*this, expr, "x86.sse.ldmxcsr",
+                               builder.getVoidTy(), tmp.getPointer());
   }
   case X86::BI_mm_getcsr:
   case X86::BI__builtin_ia32_stmxcsr: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    Address tmp = createMemTemp(e->getType(), loc);
-    emitIntrinsicCallOp(*this, e, "x86.sse.stmxcsr", builder.getVoidTy(),
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address tmp = createMemTemp(expr->getType(), loc);
+    emitIntrinsicCallOp(*this, expr, "x86.sse.stmxcsr", builder.getVoidTy(),
                         tmp.getPointer());
     return builder.createLoad(loc, tmp);
   }
