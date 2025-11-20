@@ -391,16 +391,40 @@ LogicalResult ConvertF4x2ToF16x2Op::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ConvertF32x2ToF16x2Op::verify() {
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
+  switch (getRnd()) {
+  case FPRoundingMode::RN:
+  case FPRoundingMode::RZ:
+    if (getRbits())
+      return emitOpError("rbits not supported for RN and RZ rounding modes.");
+    break;
+  case FPRoundingMode::RS:
+    if (!getRbits())
+      return emitOpError("rbits is required for RS rounding mode.");
+    break;
+  default:
+    return emitOpError("Only RN, RZ, and RS rounding modes are supported for "
                        "conversions from f32x2 to f16x2.");
+  }
+
   return success();
 }
 
 LogicalResult ConvertF32x2ToBF16x2Op::verify() {
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
+  switch (getRnd()) {
+  case FPRoundingMode::RN:
+  case FPRoundingMode::RZ:
+    if (getRbits())
+      return emitOpError("rbits not supported for RN and RZ rounding modes.");
+    break;
+  case FPRoundingMode::RS:
+    if (!getRbits())
+      return emitOpError("rbits is required for RS rounding mode.");
+    break;
+  default:
+    return emitOpError("Only RN, RZ, and RS rounding modes are supported for "
                        "conversions from f32x2 to bf16x2.");
+  }
+
   return success();
 }
 
@@ -2727,30 +2751,94 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
   }()
 
-llvm::Intrinsic::ID ConvertF32x2ToF16x2Op::getIntrinsicID() {
-  bool hasRelu = getRelu();
-  bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
+NVVM::IDArgPair
+ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
+                                             LLVM::ModuleTranslation &mt,
+                                             llvm::IRBuilderBase &builder) {
+  static const llvm::Intrinsic::ID rndRNIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rn,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_relu_satfinite,
+  };
+  static const llvm::Intrinsic::ID rndRZIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rz,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_relu_satfinite,
+  };
+  static const llvm::Intrinsic::ID rndRSIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rs,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite,
+  };
 
-  if (hasRelu && hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite;
-  if (hasRelu)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu;
-  if (hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite;
-  return llvm::Intrinsic::nvvm_ff2f16x2_rs;
+  bool hasRelu = op.getRelu();
+  bool hasSatFinite = (op.getSat() == NVVM::SaturationMode::SATFINITE);
+  unsigned idx = hasRelu | (hasSatFinite << 1);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrcHi()));
+  args.push_back(mt.lookupValue(op.getSrcLo()));
+  if (op.getRbits())
+    args.push_back(mt.lookupValue(op.getRbits()));
+
+  switch (op.getRnd()) {
+  case FPRoundingMode::RN:
+    return {rndRNIds[idx], std::move(args)};
+  case FPRoundingMode::RZ:
+    return {rndRZIds[idx], std::move(args)};
+  case FPRoundingMode::RS:
+    return {rndRSIds[idx], std::move(args)};
+  default:
+    llvm_unreachable("Invalid rounding mode for ConvertF32x2ToF16x2Op");
+  }
 }
 
-llvm::Intrinsic::ID ConvertF32x2ToBF16x2Op::getIntrinsicID() {
-  bool hasRelu = getRelu();
-  bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
+NVVM::IDArgPair
+ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
+                                              LLVM::ModuleTranslation &mt,
+                                              llvm::IRBuilderBase &builder) {
+  static const llvm::Intrinsic::ID rndRNIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_relu_satfinite,
+  };
+  static const llvm::Intrinsic::ID rndRZIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_relu_satfinite,
+  };
+  static const llvm::Intrinsic::ID rndRSIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite,
+  };
 
-  if (hasRelu && hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite;
-  if (hasRelu)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu;
-  if (hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite;
-  return llvm::Intrinsic::nvvm_ff2bf16x2_rs;
+  bool hasRelu = op.getRelu();
+  bool hasSatFinite = (op.getSat() == NVVM::SaturationMode::SATFINITE);
+  unsigned idx = hasRelu | (hasSatFinite << 1);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrcHi()));
+  args.push_back(mt.lookupValue(op.getSrcLo()));
+  if (op.getRbits())
+    args.push_back(mt.lookupValue(op.getRbits()));
+
+  switch (op.getRnd()) {
+  case FPRoundingMode::RN:
+    return {rndRNIds[idx], std::move(args)};
+  case FPRoundingMode::RZ:
+    return {rndRZIds[idx], std::move(args)};
+  case FPRoundingMode::RS:
+    return {rndRSIds[idx], std::move(args)};
+  default:
+    llvm_unreachable("Invalid rounding mode for ConvertF32x2ToBF16x2Op");
+  }
 }
 
 llvm::Intrinsic::ID ConvertF32x4ToF8x4Op::getIntrinsicID() {
