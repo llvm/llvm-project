@@ -3791,6 +3791,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   bool MinimalRuntime = CGF.CGM.getCodeGenOpts().SanitizeMinimalRuntime;
   bool HandlerPreserveAllRegs =
       CGF.CGM.getCodeGenOpts().SanitizeHandlerPreserveAllRegs;
+  bool UsePreserveFn = false;
   const SanitizerHandlerInfo &CheckInfo = SanitizerHandlers[CheckHandler];
   const StringRef CheckName = CheckInfo.Name;
   std::string FnName = "__ubsan_handle_" + CheckName.str();
@@ -3798,10 +3799,12 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
     FnName += "_v" + llvm::utostr(CheckInfo.Version);
   if (MinimalRuntime)
     FnName += "_minimal";
-  if (NeedsAbortSuffix)
+  if (NeedsAbortSuffix) {
     FnName += "_abort";
-  else if (MinimalRuntime && HandlerPreserveAllRegs)
+  } else if (MinimalRuntime && HandlerPreserveAllRegs) {
     FnName += "_preserve";
+    UsePreserveFn = true;
+  }
   bool MayReturn =
       !IsFatal || RecoverKind == CheckRecoverableKind::AlwaysRecoverable;
 
@@ -3822,7 +3825,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
             (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
   if (NoMerge)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
-  if (MinimalRuntime && HandlerPreserveAllRegs) {
+  if (UsePreserveFn) {
     // N.B. there is also a clang::CallingConv which is not what we want here.
     HandlerCall->setCallingConv(llvm::CallingConv::PreserveAll);
   }
