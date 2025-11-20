@@ -1,3 +1,111 @@
+add_header_library(
+  fputc_internal
+  HDRS
+    fputc_internal.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  fputs_internal
+  HDRS
+    fputs_internal.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  fwrite_internal
+  HDRS
+    fwrite_internal.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  vfprintf_internal
+  HDRS
+    vfprintf_internal.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.osutil
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.stdio.printf_core.core_structs
+)
+
+add_entrypoint_object(
+  feof
+  SRCS
+    feof.cpp
+  HDRS
+    ../feof.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  ferror
+  SRCS
+    ferror.cpp
+  HDRS
+    ../ferror.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    ../fprintf.h
+  DEPENDS
+    .vfprintf_internal
+    libc.src.__support.arg_list
+)
+
+add_entrypoint_object(
+  fputc
+  SRCS
+    fputc.cpp
+  HDRS
+    ../fputc.h
+  DEPENDS
+    .fputc_internal
+)
+
+add_entrypoint_object(
+  fputs
+  SRCS
+    fputs.cpp
+  HDRS
+    ../fputc.h
+  DEPENDS
+    .fputs_internal
+)
+
+add_entrypoint_object(
+  fwrite
+  SRCS
+    fwrite.cpp
+  HDRS
+    ../fwrite.h
+  DEPENDS
+    .fwrite_internal
+)
+
 add_entrypoint_object(
   getchar
   SRCS
@@ -27,14 +135,8 @@ add_entrypoint_object(
   HDRS
     ../printf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.error_mapper
-    libc.src.stdio.printf_core.core_structs
+    .vfprintf_internal
     libc.src.__support.arg_list
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.libc_errno
-    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -44,8 +146,17 @@ add_entrypoint_object(
   HDRS
     ../putchar.h
   DEPENDS
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.CPP.string_view
+    .fputc_internal
+)
+
+add_entrypoint_object(
+  putc
+  SRCS
+    putc.cpp
+  HDRS
+    ../putc.h
+  DEPENDS
+    .fputc_internal
 )
 
 add_entrypoint_object(
@@ -55,8 +166,7 @@ add_entrypoint_object(
   HDRS
     ../puts.h
   DEPENDS
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.CPP.string_view
+    .fputs_internal
 )
 
 add_header_library(
@@ -83,20 +193,25 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    ../vfprintf.h
+  DEPENDS
+    .vfprintf_internal
+    libc.src.__support.arg_list
+)
+
+add_entrypoint_object(
   vprintf
   SRCS
     vprintf.cpp
   HDRS
     ../vprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.error_mapper
-    libc.src.stdio.printf_core.core_structs
+    .vfprintf_internal
     libc.src.__support.arg_list
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.libc_errno
-    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
