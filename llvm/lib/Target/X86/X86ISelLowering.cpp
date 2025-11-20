@@ -2098,9 +2098,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // pre-AVX512 equivalents. Without VLX we use 512-bit operations for
   // narrower widths.
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX512()) {
+    for (MVT VT : {MVT::f16, MVT::f32, MVT::f64, MVT::v8f16, MVT::v4f32,
+                   MVT::v2f64, MVT::v16f16, MVT::v8f32, MVT::v4f64, MVT::v32f16,
+                   MVT::v16f32, MVT::v8f64})
+      setOperationAction(ISD::FLDEXP, VT, Custom);
+
     // These operations are handled on non-VLX by artificially widening in
     // isel patterns.
-
     setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v8i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v4i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v2i32, Custom);
@@ -19220,6 +19224,72 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   return SDValue();
 }
 
+static SDValue LowerFLDEXP(SDValue Op, const X86Subtarget &Subtarget,
+                           SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue X = Op.getOperand(0);
+  MVT XTy = X.getSimpleValueType();
+  SDValue Exp = Op.getOperand(1);
+
+  switch (XTy.SimpleTy) {
+  default:
+    return SDValue();
+  case MVT::f16:
+    if (!Subtarget.hasFP16())
+      X = DAG.getFPExtendOrRound(X, DL, MVT::f32);
+    [[fallthrough]];
+  case MVT::f32:
+  case MVT::f64: {
+    MVT VT = MVT::getVectorVT(X.getSimpleValueType(),
+                              128 / X.getSimpleValueType().getSizeInBits());
+    Exp = DAG.getNode(ISD::SINT_TO_FP, DL, X.getValueType(), Exp);
+    SDValue VX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, X);
+    SDValue VExp = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Exp);
+    SDValue Scalefs = DAG.getNode(X86ISD::SCALEFS, DL, VT, VX, VExp);
+    SDValue Final = DAG.getExtractVectorElt(DL, X.getValueType(), Scalefs, 0);
+    return DAG.getFPExtendOrRound(Final, DL, XTy);
+  }
+  case MVT::v4f32:
+  case MVT::v2f64:
+  case MVT::v8f32:
+  case MVT::v4f64:
+  case MVT::v16f32:
+  case MVT::v8f64:
+    if (XTy.getSizeInBits() == 512 || Subtarget.hasVLX()) {
+      Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp);
+      return DAG.getNode(X86ISD::SCALEF, DL, XTy, X, Exp);
+    }
+    break;
+  case MVT::v8f16:
+  case MVT::v16f16:
+    if (Subtarget.hasFP16()) {
+      if (Subtarget.hasVLX()) {
+        Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp);
+        return DAG.getNode(X86ISD::SCALEF, DL, XTy, X, Exp);
+      }
+      break;
+    }
+    X = DAG.getFPExtendOrRound(X, DL, XTy.changeVectorElementType(MVT::f32));
+    Exp = DAG.getSExtOrTrunc(Exp, DL,
+                             X.getSimpleValueType().changeTypeToInteger());
+    break;
+  case MVT::v32f16:
+    if (Subtarget.hasFP16()) {
+      Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp);
+      return DAG.getNode(X86ISD::SCALEF, DL, XTy, X, Exp);
+    }
+    return splitVectorOp(Op, DAG, DL);
+  }
+  SDValue WideX = widenSubVector(X, true, Subtarget, DAG, DL, 512);
+  SDValue WideExp = widenSubVector(Exp, true, Subtarget, DAG, DL, 512);
+  Exp = DAG.getNode(ISD::SINT_TO_FP, DL, WideExp.getSimpleValueType(), Exp);
+  SDValue Scalef =
+      DAG.getNode(X86ISD::SCALEF, DL, WideX.getValueType(), WideX, WideExp);
+  SDValue Final =
+      DAG.getExtractSubvector(DL, X.getSimpleValueType(), Scalef, 0);
+  return DAG.getFPExtendOrRound(Final, DL, XTy);
+}
+
 static SDValue LowerSCALAR_TO_VECTOR(SDValue Op, const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
   SDLoc dl(Op);
@@ -33734,7 +33804,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADDRSPACECAST:      return LowerADDRSPACECAST(Op, DAG);
   case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
-  // clang-format on
+  case ISD::FLDEXP:             return LowerFLDEXP(Op, Subtarget, DAG);
+    // clang-format on
   }
 }
 

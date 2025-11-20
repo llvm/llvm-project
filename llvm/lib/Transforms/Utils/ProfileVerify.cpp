@@ -65,11 +65,26 @@ public:
   ProfileInjector(Function &F, FunctionAnalysisManager &FAM) : F(F), FAM(FAM) {}
   bool inject();
 };
+
+bool isAsmOnly(const Function &F) {
+  if (!F.hasFnAttribute(Attribute::AttrKind::Naked))
+    return false;
+  for (const auto &BB : F)
+    for (const auto &I : drop_end(BB.instructionsWithoutDebug())) {
+      const auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB || !CB->isInlineAsm())
+        return false;
+    }
+  return true;
+}
 } // namespace
 
 // FIXME: currently this injects only for terminators. Select isn't yet
 // supported.
 bool ProfileInjector::inject() {
+  // skip purely asm functions
+  if (isAsmOnly(F))
+    return false;
   // Get whatever branch probability info can be derived from the given IR -
   // whether it has or not metadata. The main intention for this pass is to
   // ensure that other passes don't drop or "forget" to update MD_prof. We do
@@ -176,6 +191,10 @@ PreservedAnalyses ProfileInjectorPass::run(Function &F,
 
 PreservedAnalyses ProfileVerifierPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
+  // skip purely asm functions
+  if (isAsmOnly(F))
+    return PreservedAnalyses::all();
+
   const auto EntryCount = F.getEntryCount(/*AllowSynthetic=*/true);
   if (!EntryCount) {
     auto *MD = F.getMetadata(LLVMContext::MD_prof);
