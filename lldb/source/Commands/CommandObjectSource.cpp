@@ -1032,9 +1032,11 @@ protected:
           bool show_inlined_frames = true;
           const bool show_function_arguments = true;
           const bool show_function_name = true;
+          Address addr = sc.line_entry.HasValidRange()
+                             ? sc.line_entry.GetRange().GetBaseAddress()
+                             : Address();
           sc.DumpStopContext(&result.GetOutputStream(),
-                             m_exe_ctx.GetBestExecutionContextScope(),
-                             sc.line_entry.range.GetBaseAddress(),
+                             m_exe_ctx.GetBestExecutionContextScope(), addr,
                              show_fullpaths, show_module, show_inlined_frames,
                              show_function_arguments, show_function_name);
           result.GetOutputStream().EOL();

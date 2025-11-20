@@ -13,12 +13,14 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/SupportFile.h"
 #include "lldb/lldb-private.h"
+#include <optional>
 
 namespace lldb_private {
 
 /// \class LineEntry LineEntry.h "lldb/Symbol/LineEntry.h"
 /// A line table entry class.
-struct LineEntry {
+class LineEntry {
+public:
   /// Default constructor.
   ///
   /// Initialize all member variables to invalid values.
@@ -133,9 +135,21 @@ struct LineEntry {
   /// Helper to access the file.
   const FileSpec &GetFile() const { return file_sp->GetSpecOnly(); }
 
-  /// The section offset address range for this line entry.
-  AddressRange range;
+  /// Get the address range for this line entry.
+  /// \return The address range if valid, otherwise an invalid AddressRange.
+  const AddressRange &GetRange() const;
 
+  /// Check if this line entry has a valid address range.
+  bool HasValidRange() const;
+
+  /// Set the address range for this line entry.
+  void SetRange(const AddressRange &range);
+
+private:
+  /// The section offset address range for this line entry (optional).
+  std::optional<AddressRange> m_range;
+
+public:
   /// The source file, possibly mapped by the target.source-map setting.
   lldb::SupportFileSP file_sp;
 

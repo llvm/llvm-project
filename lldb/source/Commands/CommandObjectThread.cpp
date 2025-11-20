@@ -519,7 +519,7 @@ protected:
               block_range.GetByteSize() - pc_offset_in_block;
           range = AddressRange(pc_address, range_length);
         } else {
-          range = sc.line_entry.range;
+          range = sc.line_entry.GetRange();
         }
 
         new_plan_sp = thread->QueueThreadPlanForStepInRange(
@@ -999,7 +999,7 @@ protected:
           while (idx < end_func_idx) {
             if (line_idx_ranges.FindEntryIndexThatContains(idx) != UINT32_MAX) {
               addr_t address =
-                  line_entry.range.GetBaseAddress().GetLoadAddress(target);
+                  line_entry.GetRange().GetBaseAddress().GetLoadAddress(target);
               if (address != LLDB_INVALID_ADDRESS)
                 address_list.push_back(address);
             }

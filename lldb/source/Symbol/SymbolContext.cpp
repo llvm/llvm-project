@@ -341,8 +341,10 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
                                     bool use_inline_block_range,
                                     AddressRange &range) const {
   if ((scope & eSymbolContextLineEntry) && line_entry.IsValid()) {
-    range = line_entry.range;
-    return true;
+    if (line_entry.HasValidRange()) {
+      range = line_entry.GetRange();
+      return true;
+    }
   }
 
   if ((scope & eSymbolContextBlock) && (block != nullptr)) {
@@ -437,7 +439,9 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
         const InlineFunctionInfo *curr_inlined_block_inlined_info =
             curr_inlined_block->GetInlinedFunctionInfo();
         next_frame_pc = range.GetBaseAddress();
-        next_frame_sc.line_entry.range.GetBaseAddress() = next_frame_pc;
+        AddressRange new_range;
+        new_range.GetBaseAddress() = next_frame_pc;
+        next_frame_sc.line_entry.SetRange(new_range);
         next_frame_sc.line_entry.file_sp = std::make_shared<SupportFile>(
             curr_inlined_block_inlined_info->GetCallSite().GetFile());
         next_frame_sc.line_entry.original_file_sp =
@@ -668,7 +672,11 @@ SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
     return llvm::createStringError("Symbol context has no line table.");
   }
 
-  range = line_entry.range;
+  if (!line_entry.HasValidRange()) {
+    return llvm::createStringError("Line entry has no valid address range.");
+  }
+
+  range = line_entry.GetRange();
   if (line_entry.line > end_line) {
     return llvm::createStringError(
         "end line option %d must be after the current line: %d", end_line,
@@ -708,15 +716,19 @@ SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
   }
 
   Block *func_block = GetFunctionBlock();
-  if (func_block && func_block->GetRangeIndexContainingAddress(
-                        end_entry.range.GetBaseAddress()) == UINT32_MAX) {
+  if (func_block && end_entry.HasValidRange() &&
+      func_block->GetRangeIndexContainingAddress(
+          end_entry.GetRange().GetBaseAddress()) == UINT32_MAX) {
     return llvm::createStringError(
         "end line number %d is not contained within the current function.",
         end_line);
   }
 
-  lldb::addr_t range_size = end_entry.range.GetBaseAddress().GetFileAddress() -
-                            range.GetBaseAddress().GetFileAddress();
+  lldb::addr_t range_size =
+      end_entry.HasValidRange()
+          ? (end_entry.GetRange().GetBaseAddress().GetFileAddress() -
+             range.GetBaseAddress().GetFileAddress())
+          : 0;
   range.SetByteSize(range_size);
   return llvm::Error::success();
 }

@@ -105,8 +105,8 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
     retval = std::string(s.GetString());
     return true;
   } else {
-    if (FormatEntity::Format(m_format, s, &sc, &exe_ctx,
-                             &sc.line_entry.range.GetBaseAddress(), valobj,
+    Address temp_addr = sc.line_entry.GetRange().GetBaseAddress();
+    if (FormatEntity::Format(m_format, s, &sc, &exe_ctx, &temp_addr, valobj,
                              false, false)) {
       retval.assign(std::string(s.GetString()));
       return true;

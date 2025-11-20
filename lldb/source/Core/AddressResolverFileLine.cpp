@@ -46,8 +46,8 @@ AddressResolverFileLine::SearchCallback(SearchFilter &filter,
   cu->ResolveSymbolContext(m_src_location_spec, eSymbolContextEverything,
                            sc_list);
   for (const SymbolContext &sc : sc_list) {
-    Address line_start = sc.line_entry.range.GetBaseAddress();
-    addr_t byte_size = sc.line_entry.range.GetByteSize();
+    Address line_start = sc.line_entry.GetRange().GetBaseAddress();
+    addr_t byte_size = sc.line_entry.GetRange().GetByteSize();
     if (line_start.IsValid()) {
       AddressRange new_range(line_start, byte_size);
       m_address_ranges.push_back(new_range);
