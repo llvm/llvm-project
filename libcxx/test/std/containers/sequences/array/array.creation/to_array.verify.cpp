@@ -6,38 +6,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <array>
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// <array>
+
+// template <class T, size_t N>
+//   constexpr array<remove_cv_t<T>, N> to_array(T (&a)[N]);
+// template <class T, size_t N>
+//   constexpr array<remove_cv_t<T>, N> to_array(T (&&a)[N]);
 
 #include <array>
 
-#include "test_macros.h"
 #include "MoveOnly.h"
+#include "test_macros.h"
 
 // expected-warning@array:* 0-1 {{suggest braces around initialization of subobject}}
 
-int main(int, char**) {
+void test() {
   {
     char source[3][6] = {"hi", "world"};
     // expected-error@array:* {{to_array does not accept multidimensional arrays}}
     // expected-error@array:* {{to_array requires copy constructible elements}}
     // expected-error@array:* 3 {{cannot initialize}}
-    std::to_array(source); // expected-note {{requested here}}
+    (void)std::to_array(source); // expected-note {{requested here}}
   }
 
   {
     MoveOnly mo[] = {MoveOnly{3}};
     // expected-error@array:* {{to_array requires copy constructible elements}}
     // expected-error-re@array:* 1-2{{{{(call to implicitly-deleted copy constructor of 'MoveOnly')|(call to deleted constructor of 'MoveOnly')}}}}
-    std::to_array(mo); // expected-note {{requested here}}
+    (void)std::to_array(mo); // expected-note {{requested here}}
   }
 
   {
     const MoveOnly cmo[] = {MoveOnly{3}};
     // expected-error@array:* {{to_array requires move constructible elements}}
     // expected-error-re@array:* 0-1{{{{(call to implicitly-deleted copy constructor of 'MoveOnly')|(call to deleted constructor of 'MoveOnly')}}}}
-    std::to_array(std::move(cmo)); // expected-note {{requested here}}
+    (void)std::to_array(std::move(cmo)); // expected-note {{requested here}}
   }
-
-  return 0;
 }
