@@ -1,0 +1,6 @@
+RUN: rm -rf %t && mkdir -p %t && cd %t
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/main_v5.dwo -dwarf-version=5 %p/../Inputs/overflow/main_v5.s -o %t/main_v5.o
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/debug_info_v4.dwo -dwarf-version=4 %p/../Inputs/overflow/debug_info_v4.s -o %t/debug_info_v4.o
+RUN: not llvm-dwp %t/main_v5.dwo %t/debug_info_v4.dwo -o main.dwp 2>&1 | FileCheck %s
+
+CHECK: error: incompatible DWARF compile unit version: {{.*}}debug_info_v4.dwo (version 4) and {{.*}}main_v5.dwo (version 5)
