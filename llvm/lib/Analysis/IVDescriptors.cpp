@@ -672,9 +672,15 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 //     if (src[i] > 3)
 //       r = i;
 //   }
+// or like this:
+//   int r = 0;
+//   for (int i = 0; i < n; i++) {
+//     if (a[i] > 3)
+//       r = a[i];
+//   }
 // The reduction value (r) is derived from either the values of an induction
-// variable (i) sequence, or from the start value (0). The LLVM IR generated for
-// such loops would be as follows:
+// variable (i) sequence, an arbitrary value (a[i]), or from the start value
+// (0). The LLVM IR generated for such loops would be as follows:
 //   for.body:
 //     %r = phi i32 [ %spec.select, %for.body ], [ 0, %entry ]
 //     %i = phi i32 [ %inc, %for.body ], [ 0, %entry ]
@@ -683,19 +689,23 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 //     %spec.select = select i1 %cmp, i32 %i, i32 %r
 //     %inc = add nsw i32 %i, 1
 //     ...
-// Since 'i' is an induction variable, the reduction value after the loop will
-// be the maximum (increasing induction) or minimum (decreasing induction) value
-// of 'i' that the condition (src[i] > 3) is satisfied, or the start value (0 in
-// the example above). When the start value of the induction variable 'i' is
-// greater than the minimum (increasing induction) or maximum (decreasing
-// induction) value of the data type, we can use the minimum (increasing
-// induction) or maximum (decreasing induction) value of the data type as a
-// sentinel value to replace the start value. This allows us to perform a single
-// reduction max (increasing induction) or min (decreasing induction) operation
-// to obtain the final reduction result.
+// When searching for an induction variable (i), the reduction value after the
+// loop will be the maximum (increasing induction) or minimum (decreasing
+// induction) value of 'i' that the condition (src[i] > 3) is satisfied, or the
+// start value (0 in the example above). When the start value of the induction
+// variable 'i' is greater than the minimum (increasing induction) or maximum
+// (decreasing induction) value of the data type, we can use the minimum
+// (increasing induction) or maximum (decreasing induction) value of the data
+// type as a sentinel value to replace the start value. This allows us to
+// perform a single reduction max (increasing induction) or min (decreasing
+// induction) operation to obtain the final reduction result.
 // TODO: It is possible to solve the case where the start value is the minimum
 // value of the data type or a non-constant value by using mask and multiple
 // reduction operations.
+//
+// When searching for an arbitrary value (such as 'a[i]'), the reduction value
+// will either be the initial value (0) if the condition was never met, or the
+// value of a[i] in the most recent loop iteration where the condition was met.
 RecurrenceDescriptor::InstDesc
 RecurrenceDescriptor::isFindPattern(RecurKind Kind, Loop *TheLoop,
                                     PHINode *OrigPhi, Instruction *I,
@@ -710,7 +720,7 @@ RecurrenceDescriptor::isFindPattern(RecurKind Kind, Loop *TheLoop,
   // We are looking for selects of the form:
   //   select(cmp(), phi, value) or
   //   select(cmp(), value, phi)
-  // where 'value' is be a loop induction variable
+  // where 'value' must be a loop induction variable
   // (for FindFirstIV/FindLastIV) or an arbitrary value (for FindLast).
   // TODO: Match selects with multi-use cmp conditions.
   Value *NonRdxPhi = nullptr;
