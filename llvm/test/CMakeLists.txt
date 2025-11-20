@@ -102,6 +102,7 @@ set(LLVM_TEST_DEPENDS
   llvm-dwp
   llvm-exegesis
   llvm-extract
+  llvm-extract-bundle-entry
   llvm-gsymutil
   llvm-ir2vec
   llvm-isel-fuzzer
