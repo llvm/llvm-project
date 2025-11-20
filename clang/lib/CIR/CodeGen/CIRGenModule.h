@@ -461,6 +461,12 @@ public:
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
+  mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Return a null constant appropriate for zero-initializing a base class with
+  /// the given type. This is usually, but not always, an LLVM null constant.
+  mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
   void emitTentativeDefinition(const VarDecl *d);
@@ -496,6 +502,10 @@ public:
   cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
                                        cir::FuncType ty,
                                        const clang::FunctionDecl *fd);
+
+  /// Mark the function as a special member (e.g. constructor, destructor)
+  void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
+                               const clang::FunctionDecl *funcDecl);
 
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
                                     mlir::ArrayAttr = {}, bool isLocal = false,

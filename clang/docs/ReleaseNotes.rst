@@ -441,6 +441,10 @@ Improvements to Clang's diagnostics
 - Clang no longer emits ``-Wmissing-noreturn`` for virtual methods where
   the function body consists of a `throw` expression (#GH167247).
 
+- A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
+  comparison operators when mixed with bitwise operators in enum value initializers.
+  This can be locally disabled by explicitly casting the initializer value.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
