@@ -461,6 +461,12 @@ public:
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
+  mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Return a null constant appropriate for zero-initializing a base class with
+  /// the given type. This is usually, but not always, an LLVM null constant.
+  mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
   void emitTentativeDefinition(const VarDecl *d);

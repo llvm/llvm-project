@@ -802,8 +802,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
-  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "DoWhileOp", "ForOp",
+  "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -2753,6 +2753,100 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// AwaitOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
+  I32EnumAttrCase<"Init", 0, "init">,
+  I32EnumAttrCase<"User", 1, "user">,
+  I32EnumAttrCase<"Yield", 2, "yield">,
+  I32EnumAttrCase<"Final", 3, "final">
+]>;
+
+def CIR_AwaitOp : CIR_Op<"await",[
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  RecursivelySpeculatable, NoRegionArguments
+]> {
+  let summary = "Wraps C++ co_await implicit logic";
+  let description = [{
+    The under the hood effect of using C++ `co_await expr` roughly
+    translates to:
+
+    ```c++
+    // co_await expr;
+
+    auto &&x = CommonExpr();
+    if (!x.await_ready()) {
+       ...
+       x.await_suspend(...);
+       ...
+    }
+    x.await_resume();
+    ```
+
+    `cir.await` represents this logic by using 3 regions:
+      - ready: covers veto power from x.await_ready()
+      - suspend: wraps actual x.await_suspend() logic
+      - resume: handles x.await_resume()
+
+    Breaking this up in regions allows individual scrutiny of conditions
+    which might lead to folding some of them out. Lowerings coming out
+    of CIR, e.g. LLVM, should use the `suspend` region to track more
+    lower level codegen (e.g. intrinsic emission for coro.save/coro.suspend).
+
+    There are also 4 flavors of `cir.await` available:
+    - `init`: compiler generated initial suspend via implicit `co_await`.
+    - `user`: also known as normal, representing a user written `co_await`.
+    - `yield`: user written `co_yield` expressions.
+    - `final`: compiler generated final suspend via implicit `co_await`.
+
+    ```mlir
+      cir.scope {
+        ... // auto &&x = CommonExpr();
+        cir.await(user, ready : {
+          ... // x.await_ready()
+        }, suspend : {
+          ... // x.await_suspend()
+        }, resume : {
+          ... // x.await_resume()
+        })
+      }
+    ```
+
+    Note that resulution of the common expression is assumed to happen
+    as part of the enclosing await scope.
+  }];
+
+  let arguments = (ins CIR_AwaitKind:$kind);
+  let regions = (region SizedRegion<1>:$ready,
+                        SizedRegion<1>:$suspend,
+                        SizedRegion<1>:$resume);
+  let assemblyFormat = [{
+    `(` $kind `,`
+    `ready` `:` $ready `,`
+    `suspend` `:` $suspend `,`
+    `resume` `:` $resume `,`
+    `)`
+    attr-dict
+  }];
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+      "cir::AwaitKind":$kind,
+      CArg<"BuilderCallbackRef",
+           "nullptr">:$readyBuilder,
+      CArg<"BuilderCallbackRef",
+           "nullptr">:$suspendBuilder,
+      CArg<"BuilderCallbackRef",
+           "nullptr">:$resumeBuilder
+      )>
+  ];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 
@@ -4016,6 +4110,72 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// FPClass Test Flags
+//===----------------------------------------------------------------------===//
+
+def FPClassTestEnum : CIR_I32EnumAttr<"FPClassTest", "floating-point class test flags", [
+  // Basic flags
+  I32EnumAttrCase<"SignalingNaN", 1, "fcSNan">,
+  I32EnumAttrCase<"QuietNaN", 2, "fcQNan">,
+  I32EnumAttrCase<"NegativeInfinity", 4, "fcNegInf">,
+  I32EnumAttrCase<"NegativeNormal", 8, "fcNegNormal">,
+  I32EnumAttrCase<"NegativeSubnormal", 16, "fcNegSubnormal">,
+  I32EnumAttrCase<"NegativeZero", 32, "fcNegZero">,
+  I32EnumAttrCase<"PositiveZero", 64, "fcPosZero">,
+  I32EnumAttrCase<"PositiveSubnormal", 128, "fcPosSubnormal">,
+  I32EnumAttrCase<"PositiveNormal", 256, "fcPosNormal">,
+  I32EnumAttrCase<"PositiveInfinity", 512, "fcPosInf">,
+
+  // Composite flags
+  I32EnumAttrCase<"Nan", 3, "fcNan">,                   // fcSNan | fcQNan
+  I32EnumAttrCase<"Infinity", 516, "fcInf">,            // fcPosInf | fcNegInf
+  I32EnumAttrCase<"Normal", 264, "fcNormal">,           // fcPosNormal | fcNegNormal
+  I32EnumAttrCase<"Subnormal", 144, "fcSubnormal">,     // fcPosSubnormal | fcNegSubnormal
+  I32EnumAttrCase<"Zero", 96, "fcZero">,                // fcPosZero | fcNegZero
+  I32EnumAttrCase<"PositiveFinite", 448, "fcPosFinite">,// fcPosNormal | fcPosSubnormal | fcPosZero
+  I32EnumAttrCase<"NegativeFinite", 56, "fcNegFinite">, // fcNegNormal | fcNegSubnormal | fcNegZero
+  I32EnumAttrCase<"Finite", 504, "fcFinite">,           // fcPosFinite | fcNegFinite
+  I32EnumAttrCase<"Positive", 960, "fcPositive">,       // fcPosFinite | fcPosInf
+  I32EnumAttrCase<"Negative", 60, "fcNegative">,        // fcNegFinite | fcNegInf
+  I32EnumAttrCase<"All", 1023, "fcAllFlags">,           // fcNan | fcInf | fcFinite
+]> {
+  let cppNamespace = "::cir";
+}
+
+def CIR_IsFPClassOp : CIR_Op<"is_fp_class"> {
+  let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
+
+  let description = [{
+    The `cir.is_fp_class` operation takes a floating-point value as its first
+    argument and a bitfield of flags as its second argument. The operation
+    returns a boolean value indicating whether the floating-point value
+    satisfies the given flags.
+
+    The flags must be a compile time constant and the values are:
+
+    | Bit # | floating-point class |
+    | ----- | -------------------- |
+    |  0    | Signaling NaN        |
+    |  1    | Quiet NaN            |
+    |  2    | Negative infinity    |
+    |  3    | Negative normal      |
+    |  4    | Negative subnormal   |
+    |  5    | Negative zero        |
+    |  6    | Positive zero        |
+    |  7    | Positive subnormal   |
+    |  8    | Positive normal      |
+    |  9    | Positive infinity    |
+  }];
+
+  let arguments = (ins CIR_AnyFloatType:$src,
+                       FPClassTestEnum:$flags);
+  let results = (outs CIR_BoolType:$result);
+  let assemblyFormat = [{
+    $src `,` $flags `:` functional-type($src, $result) attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//

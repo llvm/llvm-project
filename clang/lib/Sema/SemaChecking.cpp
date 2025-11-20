@@ -1512,7 +1512,7 @@ static bool checkBuiltinInferAllocToken(Sema &S, CallExpr *TheCall) {
       return S.Diag(Arg->getBeginLoc(), diag::err_param_with_void_type);
   }
 
-  TheCall->setType(S.Context.UnsignedLongLongTy);
+  TheCall->setType(S.Context.getSizeType());
   return false;
 }
 

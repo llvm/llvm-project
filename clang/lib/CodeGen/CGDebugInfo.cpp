@@ -6261,15 +6261,6 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
     Reconstitutable = false;
     return false;
   }
-  bool VisitType(Type *T) {
-    // _BitInt(N) isn't reconstitutable because the bit width isn't encoded in
-    // the DWARF, only the byte width.
-    if (T->isBitIntType()) {
-      Reconstitutable = false;
-      return false;
-    }
-    return true;
-  }
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
