@@ -22,13 +22,13 @@ void test() {
     std::any a = 1;
 
     // expected-error-re@any:* 1 {{static assertion failed{{.*}}_ValueType may not be a reference.}}
-    (void)std::any_cast<int &>(&a); // expected-note {{requested here}}
+    (void)std::any_cast<int&>(&a); // expected-note {{requested here}}
 
     // expected-error-re@any:* 1 {{static assertion failed{{.*}}_ValueType may not be a reference.}}
-    (void)std::any_cast<int &&>(&a); // expected-note {{requested here}}
+    (void)std::any_cast<int&&>(&a); // expected-note {{requested here}}
 
     // expected-error-re@any:* 1 {{static assertion failed{{.*}}_ValueType may not be a reference.}}
-    (void)std::any_cast<int const &>(&a); // expected-note {{requested here}}
+    (void)std::any_cast<int const&>(&a); // expected-note {{requested here}}
 
     // expected-error-re@any:* 1 {{static assertion failed{{.*}}_ValueType may not be a reference.}}
     (void)std::any_cast<int const&&>(&a); // expected-note {{requested here}}
@@ -39,11 +39,11 @@ void test() {
     (void)std::any_cast<int &>(&a2); // expected-note {{requested here}}
 
     // expected-error-re@any:* 1 {{static assertion failed{{.*}}_ValueType may not be a reference.}}
-    (void)std::any_cast<int &&>(&a2); // expected-note {{requested here}}
+    (void)std::any_cast<int&&>(&a2); // expected-note {{requested here}}
 
     // expected-error-re@any:* 1 {{static assertion failed{{.*}}_ValueType may not be a reference.}}
-    (void)std::any_cast<int const &>(&a2); // expected-note {{requested here}}
+    (void)std::any_cast<int const&>(&a2); // expected-note {{requested here}}
 
     // expected-error-re@any:* 1 {{static assertion failed{{.*}}_ValueType may not be a reference.}}
-    (void)std::any_cast<int const &&>(&a2); // expected-note {{requested here}}
+    (void)std::any_cast<int const&&>(&a2); // expected-note {{requested here}}
 }

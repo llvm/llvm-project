@@ -50,8 +50,8 @@ void f() {
     // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
     (void)std::any_cast<no_copy>(static_cast<std::any const&>(a)); // expected-note {{requested here}}
 
-    (void)std::any_cast<no_copy>(static_cast<std::any &&>(a)); // OK
+    (void)std::any_cast<no_copy>(static_cast<std::any&&>(a)); // OK
 
     // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an rvalue reference or a CopyConstructible type}}
-    (void)std::any_cast<no_move>(static_cast<std::any &&>(a));
+    (void)std::any_cast<no_move>(static_cast<std::any&&>(a));
 }
