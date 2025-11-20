@@ -3016,7 +3016,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
                             SemaRef.getASTContext().UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
-                            SemaRef.getASTContext().BoolTy))
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 2))
       return true;
 
     auto *ResourceTy =

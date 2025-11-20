@@ -101,19 +101,17 @@ static bool checkWaveOps(Intrinsic::ID IID) {
 }
 
 // Checks to see if the status bit from a load with status
-// instruction is ever extracted.
-// This is our proof that the module requires TiledResources
-// to be set, as if check access fully mapped was used.
+// instruction is ever extracted. If it is, the module needs
+// to have the TiledResources shader flag set.
 bool checkIfStatusIsExtracted(const IntrinsicInst &II) {
   [[maybe_unused]] Intrinsic::ID IID = II.getIntrinsicID();
   assert(IID == Intrinsic::dx_resource_load_typedbuffer ||
          IID == Intrinsic::dx_resource_load_rawbuffer &&
-             "unexpected intrinsic ID, only dx_resource_load_typedbuffer and "
-             "dx_resource_load_rawbuffer are expected");
+             "unexpected intrinsic ID");
   for (const User *U : II.users()) {
     if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(U)) {
-      // Resource load operations return a {result, status} pair
-      // check if we extract the status
+      // Resource load operations return a {result, status} pair.
+      // Check if we extract the status
       if (EVI->getNumIndices() == 1 && EVI->getIndices()[0] == 1)
         return true;
     }

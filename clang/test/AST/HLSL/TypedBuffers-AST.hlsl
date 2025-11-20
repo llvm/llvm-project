@@ -220,14 +220,9 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: DeclStmt
-// CHECK-NEXT: VarDecl {{.*}} Result 'element_type'
-// CHECK-NEXT: DeclStmt
-// CHECK-NEXT: VarDecl {{.*}} StatusBool 'bool'
-// CHECK-NEXT: BinaryOperator {{.*}} 'element_type' '='
-// CHECK-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue Var {{.*}} 'Result' 'element_type'
+// CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: CallExpr {{.*}} 'element_type'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
@@ -235,12 +230,7 @@ RESOURCE<float> Buffer;
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'bool' lvalue Var {{.*}} 'StatusBool' 'bool'
-// CHECK-NEXT: BinaryOperator {{.*}} 'unsigned int' '='
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'bool' lvalue Var {{.*}} 'StatusBool' 'bool'
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue Var {{.*}} 'Result' 'element_type'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // GetDimensions method

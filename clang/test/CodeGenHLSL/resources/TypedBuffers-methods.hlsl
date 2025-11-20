@@ -47,46 +47,34 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
-// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 1, ptr noalias noundef nonnull align 4 dereferenceable(4) %tmp)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 2, ptr noalias noundef nonnull align 4 dereferenceable(4) %tmp1)
+// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 1, ptr {{.*}} %tmp)
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %tmp1)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr noalias noundef nonnull align 4 dereferenceable(4) %Status)
+// CHECK: define {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::Buffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", float, 0, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
+// CHECK-NEXT: %[[LOADED_STATUS_ADDR:.*]] = load ptr, ptr %Status.addr
 // DXIL-NEXT: %[[STRUCT:.*]] = call { float, i1 } @llvm.dx.resource.load.typedbuffer.f32.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VALUE:.*]] = extractvalue { float, i1 } %[[STRUCT]], 0
 // CHECK-NEXT: %[[STATUS_TEMP:.*]] = extractvalue { float, i1 } %[[STRUCT]], 1
 // CHECK-NEXT: %[[STATUS_EXT:.*]] = zext i1 %[[STATUS_TEMP]] to i32
-// CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %StatusBool, align 4
-// CHECK-NEXT: store float %ld.value, ptr %Result, align 4
-// CHECK-NEXT: %[[STATUS_INT:.*]] = load i32, ptr %StatusBool, align 4
-// CHECK-NEXT: %[[LOADED_VALUE:.*]] = trunc i32 %[[STATUS_INT]] to i1
-// CHECK-NEXT: %[[ZEXT_VALUE:.*]] = zext i1 %[[LOADED_VALUE]] to i32
-// CHECK-NEXT: %[[LOADED_STATUS_ADDR:.*]] = load ptr, ptr %Status.addr, align 4
-// CHECK-NEXT: store i32 %[[ZEXT_VALUE]], ptr %[[LOADED_STATUS_ADDR]], align 4
-// CHECK-NEXT: %[[RETURN_VALUE:.*]] = load float, ptr %Result, align 4
-// CHECK-NEXT: ret float %[[RETURN_VALUE]]
+// CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
+// CHECK-NEXT: ret float %[[VALUE]]
 
-// CHECK: define {{.*}}  <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr noalias noundef nonnull align 4 dereferenceable(4) %Status)
+// CHECK: define {{.*}}  <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", <4 x i32>, 1, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
+// CHECK-NEXT: %[[LOADED_STATUS_ADDR:.*]] = load ptr, ptr %Status.addr
 // DXIL-NEXT: %[[STRUCT:.*]] = call { <4 x i32>, i1 } @llvm.dx.resource.load.typedbuffer.v4i32.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VALUE:.*]] = extractvalue { <4 x i32>, i1 } %[[STRUCT]], 0
 // CHECK-NEXT: %[[STATUS_TEMP:.*]] = extractvalue { <4 x i32>, i1 } %[[STRUCT]], 1
 // CHECK-NEXT: %[[STATUS_EXT:.*]] = zext i1 %[[STATUS_TEMP]] to i32
-// CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %StatusBool, align 4
-// CHECK-NEXT: store <4 x i32> %ld.value, ptr %Result, align 16
-// CHECK-NEXT: %[[STATUS_INT:.*]] = load i32, ptr %StatusBool, align 4
-// CHECK-NEXT: %[[LOADED_VALUE:.*]] = trunc i32 %[[STATUS_INT]] to i1
-// CHECK-NEXT: %[[ZEXT_VALUE:.*]] = zext i1 %[[LOADED_VALUE]] to i32
-// CHECK-NEXT: %[[LOADED_STATUS_ADDR:.*]] = load ptr, ptr %Status.addr, align 4
-// CHECK-NEXT: store i32 %[[ZEXT_VALUE]], ptr %[[LOADED_STATUS_ADDR]], align 4
-// CHECK-NEXT: %[[RETURN_VALUE:.*]] = load <4 x i32>, ptr %Result, align 16
-// CHECK-NEXT: ret <4 x i32> %[[RETURN_VALUE]]
+// CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
+// CHECK-NEXT: ret <4 x i32> %[[VALUE]]
 
 export uint TestGetDimensions() {
     uint dim1, dim2;

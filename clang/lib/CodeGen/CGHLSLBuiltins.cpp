@@ -364,7 +364,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     QualType HandleTy = E->getArg(0)->getType();
     const HLSLAttributedResourceType *RT =
         HandleTy->getAs<HLSLAttributedResourceType>();
-    assert(RT && "Expected a resource type as first parameter");
     assert(CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil &&
            "Only DXIL currently implements load with status");
 
