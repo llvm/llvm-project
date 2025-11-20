@@ -79,9 +79,10 @@ static mlir::Value getMaskVecValue(CIRGenFunction &cgf, const CallExpr *expr,
   // If we have less than 8 elements, then the starting mask was an i8 and
   // we need to extract down to the right number of elements.
   if (numElems < 8) {
-    SmallVector<int64_t, 4> indices;
+    SmallVector<mlir::Attribute, 4> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
     for (auto i : llvm::seq<unsigned>(0, numElems))
-      indices.push_back(i);
+      indices.push_back(cir::IntAttr::get(i32Ty, i));
 
     maskVec = builder.createVecShuffle(cgf.getLoc(expr->getExprLoc()), maskVec,
                                        maskVec, indices);
@@ -603,16 +604,17 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     unsigned shiftVal =
         ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
         0xff;
-    auto numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
+    unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
 
     if (shiftVal >= numElems)
       return builder.getNullValue(ops[0].getType(), getLoc(expr->getExprLoc()));
 
     mlir::Value in = getMaskVecValue(*this, expr, ops[0], numElems);
 
-    SmallVector<int64_t, 64> indices;
+    SmallVector<mlir::Attribute, 64> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
     for (auto i : llvm::seq<unsigned>(0, numElems))
-      indices.push_back(numElems + i - shiftVal);
+      indices.push_back(cir::IntAttr::get(i32Ty, numElems + i - shiftVal));
 
     mlir::Value zero =
         builder.getNullValue(in.getType(), getLoc(expr->getExprLoc()));
@@ -627,16 +629,17 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     unsigned shiftVal =
         ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
         0xff;
-    auto numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
+    unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
 
     if (shiftVal >= numElems)
       return builder.getNullValue(ops[0].getType(), getLoc(expr->getExprLoc()));
 
     mlir::Value in = getMaskVecValue(*this, expr, ops[0], numElems);
 
-    SmallVector<int64_t, 64> indices;
+    SmallVector<mlir::Attribute, 64> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
     for (auto i : llvm::seq<unsigned>(0, numElems))
-      indices.push_back(i + shiftVal);
+      indices.push_back(cir::IntAttr::get(i32Ty, i + shiftVal));
 
     mlir::Value zero =
         builder.getNullValue(in.getType(), getLoc(expr->getExprLoc()));
