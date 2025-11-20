@@ -10,12 +10,20 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/LowerToLLVM.h"
+#include "clang/CIR/Sema/CIRAnalysisKind.h"
+#include "clang/CIR/Sema/FallThroughWarning.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Sema/AnalysisBasedWarnings.h"
+#include "clang/Sema/Sema.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace cir;
 using namespace clang;
@@ -107,6 +115,34 @@ public:
 
     mlir::ModuleOp MlirModule = Gen->getModule();
     mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
+
+    // Run CIR analysis passes if requested
+    if (!FEOptions.ClangIRAnalysisList.empty()) {
+      CIRAnalysisSet AnalysisSet = parseCIRAnalysisList(FEOptions.ClangIRAnalysisList);
+      AnalysisSet.print(llvm::errs());
+
+      if (AnalysisSet.has(CIRAnalysisKind::FallThrough)) {
+        // Get Sema for diagnostics
+        if (CI.hasSema()) {
+          Sema &S = CI.getSema();
+          FallThroughWarningPass FallThroughPass;
+
+          // Iterate over all functions in the CIR module
+          MlirModule.walk([&](cir::FuncOp FuncOp) {
+            // TODO: Get the proper QualType for the function
+            // For now, use an invalid QualType as placeholder
+
+            QualType FuncType;
+
+            // Set up diagnostics configuration
+            CheckFallThroughDiagnostics Diags;
+
+            // Run fall-through analysis on this function
+            FallThroughPass.checkFallThroughForFuncBody(S, FuncOp, FuncType, Diags);
+          });
+        }
+      }
+    }
 
     if (!FEOptions.ClangIRDisablePasses) {
       // Setup and run CIR pipeline.
