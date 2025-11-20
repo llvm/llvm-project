@@ -308,8 +308,8 @@ entry:
 }
 
 ; Non-streaming[-compatible] call to memchr.
-define ptr @ns_memcpy(ptr %src, i64 %n)  {
-; CHECK-COMMON-LABEL: ns_memcpy:
+define ptr @ns_memchr(ptr %src, i64 %n)  {
+; CHECK-COMMON-LABEL: ns_memchr:
 ; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    mov x2, x1
 ; CHECK-COMMON-NEXT:    mov w1, #5 // =0x5
