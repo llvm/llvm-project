@@ -15,10 +15,10 @@
 #include "AArch64FrameLowering.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -71,148 +71,126 @@ bool AArch64RegisterInfo::regNeedsCFI(MCRegister Reg,
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
-  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
 
-  if (MF->getFunction().getCallingConv() == CallingConv::GHC)
+  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
+  const auto &F = MF->getFunction();
+  const auto *TLI = MF->getSubtarget<AArch64Subtarget>().getTargetLowering();
+  const bool Darwin = MF->getSubtarget<AArch64Subtarget>().isTargetDarwin();
+  const bool Windows = MF->getSubtarget<AArch64Subtarget>().isTargetWindows();
+
+  if (TLI->supportSwiftError() &&
+      F.getAttributes().hasAttrSomewhere(Attribute::SwiftError)) {
+    if (Darwin)
+      return CSR_Darwin_AArch64_AAPCS_SwiftError_SaveList;
+    if (Windows)
+      return CSR_Win_AArch64_AAPCS_SwiftError_SaveList;
+    return CSR_AArch64_AAPCS_SwiftError_SaveList;
+  }
+
+  switch (F.getCallingConv()) {
+  case CallingConv::GHC:
     // GHC set of callee saved regs is empty as all those regs are
     // used for passing STG regs around
     return CSR_AArch64_NoRegs_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveNone)
+
+  case CallingConv::PreserveNone:
+    // FIXME: Windows likely need this to be altered for properly unwinding.
     return CSR_AArch64_NoneRegs_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
+
+  case CallingConv::AnyReg:
     return CSR_AArch64_AllRegs_SaveList;
 
-  if (MF->getFunction().getCallingConv() == CallingConv::ARM64EC_Thunk_X64)
+  case CallingConv::ARM64EC_Thunk_X64:
     return CSR_Win_AArch64_Arm64EC_Thunk_SaveList;
 
-  // Darwin has its own CSR_AArch64_AAPCS_SaveList, which means most CSR save
-  // lists depending on that will need to have their Darwin variant as well.
-  if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
-    return getDarwinCalleeSavedRegs(MF);
+  case CallingConv::PreserveMost:
+    if (Darwin)
+      return CSR_Darwin_AArch64_RT_MostRegs_SaveList;
+    if (Windows)
+      return CSR_Win_AArch64_RT_MostRegs_SaveList;
+    return CSR_AArch64_RT_MostRegs_SaveList;
 
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
-    return MF->getSubtarget<AArch64Subtarget>().isTargetWindows()
-               ? CSR_Win_AArch64_RT_MostRegs_SaveList
-               : CSR_AArch64_RT_MostRegs_SaveList;
+  case CallingConv::PreserveAll:
+    if (Darwin)
+      return CSR_Darwin_AArch64_RT_AllRegs_SaveList;
+    if (Windows)
+      return CSR_Win_AArch64_RT_AllRegs_SaveList;
+    return CSR_AArch64_RT_AllRegs_SaveList;
 
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll)
-    return MF->getSubtarget<AArch64Subtarget>().isTargetWindows()
-               ? CSR_Win_AArch64_RT_AllRegs_SaveList
-               : CSR_AArch64_RT_AllRegs_SaveList;
-
-  if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
+  case CallingConv::CFGuard_Check:
+    if (Darwin)
+      report_fatal_error(
+          "Calling convention CFGuard_Check is unsupported on Darwin.");
     return CSR_Win_AArch64_CFGuard_Check_SaveList;
-  if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows()) {
-    if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
-            ->supportSwiftError() &&
-        MF->getFunction().getAttributes().hasAttrSomewhere(
-            Attribute::SwiftError))
-      return CSR_Win_AArch64_AAPCS_SwiftError_SaveList;
-    if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
+
+  case CallingConv::SwiftTail:
+    if (Darwin)
+      return CSR_Darwin_AArch64_AAPCS_SwiftTail_SaveList;
+    if (Windows)
       return CSR_Win_AArch64_AAPCS_SwiftTail_SaveList;
-    if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
+    return CSR_AArch64_AAPCS_SwiftTail_SaveList;
+
+  case CallingConv::AArch64_VectorCall:
+    if (Darwin)
+      return CSR_Darwin_AArch64_AAVPCS_SaveList;
+    if (Windows)
       return CSR_Win_AArch64_AAVPCS_SaveList;
-    if (AFI.hasSVE_AAPCS(*MF))
-      return CSR_Win_AArch64_SVE_AAPCS_SaveList;
-    return CSR_Win_AArch64_AAPCS_SaveList;
-  }
-  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
     return CSR_AArch64_AAVPCS_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_SVE_VectorCall)
+
+  case CallingConv::AArch64_SVE_VectorCall:
+    if (Darwin)
+      report_fatal_error(
+          "Calling convention SVE_VectorCall is unsupported on Darwin.");
+    if (Windows)
+      return CSR_Win_AArch64_SVE_AAPCS_SaveList;
     return CSR_AArch64_SVE_AAPCS_SaveList;
-  if (MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
+
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
     report_fatal_error(
         "Calling convention "
         "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is only "
         "supported to improve calls to SME ACLE save/restore/disable-za "
         "functions, and is not intended to be used beyond that scope.");
-  if (MF->getFunction().getCallingConv() ==
-      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1)
+
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
     report_fatal_error(
         "Calling convention "
         "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 is "
         "only supported to improve calls to SME ACLE __arm_get_current_vg "
         "function, and is not intended to be used beyond that scope.");
-  if (MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
+
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
     report_fatal_error(
         "Calling convention "
         "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
         "only supported to improve calls to SME ACLE __arm_sme_state "
         "and is not intended to be used beyond that scope.");
-  if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
-          ->supportSwiftError() &&
-      MF->getFunction().getAttributes().hasAttrSomewhere(
-          Attribute::SwiftError))
-    return CSR_AArch64_AAPCS_SwiftError_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
-    return CSR_AArch64_AAPCS_SwiftTail_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::Win64)
-    // This is for OSes other than Windows; Windows is a separate case further
-    // above.
+
+  case CallingConv::Win64:
+    if (Darwin)
+      return CSR_Darwin_AArch64_AAPCS_Win64_SaveList;
+    if (Windows)
+      return CSR_Win_AArch64_AAPCS_SaveList;
     return CSR_AArch64_AAPCS_X18_SaveList;
-  if (AFI.hasSVE_AAPCS(*MF))
-    return CSR_AArch64_SVE_AAPCS_SaveList;
-  return CSR_AArch64_AAPCS_SaveList;
-}
 
-const MCPhysReg *
-AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
-  assert(MF && "Invalid MachineFunction pointer.");
-  assert(MF->getSubtarget<AArch64Subtarget>().isTargetDarwin() &&
-         "Invalid subtarget for getDarwinCalleeSavedRegs");
-  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
+  case CallingConv::CXX_FAST_TLS:
+    if (Darwin)
+      return AFI.isSplitCSR() ? CSR_Darwin_AArch64_CXX_TLS_PE_SaveList
+                              : CSR_Darwin_AArch64_CXX_TLS_SaveList;
+    // FIXME: this likely should be a `report_fatal_error` condition, however,
+    // that would be a departure from the previously implemented behaviour.
+    LLVM_FALLTHROUGH;
 
-  if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
-    report_fatal_error(
-        "Calling convention CFGuard_Check is unsupported on Darwin.");
-  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
-    return CSR_Darwin_AArch64_AAVPCS_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_SVE_VectorCall)
-    report_fatal_error(
-        "Calling convention SVE_VectorCall is unsupported on Darwin.");
-  if (MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
-    report_fatal_error(
-        "Calling convention "
-        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
-        "only supported to improve calls to SME ACLE save/restore/disable-za "
-        "functions, and is not intended to be used beyond that scope.");
-  if (MF->getFunction().getCallingConv() ==
-      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1)
-    report_fatal_error(
-        "Calling convention "
-        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 is "
-        "only supported to improve calls to SME ACLE __arm_get_current_vg "
-        "function, and is not intended to be used beyond that scope.");
-  if (MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
-    report_fatal_error(
-        "Calling convention "
-        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
-        "only supported to improve calls to SME ACLE __arm_sme_state "
-        "and is not intended to be used beyond that scope.");
-  if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS)
-    return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR()
-               ? CSR_Darwin_AArch64_CXX_TLS_PE_SaveList
-               : CSR_Darwin_AArch64_CXX_TLS_SaveList;
-  if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
-          ->supportSwiftError() &&
-      MF->getFunction().getAttributes().hasAttrSomewhere(
-          Attribute::SwiftError))
-    return CSR_Darwin_AArch64_AAPCS_SwiftError_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
-    return CSR_Darwin_AArch64_AAPCS_SwiftTail_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
-    return CSR_Darwin_AArch64_RT_MostRegs_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll)
-    return CSR_Darwin_AArch64_RT_AllRegs_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::Win64)
-    return CSR_Darwin_AArch64_AAPCS_Win64_SaveList;
-  if (AFI.hasSVE_AAPCS(*MF))
-    return CSR_Darwin_AArch64_SVE_AAPCS_SaveList;
-  return CSR_Darwin_AArch64_AAPCS_SaveList;
+  default:
+    if (Darwin)
+      return AFI.hasSVE_AAPCS(*MF) ? CSR_Darwin_AArch64_SVE_AAPCS_SaveList
+                                   : CSR_Darwin_AArch64_AAPCS_SaveList;
+    if (Windows)
+      return AFI.hasSVE_AAPCS(*MF) ? CSR_Win_AArch64_SVE_AAPCS_SaveList
+                                   : CSR_Win_AArch64_AAPCS_SaveList;
+    return AFI.hasSVE_AAPCS(*MF) ? CSR_AArch64_SVE_AAPCS_SaveList
+                                 : CSR_AArch64_AAPCS_SaveList;
+  }
 }
 
 const MCPhysReg *AArch64RegisterInfo::getCalleeSavedRegsViaCopy(
@@ -1157,6 +1135,9 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // a movprfx.
   const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
   if (AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
+    bool ConsiderOnlyHints = TargetRegisterInfo::getRegAllocationHints(
+        VirtReg, Order, Hints, MF, VRM);
+
     for (const MachineOperand &DefOp : MRI.def_operands(VirtReg)) {
       const MachineInstr &Def = *DefOp.getParent();
       if (DefOp.isImplicit() ||
@@ -1168,26 +1149,28 @@ bool AArch64RegisterInfo::getRegAllocationHints(
           TII->get(AArch64::getSVEPseudoMap(Def.getOpcode())).TSFlags;
 
       for (MCPhysReg R : Order) {
-        auto AddHintIfSuitable = [&](MCPhysReg R, const MachineOperand &MO) {
-          // R is a suitable register hint if there exists an operand for the
-          // instruction that is not yet allocated a register or if R matches
-          // one of the other source operands.
-          if (!VRM->hasPhys(MO.getReg()) || VRM->getPhys(MO.getReg()) == R)
-            Hints.push_back(R);
+        auto AddHintIfSuitable = [&](MCPhysReg R,
+                                     const MachineOperand &MO) -> bool {
+          // R is a suitable register hint if R can reuse one of the other
+          // source operands.
+          if (VRM->getPhys(MO.getReg()) != R)
+            return false;
+          Hints.push_back(R);
+          return true;
         };
 
         switch (InstFlags & AArch64::DestructiveInstTypeMask) {
         default:
           break;
         case AArch64::DestructiveTernaryCommWithRev:
-          AddHintIfSuitable(R, Def.getOperand(2));
-          AddHintIfSuitable(R, Def.getOperand(3));
-          AddHintIfSuitable(R, Def.getOperand(4));
+          AddHintIfSuitable(R, Def.getOperand(2)) ||
+              AddHintIfSuitable(R, Def.getOperand(3)) ||
+              AddHintIfSuitable(R, Def.getOperand(4));
           break;
         case AArch64::DestructiveBinaryComm:
         case AArch64::DestructiveBinaryCommWithRev:
-          AddHintIfSuitable(R, Def.getOperand(2));
-          AddHintIfSuitable(R, Def.getOperand(3));
+          AddHintIfSuitable(R, Def.getOperand(2)) ||
+              AddHintIfSuitable(R, Def.getOperand(3));
           break;
         case AArch64::DestructiveBinary:
         case AArch64::DestructiveBinaryImm:
@@ -1198,8 +1181,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     }
 
     if (Hints.size())
-      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
-                                                       MF, VRM);
+      return ConsiderOnlyHints;
   }
 
   if (!ST.hasSME() || !ST.isStreaming())

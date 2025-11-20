@@ -21,7 +21,6 @@
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBSymbolContext.h"
-#include "lldb/API/SBThread.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -580,8 +579,6 @@ public:
   Event *GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const;
 
   lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
-
-  lldb::ThreadSP GetOpaqueTypeFromSBThread(const lldb::SBThread &exe_ctx) const;
 
   lldb::StackFrameSP GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const;
 

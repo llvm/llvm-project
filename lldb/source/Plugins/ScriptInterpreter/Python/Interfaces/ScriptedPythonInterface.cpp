@@ -94,19 +94,6 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameSP>(
 }
 
 template <>
-lldb::ThreadSP
-ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadSP>(
-    python::PythonObject &p, Status &error) {
-  if (lldb::SBThread *sb_thread = reinterpret_cast<lldb::SBThread *>(
-          python::LLDBSWIGPython_CastPyObjectToSBThread(p.get())))
-    return m_interpreter.GetOpaqueTypeFromSBThread(*sb_thread);
-  error = Status::FromErrorString(
-      "Couldn't cast lldb::SBThread to lldb_private::Thread.");
-
-  return nullptr;
-}
-
-template <>
 SymbolContext
 ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
     python::PythonObject &p, Status &error) {

@@ -183,7 +183,7 @@ define void @addsub1(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: @addsub1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[TMP0]], <i32 -1, i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <4 x i32> [[TMP0]], <i32 1, i32 -1, i32 0, i32 -3>
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

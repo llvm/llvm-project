@@ -171,9 +171,9 @@ public:
       : m_options(opts), m_filename(filename) {
     m_options.ShowPresumedLoc = true;
     m_options.ShowLevel = false;
-    m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+    m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
     m_passthrough =
-        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+        std::make_unique<clang::TextDiagnosticPrinter>(*m_os, m_options);
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {
@@ -315,11 +315,11 @@ public:
 private:
   DiagnosticManager *m_manager = nullptr;
   DiagnosticOptions m_options;
-  std::shared_ptr<clang::TextDiagnosticPrinter> m_passthrough;
-  /// Output stream of m_passthrough.
-  std::shared_ptr<llvm::raw_string_ostream> m_os;
   /// Output string filled by m_os.
   std::string m_output;
+  /// Output stream of m_passthrough.
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
+  std::unique_ptr<clang::TextDiagnosticPrinter> m_passthrough;
   StringRef m_filename;
 };
 

@@ -5280,6 +5280,87 @@ std::string CompilerInvocation::getModuleHash() const {
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
 }
 
+void CompilerInvocationBase::visitPathsImpl(
+    llvm::function_ref<bool(std::string &)> Predicate) {
+#define RETURN_IF(PATH)                                                        \
+  do {                                                                         \
+    if (Predicate(PATH))                                                       \
+      return;                                                                  \
+  } while (0)
+
+#define RETURN_IF_MANY(PATHS)                                                  \
+  do {                                                                         \
+    if (llvm::any_of(PATHS, Predicate))                                        \
+      return;                                                                  \
+  } while (0)
+
+  auto &HeaderSearchOpts = *this->HSOpts;
+  // Header search paths.
+  RETURN_IF(HeaderSearchOpts.Sysroot);
+  for (auto &Entry : HeaderSearchOpts.UserEntries)
+    if (Entry.IgnoreSysRoot)
+      RETURN_IF(Entry.Path);
+  RETURN_IF(HeaderSearchOpts.ResourceDir);
+  RETURN_IF(HeaderSearchOpts.ModuleCachePath);
+  RETURN_IF(HeaderSearchOpts.ModuleUserBuildPath);
+  for (auto &[Name, File] : HeaderSearchOpts.PrebuiltModuleFiles)
+    RETURN_IF(File);
+  RETURN_IF_MANY(HeaderSearchOpts.PrebuiltModulePaths);
+  RETURN_IF_MANY(HeaderSearchOpts.VFSOverlayFiles);
+
+  // Preprocessor options.
+  auto &PPOpts = *this->PPOpts;
+  RETURN_IF_MANY(PPOpts.MacroIncludes);
+  RETURN_IF_MANY(PPOpts.Includes);
+  RETURN_IF(PPOpts.ImplicitPCHInclude);
+
+  // Frontend options.
+  auto &FrontendOpts = *this->FrontendOpts;
+  for (auto &Input : FrontendOpts.Inputs) {
+    if (Input.isBuffer())
+      continue;
+
+    RETURN_IF(Input.File);
+  }
+  // TODO: Also report output files such as FrontendOpts.OutputFile;
+  RETURN_IF(FrontendOpts.CodeCompletionAt.FileName);
+  RETURN_IF_MANY(FrontendOpts.ModuleMapFiles);
+  RETURN_IF_MANY(FrontendOpts.ModuleFiles);
+  RETURN_IF_MANY(FrontendOpts.ModulesEmbedFiles);
+  RETURN_IF_MANY(FrontendOpts.ASTMergeFiles);
+  RETURN_IF(FrontendOpts.OverrideRecordLayoutsFile);
+  RETURN_IF(FrontendOpts.StatsFile);
+
+  // Filesystem options.
+  auto &FileSystemOpts = *this->FSOpts;
+  RETURN_IF(FileSystemOpts.WorkingDir);
+
+  // Codegen options.
+  auto &CodeGenOpts = *this->CodeGenOpts;
+  RETURN_IF(CodeGenOpts.DebugCompilationDir);
+  RETURN_IF(CodeGenOpts.CoverageCompilationDir);
+
+  // Sanitizer options.
+  RETURN_IF_MANY(LangOpts->NoSanitizeFiles);
+
+  // Coverage mappings.
+  RETURN_IF(CodeGenOpts.ProfileInstrumentUsePath);
+  RETURN_IF(CodeGenOpts.SampleProfileFile);
+  RETURN_IF(CodeGenOpts.ProfileRemappingFile);
+
+  // Dependency output options.
+  for (auto &ExtraDep : DependencyOutputOpts->ExtraDeps)
+    RETURN_IF(ExtraDep.first);
+}
+
+void CompilerInvocationBase::visitPaths(
+    llvm::function_ref<bool(StringRef)> Callback) const {
+  // The const_cast here is OK, because visitPathsImpl() itself doesn't modify
+  // the invocation, and our callback takes immutable StringRefs.
+  return const_cast<CompilerInvocationBase *>(this)->visitPathsImpl(
+      [&Callback](std::string &Path) { return Callback(StringRef(Path)); });
+}
+
 void CompilerInvocationBase::generateCC1CommandLine(
     ArgumentConsumer Consumer) const {
   llvm::Triple T(getTargetOpts().Triple);

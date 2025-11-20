@@ -978,10 +978,8 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
 
 static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
                                         MachineBasicBlock::iterator RegionEnd) {
-  auto REnd = RegionEnd == RegionBegin->getParent()->end()
-                  ? std::prev(RegionEnd)
-                  : RegionEnd;
-  return &*skipDebugInstructionsBackward(REnd, RegionBegin);
+  assert(RegionBegin != RegionEnd && "Region must not be empty");
+  return &*skipDebugInstructionsBackward(std::prev(RegionEnd), RegionBegin);
 }
 
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
@@ -1076,9 +1074,12 @@ GCNScheduleDAGMILive::getRegionLiveOutMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> RegionLastMIs;
   RegionLastMIs.reserve(Regions.size());
-  for (auto &[RegionBegin, RegionEnd] : reverse(Regions))
+  for (auto &[RegionBegin, RegionEnd] : reverse(Regions)) {
+    // Skip empty regions.
+    if (RegionBegin == RegionEnd)
+      continue;
     RegionLastMIs.push_back(getLastMIForRegion(RegionBegin, RegionEnd));
-
+  }
   return getLiveRegMap(RegionLastMIs, /*After=*/true, *LIS);
 }
 
@@ -1088,10 +1089,12 @@ void RegionPressureMap::buildLiveRegMap() {
   RegionLiveRegMap =
       IsLiveOut ? DAG->getRegionLiveOutMap() : DAG->getRegionLiveInMap();
   for (unsigned I = 0; I < DAG->Regions.size(); I++) {
+    auto &[RegionBegin, RegionEnd] = DAG->Regions[I];
+    // Skip empty regions.
+    if (RegionBegin == RegionEnd)
+      continue;
     MachineInstr *RegionKey =
-        IsLiveOut
-            ? getLastMIForRegion(DAG->Regions[I].first, DAG->Regions[I].second)
-            : &*DAG->Regions[I].first;
+        IsLiveOut ? getLastMIForRegion(RegionBegin, RegionEnd) : &*RegionBegin;
     IdxToInstruction[I] = RegionKey;
   }
 }
@@ -1228,18 +1231,20 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
       createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PreRAReentry));
 
   InitialOccupancy = DAG.MinOccupancy;
-  // Aggressivly try to reduce register pressure in the unclustered high RP
+  // Aggressively try to reduce register pressure in the unclustered high RP
   // stage. Temporarily increase occupancy target in the region.
+  TempTargetOccupancy = MFI.getMaxWavesPerEU() > DAG.MinOccupancy
+                            ? InitialOccupancy + 1
+                            : InitialOccupancy;
+  IsAnyRegionScheduled = false;
   S.SGPRLimitBias = S.HighRPSGPRBias;
   S.VGPRLimitBias = S.HighRPVGPRBias;
-  if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy)
-    MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);
 
   LLVM_DEBUG(
       dbgs()
       << "Retrying function scheduling without clustering. "
-         "Aggressivly try to reduce register pressure to achieve occupancy "
-      << DAG.MinOccupancy << ".\n");
+         "Aggressively try to reduce register pressure to achieve occupancy "
+      << TempTargetOccupancy << ".\n");
 
   return true;
 }
@@ -1320,9 +1325,16 @@ void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   SavedMutations.swap(DAG.Mutations);
   S.SGPRLimitBias = S.VGPRLimitBias = 0;
   if (DAG.MinOccupancy > InitialOccupancy) {
+    assert(IsAnyRegionScheduled);
     LLVM_DEBUG(dbgs() << StageID
                       << " stage successfully increased occupancy to "
                       << DAG.MinOccupancy << '\n');
+  } else if (!IsAnyRegionScheduled) {
+    assert(DAG.MinOccupancy == InitialOccupancy);
+    LLVM_DEBUG(dbgs() << StageID
+                      << ": No regions scheduled, min occupancy stays at "
+                      << DAG.MinOccupancy << ", MFI occupancy stays at "
+                      << MFI.getOccupancy() << ".\n");
   }
 
   GCNSchedStage::finalizeGCNSchedStage();
@@ -1396,13 +1408,27 @@ bool UnclusteredHighRPStage::initGCNRegion() {
   // rescheduling of previous regions did not make occupancy drop back down to
   // the initial minimum).
   unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
+  // If no region has been scheduled yet, the DAG has not yet been updated with
+  // the occupancy target. So retrieve it from the temporary.
+  unsigned CurrentTargetOccupancy =
+      IsAnyRegionScheduled ? DAG.MinOccupancy : TempTargetOccupancy;
   if (!DAG.RegionsWithExcessRP[RegionIdx] &&
-      (DAG.MinOccupancy <= InitialOccupancy ||
+      (CurrentTargetOccupancy <= InitialOccupancy ||
        DAG.Pressure[RegionIdx].getOccupancy(ST, DynamicVGPRBlockSize) !=
            InitialOccupancy))
     return false;
 
-  return GCNSchedStage::initGCNRegion();
+  bool IsSchedulingThisRegion = GCNSchedStage::initGCNRegion();
+  // If this is the first region scheduled during this stage, make the target
+  // occupancy changes in the DAG and MFI.
+  if (!IsAnyRegionScheduled && IsSchedulingThisRegion) {
+    IsAnyRegionScheduled = true;
+    if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy) {
+      DAG.MinOccupancy = TempTargetOccupancy;
+      MFI.increaseOccupancy(MF, TempTargetOccupancy);
+    }
+  }
+  return IsSchedulingThisRegion;
 }
 
 bool ClusteredLowOccStage::initGCNRegion() {

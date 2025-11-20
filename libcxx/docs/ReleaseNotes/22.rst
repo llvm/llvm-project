@@ -40,6 +40,7 @@ Implemented Papers
 
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
   is implemented in this release)
+- P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
 - P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)
@@ -112,6 +113,9 @@ ABI Affecting Changes
   ``__hash_map_hasher`` and ``__hash_map_equal`` have been refactored to use ``_LIBCPP_COMPRESSED_ELEMENT`` instead of
   potentially inheriting from the types they wrap. At this point in time we are not aware of any ABI changes caused by
   this.
+
+- ``ranges::iota_view`` is now aware of ``__int128``. This causes ``iota_view::difference_type`` to change from
+  ``long long`` to ``__int128`` in some cases.
 
 Build System Changes
 --------------------

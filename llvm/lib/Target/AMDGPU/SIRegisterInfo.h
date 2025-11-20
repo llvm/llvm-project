@@ -216,6 +216,10 @@ public:
   getVectorSuperClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
+  const TargetRegisterClass *
+  getDefaultVectorSuperClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
   static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
 
   /// \returns true if this class contains only SGPR registers
@@ -284,6 +288,10 @@ public:
   /// \returns An AGPR reg class with the same width as \p SRC
   const TargetRegisterClass *
   getEquivalentAGPRClass(const TargetRegisterClass *SRC) const;
+
+  /// \returns An AGPR+VGPR super reg class with the same width as \p SRC
+  const TargetRegisterClass *
+  getEquivalentAVClass(const TargetRegisterClass *SRC) const;
 
   /// \returns A SGPR reg class with the same width as \p SRC
   const TargetRegisterClass *
@@ -357,7 +365,7 @@ public:
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override;
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
@@ -431,11 +439,6 @@ public:
   // the subtarget.
   bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;
 
-  // Given \p RC returns corresponding aligned register class if required
-  // by the subtarget.
-  const TargetRegisterClass *
-  getProperlyAlignedRC(const TargetRegisterClass *RC) const;
-
   /// Return all SGPR128 which satisfy the waves per execution unit requirement
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF) const;
@@ -493,6 +496,17 @@ public:
 
   SmallVector<StringLiteral>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
+
+  float
+  getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override {
+    // Prioritize VGPR_32_Lo256 over other classes which may occupy registers
+    // beyond v256.
+    return AMDGPUGenRegisterInfo::getSpillWeightScaleFactor(RC) *
+           ((RC == &AMDGPU::VGPR_32_Lo256RegClass ||
+             RC == &AMDGPU::VReg_64_Lo256_Align2RegClass)
+                ? 2.0
+                : 1.0);
+  }
 };
 
 namespace AMDGPU {

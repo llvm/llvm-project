@@ -264,7 +264,7 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[52:53], 0x50
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[54:55], 64
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v0, 0xc8 :: v_dual_mov_b32 v1, 0
+; GCN-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, 0xc8
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x7
 ; GCN-SDAG-NEXT:    global_store_b128 v[2:3], v[6:9], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x6
