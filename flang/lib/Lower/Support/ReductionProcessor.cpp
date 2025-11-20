@@ -462,7 +462,7 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                         bool isByRef) {
   ty = fir::unwrapRefType(ty);
 
-  if (fir::isa_trivial(ty) || fir::isa_derived(ty)) {
+  if (fir::isa_trivial(ty)) {
     mlir::Value lhsLoaded = builder.loadIfRef(loc, lhs);
     mlir::Value rhsLoaded = builder.loadIfRef(loc, rhs);
 
