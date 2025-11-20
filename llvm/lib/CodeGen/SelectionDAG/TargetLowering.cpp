@@ -8310,10 +8310,6 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   unsigned BW = VT.getScalarSizeInBits();
   unsigned Opcode = Node->getOpcode();
 
-  if (VT.isVector() &&
-      isOperationLegalOrCustomOrPromote(Opcode, VT.getVectorElementType()))
-    return DAG.UnrollVectorOp(Node);
-
   switch (Opcode) {
   case ISD::CLMUL: {
     SDValue Res = DAG.getConstant(0, DL, VT);
@@ -8327,9 +8323,10 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   }
   case ISD::CLMULR:
   case ISD::CLMULH: {
-    EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), 2 * BW);
-    // For example, ExtVT = i64 based operations aren't legal on rv32; use
-    // bitreverse-based lowering in this case.
+    EVT ExtVT =
+        VT.changeElementType(EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
+    // For example, ExtVT = i64 based operations aren't legal on a 32-bit
+    // target; use bitreverse-based lowering in this case.
     if (!isOperationLegalOrCustom(ISD::ZERO_EXTEND, ExtVT) ||
         !isOperationLegalOrCustom(ISD::SRL, ExtVT)) {
       SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
