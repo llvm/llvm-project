@@ -17,7 +17,9 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -25,8 +27,10 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsRipple.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -38,9 +42,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Evaluator.h"
 #include <array>
 #include <bitset>
 #include <cassert>
+#include <cstdlib>
 #include <initializer_list>
 #include <iterator>
 #include <optional>
@@ -143,7 +149,57 @@ DebugLoc stripInliningFromDebugLoc(DebugLoc DL) {
   return DL;
 }
 
+/** @brief Returns the set, S, of basic blocks such that for every X in S, there
+ * is a path, P, BB .. -(P)-> .. S, such that ExecludedBB is not a part of a P.
+ */
+DenseSet<const BasicBlock *>
+getAllReachableBBsExcluding(const BasicBlock *BB,
+                            const BasicBlock *ExcludedBB) {
+  std::queue<const BasicBlock *> Worklist;
+  Worklist.push(BB);
+
+  DenseSet<const BasicBlock *> ReachableBBs;
+
+  while (!Worklist.empty()) {
+    auto *FrontBB = Worklist.front();
+    Worklist.pop();
+    for (auto *SuccBB : successors(FrontBB)) {
+      if (SuccBB == ExcludedBB)
+        continue;
+      if (ReachableBBs.contains(SuccBB))
+        continue;
+      ReachableBBs.insert(SuccBB);
+      Worklist.push(SuccBB);
+    }
+  }
+  return ReachableBBs;
+}
+
 } // namespace
+
+bool llvm::hasTrivialLoopLikeBackEdge(BasicBlock *BranchingBB, BasicBlock *PDom,
+                                      DominatorTreeAnalysis::Result &DT) {
+  if (succ_size(BranchingBB) != 2) {
+    return false;
+  }
+  const BasicBlock *BB1 = *succ_begin(BranchingBB);
+  const BasicBlock *BB2 = *(succ_begin(BranchingBB) + 1);
+
+  const SmallPtrSet<BasicBlock *, 1> PDomSet({PDom});
+  const SmallPtrSet<BasicBlock *, 1> BranchBBSet({BranchingBB});
+
+  if (isPotentiallyReachable(BB1, BranchingBB, &PDomSet, &DT) &&
+      !isPotentiallyReachable(BB2, BranchingBB, &PDomSet, &DT) &&
+      !isPotentiallyReachable(BB1, BB2, &BranchBBSet, &DT)) {
+    return getAllReachableBBsExcluding(BB1, PDom).contains(BranchingBB);
+  }
+  if (isPotentiallyReachable(BB2, BranchingBB, &PDomSet) &&
+      !isPotentiallyReachable(BB1, BranchingBB, &PDomSet) &&
+      !isPotentiallyReachable(BB2, BB1, &BranchBBSet, &DT)) {
+    return getAllReachableBBsExcluding(BB2, PDom).contains(BranchingBB);
+  }
+  return false;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 ///                             TensorShapeAny                               ///
@@ -913,6 +969,24 @@ Ripple::computeRippleShapeForBitsetIntrinsic(const IntrinsicInst *I,
   return OutputShape;
 }
 
+Error Ripple::validate() const {
+  const std::string ErrorPrefix = "Ripple validation error: ";
+  for (auto &[DimId, DimRank] : PERanks) {
+    // Check that the ID is known by the compiler
+    if (idType(DimId) == UnknownDimType) {
+      std::string errStr;
+      raw_string_ostream oss(errStr);
+      oss << ErrorPrefix << "the dimension identifier (" << DimId
+          << ") is used in function " << F.getName()
+          << " but has not been registered; it is either missing from the "
+             "machine model or the input program is malformed.";
+      oss.flush();
+      return createStringError(inconvertibleErrorCode(), errStr);
+    }
+  }
+  return Error::success();
+}
+
 void Ripple::printTensorInstructions(raw_ostream &oss) const {
   auto dimTypeStr = [&](DimType type) {
     switch (type) {
@@ -944,6 +1018,16 @@ void Ripple::printTensorInstructions(raw_ostream &oss) const {
       printDimTypes();
     }
   }
+}
+
+bool Ripple::maskInstructionWhenIfConvert(const Instruction *I) const {
+  return isa<LoadInst>(I) || isa<StoreInst>(I) ||
+         intrinsicWithId(I,
+                         {Intrinsic::masked_load, Intrinsic::masked_store,
+                          Intrinsic::masked_gather, Intrinsic::masked_scatter,
+                          Intrinsic::masked_expandload,
+                          Intrinsic::masked_compressstore}) ||
+         isa<VPIntrinsic>(I) || isa<SelectInst>(I);
 }
 
 DenseSet<BasicBlock *> Ripple::allBasicBlocksFromTo(BasicBlock *from,
@@ -1278,6 +1362,460 @@ bool Ripple::allInstructionsHaveRippleShapes() const {
 bool Ripple::hasNoVectorDimension() const {
   return none_of(idTypes.begin(), idTypes.end(),
                  [](auto &entry) { return entry.second == VectorDimension; });
+}
+
+Error Ripple::checkRippleBlockIntrinsics(IntrinsicInst *I) {
+  if (I->getIntrinsicID() == Intrinsic::ripple_block_getsize ||
+      I->getIntrinsicID() == Intrinsic::ripple_block_index) {
+    auto DimensionIdx = *getConstantOperandValue(I, 1);
+    if (DimensionIdx >= RippleIntrinsicsMaxDims) {
+      std::string ErrMsg;
+      {
+        raw_string_ostream RSO(ErrMsg);
+        RSO << "the requested dimension index (" << DimensionIdx
+            << ") exceeds the number of dimensions supported by Ripple; "
+               "supported values are "
+               "in the range [0, "
+            << RippleIntrinsicsMaxDims - 1 << "] per block shape";
+      }
+      DiagnosticInfoRippleWithLoc DI(DS_Error, F, sanitizeRippleLocation(I),
+                                     ErrMsg);
+      F.getContext().diagnose(DI);
+      return createStringError(inconvertibleErrorCode(),
+                               "Block shape index OOB");
+    }
+  }
+
+  // TODO: when adding support for other vector "kinds" (e.g., SVE, SME) we will
+  // have to check that the tensor shapes with vector.
+  return Error::success();
+}
+
+Error Ripple::checkRippleReductionIntrinsics(IntrinsicInst *I) {
+  // The relevant checks and warnings are already processed by
+  // computeRippleReductionShape during shape-propagation
+  return Error::success();
+}
+
+Error Ripple::checkRippleShuffleIntrinsics(IntrinsicInst *I) {
+  Function *ShuffleFunc = dyn_cast<Function>(I->getArgOperand(3));
+
+  bool IsPairShuffle =
+      !cast<ConstantInt>(cast<CallInst>(I)->getArgOperand(2))->isZero();
+
+  if (!ShuffleFunc) {
+    DiagnosticInfoRippleWithLoc DI(
+        DS_Error, F, sanitizeRippleLocation(I),
+        "the ripple shuffle instruction expects a function (or lambda) for the "
+        "index-mapping argument");
+    F.getContext().diagnose(DI);
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Shuffle index mapping function is not a function");
+  }
+
+  // Check that the index-mapping function prototype matches what we expect
+  FunctionType *ShuffleFuncType = ShuffleFunc->getFunctionType();
+  if (!ShuffleFuncType->getReturnType()->isIntegerTy() ||
+      ShuffleFuncType->getNumParams() != 2 ||
+      !ShuffleFuncType->getParamType(0)->isIntegerTy() ||
+      !ShuffleFuncType->getParamType(1)->isIntegerTy()) {
+    std::string ErrMsg;
+    llvm::raw_string_ostream RSO(ErrMsg);
+    RSO << "the ripple shuffle instruction index-mapping operand "
+           "must take two integer operands and output an integer; the "
+           "provided "
+           "prototype is "
+        << *ShuffleFunc->getFunctionType();
+    RSO.flush();
+    DiagnosticInfoRippleWithLoc DI(DS_Error, F, sanitizeRippleLocation(I),
+                                   ErrMsg);
+    F.getContext().diagnose(DI);
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Shuffle index mapping function w/ wrong prototype");
+  }
+
+  // Is it defined in this module
+  if (ShuffleFunc->empty()) {
+    DiagnosticInfoRippleWithLoc DI(
+        DS_Error, F, sanitizeRippleLocation(I),
+        "the index mapping function (or lambda) operand of ripple shuffle "
+        "requires its definition to be accessible in the same module as the "
+        "function being processed");
+    F.getContext().diagnose(DI);
+    return createStringError(inconvertibleErrorCode(),
+                             "Shuffle index mapping is not defined in module");
+  }
+
+  // No global memory access for compile time evaluation
+  bool MappingFunUsingGlobals = false;
+  for (auto &BB : *ShuffleFunc) {
+    for (auto &I : BB) {
+      if (auto *LoadInst = llvm::dyn_cast<llvm::LoadInst>(&I)) {
+        llvm::Value *Operand = LoadInst->getPointerOperand();
+        if (auto *Global = llvm::dyn_cast<llvm::GlobalVariable>(Operand)) {
+          LLVM_DEBUG(dbgs() << "Found a global: " << *Global << "\n");
+          if (Global->isConstant())
+            continue;
+          std::string ErrMsg;
+          llvm::raw_string_ostream RSO(ErrMsg);
+          RSO << "The ripple shuffle instruction index-mapping function (or "
+                 "lambda) cannot be evaluated at compile time because it is "
+                 "accessing the value of a non-constant global variable \""
+              << Global->getName() << "\"";
+          RSO.flush();
+          DiagnosticInfoRippleWithLoc DI(DS_Error, F,
+                                         sanitizeRippleLocation(&I), ErrMsg);
+          F.getContext().diagnose(DI);
+          MappingFunUsingGlobals = true;
+        }
+      }
+    }
+  }
+  if (MappingFunUsingGlobals)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Shuffle index mapping function accesses non-const globals");
+
+  // Check that there is no out-of-bound access
+  DimSize BlockSize = getRippleShape(I).flatShape();
+  Evaluator Evaler(DL, &targetLibraryInfo);
+  unsigned ReportedIssues = 0;
+  for (DimSize IIdx = 0; IIdx < BlockSize; ++IIdx) {
+    Constant *RetVal;
+    Constant *IdxArg = ConstantInt::get(ShuffleFuncType->getParamType(0), IIdx);
+    Constant *BlockSizeArg =
+        ConstantInt::get(ShuffleFuncType->getParamType(1), BlockSize);
+    SmallVector<Constant *, 2> Args = {IdxArg, BlockSizeArg};
+
+    if (!Evaler.EvaluateFunction(ShuffleFunc, RetVal, Args)) {
+      std::string ErrMsg;
+      llvm::raw_string_ostream RSO(ErrMsg);
+      RSO << "failed to evaluate the index mapping function of ripple "
+             "shuffle at compile time, the call was: "
+          << ShuffleFunc->getName() << " with arguments (" << IIdx << ", "
+          << BlockSize << ")";
+      RSO.flush();
+      DiagnosticInfoRippleWithLoc DI(DS_Error, F, sanitizeRippleLocation(I),
+                                     ErrMsg);
+      F.getContext().diagnose(DI);
+      return createStringError(inconvertibleErrorCode(),
+                               "Shuffle index mapping evaluation failed");
+    }
+    ConstantInt *RetIntVal = cast<ConstantInt>(RetVal);
+
+    auto MaxInputIndex = IsPairShuffle ? BlockSize * 2 : BlockSize;
+    if (RetIntVal->uge(MaxInputIndex)) {
+      std::string ErrMsg;
+      llvm::raw_string_ostream RSO(ErrMsg);
+      RSO << "Evaluation of the index mapping function of ripple_shuffle";
+      if (IsPairShuffle)
+        RSO << "_pair";
+      RSO << " returned an out of bound value; the call was to ";
+      char *DemangledName = itaniumDemangle(ShuffleFunc->getName().str());
+      if (DemangledName) {
+        StringRef DemangledString(DemangledName);
+        RSO << "\"" << DemangledString << "\"";
+        free(DemangledName);
+      } else if (!ShuffleFunc->getName().empty()) {
+        RSO << "\"" << ShuffleFunc->getName() << "\"";
+      }
+      RSO << " with arguments (" << *IdxArg << ", " << *BlockSizeArg
+          << "). The returned value ("
+          << RetIntVal->getValue().getLimitedValue()
+          << ") is greater or equal to the size of ";
+      if (IsPairShuffle)
+        RSO << "two (pair) tensors (" << BlockSize * 2 << ")";
+      else
+        RSO << "the tensor (" << BlockSize << ")";
+      RSO.flush();
+      DiagnosticInfoRippleWithLoc DI(DS_Error, F, sanitizeRippleLocation(I),
+                                     ErrMsg);
+      F.getContext().diagnose(DI);
+      ReportedIssues++;
+    }
+  }
+  if (ReportedIssues > 0) {
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Shuffle index mapping evaluated to out-of-bound value");
+  }
+
+  return Error::success();
+}
+
+Error Ripple::checkRippleStore(const StoreInst *Store) const {
+  if (getRippleShape(Store).isScalar())
+    return Error::success();
+
+  auto &PtrShape = getRippleShape(Store->getPointerOperand());
+  auto &ValueShape = getRippleShape(Store->getValueOperand());
+
+  // We are only allowed to broadcast values to match the address but not the
+  // address to match the value. This is because it can be ambiguous what the
+  // semantics would be in this case. Hence, notify the user if any tensor
+  // dimension of the address is smaller than the value dimension
+  if (PtrShape
+          .testBothDims(ValueShape,
+                        [](DimSize PtrDimSize, DimSize ValueDimSize) {
+                          return PtrDimSize < ValueDimSize;
+                        })
+          .any()) {
+    std::string ErrMsg;
+    llvm::raw_string_ostream RSO(ErrMsg);
+    RSO << "ripple does not allow implicit broadcasting of a store address "
+           "to the value address; the value has "
+        << ValueShape << " and the address has " << PtrShape
+        << ". Hint: use ripple_id() for the address computation or use a "
+           "reduction "
+           "operation";
+    RSO.flush();
+    DiagnosticInfoRippleWithLoc DI(DS_Error, F, sanitizeRippleLocation(Store),
+                                   ErrMsg);
+    F.getContext().diagnose(DI);
+    return createStringError(inconvertibleErrorCode(),
+                             "Cannot broadcast store address");
+  }
+  return Error::success();
+}
+
+Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
+  auto firstInstructionWithValidDebugLoc = [](BasicBlock *BB) -> Instruction * {
+    for (auto &I : make_range(BB->getFirstNonPHIOrDbgOrAlloca(), BB->end())) {
+      auto DL = I.getDebugLoc();
+      if (DL && !(DL.getLine() == 0 && DL.getCol() == 0))
+        return &I;
+    }
+    return nullptr;
+  };
+  auto &MaskShape = getRippleShape(BranchOrSwitch);
+  auto maskCanApplyToShape = [&](const TensorShape &S) -> bool {
+    TensorShape ShapeBeforeBcast = MaskShape;
+    auto ReductionDims = MaskShape.reductionDimensionsBeforeBroadcast(S);
+    if (ReductionDims.any())
+      ShapeBeforeBcast.reduceDimensions(ReductionDims);
+    if (Error e = ShapeBeforeBcast.isBroadcastError(S)) {
+      consumeError(std::move(e));
+      return false;
+    }
+    return true;
+  };
+  auto maskCanApplyToInstruction = [&](const Instruction *I) -> bool {
+    auto &IShape = getRippleShape(I);
+    return maskCanApplyToShape(IShape);
+  };
+  // For vector branch/switch we check that the subgraph between the basic block
+  // containing the instruction and the immediate post-dominator is a single
+  // entry single exit (SESE) region.
+  BasicBlock *BBWithVectorSw = BranchOrSwitch->getParent();
+  BasicBlock *BranchPostDom =
+      postdomTree.getNode(BBWithVectorSw)->getIDom()->getBlock();
+  auto BBsInBetween = allBasicBlocksFromTo(BBWithVectorSw, BranchPostDom);
+  bool HasErrors = false;
+  for (auto *BB : BBsInBetween) {
+    for (auto &I : *BB) {
+      bool CheckInstruction = false;
+      CheckInstruction = maskInstructionWhenIfConvert(&I);
+      // Check that maskable instructions agree w/ the mask shape
+      if (CheckInstruction && !maskCanApplyToInstruction(&I)) {
+        std::string ErrMsg;
+        raw_string_ostream RSO(ErrMsg);
+        RSO << "this instruction, with " << getRippleShape(&I)
+            << " is incompatible with a vector "
+               "conditional";
+        RSO.flush();
+        DiagnosticInfoRippleWithLoc DI(DS_Error, F, sanitizeRippleLocation(&I),
+                                       ErrMsg);
+        F.getContext().diagnose(DI);
+        std::string NoteMsg;
+        raw_string_ostream NoteRSO(NoteMsg);
+        NoteRSO << "for this vector conditional instruction with "
+                << getRippleShape(BranchOrSwitch);
+        NoteRSO.flush();
+        DiagnosticInfoRippleWithLoc Note(
+            DS_Note, F, sanitizeRippleLocation(BranchOrSwitch), NoteMsg);
+        F.getContext().diagnose(Note);
+        HasErrors = true;
+      }
+    }
+    for (auto *IncomingBB : predecessors(BB)) {
+      bool ComingFromInBetween = BBsInBetween.contains(IncomingBB);
+      bool ComingFromBranchBB = IncomingBB == BBWithVectorSw;
+      // There is a branch from Incoming into the subgraph invalidating the SESE
+      // assumption
+      if (!(ComingFromInBetween || ComingFromBranchBB ||
+            hasTrivialLoopLikeBackEdge(BBWithVectorSw, BranchPostDom,
+                                       domTree)) ||
+          BB->hasAddressTaken()) {
+        HasErrors = true;
+        // Show that it's a problem related to if-conversion of the branch
+        // instruction
+        std::string ErrMsg;
+        llvm::raw_string_ostream RSO(ErrMsg);
+        RSO << "ripple cannot vectorize the vector "
+            << (isa<BranchInst>(BranchOrSwitch) ? "branch" : "switch")
+            << " because it applies to a non single-entry-single-exit (SESE) "
+               "region";
+        RSO.flush();
+        DiagnosticInfoRippleWithLoc DI(
+            DS_Error, F, sanitizeRippleLocation(BranchOrSwitch), ErrMsg);
+        F.getContext().diagnose(DI);
+      }
+      if (!(ComingFromInBetween || ComingFromBranchBB ||
+            hasTrivialLoopLikeBackEdge(BBWithVectorSw, BranchPostDom,
+                                       domTree))) {
+        // pinpoint the illegal branching
+        DiagnosticLocation DL(
+            sanitizeRippleLocation(IncomingBB->getTerminator()));
+        if (DL.isValid()) {
+          DiagnosticInfoRippleWithLoc DI(
+              DS_Note, F, DL,
+              "illegally branching from this instruction into the sub-graph");
+          F.getContext().diagnose(DI);
+        }
+
+        // if there is a meaningful debug location in BB, display the first
+        // target of the illegal branch
+        if (Instruction *BranchInstWithDebugInfo =
+                firstInstructionWithValidDebugLoc(BB)) {
+          DiagnosticLocation TargetDL(
+              sanitizeRippleLocation(BranchInstWithDebugInfo));
+          if (TargetDL.isValid()) {
+            DiagnosticInfoRippleWithLoc DI(
+                DS_Note, F, TargetDL,
+                "illegally branching to this instruction");
+            F.getContext().diagnose(DI);
+          }
+        }
+      }
+      if (BB->hasAddressTaken()) {
+        // Find the instructions that take the BB address
+        bool ReportedNothing = true;
+        BlockAddress *BA = BlockAddress::get(BB);
+        for (auto *User : BA->users()) {
+          if (Instruction *I = dyn_cast<Instruction>(User)) {
+            DiagnosticLocation DL(sanitizeRippleLocation(I));
+            if (DL.isValid()) {
+              DiagnosticInfoRippleWithLoc DI(DS_Note, F,
+                                             sanitizeRippleLocation(I),
+                                             "illegally taking the address at");
+              F.getContext().diagnose(DI);
+              ReportedNothing = false;
+            }
+          }
+        }
+        if (ReportedNothing) {
+          if (Instruction *BranchInstWithDebugInfo =
+                  firstInstructionWithValidDebugLoc(BB)) {
+            DiagnosticInfoRippleWithLoc DI(
+                DS_Note, F, sanitizeRippleLocation(BranchInstWithDebugInfo),
+                "illegally taking the address of a basic block starting with "
+                "this instruction");
+            F.getContext().diagnose(DI);
+          } else {
+            DiagnosticInfoRippleWithLoc DI(
+                DS_Note, F, sanitizeRippleLocation(BranchOrSwitch),
+                "illegally taking the address of a basic block");
+            F.getContext().diagnose(DI);
+          }
+        }
+      }
+    }
+  }
+  if (HasErrors)
+    return createStringError(inconvertibleErrorCode(),
+                             "if-conversion SESE violation");
+  else
+    return Error::success();
+}
+
+Error Ripple::checkTypeCanBeVectorized(const Instruction *I) {
+  auto checkVectorPromotionTypeValidity = [&](const Value *V) -> bool {
+    Type *ValueType = V->getType();
+    if (!VectorType::isValidElementType(ValueType)) {
+      LLVM_DEBUG(dbgs() << *V << " has an invalid vector type!\n");
+      const char *TypeHint = "";
+      if (ValueType->isArrayTy())
+        TypeHint = "array ";
+      else if (ValueType->isStructTy())
+        TypeHint = "structure ";
+      else if (ValueType->isFunctionTy())
+        TypeHint = "function ";
+      DiagnosticInfoRippleWithLoc DI(
+          DS_Error, F, sanitizeRippleLocation(I),
+          Twine("Ripple cannot create a vector type from this instruction's ") +
+              TypeHint +
+              "type; Allowed vector element types are integer, floating point "
+              "and pointer");
+      F.getContext().diagnose(DI);
+      return false;
+    }
+    return true;
+  };
+  bool Valid = true;
+
+  // Check that the instruction itself can be vectorized
+  if (!I->getType()->isVoidTy())
+    Valid = Valid && checkVectorPromotionTypeValidity(I);
+
+  // And that the instruction operands can be vectorized (broadcasted)
+  for (auto &U : vectorizableOperands(I))
+    Valid = Valid && checkVectorPromotionTypeValidity(U);
+
+  if (!Valid)
+    return createStringError(inconvertibleErrorCode(),
+                             "if-conversion SESE violation");
+  else
+    return Error::success();
+}
+
+Error Ripple::checkRippleFunctionReturn(const ReturnInst *Return) const {
+  if (getRippleShape(Return).isVector()) {
+    DiagnosticInfoRippleWithLoc DI(
+        DS_Error, F, sanitizeRippleLocation(Return),
+        "Ripple does not allow vectorization of the return value");
+    F.getContext().diagnose(DI);
+    return createStringError(inconvertibleErrorCode(),
+                             "Function returns tensor");
+  }
+  return Error::success();
+}
+
+Error Ripple::checkRippleSemantics() {
+  Error AllErrors = Error::success();
+  for (auto &I : instructions(F)) {
+    auto &InstructionShape = getRippleShape(&I);
+
+    if (InstructionShape.isVector())
+      AllErrors =
+          llvm::joinErrors(std::move(AllErrors), checkTypeCanBeVectorized(&I));
+
+    if ((isa<BranchInst>(&I) || isa<SwitchInst>(&I)) &&
+        InstructionShape.isVector()) {
+      AllErrors = llvm::joinErrors(std::move(AllErrors), checkVectorBranch(&I));
+
+    } else if (IntrinsicInst *RippleBlockI = rippleBlockIntrinsics(&I)) {
+      AllErrors = llvm::joinErrors(std::move(AllErrors),
+                                   checkRippleBlockIntrinsics(RippleBlockI));
+
+    } else if (IntrinsicInst *RippleRedI = rippleReduceIntrinsics(&I)) {
+      AllErrors = llvm::joinErrors(std::move(AllErrors),
+                                   checkRippleReductionIntrinsics(RippleRedI));
+
+    } else if (IntrinsicInst *rippleShuffleI = rippleShuffleIntrinsics(&I)) {
+      AllErrors = llvm::joinErrors(
+          std::move(AllErrors), checkRippleShuffleIntrinsics(rippleShuffleI));
+
+    } else if (StoreInst *Store = dyn_cast<StoreInst>(&I)) {
+      AllErrors =
+          llvm::joinErrors(std::move(AllErrors), checkRippleStore(Store));
+    } else if (auto *Return = dyn_cast<ReturnInst>(&I)) {
+      AllErrors = llvm::joinErrors(std::move(AllErrors),
+                                   checkRippleFunctionReturn(Return));
+    }
+  }
+  return AllErrors;
 }
 
 Expected<TensorShape> Ripple::combineShapeBcastWithErrorReporting(
