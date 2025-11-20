@@ -16854,39 +16854,39 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
-  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  uint64_t MulAmtBit2 = MulAmt & (-MulAmt); // lowest set bit
   SDValue X = N->getOperand(0);
   ISD::NodeType Op;
-  uint64_t ShiftAmt1;
-  bool CanSub = isPowerOf2_64(MulAmt + MulAmtLowBit);
-  auto PreferSub = [X, MulAmtLowBit]() {
+  uint64_t MulAmtBit1;
+  bool CanSub = isPowerOf2_64(MulAmt + MulAmtBit2);
+  auto PreferSub = [X, MulAmtBit2]() {
     // For MulAmt == 3 << M both (X << M + 2) - (X << M)
     // and (X << M + 1) + (X << M) are valid expansions.
     // Prefer SUB if we can get (X << M + 2) for free,
     // because X is exact (Y >> M + 2).
-    uint64_t ShAmt = Log2_64(MulAmtLowBit) + 2;
+    uint64_t ShAmt = Log2_64(MulAmtBit2) + 2;
     using namespace SDPatternMatch;
     return sd_match(X, m_ExactSr(m_Value(), m_SpecificInt(ShAmt)));
   };
-  if (isPowerOf2_64(MulAmt - MulAmtLowBit) && !(CanSub && PreferSub())) {
+  if (isPowerOf2_64(MulAmt - MulAmtBit2) && !(CanSub && PreferSub())) {
     Op = ISD::ADD;
-    ShiftAmt1 = MulAmt - MulAmtLowBit;
+    MulAmtBit1 = MulAmt - MulAmtBit2;
   } else if (CanSub) {
     Op = ISD::SUB;
-    ShiftAmt1 = MulAmt + MulAmtLowBit;
-  } else if (isPowerOf2_64(MulAmtLowBit - MulAmt)) {
+    MulAmtBit1 = MulAmt + MulAmtBit2;
+  } else if (isPowerOf2_64(MulAmtBit2 - MulAmt)) {
     Op = ISD::SUB;
-    ShiftAmt1 = MulAmtLowBit;
-    MulAmtLowBit -= MulAmt;
+    MulAmtBit1 = MulAmtBit2;
+    MulAmtBit2 -= MulAmt;
   } else {
     return SDValue();
   }
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, X,
-                               DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
+                               DAG.getConstant(Log2_64(MulAmtBit1), DL, VT));
   SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, X,
-                               DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
+                               DAG.getConstant(Log2_64(MulAmtBit2), DL, VT));
   return DAG.getNode(Op, DL, VT, Shift1, Shift2);
 }
 
