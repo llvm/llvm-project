@@ -97,6 +97,14 @@ struct ParamReferenceReplacerRAII {
   }
 };
 } // namespace
+
+RValue CIRGenFunction::emitCoroutineFrame() {
+  if (curCoro.data && curCoro.data->coroBegin) {
+    return RValue::get(curCoro.data->coroBegin);
+  }
+  cgm.errorNYI("NYI");
+}
+
 static void createCoroData(CIRGenFunction &cgf,
                            CIRGenFunction::CGCoroInfo &curCoro,
                            cir::CallOp coroId) {
@@ -302,11 +310,24 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
       builder, cgf.getLoc(s.getSourceRange()), kind,
       /*readyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        builder.createCondition(
-            cgf.createDummyValue(loc, cgf.getContext().BoolTy));
+        Expr *condExpr = s.getReadyExpr()->IgnoreParens();
+        builder.createCondition(cgf.evaluateExprAsBool(condExpr));
       },
       /*suspendBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Note that differently from LLVM codegen we do not emit coro.save
+        // and coro.suspend here, that should be done as part of lowering this
+        // to LLVM dialect (or some other MLIR dialect)
+
+        // A invalid suspendRet indicates "void returning await_suspend"
+        mlir::Value suspendRet = cgf.emitScalarExpr(s.getSuspendExpr());
+
+        // Veto suspension if requested by bool returning await_suspend.
+        if (suspendRet) {
+          cgf.cgm.errorNYI("Veto await_suspend");
+        }
+
+        // Signals the parent that execution flows to next region.
         cir::YieldOp::create(builder, loc);
       },
       /*resumeBuilder=*/

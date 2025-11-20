@@ -470,9 +470,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return getUndefRValue(e->getType());
 
   case Builtin::BI__builtin_coro_frame: {
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_frame NYI");
-    assert(!cir::MissingFeatures::coroutineFrame());
-    return getUndefRValue(e->getType());
+    return emitCoroutineFrame();
   }
   case Builtin::BI__builtin_coro_free:
   case Builtin::BI__builtin_coro_size: {
