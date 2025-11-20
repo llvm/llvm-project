@@ -570,7 +570,7 @@ static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
 
 cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                                          cir::FuncType funcType) {
-  const auto funcDecl = cast<FunctionDecl>(gd.getDecl());
+  const auto *funcDecl = cast<FunctionDecl>(gd.getDecl());
   curGD = gd;
 
   if (funcDecl->isInlineBuiltinDeclaration()) {
@@ -640,6 +640,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   {
     LexicalScope lexScope(*this, fusedLoc, entryBB);
 
+    // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
     // Save parameters for coroutine function.
@@ -666,6 +667,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       // copy-constructors.
       emitImplicitAssignmentOperatorBody(args);
     } else if (body) {
+      // Emit standard function body.
       if (mlir::failed(emitFunctionBody(body))) {
         return nullptr;
       }
@@ -692,6 +694,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   assert((cgm.getTarget().getCXXABI().hasConstructorVariants() ||
           ctorType == Ctor_Complete) &&
          "can only generate complete ctor for this ABI");
+
+  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), ctor);
 
   if (ctorType == Ctor_Complete && isConstructorDelegationValid(ctor) &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
@@ -730,6 +734,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
 void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
   CXXDtorType dtorType = curGD.getDtorType();
+
+  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), dtor);
 
   // For an abstract class, non-base destructors are never used (and can't
   // be emitted in general, because vbase dtors may not have been validated

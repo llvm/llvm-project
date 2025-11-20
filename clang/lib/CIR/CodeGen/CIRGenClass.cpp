@@ -18,6 +18,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -785,6 +786,8 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   assert(isa<CompoundStmt>(rootS) &&
          "Body of an implicit assignment operator should be compound stmt.");
   const auto *rootCS = cast<CompoundStmt>(rootS);
+
+  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), assignOp);
 
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());

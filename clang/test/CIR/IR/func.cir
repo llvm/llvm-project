@@ -152,3 +152,37 @@ cir.func @global_dtor_with_priority() global_dtor(201) {
 // CHECK: }
 
 }
+
+!rec_Foo = !cir.record<struct "Foo" {!s32i}>
+
+cir.func @Foo_default() special_member<#cir.cxx_ctor<!rec_Foo, default>> {
+  cir.return
+}
+
+// CHECK: cir.func @Foo_default() special_member<#cir.cxx_ctor<!rec_Foo, default>> {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @Foo_trivial_copy() special_member<#cir.cxx_ctor<!rec_Foo, copy, trivial true>> {
+  cir.return
+}
+
+// CHECK: cir.func @Foo_trivial_copy() special_member<#cir.cxx_ctor<!rec_Foo, copy, trivial true>> {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @Foo_destructor() special_member<#cir.cxx_dtor<!rec_Foo>> {
+  cir.return
+}
+
+// CHECK: cir.func @Foo_destructor() special_member<#cir.cxx_dtor<!rec_Foo>> {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @Foo_move_assign() special_member<#cir.cxx_assign<!rec_Foo, move>> {
+  cir.return
+}
+
+// CHECK: cir.func @Foo_move_assign() special_member<#cir.cxx_assign<!rec_Foo, move>> {
+// CHECK:   cir.return
+// CHECK: }

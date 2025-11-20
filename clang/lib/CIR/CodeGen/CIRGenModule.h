@@ -503,6 +503,10 @@ public:
                                        cir::FuncType ty,
                                        const clang::FunctionDecl *fd);
 
+  /// Mark the function as a special member (e.g. constructor, destructor)
+  void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
+                               const clang::FunctionDecl *funcDecl);
+
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
                                     mlir::ArrayAttr = {}, bool isLocal = false,
                                     bool assumeConvergent = false);
