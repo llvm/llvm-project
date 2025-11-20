@@ -41,6 +41,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
@@ -6676,6 +6677,62 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
   return MinMaxOptResult::CannotOptimize;
 }
 
+static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
+                                      Value *Op0, Value *Op1) {
+  Constant *C0 = dyn_cast<Constant>(Op0);
+  Constant *C1 = dyn_cast<Constant>(Op1);
+  unsigned Width = ReturnType->getPrimitiveSizeInBits();
+
+  // All false predicate or reduction of neutral values ==> neutral result.
+  switch (IID) {
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isNullValue()))
+      return ConstantInt::get(ReturnType, 0);
+    break;
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_uminv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isAllOnesValue()))
+      return ConstantInt::get(ReturnType, APInt::getMaxValue(Width));
+    break;
+  case Intrinsic::aarch64_sve_smaxv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isMinSignedValue()))
+      return ConstantInt::get(ReturnType, APInt::getSignedMinValue(Width));
+    break;
+  case Intrinsic::aarch64_sve_sminv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isMaxSignedValue()))
+      return ConstantInt::get(ReturnType, APInt::getSignedMaxValue(Width));
+    break;
+  }
+
+  switch (IID) {
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_uminv:
+    // sve_reduce_##(all, splat(X)) ==> X
+    if (C0 && C0->isAllOnesValue()) {
+      if (Value *SplatVal = getSplatValue(Op1)) {
+        assert(SplatVal->getType() == ReturnType && "Unexpected result type!");
+        return SplatVal;
+      }
+    }
+    break;
+  case Intrinsic::aarch64_sve_eorv:
+    // sve_reduce_xor(all, splat(X)) ==> 0
+    if (C0 && C0->isAllOnesValue())
+      return ConstantInt::get(ReturnType, 0);
+    break;
+  }
+
+  return nullptr;
+}
+
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                      Value *Op0, Value *Op1,
                                      const SimplifyQuery &Q,
@@ -6985,8 +7042,12 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
           // VectorShuffle instruction, which is not allowed in simplifyBinOp.
           OptResult = MinMaxOptResult::UseEither;
           for (unsigned i = 0; i != ElemCount.getFixedValue(); ++i) {
-            auto ElemResult = OptimizeConstMinMax(C->getAggregateElement(i),
-                                                  IID, Call, &NewConst);
+            auto *Elt = C->getAggregateElement(i);
+            if (!Elt) {
+              OptResult = MinMaxOptResult::CannotOptimize;
+              break;
+            }
+            auto ElemResult = OptimizeConstMinMax(Elt, IID, Call, &NewConst);
             if (ElemResult == MinMaxOptResult::CannotOptimize ||
                 (ElemResult != OptResult &&
                  OptResult != MinMaxOptResult::UseEither &&
@@ -7033,6 +7094,17 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     break;
   }
+
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_uminv:
+    return simplifySVEIntReduction(IID, ReturnType, Op0, Op1);
   default:
     break;
   }

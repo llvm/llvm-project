@@ -612,6 +612,19 @@ define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 
   ret <vscale x 16 x double> %lo
 }
 
+define <vscale x 1 x i64> @unaligned_vpload_nxv1i64_allones_mask(<vscale x 1 x i64>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: unaligned_vpload_nxv1i64_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
+  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
+  %load = call <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p0(<vscale x 1 x i64>* align 1 %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  ret <vscale x 1 x i64> %load
+}
+
 define <vscale x 8 x i8> @vpload_all_active_nxv8i8(ptr %ptr) {
 ; CHECK-LABEL: vpload_all_active_nxv8i8:
 ; CHECK:       # %bb.0:

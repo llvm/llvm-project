@@ -25,7 +25,10 @@ int h0 = __builtin_types_compatible_p(int,float);
 int h3 = __builtin_bswap16(0x1234) == 0x3412 ? 1 : f();
 int h4 = __builtin_bswap32(0x1234) == 0x34120000 ? 1 : f();
 int h5 = __builtin_bswap64(0x1234) == 0x3412000000000000 ? 1 : f();
-
+int h6 = __builtin_bswapg((char)0x12) == (char)0x12 ? 1 : f();
+int h7 = __builtin_bswapg((short)(0x1234)) == (short)(0x3412) ? 1 : f();
+int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
+int h9 = __builtin_bswapg(0x0000000000001234ULL) == 0x3412000000000000 ? 1 : f();
 short somefunc(void);
 
 short t = __builtin_constant_p(5353) ? 42 : somefunc();

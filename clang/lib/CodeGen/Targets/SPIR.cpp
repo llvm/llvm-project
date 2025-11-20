@@ -53,9 +53,22 @@ public:
 
   unsigned getDeviceKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
-  llvm::Type *
-  getHLSLType(CodeGenModule &CGM, const Type *Ty,
-              const SmallVector<int32_t> *Packoffsets = nullptr) const override;
+  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty,
+                          const CGHLSLOffsetInfo &OffsetInfo) const override;
+
+  llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                             CharUnits NumBytes) const override {
+    unsigned Size = NumBytes.getQuantity();
+    return llvm::TargetExtType::get(CGM.getLLVMContext(), "spirv.Padding", {},
+                                    {Size});
+  }
+
+  bool isHLSLPadding(llvm::Type *Ty) const override {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(Ty))
+      return TET->getName() == "spirv.Padding";
+    return false;
+  }
+
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
       QualType SampledType, CodeGenModule &CGM) const;
@@ -260,8 +273,16 @@ CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
   LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
                   ? LangAS::Default
                   : QT->getPointeeType().getAddressSpace();
+  unsigned ASAsInt = static_cast<unsigned>(AS);
+  unsigned FirstTargetASAsInt =
+      static_cast<unsigned>(LangAS::FirstTargetAddressSpace);
+  unsigned CodeSectionINTELAS = FirstTargetASAsInt + 9;
+  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
+  // function pointers to/from the generic AS.
+  bool IsFunctionPtrAS =
+      CGM.getTriple().isSPIRV() && ASAsInt == CodeSectionINTELAS;
   if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
-      AS == LangAS::opencl_constant)
+      AS == LangAS::opencl_constant || IsFunctionPtrAS)
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();
@@ -510,7 +531,7 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
 
 llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     CodeGenModule &CGM, const Type *Ty,
-    const SmallVector<int32_t> *Packoffsets) const {
+    const CGHLSLOffsetInfo &OffsetInfo) const {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
   if (auto *SpirvType = dyn_cast<HLSLInlineSpirvType>(Ty))
@@ -556,10 +577,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     if (ContainedTy.isNull() || !ContainedTy->isStructureType())
       return nullptr;
 
-    llvm::Type *BufferLayoutTy =
-        HLSLBufferLayoutBuilder(CGM, "spirv.Layout")
-            .createLayoutType(ContainedTy->castAsCanonical<RecordType>(),
-                              Packoffsets);
+    llvm::StructType *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM).layOutStruct(
+            ContainedTy->getAsCanonical<RecordType>(), OffsetInfo);
     uint32_t StorageClass = /* Uniform storage class */ 2;
     return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {BufferLayoutTy},
                                     {StorageClass, false});

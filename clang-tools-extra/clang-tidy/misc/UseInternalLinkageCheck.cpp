@@ -142,7 +142,8 @@ static constexpr StringRef Message =
 
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
-    DiagnosticBuilder DB = diag(FD->getLocation(), Message) << "function" << FD;
+    const DiagnosticBuilder DB = diag(FD->getLocation(), Message)
+                                 << "function" << FD;
     const SourceLocation FixLoc = FD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
@@ -157,7 +158,8 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
     if (getLangOpts().CPlusPlus && VD->getType().isConstQualified())
       return;
 
-    DiagnosticBuilder DB = diag(VD->getLocation(), Message) << "variable" << VD;
+    const DiagnosticBuilder DB = diag(VD->getLocation(), Message)
+                                 << "variable" << VD;
     const SourceLocation FixLoc = VD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;

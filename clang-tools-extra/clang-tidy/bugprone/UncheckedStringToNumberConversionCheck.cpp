@@ -76,7 +76,8 @@ static ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
 
       // Get the conversion specifier and use it to determine the conversion
       // kind.
-      analyze_scanf::ScanfConversionSpecifier SCS = FS.getConversionSpecifier();
+      const analyze_scanf::ScanfConversionSpecifier SCS =
+          FS.getConversionSpecifier();
       if (SCS.isIntArg()) {
         switch (FS.getLengthModifier().getKind()) {
         case analyze_scanf::LengthModifier::AsLongLong:
@@ -194,7 +195,7 @@ void UncheckedStringToNumberConversionCheck::check(
     // The format string comes from the call expression and depends on which
     // flavor of scanf is called.
     // Index 0: scanf, vscanf, Index 1: fscanf, sscanf, vfscanf, vsscanf.
-    unsigned Idx =
+    const unsigned Idx =
         (FFD->getName() == "scanf" || FFD->getName() == "vscanf") ? 0 : 1;
 
     // Given the index, see if the call expression argument at that index is

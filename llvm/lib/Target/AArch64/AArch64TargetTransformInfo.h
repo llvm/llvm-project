@@ -59,9 +59,17 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
     VECTOR_LDST_FOUR_ELEMENTS
   };
 
-  bool isWideningInstruction(Type *DstTy, unsigned Opcode,
-                             ArrayRef<const Value *> Args,
-                             Type *SrcOverrideTy = nullptr) const;
+  /// Given a add/sub/mul operation, detect a widening addl/subl/mull pattern
+  /// where both operands can be treated like extends. Returns the minimal type
+  /// needed to compute the operation.
+  Type *isBinExtWideningInstruction(unsigned Opcode, Type *DstTy,
+                                    ArrayRef<const Value *> Args,
+                                    Type *SrcOverrideTy = nullptr) const;
+  /// Given a add/sub operation with a single extend operand, detect a
+  /// widening addw/subw pattern.
+  bool isSingleExtWideningInstruction(unsigned Opcode, Type *DstTy,
+                                      ArrayRef<const Value *> Args,
+                                      Type *SrcOverrideTy = nullptr) const;
 
   // A helper function called by 'getVectorInstrCost'.
   //
@@ -180,8 +188,7 @@ public:
                                                   unsigned Opcode2) const;
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
@@ -304,7 +311,7 @@ public:
   }
 
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) const {
-    if (!ST->hasSVE())
+    if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
     // For fixed vectors, avoid scalarization if using SVE for them.
@@ -448,11 +455,10 @@ public:
 
   /// FP16 and BF16 operations are lowered to fptrunc(op(fpext, fpext) if the
   /// architecture features are not present.
-  std::optional<InstructionCost>
-  getFP16BF16PromoteCost(Type *Ty, TTI::TargetCostKind CostKind,
-                         TTI::OperandValueInfo Op1Info,
-                         TTI::OperandValueInfo Op2Info, bool IncludeTrunc,
-                         std::function<InstructionCost(Type *)> InstCost) const;
+  std::optional<InstructionCost> getFP16BF16PromoteCost(
+      Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+      TTI::OperandValueInfo Op2Info, bool IncludeTrunc, bool CanUseSVE,
+      std::function<InstructionCost(Type *)> InstCost) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
