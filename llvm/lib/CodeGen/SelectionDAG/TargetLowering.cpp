@@ -8308,13 +8308,14 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   SDValue X = Node->getOperand(0);
   SDValue Y = Node->getOperand(1);
   unsigned BW = VT.getScalarSizeInBits();
+  unsigned Opcode = Node->getOpcode();
 
-  if (VT.isVector() && isOperationLegalOrCustomOrPromote(
-                           Node->getOpcode(), VT.getVectorElementType()))
+  if (VT.isVector() &&
+      isOperationLegalOrCustomOrPromote(Opcode, VT.getVectorElementType()))
     return DAG.UnrollVectorOp(Node);
 
   SDValue Res = DAG.getConstant(0, DL, VT);
-  switch (Node->getOpcode()) {
+  switch (Opcode) {
   case ISD::CLMUL: {
     for (unsigned I = 0; I < BW; ++I) {
       SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
@@ -8327,12 +8328,26 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   case ISD::CLMULR:
   case ISD::CLMULH: {
     EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), 2 * BW);
+    // For example, ExtVT = i64 based operations aren't legal on rv32; use
+    // bitreverse-based lowering in this case.
+    if (!isOperationLegalOrCustom(ISD::ZERO_EXTEND, ExtVT) ||
+        !isOperationLegalOrCustom(ISD::SRL, ExtVT)) {
+      SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
+      SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, Y);
+      SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
+      Res = DAG.getNode(ISD::BITREVERSE, DL, VT, ClMul);
+      Res = Opcode == ISD::CLMULR
+                ? Res
+                : DAG.getNode(ISD::SRL, DL, VT, Res,
+                              DAG.getShiftAmountConstant(1, VT, DL));
+      break;
+    }
     SDValue XExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, X);
     SDValue YExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, Y);
     SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, ExtVT, XExt, YExt);
-    unsigned ShtAmt = Node->getOpcode() == ISD::CLMULR ? BW - 1 : BW;
+    unsigned ShtAmt = Opcode == ISD::CLMULR ? BW - 1 : BW;
     SDValue HiBits = DAG.getNode(ISD::SRL, DL, ExtVT, ClMul,
-                                 DAG.getShiftAmountConstant(ShtAmt, VT, DL));
+                                 DAG.getShiftAmountConstant(ShtAmt, ExtVT, DL));
     Res = DAG.getNode(ISD::TRUNCATE, DL, VT, HiBits);
     break;
   }
