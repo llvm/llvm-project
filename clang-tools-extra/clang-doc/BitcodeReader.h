@@ -17,8 +17,6 @@
 
 #include "BitcodeWriter.h"
 #include "Representation.h"
-#include "clang/AST/AST.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Error.h"
 #include <optional>

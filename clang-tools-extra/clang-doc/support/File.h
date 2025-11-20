@@ -8,7 +8,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
 
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
