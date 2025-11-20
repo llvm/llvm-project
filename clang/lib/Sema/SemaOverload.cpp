@@ -2134,9 +2134,7 @@ static bool IsMatrixConversion(Sema &S, QualType FromType, QualType ToType,
     if (FromRows < ToRows)
       return false;
 
-    unsigned FromElts = FromMatrixType->getNumElementsFlattened();
-    unsigned ToElts = ToMatrixType->getNumElementsFlattened();
-    if (FromElts == ToElts)
+    if (FromRows == ToRows && FromCols == ToCols)
       ElConv = ICK_Identity;
     else
       ElConv = ICK_HLSL_Matrix_Truncation;
