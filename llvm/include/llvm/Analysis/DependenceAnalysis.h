@@ -931,36 +931,6 @@ private:
   /// of the Constraints X and Y. Returns true if X has changed.
   bool intersectConstraints(Constraint *X, const Constraint *Y);
 
-  /// propagate - Review the constraints, looking for opportunities
-  /// to simplify a subscript pair (Src and Dst).
-  /// Return true if some simplification occurs.
-  /// If the simplification isn't exact (that is, if it is conservative
-  /// in terms of dependence), set consistent to false.
-  bool propagate(const SCEV *&Src, const SCEV *&Dst, SmallBitVector &Loops,
-                 SmallVectorImpl<Constraint> &Constraints, bool &Consistent);
-
-  /// propagateDistance - Attempt to propagate a distance
-  /// constraint into a subscript pair (Src and Dst).
-  /// Return true if some simplification occurs.
-  /// If the simplification isn't exact (that is, if it is conservative
-  /// in terms of dependence), set consistent to false.
-  bool propagateDistance(const SCEV *&Src, const SCEV *&Dst,
-                         Constraint &CurConstraint, bool &Consistent);
-
-  /// propagatePoint - Attempt to propagate a point
-  /// constraint into a subscript pair (Src and Dst).
-  /// Return true if some simplification occurs.
-  bool propagatePoint(const SCEV *&Src, const SCEV *&Dst,
-                      Constraint &CurConstraint);
-
-  /// propagateLine - Attempt to propagate a line
-  /// constraint into a subscript pair (Src and Dst).
-  /// Return true if some simplification occurs.
-  /// If the simplification isn't exact (that is, if it is conservative
-  /// in terms of dependence), set consistent to false.
-  bool propagateLine(const SCEV *&Src, const SCEV *&Dst,
-                     Constraint &CurConstraint, bool &Consistent);
-
   /// findCoefficient - Given a linear SCEV,
   /// return the coefficient corresponding to specified loop.
   /// If there isn't one, return the SCEV constant 0.
