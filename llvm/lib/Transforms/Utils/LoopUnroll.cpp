@@ -1258,17 +1258,13 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
   // TODO: Handle additional reductions, including min-max reductions.
-  if (!(RecurrenceDescriptor::isIntegerRecurrenceKind(RK) ||
-        RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)) ||
-      RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
       RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
       RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
     return std::nullopt;
 
-  if (RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)) {
-    if (!RdxDesc.getFastMathFlags().allowReassoc())
+  if (RdxDesc.hasExactFPMath())
       return std::nullopt;
-  }
 
   if (RdxDesc.IntermediateStore)
     return std::nullopt;
