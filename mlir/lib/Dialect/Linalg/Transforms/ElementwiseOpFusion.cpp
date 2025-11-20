@@ -1050,19 +1050,24 @@ struct PadDimInfo {
 
 /// Computes the expanded padding information for the given pad operation based
 /// on the provided expanded shape and reassociation indices. Returns a list of
-/// PaddedDimInfo containing the low and high padding amounts and the padded
+/// PadDimInfo containing the low and high padding amounts and the padded
 /// size for each dimension, or failure if the expansion is not possible.
 static FailureOr<PadDimInfo>
 computeExpandedPadding(tensor::PadOp padOp, ArrayRef<int64_t> expandedShape,
                        ArrayRef<ReassociationIndices> reassociations,
                        PatternRewriter &rewriter) {
-  ArrayRef<int64_t> low = padOp.getStaticLow();
-  ArrayRef<int64_t> high = padOp.getStaticHigh();
+  // If the padding value depends on the index values of the pad operation,
+  // then it may not be valid to expand the dimensions, since it will change
+  // the index values on which the padding value depends.
+  if (!padOp.getConstantPaddingValue())
+    return failure();
 
   // Expanded dimensions cannot have padding because the resulting padding may
   // not be representable by a tensor.pad op. There are some special cases where
   // it is possible (like expanding unit dims), but supporting these cases is
   // NYI, so disallow it for now.
+  ArrayRef<int64_t> low = padOp.getStaticLow();
+  ArrayRef<int64_t> high = padOp.getStaticHigh();
   for (auto [reInd, l, h] : llvm::zip_equal(reassociations, low, high)) {
     if (reInd.size() != 1 && (l != 0 || h != 0))
       return failure();
@@ -1101,8 +1106,6 @@ public:
         padOp.getSource().getDefiningOp<tensor::CollapseShapeOp>();
     if (!reshapeOp)
       return failure();
-    if (!reshapeOp->hasOneUse())
-      return failure();
 
     if (!controlFoldingReshapes(&padOp.getSourceMutable())) {
       return rewriter.notifyMatchFailure(padOp,
@@ -1116,7 +1119,7 @@ public:
         padOp, expandedType.getShape(), reassociations, rewriter);
     if (failed(maybeExpandedPadding))
       return failure();
-    PadDimInfo expandedPadding = maybeExpandedPadding.value();
+    PadDimInfo &expandedPadding = maybeExpandedPadding.value();
 
     Location loc = padOp->getLoc();
     RankedTensorType expandedPaddedType =
@@ -1137,12 +1140,12 @@ private:
   ControlFusionFn controlFoldingReshapes;
 };
 
-class FoldExpandShapeWithProducerPadOp
+class FoldReshapeWithProducerPadOpByExpansion
     : public OpRewritePattern<tensor::ExpandShapeOp> {
 public:
-  FoldExpandShapeWithProducerPadOp(MLIRContext *context,
-                                   ControlFusionFn foldReshapes,
-                                   PatternBenefit benefit = 1)
+  FoldReshapeWithProducerPadOpByExpansion(MLIRContext *context,
+                                          ControlFusionFn foldReshapes,
+                                          PatternBenefit benefit = 1)
       : OpRewritePattern<tensor::ExpandShapeOp>(context, benefit),
         controlFoldingReshapes(std::move(foldReshapes)) {}
 
@@ -1150,8 +1153,6 @@ public:
                                 PatternRewriter &rewriter) const override {
     tensor::PadOp padOp = expandOp.getSrc().getDefiningOp<tensor::PadOp>();
     if (!padOp)
-      return failure();
-    if (!padOp->hasOneUse())
       return failure();
 
     if (!controlFoldingReshapes(&expandOp.getSrcMutable())) {
@@ -1166,7 +1167,7 @@ public:
         padOp, expandedType.getShape(), reassociations, rewriter);
     if (failed(maybeExpandedPadding))
       return failure();
-    PadDimInfo expandedPadding = maybeExpandedPadding.value();
+    PadDimInfo &expandedPadding = maybeExpandedPadding.value();
 
     Location loc = expandOp->getLoc();
     SmallVector<OpFoldResult> newExpandedSizes = expandOp.getMixedOutputShape();
@@ -2031,13 +2032,18 @@ static FailureOr<PadDimInfo>
 computeCollapsedPadding(tensor::PadOp padOp,
                         ArrayRef<ReassociationIndices> reassociations,
                         PatternRewriter &rewriter) {
-  ArrayRef<int64_t> low = padOp.getStaticLow();
-  ArrayRef<int64_t> high = padOp.getStaticHigh();
+  // If the padding value depends on the index values of the pad operation,
+  // then it may not be valid to collapse the dimensions, since it will change
+  // the index values on which the padding value depends.
+  if (!padOp.getConstantPaddingValue())
+    return failure();
 
   // Collapsed dimensions cannot have padding because this can produce strided
   // padding that isn't representable by a tensor.pad op. There are some special
-  // cases where it it possible (like collapsing unit dims), but supporting
+  // cases where it is possible (like collapsing unit dims), but supporting
   // these cases is NYI, so disallow it for now.
+  ArrayRef<int64_t> low = padOp.getStaticLow();
+  ArrayRef<int64_t> high = padOp.getStaticHigh();
   for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
     for (int64_t dim : reInd) {
       if ((low[dim] != 0 || high[dim] != 0) && reInd.size() != 1)
@@ -2053,10 +2059,12 @@ computeCollapsedPadding(tensor::PadOp padOp,
 
   // Update padding for dimensions that are not being collapsed, and compute
   // the collapsed padded shape.
+  SmallVector<OpFoldResult> mixedLowPad(padOp.getMixedLowPad());
+  SmallVector<OpFoldResult> mixedHighPad(padOp.getMixedHighPad());
   for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
     if (reInd.size() == 1) {
-      padDimInfo.lowPad[idx] = padOp.getMixedLowPad()[reInd[0]];
-      padDimInfo.highPad[idx] = padOp.getMixedHighPad()[reInd[0]];
+      padDimInfo.lowPad[idx] = mixedLowPad[reInd[0]];
+      padDimInfo.highPad[idx] = mixedHighPad[reInd[0]];
     }
     SaturatedInteger collapsedSize = SaturatedInteger::wrap(1);
     for (int64_t dim : reInd) {
@@ -2084,8 +2092,6 @@ public:
         padOp.getSource().getDefiningOp<tensor::ExpandShapeOp>();
     if (!reshapeOp)
       return failure();
-    if (!reshapeOp->hasOneUse())
-      return failure();
 
     if (!controlFoldingReshapes(&padOp.getSourceMutable())) {
       return rewriter.notifyMatchFailure(padOp,
@@ -2098,7 +2104,7 @@ public:
         computeCollapsedPadding(padOp, reassociations, rewriter);
     if (failed(maybeCollapsedPadding))
       return failure();
-    PadDimInfo collapsedPadding = maybeCollapsedPadding.value();
+    PadDimInfo &collapsedPadding = maybeCollapsedPadding.value();
 
     SmallVector<OpFoldResult> expandedPaddedSizes =
         reshapeOp.getMixedOutputShape();
@@ -2147,8 +2153,6 @@ public:
     tensor::PadOp padOp = reshapeOp.getSrc().getDefiningOp<tensor::PadOp>();
     if (!padOp)
       return failure();
-    if (!padOp->hasOneUse())
-      return failure();
 
     if (!controlFoldingReshapes(&reshapeOp.getSrcMutable())) {
       return rewriter.notifyMatchFailure(padOp,
@@ -2162,7 +2166,7 @@ public:
         computeCollapsedPadding(padOp, reassociations, rewriter);
     if (failed(maybeCollapsedPadding))
       return failure();
-    PadDimInfo collapsedPadding = maybeCollapsedPadding.value();
+    PadDimInfo &collapsedPadding = maybeCollapsedPadding.value();
 
     Location loc = reshapeOp->getLoc();
     auto newCollapseOp = tensor::CollapseShapeOp::create(
@@ -2420,8 +2424,8 @@ void mlir::linalg::populateFoldReshapeOpsByExpansionPatterns(
                                                     controlFoldingReshapes);
   patterns.add<FoldPadWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                         controlFoldingReshapes);
-  patterns.add<FoldExpandShapeWithProducerPadOp>(patterns.getContext(),
-                                                 controlFoldingReshapes);
+  patterns.add<FoldReshapeWithProducerPadOpByExpansion>(patterns.getContext(),
+                                                        controlFoldingReshapes);
   patterns.add<FoldWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                      controlFoldingReshapes);
 }
