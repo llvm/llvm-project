@@ -863,16 +863,17 @@ static bool ProcessScopes(const Scope &scope,
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {
             return IsInitialized(*ref);
           }) != associated.end()) {
-        if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {
-            return !ref->size();
-          }) != associated.end()) {
-          // If a symbol has a non-legacy initialization, it won't have a size, so we can't combine its initializations
-          // the DataChecker Runs after this size is computed and runs this code again so it will have a size when encountered
-          // later.
+        if (std::find_if(associated.begin(), associated.end(),
+                [](SymbolRef ref) { return !ref->size(); }) !=
+            associated.end()) {
+          // If a symbol has a non-legacy initialization, it won't have a size,
+          // so we can't combine its initializations the DataChecker Runs after
+          // this size is computed and runs this code again so it will have a
+          // size when encountered later.
           result = false;
         } else {
-          result &=
-              CombineEquivalencedInitialization(associated, exprAnalyzer, inits);
+          result &= CombineEquivalencedInitialization(
+              associated, exprAnalyzer, inits);
         }
       }
     }
@@ -953,8 +954,8 @@ void ConstructInitializer(const Symbol &symbol,
   }
 }
 
-void ConvertToInitializers(
-    DataInitializations &inits, evaluate::ExpressionAnalyzer &exprAnalyzer, bool processScopes) {
+void ConvertToInitializers(DataInitializations &inits,
+    evaluate::ExpressionAnalyzer &exprAnalyzer, bool processScopes) {
   // Process DATA-style component /initializers/ now, so that they appear as
   // default values in time for EQUIVALENCE processing in ProcessScopes.
   for (auto &[symbolPtr, initialization] : inits) {
@@ -962,12 +963,14 @@ void ConvertToInitializers(
       ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
     }
   }
-  // FIXME: It is kinda weird that we need to repeatedly process the entire symbol table
-  // each time this is called by LegacyDataInitialization in ResolveNames. Could we do this 
-  // once before the DataChecker and once after to combine initializations from Non-Legacy 
-  // Initialization?
-  // Note, it passes all tests with just Running this code in CompileDataInitializationsIntoInitializers.
-  if (processScopes && ProcessScopes(
+  // FIXME: It is kinda weird that we need to repeatedly process the entire
+  // symbol table each time this is called by LegacyDataInitialization in
+  // ResolveNames. Could we do this once before the DataChecker and once after
+  // to combine initializations from Non-Legacy Initialization? Note, it passes
+  // all tests with just Running this code in
+  // CompileDataInitializationsIntoInitializers.
+  if (processScopes &&
+      ProcessScopes(
           exprAnalyzer.context().globalScope(), exprAnalyzer, inits)) {
     for (auto &[symbolPtr, initialization] : inits) {
       if (!symbolPtr->owner().IsDerivedType()) {
