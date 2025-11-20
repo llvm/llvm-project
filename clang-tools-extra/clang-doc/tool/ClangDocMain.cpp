@@ -438,7 +438,8 @@ Example usage for a project using a compile commands database:
     // Run the generator.
     llvm::outs() << "Generating docs...\n";
 
-    ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
+    ExitOnErr(
+        G->generateDocumentation(OutDirectory, std::move(USRToInfo), CDCtx));
     llvm::outs() << "Generating assets for docs...\n";
     ExitOnErr(G->createResources(CDCtx));
     llvm::timeTraceProfilerEnd();

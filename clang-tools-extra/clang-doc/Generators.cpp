@@ -7,8 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Generators.h"
+#include "support/File.h"
+#include "llvm/Support/TimeProfiler.h"
 
 LLVM_INSTANTIATE_REGISTRY(clang::doc::GeneratorRegistry)
+
+using namespace llvm;
+using namespace llvm::json;
+using namespace llvm::mustache;
 
 namespace clang {
 namespace doc {
@@ -40,6 +46,136 @@ std::string getTagType(TagTypeKind AS) {
     return "enum";
   }
   llvm_unreachable("Unknown TagTypeKind");
+}
+
+Error createFileOpenError(StringRef FileName, std::error_code EC) {
+  return createFileError("cannot open file " + FileName, EC);
+}
+
+Error MustacheGenerator::setupTemplate(
+    std::unique_ptr<MustacheTemplateFile> &Template, StringRef TemplatePath,
+    std::vector<std::pair<StringRef, StringRef>> Partials) {
+  auto T = MustacheTemplateFile::createMustacheFile(TemplatePath);
+  if (Error Err = T.takeError())
+    return Err;
+  Template = std::move(T.get());
+  for (const auto &[Name, FileName] : Partials)
+    if (auto Err = Template->registerPartialFile(Name, FileName))
+      return Err;
+  return Error::success();
+}
+
+Error MustacheGenerator::generateDocumentation(
+    StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
+    const clang::doc::ClangDocContext &CDCtx, std::string DirName) {
+  {
+    llvm::TimeTraceScope TS("Setup Templates");
+    if (auto Err = setupTemplateFiles(CDCtx))
+      return Err;
+  }
+
+  {
+    llvm::TimeTraceScope TS("Generate JSON for Mustache");
+    if (auto JSONGenerator = findGeneratorByName("json")) {
+      if (Error Err = JSONGenerator.get()->generateDocumentation(
+              RootDir, std::move(Infos), CDCtx))
+        return Err;
+    } else
+      return JSONGenerator.takeError();
+  }
+
+  SmallString<128> JSONPath;
+  sys::path::native(RootDir.str() + "/json", JSONPath);
+
+  {
+    llvm::TimeTraceScope TS("Iterate JSON files");
+    std::error_code EC;
+    sys::fs::recursive_directory_iterator JSONIter(JSONPath, EC);
+    std::vector<json::Value> JSONFiles;
+    JSONFiles.reserve(Infos.size());
+    if (EC)
+      return createStringError("Failed to create directory iterator.");
+
+    SmallString<128> DocsDirPath(RootDir.str() + '/' + DirName);
+    sys::path::native(DocsDirPath);
+    if (auto EC = sys::fs::create_directories(DocsDirPath))
+      return createFileError(DocsDirPath, EC);
+    while (JSONIter != sys::fs::recursive_directory_iterator()) {
+      // create the same directory structure in the docs format dir
+      if (JSONIter->type() == sys::fs::file_type::directory_file) {
+        SmallString<128> DocsClonedPath(JSONIter->path());
+        sys::path::replace_path_prefix(DocsClonedPath, JSONPath, DocsDirPath);
+        if (auto EC = sys::fs::create_directories(DocsClonedPath)) {
+          return createFileError(DocsClonedPath, EC);
+        }
+      }
+
+      if (EC)
+        return createFileError("Failed to iterate: " + JSONIter->path(), EC);
+
+      auto Path = StringRef(JSONIter->path());
+      if (!Path.ends_with(".json")) {
+        JSONIter.increment(EC);
+        continue;
+      }
+
+      auto File = MemoryBuffer::getFile(Path);
+      if (EC = File.getError(); EC) {
+        // TODO: Buffer errors to report later, look into using Clang
+        // diagnostics.
+        llvm::errs() << "Failed to open file: " << Path << " " << EC.message()
+                     << '\n';
+      }
+
+      auto Parsed = json::parse((*File)->getBuffer());
+      if (!Parsed)
+        return Parsed.takeError();
+      auto ValidJSON = Parsed.get();
+
+      std::error_code FileErr;
+      SmallString<128> DocsFilePath(JSONIter->path());
+      sys::path::replace_path_prefix(DocsFilePath, JSONPath, DocsDirPath);
+      sys::path::replace_extension(DocsFilePath, DirName);
+      raw_fd_ostream InfoOS(DocsFilePath, FileErr, sys::fs::OF_None);
+      if (FileErr)
+        return createFileOpenError(Path, FileErr);
+
+      auto RelativeRootPath = getRelativePathToRoot(DocsFilePath, DocsDirPath);
+      auto InfoTypeStr =
+          getInfoTypeStr(Parsed->getAsObject(), sys::path::stem(DocsFilePath));
+      if (!InfoTypeStr)
+        return InfoTypeStr.takeError();
+      if (Error Err = generateDocForJSON(*Parsed, InfoOS, CDCtx,
+                                         InfoTypeStr.get(), RelativeRootPath))
+        return Err;
+      JSONIter.increment(EC);
+    }
+  }
+
+  return Error::success();
+}
+
+Expected<std::string> MustacheGenerator::getInfoTypeStr(Object *Info,
+                                                        StringRef Filename) {
+  auto StrValue = (*Info)["InfoType"];
+  if (StrValue.kind() != json::Value::Kind::String)
+    return createStringError("JSON file '%s' does not contain key: 'InfoType'.",
+                             Filename.str().c_str());
+  auto ObjTypeStr = StrValue.getAsString();
+  if (!ObjTypeStr.has_value())
+    return createStringError(
+        "JSON file '%s' does not contain 'InfoType' field as a string.",
+        Filename.str().c_str());
+  return ObjTypeStr.value().str();
+}
+
+SmallString<128>
+MustacheGenerator::getRelativePathToRoot(StringRef PathToFile,
+                                         StringRef DocsRootPath) {
+  SmallString<128> PathVec(PathToFile);
+  // Remove filename, or else the relative path will have an extra "../"
+  sys::path::remove_filename(PathVec);
+  return computeRelativePath(DocsRootPath, PathVec);
 }
 
 llvm::Error Generator::createResources(ClangDocContext &CDCtx) {
