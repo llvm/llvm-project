@@ -1263,7 +1263,7 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
-      return std::nullopt;
+    return std::nullopt;
 
   if (RdxDesc.IntermediateStore)
     return std::nullopt;
