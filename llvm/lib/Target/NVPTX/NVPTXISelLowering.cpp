@@ -711,8 +711,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                        Custom);
   }
 
-  setOperationAction(ISD::BSWAP, MVT::i16, Expand);
-
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
 

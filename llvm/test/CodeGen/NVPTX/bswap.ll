@@ -10,16 +10,16 @@ target triple = "nvptx64-nvidia-cuda"
 define i16 @bswap16(i16 %a) {
 ; CHECK-LABEL: bswap16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [bswap16_param_0];
-; CHECK-NEXT:    shr.u16 %rs2, %rs1, 8;
-; CHECK-NEXT:    shl.b16 %rs3, %rs1, 8;
-; CHECK-NEXT:    or.b16 %rs4, %rs3, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x1U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r2;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %b = tail call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %b
