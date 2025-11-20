@@ -51,7 +51,8 @@ findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
       auto [NestedShadowedFunc, NestedShadowedNamespace] =
           findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName, All);
       if (!ShadowedFunc)
-        std::tie(ShadowedFunc, ShadowedNamespace) = std::tie(NestedShadowedFunc, NestedShadowedNamespace);
+        std::tie(ShadowedFunc, ShadowedNamespace) =
+            std::tie(NestedShadowedFunc, NestedShadowedNamespace);
     }
 
     // Check functions
@@ -103,7 +104,8 @@ void ShadowedNamespaceFunctionCheck::check(
       auto [NestedShadowedFunc, NestedShadowedNamespace] =
           findShadowedInNamespace(NS, Func, FuncName, AllShadowedFuncs);
       if (!ShadowedFunc)
-        std::tie(ShadowedFunc, ShadowedNamespace) = std::tie(NestedShadowedFunc, NestedShadowedNamespace);
+        std::tie(ShadowedFunc, ShadowedNamespace) =
+            std::tie(NestedShadowedFunc, NestedShadowedNamespace);
     }
   }
 
@@ -117,10 +119,9 @@ void ShadowedNamespaceFunctionCheck::check(
   const bool Ambiguous = AllShadowedFuncs.size() > 1;
   const std::string NamespaceName =
       ShadowedNamespace->getQualifiedNameAsString();
-  auto Diag = diag(Func->getLocation(), "free function %0 shadows %select{|at least }1'%2::%3'")
-              << Func->getDeclName()
-              << Ambiguous
-              << NamespaceName
+  auto Diag = diag(Func->getLocation(),
+                   "free function %0 shadows %select{|at least }1'%2::%3'")
+              << Func->getDeclName() << Ambiguous << NamespaceName
               << ShadowedFunc->getDeclName().getAsString();
 
   const SourceLocation NameLoc = Func->getLocation();
@@ -131,7 +132,7 @@ void ShadowedNamespaceFunctionCheck::check(
 
   for (const FunctionDecl *NoteShadowedFunc : AllShadowedFuncs)
     diag(NoteShadowedFunc->getLocation(), "function %0 declared here",
-        DiagnosticIDs::Note)
+         DiagnosticIDs::Note)
         << NoteShadowedFunc->getDeclName();
 }
 
