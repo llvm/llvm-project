@@ -124,7 +124,7 @@ class Andes45GetCyclesLoadStore<string mx> {
 }
 
 class Andes45GetCyclesOnePerElement<string mx, int sew> {
-  int VL = !div(Andes45VLEN, sew);
+  defvar VL = !div(Andes45VLEN, sew);
   int c = !cond(
     !eq(mx, "M1")  : VL,
     !eq(mx, "M2")  : !mul(VL, 2),
@@ -148,7 +148,7 @@ class Andes45GetLatecyDiv<int sew> {
 // (VLEN/DLEN)*LMUL*SEW+(VLEN/DLEN)*LMUL*2+1
 // = (VLEN/DLEN)*LMUL*(SEW+2)+1
 class Andes45GetCyclesDiv<string mx, int sew> {
-  int a = !mul(Andes45VLEN_DLEN_RATIO, !add(sew, 2));
+  defvar a = !mul(Andes45VLEN_DLEN_RATIO, !add(sew, 2));
   int b = !cond(
     !eq(mx, "M1")  : !mul(a, 1),
     !eq(mx, "M2")  : !mul(a, 2),
@@ -180,7 +180,7 @@ class Andes45GetFSqrtFactor<int sew> {
 
 // (VLEN/DLEN)*LMUL+LOG2(DLEN/64)*2+LOG2(64/SEW)
 class Andes45GetReductionCycles<string mx, int sew> {
-  int d = Andes45GetCyclesDefault<mx>.c;
+  defvar d = Andes45GetCyclesDefault<mx>.c;
   int c = !add(d,
                !add(!mul(!logtwo(!div(Andes45DLEN, 64)), 2),
                     !logtwo(!div(64, sew))));
@@ -188,7 +188,7 @@ class Andes45GetReductionCycles<string mx, int sew> {
 
 // (VLEN/DLEN)*LMUL*2+LOG2(DLEN/64)*2+LOG2(64/2/SEW)
 class Andes45GetReductionCyclesWidening<string mx, int sew> {
-  int w = !mul(Andes45GetCyclesDefault<mx>.c, 2);
+  defvar w = !mul(Andes45GetCyclesDefault<mx>.c, 2);
   int c = !add(w,
                !add(!mul(!logtwo(!div(Andes45DLEN, 64)), 2),
                     !logtwo(!div(64, sew))));
@@ -196,20 +196,20 @@ class Andes45GetReductionCyclesWidening<string mx, int sew> {
 
 // (VLEN/DLEN)*LMUL+LOG2(DLEN/SEW)
 class Andes45GetFReductionCycles<string mx, int sew> {
-  int d = Andes45GetCyclesDefault<mx>.c;
+  defvar d = Andes45GetCyclesDefault<mx>.c;
   int c = !add(d, !logtwo(!div(Andes45DLEN, sew)));
 }
 
 // (VLEN/DLEN)*LMUL*2+LOG2(DLEN/SEW)-1
 class Andes45GetFWReductionCycles<string mx, int sew> {
-  int a = !mul(Andes45GetCyclesDefault<mx>.c, 2);
-  int b = !add(a, !logtwo(!div(Andes45DLEN, sew)));
+  defvar a = !mul(Andes45GetCyclesDefault<mx>.c, 2);
+  defvar b = !add(a, !logtwo(!div(Andes45DLEN, sew)));
   int c = !sub(b, 1);
 }
 
 // (VLEN*LMUL)/SEW
 class Andes45GetOrderedFReductionCycles<string mx, int sew> {
-  int b = !cond(
+  defvar b = !cond(
     !eq(mx, "M1")  : !mul(Andes45VLEN, 1),
     !eq(mx, "M2")  : !mul(Andes45VLEN, 2),
     !eq(mx, "M4")  : !mul(Andes45VLEN, 4),
@@ -224,7 +224,7 @@ class Andes45GetOrderedFReductionCycles<string mx, int sew> {
 
 // (VLEN*LMUL)/SEW
 class Andes45GetOrderedFWReductionCycles<string mx, int sew> {
-  int b = !cond(
+  defvar b = !cond(
     !eq(mx, "M1")  : !mul(Andes45VLEN, 1),
     !eq(mx, "M2")  : !mul(Andes45VLEN, 2),
     !eq(mx, "M4")  : !mul(Andes45VLEN, 4),
