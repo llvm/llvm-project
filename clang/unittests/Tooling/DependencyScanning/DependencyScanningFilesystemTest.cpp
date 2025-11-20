@@ -13,6 +13,39 @@
 
 using namespace clang::tooling::dependencies;
 
+TEST(DependencyScanningFilesystem, OpenFileAndGetBufferRepeatedly) {
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory("/");
+  InMemoryFS->addFile("/foo", 0, llvm::MemoryBuffer::getMemBuffer("content"));
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS);
+
+  auto FileOrErr1 = DepFS.openFileForRead("foo");
+  auto FileOrErr2 = DepFS.openFileForRead("foo");
+  ASSERT_EQ(FileOrErr1.getError(), std::error_code{});
+  ASSERT_EQ(FileOrErr1.getError(), std::error_code{});
+  std::unique_ptr<llvm::vfs::File> File1 = std::move(*FileOrErr1);
+  std::unique_ptr<llvm::vfs::File> File2 = std::move(*FileOrErr2);
+  ASSERT_NE(File1, nullptr);
+  ASSERT_NE(File2, nullptr);
+  auto BufOrErr11 = File1->getBuffer("buf11");
+  auto BufOrErr12 = File1->getBuffer("buf12");
+  auto BufOrErr21 = File1->getBuffer("buf21");
+  ASSERT_EQ(BufOrErr11.getError(), std::error_code{});
+  ASSERT_EQ(BufOrErr12.getError(), std::error_code{});
+  ASSERT_EQ(BufOrErr21.getError(), std::error_code{});
+  std::unique_ptr<llvm::MemoryBuffer> Buf11 = std::move(*BufOrErr11);
+  std::unique_ptr<llvm::MemoryBuffer> Buf12 = std::move(*BufOrErr12);
+  std::unique_ptr<llvm::MemoryBuffer> Buf21 = std::move(*BufOrErr21);
+  ASSERT_NE(Buf11, nullptr);
+  ASSERT_NE(Buf12, nullptr);
+  ASSERT_NE(Buf21, nullptr);
+  ASSERT_EQ(Buf11->getBuffer().data(), Buf12->getBuffer().data());
+  ASSERT_EQ(Buf11->getBuffer().data(), Buf21->getBuffer().data());
+  EXPECT_EQ(Buf11->getBuffer(), "content");
+}
+
 TEST(DependencyScanningWorkerFilesystem, CacheStatusFailures) {
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 

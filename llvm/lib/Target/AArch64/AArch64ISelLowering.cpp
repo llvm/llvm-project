@@ -387,7 +387,7 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
 
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                              const AArch64Subtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM, STI), Subtarget(&STI) {
   // AArch64 doesn't have comparisons which set GPRs or setcc instructions, so
   // we have to make something up. Arbitrarily, choose ZeroOrOne.
   setBooleanContents(ZeroOrOneBooleanContent);

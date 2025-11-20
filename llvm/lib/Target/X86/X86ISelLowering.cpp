@@ -130,7 +130,7 @@ static cl::opt<bool> MulConstantOptimization(
 
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
 
@@ -7281,7 +7281,10 @@ static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
 static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                                         const SDLoc &DL, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget,
-                                        bool IsAfterLegalize) {
+                                        bool IsAfterLegalize,
+                                        unsigned Depth = 0) {
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return SDValue(); // Limit search depth.
   if ((VT.getScalarSizeInBits() % 8) != 0)
     return SDValue();
 
@@ -7455,7 +7458,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), HalfNumElems);
       SDValue HalfLD =
           EltsFromConsecutiveLoads(HalfVT, Elts.drop_back(HalfNumElems), DL,
-                                   DAG, Subtarget, IsAfterLegalize);
+                                   DAG, Subtarget, IsAfterLegalize, Depth + 1);
       if (HalfLD)
         return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
                            HalfLD, DAG.getVectorIdxConstant(0, DL));
@@ -7532,7 +7535,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                            VT.getSizeInBits() / ScalarSize);
       if (TLI.isTypeLegal(BroadcastVT)) {
         if (SDValue RepeatLoad = EltsFromConsecutiveLoads(
-                RepeatVT, RepeatedLoads, DL, DAG, Subtarget, IsAfterLegalize)) {
+                RepeatVT, RepeatedLoads, DL, DAG, Subtarget, IsAfterLegalize,
+                Depth + 1)) {
           SDValue Broadcast = RepeatLoad;
           if (RepeatSize > ScalarSize) {
             while (Broadcast.getValueSizeInBits() < VT.getSizeInBits())
@@ -7550,6 +7554,19 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           return DAG.getBitcast(VT, Broadcast);
         }
       }
+    }
+  }
+
+  // REVERSE - attempt to match the loads in reverse and then shuffle back.
+  // TODO: Do this for any permute or mismatching element counts.
+  if (Depth == 0 && !ZeroMask && TLI.isTypeLegal(VT) && VT.isVector() &&
+      NumElems == VT.getVectorNumElements()) {
+    SmallVector<SDValue, 16> ReverseElts(Elts.rbegin(), Elts.rend());
+    if (SDValue RevLd = EltsFromConsecutiveLoads(
+            VT, ReverseElts, DL, DAG, Subtarget, IsAfterLegalize, Depth + 1)) {
+      SmallVector<int, 16> ReverseMask(NumElems);
+      std::iota(ReverseMask.rbegin(), ReverseMask.rend(), 0);
+      return DAG.getVectorShuffle(VT, DL, RevLd, DAG.getUNDEF(VT), ReverseMask);
     }
   }
 
@@ -59486,8 +59503,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     if (TLI->allowsMemoryAccess(Ctx, DAG.getDataLayout(), VT,
                                 *FirstLd->getMemOperand(), &Fast) &&
         Fast) {
-      if (SDValue Ld =
-              EltsFromConsecutiveLoads(VT, Ops, DL, DAG, Subtarget, false))
+      if (SDValue Ld = EltsFromConsecutiveLoads(VT, Ops, DL, DAG, Subtarget,
+                                                false, Depth + 1))
         return Ld;
     }
   }

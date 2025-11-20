@@ -1,4 +1,4 @@
-# NVVM Dialect
+# 'nvvm' Dialect
 
 The NVVM dialect is MLIR's LLVM-IR-based, NVIDIA-specific backend dialect. It
 models NVVM intrinsics and public ISA functionality and introduces NVIDIA
@@ -7,6 +7,8 @@ shared, and cluster memory), enabling faithful lowering of GPU kernels to the
 NVPTX toolchain. While a NVVM op usually maps to a single LLVM IR intrinsic,
 the NVVM dialect uses type polymorphism and other attributes so that a single
 NVVM op can map to different LLVM intrinsics.
+
+[TOC]
 
 ## Scope and Capabilities
 
@@ -83,5 +85,11 @@ dialects (e.g., `nvgpu`, `gpu`, or project-specific dialects). The design
 intent is a thin, predictable, low-level surface with near-mechanical lowering
 to NVVM/LLVM IR.
 
-[TOC]
+
+## Operations
+
+All operations in the NVIDIA's instruction set have a custom form in MLIR. The mnemonic
+of an operation is that used in LLVM IR prefixed with "`nvvm.`".
+
+[include "Dialects/NVVMOps.md"]
 

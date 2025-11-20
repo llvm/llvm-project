@@ -674,3 +674,16 @@ func.func @dead_value_loop_ivs_no_result(%lb: index, %ub: index, %step: index, %
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @op_block_have_dead_arg
+func.func @op_block_have_dead_arg(%arg0: index, %arg1: index, %arg2: i1) {
+  scf.execute_region {
+    cf.cond_br %arg2, ^bb1(%arg0 : index), ^bb1(%arg1 : index)
+  ^bb1(%0: index):
+      scf.yield
+  }
+  // CHECK-NEXT: return
+  return
+}
