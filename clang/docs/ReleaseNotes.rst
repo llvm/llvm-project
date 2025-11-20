@@ -341,6 +341,8 @@ Attribute Changes in Clang
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
 
+- Annotations from C++26 are supported (still experimental), and gated under the `-freflection` flag.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
