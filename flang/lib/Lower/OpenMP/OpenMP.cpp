@@ -2547,7 +2547,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   if (!isDevicePtrSyms.empty()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> symToMapInfo;
-    for (auto [symPtr, mapVal] : llvm::zip(hasDeviceAddrSyms, clauseOps.hasDeviceAddrVars))
+    for (auto [symPtr, mapVal] :
+         llvm::zip(hasDeviceAddrSyms, clauseOps.hasDeviceAddrVars))
       if (symPtr)
         symToMapInfo.try_emplace(symPtr, mapVal);
 
@@ -2579,8 +2580,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 converter.getCurrentLocation());
 
         mlir::Value baseOp = info.rawInput;
-        if (auto refType =
-                mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
+        if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
           (void)refType; // element type not needed for storage-only mapping
 
         mlir::Value mapVal = createMapInfoOp(
