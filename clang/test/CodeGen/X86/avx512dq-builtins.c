@@ -1359,6 +1359,8 @@ __mmask16 test_mm512_movepi32_mask(__m512i __A) {
   return _mm512_movepi32_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm512_movepi32_mask(((__m512i)(__v16si){0, 1, -1, 3, 4, 5, 6, 7,8, 9, 10, 11, 12, 13, 14, -1})) == (__mmask16)0x8004);
+
 __m512i test_mm512_movm_epi32(__mmask16 __A) {
   // CHECK-LABEL: test_mm512_movm_epi32
   // CHECK: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
@@ -1378,6 +1380,8 @@ __mmask8 test_mm512_movepi64_mask(__m512i __A) {
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i64> %{{.*}}, zeroinitializer
   return _mm512_movepi64_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm512_movepi64_mask(((__m512i)(__v8di){0, 1, -1, 3, 4, 5, 6, -1})) == (__mmask8)0x84);
 
 __m512 test_mm512_broadcast_f32x2(__m128 __A) {
   // CHECK-LABEL: test_mm512_broadcast_f32x2

@@ -3362,6 +3362,28 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
+                                              const CallExpr *Call,
+                                              unsigned ID) {
+  assert(Call->getNumArgs() == 1);
+
+  const Pointer &Vec = S.Stk.pop<Pointer>();
+  unsigned RetWidth = S.getASTContext().getIntWidth(Call->getType());
+  APInt RetMask(RetWidth, 0);
+
+  unsigned VectorLen = Vec.getNumElems();
+  PrimType ElemT = Vec.getFieldDesc()->getPrimType();
+
+  for (unsigned ElemNum = 0; ElemNum != VectorLen; ++ElemNum) {
+    APSInt A;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { A = Vec.elem<T>(ElemNum).toAPSInt(); });
+    unsigned MSB = A[A.getBitWidth() - 1];
+    RetMask.setBitVal(ElemNum, MSB);
+  }
+  pushInteger(S, RetMask, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
@@ -4778,6 +4800,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cvtb2mask128:
+  case X86::BI__builtin_ia32_cvtb2mask256:
+  case X86::BI__builtin_ia32_cvtb2mask512:
+  case X86::BI__builtin_ia32_cvtw2mask128:
+  case X86::BI__builtin_ia32_cvtw2mask256:
+  case X86::BI__builtin_ia32_cvtw2mask512:
+  case X86::BI__builtin_ia32_cvtd2mask128:
+  case X86::BI__builtin_ia32_cvtd2mask256:
+  case X86::BI__builtin_ia32_cvtd2mask512:
+  case X86::BI__builtin_ia32_cvtq2mask128:
+  case X86::BI__builtin_ia32_cvtq2mask256:
+  case X86::BI__builtin_ia32_cvtq2mask512:
+    return interp__builtin_ia32_cvt_vec2mask(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpw128_mask:
