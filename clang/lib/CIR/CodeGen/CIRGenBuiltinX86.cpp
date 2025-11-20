@@ -34,6 +34,7 @@ static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
 }
 
 // OG has unordered comparison as a form of optimization in addition to
+// ordered comparison, while CIR doesn't.
 //
 // This means that we can't encode the comparison code of UGT (unordered
 // greater than), at least not at the CIR level.
@@ -79,9 +80,10 @@ static mlir::Value convertKunpckMaskToVector(CIRGenBuilderTy &builder,
   // If we have less than 8 elements, then the starting mask was an i8 and
   // we need to extract down to the right number of elements.
   if (numElems < 8) {
-    llvm::SmallVector<int64_t, 4> indices;
-    for (unsigned i = 0; i != numElems; ++i)
-      indices.push_back(i);
+    llvm::SmallVector<mlir::Attribute, 4> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+    for (auto i : llvm::seq<unsigned>(0, numElems))
+      indices.push_back(cir::IntAttr::get(i32Ty, i));
     maskVec = builder.createVecShuffle(mask.getLoc(), maskVec, indices);
   }
   return maskVec;
@@ -93,9 +95,12 @@ static mlir::Value emitKunpckOp(CIRGenBuilderTy &builder, mlir::Value op0,
   unsigned numElems = maskIntType.getWidth();
   mlir::Value lhs = convertKunpckMaskToVector(builder, op0, numElems);
   mlir::Value rhs = convertKunpckMaskToVector(builder, op1, numElems);
-  llvm::SmallVector<int64_t, 64> indices;
-  for (unsigned i = 0; i != numElems; ++i)
-    indices.push_back(i);
+  
+  // Build shuffle indices as attributes to avoid redundant conversion.
+  llvm::SmallVector<mlir::Attribute, 64> indices;
+  mlir::Type i32Ty = builder.getSInt32Ty();
+  for (auto i : llvm::seq<unsigned>(0, numElems))
+    indices.push_back(cir::IntAttr::get(i32Ty, i));
 
   // First extract half of each vector. This gives better codegen than
   // doing it in a single shuffle.
@@ -105,8 +110,7 @@ static mlir::Value emitKunpckOp(CIRGenBuilderTy &builder, mlir::Value op0,
                                  llvm::ArrayRef(indices.data(), numElems / 2));
   // Concat the vectors.
   // NOTE: Operands are swapped to match the intrinsic definition.
-  mlir::Value res = builder.createVecShuffle(
-      loc, rhs, lhs, llvm::ArrayRef(indices.data(), numElems));
+  mlir::Value res = builder.createVecShuffle(loc, rhs, lhs, indices);
   return builder.createBitcast(res, op0.getType());
 }
 
