@@ -37,6 +37,18 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     propagate the layouts required for their operands to the producers. With
     this propagated layout information, pass will then update op result type
     with the layout information.
+
+    `inst`:
+      Sets the `inst_data` field of the layout attribute.
+      The goal is to select the highest granularity of the
+      instruction shape to minimize the number of instructions required
+      for processing the user shape.
+      For nd operations, the granularity depends on (W)idth, (H)eight and (B)lock count.
+      It is possible that the max. block count of one operation is different from the
+      max. allowed block count of another operation, whereas both operations
+      may use the same tensor descriptor. The propagation is not the right place for creating a
+      second tdesc with the correct block count and other related ops. Hence,
+      the subsequent optimization passes may decide on if or how to handle the block count.
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
