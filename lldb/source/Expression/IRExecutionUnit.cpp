@@ -817,6 +817,12 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   for (size_t i = 0; i < m_preferred_modules.GetSize(); ++i)
     non_local_images.Remove(m_preferred_modules.GetModuleAtIndex(i));
 
+  // BEGIN SWIFT
+  if (m_in_populate_symtab)
+    if (lldb::ModuleSP jit_module_sp = m_jit_module_wp.lock())
+      non_local_images.Remove(jit_module_sp);
+  // END SWIFT
+
   LoadAddressResolver resolver(*target, symbol_was_missing_weak);
 
   ModuleFunctionSearchOptions function_options;
@@ -838,15 +844,6 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
                                   sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
-    }
-
-    if (sc.target_sp) {
-      ModuleList images = sc.target_sp->GetImages();
-      // BEGIN SWIFT
-      if (m_in_populate_symtab)
-        if (lldb::ModuleSP module_sp = m_jit_module_wp.lock())
-          images.Remove(module_sp);
-      // END SWIFT
     }
 
     {
