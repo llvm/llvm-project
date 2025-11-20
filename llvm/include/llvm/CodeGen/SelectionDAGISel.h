@@ -58,9 +58,7 @@ public:
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
-  TargetTransformInfo *TTI = nullptr;
-#endif
+  const TargetTransformInfo *TTI = nullptr;
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;

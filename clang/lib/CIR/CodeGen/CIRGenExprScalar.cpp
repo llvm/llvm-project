@@ -156,6 +156,10 @@ public:
     return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
   }
 
+  mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
+    return cgf.emitCoawaitExpr(*s).getValue();
+  }
+
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
     return cgf.emitLoadOfLValue(lv, loc).getValue();
   }
