@@ -412,9 +412,6 @@ struct FormatToken {
   /// \c true if this token ends a group of C++ attributes.
   unsigned EndsCppAttributeGroup : 1;
 
-  /// \c true if clang-format should insert a space before the closing '*/'.
-  unsigned NeedsSpaceBeforeClosingBlockComment : 1;
-
 private:
   /// Contains the kind of block if this token is a brace.
   unsigned BlockKind : 2;
@@ -526,11 +523,6 @@ public:
   /// Contains the width in columns of the last line of a multi-line
   /// token.
   unsigned LastLineColumnWidth = 0;
-
-  /// Offset (from the start of the token) where a space should be inserted
-  /// before the closing '*/' when \c NeedsSpaceBeforeClosingBlockComment is
-  /// set.
-  unsigned SpaceBeforeClosingBlockCommentOffset = 0;
 
   /// The number of spaces that should be inserted before this token.
   unsigned SpacesRequiredBefore = 0;
