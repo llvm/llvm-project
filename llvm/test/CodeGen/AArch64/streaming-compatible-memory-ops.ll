@@ -153,6 +153,316 @@ entry:
   ret void
 }
 
+define ptr @se_memchr(ptr %src, i64 %n) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: se_memchr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
+; CHECK-NEXT:    .cfi_offset vg, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
+; CHECK-NEXT:    .cfi_offset b8, -40
+; CHECK-NEXT:    .cfi_offset b9, -48
+; CHECK-NEXT:    .cfi_offset b10, -56
+; CHECK-NEXT:    .cfi_offset b11, -64
+; CHECK-NEXT:    .cfi_offset b12, -72
+; CHECK-NEXT:    .cfi_offset b13, -80
+; CHECK-NEXT:    .cfi_offset b14, -88
+; CHECK-NEXT:    .cfi_offset b15, -96
+; CHECK-NEXT:    mov x2, x1
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    mov w1, #5 // =0x5
+; CHECK-NEXT:    bl memchr
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore vg
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    .cfi_restore b8
+; CHECK-NEXT:    .cfi_restore b9
+; CHECK-NEXT:    .cfi_restore b10
+; CHECK-NEXT:    .cfi_restore b11
+; CHECK-NEXT:    .cfi_restore b12
+; CHECK-NEXT:    .cfi_restore b13
+; CHECK-NEXT:    .cfi_restore b14
+; CHECK-NEXT:    .cfi_restore b15
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-SME-ROUTINES-LABEL: se_memchr:
+; CHECK-NO-SME-ROUTINES:       // %bb.0: // %entry
+; CHECK-NO-SME-ROUTINES-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NO-SME-ROUTINES-NEXT:    cntd x9
+; CHECK-NO-SME-ROUTINES-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    str x9, [sp, #80] // 8-byte Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset vg, -16
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset w30, -24
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset w29, -32
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b8, -40
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b9, -48
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b10, -56
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b11, -64
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b12, -72
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b13, -80
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b14, -88
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b15, -96
+; CHECK-NO-SME-ROUTINES-NEXT:    mov x2, x1
+; CHECK-NO-SME-ROUTINES-NEXT:    smstop sm
+; CHECK-NO-SME-ROUTINES-NEXT:    mov w1, #5 // =0x5
+; CHECK-NO-SME-ROUTINES-NEXT:    bl memchr
+; CHECK-NO-SME-ROUTINES-NEXT:    smstart sm
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore vg
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore w30
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore w29
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b8
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b9
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b10
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b11
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b12
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b13
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b14
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b15
+; CHECK-NO-SME-ROUTINES-NEXT:    ret
+;
+; CHECK-MOPS-LABEL: se_memchr:
+; CHECK-MOPS:       // %bb.0: // %entry
+; CHECK-MOPS-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-MOPS-NEXT:    cntd x9
+; CHECK-MOPS-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    str x9, [sp, #80] // 8-byte Spill
+; CHECK-MOPS-NEXT:    .cfi_offset vg, -16
+; CHECK-MOPS-NEXT:    .cfi_offset w30, -24
+; CHECK-MOPS-NEXT:    .cfi_offset w29, -32
+; CHECK-MOPS-NEXT:    .cfi_offset b8, -40
+; CHECK-MOPS-NEXT:    .cfi_offset b9, -48
+; CHECK-MOPS-NEXT:    .cfi_offset b10, -56
+; CHECK-MOPS-NEXT:    .cfi_offset b11, -64
+; CHECK-MOPS-NEXT:    .cfi_offset b12, -72
+; CHECK-MOPS-NEXT:    .cfi_offset b13, -80
+; CHECK-MOPS-NEXT:    .cfi_offset b14, -88
+; CHECK-MOPS-NEXT:    .cfi_offset b15, -96
+; CHECK-MOPS-NEXT:    mov x2, x1
+; CHECK-MOPS-NEXT:    smstop sm
+; CHECK-MOPS-NEXT:    mov w1, #5 // =0x5
+; CHECK-MOPS-NEXT:    bl memchr
+; CHECK-MOPS-NEXT:    smstart sm
+; CHECK-MOPS-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-MOPS-NEXT:    .cfi_restore vg
+; CHECK-MOPS-NEXT:    .cfi_restore w30
+; CHECK-MOPS-NEXT:    .cfi_restore w29
+; CHECK-MOPS-NEXT:    .cfi_restore b8
+; CHECK-MOPS-NEXT:    .cfi_restore b9
+; CHECK-MOPS-NEXT:    .cfi_restore b10
+; CHECK-MOPS-NEXT:    .cfi_restore b11
+; CHECK-MOPS-NEXT:    .cfi_restore b12
+; CHECK-MOPS-NEXT:    .cfi_restore b13
+; CHECK-MOPS-NEXT:    .cfi_restore b14
+; CHECK-MOPS-NEXT:    .cfi_restore b15
+; CHECK-MOPS-NEXT:    ret
+entry:
+  %res = tail call ptr @memchr(ptr %src, i32 5, i64 %n)
+  ret ptr %res
+}
+
+define ptr @sc_memchr(ptr %src, i64 %n) "aarch64_pstate_sm_compatible" {
+; CHECK-LABEL: sc_memchr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset vg, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
+; CHECK-NEXT:    .cfi_offset b8, -40
+; CHECK-NEXT:    .cfi_offset b9, -48
+; CHECK-NEXT:    .cfi_offset b10, -56
+; CHECK-NEXT:    .cfi_offset b11, -64
+; CHECK-NEXT:    .cfi_offset b12, -72
+; CHECK-NEXT:    .cfi_offset b13, -80
+; CHECK-NEXT:    .cfi_offset b14, -88
+; CHECK-NEXT:    .cfi_offset b15, -96
+; CHECK-NEXT:    mov x2, x1
+; CHECK-NEXT:    mrs x19, SVCR
+; CHECK-NEXT:    tbz w19, #0, .LBB4_2
+; CHECK-NEXT:  // %bb.1: // %entry
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:  .LBB4_2: // %entry
+; CHECK-NEXT:    mov w1, #5 // =0x5
+; CHECK-NEXT:    bl memchr
+; CHECK-NEXT:    tbz w19, #0, .LBB4_4
+; CHECK-NEXT:  // %bb.3: // %entry
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:  .LBB4_4: // %entry
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore vg
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    .cfi_restore b8
+; CHECK-NEXT:    .cfi_restore b9
+; CHECK-NEXT:    .cfi_restore b10
+; CHECK-NEXT:    .cfi_restore b11
+; CHECK-NEXT:    .cfi_restore b12
+; CHECK-NEXT:    .cfi_restore b13
+; CHECK-NEXT:    .cfi_restore b14
+; CHECK-NEXT:    .cfi_restore b15
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-SME-ROUTINES-LABEL: sc_memchr:
+; CHECK-NO-SME-ROUTINES:       // %bb.0: // %entry
+; CHECK-NO-SME-ROUTINES-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NO-SME-ROUTINES-NEXT:    cntd x9
+; CHECK-NO-SME-ROUTINES-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset w19, -8
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset vg, -16
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset w30, -24
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset w29, -32
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b8, -40
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b9, -48
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b10, -56
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b11, -64
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b12, -72
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b13, -80
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b14, -88
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b15, -96
+; CHECK-NO-SME-ROUTINES-NEXT:    mov x2, x1
+; CHECK-NO-SME-ROUTINES-NEXT:    mrs x19, SVCR
+; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB4_2
+; CHECK-NO-SME-ROUTINES-NEXT:  // %bb.1: // %entry
+; CHECK-NO-SME-ROUTINES-NEXT:    smstop sm
+; CHECK-NO-SME-ROUTINES-NEXT:  .LBB4_2: // %entry
+; CHECK-NO-SME-ROUTINES-NEXT:    mov w1, #5 // =0x5
+; CHECK-NO-SME-ROUTINES-NEXT:    bl memchr
+; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB4_4
+; CHECK-NO-SME-ROUTINES-NEXT:  // %bb.3: // %entry
+; CHECK-NO-SME-ROUTINES-NEXT:    smstart sm
+; CHECK-NO-SME-ROUTINES-NEXT:  .LBB4_4: // %entry
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldr x19, [sp, #88] // 8-byte Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore w19
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore vg
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore w30
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore w29
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b8
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b9
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b10
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b11
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b12
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b13
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b14
+; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_restore b15
+; CHECK-NO-SME-ROUTINES-NEXT:    ret
+;
+; CHECK-MOPS-LABEL: sc_memchr:
+; CHECK-MOPS:       // %bb.0: // %entry
+; CHECK-MOPS-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-MOPS-NEXT:    cntd x9
+; CHECK-MOPS-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    .cfi_offset w19, -8
+; CHECK-MOPS-NEXT:    .cfi_offset vg, -16
+; CHECK-MOPS-NEXT:    .cfi_offset w30, -24
+; CHECK-MOPS-NEXT:    .cfi_offset w29, -32
+; CHECK-MOPS-NEXT:    .cfi_offset b8, -40
+; CHECK-MOPS-NEXT:    .cfi_offset b9, -48
+; CHECK-MOPS-NEXT:    .cfi_offset b10, -56
+; CHECK-MOPS-NEXT:    .cfi_offset b11, -64
+; CHECK-MOPS-NEXT:    .cfi_offset b12, -72
+; CHECK-MOPS-NEXT:    .cfi_offset b13, -80
+; CHECK-MOPS-NEXT:    .cfi_offset b14, -88
+; CHECK-MOPS-NEXT:    .cfi_offset b15, -96
+; CHECK-MOPS-NEXT:    mov x2, x1
+; CHECK-MOPS-NEXT:    mrs x19, SVCR
+; CHECK-MOPS-NEXT:    tbz w19, #0, .LBB4_2
+; CHECK-MOPS-NEXT:  // %bb.1: // %entry
+; CHECK-MOPS-NEXT:    smstop sm
+; CHECK-MOPS-NEXT:  .LBB4_2: // %entry
+; CHECK-MOPS-NEXT:    mov w1, #5 // =0x5
+; CHECK-MOPS-NEXT:    bl memchr
+; CHECK-MOPS-NEXT:    tbz w19, #0, .LBB4_4
+; CHECK-MOPS-NEXT:  // %bb.3: // %entry
+; CHECK-MOPS-NEXT:    smstart sm
+; CHECK-MOPS-NEXT:  .LBB4_4: // %entry
+; CHECK-MOPS-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldr x19, [sp, #88] // 8-byte Reload
+; CHECK-MOPS-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-MOPS-NEXT:    .cfi_restore w19
+; CHECK-MOPS-NEXT:    .cfi_restore vg
+; CHECK-MOPS-NEXT:    .cfi_restore w30
+; CHECK-MOPS-NEXT:    .cfi_restore w29
+; CHECK-MOPS-NEXT:    .cfi_restore b8
+; CHECK-MOPS-NEXT:    .cfi_restore b9
+; CHECK-MOPS-NEXT:    .cfi_restore b10
+; CHECK-MOPS-NEXT:    .cfi_restore b11
+; CHECK-MOPS-NEXT:    .cfi_restore b12
+; CHECK-MOPS-NEXT:    .cfi_restore b13
+; CHECK-MOPS-NEXT:    .cfi_restore b14
+; CHECK-MOPS-NEXT:    .cfi_restore b15
+; CHECK-MOPS-NEXT:    ret
+entry:
+  %res = tail call ptr @memchr(ptr %src, i32 5, i64 %n)
+  ret ptr %res
+}
+
 define void @sc_memcpy(i64 noundef %n) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-LABEL: sc_memcpy:
 ; CHECK:       // %bb.0: // %entry
@@ -179,15 +489,15 @@ define void @sc_memcpy(i64 noundef %n) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-NO-SME-ROUTINES-NEXT:    mrs x19, SVCR
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldr x0, [x0, :got_lo12:dst]
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldr x1, [x1, :got_lo12:src]
-; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB3_2
+; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB5_2
 ; CHECK-NO-SME-ROUTINES-NEXT:  // %bb.1: // %entry
 ; CHECK-NO-SME-ROUTINES-NEXT:    smstop sm
-; CHECK-NO-SME-ROUTINES-NEXT:  .LBB3_2: // %entry
+; CHECK-NO-SME-ROUTINES-NEXT:  .LBB5_2: // %entry
 ; CHECK-NO-SME-ROUTINES-NEXT:    bl memcpy
-; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB3_4
+; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB5_4
 ; CHECK-NO-SME-ROUTINES-NEXT:  // %bb.3: // %entry
 ; CHECK-NO-SME-ROUTINES-NEXT:    smstart sm
-; CHECK-NO-SME-ROUTINES-NEXT:  .LBB3_4: // %entry
+; CHECK-NO-SME-ROUTINES-NEXT:  .LBB5_4: // %entry
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
@@ -283,3 +593,4 @@ entry:
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg)
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg)
+declare ptr @memchr(ptr, i32, i64)
