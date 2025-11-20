@@ -32,12 +32,16 @@ int main(int argc, char **argv) {
       "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", NULL,
   };
 
-  for (char **e = environ; *e; e++) {
+  // When this test runs with a runtime (e.g. ASAN), the spawned process needs
+  // to use the same runtime search path as the parent. Otherwise, it might
+  // try to load a runtime that doesn't work and crash before hitting main(),
+  // failing the test. We technically should forward the variable for the
+  // current platform, but some platforms have multiple such variables and
+  // it's quite difficult to plumb this through the lit config.
+  for (char **e = environ; *e; e++)
     if (strncmp(*e, "DYLD_LIBRARY_PATH=", sizeof("DYLD_LIBRARY_PATH=") - 1) ==
-        0) {
+        0)
       env[0] = *e;
-    }
-  }
 
   pid_t pid;
   int s = posix_spawn(&pid, argv[0], &file_actions, &attr, args, env);
