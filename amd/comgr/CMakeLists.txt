@@ -410,6 +410,7 @@ if(TARGET clangFrontendTool)
   set(CLANG_LIBS
     clangBasic
     clangDriver
+    clangOptions
     clangSerialization
     clangFrontend
     clangFrontendTool)
