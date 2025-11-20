@@ -292,7 +292,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                       AggValueSlot aggSlot, bool ignoreResult,
                       mlir::Block *scopeParentBlock,
                       mlir::Value &tmpResumeRValAddr, bool forLValue) {
-  mlir::LogicalResult awaitBuild = mlir::success();
+  [[maybe_unused]] mlir::LogicalResult awaitBuild = mlir::success();
   LValueOrRValue awaitRes;
 
   CIRGenFunction::OpaqueValueMapping binder =
